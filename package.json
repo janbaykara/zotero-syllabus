@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/janbaykara/zotero-syllabus#readme",
   "license": "AGPL-3.0-or-later",
+  "packageManager": "pnpm@10.25.0",
   "scripts": {
     "start": "zotero-plugin serve",
     "build": "zotero-plugin build && tsc --noEmit",
