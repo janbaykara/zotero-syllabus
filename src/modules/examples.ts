@@ -356,11 +356,47 @@ export class UIExampleFactory {
             item,
             selectedCollection.id,
           );
-          return classNumber !== undefined ? String(classNumber) : "";
+          const status = getSyllabusStatus(item, selectedCollection.id);
+
+          // Get status sort order: 0=essential, 1=recommended, 2=optional, 3=blank
+          let statusOrder = "3"; // default to blank
+          if (status === SyllabusStatus.ESSENTIAL) statusOrder = "0";
+          else if (status === SyllabusStatus.RECOMMENDED) statusOrder = "1";
+          else if (status === SyllabusStatus.OPTIONAL) statusOrder = "2";
+
+          // Return composite sortable value: "classNumber_statusOrder"
+          // Pad class number to 5 digits for proper numeric sorting (supports up to 99999)
+          // Items without class number get "99999" to sort last
+          const paddedClassNumber =
+            classNumber !== undefined
+              ? String(classNumber).padStart(5, "0")
+              : "99999";
+          return `${paddedClassNumber}_${statusOrder}`;
         }
 
         // If not in a collection view, return empty
-        return "";
+        return "99999_3";
+      },
+      renderCell: (index, data, column, isFirstColumn, doc) => {
+        // Parse the composite value to extract just the class number for display
+        // data format: "00001_0" or "99999_3"
+        const parts = String(data).split("_");
+        const classNumberStr = parts[0];
+
+        // If it's the "no class number" placeholder, display empty
+        if (classNumberStr === "99999") {
+          const span = doc.createElement("span");
+          span.className = `cell ${column.className}`;
+          span.textContent = "";
+          return span;
+        }
+
+        // Remove leading zeros and display the class number
+        const classNumber = parseInt(classNumberStr, 10);
+        const span = doc.createElement("span");
+        span.className = `cell ${column.className}`;
+        span.textContent = String(classNumber);
+        return span;
       },
       onEdit: async (item: Zotero.Item, dataKey: string, newValue: string) => {
         const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
