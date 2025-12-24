@@ -876,7 +876,7 @@ export class SyllabusUIFactory {
     await Zotero.ItemTreeManager.registerColumns({
       pluginID: addon.data.config.addonID,
       dataKey: field,
-      label: "Class Instruction",
+      label: "Instructions",
       dataProvider: (item: Zotero.Item, dataKey: string) => {
         const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
         const selectedCollection = zoteroPane.getSelectedCollection();
