@@ -141,9 +141,9 @@ export class SyllabusManager {
       const updateButtonLabel = (button: XUL.Checkbox) => {
         const isEnabled = button.checked;
         // Label should reflect what will happen when clicked (opposite of current state)
-        button.label = isEnabled ? "Tree View" : "Syllabus View";
+        button.label = isEnabled ? "List View" : "Syllabus View";
         button.tooltipText = isEnabled
-          ? "Switch to Tree View"
+          ? "Switch to List View"
           : "Switch to Syllabus View";
       };
 
