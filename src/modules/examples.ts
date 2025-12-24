@@ -191,6 +191,125 @@ export class BasicExampleFactory {
       }
     }
 
+    // Helper function to create a syllabus item card
+    function createSyllabusItemCard(
+      doc: Document,
+      item: Zotero.Item,
+      collectionId: number,
+      pane: any,
+    ): HTMLElement {
+      const itemElement = doc.createElement("div");
+      itemElement.className = "syllabus-item";
+      itemElement.setAttribute("data-item-id", String(item.id));
+
+      // Get item data
+      const status = getSyllabusStatus(item, collectionId);
+      const description = getSyllabusDescription(item, collectionId);
+      const title = item.getField("title") || "Untitled";
+
+      // Create item content container
+      const itemContent = doc.createElement("div");
+      itemContent.className = "syllabus-item-content";
+
+      // Add thumbnail image on the left
+      const thumbnailContainer = doc.createElement("div");
+      thumbnailContainer.className = "syllabus-item-thumbnail";
+
+      // Try to get item image/thumbnail
+      let imageSrc: string | null = null;
+
+      // First try getImageSrc method if available
+      if ((item as any).getImageSrc) {
+        imageSrc = (item as any).getImageSrc();
+      }
+
+      // If no image, try to get from attachments
+      if (!imageSrc) {
+        const attachments = item.getAttachments();
+        for (const attId of attachments) {
+          try {
+            const att = Zotero.Items.get(attId);
+            if (att && att.isAttachment() && att.attachmentContentType?.startsWith("image/")) {
+              // Try to get attachment file path or URL
+              const file = att.getFilePath();
+              if (file) {
+                imageSrc = `file://${file}`;
+                break;
+              }
+            }
+          } catch (e) {
+            // Continue to next attachment
+          }
+        }
+      }
+
+      if (imageSrc) {
+        const thumbnailImg = doc.createElement("img");
+        thumbnailImg.className = "syllabus-item-thumbnail-img";
+        thumbnailImg.src = imageSrc;
+        thumbnailImg.alt = title;
+        thumbnailImg.onerror = () => {
+          // If image fails to load, show placeholder
+          thumbnailImg.style.display = "none";
+          const placeholder = doc.createElement("div");
+          placeholder.className = "syllabus-item-thumbnail-placeholder";
+          placeholder.textContent = "📄";
+          thumbnailContainer.appendChild(placeholder);
+        };
+        thumbnailContainer.appendChild(thumbnailImg);
+      } else {
+        // Use a placeholder
+        const placeholder = doc.createElement("div");
+        placeholder.className = "syllabus-item-thumbnail-placeholder";
+        placeholder.textContent = "📄";
+        thumbnailContainer.appendChild(placeholder);
+      }
+
+      itemContent.appendChild(thumbnailContainer);
+
+      // Create text content container
+      const textContent = doc.createElement("div");
+      textContent.className = "syllabus-item-text";
+
+      // Create item title row with status label
+      const itemTitleRow = doc.createElement("div");
+      itemTitleRow.className = "syllabus-item-title-row";
+
+      const itemTitle = doc.createElement("div");
+      itemTitle.className = "syllabus-item-title";
+      itemTitle.textContent = title;
+      itemTitleRow.appendChild(itemTitle);
+
+      // Add status label (floated to the right)
+      if (status && status in STATUS_LABELS) {
+        const statusLabel = doc.createElement("span");
+        statusLabel.className = "syllabus-status-label";
+        statusLabel.textContent = STATUS_LABELS[status as SyllabusStatus];
+        statusLabel.style.color = STATUS_COLORS[status as SyllabusStatus];
+        itemTitleRow.appendChild(statusLabel);
+      }
+
+      textContent.appendChild(itemTitleRow);
+
+      // Add description if available
+      if (description) {
+        const itemDesc = doc.createElement("div");
+        itemDesc.className = "syllabus-item-description";
+        itemDesc.textContent = description;
+        textContent.appendChild(itemDesc);
+      }
+
+      itemContent.appendChild(textContent);
+      itemElement.appendChild(itemContent);
+
+      // Add click handler to select item
+      itemElement.addEventListener("click", () => {
+        pane.selectItem(item.id);
+      });
+
+      return itemElement;
+    }
+
     // Function to render a completely custom syllabus view
     function renderCustomSyllabusView() {
       try {
@@ -236,6 +355,15 @@ export class BasicExampleFactory {
           // Show custom view
           (customView as HTMLElement).style.display = "block";
 
+          // Clear and render
+          customView.innerHTML = "";
+
+          // Add collection name as title
+          const titleElement = doc.createElement("div");
+          titleElement.className = "syllabus-view-title";
+          titleElement.textContent = selectedCollection.name;
+          customView.appendChild(titleElement);
+
           // Get all items from the collection
           const items = selectedCollection.getChildItems();
 
@@ -253,19 +381,32 @@ export class BasicExampleFactory {
             itemsByClass.get(classNumber)!.push(item);
           }
 
-          // Sort class numbers (undefined/null goes last)
+          // Sort class numbers (undefined/null goes FIRST, then numeric order)
           const sortedClassNumbers = Array.from(itemsByClass.keys()).sort((a, b) => {
-            if (a === undefined) return 1;
-            if (b === undefined) return -1;
+            if (a === undefined && b === undefined) return 0;
+            if (a === undefined) return -1; // undefined goes first
+            if (b === undefined) return 1;
             return a - b;
           });
-
-          // Clear and render
-          customView.innerHTML = "";
 
           // Render each class group
           for (const classNumber of sortedClassNumbers) {
             const classItems = itemsByClass.get(classNumber)!;
+
+            // Sort items by status: essential, recommended, optional, none
+            classItems.sort((a, b) => {
+              const statusA = getSyllabusStatus(a, selectedCollection.id);
+              const statusB = getSyllabusStatus(b, selectedCollection.id);
+
+              const getStatusOrder = (status: SyllabusStatus | "" | undefined): number => {
+                if (status === SyllabusStatus.ESSENTIAL) return 0;
+                if (status === SyllabusStatus.RECOMMENDED) return 1;
+                if (status === SyllabusStatus.OPTIONAL) return 2;
+                return 3; // none/undefined/empty string
+              };
+
+              return getStatusOrder(statusA) - getStatusOrder(statusB);
+            });
 
             // Create class group container
             const classGroup = doc.createElement("div");
@@ -280,7 +421,7 @@ export class BasicExampleFactory {
             } else {
               const classHeader = doc.createElement("div");
               classHeader.className = "syllabus-class-header";
-              classHeader.textContent = "Unassigned";
+              classHeader.textContent = "Syllabus Documents";
               classGroup.appendChild(classHeader);
             }
 
@@ -289,44 +430,12 @@ export class BasicExampleFactory {
             itemsContainer.className = "syllabus-class-items";
 
             for (const item of classItems) {
-              const itemElement = doc.createElement("div");
-              itemElement.className = "syllabus-item";
-              itemElement.setAttribute("data-item-id", String(item.id));
-
-              // Get item data
-              const status = getSyllabusStatus(item, selectedCollection.id);
-              const description = getSyllabusDescription(item, selectedCollection.id);
-              const title = item.getField("title") || "Untitled";
-
-              // Create item content
-              const itemTitle = doc.createElement("div");
-              itemTitle.className = "syllabus-item-title";
-              itemTitle.textContent = title;
-
-              // Add status indicator
-              if (status) {
-                const statusDot = doc.createElement("span");
-                statusDot.className = "syllabus-status-dot";
-                statusDot.style.backgroundColor = STATUS_COLORS[status];
-                statusDot.title = STATUS_LABELS[status];
-                itemTitle.appendChild(statusDot);
-              }
-
-              itemElement.appendChild(itemTitle);
-
-              // Add description if available
-              if (description) {
-                const itemDesc = doc.createElement("div");
-                itemDesc.className = "syllabus-item-description";
-                itemDesc.textContent = description;
-                itemElement.appendChild(itemDesc);
-              }
-
-              // Add click handler to select item
-              itemElement.addEventListener("click", () => {
-                pane.selectItem(item.id);
-              });
-
+              const itemElement = createSyllabusItemCard(
+                doc,
+                item,
+                selectedCollection.id,
+                pane,
+              );
               itemsContainer.appendChild(itemElement);
             }
 
