@@ -892,6 +892,9 @@ export class SyllabusManager {
           // Get all items from the collection
           const items = selectedCollection.getChildItems();
 
+          // Separate items that have both no priority AND no class number (for "Further reading")
+          const furtherReadingItems: Zotero.Item[] = [];
+
           // Group items by class number
           // Use null as a sentinel for "no class number" to ensure consistent grouping
           const itemsByClass: Map<number | null, Zotero.Item[]> = new Map();
@@ -901,6 +904,18 @@ export class SyllabusManager {
               item,
               selectedCollection.id,
             );
+            const priority = getSyllabusPriority(item, selectedCollection.id);
+
+            // Check if item has both no priority AND no class number
+            const hasNoPriority = priority === "";
+            const hasNoClassNumber = classNumber === undefined;
+
+            if (hasNoPriority && hasNoClassNumber) {
+              // Add to "Further reading" section (rendered at bottom)
+              furtherReadingItems.push(item);
+              continue;
+            }
+
             // Normalize undefined to null for consistent Map key handling
             const normalizedClassNumber =
               classNumber === undefined ? null : classNumber;
@@ -911,7 +926,7 @@ export class SyllabusManager {
           }
 
           // Sort class numbers (null goes FIRST, then numeric order)
-          // This ensures "Syllabus Documents" (items without class number) appear at the top
+          // This ensures items without class number (but with priority) appear at the top
           const sortedClassNumbers = Array.from(itemsByClass.keys()).sort(
             (a, b) => {
               // null represents "no class number"
@@ -948,16 +963,11 @@ export class SyllabusManager {
             const classGroup = doc.createElement("div");
             classGroup.className = "syllabus-class-group";
 
-            // Add class header
+            // Add class header (only for items with a class number)
             if (classNumber !== null) {
               const classHeader = doc.createElement("div");
               classHeader.className = "syllabus-class-header";
               classHeader.textContent = `Class ${classNumber}`;
-              classGroup.appendChild(classHeader);
-            } else {
-              const classHeader = doc.createElement("div");
-              classHeader.className = "syllabus-class-header";
-              classHeader.textContent = "Syllabus Documents";
               classGroup.appendChild(classHeader);
             }
 
@@ -1050,6 +1060,101 @@ export class SyllabusManager {
 
             classGroup.appendChild(itemsContainer);
             customView.appendChild(classGroup);
+          }
+
+          // Render "Further reading" section at the bottom (items with no priority AND no class number)
+          if (furtherReadingItems.length > 0) {
+            // Sort items by title for consistent ordering
+            furtherReadingItems.sort((a, b) => {
+              const titleA = a.getField("title") || "";
+              const titleB = b.getField("title") || "";
+              return titleA.localeCompare(titleB);
+            });
+
+            // Create "Further reading" class group container
+            const furtherReadingGroup = doc.createElement("div");
+            furtherReadingGroup.className = "syllabus-class-group";
+
+            // Add "Further reading" header
+            const furtherReadingHeader = doc.createElement("div");
+            furtherReadingHeader.className = "syllabus-class-header";
+            furtherReadingHeader.textContent = "Further reading";
+            furtherReadingGroup.appendChild(furtherReadingHeader);
+
+            // Add items container
+            const furtherReadingItemsContainer = doc.createElement("div");
+            furtherReadingItemsContainer.className = "syllabus-class-items";
+            furtherReadingItemsContainer.setAttribute("data-class-number", "");
+
+            // Make itemsContainer a drop zone
+            furtherReadingItemsContainer.addEventListener("dragover", (e: DragEvent) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (e.dataTransfer) {
+                e.dataTransfer.dropEffect = "move";
+              }
+              furtherReadingItemsContainer.classList.add("syllabus-dropzone-active");
+            });
+
+            furtherReadingItemsContainer.addEventListener("dragleave", (e: DragEvent) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const rect = furtherReadingItemsContainer.getBoundingClientRect();
+              const x = e.clientX;
+              const y = e.clientY;
+              if (
+                x < rect.left ||
+                x > rect.right ||
+                y < rect.top ||
+                y > rect.bottom
+              ) {
+                furtherReadingItemsContainer.classList.remove("syllabus-dropzone-active");
+              }
+            });
+
+            furtherReadingItemsContainer.addEventListener("drop", async (e: DragEvent) => {
+              e.preventDefault();
+              e.stopPropagation();
+              furtherReadingItemsContainer.classList.remove("syllabus-dropzone-active");
+
+              const itemIdStr = e.dataTransfer?.getData("text/plain");
+              if (!itemIdStr) return;
+
+              const itemId = parseInt(itemIdStr, 10);
+              if (isNaN(itemId)) return;
+
+              try {
+                const draggedItem = Zotero.Items.get(itemId);
+                if (!draggedItem || !draggedItem.isRegularItem()) return;
+
+                // Remove class number (set to undefined) to keep item in "Further reading"
+                await setSyllabusClassNumber(
+                  draggedItem,
+                  selectedCollection.id,
+                  undefined,
+                );
+                await draggedItem.saveTx();
+
+                // Re-render the view to reflect the change
+                renderCustomSyllabusView();
+              } catch (err) {
+                ztoolkit.log("Error handling drop:", err);
+              }
+            });
+
+            // Add all further reading items (all should be slim cards since they have no priority)
+            for (const item of furtherReadingItems) {
+              const itemElement = createSyllabusItemCardSlim(
+                doc,
+                item,
+                selectedCollection.id,
+                pane,
+              );
+              furtherReadingItemsContainer.appendChild(itemElement);
+            }
+
+            furtherReadingGroup.appendChild(furtherReadingItemsContainer);
+            customView.appendChild(furtherReadingGroup);
           }
         } else {
           // Hide custom view and show default tree
