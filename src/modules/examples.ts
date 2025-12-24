@@ -1,4 +1,10 @@
 import { getLocaleID, getString } from "../utils/locale";
+import {
+  getSyllabusStatus,
+  getSyllabusDescription,
+  setSyllabusStatus,
+  setSyllabusDescription,
+} from "../utils/syllabus";
 
 function example(
   target: any,
@@ -222,30 +228,49 @@ export class UIExampleFactory {
   @example
   static async registerSyllabusStatusColumn() {
     const field = "syllabus-status";
+    // @ts-expect-error - onEdit may not be in types but is supported by Zotero API
     await Zotero.ItemTreeManager.registerColumns({
       pluginID: addon.data.config.addonID,
       dataKey: field,
       label: "Syllabus Status",
       dataProvider: (item: Zotero.Item, dataKey: string) => {
-        const collections = item.getCollections();
-        const statusMap: { [collectionId: string]: string } = {};
+        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+        const selectedCollection = zoteroPane.getSelectedCollection();
 
-        // Get syllabus status for each collection from preferences
-        collections.forEach((collectionId) => {
-          const statusKey = `syllabus.status.${collectionId}`;
-          const status = Zotero.Prefs.get(
-            `${addon.data.config.prefsPrefix}.${statusKey}`,
-            true,
-          ) as string | undefined;
+        if (selectedCollection) {
+          return getSyllabusStatus(item, selectedCollection.id);
+        }
 
-          if (status && ["essential", "recommended", "optional"].includes(status)) {
-            statusMap[String(collectionId)] = status;
-          }
-        });
+        // If not in a collection view, return empty
+        return "";
+      },
+      onEdit: async (item: Zotero.Item, dataKey: string, newValue: string) => {
+        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+        const selectedCollection = zoteroPane.getSelectedCollection();
 
-        return Object.keys(statusMap).length > 0
-          ? JSON.stringify(statusMap)
-          : "";
+        if (!selectedCollection) {
+          ztoolkit.log("No collection selected, cannot update status");
+          return;
+        }
+
+        // Validate the status value
+        if (
+          newValue &&
+          !["essential", "recommended", "optional"].includes(newValue)
+        ) {
+          ztoolkit.log(`Invalid status value: ${newValue}`);
+          return;
+        }
+
+        setSyllabusStatus(
+          item,
+          selectedCollection.id,
+          newValue as "essential" | "recommended" | "optional" | "",
+        );
+        await item.saveTx();
+
+        // Refresh the item tree to show the updated value
+        zoteroPane.refresh();
       },
     });
   }
@@ -253,30 +278,36 @@ export class UIExampleFactory {
   @example
   static async registerSyllabusDescriptionColumn() {
     const field = "syllabus-description";
+    // @ts-expect-error - onEdit may not be in types but is supported by Zotero API
     await Zotero.ItemTreeManager.registerColumns({
       pluginID: addon.data.config.addonID,
       dataKey: field,
       label: "Syllabus Description",
       dataProvider: (item: Zotero.Item, dataKey: string) => {
-        const collections = item.getCollections();
-        const descriptionMap: { [collectionId: string]: string } = {};
+        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+        const selectedCollection = zoteroPane.getSelectedCollection();
 
-        // Get syllabus description for each collection from preferences
-        collections.forEach((collectionId) => {
-          const descriptionKey = `syllabus.description.${collectionId}`;
-          const description = Zotero.Prefs.get(
-            `${addon.data.config.prefsPrefix}.${descriptionKey}`,
-            true,
-          ) as string | undefined;
+        if (selectedCollection) {
+          return getSyllabusDescription(item, selectedCollection.id);
+        }
 
-          if (description) {
-            descriptionMap[String(collectionId)] = description;
-          }
-        });
+        // If not in a collection view, return empty
+        return "";
+      },
+      onEdit: async (item: Zotero.Item, dataKey: string, newValue: string) => {
+        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+        const selectedCollection = zoteroPane.getSelectedCollection();
 
-        return Object.keys(descriptionMap).length > 0
-          ? JSON.stringify(descriptionMap)
-          : "";
+        if (!selectedCollection) {
+          ztoolkit.log("No collection selected, cannot update description");
+          return;
+        }
+
+        setSyllabusDescription(item, selectedCollection.id, newValue);
+        await item.saveTx();
+
+        // Refresh the item tree to show the updated value
+        zoteroPane.refresh();
       },
     });
   }
@@ -296,6 +327,174 @@ export class UIExampleFactory {
       },
       onSetData: ({ item, value }) => {
         item.setField("title", value);
+      },
+    });
+  }
+
+  @example
+  static registerSyllabusItemPaneSection() {
+    Zotero.ItemPaneManager.registerSection({
+      paneID: "syllabus",
+      pluginID: addon.data.config.addonID,
+      header: {
+        l10nID: getLocaleID("item-section-syllabus-head-text"),
+        icon: "chrome://zotero/skin/16/universal/book.svg",
+      },
+      sidenav: {
+        l10nID: getLocaleID("item-section-syllabus-sidenav-tooltip"),
+        icon: "chrome://zotero/skin/20/universal/book.svg",
+      },
+      onItemChange: ({ item, setEnabled, tabType }) => {
+        // Only enable in library view (not reader)
+        const enabled = tabType === "library" && item?.isRegularItem();
+        setEnabled(enabled);
+        return true;
+      },
+      onRender: ({ body, item, editable }) => {
+        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+        const selectedCollection = zoteroPane.getSelectedCollection();
+        const doc = body.ownerDocument || ztoolkit.getGlobal("document");
+
+        // Clear previous content
+        body.textContent = "";
+
+        if (!selectedCollection) {
+          const message = ztoolkit.UI.createElement(doc, "div", {
+            namespace: "html",
+            properties: {
+              innerText: "Select a collection to view syllabus settings",
+            },
+            styles: {
+              padding: "10px",
+              color: "#666",
+            },
+          });
+          body.appendChild(message);
+          return;
+        }
+
+        const collectionId = selectedCollection.id;
+        const currentStatus = getSyllabusStatus(item, collectionId);
+        const currentDescription = getSyllabusDescription(item, collectionId);
+
+        // Create container
+        const container = ztoolkit.UI.createElement(doc, "div", {
+          namespace: "html",
+          styles: {
+            padding: "10px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "15px",
+          },
+        });
+
+        // Status dropdown
+        const statusLabel = ztoolkit.UI.createElement(doc, "label", {
+          namespace: "html",
+          properties: {
+            innerText: "Status:",
+          },
+          styles: {
+            fontWeight: "bold",
+            marginBottom: "5px",
+          },
+        });
+        container.appendChild(statusLabel);
+
+        const statusSelect = ztoolkit.UI.createElement(doc, "select", {
+          namespace: "html",
+          id: "syllabus-status-select",
+          attributes: {
+            disabled: !editable ? "true" : undefined,
+          },
+          styles: {
+            padding: "5px",
+            fontSize: "13px",
+            width: "100%",
+          },
+        });
+
+        const options = [
+          { value: "", label: "(None)" },
+          { value: "essential", label: "Essential" },
+          { value: "recommended", label: "Recommended" },
+          { value: "optional", label: "Optional" },
+        ];
+
+        options.forEach((opt) => {
+          const option = ztoolkit.UI.createElement(doc, "option", {
+            namespace: "html",
+            properties: {
+              value: opt.value,
+              innerText: opt.label,
+              selected: opt.value === currentStatus,
+            },
+          });
+          statusSelect.appendChild(option);
+        });
+
+        if (editable) {
+          statusSelect.addEventListener("change", async (e) => {
+            const target = e.target as HTMLSelectElement;
+            setSyllabusStatus(item, collectionId, target.value as any);
+            await item.saveTx();
+            zoteroPane.refresh();
+          });
+        }
+
+        container.appendChild(statusSelect);
+
+        // Description textarea
+        const descLabel = ztoolkit.UI.createElement(doc, "label", {
+          namespace: "html",
+          properties: {
+            innerText: "Description:",
+          },
+          styles: {
+            fontWeight: "bold",
+            marginTop: "10px",
+            marginBottom: "5px",
+          },
+        });
+        container.appendChild(descLabel);
+
+        const descTextarea = ztoolkit.UI.createElement(doc, "textarea", {
+          namespace: "html",
+          id: "syllabus-description-textarea",
+          attributes: {
+            disabled: !editable ? "true" : undefined,
+            rows: "4",
+          },
+          styles: {
+            padding: "5px",
+            fontSize: "13px",
+            width: "100%",
+            resize: "vertical",
+            fontFamily: "inherit",
+          },
+        }) as HTMLTextAreaElement;
+
+        // Set value after creation
+        descTextarea.value = currentDescription;
+
+        if (editable) {
+          let saveTimeout: ReturnType<typeof setTimeout> | undefined;
+          descTextarea.addEventListener("input", async () => {
+            // Debounce saves
+            if (saveTimeout) {
+              clearTimeout(saveTimeout);
+            }
+            saveTimeout = setTimeout(async () => {
+              setSyllabusDescription(item, collectionId, descTextarea.value);
+              await item.saveTx();
+              zoteroPane.refresh();
+            }, 500);
+          });
+        }
+
+        container.appendChild(descTextarea);
+
+        body.appendChild(container);
       },
     });
   }

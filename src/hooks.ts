@@ -38,6 +38,8 @@ async function onStartup() {
 
   UIExampleFactory.registerReaderItemPaneSection();
 
+  UIExampleFactory.registerSyllabusItemPaneSection();
+
   await Promise.all(
     Zotero.getMainWindows().map((win) => onMainWindowLoad(win)),
   );

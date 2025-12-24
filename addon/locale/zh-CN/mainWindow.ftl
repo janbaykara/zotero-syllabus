@@ -9,3 +9,7 @@ item-section-example2-sidenav-tooltip =
 item-section-example2-button-tooltip =
     .tooltiptext = 移除此面板
 item-info-row-example-label = 示例行
+item-section-syllabus-head-text =
+    .label = 教学大纲
+item-section-syllabus-sidenav-tooltip =
+    .tooltiptext = 此条目的教学大纲设置

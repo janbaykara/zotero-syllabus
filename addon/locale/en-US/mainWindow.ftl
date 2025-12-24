@@ -9,3 +9,7 @@ item-section-example2-sidenav-tooltip =
 item-section-example2-button-tooltip =
     .tooltiptext = Unregister this section
 item-info-row-example-label = Example Row
+item-section-syllabus-head-text =
+    .label = Syllabus
+item-section-syllabus-sidenav-tooltip =
+    .tooltiptext = Syllabus settings for this item
