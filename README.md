@@ -18,15 +18,23 @@ A Zotero plugin that turns your collections into syllabi and course reading list
 ![Drag and drop functionality demonstration](doc/images/drag-drop.gif)
 _Classes grouped by course number with visual priority indicators and custom descriptions. Use drag and drop to move items between classes._
 
-#### Standard List View
-
-![Standard Zotero list view](doc/images/list.png)
-_The standard Zotero item list view has added columns for class numbers, instructions, and reading priority levels._
-
 #### Syllabus Metadata
 
 ![Syllabus module interface showing class organization](doc/images/module.png)
 _Pin important course information to the top of the syllabus._
+
+#### Editing Items' Syllabus Details
+
+![Editing pane showing class number, instruction, and priority](doc/images/editing.png)
+_Use the item pane to edit class number, instruction, and priority for an item._
+
+![Context menu showing syllabus operations](doc/images/right-click.png)
+_Right-click to edit syllabus details for an item._
+
+#### Standard List View
+
+![Standard Zotero list view](doc/images/list.png)
+_The standard Zotero item list view has added columns for class numbers, instructions, and reading priority levels._
 
 ## Features
 
