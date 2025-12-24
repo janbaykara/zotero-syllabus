@@ -12,34 +12,34 @@ export const SYLLABUS_CLASS_NUMBER_FIELD = "syllabus-class-number";
 // Create an ExtraFieldTool instance for safe extra field operations
 const extraFieldTool = new ExtraFieldTool();
 
-export enum SyllabusStatus {
+export enum SyllabusPriority {
   ESSENTIAL = "essential",
   RECOMMENDED = "recommended",
   OPTIONAL = "optional",
 }
 
 /**
- * Color definitions for syllabus statuses
+ * Color definitions for syllabus priorities
  */
-export const STATUS_COLORS: Record<SyllabusStatus, string> = {
-  [SyllabusStatus.ESSENTIAL]: "#8B5CF6", // purple
-  [SyllabusStatus.RECOMMENDED]: "#3B82F6", // blue
-  [SyllabusStatus.OPTIONAL]: "#AAA", // darker grey for better readability
+export const PRIORITY_COLORS: Record<SyllabusPriority, string> = {
+  [SyllabusPriority.ESSENTIAL]: "#8B5CF6", // purple
+  [SyllabusPriority.RECOMMENDED]: "#3B82F6", // blue
+  [SyllabusPriority.OPTIONAL]: "#AAA", // darker grey for better readability
 };
 
 /**
- * Human-readable labels for syllabus statuses
+ * Human-readable labels for syllabus priorities
  */
-export const STATUS_LABELS: Record<SyllabusStatus, string> = {
-  [SyllabusStatus.ESSENTIAL]: "Essential",
-  [SyllabusStatus.RECOMMENDED]: "Recommended",
-  [SyllabusStatus.OPTIONAL]: "Optional",
+export const PRIORITY_LABELS: Record<SyllabusPriority, string> = {
+  [SyllabusPriority.ESSENTIAL]: "Essential",
+  [SyllabusPriority.RECOMMENDED]: "Recommended",
+  [SyllabusPriority.OPTIONAL]: "Optional",
 };
 
 export interface SyllabusData {
   [collectionId: string]: {
-    status?: SyllabusStatus;
-    description?: string;
+    priority?: SyllabusPriority;
+    classInstruction?: string;
     classNumber?: number;
   };
 }
@@ -74,24 +74,24 @@ export async function setSyllabusData(
 }
 
 /**
- * Get syllabus status for a specific collection
+ * Get syllabus priority for a specific collection
  */
-export function getSyllabusStatus(
+export function getSyllabusPriority(
   item: Zotero.Item,
   collectionId: number | string,
-): SyllabusStatus | "" {
+): SyllabusPriority | "" {
   const data = getSyllabusData(item);
   const collectionIdStr = String(collectionId);
-  return data[collectionIdStr]?.status || "";
+  return data[collectionIdStr]?.priority || "";
 }
 
 /**
- * Set syllabus status for a specific collection
+ * Set syllabus priority for a specific collection
  */
-export async function setSyllabusStatus(
+export async function setSyllabusPriority(
   item: Zotero.Item,
   collectionId: number | string,
-  status: SyllabusStatus | "",
+  priority: SyllabusPriority | "",
 ): Promise<void> {
   const data = getSyllabusData(item);
   const collectionIdStr = String(collectionId);
@@ -100,13 +100,13 @@ export async function setSyllabusStatus(
     data[collectionIdStr] = {};
   }
 
-  if (status) {
-    data[collectionIdStr].status = status;
+  if (priority) {
+    data[collectionIdStr].priority = priority;
   } else {
-    delete data[collectionIdStr].status;
-    // Remove collection entry if status, description, and classNumber are all empty
+    delete data[collectionIdStr].priority;
+    // Remove collection entry if priority, classInstruction, and classNumber are all empty
     if (
-      !data[collectionIdStr].description &&
+      !data[collectionIdStr].classInstruction &&
       !data[collectionIdStr].classNumber
     ) {
       delete data[collectionIdStr];
@@ -117,24 +117,24 @@ export async function setSyllabusStatus(
 }
 
 /**
- * Get syllabus description for a specific collection
+ * Get class instruction for a specific collection
  */
-export function getSyllabusDescription(
+export function getSyllabusClassInstruction(
   item: Zotero.Item,
   collectionId: number | string,
 ): string {
   const data = getSyllabusData(item);
   const collectionIdStr = String(collectionId);
-  return data[collectionIdStr]?.description || "";
+  return data[collectionIdStr]?.classInstruction || "";
 }
 
 /**
- * Set syllabus description for a specific collection
+ * Set class instruction for a specific collection
  */
-export async function setSyllabusDescription(
+export async function setSyllabusClassInstruction(
   item: Zotero.Item,
   collectionId: number | string,
-  description: string,
+  classInstruction: string,
 ): Promise<void> {
   const data = getSyllabusData(item);
   const collectionIdStr = String(collectionId);
@@ -143,13 +143,13 @@ export async function setSyllabusDescription(
     data[collectionIdStr] = {};
   }
 
-  if (description && description.trim()) {
-    data[collectionIdStr].description = description.trim();
+  if (classInstruction && classInstruction.trim()) {
+    data[collectionIdStr].classInstruction = classInstruction.trim();
   } else {
-    delete data[collectionIdStr].description;
-    // Remove collection entry if status, description, and classNumber are all empty
+    delete data[collectionIdStr].classInstruction;
+    // Remove collection entry if priority, classInstruction, and classNumber are all empty
     if (
-      !data[collectionIdStr].status &&
+      !data[collectionIdStr].priority &&
       !data[collectionIdStr].classNumber
     ) {
       delete data[collectionIdStr];
@@ -190,10 +190,10 @@ export async function setSyllabusClassNumber(
     data[collectionIdStr].classNumber = classNumber;
   } else {
     delete data[collectionIdStr].classNumber;
-    // Remove collection entry if status, description, and classNumber are all empty
+    // Remove collection entry if priority, classInstruction, and classNumber are all empty
     if (
-      !data[collectionIdStr].status &&
-      !data[collectionIdStr].description
+      !data[collectionIdStr].priority &&
+      !data[collectionIdStr].classInstruction
     ) {
       delete data[collectionIdStr];
     }

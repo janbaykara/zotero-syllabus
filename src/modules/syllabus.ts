@@ -4,15 +4,15 @@
 
 import { getLocaleID } from "../utils/locale";
 import {
-  getSyllabusStatus,
-  getSyllabusDescription,
+  getSyllabusPriority,
+  getSyllabusClassInstruction,
   getSyllabusClassNumber,
-  setSyllabusStatus,
-  setSyllabusDescription,
+  setSyllabusPriority,
+  setSyllabusClassInstruction,
   setSyllabusClassNumber,
-  SyllabusStatus,
-  STATUS_COLORS,
-  STATUS_LABELS,
+  SyllabusPriority,
+  PRIORITY_COLORS,
+  PRIORITY_LABELS,
   SYLLABUS_CLASS_NUMBER_FIELD,
 } from "../utils/syllabus";
 
@@ -210,23 +210,23 @@ export class SyllabusManager {
       pane: any,
     ): HTMLElement {
       // Get item data
-      const status = getSyllabusStatus(item, collectionId);
+      const priority = getSyllabusPriority(item, collectionId);
 
       const itemElement = doc.createElement("div");
       itemElement.className = "syllabus-item";
       itemElement.setAttribute("data-item-id", String(item.id));
 
-      // Add subtle background and border coloring based on status
-      if (status && status in STATUS_COLORS) {
-        const statusColor = STATUS_COLORS[status as SyllabusStatus];
+      // Add subtle background and border coloring based on priority
+      if (priority && priority in PRIORITY_COLORS) {
+        const priorityColor = PRIORITY_COLORS[priority as SyllabusPriority];
         // Convert hex to rgba for subtle background (5% opacity) and border (20% opacity)
-        const r = parseInt(statusColor.slice(1, 3), 16);
-        const g = parseInt(statusColor.slice(3, 5), 16);
-        const b = parseInt(statusColor.slice(5, 7), 16);
+        const r = parseInt(priorityColor.slice(1, 3), 16);
+        const g = parseInt(priorityColor.slice(3, 5), 16);
+        const b = parseInt(priorityColor.slice(5, 7), 16);
         itemElement.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.05)`;
         itemElement.style.borderColor = `rgba(${r}, ${g}, ${b}, 0.2)`;
       }
-      const description = getSyllabusDescription(item, collectionId);
+      const classInstruction = getSyllabusClassInstruction(item, collectionId);
       const title = item.getField("title") || "Untitled";
 
       // Get item metadata
@@ -393,7 +393,7 @@ export class SyllabusManager {
       const textContent = doc.createElement("div");
       textContent.className = "syllabus-item-text";
 
-      // Create item title row (just title, no status)
+      // Create item title row (just title, no priority)
       const itemTitleRow = doc.createElement("div");
       itemTitleRow.className = "syllabus-item-title-row";
 
@@ -413,27 +413,27 @@ export class SyllabusManager {
         textContent.appendChild(publicationRow);
       }
 
-      // Add item metadata row (status, type, author, date)
+      // Add item metadata row (priority, type, author, date)
       const metadataRow = doc.createElement("div");
       metadataRow.className = "syllabus-item-metadata";
 
-      // Add status as first item in metadata row
-      if (status && status in STATUS_LABELS) {
-        const statusContainer = doc.createElement("span");
-        statusContainer.className = "syllabus-item-status-inline";
+      // Add priority as first item in metadata row
+      if (priority && priority in PRIORITY_LABELS) {
+        const priorityContainer = doc.createElement("span");
+        priorityContainer.className = "syllabus-item-priority-inline";
 
-        const statusIcon = doc.createElement("span");
-        statusIcon.className = "syllabus-status-icon";
-        statusIcon.style.backgroundColor = STATUS_COLORS[status as SyllabusStatus];
-        statusContainer.appendChild(statusIcon);
+        const priorityIcon = doc.createElement("span");
+        priorityIcon.className = "syllabus-priority-icon";
+        priorityIcon.style.backgroundColor = PRIORITY_COLORS[priority as SyllabusPriority];
+        priorityContainer.appendChild(priorityIcon);
 
-        const statusLabel = doc.createElement("span");
-        statusLabel.className = "syllabus-status-label";
-        statusLabel.textContent = STATUS_LABELS[status as SyllabusStatus];
-        statusLabel.style.color = STATUS_COLORS[status as SyllabusStatus];
-        statusContainer.appendChild(statusLabel);
+        const priorityLabel = doc.createElement("span");
+        priorityLabel.className = "syllabus-priority-label";
+        priorityLabel.textContent = PRIORITY_LABELS[priority as SyllabusPriority];
+        priorityLabel.style.color = PRIORITY_COLORS[priority as SyllabusPriority];
+        priorityContainer.appendChild(priorityLabel);
 
-        metadataRow.appendChild(statusContainer);
+        metadataRow.appendChild(priorityContainer);
       }
 
       const metadataParts: string[] = [];
@@ -465,11 +465,11 @@ export class SyllabusManager {
         textContent.appendChild(referenceRow);
       }
 
-      // Add description if available
-      if (description) {
+      // Add class instruction if available
+      if (classInstruction) {
         const itemDesc = doc.createElement("div");
         itemDesc.className = "syllabus-item-description";
-        itemDesc.textContent = description;
+        itemDesc.textContent = classInstruction;
         textContent.appendChild(itemDesc);
       }
 
@@ -672,19 +672,19 @@ export class SyllabusManager {
           for (const classNumber of sortedClassNumbers) {
             const classItems = itemsByClass.get(classNumber)!;
 
-            // Sort items by status: essential, recommended, optional, none
+            // Sort items by priority: essential, recommended, optional, none
             classItems.sort((a, b) => {
-              const statusA = getSyllabusStatus(a, selectedCollection.id);
-              const statusB = getSyllabusStatus(b, selectedCollection.id);
+              const priorityA = getSyllabusPriority(a, selectedCollection.id);
+              const priorityB = getSyllabusPriority(b, selectedCollection.id);
 
-              const getStatusOrder = (status: SyllabusStatus | "" | undefined): number => {
-                if (status === SyllabusStatus.ESSENTIAL) return 0;
-                if (status === SyllabusStatus.RECOMMENDED) return 1;
-                if (status === SyllabusStatus.OPTIONAL) return 2;
+              const getPriorityOrder = (priority: SyllabusPriority | "" | undefined): number => {
+                if (priority === SyllabusPriority.ESSENTIAL) return 0;
+                if (priority === SyllabusPriority.RECOMMENDED) return 1;
+                if (priority === SyllabusPriority.OPTIONAL) return 2;
                 return 3; // none/undefined/empty string
               };
 
-              return getStatusOrder(statusA) - getStatusOrder(statusB);
+              return getPriorityOrder(priorityA) - getPriorityOrder(priorityB);
             });
 
             // Create class group container
@@ -783,25 +783,25 @@ export class SyllabusUIFactory {
     doc.documentElement?.appendChild(styles);
   }
 
-  static async registerSyllabusStatusColumn() {
-    const field = "syllabus-status";
+  static async registerSyllabusPriorityColumn() {
+    const field = "syllabus-priority";
     // @ts-expect-error - onEdit may not be in types but is supported by Zotero API
     await Zotero.ItemTreeManager.registerColumns({
       pluginID: addon.data.config.addonID,
       dataKey: field,
-      label: "Syllabus Status",
+      label: "Priority",
       dataProvider: (item: Zotero.Item, dataKey: string) => {
         const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
         const selectedCollection = zoteroPane.getSelectedCollection();
 
         if (selectedCollection) {
-          const status = getSyllabusStatus(item, selectedCollection.id);
-          // Return sortable value with status encoded: "0_essential", "1_recommended", etc.
+          const priority = getSyllabusPriority(item, selectedCollection.id);
+          // Return sortable value with priority encoded: "0_essential", "1_recommended", etc.
           // This ensures proper sort order: Essential < Recommended < Optional < Blank
-          // The prefix determines sort order, the suffix is the actual status for display
-          if (status === SyllabusStatus.ESSENTIAL) return "0_essential";
-          if (status === SyllabusStatus.RECOMMENDED) return "1_recommended";
-          if (status === SyllabusStatus.OPTIONAL) return "2_optional";
+          // The prefix determines sort order, the suffix is the actual priority for display
+          if (priority === SyllabusPriority.ESSENTIAL) return "0_essential";
+          if (priority === SyllabusPriority.RECOMMENDED) return "1_recommended";
+          if (priority === SyllabusPriority.OPTIONAL) return "2_optional";
           return "3_"; // empty/blank
         }
 
@@ -809,10 +809,10 @@ export class SyllabusUIFactory {
         return "3_";
       },
       renderCell: (index, data, column, isFirstColumn, doc) => {
-        // Parse the data to extract the status for display
+        // Parse the data to extract the priority for display
         // data format: "0_essential", "1_recommended", "2_optional", or "3_"
         const parts = String(data).split("_");
-        const status = parts.length > 1 ? parts[1] : "";
+        const priority = parts.length > 1 ? parts[1] : "";
 
         const container = doc.createElement("span");
         container.className = `cell ${column.className}`;
@@ -820,20 +820,20 @@ export class SyllabusUIFactory {
         container.style.alignItems = "center";
         container.style.gap = "6px";
 
-        if (status && STATUS_LABELS[status as SyllabusStatus]) {
-          const statusEnum = status as SyllabusStatus;
+        if (priority && PRIORITY_LABELS[priority as SyllabusPriority]) {
+          const priorityEnum = priority as SyllabusPriority;
           // Create colored dot
           const dot = doc.createElement("span");
           dot.style.width = "8px";
           dot.style.height = "8px";
           dot.style.borderRadius = "50%";
-          dot.style.backgroundColor = STATUS_COLORS[statusEnum];
+          dot.style.backgroundColor = PRIORITY_COLORS[priorityEnum];
           dot.style.flexShrink = "0";
           container.appendChild(dot);
 
           // Create text label
           const label = doc.createElement("span");
-          label.textContent = STATUS_LABELS[statusEnum];
+          label.textContent = PRIORITY_LABELS[priorityEnum];
           container.appendChild(label);
         }
 
@@ -844,23 +844,23 @@ export class SyllabusUIFactory {
         const selectedCollection = zoteroPane.getSelectedCollection();
 
         if (!selectedCollection) {
-          ztoolkit.log("No collection selected, cannot update status");
+          ztoolkit.log("No collection selected, cannot update priority");
           return;
         }
 
-        // Validate the status value
+        // Validate the priority value
         if (
           newValue &&
-          ![SyllabusStatus.ESSENTIAL, SyllabusStatus.RECOMMENDED, SyllabusStatus.OPTIONAL].includes(newValue as SyllabusStatus)
+          ![SyllabusPriority.ESSENTIAL, SyllabusPriority.RECOMMENDED, SyllabusPriority.OPTIONAL].includes(newValue as SyllabusPriority)
         ) {
-          ztoolkit.log(`Invalid status value: ${newValue}`);
+          ztoolkit.log(`Invalid priority value: ${newValue}`);
           return;
         }
 
-        await setSyllabusStatus(
+        await setSyllabusPriority(
           item,
           selectedCollection.id,
-          newValue as SyllabusStatus | "",
+          newValue as SyllabusPriority | "",
         );
         await item.saveTx();
 
@@ -870,19 +870,19 @@ export class SyllabusUIFactory {
     });
   }
 
-  static async registerSyllabusDescriptionColumn() {
-    const field = "syllabus-description";
+  static async registerSyllabusClassInstructionColumn() {
+    const field = "syllabus-class-instruction";
     // @ts-expect-error - onEdit may not be in types but is supported by Zotero API
     await Zotero.ItemTreeManager.registerColumns({
       pluginID: addon.data.config.addonID,
       dataKey: field,
-      label: "Syllabus Description",
+      label: "Class Instruction",
       dataProvider: (item: Zotero.Item, dataKey: string) => {
         const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
         const selectedCollection = zoteroPane.getSelectedCollection();
 
         if (selectedCollection) {
-          return getSyllabusDescription(item, selectedCollection.id);
+          return getSyllabusClassInstruction(item, selectedCollection.id);
         }
 
         // If not in a collection view, return empty
@@ -893,11 +893,11 @@ export class SyllabusUIFactory {
         const selectedCollection = zoteroPane.getSelectedCollection();
 
         if (!selectedCollection) {
-          ztoolkit.log("No collection selected, cannot update description");
+          ztoolkit.log("No collection selected, cannot update class instruction");
           return;
         }
 
-        await setSyllabusDescription(item, selectedCollection.id, newValue);
+        await setSyllabusClassInstruction(item, selectedCollection.id, newValue);
         await item.saveTx();
 
         // Refresh the item tree to show the updated value
@@ -922,22 +922,22 @@ export class SyllabusUIFactory {
             item,
             selectedCollection.id,
           );
-          const status = getSyllabusStatus(item, selectedCollection.id);
+          const priority = getSyllabusPriority(item, selectedCollection.id);
 
-          // Get status sort order: 0=essential, 1=recommended, 2=optional, 3=blank
-          let statusOrder = "3"; // default to blank
-          if (status === SyllabusStatus.ESSENTIAL) statusOrder = "0";
-          else if (status === SyllabusStatus.RECOMMENDED) statusOrder = "1";
-          else if (status === SyllabusStatus.OPTIONAL) statusOrder = "2";
+          // Get priority sort order: 0=essential, 1=recommended, 2=optional, 3=blank
+          let priorityOrder = "3"; // default to blank
+          if (priority === SyllabusPriority.ESSENTIAL) priorityOrder = "0";
+          else if (priority === SyllabusPriority.RECOMMENDED) priorityOrder = "1";
+          else if (priority === SyllabusPriority.OPTIONAL) priorityOrder = "2";
 
-          // Return composite sortable value: "classNumber_statusOrder"
+          // Return composite sortable value: "classNumber_priorityOrder"
           // Pad class number to 5 digits for proper numeric sorting (supports up to 99999)
           // Items without class number get "99999" to sort last
           const paddedClassNumber =
             classNumber !== undefined
               ? String(classNumber).padStart(5, "0")
               : "99999";
-          return `${paddedClassNumber}_${statusOrder}`;
+          return `${paddedClassNumber}_${priorityOrder}`;
         }
 
         // If not in a collection view, return empty
@@ -1036,8 +1036,8 @@ export class SyllabusUIFactory {
         }
 
         const collectionId = selectedCollection.id;
-        const currentStatus = getSyllabusStatus(item, collectionId);
-        const currentDescription = getSyllabusDescription(item, collectionId);
+        const currentPriority = getSyllabusPriority(item, collectionId);
+        const currentClassInstruction = getSyllabusClassInstruction(item, collectionId);
         const currentclassNumber = getSyllabusClassNumber(
           item,
           collectionId,
@@ -1094,10 +1094,10 @@ export class SyllabusUIFactory {
           return row;
         };
 
-        // Status dropdown
-        const statusSelect = ztoolkit.UI.createElement(doc, "select", {
+        // Priority dropdown
+        const prioritySelect = ztoolkit.UI.createElement(doc, "select", {
           namespace: "html",
-          id: "syllabus-status-select",
+          id: "syllabus-priority-select",
           attributes: {
             disabled: !editable ? "true" : undefined,
           },
@@ -1112,19 +1112,19 @@ export class SyllabusUIFactory {
         const options = [
           { value: "", label: "(None)" },
           {
-            value: SyllabusStatus.ESSENTIAL,
-            label: STATUS_LABELS[SyllabusStatus.ESSENTIAL],
-            color: STATUS_COLORS[SyllabusStatus.ESSENTIAL],
+            value: SyllabusPriority.ESSENTIAL,
+            label: PRIORITY_LABELS[SyllabusPriority.ESSENTIAL],
+            color: PRIORITY_COLORS[SyllabusPriority.ESSENTIAL],
           },
           {
-            value: SyllabusStatus.RECOMMENDED,
-            label: STATUS_LABELS[SyllabusStatus.RECOMMENDED],
-            color: STATUS_COLORS[SyllabusStatus.RECOMMENDED],
+            value: SyllabusPriority.RECOMMENDED,
+            label: PRIORITY_LABELS[SyllabusPriority.RECOMMENDED],
+            color: PRIORITY_COLORS[SyllabusPriority.RECOMMENDED],
           },
           {
-            value: SyllabusStatus.OPTIONAL,
-            label: STATUS_LABELS[SyllabusStatus.OPTIONAL],
-            color: STATUS_COLORS[SyllabusStatus.OPTIONAL],
+            value: SyllabusPriority.OPTIONAL,
+            label: PRIORITY_LABELS[SyllabusPriority.OPTIONAL],
+            color: PRIORITY_COLORS[SyllabusPriority.OPTIONAL],
           },
         ];
 
@@ -1134,7 +1134,7 @@ export class SyllabusUIFactory {
             properties: {
               value: opt.value,
               innerText: opt.label,
-              selected: opt.value === currentStatus,
+              selected: opt.value === currentPriority,
             },
             styles: opt.color
               ? {
@@ -1143,20 +1143,20 @@ export class SyllabusUIFactory {
               }
               : undefined,
           });
-          statusSelect.appendChild(option);
+          prioritySelect.appendChild(option);
         });
 
         if (editable) {
-          statusSelect.addEventListener("change", async (e) => {
+          prioritySelect.addEventListener("change", async (e) => {
             const target = e.target as HTMLSelectElement;
-            await setSyllabusStatus(item, collectionId, target.value as any);
+            await setSyllabusPriority(item, collectionId, target.value as any);
             await item.saveTx();
             zoteroPane.refresh();
           });
         }
 
-        const statusRow = createFieldRow("Status", statusSelect);
-        container.appendChild(statusRow);
+        const priorityRow = createFieldRow("Priority", prioritySelect);
+        container.appendChild(priorityRow);
 
         // Class number input
         const sessionInput = ztoolkit.UI.createElement(doc, "input", {
@@ -1199,10 +1199,10 @@ export class SyllabusUIFactory {
         const classNumberRow = createFieldRow("Class Number", sessionInput);
         container.appendChild(classNumberRow);
 
-        // Description textarea
-        const descTextarea = ztoolkit.UI.createElement(doc, "textarea", {
+        // Class instruction textarea
+        const classInstructionTextarea = ztoolkit.UI.createElement(doc, "textarea", {
           namespace: "html",
-          id: "syllabus-description-textarea",
+          id: "syllabus-class-instruction-textarea",
           attributes: {
             disabled: !editable ? "true" : undefined,
             rows: "4",
@@ -1219,25 +1219,25 @@ export class SyllabusUIFactory {
         }) as HTMLTextAreaElement;
 
         // Set value after creation
-        descTextarea.value = currentDescription;
+        classInstructionTextarea.value = currentClassInstruction;
 
         if (editable) {
           let saveTimeout: ReturnType<typeof setTimeout> | undefined;
-          descTextarea.addEventListener("input", async () => {
+          classInstructionTextarea.addEventListener("input", async () => {
             // Debounce saves
             if (saveTimeout) {
               clearTimeout(saveTimeout);
             }
             saveTimeout = setTimeout(async () => {
-              await setSyllabusDescription(item, collectionId, descTextarea.value);
+              await setSyllabusClassInstruction(item, collectionId, classInstructionTextarea.value);
               await item.saveTx();
               zoteroPane.refresh();
             }, 500);
           });
         }
 
-        const descriptionRow = createFieldRow("Class Instruction", descTextarea);
-        container.appendChild(descriptionRow);
+        const classInstructionRow = createFieldRow("Instructions", classInstructionTextarea);
+        container.appendChild(classInstructionRow);
 
         body.appendChild(container);
       },

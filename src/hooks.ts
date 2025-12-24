@@ -19,9 +19,9 @@ async function onStartup() {
 
   SyllabusManager.registerNotifier();
 
-  await SyllabusUIFactory.registerSyllabusStatusColumn();
+  await SyllabusUIFactory.registerSyllabusPriorityColumn();
 
-  await SyllabusUIFactory.registerSyllabusDescriptionColumn();
+  await SyllabusUIFactory.registerSyllabusClassInstructionColumn();
 
   await SyllabusUIFactory.registerSyllabusClassNumberColumn();
 
