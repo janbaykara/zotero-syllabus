@@ -11,6 +11,24 @@ export enum SyllabusStatus {
   OPTIONAL = "optional",
 }
 
+/**
+ * Color definitions for syllabus statuses
+ */
+export const STATUS_COLORS: Record<SyllabusStatus, string> = {
+  [SyllabusStatus.ESSENTIAL]: "#8B5CF6", // purple
+  [SyllabusStatus.RECOMMENDED]: "#3B82F6", // blue
+  [SyllabusStatus.OPTIONAL]: "#6B7280", // grey
+};
+
+/**
+ * Human-readable labels for syllabus statuses
+ */
+export const STATUS_LABELS: Record<SyllabusStatus, string> = {
+  [SyllabusStatus.ESSENTIAL]: "Essential",
+  [SyllabusStatus.RECOMMENDED]: "Recommended",
+  [SyllabusStatus.OPTIONAL]: "Optional",
+};
+
 export interface SyllabusData {
   [collectionId: string]: {
     status?: SyllabusStatus;

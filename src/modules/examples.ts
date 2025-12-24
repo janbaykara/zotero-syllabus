@@ -7,6 +7,8 @@ import {
   setSyllabusDescription,
   setSyllabusClassNumber,
   SyllabusStatus,
+  STATUS_COLORS,
+  STATUS_LABELS,
 } from "../utils/syllabus";
 
 function example(
@@ -260,37 +262,26 @@ export class UIExampleFactory {
         const parts = String(data).split("_");
         const status = parts.length > 1 ? parts[1] : "";
 
-        const statusLabels: { [key: string]: string } = {
-          [SyllabusStatus.ESSENTIAL]: "Essential",
-          [SyllabusStatus.RECOMMENDED]: "Recommended",
-          [SyllabusStatus.OPTIONAL]: "Optional",
-        };
-
-        const statusColors: { [key: string]: string } = {
-          [SyllabusStatus.ESSENTIAL]: "#8B5CF6", // purple
-          [SyllabusStatus.RECOMMENDED]: "#3B82F6", // blue
-          [SyllabusStatus.OPTIONAL]: "#6B7280", // grey
-        };
-
         const container = doc.createElement("span");
         container.className = `cell ${column.className}`;
         container.style.display = "flex";
         container.style.alignItems = "center";
         container.style.gap = "6px";
 
-        if (status && statusLabels[status]) {
+        if (status && STATUS_LABELS[status as SyllabusStatus]) {
+          const statusEnum = status as SyllabusStatus;
           // Create colored dot
           const dot = doc.createElement("span");
           dot.style.width = "8px";
           dot.style.height = "8px";
           dot.style.borderRadius = "50%";
-          dot.style.backgroundColor = statusColors[status] || "#6B7280";
+          dot.style.backgroundColor = STATUS_COLORS[statusEnum];
           dot.style.flexShrink = "0";
           container.appendChild(dot);
 
           // Create text label
           const label = doc.createElement("span");
-          label.textContent = statusLabels[status];
+          label.textContent = STATUS_LABELS[statusEnum];
           container.appendChild(label);
         }
 
@@ -561,9 +552,21 @@ export class UIExampleFactory {
 
         const options = [
           { value: "", label: "(None)" },
-          { value: SyllabusStatus.ESSENTIAL, label: "Essential" },
-          { value: SyllabusStatus.RECOMMENDED, label: "Recommended" },
-          { value: SyllabusStatus.OPTIONAL, label: "Optional" },
+          {
+            value: SyllabusStatus.ESSENTIAL,
+            label: STATUS_LABELS[SyllabusStatus.ESSENTIAL],
+            color: STATUS_COLORS[SyllabusStatus.ESSENTIAL],
+          },
+          {
+            value: SyllabusStatus.RECOMMENDED,
+            label: STATUS_LABELS[SyllabusStatus.RECOMMENDED],
+            color: STATUS_COLORS[SyllabusStatus.RECOMMENDED],
+          },
+          {
+            value: SyllabusStatus.OPTIONAL,
+            label: STATUS_LABELS[SyllabusStatus.OPTIONAL],
+            color: STATUS_COLORS[SyllabusStatus.OPTIONAL],
+          },
         ];
 
         options.forEach((opt) => {
@@ -574,6 +577,12 @@ export class UIExampleFactory {
               innerText: opt.label,
               selected: opt.value === currentStatus,
             },
+            styles: opt.color
+              ? {
+                color: opt.color,
+                fontWeight: "500",
+              }
+              : undefined,
           });
           statusSelect.appendChild(option);
         });
