@@ -66,6 +66,34 @@
   color: #1a1a1a;
   margin-bottom: 24px;
   line-height: 1.2;
+  cursor: text;
+  padding: 4px 8px;
+  margin-left: -8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  font-family: inherit;
+  box-sizing: border-box;
+  resize: none;
+  overflow-y: hidden;
+  overflow-x: hidden;
+  min-height: 1.2em;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  vertical-align: top;
+}
+
+.syllabus-view-title:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.syllabus-view-title:focus {
+  outline: 2px solid rgba(0, 123, 255, 0.5);
+  outline-offset: 2px;
+  background-color: rgba(0, 123, 255, 0.05);
 }
 
 .syllabus-class-group {
