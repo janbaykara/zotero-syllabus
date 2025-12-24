@@ -545,9 +545,6 @@
 
   .syllabus-view-title-container {
     background: #1c1c1e;
-    position: sticky;
-    top: 0;
-    z-index: 10;
   }
 
   .syllabus-view-title {
@@ -596,11 +593,6 @@
 
   .syllabus-class-header-container {
     background: #1c1c1e;
-    position: sticky;
-    top: 48px; /* Below collection title */
-    z-index: 5;
-    padding: 8px 8px 4px 8px;
-    margin: 0 -8px;
   }
 
   .syllabus-class-header {
@@ -724,9 +716,6 @@
 #main-window[data-theme="dark"] .syllabus-view-title-container,
 #main-window.dark .syllabus-view-title-container {
   background: #1c1c1e;
-  position: sticky;
-  top: 0;
-  z-index: 10;
 }
 
 :root[data-theme="dark"] .syllabus-view-title,
