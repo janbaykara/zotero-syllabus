@@ -1047,26 +1047,54 @@ export class SyllabusUIFactory {
         const container = ztoolkit.UI.createElement(doc, "div", {
           namespace: "html",
           styles: {
-            padding: "10px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "15px",
+            display: "grid",
+            gridTemplateColumns: "max-content 1fr",
+            columnGap: "18px",
+            rowGap: "10px",
           },
         });
+
+        // Helper function to create a two-column field row
+        const createFieldRow = (
+          labelText: string,
+          inputElement: HTMLElement,
+        ) => {
+          const row = ztoolkit.UI.createElement(doc, "div", {
+            namespace: "html",
+            styles: {
+              display: "grid",
+              gridTemplateColumns: "subgrid",
+              gridColumn: "span 2",
+            },
+          });
+
+          const label = ztoolkit.UI.createElement(doc, "label", {
+            namespace: "html",
+            properties: {
+              innerText: labelText,
+            },
+            styles: {
+              fontWeight: "normal",
+              textAlign: "end",
+              color: "var(--fill-secondary)",
+            },
+          });
+          row.appendChild(label);
+
+          const inputContainer = ztoolkit.UI.createElement(doc, "div", {
+            namespace: "html",
+            styles: {
+              flex: "1",
+              minWidth: "0",
+            },
+          });
+          inputContainer.appendChild(inputElement);
+          row.appendChild(inputContainer);
+
+          return row;
+        };
 
         // Status dropdown
-        const statusLabel = ztoolkit.UI.createElement(doc, "label", {
-          namespace: "html",
-          properties: {
-            innerText: "Status:",
-          },
-          styles: {
-            fontWeight: "bold",
-            marginBottom: "5px",
-          },
-        });
-        container.appendChild(statusLabel);
-
         const statusSelect = ztoolkit.UI.createElement(doc, "select", {
           namespace: "html",
           id: "syllabus-status-select",
@@ -1077,6 +1105,7 @@ export class SyllabusUIFactory {
             padding: "5px",
             fontSize: "13px",
             width: "100%",
+            margin: "0",
           },
         });
 
@@ -1126,22 +1155,10 @@ export class SyllabusUIFactory {
           });
         }
 
-        container.appendChild(statusSelect);
+        const statusRow = createFieldRow("Status", statusSelect);
+        container.appendChild(statusRow);
 
-        // Session number input
-        const sessionLabel = ztoolkit.UI.createElement(doc, "label", {
-          namespace: "html",
-          properties: {
-            innerText: "Class No.:",
-          },
-          styles: {
-            fontWeight: "bold",
-            marginTop: "10px",
-            marginBottom: "5px",
-          },
-        });
-        container.appendChild(sessionLabel);
-
+        // Class number input
         const sessionInput = ztoolkit.UI.createElement(doc, "input", {
           namespace: "html",
           id: "syllabus-class-number-input",
@@ -1156,9 +1173,11 @@ export class SyllabusUIFactory {
             value: currentclassNumber?.toString() || "",
           },
           styles: {
-            padding: "5px",
+            textAlign: "start",
+            border: "none",
             fontSize: "13px",
             width: "100%",
+            margin: "0"
           },
         }) as HTMLInputElement;
 
@@ -1177,22 +1196,10 @@ export class SyllabusUIFactory {
           });
         }
 
-        container.appendChild(sessionInput);
+        const classNumberRow = createFieldRow("Class Number", sessionInput);
+        container.appendChild(classNumberRow);
 
         // Description textarea
-        const descLabel = ztoolkit.UI.createElement(doc, "label", {
-          namespace: "html",
-          properties: {
-            innerText: "Description:",
-          },
-          styles: {
-            fontWeight: "bold",
-            marginTop: "10px",
-            marginBottom: "5px",
-          },
-        });
-        container.appendChild(descLabel);
-
         const descTextarea = ztoolkit.UI.createElement(doc, "textarea", {
           namespace: "html",
           id: "syllabus-description-textarea",
@@ -1201,7 +1208,9 @@ export class SyllabusUIFactory {
             rows: "4",
           },
           styles: {
-            padding: "5px",
+            padding: "0",
+            margin: "0",
+            border: "none",
             fontSize: "13px",
             width: "100%",
             resize: "vertical",
@@ -1227,7 +1236,8 @@ export class SyllabusUIFactory {
           });
         }
 
-        container.appendChild(descTextarea);
+        const descriptionRow = createFieldRow("Class Instruction", descTextarea);
+        container.appendChild(descriptionRow);
 
         body.appendChild(container);
       },

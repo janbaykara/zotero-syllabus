@@ -241,3 +241,34 @@
 #syllabus-view-toggle {
   min-width: 120px;
 }
+
+/* Item Pane Section Styles */
+/* Style the syllabus item pane section to match Zotero's native item pane layout */
+#zotero-item-pane-content [data-section-id="syllabus"] label {
+  color: #333;
+  text-align: right;
+}
+
+#zotero-item-pane-content [data-section-id="syllabus"] select,
+#zotero-item-pane-content [data-section-id="syllabus"] input,
+#zotero-item-pane-content [data-section-id="syllabus"] textarea {
+  border: 1px solid #d0d0d0;
+  border-radius: 2px;
+  background-color: #fff;
+}
+
+#zotero-item-pane-content [data-section-id="syllabus"] select:focus,
+#zotero-item-pane-content [data-section-id="syllabus"] input:focus,
+#zotero-item-pane-content [data-section-id="syllabus"] textarea:focus {
+  border-color: #0060df;
+  outline: none;
+  box-shadow: 0 0 0 1px #0060df;
+}
+
+#zotero-item-pane-content [data-section-id="syllabus"] select:disabled,
+#zotero-item-pane-content [data-section-id="syllabus"] input:disabled,
+#zotero-item-pane-content [data-section-id="syllabus"] textarea:disabled {
+  background-color: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+}
