@@ -64,7 +64,7 @@
   font-size: 24px;
   font-weight: 600;
   color: #1a1a1a;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   line-height: 1.2;
   cursor: text;
   padding: 4px 8px;
@@ -100,7 +100,7 @@
   font-size: 16px;
   font-weight: 400;
   color: #555;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   line-height: 1.5;
   cursor: text;
   padding: 4px 8px;
@@ -136,8 +136,7 @@
   font-size: 18px;
   font-weight: 500;
   color: #333;
-  margin-top: 4px;
-  margin-bottom: 4px;
+  margin: 0;
   line-height: 1.3;
   cursor: text;
   padding: 4px 8px;
@@ -147,7 +146,8 @@
   border: none;
   background: transparent;
   outline: none;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   font-family: inherit;
   box-sizing: border-box;
   resize: none;
@@ -173,8 +173,8 @@
   font-size: 14px;
   font-weight: 400;
   color: #666;
-  margin-top: 2px;
-  margin-bottom: 12px;
+  margin-top: 0px;
+  margin-bottom: 8px;
   line-height: 1.5;
   cursor: text;
   padding: 4px 8px;
@@ -210,14 +210,22 @@
   margin-bottom: 40px;
 }
 
+.syllabus-class-header-container {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
 .syllabus-class-header {
   font-size: 16px;
   font-weight: 600;
   color: #666;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  padding: 8px 0;
-  margin-bottom: 12px;
+  flex-shrink: 0;
+  padding: 0;
+  margin: 0;
 }
 
 .syllabus-class-items {
@@ -226,6 +234,12 @@
   gap: 12px;
   min-height: 20px;
   transition: background-color 0.2s ease;
+  margin-top: 8px;
+}
+
+/* Add extra spacing for "Further reading" section items */
+.syllabus-further-reading-items {
+  margin-top: 12px;
 }
 
 .syllabus-class-items.syllabus-dropzone-active {
@@ -550,6 +564,10 @@
 
   .syllabus-class-description:focus {
     background-color: rgba(0, 123, 255, 0.1);
+  }
+
+  .syllabus-class-header-container {
+    /* Container styles for dark mode */
   }
 
   .syllabus-class-header {

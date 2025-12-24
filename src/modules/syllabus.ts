@@ -1114,7 +1114,7 @@ export class SyllabusManager {
             onSave: async (newDescription: string) => {
               await setCollectionDescription(selectedCollection.id, newDescription);
             },
-            placeholder: "Add a description for this collection...",
+            placeholder: "Add a description...",
             emptyBehavior: "delete", // Collection description deletes when cleared
           });
 
@@ -1196,22 +1196,28 @@ export class SyllabusManager {
 
             // Add class header (only for items with a class number)
             if (classNumber !== null) {
+              // Create header container with class number and title on same line
+              const classHeaderContainer = doc.createElement("div");
+              classHeaderContainer.className = "syllabus-class-header-container";
+
               const classHeader = doc.createElement("div");
               classHeader.className = "syllabus-class-header";
               classHeader.textContent = `Class ${classNumber}`;
-              classGroup.appendChild(classHeader);
+              classHeaderContainer.appendChild(classHeader);
 
-              // Add class title field
+              // Add class title field on same line
               const classTitleElement = createEditableTextInput(doc, {
                 className: "syllabus-class-title",
                 initialValue: getClassTitle(selectedCollection.id, classNumber),
                 onSave: async (newTitle: string) => {
                   await setClassTitle(selectedCollection.id, classNumber, newTitle);
                 },
-                placeholder: "Add a title for this class...",
+                placeholder: "Add a title...",
                 emptyBehavior: "delete", // Class title deletes when cleared
               });
-              classGroup.appendChild(classTitleElement);
+              classHeaderContainer.appendChild(classTitleElement);
+
+              classGroup.appendChild(classHeaderContainer);
 
               // Add class description field
               const classDescriptionElement = createEditableTextInput(doc, {
@@ -1220,7 +1226,7 @@ export class SyllabusManager {
                 onSave: async (newDescription: string) => {
                   await setClassDescription(selectedCollection.id, classNumber, newDescription);
                 },
-                placeholder: "Add a description for this class...",
+                placeholder: "Add a description...",
                 emptyBehavior: "delete", // Class description deletes when cleared
               });
               classGroup.appendChild(classDescriptionElement);
@@ -1343,7 +1349,7 @@ export class SyllabusManager {
 
             // Add items container
             const furtherReadingItemsContainer = doc.createElement("div");
-            furtherReadingItemsContainer.className = "syllabus-class-items";
+            furtherReadingItemsContainer.className = "syllabus-class-items syllabus-further-reading-items";
             furtherReadingItemsContainer.setAttribute("data-class-number", "");
 
             // Make itemsContainer a drop zone
