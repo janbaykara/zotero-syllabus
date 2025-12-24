@@ -74,42 +74,41 @@ export class BasicExampleFactory {
       return; // Already set up
     }
 
-    // Function to add header rows for class groups
-    function addClassGroupHeaders() {
+    // Function to update class group headers (both setup and cleanup)
+    // This function handles both adding headers when sorted by class number
+    // and removing them when sorted by other fields
+    function updateClassGroupHeaders() {
       try {
         const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-        const selectedCollection = zoteroPane.getSelectedCollection();
-
-        if (!selectedCollection || !zoteroPane.itemsView) {
-          ztoolkit.log(`No selected collection or items view`);
-          return;
-        }
-
-        // find out sort order
-        const sortOrder = zoteroPane.getSortField();
-        const itemsView = zoteroPane.itemsView;
-        const rowCount = itemsView.rowCount;
-
-        ztoolkit.log(`looping over rowCount: ${rowCount}`);
-
-        // Track which rows we've already processed to avoid duplicates
-        // const processedRows = new Set<number>();
-
-        // Go through rows and add headers before class group starts
         const w = Zotero.getMainWindow();
         const doc = w.document;
 
-        // First, remove all data-row-class-number attributes if not sorted by class number
-        if (!sortOrder || !sortOrder.endsWith(SYLLABUS_CLASS_NUMBER_FIELD)) {
-          // Remove all data-row-class-number attributes from all rows
-          const allRows = doc.querySelectorAll(
-            "#zotero-items-tree .row[data-row-class-number]",
-          );
-          allRows.forEach((row: Element) => {
-            row.removeAttribute("data-row-class-number");
-          });
+        // Always start by cleaning up: remove all data-row-class-number attributes
+        // This ensures headers are removed when not sorted by class number
+        const allRows = doc.querySelectorAll(
+          "#zotero-items-tree .row[data-row-class-number]",
+        );
+        allRows.forEach((row: Element) => {
+          row.removeAttribute("data-row-class-number");
+        });
+
+        // Now check if we should add headers
+        const selectedCollection = zoteroPane.getSelectedCollection();
+        if (!selectedCollection || !zoteroPane.itemsView) {
+          // No collection or items view - cleanup is done, exit
           return;
         }
+
+        // Check sort order - only show headers when sorted by class number field
+        const sortOrder = zoteroPane.getSortField();
+        if (!sortOrder || !sortOrder.endsWith(SYLLABUS_CLASS_NUMBER_FIELD)) {
+          // Not sorted by class number - cleanup already done, exit
+          return;
+        }
+
+        // We're sorted by class number, so add headers
+        const itemsView = zoteroPane.itemsView;
+        const rowCount = itemsView.rowCount;
 
         // Track the previous class number to detect group boundaries
         let prevClassNumber: number | undefined = undefined;
@@ -153,9 +152,6 @@ export class BasicExampleFactory {
                 "data-row-class-number",
                 classNumber.toString(),
               );
-            } else if (domRow) {
-              // Remove the attribute if this row shouldn't have a header
-              domRow.removeAttribute("data-row-class-number");
             }
 
             // Update previous class number for next iteration
@@ -166,13 +162,13 @@ export class BasicExampleFactory {
           }
         }
       } catch (e) {
-        ztoolkit.log("Error in addClassGroupHeaders:", e);
+        ztoolkit.log("Error in updateClassGroupHeaders:", e);
       }
     };
 
-    // Add headers after a short delay on startup
+    // Update headers after a short delay on startup
     Zotero.Promise.delay(500).then(() => {
-      addClassGroupHeaders();
+      updateClassGroupHeaders();
     });
 
     const win = Zotero.getMainWindow();
@@ -187,11 +183,11 @@ export class BasicExampleFactory {
     if (zoteroPane?.itemsView) {
       const originalRefresh = zoteroPane.itemsView.refresh;
       if (originalRefresh && !(originalRefresh as any)._syllabusWrapped) {
-        // Patching refresh method to add class group headers
+        // Patching refresh method to update class group headers
         const wrappedRefresh = function (this: any, ...args: any[]) {
           const result = originalRefresh.apply(this, args);
           Zotero.Promise.delay(100).then(() => {
-            addClassGroupHeaders();
+            updateClassGroupHeaders();
           });
           return result;
         };
@@ -210,7 +206,7 @@ export class BasicExampleFactory {
       const wrappedSetSortField = function (this: any, ...args: any[]) {
         const result = originalSetSortField.apply(this, args);
         Zotero.Promise.delay(150).then(() => {
-          addClassGroupHeaders();
+          updateClassGroupHeaders();
         });
         return result;
       };
@@ -233,7 +229,7 @@ export class BasicExampleFactory {
             target.closest("treecol")
           ) {
             Zotero.Promise.delay(150).then(() => {
-              addClassGroupHeaders();
+              updateClassGroupHeaders();
             });
           }
         },
@@ -245,7 +241,7 @@ export class BasicExampleFactory {
         "command",
         () => {
           Zotero.Promise.delay(150).then(() => {
-            addClassGroupHeaders();
+            updateClassGroupHeaders();
           });
         },
         true,
