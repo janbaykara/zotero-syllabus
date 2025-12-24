@@ -274,7 +274,8 @@ export class SyllabusManager {
 
       // Add small thumbnail image on the left
       const thumbnailContainer = doc.createElement("div");
-      thumbnailContainer.className = "syllabus-item-thumbnail syllabus-item-thumbnail-slim";
+      thumbnailContainer.className =
+        "syllabus-item-thumbnail syllabus-item-thumbnail-slim";
 
       // Try to get item image/thumbnail
       let imageSrc: string | null = null;
@@ -1054,7 +1055,12 @@ export class SyllabusManager {
               // Use slim card for items without priority, full card for items with priority
               const itemElement = priority
                 ? createSyllabusItemCard(doc, item, selectedCollection.id, pane)
-                : createSyllabusItemCardSlim(doc, item, selectedCollection.id, pane);
+                : createSyllabusItemCardSlim(
+                    doc,
+                    item,
+                    selectedCollection.id,
+                    pane,
+                  );
               itemsContainer.appendChild(itemElement);
             }
 
@@ -1087,60 +1093,76 @@ export class SyllabusManager {
             furtherReadingItemsContainer.setAttribute("data-class-number", "");
 
             // Make itemsContainer a drop zone
-            furtherReadingItemsContainer.addEventListener("dragover", (e: DragEvent) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (e.dataTransfer) {
-                e.dataTransfer.dropEffect = "move";
-              }
-              furtherReadingItemsContainer.classList.add("syllabus-dropzone-active");
-            });
-
-            furtherReadingItemsContainer.addEventListener("dragleave", (e: DragEvent) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const rect = furtherReadingItemsContainer.getBoundingClientRect();
-              const x = e.clientX;
-              const y = e.clientY;
-              if (
-                x < rect.left ||
-                x > rect.right ||
-                y < rect.top ||
-                y > rect.bottom
-              ) {
-                furtherReadingItemsContainer.classList.remove("syllabus-dropzone-active");
-              }
-            });
-
-            furtherReadingItemsContainer.addEventListener("drop", async (e: DragEvent) => {
-              e.preventDefault();
-              e.stopPropagation();
-              furtherReadingItemsContainer.classList.remove("syllabus-dropzone-active");
-
-              const itemIdStr = e.dataTransfer?.getData("text/plain");
-              if (!itemIdStr) return;
-
-              const itemId = parseInt(itemIdStr, 10);
-              if (isNaN(itemId)) return;
-
-              try {
-                const draggedItem = Zotero.Items.get(itemId);
-                if (!draggedItem || !draggedItem.isRegularItem()) return;
-
-                // Remove class number (set to undefined) to keep item in "Further reading"
-                await setSyllabusClassNumber(
-                  draggedItem,
-                  selectedCollection.id,
-                  undefined,
+            furtherReadingItemsContainer.addEventListener(
+              "dragover",
+              (e: DragEvent) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (e.dataTransfer) {
+                  e.dataTransfer.dropEffect = "move";
+                }
+                furtherReadingItemsContainer.classList.add(
+                  "syllabus-dropzone-active",
                 );
-                await draggedItem.saveTx();
+              },
+            );
 
-                // Re-render the view to reflect the change
-                renderCustomSyllabusView();
-              } catch (err) {
-                ztoolkit.log("Error handling drop:", err);
-              }
-            });
+            furtherReadingItemsContainer.addEventListener(
+              "dragleave",
+              (e: DragEvent) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const rect =
+                  furtherReadingItemsContainer.getBoundingClientRect();
+                const x = e.clientX;
+                const y = e.clientY;
+                if (
+                  x < rect.left ||
+                  x > rect.right ||
+                  y < rect.top ||
+                  y > rect.bottom
+                ) {
+                  furtherReadingItemsContainer.classList.remove(
+                    "syllabus-dropzone-active",
+                  );
+                }
+              },
+            );
+
+            furtherReadingItemsContainer.addEventListener(
+              "drop",
+              async (e: DragEvent) => {
+                e.preventDefault();
+                e.stopPropagation();
+                furtherReadingItemsContainer.classList.remove(
+                  "syllabus-dropzone-active",
+                );
+
+                const itemIdStr = e.dataTransfer?.getData("text/plain");
+                if (!itemIdStr) return;
+
+                const itemId = parseInt(itemIdStr, 10);
+                if (isNaN(itemId)) return;
+
+                try {
+                  const draggedItem = Zotero.Items.get(itemId);
+                  if (!draggedItem || !draggedItem.isRegularItem()) return;
+
+                  // Remove class number (set to undefined) to keep item in "Further reading"
+                  await setSyllabusClassNumber(
+                    draggedItem,
+                    selectedCollection.id,
+                    undefined,
+                  );
+                  await draggedItem.saveTx();
+
+                  // Re-render the view to reflect the change
+                  renderCustomSyllabusView();
+                } catch (err) {
+                  ztoolkit.log("Error handling drop:", err);
+                }
+              },
+            );
 
             // Add all further reading items (all should be slim cards since they have no priority)
             for (const item of furtherReadingItems) {
@@ -1619,9 +1641,9 @@ export class SyllabusUIFactory {
             },
             styles: opt.color
               ? {
-                color: opt.color,
-                fontWeight: "500",
-              }
+                  color: opt.color,
+                  fontWeight: "500",
+                }
               : undefined,
           });
           prioritySelect.appendChild(option);
