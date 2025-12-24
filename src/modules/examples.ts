@@ -266,10 +266,35 @@ export class UIExampleFactory {
           [SyllabusStatus.OPTIONAL]: "Optional",
         };
 
-        const span = doc.createElement("span");
-        span.className = `cell ${column.className}`;
-        span.textContent = status ? statusLabels[status] || "" : "";
-        return span;
+        const statusColors: { [key: string]: string } = {
+          [SyllabusStatus.ESSENTIAL]: "#8B5CF6", // purple
+          [SyllabusStatus.RECOMMENDED]: "#3B82F6", // blue
+          [SyllabusStatus.OPTIONAL]: "#6B7280", // grey
+        };
+
+        const container = doc.createElement("span");
+        container.className = `cell ${column.className}`;
+        container.style.display = "flex";
+        container.style.alignItems = "center";
+        container.style.gap = "6px";
+
+        if (status && statusLabels[status]) {
+          // Create colored dot
+          const dot = doc.createElement("span");
+          dot.style.width = "8px";
+          dot.style.height = "8px";
+          dot.style.borderRadius = "50%";
+          dot.style.backgroundColor = statusColors[status] || "#6B7280";
+          dot.style.flexShrink = "0";
+          container.appendChild(dot);
+
+          // Create text label
+          const label = doc.createElement("span");
+          label.textContent = statusLabels[status];
+          container.appendChild(label);
+        }
+
+        return container;
       },
       onEdit: async (item: Zotero.Item, dataKey: string, newValue: string) => {
         const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
