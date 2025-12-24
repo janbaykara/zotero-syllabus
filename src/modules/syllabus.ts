@@ -142,7 +142,28 @@ export class SyllabusManager {
       const updateButtonLabel = (button: XUL.Checkbox) => {
         const isEnabled = button.checked;
         // Label should reflect what will happen when clicked (opposite of current state)
-        button.label = isEnabled ? "List View" : "Syllabus View";
+        // Render button inner HTML with icon + label based on state
+        const listIcon = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="vertical-align:middle;">
+            <rect x="2" y="3" width="12" height="2" fill="currentColor"/>
+            <rect x="2" y="7" width="12" height="2" fill="currentColor"/>
+            <rect x="2" y="11" width="12" height="2" fill="currentColor"/>
+          </svg>
+        `;
+
+        const bookIcon = `
+          <image xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" width="16" height="16" src="chrome://zotero/skin/20/universal/book.svg"/>
+        `
+
+        const icon = isEnabled
+          ? listIcon
+          : bookIcon;
+
+        const label = isEnabled
+          ? `View as list`
+          : `View as syllabus`;
+
+        button.innerHTML = `${icon} <label xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" class="toolbarbutton-text" crop="end" flex="1">${label}</label>`;
         button.tooltipText = isEnabled
           ? "Switch to List View"
           : "Switch to Syllabus View";
@@ -154,8 +175,7 @@ export class SyllabusManager {
 
       if (!toggleButton) {
         // Create toggle button
-        toggleButton = ztoolkit.UI.createElement(doc, "button", {
-          namespace: "xul",
+        toggleButton = ztoolkit.UI.createElement(doc, "toolbarbutton", {
           id: "syllabus-view-toggle",
           classList: ["toolbarbutton-1"],
           properties: {
@@ -1290,6 +1310,7 @@ export class SyllabusUIFactory {
       tag: "menu",
       id: "syllabus-set-priority-menu",
       label: "Set Priority",
+      icon: "chrome://zotero/skin/16/universal/book.svg",
       children: [
         {
           tag: "menuitem",
@@ -1484,7 +1505,8 @@ export class SyllabusUIFactory {
       ztoolkit.Menu.register("item", {
         tag: "menu",
         id: "syllabus-reassign-class-number-menu",
-        label: "Re-assign Class Number",
+        icon: "chrome://zotero/skin/16/universal/book.svg",
+        label: "Set Class Number",
         children: buildClassNumberChildren(),
       });
     };
@@ -1492,12 +1514,7 @@ export class SyllabusUIFactory {
     // Store the update handler for this window so it can be called when items are updated
     classNumberMenuUpdateHandlers.set(win, updateMenuHandler);
 
-    ztoolkit.Menu.register("item", {
-      tag: "menu",
-      id: "syllabus-reassign-class-number-menu",
-      label: "Re-assign Class Number",
-      children: buildClassNumberChildren(),
-    });
+    updateMenuHandler();
   }
 }
 
