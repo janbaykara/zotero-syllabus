@@ -103,6 +103,7 @@ async function onMainWindowUnload(win: Window): Promise<void> {
   addon.data.dialog?.window?.close();
   ztoolkit.log("onMainWindowUnload->setupSyllabusView");
   SyllabusManager.setupSyllabusView();
+  SyllabusManager.unregisterClassNumberMenu(win);
 }
 
 function onShutdown(): void {
@@ -127,6 +128,11 @@ async function onNotify(
 
   ztoolkit.log("onNotify->setupSyllabusView");
   SyllabusManager.setupSyllabusView();
+
+  // Update class number menu when items are modified
+  if (type === "item" && (event === "modify" || event === "add")) {
+    SyllabusManager.updateClassNumberMenus();
+  }
 }
 
 /**

@@ -17,6 +17,7 @@ import {
 } from "../utils/syllabus";
 
 let notifierID: string | null = null;
+const classNumberMenuUpdateHandlers: Map<Window, () => void> = new Map();
 
 export class SyllabusManager {
   static registerNotifier() {
@@ -760,6 +761,22 @@ export class SyllabusManager {
     }
   }
 
+  static updateClassNumberMenus() {
+    // Update the class number menu for all windows when items are updated
+    for (const updateHandler of classNumberMenuUpdateHandlers.values()) {
+      try {
+        updateHandler();
+      } catch (e) {
+        ztoolkit.log("Error updating class number menu:", e);
+      }
+    }
+  }
+
+  static unregisterClassNumberMenu(win: Window) {
+    // Remove the update handler when a window is unloaded
+    classNumberMenuUpdateHandlers.delete(win);
+  }
+
   static registerPrefs() {
     Zotero.PreferencePanes.register({
       pluginID: addon.data.config.addonID,
@@ -865,7 +882,10 @@ export class SyllabusUIFactory {
         await item.saveTx();
 
         // Refresh the item tree to show the updated value
-        zoteroPane.refresh();
+        const itemPane = zoteroPane.itemPane;
+        if (itemPane) {
+          itemPane.render()
+        }
       },
     });
   }
@@ -901,7 +921,11 @@ export class SyllabusUIFactory {
         await item.saveTx();
 
         // Refresh the item tree to show the updated value
-        zoteroPane.refresh();
+
+        const itemPane = zoteroPane.itemPane;
+        if (itemPane) {
+          itemPane.render()
+        }
       },
     });
   }
@@ -989,7 +1013,11 @@ export class SyllabusUIFactory {
         await item.saveTx();
 
         // Refresh the item tree to show the updated value
-        zoteroPane.refresh();
+
+        const itemPane = zoteroPane.itemPane;
+        if (itemPane) {
+          itemPane.render()
+        }
       },
     });
   }
@@ -1151,7 +1179,11 @@ export class SyllabusUIFactory {
             const target = e.target as HTMLSelectElement;
             await setSyllabusPriority(item, collectionId, target.value as any);
             await item.saveTx();
-            zoteroPane.refresh();
+
+            const itemPane = zoteroPane.itemPane;
+            if (itemPane) {
+              itemPane.render()
+            }
           });
         }
 
@@ -1192,7 +1224,11 @@ export class SyllabusUIFactory {
             }
             await setSyllabusClassNumber(item, collectionId, sessionNum);
             await item.saveTx();
-            zoteroPane.refresh();
+
+            const itemPane = zoteroPane.itemPane;
+            if (itemPane) {
+              itemPane.render()
+            }
           });
         }
 
@@ -1231,7 +1267,11 @@ export class SyllabusUIFactory {
             saveTimeout = setTimeout(async () => {
               await setSyllabusClassInstruction(item, collectionId, classInstructionTextarea.value);
               await item.saveTx();
-              zoteroPane.refresh();
+
+              const itemPane = zoteroPane.itemPane;
+              if (itemPane) {
+                itemPane.render()
+              }
             }, 500);
           });
         }
@@ -1266,7 +1306,11 @@ export class SyllabusUIFactory {
                 await item.saveTx();
               }
             }
-            zoteroPane.refresh();
+
+            const itemPane = zoteroPane.itemPane;
+            if (itemPane) {
+              itemPane.render()
+            }
           },
         },
         {
@@ -1284,7 +1328,11 @@ export class SyllabusUIFactory {
                 await item.saveTx();
               }
             }
-            zoteroPane.refresh();
+
+            const itemPane = zoteroPane.itemPane;
+            if (itemPane) {
+              itemPane.render()
+            }
           },
         },
         {
@@ -1302,7 +1350,11 @@ export class SyllabusUIFactory {
                 await item.saveTx();
               }
             }
-            zoteroPane.refresh();
+
+            const itemPane = zoteroPane.itemPane;
+            if (itemPane) {
+              itemPane.render()
+            }
           },
         },
         {
@@ -1323,7 +1375,11 @@ export class SyllabusUIFactory {
                 await item.saveTx();
               }
             }
-            zoteroPane.refresh();
+
+            const itemPane = zoteroPane.itemPane;
+            if (itemPane) {
+              itemPane.render()
+            }
           },
         },
       ],
@@ -1378,7 +1434,11 @@ export class SyllabusUIFactory {
                 await item.saveTx();
               }
             }
-            zoteroPane.refresh();
+
+            const itemPane = zoteroPane.itemPane;
+            if (itemPane) {
+              itemPane.render()
+            }
           },
         });
       }
@@ -1406,7 +1466,11 @@ export class SyllabusUIFactory {
               await item.saveTx();
             }
           }
-          zoteroPane.refresh();
+
+          const itemPane = zoteroPane.itemPane;
+          if (itemPane) {
+            itemPane.render()
+          }
         },
       });
 
@@ -1423,18 +1487,10 @@ export class SyllabusUIFactory {
         label: "Re-assign Class Number",
         children: buildClassNumberChildren(),
       });
-
-      // Re-attach the listener to the new menu element
-      const doc = win.document;
-      if (doc) {
-        setTimeout(() => {
-          const newMenuElement = doc.getElementById("syllabus-reassign-class-number-menu") as XUL.Menu;
-          if (newMenuElement) {
-            newMenuElement.addEventListener("popupshowing", updateMenuHandler);
-          }
-        }, 10);
-      }
     };
+
+    // Store the update handler for this window so it can be called when items are updated
+    classNumberMenuUpdateHandlers.set(win, updateMenuHandler);
 
     ztoolkit.Menu.register("item", {
       tag: "menu",
