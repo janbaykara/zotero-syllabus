@@ -35,7 +35,7 @@ This plugin is built using the [Zotero Plugin Template](https://github.com/windi
 
 2. Install dependencies:
    ```bash
-   npm install
+   pnpm install
    ```
 
 3. Configure environment:
@@ -46,14 +46,14 @@ This plugin is built using the [Zotero Plugin Template](https://github.com/windi
 
 4. Start development:
    ```bash
-   npm start
+   pnpm start
    ```
 
 ### Build
 
 Build the plugin for production:
 ```bash
-npm run build
+pnpm run build
 ```
 
 ## License
