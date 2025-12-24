@@ -78,14 +78,9 @@ export class BasicExampleFactory {
           ztoolkit.log(`No selected collection or items view`);
           return;
         }
+
         // find out sort order
         const sortOrder = zoteroPane.getSortField();
-        if (!sortOrder || !sortOrder.endsWith(SYLLABUS_CLASS_NUMBER_FIELD)) {
-          // Only display headers if the sort order is the syllabus class number field
-          ztoolkit.log(`Sort order is not the syllabus class number field: ${sortOrder}`);
-          return;
-        }
-
         const itemsView = zoteroPane.itemsView;
         const rowCount = itemsView.rowCount;
 
@@ -95,14 +90,33 @@ export class BasicExampleFactory {
         // const processedRows = new Set<number>();
 
         // Go through rows and add headers before class group starts
+        const w = Zotero.getMainWindow();
+        const doc = w.document;
+
+        // First, remove all data-row-class-number attributes if not sorted by class number
+        if (!sortOrder || !sortOrder.endsWith(SYLLABUS_CLASS_NUMBER_FIELD)) {
+          // Remove all data-row-class-number attributes from all rows
+          const allRows = doc.querySelectorAll(
+            "#zotero-items-tree .row[data-row-class-number]",
+          );
+          allRows.forEach((row: Element) => {
+            row.removeAttribute("data-row-class-number");
+          });
+          return;
+        }
+
+        // Track the previous class number to detect group boundaries
+        let prevClassNumber: number | undefined = undefined;
+
         for (let i = 0; i < rowCount; i++) {
-          ztoolkit.log(`looping over row ${i}`);
           try {
             const row = itemsView.getRow(i);
             // @ts-expect-error - ref property exists but not in types
             const item = row?.ref as Zotero.Item | undefined;
 
             if (!item || !item.isRegularItem()) {
+              // Clear prevClassNumber when we hit a non-item row
+              prevClassNumber = undefined;
               continue;
             }
 
@@ -111,69 +125,38 @@ export class BasicExampleFactory {
               selectedCollection.id,
             );
 
-            // Skip if no class number
-            if (classNumber === undefined) {
-              continue;
+            // Check if this is the first row in a new class group
+            // This happens when:
+            // 1. It's the first row (i === 0)
+            // 2. Previous item had no class number
+            // 3. Previous item had a different class number
+            const isFirstInGroup =
+              classNumber !== undefined &&
+              (i === 0 ||
+                prevClassNumber === undefined ||
+                prevClassNumber !== classNumber);
+
+            // Get the DOM row element
+            const domRow = doc.querySelector(
+              `#zotero-items-tree .row:nth-child(${i + 1})`,
+            );
+
+            if (isFirstInGroup && domRow) {
+              // Set the data attribute on the row for CSS targeting
+              domRow.setAttribute(
+                "data-row-class-number",
+                classNumber.toString(),
+              );
+            } else if (domRow) {
+              // Remove the attribute if this row shouldn't have a header
+              domRow.removeAttribute("data-row-class-number");
             }
 
-            //     // Check if this is the first item in a new class group
-            //     let isFirstInGroup = false;
-            //     if (i === 0) {
-            //       isFirstInGroup = true;
-            //     } else {
-            //       try {
-            //         const prevRow = itemsView.getRow(i - 1);
-            //         // @ts-expect-error - ref property exists but not in types
-            //         const prevItem = prevRow?.ref as Zotero.Item | undefined;
-            //         if (prevItem && prevItem.isRegularItem()) {
-            //           const prevClassNumber = getSyllabusClassNumber(
-            //             prevItem,
-            //             selectedCollection.id,
-            //           );
-            //           isFirstInGroup = prevClassNumber !== classNumber;
-            //         } else {
-            //           isFirstInGroup = true;
-            //         }
-            //       } catch (e) {
-            //         isFirstInGroup = true;
-            //       }
-            //     }
-
-            //     // Add header row if this is first in group and we haven't processed it
-            //     if (isFirstInGroup && !processedRows.has(i)) {
-            // ztoolkit.log(`Adding header row for class group ${classNumber}`);
-
-            // // Use _addRow to insert a header row
-            // // _addRow is a private method but exists
-            // const headerRow = itemsView._addRow({
-            //   isOpen: true,
-            //   level: 0,
-            // }, i) as Element | null | undefined;
-            // const collectionsView = zoteroPane.collectionsView;
-            // if (collectionsView) {
-            //   collectionsView._addRow({
-            //     isOpen: true,
-            //     level: 0,
-            //     textContent: `Class ${classNumber}`,
-            //   }, i);
-            // }
-
-            // if (headerRow && headerRow instanceof Element) {
-            //   // Style the header row
-            //   headerRow.classList.add("syllabus-class-group-header-row");
-            //   headerRow.setAttribute("data-class-number", String(classNumber));
-
-            //   // Create header content
-            //   const doc = ztoolkit.getGlobal("document") as Document;
-            //   const headerCell = doc.createElement("cell");
-            //   headerCell.setAttribute("colspan", "100");
-            //   headerCell.className = "syllabus-class-group-header-cell";
-            //   headerCell.textContent = `Class ${classNumber}`;
-            //   headerRow.appendChild(headerCell);
-            // }
-            // }
+            // Update previous class number for next iteration
+            prevClassNumber = classNumber;
           } catch (e) {
             ztoolkit.log("Error processing row for class headers:", e);
+            prevClassNumber = undefined;
           }
         }
       } catch (e) {
@@ -367,7 +350,7 @@ export class UIExampleFactory {
         span.style.background = "#0dd068";
         span.innerText = "⭐" + data;
         return span;
-      },
+      }
     });
   }
 
@@ -553,8 +536,6 @@ export class UIExampleFactory {
         const span = doc.createElement("span");
         span.className = `cell ${column.className}`;
         span.textContent = String(classNumber);
-        span.setAttribute("data-class-number", classNumberStr);
-        span.setAttribute(`data-class-number-${classNumber}`, classNumberStr);
         return span;
       },
       onEdit: async (item: Zotero.Item, dataKey: string, newValue: string) => {
