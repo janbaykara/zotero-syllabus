@@ -1,7 +1,4 @@
-import {
-  SyllabusManager,
-  SyllabusUIFactory,
-} from "./modules/syllabus";
+import { SyllabusManager, SyllabusUIFactory } from "./modules/syllabus";
 import { getString, initLocale } from "./utils/locale";
 import { registerPrefsScripts } from "./modules/preferenceScript";
 import { createZToolkit } from "./utils/ztoolkit";
@@ -54,13 +51,10 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
 
     const itemsView = zoteroPane.itemsView;
     if (itemsView) {
-      itemsView.window.addEventListener(
-        'click',
-        (e: Event) => {
-          ztoolkit.log("itemsView.click->setupSyllabusView", e);
-          SyllabusManager.setupSyllabusView();
-        }
-      )
+      itemsView.window.addEventListener("click", (e: Event) => {
+        ztoolkit.log("itemsView.click->setupSyllabusView", e);
+        SyllabusManager.setupSyllabusView();
+      });
     }
   }
 

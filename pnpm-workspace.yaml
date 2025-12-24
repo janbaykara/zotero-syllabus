@@ -1,4 +1,4 @@
 onlyBuiltDependencies:
-  - '@swc/core'
+  - "@swc/core"
   - es5-ext
   - esbuild

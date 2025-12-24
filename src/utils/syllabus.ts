@@ -148,10 +148,7 @@ export async function setSyllabusClassInstruction(
   } else {
     delete data[collectionIdStr].classInstruction;
     // Remove collection entry if priority, classInstruction, and classNumber are all empty
-    if (
-      !data[collectionIdStr].priority &&
-      !data[collectionIdStr].classNumber
-    ) {
+    if (!data[collectionIdStr].priority && !data[collectionIdStr].classNumber) {
       delete data[collectionIdStr];
     }
   }
@@ -201,4 +198,3 @@ export async function setSyllabusClassNumber(
 
   await setSyllabusData(item, data);
 }
-
