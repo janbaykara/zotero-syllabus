@@ -1751,7 +1751,20 @@ export class SyllabusUIFactory {
           const classNumber = parseInt(classNumberStr, 10);
           const span = doc.createElement("span");
           span.className = `cell ${column.className}`;
-          span.textContent = String(classNumber);
+
+          // Get the custom class name/title if it exists
+          const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+          const selectedCollection = zoteroPane.getSelectedCollection();
+          let displayText = String(classNumber);
+
+          if (selectedCollection) {
+            const classTitle = getClassTitle(selectedCollection.id, classNumber);
+            if (classTitle) {
+              displayText += ` (${classTitle})`;
+            }
+          }
+
+          span.textContent = displayText;
           return span;
         }
 
@@ -1843,6 +1856,9 @@ export class SyllabusUIFactory {
           collectionId,
         );
         const currentclassNumber = getSyllabusClassNumber(item, collectionId);
+        const currentClassTitle = currentclassNumber
+          ? getClassTitle(collectionId, currentclassNumber)
+          : "";
 
         // Create container
         const container = ztoolkit.UI.createElement(doc, "div", {
@@ -1866,6 +1882,7 @@ export class SyllabusUIFactory {
               display: "grid",
               gridTemplateColumns: "subgrid",
               gridColumn: "span 2",
+              alignItems: "center",
             },
           });
 
@@ -2012,6 +2029,54 @@ export class SyllabusUIFactory {
 
         const classNumberRow = createFieldRow("Class Number", sessionInput);
         container.appendChild(classNumberRow);
+
+        // Class title input (only shown if item has a class number)
+        if (currentclassNumber) {
+          const classTitleInput = ztoolkit.UI.createElement(doc, "input", {
+            namespace: "html",
+            id: "syllabus-class-title-input",
+            attributes: {
+              type: "text",
+              disabled: !editable ? "true" : undefined,
+              placeholder: "Add a title...",
+            },
+            properties: {
+              value: currentClassTitle,
+            },
+            styles: {
+              textAlign: "start",
+              border: "none",
+              fontSize: "13px",
+              width: "100%",
+              margin: "0",
+            },
+          }) as HTMLInputElement;
+
+          if (editable) {
+            let saveTimeout: ReturnType<typeof setTimeout> | undefined;
+            classTitleInput.addEventListener("input", async () => {
+              // Debounce saves
+              if (saveTimeout) {
+                clearTimeout(saveTimeout);
+              }
+              saveTimeout = setTimeout(async () => {
+                await setClassTitle(
+                  collectionId,
+                  currentclassNumber,
+                  classTitleInput.value.trim(),
+                );
+
+                const itemPane = zoteroPane.itemPane;
+                if (itemPane) {
+                  itemPane.render();
+                }
+              }, 500);
+            });
+          }
+
+          const classTitleRow = createFieldRow("Class Title", classTitleInput);
+          container.appendChild(classTitleRow);
+        }
 
         // Class instruction textarea
         const classInstructionTextarea = ztoolkit.UI.createElement(
