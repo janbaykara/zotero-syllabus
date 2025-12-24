@@ -68,6 +68,12 @@ export class BasicExampleFactory {
 
   @example
   static setupClassGroupRowStyling() {
+    // Prevent multiple setups by checking if already patched
+    const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+    if ((zoteroPane?.itemsView as any)?._syllabusHeadersSetup) {
+      return; // Already set up
+    }
+
     // Function to add header rows for class groups
     function addClassGroupHeaders() {
       try {
@@ -169,20 +175,81 @@ export class BasicExampleFactory {
       addClassGroupHeaders();
     });
 
-    // Also add headers when the item tree refreshes
-    const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+    const win = Zotero.getMainWindow();
+    const doc = win.document;
+
+    // Mark as set up to prevent duplicate patches
+    if (zoteroPane?.itemsView) {
+      (zoteroPane.itemsView as any)._syllabusHeadersSetup = true;
+    }
+
+    // Hook into itemsView refresh to update headers when items are re-sorted
     if (zoteroPane?.itemsView) {
       const originalRefresh = zoteroPane.itemsView.refresh;
-      if (originalRefresh) {
+      if (originalRefresh && !(originalRefresh as any)._syllabusWrapped) {
         // Patching refresh method to add class group headers
-        (zoteroPane.itemsView as any).refresh = function (...args: any[]) {
+        const wrappedRefresh = function (this: any, ...args: any[]) {
           const result = originalRefresh.apply(this, args);
           Zotero.Promise.delay(100).then(() => {
             addClassGroupHeaders();
           });
           return result;
         };
+        (wrappedRefresh as any)._syllabusWrapped = true;
+        (zoteroPane.itemsView as any).refresh = wrappedRefresh;
       }
+    }
+
+    // Hook into setSortField if it exists to catch sort changes
+    if (
+      zoteroPane &&
+      typeof (zoteroPane as any).setSortField === "function" &&
+      !((zoteroPane as any).setSortField as any)?._syllabusWrapped
+    ) {
+      const originalSetSortField = (zoteroPane as any).setSortField;
+      const wrappedSetSortField = function (this: any, ...args: any[]) {
+        const result = originalSetSortField.apply(this, args);
+        Zotero.Promise.delay(150).then(() => {
+          addClassGroupHeaders();
+        });
+        return result;
+      };
+      (wrappedSetSortField as any)._syllabusWrapped = true;
+      (zoteroPane as any).setSortField = wrappedSetSortField;
+    }
+
+    // Also listen to DOM events on sort controls (column headers)
+    // The sort controls are typically in the items tree header
+    const itemsTree = doc.getElementById("zotero-items-tree");
+    if (itemsTree) {
+      // Listen for click events on column headers (which trigger sorting)
+      itemsTree.addEventListener(
+        "click",
+        (e: Event) => {
+          const target = e.target as Element;
+          // Check if clicking on a column header (treecol element)
+          if (
+            target.tagName === "treecol" ||
+            target.closest("treecol")
+          ) {
+            Zotero.Promise.delay(150).then(() => {
+              addClassGroupHeaders();
+            });
+          }
+        },
+        true, // Use capture phase to catch events early
+      );
+
+      // Also listen for command events which might be used for sort menu items
+      itemsTree.addEventListener(
+        "command",
+        () => {
+          Zotero.Promise.delay(150).then(() => {
+            addClassGroupHeaders();
+          });
+        },
+        true,
+      );
     }
   }
 
