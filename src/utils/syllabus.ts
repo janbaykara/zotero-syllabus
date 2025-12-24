@@ -5,9 +5,15 @@
 
 const SYLLABUS_DATA_KEY = "syllabus";
 
+export enum SyllabusStatus {
+  ESSENTIAL = "essential",
+  RECOMMENDED = "recommended",
+  OPTIONAL = "optional",
+}
+
 export interface SyllabusData {
   [collectionId: string]: {
-    status?: "essential" | "recommended" | "optional";
+    status?: SyllabusStatus;
     description?: string;
     classNumber?: number;
   };
@@ -63,7 +69,7 @@ export function setSyllabusData(
 export function getSyllabusStatus(
   item: Zotero.Item,
   collectionId: number | string,
-): "essential" | "recommended" | "optional" | "" {
+): SyllabusStatus | "" {
   const data = getSyllabusData(item);
   const collectionIdStr = String(collectionId);
   return data[collectionIdStr]?.status || "";
@@ -75,7 +81,7 @@ export function getSyllabusStatus(
 export function setSyllabusStatus(
   item: Zotero.Item,
   collectionId: number | string,
-  status: "essential" | "recommended" | "optional" | "",
+  status: SyllabusStatus | "",
 ): void {
   const data = getSyllabusData(item);
   const collectionIdStr = String(collectionId);

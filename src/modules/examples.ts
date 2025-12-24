@@ -6,6 +6,7 @@ import {
   setSyllabusStatus,
   setSyllabusDescription,
   setSyllabusClassNumber,
+  SyllabusStatus,
 } from "../utils/syllabus";
 
 function example(
@@ -240,11 +241,35 @@ export class UIExampleFactory {
         const selectedCollection = zoteroPane.getSelectedCollection();
 
         if (selectedCollection) {
-          return getSyllabusStatus(item, selectedCollection.id);
+          const status = getSyllabusStatus(item, selectedCollection.id);
+          // Return sortable value with status encoded: "0_essential", "1_recommended", etc.
+          // This ensures proper sort order: Essential < Recommended < Optional < Blank
+          // The prefix determines sort order, the suffix is the actual status for display
+          if (status === SyllabusStatus.ESSENTIAL) return "0_essential";
+          if (status === SyllabusStatus.RECOMMENDED) return "1_recommended";
+          if (status === SyllabusStatus.OPTIONAL) return "2_optional";
+          return "3_"; // empty/blank
         }
 
         // If not in a collection view, return empty
-        return "";
+        return "3_";
+      },
+      renderCell: (index, data, column, isFirstColumn, doc) => {
+        // Parse the data to extract the status for display
+        // data format: "0_essential", "1_recommended", "2_optional", or "3_"
+        const parts = String(data).split("_");
+        const status = parts.length > 1 ? parts[1] : "";
+
+        const statusLabels: { [key: string]: string } = {
+          [SyllabusStatus.ESSENTIAL]: "Essential",
+          [SyllabusStatus.RECOMMENDED]: "Recommended",
+          [SyllabusStatus.OPTIONAL]: "Optional",
+        };
+
+        const span = doc.createElement("span");
+        span.className = `cell ${column.className}`;
+        span.textContent = status ? statusLabels[status] || "" : "";
+        return span;
       },
       onEdit: async (item: Zotero.Item, dataKey: string, newValue: string) => {
         const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
@@ -258,7 +283,7 @@ export class UIExampleFactory {
         // Validate the status value
         if (
           newValue &&
-          !["essential", "recommended", "optional"].includes(newValue)
+          ![SyllabusStatus.ESSENTIAL, SyllabusStatus.RECOMMENDED, SyllabusStatus.OPTIONAL].includes(newValue as SyllabusStatus)
         ) {
           ztoolkit.log(`Invalid status value: ${newValue}`);
           return;
@@ -267,7 +292,7 @@ export class UIExampleFactory {
         setSyllabusStatus(
           item,
           selectedCollection.id,
-          newValue as "essential" | "recommended" | "optional" | "",
+          newValue as SyllabusStatus | "",
         );
         await item.saveTx();
 
@@ -475,9 +500,9 @@ export class UIExampleFactory {
 
         const options = [
           { value: "", label: "(None)" },
-          { value: "essential", label: "Essential" },
-          { value: "recommended", label: "Recommended" },
-          { value: "optional", label: "Optional" },
+          { value: SyllabusStatus.ESSENTIAL, label: "Essential" },
+          { value: SyllabusStatus.RECOMMENDED, label: "Recommended" },
+          { value: SyllabusStatus.OPTIONAL, label: "Optional" },
         ];
 
         options.forEach((opt) => {
@@ -507,7 +532,7 @@ export class UIExampleFactory {
         const sessionLabel = ztoolkit.UI.createElement(doc, "label", {
           namespace: "html",
           properties: {
-            innerText: "Session Number:",
+            innerText: "Class No.:",
           },
           styles: {
             fontWeight: "bold",
@@ -519,7 +544,7 @@ export class UIExampleFactory {
 
         const sessionInput = ztoolkit.UI.createElement(doc, "input", {
           namespace: "html",
-          id: "syllabus-session-number-input",
+          id: "syllabus-class-number-input",
           attributes: {
             type: "number",
             min: "1",
