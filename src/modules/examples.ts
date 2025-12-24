@@ -100,6 +100,75 @@ export class BasicExampleFactory {
       return; // Already set up
     }
 
+    // Function to get/set syllabus view toggle state
+    function getSyllabusViewEnabled(): boolean {
+      const prefKey = `${addon.data.config.prefsPrefix}.syllabusViewEnabled`;
+      const value = Zotero.Prefs.get(prefKey, true);
+      // Default to false (tree view) if not set
+      return value === true;
+    }
+
+    function setSyllabusViewEnabled(enabled: boolean): void {
+      const prefKey = `${addon.data.config.prefsPrefix}.syllabusViewEnabled`;
+      Zotero.Prefs.set(prefKey, enabled, true);
+    }
+
+    // Function to create/update the toggle button
+    function createToggleButton() {
+      const pane = ztoolkit.getGlobal("ZoteroPane");
+      const w = Zotero.getMainWindow();
+      const doc = w.document;
+
+      // Find the items tree container to place toggle near it
+      const itemsTreeContainer = doc.getElementById("zotero-items-pane-container");
+      if (!itemsTreeContainer) return;
+
+      // Check if toggle button already exists
+      let toggleButton = doc.getElementById("syllabus-view-toggle");
+      if (!toggleButton) {
+        // Create a container for the toggle button
+        const toggleContainer = doc.createElement("div");
+        toggleContainer.id = "syllabus-view-toggle-container";
+        toggleContainer.className = "syllabus-view-toggle-container";
+
+        // Create toggle button
+        toggleButton = ztoolkit.UI.createElement(doc, "button", {
+          namespace: "xul",
+          id: "syllabus-view-toggle",
+          classList: ["toolbarbutton-1"],
+          properties: {
+            label: "Syllabus View",
+            type: "checkbox",
+            checked: getSyllabusViewEnabled(),
+            tooltiptext: "Toggle between Syllabus View and Tree View",
+          },
+          listeners: [
+            {
+              type: "command",
+              listener: (e: Event) => {
+                const target = e.target as XUL.Checkbox;
+                setSyllabusViewEnabled(target.checked);
+                renderCustomSyllabusView();
+              },
+            },
+          ],
+        });
+
+        toggleContainer.appendChild(toggleButton);
+
+        // Insert before the items tree container or at the top of items pane
+        const itemsPane = doc.getElementById("zotero-items-pane");
+        if (itemsPane && itemsTreeContainer.parentNode) {
+          itemsTreeContainer.parentNode.insertBefore(toggleContainer, itemsTreeContainer);
+        } else if (itemsTreeContainer.parentNode) {
+          itemsTreeContainer.parentNode.insertBefore(toggleContainer, itemsTreeContainer);
+        }
+      } else {
+        // Update button state
+        (toggleButton as XUL.Checkbox).checked = getSyllabusViewEnabled();
+      }
+    }
+
     // Function to render a completely custom syllabus view
     function renderCustomSyllabusView() {
       try {
@@ -114,12 +183,10 @@ export class BasicExampleFactory {
           return;
         }
 
-        // Check if we should show custom view (only for collections, when sorted by class number)
-        const sortOrder = pane.getSortField();
-        const shouldShowCustomView =
-          selectedCollection &&
-          sortOrder &&
-          sortOrder.endsWith(SYLLABUS_CLASS_NUMBER_FIELD);
+        // Check if we should show custom view
+        // Show if: syllabus view is enabled AND we have a collection
+        const syllabusViewEnabled = getSyllabusViewEnabled();
+        const shouldShowCustomView = syllabusViewEnabled && selectedCollection;
 
         // Find or create custom syllabus view container
         let customView = doc.getElementById("syllabus-custom-view");
@@ -350,11 +417,12 @@ export class BasicExampleFactory {
       }
     };
 
-    // Update view after a short delay on startup
+    // Create toggle button and update view after a short delay on startup
     Zotero.Promise.delay(0).then(() => {
+      createToggleButton();
       renderCustomSyllabusView();
       // Also update headers for fallback tree view
-      updateClassGroupHeaders();
+      // updateClassGroupHeaders();
     });
 
     // Re-render custom view when collection or sort changes
@@ -362,8 +430,9 @@ export class BasicExampleFactory {
     if (pane) {
       pane.addReloadListener(() => {
         Zotero.Promise.delay(100).then(() => {
+          createToggleButton();
           renderCustomSyllabusView();
-          updateClassGroupHeaders();
+          // updateClassGroupHeaders();
         });
       });
     }
