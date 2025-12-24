@@ -40,6 +40,8 @@ export class BasicExampleFactory {
         ids: number[] | string[],
         extraData: { [key: string]: any },
       ) => {
+        ztoolkit.log("notifier->setupSyllabusView", event, type, ids, extraData);
+
         if (!addon?.data.alive) {
           this.unregisterNotifier(notifierID);
           return;
@@ -50,24 +52,48 @@ export class BasicExampleFactory {
 
     // Register the callback in Zotero as an item observer
     const notifierID = Zotero.Notifier.registerObserver(callback, [
-      "tab",
+      "collection",
+      "search",
+      "share",
+      "share-items",
       "item",
       "file",
+      "collection-item",
+      "item-tag",
+      "tag",
+      "setting",
+      "group",
+      "trash",
+      "bucket",
+      "relation",
+      "feed",
+      "feedItem",
+      "sync",
+      "api-key",
+      "tab",
+      "itemtree",
+      "itempane",
     ]);
 
     Zotero.Plugins.addObserver({
+      startup: () => {
+        ztoolkit.log("startup->setupSyllabusView");
+        this.setupSyllabusView();
+      },
       shutdown: ({ id }) => {
         if (id === addon.data.config.addonID)
           this.unregisterNotifier(notifierID);
       },
     });
 
-    // Also set up a function to style class group rows after tree updates
+    ztoolkit.log("registerNotifier->setupSyllabusView");
     this.setupSyllabusView();
   }
 
   @example
   static setupSyllabusView() {
+    ztoolkit.log("Setting up syllabus view");
+
     // Prevent multiple setups by checking if already patched
     const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
     if ((zoteroPane?.itemsView as any)?._syllabusHeadersSetup) {

@@ -52,20 +52,27 @@ async function onStartup() {
 }
 
 async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
-  // Set up class group row styling after window loads
-  BasicExampleFactory.setupSyllabusView();
   // Create ztoolkit for every window
   addon.data.ztoolkit = createZToolkit();
 
   const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
   // Use addReloadListener to catch view reloads (which happen on sort changes)
-  if (zoteroPane && typeof zoteroPane.addReloadListener === "function") {
-    ///
+  if (zoteroPane) {
+    // Set up class group row styling after window loads
+    ztoolkit.log("onMainWindowLoad->setupSyllabusView");
+    BasicExampleFactory.setupSyllabusView();
+
+    zoteroPane.addReloadListener(() => {
+      ztoolkit.log("reloadListener->setupSyllabusView");
+      BasicExampleFactory.setupSyllabusView();
+    });
+
     const itemsView = zoteroPane.itemsView;
     if (itemsView) {
       itemsView.window.addEventListener(
         'click',
         (e: Event) => {
+          ztoolkit.log("itemsView.click->setupSyllabusView", e);
           BasicExampleFactory.setupSyllabusView();
         }
       )
@@ -121,6 +128,7 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
 async function onMainWindowUnload(win: Window): Promise<void> {
   ztoolkit.unregisterAll();
   addon.data.dialog?.window?.close();
+  ztoolkit.log("onMainWindowUnload->setupSyllabusView");
   BasicExampleFactory.setupSyllabusView();
 }
 
@@ -144,7 +152,11 @@ async function onNotify(
   extraData: { [key: string]: any },
 ) {
   // You can add your code to the corresponding notify type
-  ztoolkit.log("notify", event, type, ids, extraData);
+  ztoolkit.log("onNotify", event, type, ids, extraData);
+
+  ztoolkit.log("onNotify->setupSyllabusView");
+  BasicExampleFactory.setupSyllabusView();
+
   if (
     event == "select" &&
     type == "tab" &&
