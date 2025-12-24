@@ -2,18 +2,61 @@
 
 [![zotero target version](https://img.shields.io/badge/Zotero-7-green?style=flat-square&logo=zotero&logoColor=CC2936)](https://www.zotero.org)
 
-A Zotero plugin for managing syllabi and course materials.
-
-## Author
-
-**Jan Baykara** <janbaykara@pm.me>
+A Zotero plugin that turns your collections into syllabi and course reading lists. Order your items by class, tag things as required / optional reading and pin course information.
 
 ## Installation
 
-1. Download the latest release from the [Releases](https://github.com/janbaykara/zotero-syllabus/releases) page
-2. In Zotero, go to `Tools` → `Add-ons`
-3. Click the gear icon and select `Install Add-on From File...`
-4. Select the downloaded `.xpi` file
+### Download
+
+Download the latest release from the [Releases](https://github.com/janbaykara/zotero-syllabus/releases) page.
+
+### Install Plugin
+
+To install a plugin in Zotero, download its .xpi file to your computer. Then, in Zotero, click "Tools → Add-ons" and drag the .xpi file onto the Add-ons window.
+
+Alternatively:
+
+1. In Zotero, go to `Tools` → `Add-ons`
+2. Click the gear icon and select `Install Add-on From File...`
+3. Select the downloaded `.xpi` file
+
+## Screenshots
+
+### List View vs Syllabus View
+
+The plugin provides two distinct viewing modes to accommodate different organizational needs.
+
+#### Standard List View
+
+![Standard Zotero list view](doc/images/list.png)
+_The standard Zotero item list view showing items in a traditional tabular format._
+
+#### Syllabus View
+
+![Syllabus module interface showing class organization](doc/images/module.png)
+_The enhanced syllabus view with custom columns for class numbers, instructions, and priority levels, along with priority indicators and class-based organization._
+
+### Class Management
+
+![Class grouping and organization](doc/images/classes.png)
+_Classes grouped by course number with visual priority indicators and custom descriptions._
+
+### Drag & Drop Operations
+
+![Drag and drop functionality demonstration](doc/images/drag-drop.gif)
+_Intuitive drag-and-drop interface for organizing syllabus materials._
+
+## Features
+
+- **Syllabus View**: Enhanced item view with syllabus-specific columns and organization
+- **Class Management**: Group items by course/class with custom titles and descriptions
+- **Priority System**: Assign priorities to syllabus items with color-coded visual indicators
+- **Custom Columns**: Dedicated columns for class numbers, instructions, and priority levels
+- **Collection Descriptions**: Add detailed descriptions to syllabus collections
+- **Context Menus**: Right-click menus for quick syllabus operations
+- **Item Pane Integration**: Syllabus information displayed directly in the item pane
+- **Drag & Drop Support**: Intuitive organization of course materials
+- **Localization**: Multi-language support (English, French, Chinese)
 
 ## Development
 
@@ -24,6 +67,7 @@ This plugin is built using the [Zotero Plugin Template](https://github.com/windi
 - Zotero 7 beta or later
 - Node.js (LTS version)
 - Git
+- pnpm
 
 ### Setup
 
@@ -58,6 +102,63 @@ Build the plugin for production:
 
 ```bash
 pnpm run build
+```
+
+### Release
+
+Create a new release:
+
+```bash
+pnpm run release
+```
+
+This will build the plugin, create the .xpi file, and prepare it for distribution.
+
+### Testing
+
+Run the test suite:
+
+```bash
+pnpm test
+```
+
+### Code Quality
+
+Check code quality:
+
+```bash
+pnpm run lint:check
+```
+
+Fix code quality issues:
+
+```bash
+pnpm run lint:fix
+```
+
+### Project Structure
+
+```
+src/
+├── addon.ts              # Main addon class
+├── hooks.ts              # Lifecycle hooks
+├── index.ts              # Entry point
+├── modules/
+│   ├── syllabus.ts       # Core syllabus functionality
+│   └── preferenceScript.ts # Preferences handling
+└── utils/
+    ├── locale.ts         # Localization utilities
+    ├── prefs.ts          # Preferences management
+    ├── syllabus.ts       # Syllabus data utilities
+    ├── window.ts         # Window management
+    └── ztoolkit.ts       # Zotero toolkit setup
+
+addon/
+├── manifest.json         # Plugin manifest
+├── bootstrap.js          # Bootstrap script
+├── prefs.js              # Preferences defaults
+├── content/              # UI content
+└── locale/               # Localization files
 ```
 
 ## License
