@@ -50,3 +50,71 @@
   border-top: 1px solid rgba(0, 0, 0, 0.08);
   z-index: 1;
 }
+
+/* Custom Syllabus View Styles */
+#syllabus-custom-view {
+  display: none;
+  padding: 16px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.syllabus-class-group {
+  margin-bottom: 32px;
+}
+
+.syllabus-class-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 0;
+  border-bottom: 2px solid #e0e0e0;
+  margin-bottom: 12px;
+}
+
+.syllabus-class-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.syllabus-item {
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.syllabus-item:hover {
+  background: #f5f5f5;
+  border-color: #ccc;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.syllabus-item-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.syllabus-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.syllabus-item-description {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+  line-height: 1.4;
+}

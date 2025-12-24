@@ -100,6 +100,164 @@ export class BasicExampleFactory {
       return; // Already set up
     }
 
+    // Function to render a completely custom syllabus view
+    function renderCustomSyllabusView() {
+      try {
+        const pane = ztoolkit.getGlobal("ZoteroPane");
+        const selectedCollection = pane.getSelectedCollection();
+        const w = Zotero.getMainWindow();
+        const doc = w.document;
+
+        // Find the items tree container
+        const itemsTreeContainer = doc.getElementById("zotero-items-pane-container");
+        if (!itemsTreeContainer) {
+          return;
+        }
+
+        // Check if we should show custom view (only for collections, when sorted by class number)
+        const sortOrder = pane.getSortField();
+        const shouldShowCustomView =
+          selectedCollection &&
+          sortOrder &&
+          sortOrder.endsWith(SYLLABUS_CLASS_NUMBER_FIELD);
+
+        // Find or create custom syllabus view container
+        let customView = doc.getElementById("syllabus-custom-view");
+        const itemsTree = doc.getElementById("zotero-items-tree");
+
+        if (shouldShowCustomView) {
+          // Hide the default tree
+          if (itemsTree) {
+            (itemsTree as HTMLElement).style.display = "none";
+          }
+
+          // Create custom view if it doesn't exist
+          if (!customView) {
+            customView = doc.createElement("div");
+            customView.id = "syllabus-custom-view";
+            customView.className = "syllabus-custom-view";
+            // Insert before items tree or append to container
+            if (itemsTree && itemsTree.parentNode) {
+              itemsTree.parentNode.insertBefore(customView, itemsTree);
+            } else {
+              itemsTreeContainer.appendChild(customView);
+            }
+          }
+
+          // Show custom view
+          (customView as HTMLElement).style.display = "block";
+
+          // Get all items from the collection
+          const items = selectedCollection.getChildItems();
+
+          // Group items by class number
+          const itemsByClass: Map<number | undefined, Zotero.Item[]> = new Map();
+          for (const item of items) {
+            if (!item.isRegularItem()) continue;
+            const classNumber = getSyllabusClassNumber(
+              item,
+              selectedCollection.id,
+            );
+            if (!itemsByClass.has(classNumber)) {
+              itemsByClass.set(classNumber, []);
+            }
+            itemsByClass.get(classNumber)!.push(item);
+          }
+
+          // Sort class numbers (undefined/null goes last)
+          const sortedClassNumbers = Array.from(itemsByClass.keys()).sort((a, b) => {
+            if (a === undefined) return 1;
+            if (b === undefined) return -1;
+            return a - b;
+          });
+
+          // Clear and render
+          customView.innerHTML = "";
+
+          // Render each class group
+          for (const classNumber of sortedClassNumbers) {
+            const classItems = itemsByClass.get(classNumber)!;
+
+            // Create class group container
+            const classGroup = doc.createElement("div");
+            classGroup.className = "syllabus-class-group";
+
+            // Add class header
+            if (classNumber !== undefined) {
+              const classHeader = doc.createElement("div");
+              classHeader.className = "syllabus-class-header";
+              classHeader.textContent = `Class ${classNumber}`;
+              classGroup.appendChild(classHeader);
+            } else {
+              const classHeader = doc.createElement("div");
+              classHeader.className = "syllabus-class-header";
+              classHeader.textContent = "Unassigned";
+              classGroup.appendChild(classHeader);
+            }
+
+            // Add items in this class
+            const itemsContainer = doc.createElement("div");
+            itemsContainer.className = "syllabus-class-items";
+
+            for (const item of classItems) {
+              const itemElement = doc.createElement("div");
+              itemElement.className = "syllabus-item";
+              itemElement.setAttribute("data-item-id", String(item.id));
+
+              // Get item data
+              const status = getSyllabusStatus(item, selectedCollection.id);
+              const description = getSyllabusDescription(item, selectedCollection.id);
+              const title = item.getField("title") || "Untitled";
+
+              // Create item content
+              const itemTitle = doc.createElement("div");
+              itemTitle.className = "syllabus-item-title";
+              itemTitle.textContent = title;
+
+              // Add status indicator
+              if (status) {
+                const statusDot = doc.createElement("span");
+                statusDot.className = "syllabus-status-dot";
+                statusDot.style.backgroundColor = STATUS_COLORS[status];
+                statusDot.title = STATUS_LABELS[status];
+                itemTitle.appendChild(statusDot);
+              }
+
+              itemElement.appendChild(itemTitle);
+
+              // Add description if available
+              if (description) {
+                const itemDesc = doc.createElement("div");
+                itemDesc.className = "syllabus-item-description";
+                itemDesc.textContent = description;
+                itemElement.appendChild(itemDesc);
+              }
+
+              // Add click handler to select item
+              itemElement.addEventListener("click", () => {
+                pane.selectItem(item.id);
+              });
+
+              itemsContainer.appendChild(itemElement);
+            }
+
+            classGroup.appendChild(itemsContainer);
+            customView.appendChild(classGroup);
+          }
+        } else {
+          // Hide custom view and show default tree
+          if (customView) {
+            (customView as HTMLElement).style.display = "none";
+          }
+          if (itemsTree) {
+            (itemsTree as HTMLElement).style.display = "";
+          }
+        }
+      } catch (e) {
+        ztoolkit.log("Error in renderCustomSyllabusView:", e);
+      }
+    }
+
     // Function to update class group headers (both setup and cleanup)
     // This function handles both adding headers when sorted by class number
     // and removing them when sorted by other fields
@@ -192,10 +350,23 @@ export class BasicExampleFactory {
       }
     };
 
-    // Update headers after a short delay on startup
+    // Update view after a short delay on startup
     Zotero.Promise.delay(0).then(() => {
+      renderCustomSyllabusView();
+      // Also update headers for fallback tree view
       updateClassGroupHeaders();
     });
+
+    // Re-render custom view when collection or sort changes
+    const pane = ztoolkit.getGlobal("ZoteroPane");
+    if (pane) {
+      pane.addReloadListener(() => {
+        Zotero.Promise.delay(100).then(() => {
+          renderCustomSyllabusView();
+          updateClassGroupHeaders();
+        });
+      });
+    }
   }
 
   @example
