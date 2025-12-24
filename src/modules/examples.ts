@@ -307,6 +307,10 @@ export class BasicExampleFactory {
       const itemContent = doc.createElement("div");
       itemContent.className = "syllabus-item-content";
 
+      // Create main content wrapper (thumbnail + text)
+      const mainContent = doc.createElement("div");
+      mainContent.className = "syllabus-item-main-content";
+
       // Add thumbnail image on the left
       const thumbnailContainer = doc.createElement("div");
       thumbnailContainer.className = "syllabus-item-thumbnail";
@@ -361,7 +365,7 @@ export class BasicExampleFactory {
         thumbnailContainer.appendChild(placeholder);
       }
 
-      itemContent.appendChild(thumbnailContainer);
+      mainContent.appendChild(thumbnailContainer);
 
       // Create text content container
       const textContent = doc.createElement("div");
@@ -402,14 +406,6 @@ export class BasicExampleFactory {
         textContent.appendChild(publicationRow);
       }
 
-      // Add bibliographic reference
-      if (bibliographicReference) {
-        const referenceRow = doc.createElement("div");
-        referenceRow.className = "syllabus-item-reference";
-        referenceRow.textContent = bibliographicReference;
-        textContent.appendChild(referenceRow);
-      }
-
       // Add item metadata row (type, author, date)
       const metadataRow = doc.createElement("div");
       metadataRow.className = "syllabus-item-metadata";
@@ -430,6 +426,14 @@ export class BasicExampleFactory {
         textContent.appendChild(metadataRow);
       }
 
+      // Add bibliographic reference (after metadata)
+      if (bibliographicReference) {
+        const referenceRow = doc.createElement("div");
+        referenceRow.className = "syllabus-item-reference";
+        referenceRow.textContent = bibliographicReference;
+        textContent.appendChild(referenceRow);
+      }
+
       // Add description if available
       if (description) {
         const itemDesc = doc.createElement("div");
@@ -438,7 +442,10 @@ export class BasicExampleFactory {
         textContent.appendChild(itemDesc);
       }
 
-      // Add action buttons row (URL, PDF)
+      mainContent.appendChild(textContent);
+      itemContent.appendChild(mainContent);
+
+      // Add action buttons row (URL, PDF) - on the right side
       const actionsRow = doc.createElement("div");
       actionsRow.className = "syllabus-item-actions";
 
@@ -527,11 +534,8 @@ export class BasicExampleFactory {
         actionsRow.appendChild(viewButton);
       }
 
-      if (url || viewableAttachment) {
-        itemElement.appendChild(actionsRow);
-      }
-
-      itemContent.appendChild(textContent);
+      // Always append actions row (even if empty, for layout consistency)
+      itemContent.appendChild(actionsRow);
       itemElement.appendChild(itemContent);
 
       // Add click handler to select item
@@ -590,7 +594,7 @@ export class BasicExampleFactory {
           // Clear and render
           customView.innerHTML = "";
 
-          // Add collection name as title (large, like document title)
+          // Add collection name as title
           const titleElement = doc.createElement("h1");
           titleElement.className = "syllabus-view-title";
           titleElement.textContent = selectedCollection.name;
@@ -614,9 +618,10 @@ export class BasicExampleFactory {
           }
 
           // Sort class numbers (undefined/null goes FIRST, then numeric order)
+          // This ensures "Syllabus Documents" (items without class number) appear at the top
           const sortedClassNumbers = Array.from(itemsByClass.keys()).sort((a, b) => {
             if (a === undefined && b === undefined) return 0;
-            if (a === undefined) return -1; // undefined goes first
+            if (a === undefined) return -1; // undefined goes first (top)
             if (b === undefined) return 1;
             return a - b;
           });
