@@ -275,7 +275,10 @@ export async function setCollectionDescription(
   } else {
     delete metadata[collectionIdStr].description;
     // Remove collection entry if it's empty
-    if (!metadata[collectionIdStr].classes || Object.keys(metadata[collectionIdStr].classes || {}).length === 0) {
+    if (
+      !metadata[collectionIdStr].classes ||
+      Object.keys(metadata[collectionIdStr].classes || {}).length === 0
+    ) {
       delete metadata[collectionIdStr];
     }
   }
@@ -331,7 +334,10 @@ export async function setClassTitle(
       delete metadata[collectionIdStr].classes;
     }
     // Remove collection entry if it's empty
-    if (!metadata[collectionIdStr].description && !metadata[collectionIdStr].classes) {
+    if (
+      !metadata[collectionIdStr].description &&
+      !metadata[collectionIdStr].classes
+    ) {
       delete metadata[collectionIdStr];
     }
   }
@@ -349,7 +355,9 @@ export function getClassDescription(
   const metadata = getCollectionMetadata();
   const collectionIdStr = String(collectionId);
   const classNumberStr = String(classNumber);
-  return metadata[collectionIdStr]?.classes?.[classNumberStr]?.description || "";
+  return (
+    metadata[collectionIdStr]?.classes?.[classNumberStr]?.description || ""
+  );
 }
 
 /**
@@ -375,7 +383,8 @@ export async function setClassDescription(
   }
 
   if (description && description.trim()) {
-    metadata[collectionIdStr].classes[classNumberStr].description = description.trim();
+    metadata[collectionIdStr].classes[classNumberStr].description =
+      description.trim();
   } else {
     delete metadata[collectionIdStr].classes[classNumberStr].description;
     // Remove class entry if it's empty
@@ -387,7 +396,10 @@ export async function setClassDescription(
       delete metadata[collectionIdStr].classes;
     }
     // Remove collection entry if it's empty
-    if (!metadata[collectionIdStr].description && !metadata[collectionIdStr].classes) {
+    if (
+      !metadata[collectionIdStr].description &&
+      !metadata[collectionIdStr].classes
+    ) {
       delete metadata[collectionIdStr];
     }
   }

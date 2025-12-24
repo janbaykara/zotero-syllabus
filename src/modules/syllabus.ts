@@ -889,7 +889,8 @@ export class SyllabusManager {
       }
 
       // Set initial value
-      const valueToUse = textToPreserve !== null ? textToPreserve : initialValue;
+      const valueToUse =
+        textToPreserve !== null ? textToPreserve : initialValue;
       textareaElement.value = valueToUse;
 
       // Auto-resize textarea to fit content
@@ -1112,7 +1113,10 @@ export class SyllabusManager {
             className: "syllabus-collection-description",
             initialValue: getCollectionDescription(selectedCollection.id),
             onSave: async (newDescription: string) => {
-              await setCollectionDescription(selectedCollection.id, newDescription);
+              await setCollectionDescription(
+                selectedCollection.id,
+                newDescription,
+              );
             },
             placeholder: "Add a description...",
             emptyBehavior: "delete", // Collection description deletes when cleared
@@ -1198,7 +1202,8 @@ export class SyllabusManager {
             if (classNumber !== null) {
               // Create header container with class number and title on same line
               const classHeaderContainer = doc.createElement("div");
-              classHeaderContainer.className = "syllabus-class-header-container";
+              classHeaderContainer.className =
+                "syllabus-class-header-container";
 
               const classHeader = doc.createElement("div");
               classHeader.className = "syllabus-class-header";
@@ -1210,7 +1215,11 @@ export class SyllabusManager {
                 className: "syllabus-class-title",
                 initialValue: getClassTitle(selectedCollection.id, classNumber),
                 onSave: async (newTitle: string) => {
-                  await setClassTitle(selectedCollection.id, classNumber, newTitle);
+                  await setClassTitle(
+                    selectedCollection.id,
+                    classNumber,
+                    newTitle,
+                  );
                 },
                 placeholder: "Add a title...",
                 emptyBehavior: "delete", // Class title deletes when cleared
@@ -1222,9 +1231,16 @@ export class SyllabusManager {
               // Add class description field
               const classDescriptionElement = createEditableTextInput(doc, {
                 className: "syllabus-class-description",
-                initialValue: getClassDescription(selectedCollection.id, classNumber),
+                initialValue: getClassDescription(
+                  selectedCollection.id,
+                  classNumber,
+                ),
                 onSave: async (newDescription: string) => {
-                  await setClassDescription(selectedCollection.id, classNumber, newDescription);
+                  await setClassDescription(
+                    selectedCollection.id,
+                    classNumber,
+                    newDescription,
+                  );
                 },
                 placeholder: "Add a description...",
                 emptyBehavior: "delete", // Class description deletes when cleared
@@ -1316,11 +1332,11 @@ export class SyllabusManager {
               const itemElement = priority
                 ? createSyllabusItemCard(doc, item, selectedCollection.id, pane)
                 : createSyllabusItemCardSlim(
-                  doc,
-                  item,
-                  selectedCollection.id,
-                  pane,
-                );
+                    doc,
+                    item,
+                    selectedCollection.id,
+                    pane,
+                  );
               itemsContainer.appendChild(itemElement);
             }
 
@@ -1349,7 +1365,8 @@ export class SyllabusManager {
 
             // Add items container
             const furtherReadingItemsContainer = doc.createElement("div");
-            furtherReadingItemsContainer.className = "syllabus-class-items syllabus-further-reading-items";
+            furtherReadingItemsContainer.className =
+              "syllabus-class-items syllabus-further-reading-items";
             furtherReadingItemsContainer.setAttribute("data-class-number", "");
 
             // Make itemsContainer a drop zone
@@ -1901,9 +1918,9 @@ export class SyllabusUIFactory {
             },
             styles: opt.color
               ? {
-                color: opt.color,
-                fontWeight: "500",
-              }
+                  color: opt.color,
+                  fontWeight: "500",
+                }
               : undefined,
           });
           prioritySelect.appendChild(option);
