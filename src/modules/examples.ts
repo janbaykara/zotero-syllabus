@@ -2,8 +2,10 @@ import { getLocaleID, getString } from "../utils/locale";
 import {
   getSyllabusStatus,
   getSyllabusDescription,
+  getSyllabusClassNumber,
   setSyllabusStatus,
   setSyllabusDescription,
+  setSyllabusClassNumber,
 } from "../utils/syllabus";
 
 function example(
@@ -313,6 +315,59 @@ export class UIExampleFactory {
   }
 
   @example
+  static async registerSyllabusClassNumberColumn() {
+    const field = "syllabus-class-number";
+    // @ts-expect-error - onEdit may not be in types but is supported by Zotero API
+    await Zotero.ItemTreeManager.registerColumns({
+      pluginID: addon.data.config.addonID,
+      dataKey: field,
+      label: "Class No.",
+      dataProvider: (item: Zotero.Item, dataKey: string) => {
+        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+        const selectedCollection = zoteroPane.getSelectedCollection();
+
+        if (selectedCollection) {
+          const classNumber = getSyllabusClassNumber(
+            item,
+            selectedCollection.id,
+          );
+          return classNumber !== undefined ? String(classNumber) : "";
+        }
+
+        // If not in a collection view, return empty
+        return "";
+      },
+      onEdit: async (item: Zotero.Item, dataKey: string, newValue: string) => {
+        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+        const selectedCollection = zoteroPane.getSelectedCollection();
+
+        if (!selectedCollection) {
+          ztoolkit.log("No collection selected, cannot update session number");
+          return;
+        }
+
+        // Parse and validate the session number
+        const trimmedValue = newValue.trim();
+        if (trimmedValue === "") {
+          setSyllabusClassNumber(item, selectedCollection.id, undefined);
+        } else {
+          const sessionNum = parseInt(trimmedValue, 10);
+          if (isNaN(sessionNum) || sessionNum < 1) {
+            ztoolkit.log(`Invalid session number: ${trimmedValue}`);
+            return;
+          }
+          setSyllabusClassNumber(item, selectedCollection.id, sessionNum);
+        }
+
+        await item.saveTx();
+
+        // Refresh the item tree to show the updated value
+        zoteroPane.refresh();
+      },
+    });
+  }
+
+  @example
   static registerItemPaneCustomInfoRow() {
     Zotero.ItemPaneManager.registerInfoRow({
       rowID: "example",
@@ -376,6 +431,10 @@ export class UIExampleFactory {
         const collectionId = selectedCollection.id;
         const currentStatus = getSyllabusStatus(item, collectionId);
         const currentDescription = getSyllabusDescription(item, collectionId);
+        const currentclassNumber = getSyllabusClassNumber(
+          item,
+          collectionId,
+        );
 
         // Create container
         const container = ztoolkit.UI.createElement(doc, "div", {
@@ -443,6 +502,57 @@ export class UIExampleFactory {
         }
 
         container.appendChild(statusSelect);
+
+        // Session number input
+        const sessionLabel = ztoolkit.UI.createElement(doc, "label", {
+          namespace: "html",
+          properties: {
+            innerText: "Session Number:",
+          },
+          styles: {
+            fontWeight: "bold",
+            marginTop: "10px",
+            marginBottom: "5px",
+          },
+        });
+        container.appendChild(sessionLabel);
+
+        const sessionInput = ztoolkit.UI.createElement(doc, "input", {
+          namespace: "html",
+          id: "syllabus-session-number-input",
+          attributes: {
+            type: "number",
+            min: "1",
+            step: "1",
+            disabled: !editable ? "true" : undefined,
+            placeholder: "e.g., 1, 2, 3...",
+          },
+          properties: {
+            value: currentclassNumber?.toString() || "",
+          },
+          styles: {
+            padding: "5px",
+            fontSize: "13px",
+            width: "100%",
+          },
+        }) as HTMLInputElement;
+
+        if (editable) {
+          sessionInput.addEventListener("change", async () => {
+            const value = sessionInput.value.trim();
+            const sessionNum = value ? parseInt(value, 10) : undefined;
+            if (value && (isNaN(sessionNum!) || sessionNum! < 1)) {
+              // Invalid input, reset to current value
+              sessionInput.value = currentclassNumber?.toString() || "";
+              return;
+            }
+            setSyllabusClassNumber(item, collectionId, sessionNum);
+            await item.saveTx();
+            zoteroPane.refresh();
+          });
+        }
+
+        container.appendChild(sessionInput);
 
         // Description textarea
         const descLabel = ztoolkit.UI.createElement(doc, "label", {

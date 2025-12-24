@@ -9,6 +9,7 @@ export interface SyllabusData {
   [collectionId: string]: {
     status?: "essential" | "recommended" | "optional";
     description?: string;
+    classNumber?: number;
   };
 }
 
@@ -18,7 +19,7 @@ export interface SyllabusData {
 export function getSyllabusData(item: Zotero.Item): SyllabusData {
   const extra = item.getField("extra") || "";
   const lines = extra.split("\n");
-  
+
   for (const line of lines) {
     if (line.startsWith(`${SYLLABUS_DATA_KEY}:`)) {
       try {
@@ -30,7 +31,7 @@ export function getSyllabusData(item: Zotero.Item): SyllabusData {
       }
     }
   }
-  
+
   return {};
 }
 
@@ -44,15 +45,15 @@ export function setSyllabusData(
   const extra = item.getField("extra") || "";
   const lines = extra.split("\n");
   const syllabusLine = `${SYLLABUS_DATA_KEY}: ${JSON.stringify(data)}`;
-  
+
   // Remove existing syllabus line if present
   const filteredLines = lines.filter(
     (line) => !line.startsWith(`${SYLLABUS_DATA_KEY}:`),
   );
-  
+
   // Add new syllabus line
   filteredLines.push(syllabusLine);
-  
+
   item.setField("extra", filteredLines.join("\n"));
 }
 
@@ -78,21 +79,24 @@ export function setSyllabusStatus(
 ): void {
   const data = getSyllabusData(item);
   const collectionIdStr = String(collectionId);
-  
+
   if (!data[collectionIdStr]) {
     data[collectionIdStr] = {};
   }
-  
+
   if (status) {
     data[collectionIdStr].status = status;
   } else {
     delete data[collectionIdStr].status;
-    // Remove collection entry if both status and description are empty
-    if (!data[collectionIdStr].description) {
+    // Remove collection entry if status, description, and classNumber are all empty
+    if (
+      !data[collectionIdStr].description &&
+      !data[collectionIdStr].classNumber
+    ) {
       delete data[collectionIdStr];
     }
   }
-  
+
   setSyllabusData(item, data);
 }
 
@@ -118,21 +122,67 @@ export function setSyllabusDescription(
 ): void {
   const data = getSyllabusData(item);
   const collectionIdStr = String(collectionId);
-  
+
   if (!data[collectionIdStr]) {
     data[collectionIdStr] = {};
   }
-  
+
   if (description && description.trim()) {
     data[collectionIdStr].description = description.trim();
   } else {
     delete data[collectionIdStr].description;
-    // Remove collection entry if both status and description are empty
-    if (!data[collectionIdStr].status) {
+    // Remove collection entry if status, description, and classNumber are all empty
+    if (
+      !data[collectionIdStr].status &&
+      !data[collectionIdStr].classNumber
+    ) {
       delete data[collectionIdStr];
     }
   }
-  
+
+  setSyllabusData(item, data);
+}
+
+/**
+ * Get syllabus session number for a specific collection
+ */
+export function getSyllabusClassNumber(
+  item: Zotero.Item,
+  collectionId: number | string,
+): number | undefined {
+  const data = getSyllabusData(item);
+  const collectionIdStr = String(collectionId);
+  return data[collectionIdStr]?.classNumber;
+}
+
+/**
+ * Set syllabus session number for a specific collection
+ */
+export function setSyllabusClassNumber(
+  item: Zotero.Item,
+  collectionId: number | string,
+  classNumber: number | undefined,
+): void {
+  const data = getSyllabusData(item);
+  const collectionIdStr = String(collectionId);
+
+  if (!data[collectionIdStr]) {
+    data[collectionIdStr] = {};
+  }
+
+  if (classNumber !== undefined && classNumber !== null) {
+    data[collectionIdStr].classNumber = classNumber;
+  } else {
+    delete data[collectionIdStr].classNumber;
+    // Remove collection entry if status, description, and classNumber are all empty
+    if (
+      !data[collectionIdStr].status &&
+      !data[collectionIdStr].description
+    ) {
+      delete data[collectionIdStr];
+    }
+  }
+
   setSyllabusData(item, data);
 }
 

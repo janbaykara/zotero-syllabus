@@ -32,6 +32,8 @@ async function onStartup() {
 
   await UIExampleFactory.registerSyllabusDescriptionColumn();
 
+  await UIExampleFactory.registerSyllabusClassNumberColumn();
+
   UIExampleFactory.registerItemPaneCustomInfoRow();
 
   UIExampleFactory.registerItemPaneSection();
