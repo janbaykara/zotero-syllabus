@@ -13,6 +13,7 @@ export const SYLLABUS_CLASS_NUMBER_FIELD = "syllabus-class-number";
 const extraFieldTool = new ExtraFieldTool();
 
 export enum SyllabusPriority {
+  COURSE_INFO = "course-info",
   ESSENTIAL = "essential",
   RECOMMENDED = "recommended",
   OPTIONAL = "optional",
@@ -22,6 +23,7 @@ export enum SyllabusPriority {
  * Color definitions for syllabus priorities
  */
 export const PRIORITY_COLORS: Record<SyllabusPriority, string> = {
+  [SyllabusPriority.COURSE_INFO]: "#F97316", // orange
   [SyllabusPriority.ESSENTIAL]: "#8B5CF6", // purple
   [SyllabusPriority.RECOMMENDED]: "#3B82F6", // blue
   [SyllabusPriority.OPTIONAL]: "#AAA", // darker grey for better readability
@@ -31,6 +33,7 @@ export const PRIORITY_COLORS: Record<SyllabusPriority, string> = {
  * Human-readable labels for syllabus priorities
  */
 export const PRIORITY_LABELS: Record<SyllabusPriority, string> = {
+  [SyllabusPriority.COURSE_INFO]: "Course Information",
   [SyllabusPriority.ESSENTIAL]: "Essential",
   [SyllabusPriority.RECOMMENDED]: "Recommended",
   [SyllabusPriority.OPTIONAL]: "Optional",

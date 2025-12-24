@@ -261,6 +261,60 @@
   align-items: flex-end;
 }
 
+/* Slim card styles for items without priority */
+.syllabus-item-slim {
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  background: #fff;
+  padding: 0;
+}
+
+.syllabus-item-slim:hover {
+  background: #f5f5f5;
+  border-color: #d0d0d0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transform: none;
+}
+
+.syllabus-item-slim .syllabus-item-content {
+  padding: 8px 12px;
+  gap: 10px;
+  align-items: center;
+}
+
+.syllabus-item-slim .syllabus-item-main-content {
+  gap: 10px;
+  align-items: center;
+}
+
+.syllabus-item-slim .syllabus-item-thumbnail-slim {
+  width: 32px;
+  height: 32px;
+  background: #f0f0f0;
+  border-radius: 3px;
+}
+
+.syllabus-item-slim .syllabus-item-thumbnail-placeholder {
+  font-size: 16px;
+  opacity: 0.4;
+}
+
+.syllabus-item-slim .syllabus-item-text {
+  gap: 4px;
+}
+
+.syllabus-item-slim .syllabus-item-title {
+  font-size: 14px;
+  font-weight: 400;
+  color: #333;
+}
+
+.syllabus-item-slim .syllabus-item-metadata {
+  font-size: 12px;
+  color: #888;
+  margin-top: 2px;
+}
+
 /* Toggle Button in Toolbar */
 #syllabus-view-toggle {
   min-width: 120px;

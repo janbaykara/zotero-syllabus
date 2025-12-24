@@ -231,6 +231,177 @@ export class SyllabusManager {
       }
     }
 
+    // Helper function to create a slim syllabus item card (for items without priority)
+    function createSyllabusItemCardSlim(
+      doc: Document,
+      item: Zotero.Item,
+      collectionId: number,
+      pane: any,
+    ): HTMLElement {
+      const title = item.getField("title") || "Untitled";
+      const itemType = item.itemType;
+      const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(itemType);
+
+      // Get author (first creator)
+      let author = "";
+      if (item.firstCreator) {
+        author = item.firstCreator;
+      } else {
+        const creators = item.getCreators();
+        if (creators.length > 0) {
+          const creatorName = item.getCreator(0);
+          if (creatorName) {
+            author =
+              `${creatorName.firstName || ""} ${creatorName.lastName || ""}`.trim();
+          }
+        }
+      }
+
+      const date = item.getField("date") || "";
+
+      const itemElement = doc.createElement("div");
+      itemElement.className = "syllabus-item syllabus-item-slim";
+      itemElement.setAttribute("data-item-id", String(item.id));
+      itemElement.setAttribute("draggable", "true");
+
+      // Create item content container
+      const itemContent = doc.createElement("div");
+      itemContent.className = "syllabus-item-content";
+
+      // Create main content wrapper (small thumbnail + text)
+      const mainContent = doc.createElement("div");
+      mainContent.className = "syllabus-item-main-content";
+
+      // Add small thumbnail image on the left
+      const thumbnailContainer = doc.createElement("div");
+      thumbnailContainer.className = "syllabus-item-thumbnail syllabus-item-thumbnail-slim";
+
+      // Try to get item image/thumbnail
+      let imageSrc: string | null = null;
+
+      // First try getImageSrc method if available
+      if ((item as any).getImageSrc) {
+        imageSrc = (item as any).getImageSrc();
+      }
+
+      // If no image, try to get from attachments
+      if (!imageSrc) {
+        const attachments = item.getAttachments();
+        for (const attId of attachments) {
+          try {
+            const att = Zotero.Items.get(attId);
+            if (
+              att &&
+              att.isAttachment() &&
+              att.attachmentContentType?.startsWith("image/")
+            ) {
+              const file = att.getFilePath();
+              if (file) {
+                imageSrc = `file://${file}`;
+                break;
+              }
+            }
+          } catch (e) {
+            // Continue to next attachment
+          }
+        }
+      }
+
+      if (imageSrc) {
+        const thumbnailImg = doc.createElement("img");
+        thumbnailImg.className = "syllabus-item-thumbnail-img";
+        thumbnailImg.src = imageSrc;
+        thumbnailImg.alt = title;
+        thumbnailImg.onerror = () => {
+          thumbnailImg.style.display = "none";
+          const placeholder = doc.createElement("div");
+          placeholder.className = "syllabus-item-thumbnail-placeholder";
+          placeholder.textContent = "📄";
+          thumbnailContainer.appendChild(placeholder);
+        };
+        thumbnailContainer.appendChild(thumbnailImg);
+      } else {
+        const placeholder = doc.createElement("div");
+        placeholder.className = "syllabus-item-thumbnail-placeholder";
+        placeholder.textContent = "📄";
+        thumbnailContainer.appendChild(placeholder);
+      }
+
+      mainContent.appendChild(thumbnailContainer);
+
+      // Create text content container
+      const textContent = doc.createElement("div");
+      textContent.className = "syllabus-item-text";
+
+      // Create item title row
+      const itemTitleRow = doc.createElement("div");
+      itemTitleRow.className = "syllabus-item-title-row";
+
+      const itemTitle = doc.createElement("div");
+      itemTitle.className = "syllabus-item-title";
+      itemTitle.textContent = title;
+      itemTitleRow.appendChild(itemTitle);
+
+      textContent.appendChild(itemTitleRow);
+
+      // Add item metadata row (type, author, date) - compact
+      const metadataParts: string[] = [];
+      if (itemTypeLabel) {
+        metadataParts.push(itemTypeLabel);
+      }
+      if (author) {
+        metadataParts.push(author);
+      }
+      if (date) {
+        metadataParts.push(date);
+      }
+
+      if (metadataParts.length > 0) {
+        const metadataRow = doc.createElement("div");
+        metadataRow.className = "syllabus-item-metadata";
+        const metadataText = doc.createElement("span");
+        metadataText.textContent = metadataParts.join(" • ");
+        metadataRow.appendChild(metadataText);
+        textContent.appendChild(metadataRow);
+      }
+
+      mainContent.appendChild(textContent);
+      itemContent.appendChild(mainContent);
+      itemElement.appendChild(itemContent);
+
+      // Track if we're dragging to prevent click after drag
+      let isDragging = false;
+
+      // Add click handler to select item
+      itemElement.addEventListener("click", (e: MouseEvent) => {
+        if (isDragging) {
+          isDragging = false;
+          return;
+        }
+        pane.selectItem(item.id);
+      });
+
+      // Prevent drag from triggering click
+      itemElement.addEventListener("dragstart", (e: DragEvent) => {
+        e.stopPropagation();
+        isDragging = true;
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", String(item.id));
+        }
+        itemElement.classList.add("syllabus-item-dragging");
+      });
+
+      itemElement.addEventListener("dragend", () => {
+        itemElement.classList.remove("syllabus-item-dragging");
+        setTimeout(() => {
+          isDragging = false;
+        }, 100);
+      });
+
+      return itemElement;
+    }
+
     // Helper function to create a syllabus item card
     function createSyllabusItemCard(
       doc: Document,
@@ -755,7 +926,7 @@ export class SyllabusManager {
           for (const classNumber of sortedClassNumbers) {
             const classItems = itemsByClass.get(classNumber)!;
 
-            // Sort items by priority: essential, recommended, optional, none
+            // Sort items by priority: course-info, essential, recommended, optional, none
             classItems.sort((a, b) => {
               const priorityA = getSyllabusPriority(a, selectedCollection.id);
               const priorityB = getSyllabusPriority(b, selectedCollection.id);
@@ -763,10 +934,11 @@ export class SyllabusManager {
               const getPriorityOrder = (
                 priority: SyllabusPriority | "" | undefined,
               ): number => {
-                if (priority === SyllabusPriority.ESSENTIAL) return 0;
-                if (priority === SyllabusPriority.RECOMMENDED) return 1;
-                if (priority === SyllabusPriority.OPTIONAL) return 2;
-                return 3; // none/undefined/empty string
+                if (priority === SyllabusPriority.COURSE_INFO) return 0;
+                if (priority === SyllabusPriority.ESSENTIAL) return 1;
+                if (priority === SyllabusPriority.RECOMMENDED) return 2;
+                if (priority === SyllabusPriority.OPTIONAL) return 3;
+                return 4; // none/undefined/empty string
               };
 
               return getPriorityOrder(priorityA) - getPriorityOrder(priorityB);
@@ -868,12 +1040,11 @@ export class SyllabusManager {
             });
 
             for (const item of classItems) {
-              const itemElement = createSyllabusItemCard(
-                doc,
-                item,
-                selectedCollection.id,
-                pane,
-              );
+              const priority = getSyllabusPriority(item, selectedCollection.id);
+              // Use slim card for items without priority, full card for items with priority
+              const itemElement = priority
+                ? createSyllabusItemCard(doc, item, selectedCollection.id, pane)
+                : createSyllabusItemCardSlim(doc, item, selectedCollection.id, pane);
               itemsContainer.appendChild(itemElement);
             }
 
@@ -971,17 +1142,18 @@ export class SyllabusUIFactory {
 
         if (selectedCollection) {
           const priority = getSyllabusPriority(item, selectedCollection.id);
-          // Return sortable value with priority encoded: "0_essential", "1_recommended", etc.
-          // This ensures proper sort order: Essential < Recommended < Optional < Blank
+          // Return sortable value with priority encoded: "0_course-info", "1_essential", etc.
+          // This ensures proper sort order: Course Info < Essential < Recommended < Optional < Blank
           // The prefix determines sort order, the suffix is the actual priority for display
-          if (priority === SyllabusPriority.ESSENTIAL) return "0_essential";
-          if (priority === SyllabusPriority.RECOMMENDED) return "1_recommended";
-          if (priority === SyllabusPriority.OPTIONAL) return "2_optional";
-          return "3_"; // empty/blank
+          if (priority === SyllabusPriority.COURSE_INFO) return "0_course-info";
+          if (priority === SyllabusPriority.ESSENTIAL) return "1_essential";
+          if (priority === SyllabusPriority.RECOMMENDED) return "2_recommended";
+          if (priority === SyllabusPriority.OPTIONAL) return "3_optional";
+          return "4_"; // empty/blank
         }
 
         // If not in a collection view, return empty
-        return "3_";
+        return "4_";
       },
       renderCell: (index, data, column, isFirstColumn, doc) => {
         // Parse the data to extract the priority for display
@@ -1027,6 +1199,7 @@ export class SyllabusUIFactory {
         if (
           newValue &&
           ![
+            SyllabusPriority.COURSE_INFO,
             SyllabusPriority.ESSENTIAL,
             SyllabusPriority.RECOMMENDED,
             SyllabusPriority.OPTIONAL,
@@ -1116,12 +1289,13 @@ export class SyllabusUIFactory {
           );
           const priority = getSyllabusPriority(item, selectedCollection.id);
 
-          // Get priority sort order: 0=essential, 1=recommended, 2=optional, 3=blank
-          let priorityOrder = "3"; // default to blank
-          if (priority === SyllabusPriority.ESSENTIAL) priorityOrder = "0";
+          // Get priority sort order: 0=course-info, 1=essential, 2=recommended, 3=optional, 4=blank
+          let priorityOrder = "4"; // default to blank
+          if (priority === SyllabusPriority.COURSE_INFO) priorityOrder = "0";
+          else if (priority === SyllabusPriority.ESSENTIAL) priorityOrder = "1";
           else if (priority === SyllabusPriority.RECOMMENDED)
-            priorityOrder = "1";
-          else if (priority === SyllabusPriority.OPTIONAL) priorityOrder = "2";
+            priorityOrder = "2";
+          else if (priority === SyllabusPriority.OPTIONAL) priorityOrder = "3";
 
           // Return composite sortable value: "classNumber_priorityOrder"
           // Pad class number to 5 digits for proper numeric sorting (supports up to 99999)
@@ -1134,7 +1308,7 @@ export class SyllabusUIFactory {
         }
 
         // If not in a collection view, return empty
-        return "99999_3";
+        return "99999_4";
       },
       renderCell: (index, data, column, isFirstColumn, doc) => {
         // Parse the composite value to extract just the class number for display
@@ -1309,6 +1483,11 @@ export class SyllabusUIFactory {
         const options = [
           { value: "", label: "(None)" },
           {
+            value: SyllabusPriority.COURSE_INFO,
+            label: PRIORITY_LABELS[SyllabusPriority.COURSE_INFO],
+            color: PRIORITY_COLORS[SyllabusPriority.COURSE_INFO],
+          },
+          {
             value: SyllabusPriority.ESSENTIAL,
             label: PRIORITY_LABELS[SyllabusPriority.ESSENTIAL],
             color: PRIORITY_COLORS[SyllabusPriority.ESSENTIAL],
@@ -1335,9 +1514,9 @@ export class SyllabusUIFactory {
             },
             styles: opt.color
               ? {
-                  color: opt.color,
-                  fontWeight: "500",
-                }
+                color: opt.color,
+                fontWeight: "500",
+              }
               : undefined,
           });
           prioritySelect.appendChild(option);
@@ -1472,6 +1651,32 @@ export class SyllabusUIFactory {
       label: "Set Priority",
       icon: "chrome://zotero/skin/16/universal/book.svg",
       children: [
+        {
+          tag: "menuitem",
+          label: PRIORITY_LABELS[SyllabusPriority.COURSE_INFO],
+          commandListener: async () => {
+            const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+            const selectedCollection = zoteroPane.getSelectedCollection();
+            if (!selectedCollection) return;
+            const items = zoteroPane.getSelectedItems();
+            const collectionId = selectedCollection.id;
+            for (const item of items) {
+              if (item.isRegularItem()) {
+                await setSyllabusPriority(
+                  item,
+                  collectionId,
+                  SyllabusPriority.COURSE_INFO,
+                );
+                await item.saveTx();
+              }
+            }
+
+            const itemPane = zoteroPane.itemPane;
+            if (itemPane) {
+              itemPane.render();
+            }
+          },
+        },
         {
           tag: "menuitem",
           label: PRIORITY_LABELS[SyllabusPriority.ESSENTIAL],
