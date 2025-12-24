@@ -1,6 +1,6 @@
 /* Syllabus class grouping styles */
 /* Style for class group header rows */
-.syllabus-class-group-header-row {
+/* .syllabus-class-group-header-row {
   background: linear-gradient(
     to bottom,
     rgba(0, 0, 0, 0.02),
@@ -21,9 +21,9 @@
   text-transform: uppercase !important;
   letter-spacing: 0.5px !important;
   user-select: none !important;
-}
+} */
 
-hbox #zotero-items-tree .row {
+hbox #zotero-items-tree:has(*[data-class-number]) .row {
   /* padding-top: 35px; */
   height: auto !important;
   overflow: visible !important;
@@ -34,15 +34,17 @@ hbox #zotero-items-tree .row {
   padding-bottom: 4px;
 }
 
-hbox #zotero-items-tree .row:not(.selected) {
+hbox #zotero-items-tree:has(*[data-class-number]) .row:not(.selected) {
   background: transparent !important;
 }
 
-hbox #zotero-items-tree .row:has(*[data-class-number]) {
+hbox
+  #zotero-items-tree:has(*[data-class-number])
+  .row:has(*[data-class-number]) {
   margin-top: 45px;
 }
 
-#zotero-items-tree *[data-class-number]::before {
+#zotero-items-tree:has(*[data-class-number]) *[data-class-number]::before {
   content: "Class " attr(data-class-number);
   position: absolute;
   left: 0;
