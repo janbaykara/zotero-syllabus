@@ -1706,38 +1706,59 @@ export class SyllabusUIFactory {
             priorityOrder = "2";
           else if (priority === SyllabusPriority.OPTIONAL) priorityOrder = "3";
 
-          // Return composite sortable value: "classNumber_priorityOrder"
-          // Pad class number to 5 digits for proper numeric sorting (supports up to 99999)
-          // Items without class number get "99999" to sort last
-          const paddedClassNumber =
-            classNumber !== undefined
-              ? String(classNumber).padStart(5, "0")
-              : "99999";
-          return `${paddedClassNumber}_${priorityOrder}`;
+          const hasClassNumber = classNumber !== undefined;
+          const hasPriority = priority !== "";
+
+          // Create sorting key to match Syllabus View order:
+          // 1. No-class numbered items that have a priority status (in priority status order)
+          // 2. Class numbered items (in priority status order)
+          // 3. Un-numbered and un-statused items
+
+          if (!hasClassNumber && hasPriority) {
+            // Group 1: No-class numbered items with priority - sort first by priority
+            return `0_${priorityOrder}`;
+          } else if (hasClassNumber) {
+            // Group 2: Class numbered items - sort by class number, then priority
+            const paddedClassNumber = String(classNumber).padStart(5, "0");
+            return `1_${paddedClassNumber}_${priorityOrder}`;
+          } else {
+            // Group 3: Un-numbered and un-statused items - sort last
+            return `2_99999_4`;
+          }
         }
 
         // If not in a collection view, return empty
-        return "99999_4";
+        return "2_99999_4";
       },
       renderCell: (index, data, column, isFirstColumn, doc) => {
         // Parse the composite value to extract just the class number for display
-        // data format: "00001_0" or "99999_3"
+        // data format: "0_priorityOrder", "1_paddedClassNumber_priorityOrder", or "2_99999_4"
         const parts = String(data).split("_");
-        const classNumberStr = parts[0];
+        const groupIndicator = parts[0];
 
-        // If it's the "no class number" placeholder, display empty
-        if (classNumberStr === "99999") {
+        // Group 0 and 2: No class number (either prioritized or un-statused)
+        if (groupIndicator === "0" || groupIndicator === "2") {
           const span = doc.createElement("span");
           span.className = `cell ${column.className}`;
           span.textContent = "";
           return span;
         }
 
-        // Remove leading zeros and display the class number
-        const classNumber = parseInt(classNumberStr, 10);
+        // Group 1: Class numbered items - extract and display class number
+        if (groupIndicator === "1" && parts.length >= 2) {
+          const classNumberStr = parts[1];
+          // Remove leading zeros and display the class number
+          const classNumber = parseInt(classNumberStr, 10);
+          const span = doc.createElement("span");
+          span.className = `cell ${column.className}`;
+          span.textContent = String(classNumber);
+          return span;
+        }
+
+        // Fallback
         const span = doc.createElement("span");
         span.className = `cell ${column.className}`;
-        span.textContent = String(classNumber);
+        span.textContent = "";
         return span;
       },
       onEdit: async (item: Zotero.Item, dataKey: string, newValue: string) => {
@@ -1745,21 +1766,21 @@ export class SyllabusUIFactory {
         const selectedCollection = zoteroPane.getSelectedCollection();
 
         if (!selectedCollection) {
-          ztoolkit.log("No collection selected, cannot update session number");
+          ztoolkit.log("No collection selected, cannot update class number");
           return;
         }
 
-        // Parse and validate the session number
+        // Parse and validate the class number
         const trimmedValue = newValue.trim();
         if (trimmedValue === "") {
           await setSyllabusClassNumber(item, selectedCollection.id, undefined);
         } else {
-          const sessionNum = parseInt(trimmedValue, 10);
-          if (isNaN(sessionNum) || sessionNum < 1) {
-            ztoolkit.log(`Invalid session number: ${trimmedValue}`);
+          const classNum = parseInt(trimmedValue, 10);
+          if (isNaN(classNum) || classNum < 1) {
+            ztoolkit.log(`Invalid class number: ${trimmedValue}`);
             return;
           }
-          await setSyllabusClassNumber(item, selectedCollection.id, sessionNum);
+          await setSyllabusClassNumber(item, selectedCollection.id, classNum);
         }
 
         await item.saveTx();
