@@ -261,17 +261,40 @@ export class BasicExampleFactory {
 
       const bibliographicReference = citationParts.join(". ");
 
-      // Get URL and PDF attachment
+      // Get URL and viewable attachment (PDF, web snapshot, or EPUB)
       const url = item.getField("url") || "";
       const attachments = item.getAttachments();
-      let pdfAttachment: Zotero.Item | null = null;
+      let viewableAttachment: Zotero.Item | null = null;
+      let attachmentType: "pdf" | "snapshot" | "epub" | null = null;
+
       for (const attId of attachments) {
         try {
           const att = Zotero.Items.get(attId);
           if (att && att.isAttachment()) {
             const contentType = att.attachmentContentType || "";
-            if (contentType === "application/pdf" || att.attachmentPath?.toLowerCase().endsWith(".pdf")) {
-              pdfAttachment = att;
+            const linkMode = att.attachmentLinkMode;
+            const path = att.attachmentPath?.toLowerCase() || "";
+
+            // Check for PDF
+            if (contentType === "application/pdf" || path.endsWith(".pdf")) {
+              viewableAttachment = att;
+              attachmentType = "pdf";
+              break;
+            }
+
+            // Check for web snapshot (linkMode 3 = imported snapshot)
+            if (linkMode === 3) {
+              viewableAttachment = att;
+              attachmentType = "snapshot";
+              break;
+            }
+
+            // Check for EPUB
+            if (contentType === "application/epub+zip" ||
+              contentType === "application/epub" ||
+              path.endsWith(".epub")) {
+              viewableAttachment = att;
+              attachmentType = "epub";
               break;
             }
           }
@@ -440,13 +463,27 @@ export class BasicExampleFactory {
         actionsRow.appendChild(urlButton);
       }
 
-      if (pdfAttachment) {
-        const pdfButton = ztoolkit.UI.createElement(doc, "button", {
+      if (viewableAttachment && attachmentType) {
+        // Determine button label based on attachment type
+        let buttonLabel = "View";
+        let buttonTooltip = "Open attachment";
+        if (attachmentType === "pdf") {
+          buttonLabel = "PDF";
+          buttonTooltip = "Open PDF";
+        } else if (attachmentType === "snapshot") {
+          buttonLabel = "Snapshot";
+          buttonTooltip = "Open web snapshot";
+        } else if (attachmentType === "epub") {
+          buttonLabel = "EPUB";
+          buttonTooltip = "Open EPUB";
+        }
+
+        const viewButton = ztoolkit.UI.createElement(doc, "button", {
           namespace: "xul",
           classList: ["toolbarbutton-1"],
           properties: {
-            label: "PDF",
-            tooltiptext: "Open PDF",
+            label: buttonLabel,
+            tooltiptext: buttonTooltip,
           },
           listeners: [
             {
@@ -454,28 +491,44 @@ export class BasicExampleFactory {
               listener: async (e: Event) => {
                 e.stopPropagation(); // Prevent item selection
                 try {
-                  // Try to view PDF in Zotero reader
-                  await pane.viewPDF(pdfAttachment.id, { page: 1 });
+                  if (attachmentType === "pdf") {
+                    // Try to view PDF in Zotero reader
+                    await pane.viewPDF(viewableAttachment.id, { page: 1 });
+                  } else if (attachmentType === "snapshot") {
+                    // Open web snapshot in Zotero reader
+                    await pane.viewPDF(viewableAttachment.id, { page: 1 });
+                  } else if (attachmentType === "epub") {
+                    // Open EPUB in Zotero reader
+                    await pane.viewPDF(viewableAttachment.id, { page: 1 });
+                  }
                 } catch (err) {
                   // Fallback: try to open attachment file
                   try {
-                    const file = pdfAttachment.getFilePath();
+                    const file = viewableAttachment.getFilePath();
                     if (file) {
                       Zotero.File.pathToFile(file).reveal();
+                    } else {
+                      // For snapshots, try to get the URL
+                      if (attachmentType === "snapshot") {
+                        const snapshotUrl = viewableAttachment.getField("url");
+                        if (snapshotUrl) {
+                          Zotero.launchURL(snapshotUrl);
+                        }
+                      }
                     }
                   } catch (fileErr) {
-                    ztoolkit.log("Error opening PDF:", fileErr);
+                    ztoolkit.log("Error opening attachment:", fileErr);
                   }
                 }
               },
             },
           ],
         });
-        actionsRow.appendChild(pdfButton);
+        actionsRow.appendChild(viewButton);
       }
 
-      if (url || pdfAttachment) {
-        textContent.appendChild(actionsRow);
+      if (url || viewableAttachment) {
+        itemElement.appendChild(actionsRow);
       }
 
       itemContent.appendChild(textContent);
