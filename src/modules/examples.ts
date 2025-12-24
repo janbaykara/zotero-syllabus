@@ -631,25 +631,29 @@ export class BasicExampleFactory {
           const items = selectedCollection.getChildItems();
 
           // Group items by class number
-          const itemsByClass: Map<number | undefined, Zotero.Item[]> = new Map();
+          // Use null as a sentinel for "no class number" to ensure consistent grouping
+          const itemsByClass: Map<number | null, Zotero.Item[]> = new Map();
           for (const item of items) {
             if (!item.isRegularItem()) continue;
             const classNumber = getSyllabusClassNumber(
               item,
               selectedCollection.id,
             );
-            if (!itemsByClass.has(classNumber)) {
-              itemsByClass.set(classNumber, []);
+            // Normalize undefined to null for consistent Map key handling
+            const normalizedClassNumber = classNumber === undefined ? null : classNumber;
+            if (!itemsByClass.has(normalizedClassNumber)) {
+              itemsByClass.set(normalizedClassNumber, []);
             }
-            itemsByClass.get(classNumber)!.push(item);
+            itemsByClass.get(normalizedClassNumber)!.push(item);
           }
 
-          // Sort class numbers (undefined/null goes FIRST, then numeric order)
+          // Sort class numbers (null goes FIRST, then numeric order)
           // This ensures "Syllabus Documents" (items without class number) appear at the top
           const sortedClassNumbers = Array.from(itemsByClass.keys()).sort((a, b) => {
-            if (a === undefined && b === undefined) return 0;
-            if (a === undefined) return -1; // undefined goes first (top)
-            if (b === undefined) return 1;
+            // null represents "no class number"
+            if (a === null && b === null) return 0;
+            if (a === null) return -1; // null goes first (top)
+            if (b === null) return 1;
             return a - b;
           });
 
@@ -677,7 +681,7 @@ export class BasicExampleFactory {
             classGroup.className = "syllabus-class-group";
 
             // Add class header
-            if (classNumber !== undefined) {
+            if (classNumber !== null) {
               const classHeader = doc.createElement("div");
               classHeader.className = "syllabus-class-header";
               classHeader.textContent = `Class ${classNumber}`;

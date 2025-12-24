@@ -24,7 +24,7 @@ export enum SyllabusStatus {
 export const STATUS_COLORS: Record<SyllabusStatus, string> = {
   [SyllabusStatus.ESSENTIAL]: "#8B5CF6", // purple
   [SyllabusStatus.RECOMMENDED]: "#3B82F6", // blue
-  [SyllabusStatus.OPTIONAL]: "#CCC", // grey
+  [SyllabusStatus.OPTIONAL]: "#AAA", // darker grey for better readability
 };
 
 /**
