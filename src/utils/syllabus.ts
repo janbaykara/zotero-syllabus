@@ -1,9 +1,14 @@
 /**
  * Utility functions for managing syllabus data on Zotero items
- * Data is stored in the item's 'extra' field as JSON
+ * Data is stored in the item's 'extra' field as JSON using ExtraFieldTool
  */
 
+import { ExtraFieldTool } from "zotero-plugin-toolkit";
+
 const SYLLABUS_DATA_KEY = "syllabus";
+
+// Create an ExtraFieldTool instance for safe extra field operations
+const extraFieldTool = new ExtraFieldTool();
 
 export enum SyllabusStatus {
   ESSENTIAL = "essential",
@@ -41,44 +46,29 @@ export interface SyllabusData {
  * Get syllabus data from an item's extra field
  */
 export function getSyllabusData(item: Zotero.Item): SyllabusData {
-  const extra = item.getField("extra") || "";
-  const lines = extra.split("\n");
+  const jsonStr = extraFieldTool.getExtraField(item, SYLLABUS_DATA_KEY);
 
-  for (const line of lines) {
-    if (line.startsWith(`${SYLLABUS_DATA_KEY}:`)) {
-      try {
-        const jsonStr = line.substring(`${SYLLABUS_DATA_KEY}:`.length).trim();
-        return JSON.parse(jsonStr) as SyllabusData;
-      } catch (e) {
-        ztoolkit.log("Error parsing syllabus data:", e);
-        return {};
-      }
-    }
+  if (!jsonStr) {
+    return {};
   }
 
-  return {};
+  try {
+    return JSON.parse(jsonStr) as SyllabusData;
+  } catch (e) {
+    ztoolkit.log("Error parsing syllabus data:", e);
+    return {};
+  }
 }
 
 /**
  * Set syllabus data in an item's extra field
  */
-export function setSyllabusData(
+export async function setSyllabusData(
   item: Zotero.Item,
   data: SyllabusData,
-): void {
-  const extra = item.getField("extra") || "";
-  const lines = extra.split("\n");
-  const syllabusLine = `${SYLLABUS_DATA_KEY}: ${JSON.stringify(data)}`;
-
-  // Remove existing syllabus line if present
-  const filteredLines = lines.filter(
-    (line) => !line.startsWith(`${SYLLABUS_DATA_KEY}:`),
-  );
-
-  // Add new syllabus line
-  filteredLines.push(syllabusLine);
-
-  item.setField("extra", filteredLines.join("\n"));
+): Promise<void> {
+  const jsonStr = JSON.stringify(data);
+  await extraFieldTool.setExtraField(item, SYLLABUS_DATA_KEY, jsonStr);
 }
 
 /**
@@ -96,11 +86,11 @@ export function getSyllabusStatus(
 /**
  * Set syllabus status for a specific collection
  */
-export function setSyllabusStatus(
+export async function setSyllabusStatus(
   item: Zotero.Item,
   collectionId: number | string,
   status: SyllabusStatus | "",
-): void {
+): Promise<void> {
   const data = getSyllabusData(item);
   const collectionIdStr = String(collectionId);
 
@@ -121,7 +111,7 @@ export function setSyllabusStatus(
     }
   }
 
-  setSyllabusData(item, data);
+  await setSyllabusData(item, data);
 }
 
 /**
@@ -139,11 +129,11 @@ export function getSyllabusDescription(
 /**
  * Set syllabus description for a specific collection
  */
-export function setSyllabusDescription(
+export async function setSyllabusDescription(
   item: Zotero.Item,
   collectionId: number | string,
   description: string,
-): void {
+): Promise<void> {
   const data = getSyllabusData(item);
   const collectionIdStr = String(collectionId);
 
@@ -164,7 +154,7 @@ export function setSyllabusDescription(
     }
   }
 
-  setSyllabusData(item, data);
+  await setSyllabusData(item, data);
 }
 
 /**
@@ -182,11 +172,11 @@ export function getSyllabusClassNumber(
 /**
  * Set syllabus session number for a specific collection
  */
-export function setSyllabusClassNumber(
+export async function setSyllabusClassNumber(
   item: Zotero.Item,
   collectionId: number | string,
   classNumber: number | undefined,
-): void {
+): Promise<void> {
   const data = getSyllabusData(item);
   const collectionIdStr = String(collectionId);
 
@@ -207,6 +197,6 @@ export function setSyllabusClassNumber(
     }
   }
 
-  setSyllabusData(item, data);
+  await setSyllabusData(item, data);
 }
 

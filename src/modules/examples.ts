@@ -305,7 +305,7 @@ export class UIExampleFactory {
           return;
         }
 
-        setSyllabusStatus(
+        await setSyllabusStatus(
           item,
           selectedCollection.id,
           newValue as SyllabusStatus | "",
@@ -346,7 +346,7 @@ export class UIExampleFactory {
           return;
         }
 
-        setSyllabusDescription(item, selectedCollection.id, newValue);
+        await setSyllabusDescription(item, selectedCollection.id, newValue);
         await item.saveTx();
 
         // Refresh the item tree to show the updated value
@@ -426,14 +426,14 @@ export class UIExampleFactory {
         // Parse and validate the session number
         const trimmedValue = newValue.trim();
         if (trimmedValue === "") {
-          setSyllabusClassNumber(item, selectedCollection.id, undefined);
+          await setSyllabusClassNumber(item, selectedCollection.id, undefined);
         } else {
           const sessionNum = parseInt(trimmedValue, 10);
           if (isNaN(sessionNum) || sessionNum < 1) {
             ztoolkit.log(`Invalid session number: ${trimmedValue}`);
             return;
           }
-          setSyllabusClassNumber(item, selectedCollection.id, sessionNum);
+          await setSyllabusClassNumber(item, selectedCollection.id, sessionNum);
         }
 
         await item.saveTx();
@@ -590,7 +590,7 @@ export class UIExampleFactory {
         if (editable) {
           statusSelect.addEventListener("change", async (e) => {
             const target = e.target as HTMLSelectElement;
-            setSyllabusStatus(item, collectionId, target.value as any);
+            await setSyllabusStatus(item, collectionId, target.value as any);
             await item.saveTx();
             zoteroPane.refresh();
           });
@@ -641,7 +641,7 @@ export class UIExampleFactory {
               sessionInput.value = currentclassNumber?.toString() || "";
               return;
             }
-            setSyllabusClassNumber(item, collectionId, sessionNum);
+            await setSyllabusClassNumber(item, collectionId, sessionNum);
             await item.saveTx();
             zoteroPane.refresh();
           });
@@ -690,7 +690,7 @@ export class UIExampleFactory {
               clearTimeout(saveTimeout);
             }
             saveTimeout = setTimeout(async () => {
-              setSyllabusDescription(item, collectionId, descTextarea.value);
+              await setSyllabusDescription(item, collectionId, descTextarea.value);
               await item.saveTx();
               zoteroPane.refresh();
             }, 500);
