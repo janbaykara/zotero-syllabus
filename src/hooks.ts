@@ -87,6 +87,8 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
 
   SyllabusUIFactory.registerStyleSheet(win);
 
+  SyllabusUIFactory.registerContextMenu(win);
+
   await Zotero.Promise.delay(1000);
 
   popupWin.changeLine({

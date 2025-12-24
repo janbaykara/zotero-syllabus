@@ -1243,5 +1243,205 @@ export class SyllabusUIFactory {
       },
     });
   }
+
+  static registerContextMenu(win: Window) {
+    // Register priority menu with submenu
+    ztoolkit.Menu.register("item", {
+      tag: "menu",
+      id: "syllabus-set-priority-menu",
+      label: "Set Priority",
+      children: [
+        {
+          tag: "menuitem",
+          label: PRIORITY_LABELS[SyllabusPriority.ESSENTIAL],
+          commandListener: async () => {
+            const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+            const selectedCollection = zoteroPane.getSelectedCollection();
+            if (!selectedCollection) return;
+            const items = zoteroPane.getSelectedItems();
+            const collectionId = selectedCollection.id;
+            for (const item of items) {
+              if (item.isRegularItem()) {
+                await setSyllabusPriority(item, collectionId, SyllabusPriority.ESSENTIAL);
+                await item.saveTx();
+              }
+            }
+            zoteroPane.refresh();
+          },
+        },
+        {
+          tag: "menuitem",
+          label: PRIORITY_LABELS[SyllabusPriority.RECOMMENDED],
+          commandListener: async () => {
+            const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+            const selectedCollection = zoteroPane.getSelectedCollection();
+            if (!selectedCollection) return;
+            const items = zoteroPane.getSelectedItems();
+            const collectionId = selectedCollection.id;
+            for (const item of items) {
+              if (item.isRegularItem()) {
+                await setSyllabusPriority(item, collectionId, SyllabusPriority.RECOMMENDED);
+                await item.saveTx();
+              }
+            }
+            zoteroPane.refresh();
+          },
+        },
+        {
+          tag: "menuitem",
+          label: PRIORITY_LABELS[SyllabusPriority.OPTIONAL],
+          commandListener: async () => {
+            const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+            const selectedCollection = zoteroPane.getSelectedCollection();
+            if (!selectedCollection) return;
+            const items = zoteroPane.getSelectedItems();
+            const collectionId = selectedCollection.id;
+            for (const item of items) {
+              if (item.isRegularItem()) {
+                await setSyllabusPriority(item, collectionId, SyllabusPriority.OPTIONAL);
+                await item.saveTx();
+              }
+            }
+            zoteroPane.refresh();
+          },
+        },
+        {
+          tag: "menuseparator",
+        },
+        {
+          tag: "menuitem",
+          label: "(None)",
+          commandListener: async () => {
+            const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+            const selectedCollection = zoteroPane.getSelectedCollection();
+            if (!selectedCollection) return;
+            const items = zoteroPane.getSelectedItems();
+            const collectionId = selectedCollection.id;
+            for (const item of items) {
+              if (item.isRegularItem()) {
+                await setSyllabusPriority(item, collectionId, "");
+                await item.saveTx();
+              }
+            }
+            zoteroPane.refresh();
+          },
+        },
+      ],
+    });
+
+    // Register class number reassignment menu (dynamic)
+    // Helper function to build children array dynamically
+    const buildClassNumberChildren = (): any[] => {
+      const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+      const selectedCollection = zoteroPane.getSelectedCollection();
+      if (!selectedCollection) {
+        return [
+          {
+            tag: "menuitem",
+            label: "(No collection selected)",
+            disabled: true,
+          },
+        ];
+      }
+
+      // Get all items in the collection to find existing class numbers
+      const collectionItems = selectedCollection.getChildItems();
+      const classNumbers = new Set<number>();
+      for (const item of collectionItems) {
+        if (item.isRegularItem()) {
+          const classNumber = getSyllabusClassNumber(item, selectedCollection.id);
+          if (classNumber !== undefined) {
+            classNumbers.add(classNumber);
+          }
+        }
+      }
+
+      // Sort class numbers
+      const sortedClassNumbers = Array.from(classNumbers).sort((a, b) => a - b);
+
+      const children: any[] = [];
+
+      // Add menu items for each class number
+      for (const classNumber of sortedClassNumbers) {
+        children.push({
+          tag: "menuitem",
+          label: `Class ${classNumber}`,
+          commandListener: async () => {
+            const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+            const selectedCollection = zoteroPane.getSelectedCollection();
+            if (!selectedCollection) return;
+            const items = zoteroPane.getSelectedItems();
+            const collectionId = selectedCollection.id;
+            for (const item of items) {
+              if (item.isRegularItem()) {
+                await setSyllabusClassNumber(item, collectionId, classNumber);
+                await item.saveTx();
+              }
+            }
+            zoteroPane.refresh();
+          },
+        });
+      }
+
+      // Add separator if there are class numbers
+      if (sortedClassNumbers.length > 0) {
+        children.push({
+          tag: "menuseparator",
+        });
+      }
+
+      // Add "None" option
+      children.push({
+        tag: "menuitem",
+        label: "(None)",
+        commandListener: async () => {
+          const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+          const selectedCollection = zoteroPane.getSelectedCollection();
+          if (!selectedCollection) return;
+          const items = zoteroPane.getSelectedItems();
+          const collectionId = selectedCollection.id;
+          for (const item of items) {
+            if (item.isRegularItem()) {
+              await setSyllabusClassNumber(item, collectionId, undefined);
+              await item.saveTx();
+            }
+          }
+          zoteroPane.refresh();
+        },
+      });
+
+      return children;
+    };
+
+    // Register the menu with dynamic children
+    const updateMenuHandler = () => {
+      // Unregister and re-register to update children
+      ztoolkit.Menu.unregister("syllabus-reassign-class-number-menu");
+      ztoolkit.Menu.register("item", {
+        tag: "menu",
+        id: "syllabus-reassign-class-number-menu",
+        label: "Re-assign Class Number",
+        children: buildClassNumberChildren(),
+      });
+
+      // Re-attach the listener to the new menu element
+      const doc = win.document;
+      if (doc) {
+        setTimeout(() => {
+          const newMenuElement = doc.getElementById("syllabus-reassign-class-number-menu") as XUL.Menu;
+          if (newMenuElement) {
+            newMenuElement.addEventListener("popupshowing", updateMenuHandler);
+          }
+        }, 10);
+      }
+    };
+
+    ztoolkit.Menu.register("item", {
+      tag: "menu",
+      id: "syllabus-reassign-class-number-menu",
+      label: "Re-assign Class Number",
+      children: buildClassNumberChildren(),
+    });
+  }
 }
 
