@@ -207,6 +207,45 @@ export class BasicExampleFactory {
       const description = getSyllabusDescription(item, collectionId);
       const title = item.getField("title") || "Untitled";
 
+      // Get item metadata
+      const itemType = item.itemType;
+      const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(itemType);
+
+      // Get author (first creator)
+      let author = "";
+      if (item.firstCreator) {
+        author = item.firstCreator;
+      } else {
+        const creators = item.getCreators();
+        if (creators.length > 0) {
+          const creatorName = item.getCreator(0);
+          if (creatorName) {
+            author = `${creatorName.firstName || ""} ${creatorName.lastName || ""}`.trim();
+          }
+        }
+      }
+
+      const date = item.getField("date") || "";
+
+      // Get URL and PDF attachment
+      const url = item.getField("url") || "";
+      const attachments = item.getAttachments();
+      let pdfAttachment: Zotero.Item | null = null;
+      for (const attId of attachments) {
+        try {
+          const att = Zotero.Items.get(attId);
+          if (att && att.isAttachment()) {
+            const contentType = att.attachmentContentType || "";
+            if (contentType === "application/pdf" || att.attachmentPath?.toLowerCase().endsWith(".pdf")) {
+              pdfAttachment = att;
+              break;
+            }
+          }
+        } catch (e) {
+          // Continue
+        }
+      }
+
       // Create item content container
       const itemContent = doc.createElement("div");
       itemContent.className = "syllabus-item-content";
@@ -291,12 +330,95 @@ export class BasicExampleFactory {
 
       textContent.appendChild(itemTitleRow);
 
+      // Add item metadata row (type, author, date)
+      const metadataRow = doc.createElement("div");
+      metadataRow.className = "syllabus-item-metadata";
+
+      const metadataParts: string[] = [];
+      if (itemTypeLabel) {
+        metadataParts.push(itemTypeLabel);
+      }
+      if (author) {
+        metadataParts.push(author);
+      }
+      if (date) {
+        metadataParts.push(date);
+      }
+
+      if (metadataParts.length > 0) {
+        metadataRow.textContent = metadataParts.join(" • ");
+        textContent.appendChild(metadataRow);
+      }
+
       // Add description if available
       if (description) {
         const itemDesc = doc.createElement("div");
         itemDesc.className = "syllabus-item-description";
         itemDesc.textContent = description;
         textContent.appendChild(itemDesc);
+      }
+
+      // Add action buttons row (URL, PDF)
+      const actionsRow = doc.createElement("div");
+      actionsRow.className = "syllabus-item-actions";
+
+      if (url) {
+        const urlButton = ztoolkit.UI.createElement(doc, "button", {
+          namespace: "xul",
+          classList: ["toolbarbutton-1"],
+          properties: {
+            label: "URL",
+            tooltiptext: "Open URL",
+          },
+          listeners: [
+            {
+              type: "command",
+              listener: (e: Event) => {
+                e.stopPropagation(); // Prevent item selection
+                Zotero.launchURL(url);
+              },
+            },
+          ],
+        });
+        actionsRow.appendChild(urlButton);
+      }
+
+      if (pdfAttachment) {
+        const pdfButton = ztoolkit.UI.createElement(doc, "button", {
+          namespace: "xul",
+          classList: ["toolbarbutton-1"],
+          properties: {
+            label: "PDF",
+            tooltiptext: "Open PDF",
+          },
+          listeners: [
+            {
+              type: "command",
+              listener: async (e: Event) => {
+                e.stopPropagation(); // Prevent item selection
+                try {
+                  // Try to view PDF in Zotero reader
+                  await pane.viewPDF(pdfAttachment.id, { page: 1 });
+                } catch (err) {
+                  // Fallback: try to open attachment file
+                  try {
+                    const file = pdfAttachment.getFilePath();
+                    if (file) {
+                      Zotero.File.pathToFile(file).reveal();
+                    }
+                  } catch (fileErr) {
+                    ztoolkit.log("Error opening PDF:", fileErr);
+                  }
+                }
+              },
+            },
+          ],
+        });
+        actionsRow.appendChild(pdfButton);
+      }
+
+      if (url || pdfAttachment) {
+        textContent.appendChild(actionsRow);
       }
 
       itemContent.appendChild(textContent);
@@ -358,8 +480,8 @@ export class BasicExampleFactory {
           // Clear and render
           customView.innerHTML = "";
 
-          // Add collection name as title
-          const titleElement = doc.createElement("div");
+          // Add collection name as title (large, like document title)
+          const titleElement = doc.createElement("h1");
           titleElement.className = "syllabus-view-title";
           titleElement.textContent = selectedCollection.name;
           customView.appendChild(titleElement);
