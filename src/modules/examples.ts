@@ -198,12 +198,23 @@ export class BasicExampleFactory {
       collectionId: number,
       pane: any,
     ): HTMLElement {
+      // Get item data
+      const status = getSyllabusStatus(item, collectionId);
+
       const itemElement = doc.createElement("div");
       itemElement.className = "syllabus-item";
       itemElement.setAttribute("data-item-id", String(item.id));
 
-      // Get item data
-      const status = getSyllabusStatus(item, collectionId);
+      // Add subtle background and border coloring based on status
+      if (status && status in STATUS_COLORS) {
+        const statusColor = STATUS_COLORS[status as SyllabusStatus];
+        // Convert hex to rgba for subtle background (5% opacity) and border (20% opacity)
+        const r = parseInt(statusColor.slice(1, 3), 16);
+        const g = parseInt(statusColor.slice(3, 5), 16);
+        const b = parseInt(statusColor.slice(5, 7), 16);
+        itemElement.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.05)`;
+        itemElement.style.borderColor = `rgba(${r}, ${g}, ${b}, 0.2)`;
+      }
       const description = getSyllabusDescription(item, collectionId);
       const title = item.getField("title") || "Untitled";
 
@@ -371,24 +382,9 @@ export class BasicExampleFactory {
       const textContent = doc.createElement("div");
       textContent.className = "syllabus-item-text";
 
-      // Create item title row: icon (status dot), status label, title text
+      // Create item title row (just title, no status)
       const itemTitleRow = doc.createElement("div");
       itemTitleRow.className = "syllabus-item-title-row";
-
-      // Add status icon (colored dot) first
-      if (status && status in STATUS_LABELS) {
-        const statusIcon = doc.createElement("span");
-        statusIcon.className = "syllabus-status-icon";
-        statusIcon.style.backgroundColor = STATUS_COLORS[status as SyllabusStatus];
-        itemTitleRow.appendChild(statusIcon);
-
-        // Add status label
-        const statusLabel = doc.createElement("span");
-        statusLabel.className = "syllabus-status-label";
-        statusLabel.textContent = STATUS_LABELS[status as SyllabusStatus];
-        statusLabel.style.color = STATUS_COLORS[status as SyllabusStatus];
-        itemTitleRow.appendChild(statusLabel);
-      }
 
       // Add title text
       const itemTitle = doc.createElement("div");
@@ -406,9 +402,28 @@ export class BasicExampleFactory {
         textContent.appendChild(publicationRow);
       }
 
-      // Add item metadata row (type, author, date)
+      // Add item metadata row (status, type, author, date)
       const metadataRow = doc.createElement("div");
       metadataRow.className = "syllabus-item-metadata";
+
+      // Add status as first item in metadata row
+      if (status && status in STATUS_LABELS) {
+        const statusContainer = doc.createElement("span");
+        statusContainer.className = "syllabus-item-status-inline";
+
+        const statusIcon = doc.createElement("span");
+        statusIcon.className = "syllabus-status-icon";
+        statusIcon.style.backgroundColor = STATUS_COLORS[status as SyllabusStatus];
+        statusContainer.appendChild(statusIcon);
+
+        const statusLabel = doc.createElement("span");
+        statusLabel.className = "syllabus-status-label";
+        statusLabel.textContent = STATUS_LABELS[status as SyllabusStatus];
+        statusLabel.style.color = STATUS_COLORS[status as SyllabusStatus];
+        statusContainer.appendChild(statusLabel);
+
+        metadataRow.appendChild(statusContainer);
+      }
 
       const metadataParts: string[] = [];
       if (itemTypeLabel) {
@@ -422,7 +437,12 @@ export class BasicExampleFactory {
       }
 
       if (metadataParts.length > 0) {
-        metadataRow.textContent = metadataParts.join(" • ");
+        const metadataText = doc.createElement("span");
+        metadataText.textContent = metadataParts.join(" • ");
+        metadataRow.appendChild(metadataText);
+      }
+
+      if (metadataRow.children.length > 0) {
         textContent.appendChild(metadataRow);
       }
 
@@ -444,6 +464,10 @@ export class BasicExampleFactory {
 
       mainContent.appendChild(textContent);
       itemContent.appendChild(mainContent);
+
+      // Create right side container (buttons)
+      const rightSide = doc.createElement("div");
+      rightSide.className = "syllabus-item-right-side";
 
       // Add action buttons row (URL, PDF) - on the right side
       const actionsRow = doc.createElement("div");
@@ -534,8 +558,11 @@ export class BasicExampleFactory {
         actionsRow.appendChild(viewButton);
       }
 
-      // Always append actions row (even if empty, for layout consistency)
-      itemContent.appendChild(actionsRow);
+      // Append actions row to right side
+      rightSide.appendChild(actionsRow);
+
+      // Append right side to item content
+      itemContent.appendChild(rightSide);
       itemElement.appendChild(itemContent);
 
       // Add click handler to select item

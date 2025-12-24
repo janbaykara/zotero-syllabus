@@ -151,9 +151,8 @@
 
 .syllabus-item-title-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
 .syllabus-status-icon {
@@ -186,7 +185,6 @@
 .syllabus-item-publication {
   font-size: 13px;
   color: #666;
-  font-style: italic;
   margin-top: 4px;
 }
 
@@ -201,7 +199,16 @@
   font-size: 13px;
   color: #888;
   margin-top: 4px;
-  font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.syllabus-item-status-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .syllabus-item-description {
@@ -215,11 +222,18 @@
   margin-top: 8px;
 }
 
+.syllabus-item-right-side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+  align-items: flex-end;
+}
+
 .syllabus-item-actions {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  flex-shrink: 0;
   align-items: flex-end;
 }
 
