@@ -53,9 +53,24 @@ async function onStartup() {
 
 async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
   // Set up class group row styling after window loads
-  BasicExampleFactory.setupClassGroupRowStyling();
+  BasicExampleFactory.setupSyllabusView();
   // Create ztoolkit for every window
   addon.data.ztoolkit = createZToolkit();
+
+  const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+  // Use addReloadListener to catch view reloads (which happen on sort changes)
+  if (zoteroPane && typeof zoteroPane.addReloadListener === "function") {
+    ///
+    const itemsView = zoteroPane.itemsView;
+    if (itemsView) {
+      itemsView.window.addEventListener(
+        'click',
+        (e: Event) => {
+          BasicExampleFactory.setupSyllabusView();
+        }
+      )
+    }
+  }
 
   win.MozXULElement.insertFTLIfNeeded(
     `${addon.data.config.addonRef}-mainWindow.ftl`,
@@ -106,6 +121,7 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
 async function onMainWindowUnload(win: Window): Promise<void> {
   ztoolkit.unregisterAll();
   addon.data.dialog?.window?.close();
+  BasicExampleFactory.setupSyllabusView();
 }
 
 function onShutdown(): void {
