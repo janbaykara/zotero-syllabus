@@ -1106,7 +1106,12 @@ export class SyllabusManager {
             emptyBehavior: "reset", // Collection title resets to original when cleared
           });
 
-          customView.appendChild(titleElement);
+          // Wrap title in a sticky container to eliminate gaps
+          const titleContainer = doc.createElement("div");
+          titleContainer.className = "syllabus-view-title-container";
+          titleContainer.appendChild(titleElement);
+
+          customView.appendChild(titleContainer);
 
           // Add collection description field
           const collectionDescriptionElement = createEditableTextInput(doc, {
