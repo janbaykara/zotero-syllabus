@@ -10,6 +10,12 @@ import {
   setSyllabusPriority,
   setSyllabusClassInstruction,
   setSyllabusClassNumber,
+  getCollectionDescription,
+  setCollectionDescription,
+  getClassTitle,
+  setClassTitle,
+  getClassDescription,
+  setClassDescription,
   SyllabusPriority,
   PRIORITY_COLORS,
   PRIORITY_LABELS,
@@ -848,9 +854,17 @@ export class SyllabusManager {
         onSave: (newValue: string) => Promise<void>;
         onCancel?: () => void;
         placeholder?: string;
+        emptyBehavior?: "reset" | "delete"; // 'reset' reverts to original value, 'delete' saves empty string
       },
     ): HTMLTextAreaElement {
-      const { className, initialValue, onSave, onCancel, placeholder } = options;
+      const {
+        className,
+        initialValue,
+        onSave,
+        onCancel,
+        placeholder,
+        emptyBehavior = "reset",
+      } = options;
 
       // Check if an element with this class already exists and is being edited
       const existingElement = doc.querySelector(
@@ -903,8 +917,31 @@ export class SyllabusManager {
       const saveValue = async () => {
         const newValue = textareaElement.value.trim();
 
+        // Handle empty value based on emptyBehavior mode
+        if (!newValue) {
+          if (emptyBehavior === "delete") {
+            // Delete mode: save empty string
+            try {
+              await onSave("");
+              originalValue = "";
+              // Update textarea height after save
+              autoResize();
+            } catch (err) {
+              ztoolkit.log("Error saving editable text:", err);
+              // Revert to original value on error
+              textareaElement.value = originalValue;
+              autoResize();
+            }
+          } else {
+            // Reset mode: revert to original value
+            textareaElement.value = originalValue;
+            autoResize();
+          }
+          return;
+        }
+
         // Only update if value actually changed
-        if (newValue && newValue !== originalValue) {
+        if (newValue !== originalValue) {
           try {
             await onSave(newValue);
             originalValue = newValue;
@@ -916,10 +953,6 @@ export class SyllabusManager {
             textareaElement.value = originalValue;
             autoResize();
           }
-        } else if (!newValue) {
-          // If empty, revert to original value
-          textareaElement.value = originalValue;
-          autoResize();
         }
       };
 
@@ -1069,9 +1102,23 @@ export class SyllabusManager {
               selectedCollection.name = newName;
               await selectedCollection.saveTx();
             },
+            emptyBehavior: "reset", // Collection title resets to original when cleared
           });
 
           customView.appendChild(titleElement);
+
+          // Add collection description field
+          const collectionDescriptionElement = createEditableTextInput(doc, {
+            className: "syllabus-collection-description",
+            initialValue: getCollectionDescription(selectedCollection.id),
+            onSave: async (newDescription: string) => {
+              await setCollectionDescription(selectedCollection.id, newDescription);
+            },
+            placeholder: "Add a description for this collection...",
+            emptyBehavior: "delete", // Collection description deletes when cleared
+          });
+
+          customView.appendChild(collectionDescriptionElement);
 
           // Get all items from the collection
           const items = selectedCollection.getChildItems();
@@ -1153,6 +1200,30 @@ export class SyllabusManager {
               classHeader.className = "syllabus-class-header";
               classHeader.textContent = `Class ${classNumber}`;
               classGroup.appendChild(classHeader);
+
+              // Add class title field
+              const classTitleElement = createEditableTextInput(doc, {
+                className: "syllabus-class-title",
+                initialValue: getClassTitle(selectedCollection.id, classNumber),
+                onSave: async (newTitle: string) => {
+                  await setClassTitle(selectedCollection.id, classNumber, newTitle);
+                },
+                placeholder: "Add a title for this class...",
+                emptyBehavior: "delete", // Class title deletes when cleared
+              });
+              classGroup.appendChild(classTitleElement);
+
+              // Add class description field
+              const classDescriptionElement = createEditableTextInput(doc, {
+                className: "syllabus-class-description",
+                initialValue: getClassDescription(selectedCollection.id, classNumber),
+                onSave: async (newDescription: string) => {
+                  await setClassDescription(selectedCollection.id, classNumber, newDescription);
+                },
+                placeholder: "Add a description for this class...",
+                emptyBehavior: "delete", // Class description deletes when cleared
+              });
+              classGroup.appendChild(classDescriptionElement);
             }
 
             // Add items in this class

@@ -201,3 +201,196 @@ export async function setSyllabusClassNumber(
 
   await setSyllabusData(item, data);
 }
+
+/**
+ * Collection metadata stored in preferences
+ * Structure: { [collectionId]: { description: string, classes: { [classNumber]: { title: string, description: string } } } }
+ */
+interface CollectionMetadata {
+  [collectionId: string]: {
+    description?: string;
+    classes?: {
+      [classNumber: string]: {
+        title?: string;
+        description?: string;
+      };
+    };
+  };
+}
+
+/**
+ * Get collection metadata from preferences
+ */
+function getCollectionMetadata(): CollectionMetadata {
+  const prefKey = `${addon.data.config.prefsPrefix}.collectionMetadata`;
+  const metadataStr = String(Zotero.Prefs.get(prefKey, true) || "");
+  if (!metadataStr) {
+    return {};
+  }
+  try {
+    return JSON.parse(metadataStr) as CollectionMetadata;
+  } catch (e) {
+    ztoolkit.log("Error parsing collection metadata:", e);
+    return {};
+  }
+}
+
+/**
+ * Set collection metadata in preferences
+ */
+async function setCollectionMetadata(
+  metadata: CollectionMetadata,
+): Promise<void> {
+  const prefKey = `${addon.data.config.prefsPrefix}.collectionMetadata`;
+  Zotero.Prefs.set(prefKey, JSON.stringify(metadata), true);
+}
+
+/**
+ * Get collection description for a specific collection
+ */
+export function getCollectionDescription(
+  collectionId: number | string,
+): string {
+  const metadata = getCollectionMetadata();
+  const collectionIdStr = String(collectionId);
+  return metadata[collectionIdStr]?.description || "";
+}
+
+/**
+ * Set collection description for a specific collection
+ */
+export async function setCollectionDescription(
+  collectionId: number | string,
+  description: string,
+): Promise<void> {
+  const metadata = getCollectionMetadata();
+  const collectionIdStr = String(collectionId);
+
+  if (!metadata[collectionIdStr]) {
+    metadata[collectionIdStr] = {};
+  }
+
+  if (description && description.trim()) {
+    metadata[collectionIdStr].description = description.trim();
+  } else {
+    delete metadata[collectionIdStr].description;
+    // Remove collection entry if it's empty
+    if (!metadata[collectionIdStr].classes || Object.keys(metadata[collectionIdStr].classes || {}).length === 0) {
+      delete metadata[collectionIdStr];
+    }
+  }
+
+  await setCollectionMetadata(metadata);
+}
+
+/**
+ * Get class title for a specific collection and class number
+ */
+export function getClassTitle(
+  collectionId: number | string,
+  classNumber: number,
+): string {
+  const metadata = getCollectionMetadata();
+  const collectionIdStr = String(collectionId);
+  const classNumberStr = String(classNumber);
+  return metadata[collectionIdStr]?.classes?.[classNumberStr]?.title || "";
+}
+
+/**
+ * Set class title for a specific collection and class number
+ */
+export async function setClassTitle(
+  collectionId: number | string,
+  classNumber: number,
+  title: string,
+): Promise<void> {
+  const metadata = getCollectionMetadata();
+  const collectionIdStr = String(collectionId);
+  const classNumberStr = String(classNumber);
+
+  if (!metadata[collectionIdStr]) {
+    metadata[collectionIdStr] = {};
+  }
+  if (!metadata[collectionIdStr].classes) {
+    metadata[collectionIdStr].classes = {};
+  }
+  if (!metadata[collectionIdStr].classes[classNumberStr]) {
+    metadata[collectionIdStr].classes[classNumberStr] = {};
+  }
+
+  if (title && title.trim()) {
+    metadata[collectionIdStr].classes[classNumberStr].title = title.trim();
+  } else {
+    delete metadata[collectionIdStr].classes[classNumberStr].title;
+    // Remove class entry if it's empty
+    if (!metadata[collectionIdStr].classes[classNumberStr].description) {
+      delete metadata[collectionIdStr].classes[classNumberStr];
+    }
+    // Remove classes object if empty
+    if (Object.keys(metadata[collectionIdStr].classes || {}).length === 0) {
+      delete metadata[collectionIdStr].classes;
+    }
+    // Remove collection entry if it's empty
+    if (!metadata[collectionIdStr].description && !metadata[collectionIdStr].classes) {
+      delete metadata[collectionIdStr];
+    }
+  }
+
+  await setCollectionMetadata(metadata);
+}
+
+/**
+ * Get class description for a specific collection and class number
+ */
+export function getClassDescription(
+  collectionId: number | string,
+  classNumber: number,
+): string {
+  const metadata = getCollectionMetadata();
+  const collectionIdStr = String(collectionId);
+  const classNumberStr = String(classNumber);
+  return metadata[collectionIdStr]?.classes?.[classNumberStr]?.description || "";
+}
+
+/**
+ * Set class description for a specific collection and class number
+ */
+export async function setClassDescription(
+  collectionId: number | string,
+  classNumber: number,
+  description: string,
+): Promise<void> {
+  const metadata = getCollectionMetadata();
+  const collectionIdStr = String(collectionId);
+  const classNumberStr = String(classNumber);
+
+  if (!metadata[collectionIdStr]) {
+    metadata[collectionIdStr] = {};
+  }
+  if (!metadata[collectionIdStr].classes) {
+    metadata[collectionIdStr].classes = {};
+  }
+  if (!metadata[collectionIdStr].classes[classNumberStr]) {
+    metadata[collectionIdStr].classes[classNumberStr] = {};
+  }
+
+  if (description && description.trim()) {
+    metadata[collectionIdStr].classes[classNumberStr].description = description.trim();
+  } else {
+    delete metadata[collectionIdStr].classes[classNumberStr].description;
+    // Remove class entry if it's empty
+    if (!metadata[collectionIdStr].classes[classNumberStr].title) {
+      delete metadata[collectionIdStr].classes[classNumberStr];
+    }
+    // Remove classes object if empty
+    if (Object.keys(metadata[collectionIdStr].classes || {}).length === 0) {
+      delete metadata[collectionIdStr].classes;
+    }
+    // Remove collection entry if it's empty
+    if (!metadata[collectionIdStr].description && !metadata[collectionIdStr].classes) {
+      delete metadata[collectionIdStr];
+    }
+  }
+
+  await setCollectionMetadata(metadata);
+}
