@@ -148,19 +148,16 @@
 .syllabus-item-title-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.syllabus-item-title {
-  font-size: 16px;
-  font-weight: 500;
-  color: #333;
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.syllabus-status-icon {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
 }
 
 .syllabus-status-label {
@@ -169,9 +166,33 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   flex-shrink: 0;
-  padding: 4px 8px;
+  padding: 2px 6px;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.05);
+}
+
+.syllabus-item-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  flex: 1;
+  min-width: 0;
+}
+
+.syllabus-item-publication {
+  font-size: 13px;
+  color: #666;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.syllabus-item-reference {
+  font-size: 12px;
+  color: #777;
+  line-height: 1.4;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e8e8e8;
 }
 
 .syllabus-item-metadata {

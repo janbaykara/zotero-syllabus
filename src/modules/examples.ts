@@ -227,6 +227,40 @@ export class BasicExampleFactory {
 
       const date = item.getField("date") || "";
 
+      // Get publication name (for "In..." display)
+      const publicationTitle = item.getField("publicationTitle") || "";
+      const bookTitle = item.getField("bookTitle") || "";
+      const publicationName = publicationTitle || bookTitle || "";
+
+      // Get bibliographic reference (build citation manually)
+      const citationParts: string[] = [];
+      if (author) citationParts.push(author);
+      if (date) {
+        const year = date.substring(0, 4);
+        if (year && year !== "0000") citationParts.push(`(${year})`);
+      }
+      if (title) citationParts.push(title);
+      if (publicationName) citationParts.push(`In ${publicationName}`);
+
+      // Add additional citation details
+      const volume = item.getField("volume");
+      const issue = item.getField("issue");
+      const pages = item.getField("pages");
+      const publisher = item.getField("publisher");
+      const place = item.getField("place");
+
+      if (volume) {
+        citationParts.push(`Vol. ${volume}`);
+        if (issue) citationParts.push(`No. ${issue}`);
+      }
+      if (pages) citationParts.push(`pp. ${pages}`);
+      if (publisher) {
+        const publisherInfo = place ? `${place}: ${publisher}` : publisher;
+        citationParts.push(publisherInfo);
+      }
+
+      const bibliographicReference = citationParts.join(". ");
+
       // Get URL and PDF attachment
       const url = item.getField("url") || "";
       const attachments = item.getAttachments();
@@ -310,17 +344,18 @@ export class BasicExampleFactory {
       const textContent = doc.createElement("div");
       textContent.className = "syllabus-item-text";
 
-      // Create item title row with status label
+      // Create item title row: icon (status dot), status label, title text
       const itemTitleRow = doc.createElement("div");
       itemTitleRow.className = "syllabus-item-title-row";
 
-      const itemTitle = doc.createElement("div");
-      itemTitle.className = "syllabus-item-title";
-      itemTitle.textContent = title;
-      itemTitleRow.appendChild(itemTitle);
-
-      // Add status label (floated to the right)
+      // Add status icon (colored dot) first
       if (status && status in STATUS_LABELS) {
+        const statusIcon = doc.createElement("span");
+        statusIcon.className = "syllabus-status-icon";
+        statusIcon.style.backgroundColor = STATUS_COLORS[status as SyllabusStatus];
+        itemTitleRow.appendChild(statusIcon);
+
+        // Add status label
         const statusLabel = doc.createElement("span");
         statusLabel.className = "syllabus-status-label";
         statusLabel.textContent = STATUS_LABELS[status as SyllabusStatus];
@@ -328,7 +363,29 @@ export class BasicExampleFactory {
         itemTitleRow.appendChild(statusLabel);
       }
 
+      // Add title text
+      const itemTitle = doc.createElement("div");
+      itemTitle.className = "syllabus-item-title";
+      itemTitle.textContent = title;
+      itemTitleRow.appendChild(itemTitle);
+
       textContent.appendChild(itemTitleRow);
+
+      // Add "In..." publication name under title
+      if (publicationName) {
+        const publicationRow = doc.createElement("div");
+        publicationRow.className = "syllabus-item-publication";
+        publicationRow.textContent = `In ${publicationName}`;
+        textContent.appendChild(publicationRow);
+      }
+
+      // Add bibliographic reference
+      if (bibliographicReference) {
+        const referenceRow = doc.createElement("div");
+        referenceRow.className = "syllabus-item-reference";
+        referenceRow.textContent = bibliographicReference;
+        textContent.appendChild(referenceRow);
+      }
 
       // Add item metadata row (type, author, date)
       const metadataRow = doc.createElement("div");
