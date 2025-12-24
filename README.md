@@ -6,45 +6,27 @@ A Zotero plugin that turns your collections into syllabi and course reading list
 
 ## Installation
 
-### Download
-
-Download the latest release from the [Releases](https://github.com/janbaykara/zotero-syllabus/releases) page.
-
-### Install Plugin
-
-To install a plugin in Zotero, download its .xpi file to your computer. Then, in Zotero, click "Tools → Add-ons" and drag the .xpi file onto the Add-ons window.
-
-Alternatively:
-
-1. In Zotero, go to `Tools` → `Add-ons`
-2. Click the gear icon and select `Install Add-on From File...`
-3. Select the downloaded `.xpi` file
+1. Download the latest release from the [Releases](https://github.com/janbaykara/zotero-syllabus/releases) page.
+2. In Zotero, go to `Tools` → `Add-ons`
+3. Click the gear icon and select `Install Add-on From File...`
+4. Select the downloaded `.xpi` file
 
 ## Screenshots
 
-### List View vs Syllabus View
+### Class Management
 
-The plugin provides two distinct viewing modes to accommodate different organizational needs.
+![Drag and drop functionality demonstration](doc/images/drag-drop.gif)
+_Classes grouped by course number with visual priority indicators and custom descriptions. Use drag and drop to move items between classes._
 
 #### Standard List View
 
 ![Standard Zotero list view](doc/images/list.png)
-_The standard Zotero item list view showing items in a traditional tabular format._
+_The standard Zotero item list view has added columns for class numbers, instructions, and reading priority levels._
 
-#### Syllabus View
+#### Syllabus Metadata
 
 ![Syllabus module interface showing class organization](doc/images/module.png)
-_The enhanced syllabus view with custom columns for class numbers, instructions, and priority levels, along with priority indicators and class-based organization._
-
-### Class Management
-
-![Class grouping and organization](doc/images/classes.png)
-_Classes grouped by course number with visual priority indicators and custom descriptions._
-
-### Drag & Drop Operations
-
-![Drag and drop functionality demonstration](doc/images/drag-drop.gif)
-_Intuitive drag-and-drop interface for organizing syllabus materials._
+_Pin important course information to the top of the syllabus._
 
 ## Features
 
