@@ -236,6 +236,7 @@ export class SyllabusManager {
       const itemElement = doc.createElement("div");
       itemElement.className = "syllabus-item";
       itemElement.setAttribute("data-item-id", String(item.id));
+      itemElement.setAttribute("draggable", "true");
 
       // Add subtle background and border coloring based on priority
       if (priority && priority in PRIORITY_COLORS) {
@@ -500,10 +501,13 @@ export class SyllabusManager {
       // Create right side container (buttons)
       const rightSide = doc.createElement("div");
       rightSide.className = "syllabus-item-right-side";
+      // Prevent buttons area from interfering with drag
+      rightSide.setAttribute("draggable", "false");
 
       // Add action buttons row (URL, PDF) - on the right side
       const actionsRow = doc.createElement("div");
       actionsRow.className = "syllabus-item-actions";
+      actionsRow.setAttribute("draggable", "false");
 
       if (url) {
         const urlButton = ztoolkit.UI.createElement(doc, "button", {
@@ -597,9 +601,44 @@ export class SyllabusManager {
       itemContent.appendChild(rightSide);
       itemElement.appendChild(itemContent);
 
-      // Add click handler to select item
-      itemElement.addEventListener("click", () => {
+      // Track if we're dragging to prevent click after drag
+      let isDragging = false;
+
+      // Add click handler to select item (only if not dragging)
+      itemElement.addEventListener("click", (e: MouseEvent) => {
+        // Don't select if we just finished dragging or if clicking on a button
+        if (isDragging) {
+          isDragging = false;
+          return;
+        }
+        // Don't select if clicking on action buttons
+        const target = e.target as HTMLElement;
+        if (
+          target.closest(".syllabus-item-actions") ||
+          target.closest("button")
+        ) {
+          return;
+        }
         pane.selectItem(item.id);
+      });
+
+      // Prevent drag from triggering click
+      itemElement.addEventListener("dragstart", (e: DragEvent) => {
+        e.stopPropagation();
+        isDragging = true;
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", String(item.id));
+        }
+        itemElement.classList.add("syllabus-item-dragging");
+      });
+
+      itemElement.addEventListener("dragend", () => {
+        itemElement.classList.remove("syllabus-item-dragging");
+        // Reset dragging flag after a short delay to prevent click
+        setTimeout(() => {
+          isDragging = false;
+        }, 100);
       });
 
       return itemElement;
@@ -728,6 +767,76 @@ export class SyllabusManager {
             // Add items in this class
             const itemsContainer = doc.createElement("div");
             itemsContainer.className = "syllabus-class-items";
+            // Store class number in data attribute for drop handling
+            if (classNumber !== null) {
+              itemsContainer.setAttribute("data-class-number", String(classNumber));
+            } else {
+              itemsContainer.setAttribute("data-class-number", "");
+            }
+
+            // Make itemsContainer a drop zone
+            itemsContainer.addEventListener("dragover", (e: DragEvent) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (e.dataTransfer) {
+                e.dataTransfer.dropEffect = "move";
+              }
+              itemsContainer.classList.add("syllabus-dropzone-active");
+            });
+
+            itemsContainer.addEventListener("dragleave", (e: DragEvent) => {
+              e.preventDefault();
+              e.stopPropagation();
+              // Only remove class if we're actually leaving the container
+              const rect = itemsContainer.getBoundingClientRect();
+              const x = e.clientX;
+              const y = e.clientY;
+              if (
+                x < rect.left ||
+                x > rect.right ||
+                y < rect.top ||
+                y > rect.bottom
+              ) {
+                itemsContainer.classList.remove("syllabus-dropzone-active");
+              }
+            });
+
+            itemsContainer.addEventListener("drop", async (e: DragEvent) => {
+              e.preventDefault();
+              e.stopPropagation();
+              itemsContainer.classList.remove("syllabus-dropzone-active");
+
+              const itemIdStr = e.dataTransfer?.getData("text/plain");
+              if (!itemIdStr) return;
+
+              const itemId = parseInt(itemIdStr, 10);
+              if (isNaN(itemId)) return;
+
+              try {
+                const draggedItem = Zotero.Items.get(itemId);
+                if (!draggedItem || !draggedItem.isRegularItem()) return;
+
+                // Get the target class number
+                const targetClassNumberStr = itemsContainer.getAttribute("data-class-number");
+                const targetClassNumber =
+                  targetClassNumberStr === "" || targetClassNumberStr === null
+                    ? undefined
+                    : parseInt(targetClassNumberStr, 10);
+
+                // Update the item's class number
+                await setSyllabusClassNumber(
+                  draggedItem,
+                  selectedCollection.id,
+                  targetClassNumber,
+                );
+                await draggedItem.saveTx();
+
+                // Re-render the view to reflect the change
+                renderCustomSyllabusView();
+              } catch (err) {
+                ztoolkit.log("Error handling drop:", err);
+              }
+            });
 
             for (const item of classItems) {
               const itemElement = createSyllabusItemCard(
