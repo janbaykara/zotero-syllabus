@@ -7,6 +7,8 @@ import { ExtraFieldTool } from "zotero-plugin-toolkit";
 
 const SYLLABUS_DATA_KEY = "syllabus";
 
+export const SYLLABUS_CLASS_NUMBER_FIELD = "syllabus-class-number";
+
 // Create an ExtraFieldTool instance for safe extra field operations
 const extraFieldTool = new ExtraFieldTool();
 

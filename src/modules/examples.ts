@@ -9,6 +9,7 @@ import {
   SyllabusStatus,
   STATUS_COLORS,
   STATUS_LABELS,
+  SYLLABUS_CLASS_NUMBER_FIELD,
 } from "../utils/syllabus";
 
 function example(
@@ -60,6 +61,146 @@ export class BasicExampleFactory {
           this.unregisterNotifier(notifierID);
       },
     });
+
+    // Also set up a function to style class group rows after tree updates
+    this.setupClassGroupRowStyling();
+  }
+
+  @example
+  static setupClassGroupRowStyling() {
+    // Function to add header rows for class groups
+    function addClassGroupHeaders() {
+      try {
+        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+        const selectedCollection = zoteroPane.getSelectedCollection();
+
+        if (!selectedCollection || !zoteroPane.itemsView) {
+          ztoolkit.log(`No selected collection or items view`);
+          return;
+        }
+        // find out sort order
+        const sortOrder = zoteroPane.getSortField();
+        if (!sortOrder || !sortOrder.endsWith(SYLLABUS_CLASS_NUMBER_FIELD)) {
+          // Only display headers if the sort order is the syllabus class number field
+          ztoolkit.log(`Sort order is not the syllabus class number field: ${sortOrder}`);
+          return;
+        }
+
+        const itemsView = zoteroPane.itemsView;
+        const rowCount = itemsView.rowCount;
+
+        ztoolkit.log(`looping over rowCount: ${rowCount}`);
+
+        // Track which rows we've already processed to avoid duplicates
+        // const processedRows = new Set<number>();
+
+        // Go through rows and add headers before class group starts
+        for (let i = 0; i < rowCount; i++) {
+          ztoolkit.log(`looping over row ${i}`);
+          try {
+            const row = itemsView.getRow(i);
+            // @ts-expect-error - ref property exists but not in types
+            const item = row?.ref as Zotero.Item | undefined;
+
+            if (!item || !item.isRegularItem()) {
+              continue;
+            }
+
+            const classNumber = getSyllabusClassNumber(
+              item,
+              selectedCollection.id,
+            );
+
+            // Skip if no class number
+            if (classNumber === undefined) {
+              continue;
+            }
+
+            //     // Check if this is the first item in a new class group
+            //     let isFirstInGroup = false;
+            //     if (i === 0) {
+            //       isFirstInGroup = true;
+            //     } else {
+            //       try {
+            //         const prevRow = itemsView.getRow(i - 1);
+            //         // @ts-expect-error - ref property exists but not in types
+            //         const prevItem = prevRow?.ref as Zotero.Item | undefined;
+            //         if (prevItem && prevItem.isRegularItem()) {
+            //           const prevClassNumber = getSyllabusClassNumber(
+            //             prevItem,
+            //             selectedCollection.id,
+            //           );
+            //           isFirstInGroup = prevClassNumber !== classNumber;
+            //         } else {
+            //           isFirstInGroup = true;
+            //         }
+            //       } catch (e) {
+            //         isFirstInGroup = true;
+            //       }
+            //     }
+
+            //     // Add header row if this is first in group and we haven't processed it
+            //     if (isFirstInGroup && !processedRows.has(i)) {
+            // ztoolkit.log(`Adding header row for class group ${classNumber}`);
+
+            // // Use _addRow to insert a header row
+            // // _addRow is a private method but exists
+            // const headerRow = itemsView._addRow({
+            //   isOpen: true,
+            //   level: 0,
+            // }, i) as Element | null | undefined;
+            // const collectionsView = zoteroPane.collectionsView;
+            // if (collectionsView) {
+            //   collectionsView._addRow({
+            //     isOpen: true,
+            //     level: 0,
+            //     textContent: `Class ${classNumber}`,
+            //   }, i);
+            // }
+
+            // if (headerRow && headerRow instanceof Element) {
+            //   // Style the header row
+            //   headerRow.classList.add("syllabus-class-group-header-row");
+            //   headerRow.setAttribute("data-class-number", String(classNumber));
+
+            //   // Create header content
+            //   const doc = ztoolkit.getGlobal("document") as Document;
+            //   const headerCell = doc.createElement("cell");
+            //   headerCell.setAttribute("colspan", "100");
+            //   headerCell.className = "syllabus-class-group-header-cell";
+            //   headerCell.textContent = `Class ${classNumber}`;
+            //   headerRow.appendChild(headerCell);
+            // }
+            // }
+          } catch (e) {
+            ztoolkit.log("Error processing row for class headers:", e);
+          }
+        }
+      } catch (e) {
+        ztoolkit.log("Error in addClassGroupHeaders:", e);
+      }
+    };
+
+    // Add headers after a short delay on startup
+    Zotero.Promise.delay(500).then(() => {
+      addClassGroupHeaders();
+    });
+
+    // Also add headers when the item tree refreshes
+    const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+    if (zoteroPane?.itemsView) {
+      const originalRefresh = zoteroPane.itemsView.refresh;
+      if (originalRefresh) {
+        // Patching refresh method to add class group headers
+        (zoteroPane.itemsView as any).refresh = function (...args: any[]) {
+          const result = originalRefresh.apply(this, args);
+          Zotero.Promise.delay(100).then(() => {
+            addClassGroupHeaders();
+          });
+          return result;
+        };
+      }
+    }
   }
 
   @example
@@ -357,7 +498,7 @@ export class UIExampleFactory {
 
   @example
   static async registerSyllabusClassNumberColumn() {
-    const field = "syllabus-class-number";
+    const field = SYLLABUS_CLASS_NUMBER_FIELD;
     // @ts-expect-error - onEdit may not be in types but is supported by Zotero API
     await Zotero.ItemTreeManager.registerColumns({
       pluginID: addon.data.config.addonID,
@@ -412,6 +553,8 @@ export class UIExampleFactory {
         const span = doc.createElement("span");
         span.className = `cell ${column.className}`;
         span.textContent = String(classNumber);
+        span.setAttribute("data-class-number", classNumberStr);
+        span.setAttribute(`data-class-number-${classNumber}`, classNumberStr);
         return span;
       },
       onEdit: async (item: Zotero.Item, dataKey: string, newValue: string) => {
@@ -916,7 +1059,7 @@ export class PromptExampleFactory {
           const container = prompt.createCommandsContainer();
           container.classList.add("suggestions");
           ids = filter(ids);
-          console.log(ids.length);
+          // console.log(ids.length);
           if (ids.length == 0) {
             const s = new Zotero.Search();
             const operators = [
@@ -960,7 +1103,7 @@ export class PromptExampleFactory {
             }
           }
           ids = filter(ids);
-          console.log(ids.length);
+          // console.log(ids.length);
           if (ids.length > 0) {
             ids.forEach((id: number) => {
               const item = Zotero.Items.get(id);

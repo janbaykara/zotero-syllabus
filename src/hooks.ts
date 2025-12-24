@@ -52,6 +52,8 @@ async function onStartup() {
 }
 
 async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
+  // Set up class group row styling after window loads
+  BasicExampleFactory.setupClassGroupRowStyling();
   // Create ztoolkit for every window
   addon.data.ztoolkit = createZToolkit();
 
