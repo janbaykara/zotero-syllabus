@@ -28,6 +28,10 @@ async function onStartup() {
 
   await UIExampleFactory.registerExtraColumnWithCustomCell();
 
+  await UIExampleFactory.registerSyllabusStatusColumn();
+
+  await UIExampleFactory.registerSyllabusDescriptionColumn();
+
   UIExampleFactory.registerItemPaneCustomInfoRow();
 
   UIExampleFactory.registerItemPaneSection();

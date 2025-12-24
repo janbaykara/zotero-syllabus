@@ -220,6 +220,68 @@ export class UIExampleFactory {
   }
 
   @example
+  static async registerSyllabusStatusColumn() {
+    const field = "syllabus-status";
+    await Zotero.ItemTreeManager.registerColumns({
+      pluginID: addon.data.config.addonID,
+      dataKey: field,
+      label: "Syllabus Status",
+      dataProvider: (item: Zotero.Item, dataKey: string) => {
+        const collections = item.getCollections();
+        const statusMap: { [collectionId: string]: string } = {};
+
+        // Get syllabus status for each collection from preferences
+        collections.forEach((collectionId) => {
+          const statusKey = `syllabus.status.${collectionId}`;
+          const status = Zotero.Prefs.get(
+            `${addon.data.config.prefsPrefix}.${statusKey}`,
+            true,
+          ) as string | undefined;
+
+          if (status && ["essential", "recommended", "optional"].includes(status)) {
+            statusMap[String(collectionId)] = status;
+          }
+        });
+
+        return Object.keys(statusMap).length > 0
+          ? JSON.stringify(statusMap)
+          : "";
+      },
+    });
+  }
+
+  @example
+  static async registerSyllabusDescriptionColumn() {
+    const field = "syllabus-description";
+    await Zotero.ItemTreeManager.registerColumns({
+      pluginID: addon.data.config.addonID,
+      dataKey: field,
+      label: "Syllabus Description",
+      dataProvider: (item: Zotero.Item, dataKey: string) => {
+        const collections = item.getCollections();
+        const descriptionMap: { [collectionId: string]: string } = {};
+
+        // Get syllabus description for each collection from preferences
+        collections.forEach((collectionId) => {
+          const descriptionKey = `syllabus.description.${collectionId}`;
+          const description = Zotero.Prefs.get(
+            `${addon.data.config.prefsPrefix}.${descriptionKey}`,
+            true,
+          ) as string | undefined;
+
+          if (description) {
+            descriptionMap[String(collectionId)] = description;
+          }
+        });
+
+        return Object.keys(descriptionMap).length > 0
+          ? JSON.stringify(descriptionMap)
+          : "";
+      },
+    });
+  }
+
+  @example
   static registerItemPaneCustomInfoRow() {
     Zotero.ItemPaneManager.registerInfoRow({
       rowID: "example",
