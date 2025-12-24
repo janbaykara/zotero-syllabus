@@ -119,28 +119,36 @@ export class BasicExampleFactory {
       const w = Zotero.getMainWindow();
       const doc = w.document;
 
-      // Find the items tree container to place toggle near it
-      const itemsTreeContainer = doc.getElementById("zotero-items-pane-container");
-      if (!itemsTreeContainer) return;
+      // Find the items toolbar
+      const itemsToolbar = doc.getElementById("zotero-items-toolbar");
+      if (!itemsToolbar) return;
+
+      // Find the search spinner to insert before it
+      const searchSpinner = doc.getElementById("zotero-tb-search-spinner");
+
+      // Function to update button label based on current state
+      const updateButtonLabel = (button: XUL.Checkbox) => {
+        const isEnabled = button.checked;
+        // Label should reflect what will happen when clicked (opposite of current state)
+        button.label = isEnabled ? "Tree View" : "Syllabus View";
+        button.tooltipText = isEnabled
+          ? "Switch to Tree View"
+          : "Switch to Syllabus View";
+      };
 
       // Check if toggle button already exists
-      let toggleButton = doc.getElementById("syllabus-view-toggle");
-      if (!toggleButton) {
-        // Create a container for the toggle button
-        const toggleContainer = doc.createElement("div");
-        toggleContainer.id = "syllabus-view-toggle-container";
-        toggleContainer.className = "syllabus-view-toggle-container";
+      let toggleButton = doc.getElementById("syllabus-view-toggle") as XUL.Checkbox | null;
+      let spacer = doc.getElementById("syllabus-view-spacer") as Element | null;
 
+      if (!toggleButton) {
         // Create toggle button
         toggleButton = ztoolkit.UI.createElement(doc, "button", {
           namespace: "xul",
           id: "syllabus-view-toggle",
           classList: ["toolbarbutton-1"],
           properties: {
-            label: "Syllabus View",
             type: "checkbox",
             checked: getSyllabusViewEnabled(),
-            tooltiptext: "Toggle between Syllabus View and Tree View",
           },
           listeners: [
             {
@@ -148,24 +156,38 @@ export class BasicExampleFactory {
               listener: (e: Event) => {
                 const target = e.target as XUL.Checkbox;
                 setSyllabusViewEnabled(target.checked);
+                updateButtonLabel(target);
                 renderCustomSyllabusView();
               },
             },
           ],
-        });
+        }) as XUL.Checkbox;
 
-        toggleContainer.appendChild(toggleButton);
+        // Set initial label
+        updateButtonLabel(toggleButton);
 
-        // Insert before the items tree container or at the top of items pane
-        const itemsPane = doc.getElementById("zotero-items-pane");
-        if (itemsPane && itemsTreeContainer.parentNode) {
-          itemsTreeContainer.parentNode.insertBefore(toggleContainer, itemsTreeContainer);
-        } else if (itemsTreeContainer.parentNode) {
-          itemsTreeContainer.parentNode.insertBefore(toggleContainer, itemsTreeContainer);
+        // Create spacer element if it doesn't exist
+        if (!spacer) {
+          spacer = doc.createElementNS(
+            "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
+            "spacer"
+          );
+          spacer.id = "syllabus-view-spacer";
+          spacer.setAttribute("flex", "1");
+        }
+
+        // Insert button and spacer before the search spinner, or append to toolbar if spinner not found
+        if (searchSpinner && searchSpinner.parentNode) {
+          searchSpinner.parentNode.insertBefore(toggleButton, searchSpinner);
+          searchSpinner.parentNode.insertBefore(spacer, searchSpinner);
+        } else {
+          itemsToolbar.appendChild(toggleButton);
+          itemsToolbar.appendChild(spacer);
         }
       } else {
-        // Update button state
-        (toggleButton as XUL.Checkbox).checked = getSyllabusViewEnabled();
+        // Update button state and label
+        toggleButton.checked = getSyllabusViewEnabled();
+        updateButtonLabel(toggleButton);
       }
     }
 

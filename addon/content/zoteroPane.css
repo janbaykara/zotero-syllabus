@@ -119,16 +119,7 @@
   line-height: 1.4;
 }
 
-/* Toggle Button Container */
-#syllabus-view-toggle-container {
-  padding: 8px 12px;
-  background: var(--zotero-background-color, #fff);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
-
+/* Toggle Button in Toolbar */
 #syllabus-view-toggle {
   min-width: 120px;
 }
