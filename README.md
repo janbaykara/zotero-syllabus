@@ -28,17 +28,20 @@ This plugin is built using the [Zotero Plugin Template](https://github.com/windi
 ### Setup
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/janbaykara/zotero-syllabus.git
    cd zotero-syllabus
    ```
 
 2. Install dependencies:
+
    ```bash
    pnpm install
    ```
 
 3. Configure environment:
+
    ```bash
    cp .env.example .env
    # Edit .env with your Zotero installation path
@@ -52,6 +55,7 @@ This plugin is built using the [Zotero Plugin Template](https://github.com/windi
 ### Build
 
 Build the plugin for production:
+
 ```bash
 pnpm run build
 ```

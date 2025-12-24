@@ -1,10 +1,7 @@
 import {
-  BasicExampleFactory,
-  HelperExampleFactory,
-  KeyExampleFactory,
-  PromptExampleFactory,
-  UIExampleFactory,
-} from "./modules/examples";
+  SyllabusManager,
+  SyllabusUIFactory,
+} from "./modules/syllabus";
 import { getString, initLocale } from "./utils/locale";
 import { registerPrefsScripts } from "./modules/preferenceScript";
 import { createZToolkit } from "./utils/ztoolkit";
@@ -18,29 +15,17 @@ async function onStartup() {
 
   initLocale();
 
-  BasicExampleFactory.registerPrefs();
+  SyllabusManager.registerPrefs();
 
-  BasicExampleFactory.registerNotifier();
+  SyllabusManager.registerNotifier();
 
-  KeyExampleFactory.registerShortcuts();
+  await SyllabusUIFactory.registerSyllabusStatusColumn();
 
-  await UIExampleFactory.registerExtraColumn();
+  await SyllabusUIFactory.registerSyllabusDescriptionColumn();
 
-  await UIExampleFactory.registerExtraColumnWithCustomCell();
+  await SyllabusUIFactory.registerSyllabusClassNumberColumn();
 
-  await UIExampleFactory.registerSyllabusStatusColumn();
-
-  await UIExampleFactory.registerSyllabusDescriptionColumn();
-
-  await UIExampleFactory.registerSyllabusClassNumberColumn();
-
-  UIExampleFactory.registerItemPaneCustomInfoRow();
-
-  UIExampleFactory.registerItemPaneSection();
-
-  UIExampleFactory.registerReaderItemPaneSection();
-
-  UIExampleFactory.registerSyllabusItemPaneSection();
+  SyllabusUIFactory.registerSyllabusItemPaneSection();
 
   await Promise.all(
     Zotero.getMainWindows().map((win) => onMainWindowLoad(win)),
@@ -60,11 +45,11 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
   if (zoteroPane) {
     // Set up class group row styling after window loads
     ztoolkit.log("onMainWindowLoad->setupSyllabusView");
-    BasicExampleFactory.setupSyllabusView();
+    SyllabusManager.setupSyllabusView();
 
     zoteroPane.addReloadListener(() => {
       ztoolkit.log("reloadListener->setupSyllabusView");
-      BasicExampleFactory.setupSyllabusView();
+      SyllabusManager.setupSyllabusView();
     });
 
     const itemsView = zoteroPane.itemsView;
@@ -73,7 +58,7 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
         'click',
         (e: Event) => {
           ztoolkit.log("itemsView.click->setupSyllabusView", e);
-          BasicExampleFactory.setupSyllabusView();
+          SyllabusManager.setupSyllabusView();
         }
       )
     }
@@ -100,19 +85,7 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
     text: `[30%] ${getString("startup-begin")}`,
   });
 
-  UIExampleFactory.registerStyleSheet(win);
-
-  UIExampleFactory.registerRightClickMenuItem();
-
-  UIExampleFactory.registerRightClickMenuPopup(win);
-
-  UIExampleFactory.registerWindowMenuWithSeparator();
-
-  PromptExampleFactory.registerNormalCommandExample();
-
-  PromptExampleFactory.registerAnonymousCommandExample(win);
-
-  PromptExampleFactory.registerConditionalCommandExample();
+  SyllabusUIFactory.registerStyleSheet(win);
 
   await Zotero.Promise.delay(1000);
 
@@ -121,15 +94,13 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
     text: `[100%] ${getString("startup-finish")}`,
   });
   popupWin.startCloseTimer(5000);
-
-  addon.hooks.onDialogEvents("dialogExample");
 }
 
 async function onMainWindowUnload(win: Window): Promise<void> {
   ztoolkit.unregisterAll();
   addon.data.dialog?.window?.close();
   ztoolkit.log("onMainWindowUnload->setupSyllabusView");
-  BasicExampleFactory.setupSyllabusView();
+  SyllabusManager.setupSyllabusView();
 }
 
 function onShutdown(): void {
@@ -142,8 +113,7 @@ function onShutdown(): void {
 }
 
 /**
- * This function is just an example of dispatcher for Notify events.
- * Any operations should be placed in a function to keep this funcion clear.
+ * Dispatcher for Notify events.
  */
 async function onNotify(
   event: string,
@@ -151,26 +121,14 @@ async function onNotify(
   ids: Array<string | number>,
   extraData: { [key: string]: any },
 ) {
-  // You can add your code to the corresponding notify type
   ztoolkit.log("onNotify", event, type, ids, extraData);
 
   ztoolkit.log("onNotify->setupSyllabusView");
-  BasicExampleFactory.setupSyllabusView();
-
-  if (
-    event == "select" &&
-    type == "tab" &&
-    extraData[ids[0]].type == "reader"
-  ) {
-    BasicExampleFactory.exampleNotifierCallback();
-  } else {
-    return;
-  }
+  SyllabusManager.setupSyllabusView();
 }
 
 /**
- * This function is just an example of dispatcher for Preference UI events.
- * Any operations should be placed in a function to keep this funcion clear.
+ * Dispatcher for Preference UI events.
  * @param type event type
  * @param data event data
  */
@@ -184,45 +142,6 @@ async function onPrefsEvent(type: string, data: { [key: string]: any }) {
   }
 }
 
-function onShortcuts(type: string) {
-  switch (type) {
-    case "larger":
-      KeyExampleFactory.exampleShortcutLargerCallback();
-      break;
-    case "smaller":
-      KeyExampleFactory.exampleShortcutSmallerCallback();
-      break;
-    default:
-      break;
-  }
-}
-
-function onDialogEvents(type: string) {
-  switch (type) {
-    case "dialogExample":
-      HelperExampleFactory.dialogExample();
-      break;
-    case "clipboardExample":
-      HelperExampleFactory.clipboardExample();
-      break;
-    case "filePickerExample":
-      HelperExampleFactory.filePickerExample();
-      break;
-    case "progressWindowExample":
-      HelperExampleFactory.progressWindowExample();
-      break;
-    case "vtableExample":
-      HelperExampleFactory.vtableExample();
-      break;
-    default:
-      break;
-  }
-}
-
-// Add your hooks here. For element click, etc.
-// Keep in mind hooks only do dispatch. Don't add code that does real jobs in hooks.
-// Otherwise the code would be hard to read and maintain.
-
 export default {
   onStartup,
   onShutdown,
@@ -230,6 +149,4 @@ export default {
   onMainWindowUnload,
   onNotify,
   onPrefsEvent,
-  onShortcuts,
-  onDialogEvents,
 };

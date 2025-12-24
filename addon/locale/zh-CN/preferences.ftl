@@ -1,4 +1,4 @@
-pref-title = 插件模板设置示例
+pref-title = Zotero Syllabus
 pref-enable =
     .label = 开启
 pref-input = 输入

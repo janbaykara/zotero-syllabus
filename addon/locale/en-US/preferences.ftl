@@ -1,4 +1,4 @@
-pref-title = Addon Template Example
+pref-title = Zotero Syllabus
 pref-enable =
     .label = Enable
 pref-input = Input

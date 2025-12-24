@@ -3,18 +3,8 @@
 /* eslint-disable */
 // @ts-nocheck
 export type FluentMessageId =
-  | 'item-info-row-example-label'
-  | 'item-section-example1-head-text'
-  | 'item-section-example1-sidenav-tooltip'
-  | 'item-section-example2-button-tooltip'
-  | 'item-section-example2-head-text'
-  | 'item-section-example2-sidenav-tooltip'
   | 'item-section-syllabus-head-text'
   | 'item-section-syllabus-sidenav-tooltip'
-  | 'menuitem-filemenulabel'
-  | 'menuitem-label'
-  | 'menuitem-submenulabel'
-  | 'menupopup-label'
   | 'pref-enable'
   | 'pref-help'
   | 'pref-input'
