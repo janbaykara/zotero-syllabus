@@ -350,3 +350,445 @@
   color: #999;
   cursor: not-allowed;
 }
+
+/* Dark Mode Styles */
+/* Use media query for system dark mode preference */
+@media (prefers-color-scheme: dark) {
+  /* Class header row styles for dark mode */
+  #zotero-items-tree .row[data-row-class-number]::before {
+    color: #999;
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.05),
+      transparent
+    );
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Custom Syllabus View Dark Mode */
+  #syllabus-custom-view {
+    background: #1c1c1e;
+  }
+
+  .syllabus-view-title {
+    color: #f5f5f7;
+  }
+
+  .syllabus-class-header {
+    color: #a1a1a6;
+  }
+
+  .syllabus-class-items.syllabus-dropzone-active {
+    background-color: rgba(59, 130, 246, 0.2);
+  }
+
+  .syllabus-item {
+    border-color: #38383a;
+    background: #2c2c2e;
+  }
+
+  .syllabus-item:hover {
+    background: #3a3a3c;
+    border-color: #48484a;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .syllabus-item-thumbnail {
+    background: #38383a;
+  }
+
+  .syllabus-item-thumbnail-placeholder {
+    opacity: 0.5;
+    filter: invert(1);
+  }
+
+  .syllabus-priority-label {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .syllabus-item-title {
+    color: #f5f5f7;
+  }
+
+  .syllabus-item-publication {
+    color: #a1a1a6;
+  }
+
+  .syllabus-item-reference {
+    color: #8e8e93;
+  }
+
+  .syllabus-item-metadata {
+    color: #8e8e93;
+  }
+
+  .syllabus-item-description {
+    color: #a1a1a6;
+  }
+
+  /* Slim card dark mode */
+  .syllabus-item-slim {
+    border-color: #38383a;
+    background: #2c2c2e;
+  }
+
+  .syllabus-item-slim:hover {
+    background: #3a3a3c;
+    border-color: #48484a;
+  }
+
+  .syllabus-item-slim .syllabus-item-thumbnail-slim {
+    background: #38383a;
+  }
+
+  .syllabus-item-slim .syllabus-item-thumbnail-placeholder {
+    opacity: 0.5;
+    filter: invert(1);
+  }
+
+  .syllabus-item-slim .syllabus-item-title {
+    color: #f5f5f7;
+  }
+
+  .syllabus-item-slim .syllabus-item-metadata {
+    color: #8e8e93;
+  }
+
+  /* Item Pane dark mode */
+  #zotero-item-pane-content [data-section-id="syllabus"] label {
+    color: #f5f5f7;
+  }
+
+  #zotero-item-pane-content [data-section-id="syllabus"] select,
+  #zotero-item-pane-content [data-section-id="syllabus"] input,
+  #zotero-item-pane-content [data-section-id="syllabus"] textarea {
+    border-color: #48484a;
+    background-color: #2c2c2e;
+    color: #f5f5f7;
+  }
+
+  #zotero-item-pane-content [data-section-id="syllabus"] select:focus,
+  #zotero-item-pane-content [data-section-id="syllabus"] input:focus,
+  #zotero-item-pane-content [data-section-id="syllabus"] textarea:focus {
+    border-color: #0060df;
+    box-shadow: 0 0 0 1px #0060df;
+  }
+
+  #zotero-item-pane-content [data-section-id="syllabus"] select:disabled,
+  #zotero-item-pane-content [data-section-id="syllabus"] input:disabled,
+  #zotero-item-pane-content [data-section-id="syllabus"] textarea:disabled {
+    background-color: #1c1c1e;
+    color: #6e6e73;
+  }
+}
+
+/* Also support Zotero's dark theme class if it exists */
+:root[data-theme="dark"] #syllabus-custom-view,
+:root.dark #syllabus-custom-view,
+#main-window[data-theme="dark"] #syllabus-custom-view,
+#main-window.dark #syllabus-custom-view {
+  background: #1c1c1e;
+}
+
+:root[data-theme="dark"] .syllabus-view-title,
+:root.dark .syllabus-view-title,
+#main-window[data-theme="dark"] .syllabus-view-title,
+#main-window.dark .syllabus-view-title {
+  color: #f5f5f7;
+}
+
+:root[data-theme="dark"] .syllabus-class-header,
+:root.dark .syllabus-class-header,
+#main-window[data-theme="dark"] .syllabus-class-header,
+#main-window.dark .syllabus-class-header {
+  color: #a1a1a6;
+}
+
+:root[data-theme="dark"] .syllabus-item,
+:root.dark .syllabus-item,
+#main-window[data-theme="dark"] .syllabus-item,
+#main-window.dark .syllabus-item {
+  border-color: #38383a;
+  background: #2c2c2e;
+}
+
+:root[data-theme="dark"] .syllabus-item:hover,
+:root.dark .syllabus-item:hover,
+#main-window[data-theme="dark"] .syllabus-item:hover,
+#main-window.dark .syllabus-item:hover {
+  background: #3a3a3c;
+  border-color: #48484a;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+:root[data-theme="dark"] .syllabus-item-thumbnail,
+:root.dark .syllabus-item-thumbnail,
+#main-window[data-theme="dark"] .syllabus-item-thumbnail,
+#main-window.dark .syllabus-item-thumbnail {
+  background: #38383a;
+}
+
+:root[data-theme="dark"] .syllabus-item-thumbnail-placeholder,
+:root.dark .syllabus-item-thumbnail-placeholder,
+#main-window[data-theme="dark"] .syllabus-item-thumbnail-placeholder,
+#main-window.dark .syllabus-item-thumbnail-placeholder {
+  opacity: 0.5;
+  filter: invert(1);
+}
+
+:root[data-theme="dark"] .syllabus-priority-label,
+:root.dark .syllabus-priority-label,
+#main-window[data-theme="dark"] .syllabus-priority-label,
+#main-window.dark .syllabus-priority-label {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme="dark"] .syllabus-item-title,
+:root.dark .syllabus-item-title,
+#main-window[data-theme="dark"] .syllabus-item-title,
+#main-window.dark .syllabus-item-title {
+  color: #f5f5f7;
+}
+
+:root[data-theme="dark"] .syllabus-item-publication,
+:root.dark .syllabus-item-publication,
+#main-window[data-theme="dark"] .syllabus-item-publication,
+#main-window.dark .syllabus-item-publication {
+  color: #a1a1a6;
+}
+
+:root[data-theme="dark"] .syllabus-item-reference,
+:root.dark .syllabus-item-reference,
+#main-window[data-theme="dark"] .syllabus-item-reference,
+#main-window.dark .syllabus-item-reference {
+  color: #8e8e93;
+}
+
+:root[data-theme="dark"] .syllabus-item-metadata,
+:root.dark .syllabus-item-metadata,
+#main-window[data-theme="dark"] .syllabus-item-metadata,
+#main-window.dark .syllabus-item-metadata {
+  color: #8e8e93;
+}
+
+:root[data-theme="dark"] .syllabus-item-description,
+:root.dark .syllabus-item-description,
+#main-window[data-theme="dark"] .syllabus-item-description,
+#main-window.dark .syllabus-item-description {
+  color: #a1a1a6;
+}
+
+:root[data-theme="dark"] .syllabus-item-slim,
+:root.dark .syllabus-item-slim,
+#main-window[data-theme="dark"] .syllabus-item-slim,
+#main-window.dark .syllabus-item-slim {
+  border-color: #38383a;
+  background: #2c2c2e;
+}
+
+:root[data-theme="dark"] .syllabus-item-slim:hover,
+:root.dark .syllabus-item-slim:hover,
+#main-window[data-theme="dark"] .syllabus-item-slim:hover,
+#main-window.dark .syllabus-item-slim:hover {
+  background: #3a3a3c;
+  border-color: #48484a;
+}
+
+:root[data-theme="dark"] .syllabus-item-slim .syllabus-item-thumbnail-slim,
+:root.dark .syllabus-item-slim .syllabus-item-thumbnail-slim,
+#main-window[data-theme="dark"]
+  .syllabus-item-slim
+  .syllabus-item-thumbnail-slim,
+#main-window.dark .syllabus-item-slim .syllabus-item-thumbnail-slim {
+  background: #38383a;
+}
+
+:root[data-theme="dark"]
+  .syllabus-item-slim
+  .syllabus-item-thumbnail-placeholder,
+:root.dark .syllabus-item-slim .syllabus-item-thumbnail-placeholder,
+#main-window[data-theme="dark"]
+  .syllabus-item-slim
+  .syllabus-item-thumbnail-placeholder,
+#main-window.dark .syllabus-item-slim .syllabus-item-thumbnail-placeholder {
+  opacity: 0.5;
+  filter: invert(1);
+}
+
+:root[data-theme="dark"] .syllabus-item-slim .syllabus-item-title,
+:root.dark .syllabus-item-slim .syllabus-item-title,
+#main-window[data-theme="dark"] .syllabus-item-slim .syllabus-item-title,
+#main-window.dark .syllabus-item-slim .syllabus-item-title {
+  color: #f5f5f7;
+}
+
+:root[data-theme="dark"] .syllabus-item-slim .syllabus-item-metadata,
+:root.dark .syllabus-item-slim .syllabus-item-metadata,
+#main-window[data-theme="dark"] .syllabus-item-slim .syllabus-item-metadata,
+#main-window.dark .syllabus-item-slim .syllabus-item-metadata {
+  color: #8e8e93;
+}
+
+:root[data-theme="dark"] #zotero-items-tree .row[data-row-class-number]::before,
+:root.dark #zotero-items-tree .row[data-row-class-number]::before,
+#main-window[data-theme="dark"]
+  #zotero-items-tree
+  .row[data-row-class-number]::before,
+#main-window.dark #zotero-items-tree .row[data-row-class-number]::before {
+  color: #999;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.05),
+    transparent
+  );
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme="dark"]
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  label,
+:root.dark #zotero-item-pane-content [data-section-id="syllabus"] label,
+#main-window[data-theme="dark"]
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  label,
+#main-window.dark #zotero-item-pane-content [data-section-id="syllabus"] label {
+  color: #f5f5f7;
+}
+
+:root[data-theme="dark"]
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  select,
+:root[data-theme="dark"]
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  input,
+:root[data-theme="dark"]
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  textarea,
+:root.dark #zotero-item-pane-content [data-section-id="syllabus"] select,
+:root.dark #zotero-item-pane-content [data-section-id="syllabus"] input,
+:root.dark #zotero-item-pane-content [data-section-id="syllabus"] textarea,
+#main-window[data-theme="dark"]
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  select,
+#main-window[data-theme="dark"]
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  input,
+#main-window[data-theme="dark"]
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  textarea,
+#main-window.dark #zotero-item-pane-content [data-section-id="syllabus"] select,
+#main-window.dark #zotero-item-pane-content [data-section-id="syllabus"] input,
+#main-window.dark
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  textarea {
+  border-color: #48484a;
+  background-color: #2c2c2e;
+  color: #f5f5f7;
+}
+
+:root[data-theme="dark"]
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  select:focus,
+:root[data-theme="dark"]
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  input:focus,
+:root[data-theme="dark"]
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  textarea:focus,
+:root.dark #zotero-item-pane-content [data-section-id="syllabus"] select:focus,
+:root.dark #zotero-item-pane-content [data-section-id="syllabus"] input:focus,
+:root.dark
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  textarea:focus,
+#main-window[data-theme="dark"]
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  select:focus,
+#main-window[data-theme="dark"]
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  input:focus,
+#main-window[data-theme="dark"]
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  textarea:focus,
+#main-window.dark
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  select:focus,
+#main-window.dark
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  input:focus,
+#main-window.dark
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  textarea:focus {
+  border-color: #0060df;
+  box-shadow: 0 0 0 1px #0060df;
+}
+
+:root[data-theme="dark"]
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  select:disabled,
+:root[data-theme="dark"]
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  input:disabled,
+:root[data-theme="dark"]
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  textarea:disabled,
+:root.dark
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  select:disabled,
+:root.dark
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  input:disabled,
+:root.dark
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  textarea:disabled,
+#main-window[data-theme="dark"]
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  select:disabled,
+#main-window[data-theme="dark"]
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  input:disabled,
+#main-window[data-theme="dark"]
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  textarea:disabled,
+#main-window.dark
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  select:disabled,
+#main-window.dark
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  input:disabled,
+#main-window.dark
+  #zotero-item-pane-content
+  [data-section-id="syllabus"]
+  textarea:disabled {
+  background-color: #1c1c1e;
+  color: #6e6e73;
+}
