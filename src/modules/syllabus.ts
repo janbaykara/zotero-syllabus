@@ -1588,22 +1588,44 @@ export class SyllabusUIFactory {
 
         if (selectedCollection) {
           const priority = getSyllabusPriority(item, selectedCollection.id);
+          const classNumber = getSyllabusClassNumber(
+            item,
+            selectedCollection.id,
+          );
+
+          // Return sortable value with priority and class number encoded
+          // Format: "priorityPrefix_priorityValue_classNumber"
+          // This ensures proper sort order: Priority first, then Class Number
+          // Class numbers without a value get 999 to sort last
+          const classNumberStr = classNumber !== undefined
+            ? String(classNumber).padStart(4, "0") // Pad to 4 digits for proper string sorting
+            : "9999"; // Items without class number sort last
+
           // Return sortable value with priority encoded: "0_course-info", "1_essential", etc.
           // This ensures proper sort order: Course Info < Essential < Recommended < Optional < Blank
           // The prefix determines sort order, the suffix is the actual priority for display
-          if (priority === SyllabusPriority.COURSE_INFO) return "0_course-info";
-          if (priority === SyllabusPriority.ESSENTIAL) return "1_essential";
-          if (priority === SyllabusPriority.RECOMMENDED) return "2_recommended";
-          if (priority === SyllabusPriority.OPTIONAL) return "3_optional";
-          return "4_"; // empty/blank
+          if (priority === SyllabusPriority.COURSE_INFO) {
+            return `0_course-info_${classNumberStr}`;
+          }
+          if (priority === SyllabusPriority.ESSENTIAL) {
+            return `1_essential_${classNumberStr}`;
+          }
+          if (priority === SyllabusPriority.RECOMMENDED) {
+            return `2_recommended_${classNumberStr}`;
+          }
+          if (priority === SyllabusPriority.OPTIONAL) {
+            return `3_optional_${classNumberStr}`;
+          }
+          return `4__${classNumberStr}`; // empty/blank priority
         }
 
         // If not in a collection view, return empty
-        return "4_";
+        return "4__9999";
       },
       renderCell: (index, data, column, isFirstColumn, doc) => {
         // Parse the data to extract the priority for display
-        // data format: "0_essential", "1_recommended", "2_optional", or "3_"
+        // data format: "0_essential_0001", "1_recommended_0002", "2_optional_0003", or "4__9999"
+        // Format: "priorityPrefix_priorityValue_classNumber"
         const parts = String(data).split("_");
         const priority = parts.length > 1 ? parts[1] : "";
 
