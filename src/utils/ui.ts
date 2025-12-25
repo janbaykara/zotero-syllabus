@@ -15,7 +15,10 @@ export function escapeHTML(str: string): string {
 /**
  * Helper to parse HTML template string into a DocumentFragment
  */
-export function parseHTMLTemplate(doc: Document, html: string): DocumentFragment {
+export function parseHTMLTemplate(
+  doc: Document,
+  html: string,
+): DocumentFragment {
   const parser = new doc.defaultView!.DOMParser();
   const parsed = parser.parseFromString(
     `<template>${html}</template>`,
@@ -239,7 +242,9 @@ export function createEditableTextInput(
 
 export function getSystemTheme(): string {
   const win = Zotero.getMainWindow();
-  return (win?.matchMedia?.('(prefers-color-scheme: dark)')?.matches ?? false) ? 'dark' : 'light';
+  return (win?.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? false)
+    ? "dark"
+    : "light";
 }
 
 // <img class="syllabus-item-thumbnail-img" src="${getThumbnailForItem(item)}" alt="${escapeHTML(title)}" />
@@ -277,18 +282,24 @@ export function getThumbnailForItem(item: Zotero.Item): string | null {
   return imageSrc;
 }
 
-export function generateImageSetString(__icon: Zotero.Item['itemType'], __size: number = 16): string {
+export function generateImageSetString(
+  __icon: Zotero.Item["itemType"],
+  __size: number = 16,
+): string {
   const icon = itemTypeToIconFileName(__icon, __icon);
-  const size = 16
+  const size = 16;
   return `
     image-set(url("chrome://zotero/skin/item-type/${size}/dark/${icon}.svg") 1x, url("chrome://zotero/skin/item-type/${size}/dark/${icon}@2x.svg") 2x) no-repeat center/contain,image-set(url("chrome://zotero/skin/item-type/${size}/white/${icon}.svg") 1x, url("chrome://zotero/skin/item-type/${size}/white/${icon}@2x.svg") 2x) center/0,image-set(url("chrome://zotero/skin/item-type/${size}/light/${icon}.svg") 1x, url("chrome://zotero/skin/item-type/${size}/light/${icon}@2x.svg") 2x) center/0,image-set(url("chrome://zotero/skin/item-type/${size}/dark/${icon}.svg") 1x, url("chrome://zotero/skin/item-type/${size}/dark/${icon}@2x.svg") 2x) center/0
-  `
+  `;
 }
 
 /**
  * Map Zotero item type to icon name
  */
-export const itemTypeToIconFileName = (itemType: Zotero.Item['itemType'], defaultValue: string = "document"): string => {
+export const itemTypeToIconFileName = (
+  itemType: Zotero.Item["itemType"],
+  defaultValue: string = "document",
+): string => {
   return itemType.toString();
 
   // // Map item types to icon names
@@ -321,4 +332,4 @@ export const itemTypeToIconFileName = (itemType: Zotero.Item['itemType'], defaul
   // };
 
   // return iconMap[itemType] || defaultValue || "document";
-}
+};
