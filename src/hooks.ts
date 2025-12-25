@@ -60,7 +60,7 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
 
   // Listen for tab changes and refresh syllabus view
   (async () => {
-    const z = ztoolkit.getGlobal("Zotero")
+    const z = ztoolkit.getGlobal("Zotero");
     const mainWindow = z.getMainWindow();
     let currentTab = mainWindow.Zotero_Tabs.getState()[0].title;
     while (true) {
