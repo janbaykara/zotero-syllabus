@@ -1,4 +1,3 @@
-
 /**
  * Generate a bibliographic reference for an item using Zotero's CSL processor
  * and the user's preferred citation style.

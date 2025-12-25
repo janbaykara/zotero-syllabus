@@ -9,5 +9,5 @@ export function isWindowAlive(win?: Window) {
 
 export function getCurrentTab(win?: _ZoteroTypes.MainWindow) {
   const mainWindow = win ? win : ztoolkit.getGlobal("Zotero").getMainWindow();
-  return mainWindow.Zotero_Tabs.getState().find((tab) => tab.selected)
+  return mainWindow.Zotero_Tabs.getState().find((tab) => tab.selected);
 }

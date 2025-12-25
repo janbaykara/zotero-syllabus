@@ -1,4 +1,3 @@
-
 /**
  * Creates a reusable editable text input element that wraps text
  * @param doc - The document to create the element in
@@ -48,8 +47,7 @@ export function createEditableTextInput(
   }
 
   // Set initial value
-  const valueToUse =
-    textToPreserve !== null ? textToPreserve : initialValue;
+  const valueToUse = textToPreserve !== null ? textToPreserve : initialValue;
   textareaElement.value = valueToUse;
 
   // Auto-resize textarea to fit content
