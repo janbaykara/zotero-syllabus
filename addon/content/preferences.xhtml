@@ -10,17 +10,11 @@
     preference="enable"
     data-l10n-id="pref-enable"
   />
-  <hbox>
-    <html:label
-      for="zotero-prefpane-__addonRef__-input"
-      data-l10n-id="pref-input"
-    ></html:label>
-    <html:input
-      type="text"
-      id="zotero-prefpane-__addonRef__-input"
-      preference="input"
-    ></html:input>
-  </hbox>
+  <checkbox
+    id="zotero-prefpane-__addonRef__-showBibliography"
+    preference="showBibliography"
+    data-l10n-id="pref-show-bibliography"
+  />
   <hbox class="virtualized-table-container" flex="1" height="300px">
     <html:div id="__addonRef__-table-container" />
   </hbox>

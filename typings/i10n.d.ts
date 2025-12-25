@@ -5,9 +5,11 @@
 export type FluentMessageId =
   | 'item-section-syllabus-head-text'
   | 'item-section-syllabus-sidenav-tooltip'
+  | 'menu-toggle-bibliography'
   | 'pref-enable'
   | 'pref-help'
   | 'pref-input'
+  | 'pref-show-bibliography'
   | 'pref-title'
   | 'prefs-table-detail'
   | 'prefs-table-title'

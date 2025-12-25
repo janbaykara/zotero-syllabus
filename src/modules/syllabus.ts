@@ -2,7 +2,8 @@
  * Syllabus Manager - Core functionality for syllabus view and metadata
  */
 
-import { getLocaleID } from "../utils/locale";
+import { getLocaleID, getString } from "../utils/locale";
+import { getPref, setPref } from "../utils/prefs";
 import {
   getSyllabusPriority,
   getSyllabusClassInstruction,
@@ -524,7 +525,6 @@ export class SyllabusManager {
       const publicationTitle = item.getField("publicationTitle") || "";
       const bookTitle = item.getField("bookTitle") || "";
       const publicationName = publicationTitle || bookTitle || "";
-      const bibliographicReference = await generateBibliographicReference(item);
 
       // Get URL and viewable attachment (PDF, web snapshot, or EPUB)
       const url = item.getField("url") || "";
@@ -710,11 +710,14 @@ export class SyllabusManager {
       }
 
       // Add bibliographic reference (after metadata)
-      if (bibliographicReference) {
-        const referenceRow = doc.createElement("div");
-        referenceRow.className = "syllabus-item-reference";
-        referenceRow.textContent = bibliographicReference;
-        textContent.appendChild(referenceRow);
+      if (getPref("showBibliography")) {
+        const bibliographicReference = await generateBibliographicReference(item);
+        if (bibliographicReference) {
+          const referenceRow = doc.createElement("div");
+          referenceRow.className = "syllabus-item-reference";
+          referenceRow.textContent = bibliographicReference;
+          textContent.appendChild(referenceRow);
+        }
       }
 
       // Add class instruction if available
@@ -2310,6 +2313,28 @@ export class SyllabusUIFactory {
           },
         },
       ],
+    });
+
+    // Register toggle bibliography menu
+    ztoolkit.Menu.register("item", {
+      tag: "menuitem",
+      id: "syllabus-toggle-bibliography-menu",
+      label: getString("menu-toggle-bibliography"),
+      icon: "chrome://zotero/skin/16/universal/book.svg",
+      commandListener: async () => {
+        const currentValue = getPref("showBibliography");
+        setPref("showBibliography", !currentValue);
+
+        // Refresh the item pane to reflect the change
+        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+        const itemPane = zoteroPane?.itemPane;
+        if (itemPane) {
+          itemPane.render();
+        }
+
+        // Also refresh the syllabus view if it's visible
+        SyllabusManager.setupSyllabusView();
+      },
     });
 
     // Register class number reassignment menu (dynamic)
