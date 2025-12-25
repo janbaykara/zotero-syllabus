@@ -434,6 +434,7 @@ export class SyllabusManager {
             await SyllabusManager.setCollectionDescription(
               selectedCollection.id,
               newDescription,
+              "page",
             );
           },
           placeholder: "Add a description...",
@@ -537,6 +538,7 @@ export class SyllabusManager {
                   selectedCollection.id,
                   classNumber,
                   newTitle,
+                  "page",
                 );
               },
               placeholder: "Add a title...",
@@ -558,6 +560,7 @@ export class SyllabusManager {
                   selectedCollection.id,
                   classNumber,
                   newDescription,
+                  "page",
                 );
               },
               placeholder: "Add a description...",
@@ -1892,6 +1895,7 @@ export class SyllabusManager {
                   collectionId,
                   currentclassNumber,
                   classTitleInput.value.trim(),
+                  "item-pane",
                 );
 
                 const itemPane = zoteroPane.itemPane;
@@ -2408,9 +2412,12 @@ export class SyllabusManager {
    */
   static async setCollectionMetadata(
     metadata: CollectionMetadata,
+    source: "page" | "item-pane"
   ): Promise<void> {
     const prefKey = `${addon.data.config.prefsPrefix}.collectionMetadata`;
     Zotero.Prefs.set(prefKey, JSON.stringify(metadata), true);
+    if (source !== "page") this.setupPage();
+    if (source !== "item-pane") this.reloadItemPane();
   }
 
   /**
@@ -2430,6 +2437,7 @@ export class SyllabusManager {
   static async setCollectionDescription(
     collectionId: number | string,
     description: string,
+    source: "page"
   ): Promise<void> {
     const metadata = SyllabusManager.getCollectionMetadata();
     const collectionIdStr = String(collectionId);
@@ -2451,7 +2459,7 @@ export class SyllabusManager {
       }
     }
 
-    await SyllabusManager.setCollectionMetadata(metadata);
+    await SyllabusManager.setCollectionMetadata(metadata, source);
   }
 
   /**
@@ -2479,6 +2487,7 @@ export class SyllabusManager {
     collectionId: number | string,
     classNumber: number,
     title: string,
+    source: "page" | "item-pane"
   ): Promise<void> {
     const metadata = SyllabusManager.getCollectionMetadata();
     const collectionIdStr = String(collectionId);
@@ -2515,7 +2524,7 @@ export class SyllabusManager {
       }
     }
 
-    await SyllabusManager.setCollectionMetadata(metadata);
+    await SyllabusManager.setCollectionMetadata(metadata, source);
   }
 
   /**
@@ -2540,6 +2549,7 @@ export class SyllabusManager {
     collectionId: number | string,
     classNumber: number,
     description: string,
+    source: "page"
   ): Promise<void> {
     const metadata = SyllabusManager.getCollectionMetadata();
     const collectionIdStr = String(collectionId);
@@ -2577,6 +2587,6 @@ export class SyllabusManager {
       }
     }
 
-    await SyllabusManager.setCollectionMetadata(metadata);
+    await SyllabusManager.setCollectionMetadata(metadata, source);
   }
 }
