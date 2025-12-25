@@ -568,27 +568,52 @@ export class SyllabusManager {
 
     return `
       <div class="syllabus-view-title-container">
-
-      <!-- Collection title -->
-        <div class="syllabus-editable-placeholder" data-type="collection-title" data-collection-id="${selectedCollection.id}" data-initial-value="${escapeHTML(selectedCollection.name || "")}" data-empty-behavior="reset"></div>
+        <div
+          class="syllabus-editable-placeholder"
+          data-type="collection-title"
+          data-collection-id="${selectedCollection.id}"
+          data-initial-value="${escapeHTML(selectedCollection.name || "")}"
+          data-empty-behavior="reset"
+        ></div>
       </div>
-
-      <!-- Collection description -->
-      <div class="syllabus-editable-placeholder" data-type="collection-description" data-collection-id="${selectedCollection.id}" data-initial-value="${escapeHTML(SyllabusManager.getCollectionDescription(selectedCollection.id))}" data-placeholder="Add a description..." data-empty-behavior="delete"></div>
-
-      <!-- Class groups -->
-      ${(await Promise.all(sortedClassNumbers.map((classNumber) => SyllabusManager.renderClassGroupHTML(classNumber, itemsByClass.get(classNumber)!, selectedCollection.id)))).join("")}
-
-      <!-- Further reading -->
+      <div
+        class="syllabus-editable-placeholder"
+        data-type="collection-description"
+        data-collection-id="${selectedCollection.id}"
+        data-initial-value="${escapeHTML(SyllabusManager.getCollectionDescription(selectedCollection.id))}"
+        data-placeholder="Add a description..."
+        data-empty-behavior="delete"
+      ></div>
+      ${(
+        await Promise.all(
+          sortedClassNumbers.map((classNumber) =>
+            SyllabusManager.renderClassGroupHTML(
+              classNumber,
+              itemsByClass.get(classNumber)!,
+              selectedCollection.id,
+            ),
+          ),
+        )
+      ).join("")}
       ${furtherReadingItems.length > 0
         ? `
-      <div class="syllabus-class-group">
-        <div class="syllabus-class-header">Further reading</div>
-        <div class="syllabus-class-items syllabus-further-reading-items" data-class-number="">
-          ${furtherReadingItems.map((item) => SyllabusManager.renderSyllabusItemCardSlimHTML(item, selectedCollection.id)).join("")}
-        </div>
-      </div>
-      `
+          <div class="syllabus-class-group">
+            <div class="syllabus-class-header">Further reading</div>
+            <div
+              class="syllabus-class-items syllabus-further-reading-items"
+              data-class-number=""
+            >
+              ${furtherReadingItems
+          .map((item) =>
+            SyllabusManager.renderSyllabusItemCardSlimHTML(
+              item,
+              selectedCollection.id,
+            ),
+          )
+          .join("")}
+            </div>
+          </div>
+        `
         : ""
       }
     `;
@@ -602,15 +627,50 @@ export class SyllabusManager {
     return `
       <div class="syllabus-class-group">
         ${classNumber !== null
-        ? `<div class="syllabus-class-header-container">
-            <div class="syllabus-class-header">Class ${classNumber}</div>
-            <div class="syllabus-editable-placeholder" data-type="class-title" data-collection-id="${collectionId}" data-class-number="${classNumber}" data-initial-value="${escapeHTML(SyllabusManager.getClassTitle(collectionId, classNumber))}" data-placeholder="Add a title..." data-empty-behavior="delete"></div>
-          </div>
-          <div class="syllabus-editable-placeholder" data-type="class-description" data-collection-id="${collectionId}" data-class-number="${classNumber}" data-initial-value="${escapeHTML(SyllabusManager.getClassDescription(collectionId, classNumber))}" data-placeholder="Add a description..." data-empty-behavior="delete"></div>`
+        ? `
+            <div class="syllabus-class-header-container">
+              <div class="syllabus-class-header">Class ${classNumber}</div>
+              <div
+                class="syllabus-editable-placeholder"
+                data-type="class-title"
+                data-collection-id="${collectionId}"
+                data-class-number="${classNumber}"
+                data-initial-value="${escapeHTML(SyllabusManager.getClassTitle(collectionId, classNumber))}"
+                data-placeholder="Add a title..."
+                data-empty-behavior="delete"
+              ></div>
+            </div>
+            <div
+              class="syllabus-editable-placeholder"
+              data-type="class-description"
+              data-collection-id="${collectionId}"
+              data-class-number="${classNumber}"
+              data-initial-value="${escapeHTML(SyllabusManager.getClassDescription(collectionId, classNumber))}"
+              data-placeholder="Add a description..."
+              data-empty-behavior="delete"
+            ></div>
+          `
         : ""
       }
-        <div class="syllabus-class-items" data-class-number="${classNumber !== null ? String(classNumber) : ""}">
-          ${(await Promise.all(classItems.map(async (item) => (SyllabusManager.getSyllabusPriority(item, collectionId) ? await SyllabusManager.renderSyllabusItemCardHTML(item, collectionId) : SyllabusManager.renderSyllabusItemCardSlimHTML(item, collectionId))))).join("")}
+        <div
+          class="syllabus-class-items"
+          data-class-number="${classNumber !== null ? String(classNumber) : ""}"
+        >
+          ${(
+        await Promise.all(
+          classItems.map(async (item) =>
+            SyllabusManager.getSyllabusPriority(item, collectionId)
+              ? await SyllabusManager.renderSyllabusItemCardHTML(
+                item,
+                collectionId,
+              )
+              : SyllabusManager.renderSyllabusItemCardSlimHTML(
+                item,
+                collectionId,
+              ),
+          ),
+        )
+      ).join("")}
         </div>
       </div>
     `;
@@ -695,53 +755,95 @@ export class SyllabusManager {
         ? (await generateBibliographicReference(item)) || ""
         : "";
       return `
-        <div class="syllabus-item" data-item-id="${item.id}" draggable="true"${priorityStyle ? ` style="${priorityStyle}"` : ""}>
+        <div
+          class="syllabus-item"
+          data-item-id="${item.id}"
+          draggable="true"
+          ${priorityStyle ? `style="${priorityStyle}"` : ""}
+        >
           <div class="syllabus-item-content">
             <div class="syllabus-item-main-content">
               <div class="syllabus-item-thumbnail">
-                <span class="icon icon-css icon-item-type cell-icon" data-item-type="${item.itemType}" style="
-                  width: 100%;
-                  height: 100%;
-                  background-origin: padding-box, padding-box, padding-box, padding-box;
-                  background-position-x: 50%, 50%, 50%, 50%;
-                  background-position-y: 50%, 50%, 50%, 50%;
-                  background-repeat: no-repeat, repeat, repeat, repeat;
-                  background-size: contain, 0px, 0px, 0px;
-                "></span>
+                <span
+                  class="icon icon-css icon-item-type cell-icon"
+                  data-item-type="${item.itemType}"
+                  style="
+                    width: 100%;
+                    height: 100%;
+                    background-origin: padding-box, padding-box, padding-box, padding-box;
+                    background-position-x: 50%, 50%, 50%, 50%;
+                    background-position-y: 50%, 50%, 50%, 50%;
+                    background-repeat: no-repeat, repeat, repeat, repeat;
+                    background-size: contain, 0px, 0px, 0px;
+                  "
+                ></span>
               </div>
               <div class="syllabus-item-text">
                 <div class="syllabus-item-title-row">
                   <div class="syllabus-item-title">${escapeHTML(title)}</div>
                 </div>
-                ${publicationName ? `<div class="syllabus-item-publication">In ${escapeHTML(publicationName)}</div>` : ""}
-                ${(priority && priority in SyllabusManager.PRIORITY_LABELS) ||
+                ${publicationName
+          ? `<div class="syllabus-item-publication">In ${escapeHTML(publicationName)}</div>`
+          : ""}
+          ${(priority && priority in SyllabusManager.PRIORITY_LABELS) ||
           metadataParts.length > 0
           ? `<div class="syllabus-item-metadata">
-                  ${priority && priority in SyllabusManager.PRIORITY_LABELS
-            ? `<span class="syllabus-item-priority-inline">
-                        <span class="syllabus-priority-icon" style="background-color: ${SyllabusManager.PRIORITY_COLORS[priority as SyllabusPriority]}"></span>
-                        <span class="syllabus-priority-label" style="color: ${SyllabusManager.PRIORITY_COLORS[priority as SyllabusPriority]}">${SyllabusManager.PRIORITY_LABELS[priority as SyllabusPriority]}</span>
-                      </span>`
+            ${priority && priority in SyllabusManager.PRIORITY_LABELS
+            ? `
+              <span class="syllabus-item-priority-inline">
+                <span
+                  class="syllabus-priority-icon"
+                  style="background-color: ${SyllabusManager.PRIORITY_COLORS[priority as SyllabusPriority]}"
+                ></span>
+                <span
+                  class="syllabus-priority-label"
+                  style="color: ${SyllabusManager.PRIORITY_COLORS[priority as SyllabusPriority]}"
+                >${SyllabusManager.PRIORITY_LABELS[priority as SyllabusPriority]}</span>
+              </span>
+            `
             : ""
           }
-                  ${metadataParts.length > 0 ? `<span>${metadataParts.join(" • ")}</span>` : ""}
-                </div>`
+            ${SyllabusManager.renderSyllabusItemMetadataHTML(item)}
+          }</div>`
           : ""
         }
-                ${bibliographicReference ? `<div class="syllabus-item-reference">${escapeHTML(bibliographicReference)}</div>` : ""}
-                ${classInstruction ? `<div class="syllabus-item-description">${escapeHTML(classInstruction)}</div>` : ""}
-              </div>
-            </div>
-            <div class="syllabus-item-right-side" draggable="false">
-              <div class="syllabus-item-actions" draggable="false">
-                ${url ? `<button class="toolbarbutton-1 syllabus-action-button" data-action="url" data-url="${escapeHTML(url)}" label="URL" tooltiptext="Open URL" />` : ""}
-                ${viewableAttachment && attachmentType ? `<button
-                    class="toolbarbutton-1 syllabus-action-button"
-                    data-action="attachment"
-                    data-attachment-id="${viewableAttachment.id}"
-                    data-attachment-type="${attachmentType}"
-                    label="${escapeHTML(attachmentType === "pdf" ? "PDF" : attachmentType === "snapshot" ? "Snapshot" : attachmentType === "epub" ? "EPUB" : "View")}"
-                    tooltiptext="${escapeHTML(
+         ${bibliographicReference
+          ? `<div class="syllabus-item-reference">${escapeHTML(bibliographicReference)}</div>`
+          : ""
+        }
+         ${classInstruction
+          ? `<div class="syllabus-item-description">${escapeHTML(classInstruction)}</div>`
+          : ""
+        }</div>
+      </div>
+      <div class="syllabus-item-right-side" draggable="false">
+        <div class="syllabus-item-actions" draggable="false">
+          ${url ? `
+            <button
+              class="toolbarbutton-1 syllabus-action-button"
+              data-action="url"
+              data-url="${escapeHTML(url)}"
+              label="URL"
+              tooltiptext="Open URL"
+            />`
+          : ""
+        }
+        ${viewableAttachment && attachmentType ? `
+          <button
+            class="toolbarbutton-1 syllabus-action-button"
+            data-action="attachment"
+            data-attachment-id="${viewableAttachment.id}"
+            data-attachment-type="${attachmentType}"
+            label="${escapeHTML(
+          attachmentType === "pdf"
+            ? "PDF"
+            : attachmentType === "snapshot"
+              ? "Snapshot"
+              : attachmentType === "epub"
+                ? "EPUB"
+                : "View",
+        )}"
+            tooltiptext="${escapeHTML(
           attachmentType === "pdf"
             ? "Open PDF"
             : attachmentType === "snapshot"
@@ -749,8 +851,7 @@ export class SyllabusManager {
               : attachmentType === "epub"
                 ? "Open EPUB"
                 : "Open attachment",
-        )}"
-                  />`
+        )}" />`
           : ""
         }
               </div>
@@ -769,48 +870,60 @@ export class SyllabusManager {
     collectionId: number,
   ): string {
     return `
-      <div class="syllabus-item syllabus-item-slim" data-item-id="${item.id}" draggable="true">
+      <div
+        class="syllabus-item syllabus-item-slim"
+        data-item-id="${item.id}"
+        draggable="true"
+      >
         <div class="syllabus-item-content">
           <div class="syllabus-item-main-content">
             <div class="syllabus-item-thumbnail">
-              <span class="icon icon-css icon-item-type cell-icon" data-item-type="${item.itemType}" style="
-                width: 100%;
-                height: 100%;
-                background-origin: padding-box, padding-box, padding-box, padding-box;
-                background-position-x: 50%, 50%, 50%, 50%;
-                background-position-y: 50%, 50%, 50%, 50%;
-                background-repeat: no-repeat, repeat, repeat, repeat;
-                background-size: contain, 0px, 0px, 0px;
-              "></span>
+              <span
+                class="icon icon-css icon-item-type cell-icon"
+                data-item-type="${item.itemType}"
+                style="
+                  width: 100%;
+                  height: 100%;
+                  background-origin: padding-box, padding-box, padding-box, padding-box;
+                  background-position-x: 50%, 50%, 50%, 50%;
+                  background-position-y: 50%, 50%, 50%, 50%;
+                  background-repeat: no-repeat, repeat, repeat, repeat;
+                  background-size: contain, 0px, 0px, 0px;
+                "
+              ></span>
             </div>
             <div class="syllabus-item-text">
               <div class="syllabus-item-title-row">
-                <div class="syllabus-item-title">${escapeHTML(item.getField("title") || "Untitled")}</div>
+                <div class="syllabus-item-title">
+                  ${escapeHTML(item.getField("title") || "Untitled")}
+                </div>
               </div>
-              ${(() => {
-        const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(
-          item.itemType,
-        );
-        const creator =
-          item.getCreators().length > 0 ? item.getCreator(0) : null;
-        const author =
-          item.firstCreator ||
-          (creator && typeof creator !== "boolean"
-            ? `${creator.firstName || ""} ${creator.lastName || ""}`.trim()
-            : "");
-        const date = item.getField("date") || "";
-        const metadataParts = [itemTypeLabel, author, date].filter(
-          Boolean,
-        );
-        return metadataParts.length > 0
-          ? `<div class="syllabus-item-metadata"><span>${metadataParts.join(" • ")}</span></div>`
-          : "";
-      })()}
+              ${SyllabusManager.renderSyllabusItemMetadataHTML(item)}
             </div>
           </div>
         </div>
       </div>
     `;
+  }
+
+  static renderSyllabusItemMetadataHTML(item: Zotero.Item): string {
+    const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(
+      item.itemType,
+    );
+    const creator =
+      item.getCreators().length > 0 ? item.getCreator(0) : null;
+    const author =
+      item.firstCreator ||
+      (creator && typeof creator !== "boolean"
+        ? `${creator.firstName || ""} ${creator.lastName || ""}`.trim()
+        : "");
+    const date = item.getField("date") || "";
+    const metadataParts = [itemTypeLabel, author, date].filter(
+      Boolean,
+    );
+    return metadataParts.length > 0
+      ? `<div class="syllabus-item-metadata"><span>${metadataParts.join(" • ")}</span></div>`
+      : "";
   }
 
   /**
