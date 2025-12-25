@@ -121,7 +121,7 @@ async function onNotify(
   ztoolkit.log("onNotify", event, type, ids, extraData);
 
   ztoolkit.log("onNotify->setupSyllabusView");
-  SyllabusManager.setupSyllabusView();
+  await SyllabusManager.setupSyllabusView();
 
   // Update class number menu when items are modified
   if (type === "item" && (event === "modify" || event === "add")) {
