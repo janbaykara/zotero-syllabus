@@ -73,6 +73,7 @@ export class SyllabusManager {
   static extraFieldTool = new ExtraFieldTool();
 
   static onStartup() {
+    ztoolkit.log("SyllabusManager.onStartup");
     this.registerPrefs();
     this.registerNotifier();
     this.registerSyllabusPriorityColumn();
@@ -82,6 +83,7 @@ export class SyllabusManager {
   }
 
   static onMainWindowLoad(win: _ZoteroTypes.MainWindow) {
+    ztoolkit.log("SyllabusManager.onMainWindowLoad", win);
     this.registerStyleSheet(win);
     this.registerContextMenu(win);
     this.updateClassNumberMenus();
@@ -90,34 +92,39 @@ export class SyllabusManager {
     this.setupSyllabusViewReloadListener();
   }
 
-  static onItemUpdated(item: Zotero.Item) {
-    this.setupUI();
-    // TODO: refresh Item Pane
+  static onItemUpdate(item: Zotero.Item, source: "page" | "item-pane" | "context-menu") {
+    ztoolkit.log("SyllabusManager.onItemUpdate", source, item.id);
+    if (source !== "page") this.setupPage();
+    if (source !== "item-pane") this.reloadItemPane();
   }
 
   /**
    * E.g. the class title or description has been updated
    */
-  static onClassUpdated(classNumber: number) {
-    this.setupUI();
-    // TODO: refresh Class Number Menu
-    this.setupPage();
+  static onClassUpdate(classNumber: number, source: "page" | "item-pane") {
+    ztoolkit.log("SyllabusManager.onClassUpdate", classNumber, source);
+    if (source !== "page") this.setupPage();
+    if (source !== "item-pane") this.reloadItemPane();
+    this.updateClassNumberMenus();
   }
 
   /**
    * E.g. the description of the collection has been updated
    */
-  static onCollectionUpdated(collection: Zotero.Collection) {
+  static onCollectionUpdated(collection: Zotero.Collection, source: "page") {
+    ztoolkit.log("SyllabusManager.onCollectionUpdated", collection);
     this.setupPage();
   }
 
   static onMainWindowUnload(win: _ZoteroTypes.MainWindow) {
+    ztoolkit.log("SyllabusManager.onMainWindowUnload", win);
     this.setupUI();
     this.cleanupSyllabusViewTabListener();
     this.unregisterClassNumberMenuUpdater(win);
   }
 
   static onShutdown() {
+    ztoolkit.log("SyllabusManager.onShutdown");
     this.unregisterNotifier();
   }
 
@@ -627,6 +634,7 @@ export class SyllabusManager {
                 draggedItem,
                 selectedCollection.id,
                 targetClassNumber,
+                "page",
               );
               await draggedItem.saveTx();
 
@@ -746,6 +754,7 @@ export class SyllabusManager {
                   draggedItem,
                   selectedCollection.id,
                   undefined,
+                  "page",
                 );
                 await draggedItem.saveTx();
 
@@ -1401,7 +1410,6 @@ export class SyllabusManager {
 
   static async registerSyllabusPriorityColumn() {
     const field = "syllabus-priority";
-    // @ts-expect-error - onEdit may not be in types but is supported by Zotero API
     await Zotero.ItemTreeManager.registerColumns({
       pluginID: addon.data.config.addonID,
       dataKey: field,
@@ -1478,49 +1486,12 @@ export class SyllabusManager {
         }
 
         return container;
-      },
-      onEdit: async (item: Zotero.Item, dataKey: string, newValue: string) => {
-        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-        const selectedCollection = zoteroPane.getSelectedCollection();
-
-        if (!selectedCollection) {
-          ztoolkit.log("No collection selected, cannot update priority");
-          return;
-        }
-
-        // Validate the priority value
-        if (
-          newValue &&
-          ![
-            SyllabusPriority.COURSE_INFO,
-            SyllabusPriority.ESSENTIAL,
-            SyllabusPriority.RECOMMENDED,
-            SyllabusPriority.OPTIONAL,
-          ].includes(newValue as SyllabusPriority)
-        ) {
-          ztoolkit.log(`Invalid priority value: ${newValue}`);
-          return;
-        }
-
-        await SyllabusManager.setSyllabusPriority(
-          item,
-          selectedCollection.id,
-          newValue as SyllabusPriority | "",
-        );
-        await item.saveTx();
-
-        // Refresh the item tree to show the updated value
-        const itemPane = zoteroPane.itemPane;
-        if (itemPane) {
-          itemPane.render();
-        }
-      },
+      }
     });
   }
 
   static async registerSyllabusClassInstructionColumn() {
     const field = "syllabus-class-instruction";
-    // @ts-expect-error - onEdit may not be in types but is supported by Zotero API
     await Zotero.ItemTreeManager.registerColumns({
       pluginID: addon.data.config.addonID,
       dataKey: field,
@@ -1535,38 +1506,12 @@ export class SyllabusManager {
 
         // If not in a collection view, return empty
         return "";
-      },
-      onEdit: async (item: Zotero.Item, dataKey: string, newValue: string) => {
-        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-        const selectedCollection = zoteroPane.getSelectedCollection();
-
-        if (!selectedCollection) {
-          ztoolkit.log(
-            "No collection selected, cannot update class instruction",
-          );
-          return;
-        }
-
-        await SyllabusManager.setSyllabusClassInstruction(
-          item,
-          selectedCollection.id,
-          newValue,
-        );
-        await item.saveTx();
-
-        // Refresh the item tree to show the updated value
-
-        const itemPane = zoteroPane.itemPane;
-        if (itemPane) {
-          itemPane.render();
-        }
-      },
+      }
     });
   }
 
   static async registerSyllabusClassNumberColumn() {
     const field = this.SYLLABUS_CLASS_NUMBER_FIELD;
-    // @ts-expect-error - onEdit may not be in types but is supported by Zotero API
     await Zotero.ItemTreeManager.registerColumns({
       pluginID: addon.data.config.addonID,
       dataKey: field,
@@ -1661,42 +1606,28 @@ export class SyllabusManager {
         span.className = `cell ${column.className}`;
         span.textContent = "";
         return span;
-      },
-      onEdit: async (item: Zotero.Item, dataKey: string, newValue: string) => {
-        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-        const selectedCollection = zoteroPane.getSelectedCollection();
-
-        if (!selectedCollection) {
-          ztoolkit.log("No collection selected, cannot update class number");
-          return;
-        }
-
-        // Parse and validate the class number
-        const trimmedValue = newValue.trim();
-        if (trimmedValue === "") {
-          await SyllabusManager.setSyllabusClassNumber(item, selectedCollection.id, undefined);
-        } else {
-          const classNum = parseInt(trimmedValue, 10);
-          if (isNaN(classNum) || classNum < 1) {
-            ztoolkit.log(`Invalid class number: ${trimmedValue}`);
-            return;
-          }
-          await SyllabusManager.setSyllabusClassNumber(item, selectedCollection.id, classNum);
-        }
-
-        await item.saveTx();
-
-        // Refresh the item tree to show the updated value
-
-        const itemPane = zoteroPane.itemPane;
-        if (itemPane) {
-          itemPane.render();
-        }
-      },
+      }
     });
   }
 
+  static reloadItemPane() {
+    ztoolkit.log("SyllabusManager.reloadItemPane");
+    this.destroyItemPaneSection();
+    setTimeout(() => {
+      this.registerSyllabusItemPaneSection();
+    }, 100);
+  }
+
+  static destroyItemPaneSection() {
+    ztoolkit.log("SyllabusManager.destroyItemPaneSection");
+    if (this.syllabusItemPaneSection) {
+      Zotero.ItemPaneManager.unregisterSection(this.syllabusItemPaneSection);
+      this.syllabusItemPaneSection = null;
+    }
+  }
+
   static registerSyllabusItemPaneSection() {
+    ztoolkit.log("SyllabusManager.registerSyllabusItemPaneSection");
     this.syllabusItemPaneSection = Zotero.ItemPaneManager.registerSection({
       paneID: "syllabus",
       pluginID: addon.data.config.addonID,
@@ -1708,13 +1639,21 @@ export class SyllabusManager {
         l10nID: getLocaleID("item-section-syllabus-sidenav-tooltip"),
         icon: "chrome://zotero/skin/16/universal/book.svg",
       },
-      onItemChange: ({ item, setEnabled, tabType }) => {
-        this.onItemUpdated(item);
-        // Only enable in library view (not reader)
-        const enabled = tabType === "library" && item?.isRegularItem();
-        setEnabled(enabled);
-        return true;
-      },
+      // onItemUpdate: ({ item, setEnabled, tabType, editable, ...args }) => {
+      //   // ztoolkit.log("SyllabusManager.registerSyllabusItemPaneSection.onItemUpdate", {
+      //   //   item,
+      //   //   tabType,
+      //   //   editable,
+      //   //   args
+      //   // });
+      //   // Only enable in library view (not reader)
+      //   // const enabled = tabType === "library" && item?.isRegularItem();
+      //   // setEnabled(enabled);
+      //   // if (editable && enabled) {
+      //   //   this.onItemUpdate(item, "registerSyllabusItemPaneSection.onItemUpdate");
+      //   // }
+      //   // return true;
+      // },
       onRender: ({ body, item, editable }) => {
         const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
         const selectedCollection = zoteroPane.getSelectedCollection();
@@ -1861,7 +1800,7 @@ export class SyllabusManager {
         if (editable) {
           prioritySelect.addEventListener("change", async (e) => {
             const target = e.target as HTMLSelectElement;
-            await SyllabusManager.setSyllabusPriority(item, collectionId, target.value as any);
+            await SyllabusManager.setSyllabusPriority(item, collectionId, target.value as any, "item-pane");
             await item.saveTx();
 
             const itemPane = zoteroPane.itemPane;
@@ -1906,7 +1845,7 @@ export class SyllabusManager {
               sessionInput.value = currentclassNumber?.toString() || "";
               return;
             }
-            await SyllabusManager.setSyllabusClassNumber(item, collectionId, sessionNum);
+            await SyllabusManager.setSyllabusClassNumber(item, collectionId, sessionNum, "item-pane");
             await item.saveTx();
 
             const itemPane = zoteroPane.itemPane;
@@ -2005,6 +1944,7 @@ export class SyllabusManager {
                 item,
                 collectionId,
                 classInstructionTextarea.value,
+                "item-pane",
               );
               await item.saveTx();
 
@@ -2050,6 +1990,7 @@ export class SyllabusManager {
                   item,
                   collectionId,
                   SyllabusPriority.COURSE_INFO,
+                  "context-menu",
                 );
                 await item.saveTx();
               }
@@ -2076,6 +2017,7 @@ export class SyllabusManager {
                   item,
                   collectionId,
                   SyllabusPriority.ESSENTIAL,
+                  "context-menu",
                 );
                 await item.saveTx();
               }
@@ -2102,6 +2044,7 @@ export class SyllabusManager {
                   item,
                   collectionId,
                   SyllabusPriority.RECOMMENDED,
+                  "context-menu",
                 );
                 await item.saveTx();
               }
@@ -2128,6 +2071,7 @@ export class SyllabusManager {
                   item,
                   collectionId,
                   SyllabusPriority.OPTIONAL,
+                  "context-menu",
                 );
                 await item.saveTx();
               }
@@ -2153,7 +2097,7 @@ export class SyllabusManager {
             const collectionId = selectedCollection.id;
             for (const item of items) {
               if (item.isRegularItem()) {
-                await SyllabusManager.setSyllabusPriority(item, collectionId, "");
+                await SyllabusManager.setSyllabusPriority(item, collectionId, "", "context-menu");
                 await item.saveTx();
               }
             }
@@ -2216,7 +2160,7 @@ export class SyllabusManager {
             const collectionId = selectedCollection.id;
             for (const item of items) {
               if (item.isRegularItem()) {
-                await SyllabusManager.setSyllabusClassNumber(item, collectionId, classNumber);
+                await SyllabusManager.setSyllabusClassNumber(item, collectionId, classNumber, "context-menu");
                 await item.saveTx();
               }
             }
@@ -2248,7 +2192,7 @@ export class SyllabusManager {
           const collectionId = selectedCollection.id;
           for (const item of items) {
             if (item.isRegularItem()) {
-              await SyllabusManager.setSyllabusClassNumber(item, collectionId, undefined);
+              await SyllabusManager.setSyllabusClassNumber(item, collectionId, undefined, "context-menu");
               await item.saveTx();
             }
           }
@@ -2306,10 +2250,11 @@ export class SyllabusManager {
   static async setSyllabusData(
     item: Zotero.Item,
     data: SyllabusData,
+    source: "page" | "item-pane" | "context-menu",
   ): Promise<void> {
     const jsonStr = JSON.stringify(data);
     await this.extraFieldTool.setExtraField(item, this.SYLLABUS_DATA_KEY, jsonStr);
-    this.onItemUpdated(item);
+    this.onItemUpdate(item, source);
   }
 
   /**
@@ -2331,6 +2276,7 @@ export class SyllabusManager {
     item: Zotero.Item,
     collectionId: number | string,
     priority: SyllabusPriority | "",
+    source: "page" | "item-pane" | "context-menu",
   ): Promise<void> {
     const data = this.getSyllabusData(item);
     const collectionIdStr = String(collectionId);
@@ -2352,7 +2298,7 @@ export class SyllabusManager {
       }
     }
 
-    await this.setSyllabusData(item, data);
+    await this.setSyllabusData(item, data, source);
   }
 
   /**
@@ -2374,6 +2320,7 @@ export class SyllabusManager {
     item: Zotero.Item,
     collectionId: number | string,
     classInstruction: string,
+    source: "page" | "item-pane" | "context-menu",
   ): Promise<void> {
     const data = this.getSyllabusData(item);
     const collectionIdStr = String(collectionId);
@@ -2392,7 +2339,7 @@ export class SyllabusManager {
       }
     }
 
-    await this.setSyllabusData(item, data);
+    await this.setSyllabusData(item, data, source);
   }
 
   /**
@@ -2414,6 +2361,7 @@ export class SyllabusManager {
     item: Zotero.Item,
     collectionId: number | string,
     classNumber: number | undefined,
+    source: "page" | "item-pane" | "context-menu",
   ) {
     const data = this.getSyllabusData(item);
     const collectionIdStr = String(collectionId);
@@ -2435,7 +2383,7 @@ export class SyllabusManager {
       }
     }
 
-    await this.setSyllabusData(item, data);
+    await this.setSyllabusData(item, data, source);
   }
 
   /**
@@ -2519,7 +2467,7 @@ export class SyllabusManager {
     const classNumberStr = String(classNumber);
     const title = metadata[collectionIdStr]?.classes?.[classNumberStr]?.title || "";
     if (includeClassNumber) {
-      return `Class ${classNumber} (${title})`;
+      return `#${classNumber}: ${title}`;
     }
     return title;
   }
