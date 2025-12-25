@@ -1,4 +1,39 @@
 /**
+ * Helper to escape HTML special characters
+ */
+export function escapeHTML(str: string): string {
+  const map: Record<string, string> = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  };
+  return str.replace(/[&<>"']/g, (m) => map[m]);
+}
+
+/**
+ * Helper to parse HTML template string into a DocumentFragment
+ */
+export function parseHTMLTemplate(doc: Document, html: string): DocumentFragment {
+  const parser = new doc.defaultView!.DOMParser();
+  const parsed = parser.parseFromString(
+    `<template>${html}</template>`,
+    "text/html",
+  );
+  const template = parsed.querySelector("template")!;
+  return template.content;
+}
+
+/**
+ * Helper to parse XUL template string into a DocumentFragment
+ */
+export function parseXULTemplate(xul: string): DocumentFragment {
+  const win = Zotero.getMainWindow();
+  return win.MozXULElement.parseXULToFragment(xul);
+}
+
+/**
  * Creates a reusable editable text input element that wraps text
  * @param doc - The document to create the element in
  * @param options - Configuration options

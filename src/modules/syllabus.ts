@@ -7,7 +7,12 @@ import { getLocaleID } from "../utils/locale";
 import { getPref } from "../utils/prefs";
 import { ExtraFieldTool } from "zotero-plugin-toolkit";
 import { getCurrentTab } from "../utils/window";
-import { createEditableTextInput } from "../utils/ui";
+import {
+  createEditableTextInput,
+  escapeHTML,
+  parseHTMLTemplate,
+  parseXULTemplate,
+} from "../utils/ui";
 
 enum SyllabusPriority {
   COURSE_INFO = "course-info",
@@ -676,17 +681,17 @@ export class SyllabusManager {
             // Use slim card for items without priority, full card for items with priority
             const itemElement = priority
               ? await SyllabusManager.createSyllabusItemCard(
-                  doc,
-                  item,
-                  selectedCollection.id,
-                  pane,
-                )
+                doc,
+                item,
+                selectedCollection.id,
+                pane,
+              )
               : await SyllabusManager.createSyllabusItemCardSlim(
-                  doc,
-                  item,
-                  selectedCollection.id,
-                  pane,
-                );
+                doc,
+                item,
+                selectedCollection.id,
+                pane,
+              );
             itemsContainer.appendChild(itemElement);
           }
 
@@ -839,24 +844,6 @@ export class SyllabusManager {
 
     const date = item.getField("date") || "";
 
-    const itemElement = doc.createElement("div");
-    itemElement.className = "syllabus-item syllabus-item-slim";
-    itemElement.setAttribute("data-item-id", String(item.id));
-    itemElement.setAttribute("draggable", "true");
-
-    // Create item content container
-    const itemContent = doc.createElement("div");
-    itemContent.className = "syllabus-item-content";
-
-    // Create main content wrapper (small thumbnail + text)
-    const mainContent = doc.createElement("div");
-    mainContent.className = "syllabus-item-main-content";
-
-    // Add small thumbnail image on the left
-    const thumbnailContainer = doc.createElement("div");
-    thumbnailContainer.className =
-      "syllabus-item-thumbnail syllabus-item-thumbnail-slim";
-
     // Try to get item image/thumbnail
     let imageSrc: string | null = null;
 
@@ -888,67 +875,50 @@ export class SyllabusManager {
       }
     }
 
+    // Build metadata parts array
+    const metadataParts = [itemTypeLabel, author, date].filter(Boolean);
+
+    // Build the HTML template
+    const html = `
+      <div class="syllabus-item syllabus-item-slim" data-item-id="${item.id}" draggable="true">
+        <div class="syllabus-item-content">
+          <div class="syllabus-item-main-content">
+            <div class="syllabus-item-thumbnail syllabus-item-thumbnail-slim">
+              ${imageSrc
+        ? `<img class="syllabus-item-thumbnail-img" src="${escapeHTML(imageSrc)}" alt="${escapeHTML(title)}" />`
+        : `<div class="syllabus-item-thumbnail-placeholder">📄</div>`}
+            </div>
+            <div class="syllabus-item-text">
+              <div class="syllabus-item-title-row">
+                <div class="syllabus-item-title">${escapeHTML(title)}</div>
+              </div>
+              ${metadataParts.length > 0
+        ? `<div class="syllabus-item-metadata"><span>${metadataParts.join(" • ")}</span></div>`
+        : ""}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const fragment = parseHTMLTemplate(doc, html);
+    const itemElement = fragment.firstElementChild as HTMLElement;
+
+    // Handle image error case
     if (imageSrc) {
-      const thumbnailImg = doc.createElement("img");
-      thumbnailImg.className = "syllabus-item-thumbnail-img";
-      thumbnailImg.src = imageSrc;
-      thumbnailImg.alt = title;
-      thumbnailImg.onerror = () => {
-        thumbnailImg.style.display = "none";
-        const placeholder = doc.createElement("div");
-        placeholder.className = "syllabus-item-thumbnail-placeholder";
-        placeholder.textContent = "📄";
-        thumbnailContainer.appendChild(placeholder);
-      };
-      thumbnailContainer.appendChild(thumbnailImg);
-    } else {
-      const placeholder = doc.createElement("div");
-      placeholder.className = "syllabus-item-thumbnail-placeholder";
-      placeholder.textContent = "📄";
-      thumbnailContainer.appendChild(placeholder);
+      const thumbnailImg = itemElement.querySelector(
+        ".syllabus-item-thumbnail-img",
+      ) as HTMLImageElement;
+      if (thumbnailImg) {
+        thumbnailImg.onerror = () => {
+          thumbnailImg.style.display = "none";
+          const placeholder = doc.createElement("div");
+          placeholder.className = "syllabus-item-thumbnail-placeholder";
+          placeholder.textContent = "📄";
+          thumbnailImg.parentElement!.appendChild(placeholder);
+        };
+      }
     }
-
-    mainContent.appendChild(thumbnailContainer);
-
-    // Create text content container
-    const textContent = doc.createElement("div");
-    textContent.className = "syllabus-item-text";
-
-    // Create item title row
-    const itemTitleRow = doc.createElement("div");
-    itemTitleRow.className = "syllabus-item-title-row";
-
-    const itemTitle = doc.createElement("div");
-    itemTitle.className = "syllabus-item-title";
-    itemTitle.textContent = title;
-    itemTitleRow.appendChild(itemTitle);
-
-    textContent.appendChild(itemTitleRow);
-
-    // Add item metadata row (type, author, date) - compact
-    const metadataParts: string[] = [];
-    if (itemTypeLabel) {
-      metadataParts.push(itemTypeLabel);
-    }
-    if (author) {
-      metadataParts.push(author);
-    }
-    if (date) {
-      metadataParts.push(date);
-    }
-
-    if (metadataParts.length > 0) {
-      const metadataRow = doc.createElement("div");
-      metadataRow.className = "syllabus-item-metadata";
-      const metadataText = doc.createElement("span");
-      metadataText.textContent = metadataParts.join(" • ");
-      metadataRow.appendChild(metadataText);
-      textContent.appendChild(metadataRow);
-    }
-
-    mainContent.appendChild(textContent);
-    itemContent.appendChild(mainContent);
-    itemElement.appendChild(itemContent);
 
     // Track if we're dragging to prevent click after drag
     let isDragging = false;
@@ -1085,18 +1055,6 @@ export class SyllabusManager {
       }
     }
 
-    // Create item content container
-    const itemContent = doc.createElement("div");
-    itemContent.className = "syllabus-item-content";
-
-    // Create main content wrapper (thumbnail + text)
-    const mainContent = doc.createElement("div");
-    mainContent.className = "syllabus-item-main-content";
-
-    // Add thumbnail image on the left
-    const thumbnailContainer = doc.createElement("div");
-    thumbnailContainer.className = "syllabus-item-thumbnail";
-
     // Try to get item image/thumbnail
     let imageSrc: string | null = null;
 
@@ -1129,151 +1087,94 @@ export class SyllabusManager {
       }
     }
 
-    if (imageSrc) {
-      const thumbnailImg = doc.createElement("img");
-      thumbnailImg.className = "syllabus-item-thumbnail-img";
-      thumbnailImg.src = imageSrc;
-      thumbnailImg.alt = title;
-      thumbnailImg.onerror = () => {
-        // If image fails to load, show placeholder
-        thumbnailImg.style.display = "none";
-        const placeholder = doc.createElement("div");
-        placeholder.className = "syllabus-item-thumbnail-placeholder";
-        placeholder.textContent = "📄";
-        thumbnailContainer.appendChild(placeholder);
-      };
-      thumbnailContainer.appendChild(thumbnailImg);
-    } else {
-      // Use a placeholder
-      const placeholder = doc.createElement("div");
-      placeholder.className = "syllabus-item-thumbnail-placeholder";
-      placeholder.textContent = "📄";
-      thumbnailContainer.appendChild(placeholder);
-    }
+    // Build metadata parts array
+    const metadataParts = [itemTypeLabel, author, date].filter(Boolean);
 
-    mainContent.appendChild(thumbnailContainer);
-
-    // Create text content container
-    const textContent = doc.createElement("div");
-    textContent.className = "syllabus-item-text";
-
-    // Create item title row (just title, no priority)
-    const itemTitleRow = doc.createElement("div");
-    itemTitleRow.className = "syllabus-item-title-row";
-
-    // Add title text
-    const itemTitle = doc.createElement("div");
-    itemTitle.className = "syllabus-item-title";
-    itemTitle.textContent = title;
-    itemTitleRow.appendChild(itemTitle);
-
-    textContent.appendChild(itemTitleRow);
-
-    // Add "In..." publication name under title
-    if (publicationName) {
-      const publicationRow = doc.createElement("div");
-      publicationRow.className = "syllabus-item-publication";
-      publicationRow.textContent = `In ${publicationName}`;
-      textContent.appendChild(publicationRow);
-    }
-
-    // Add item metadata row (priority, type, author, date)
-    const metadataRow = doc.createElement("div");
-    metadataRow.className = "syllabus-item-metadata";
-
-    // Add priority as first item in metadata row
-    if (priority && priority in SyllabusManager.PRIORITY_LABELS) {
-      const priorityContainer = doc.createElement("span");
-      priorityContainer.className = "syllabus-item-priority-inline";
-
-      const priorityIcon = doc.createElement("span");
-      priorityIcon.className = "syllabus-priority-icon";
-      priorityIcon.style.backgroundColor =
-        SyllabusManager.PRIORITY_COLORS[priority as SyllabusPriority];
-      priorityContainer.appendChild(priorityIcon);
-
-      const priorityLabel = doc.createElement("span");
-      priorityLabel.className = "syllabus-priority-label";
-      priorityLabel.textContent =
-        SyllabusManager.PRIORITY_LABELS[priority as SyllabusPriority];
-      priorityLabel.style.color =
-        SyllabusManager.PRIORITY_COLORS[priority as SyllabusPriority];
-      priorityContainer.appendChild(priorityLabel);
-
-      metadataRow.appendChild(priorityContainer);
-    }
-
-    const metadataParts: string[] = [];
-    if (itemTypeLabel) {
-      metadataParts.push(itemTypeLabel);
-    }
-    if (author) {
-      metadataParts.push(author);
-    }
-    if (date) {
-      metadataParts.push(date);
-    }
-
-    if (metadataParts.length > 0) {
-      const metadataText = doc.createElement("span");
-      metadataText.textContent = metadataParts.join(" • ");
-      metadataRow.appendChild(metadataText);
-    }
-
-    if (metadataRow.children.length > 0) {
-      textContent.appendChild(metadataRow);
-    }
-
-    // Add bibliographic reference (after metadata)
+    // Get bibliographic reference if needed
+    let bibliographicReference = "";
     if (getPref("showBibliography")) {
-      const bibliographicReference = await generateBibliographicReference(item);
-      if (bibliographicReference) {
-        const referenceRow = doc.createElement("div");
-        referenceRow.className = "syllabus-item-reference";
-        referenceRow.textContent = bibliographicReference;
-        textContent.appendChild(referenceRow);
+      const ref = await generateBibliographicReference(item);
+      if (ref) {
+        bibliographicReference = ref;
       }
     }
 
-    // Add class instruction if available
-    if (classInstruction) {
-      const itemDesc = doc.createElement("div");
-      itemDesc.className = "syllabus-item-description";
-      itemDesc.textContent = classInstruction;
-      textContent.appendChild(itemDesc);
+    // Build the main HTML structure
+    const html = `
+      <div class="syllabus-item-content">
+        <div class="syllabus-item-main-content">
+          <div class="syllabus-item-thumbnail">
+            ${imageSrc
+        ? `<img class="syllabus-item-thumbnail-img" src="${escapeHTML(imageSrc)}" alt="${escapeHTML(title)}" />`
+        : `<div class="syllabus-item-thumbnail-placeholder">📄</div>`}
+          </div>
+          <div class="syllabus-item-text">
+            <div class="syllabus-item-title-row">
+              <div class="syllabus-item-title">${escapeHTML(title)}</div>
+            </div>
+            ${publicationName
+        ? `<div class="syllabus-item-publication">In ${escapeHTML(publicationName)}</div>`
+        : ""}
+            ${priority && priority in SyllabusManager.PRIORITY_LABELS || metadataParts.length > 0
+        ? `<div class="syllabus-item-metadata">
+                  ${priority && priority in SyllabusManager.PRIORITY_LABELS
+          ? `<span class="syllabus-item-priority-inline">
+                        <span class="syllabus-priority-icon" style="background-color: ${SyllabusManager.PRIORITY_COLORS[priority as SyllabusPriority]}"></span>
+                        <span class="syllabus-priority-label" style="color: ${SyllabusManager.PRIORITY_COLORS[priority as SyllabusPriority]}">${SyllabusManager.PRIORITY_LABELS[priority as SyllabusPriority]}</span>
+                      </span>`
+          : ""}
+                  ${metadataParts.length > 0
+          ? `<span>${metadataParts.join(" • ")}</span>`
+          : ""}
+                </div>`
+        : ""}
+            ${bibliographicReference
+        ? `<div class="syllabus-item-reference">${escapeHTML(bibliographicReference)}</div>`
+        : ""}
+            ${classInstruction
+        ? `<div class="syllabus-item-description">${escapeHTML(classInstruction)}</div>`
+        : ""}
+          </div>
+        </div>
+        <div class="syllabus-item-right-side" draggable="false">
+          <div class="syllabus-item-actions" draggable="false"></div>
+        </div>
+      </div>
+    `;
+
+    const fragment = parseHTMLTemplate(doc, html);
+    const itemContent = fragment.firstElementChild as HTMLElement;
+
+    // Handle image error case
+    if (imageSrc) {
+      const thumbnailImg = itemContent.querySelector(
+        ".syllabus-item-thumbnail-img",
+      ) as HTMLImageElement;
+      if (thumbnailImg) {
+        thumbnailImg.onerror = () => {
+          thumbnailImg.style.display = "none";
+          const placeholder = doc.createElement("div");
+          placeholder.className = "syllabus-item-thumbnail-placeholder";
+          placeholder.textContent = "📄";
+          thumbnailImg.parentElement!.appendChild(placeholder);
+        };
+      }
     }
 
-    mainContent.appendChild(textContent);
-    itemContent.appendChild(mainContent);
+    // Get the actions row for buttons
+    const actionsRow = itemContent.querySelector(
+      ".syllabus-item-actions",
+    ) as HTMLElement;
 
-    // Create right side container (buttons)
-    const rightSide = doc.createElement("div");
-    rightSide.className = "syllabus-item-right-side";
-    // Prevent buttons area from interfering with drag
-    rightSide.setAttribute("draggable", "false");
-
-    // Add action buttons row (URL, PDF) - on the right side
-    const actionsRow = doc.createElement("div");
-    actionsRow.className = "syllabus-item-actions";
-    actionsRow.setAttribute("draggable", "false");
-
+    // Create XUL buttons using parseXULToFragment
     if (url) {
-      const urlButton = ztoolkit.UI.createElement(doc, "button", {
-        namespace: "xul",
-        classList: ["toolbarbutton-1"],
-        properties: {
-          label: "URL",
-          tooltiptext: "Open URL",
-        },
-        listeners: [
-          {
-            type: "command",
-            listener: (e: Event) => {
-              e.stopPropagation(); // Prevent item selection
-              Zotero.launchURL(url);
-            },
-          },
-        ],
+      const urlButtonFragment = parseXULTemplate(`
+        <button class="toolbarbutton-1" label="URL" tooltiptext="Open URL" />
+      `);
+      const urlButton = urlButtonFragment.firstElementChild as XUL.Button;
+      urlButton.addEventListener("command", (e: Event) => {
+        e.stopPropagation(); // Prevent item selection
+        Zotero.launchURL(url);
       });
       actionsRow.appendChild(urlButton);
     }
@@ -1293,60 +1194,47 @@ export class SyllabusManager {
         buttonTooltip = "Open EPUB";
       }
 
-      const viewButton = ztoolkit.UI.createElement(doc, "button", {
-        namespace: "xul",
-        classList: ["toolbarbutton-1"],
-        properties: {
-          label: buttonLabel,
-          tooltiptext: buttonTooltip,
-        },
-        listeners: [
-          {
-            type: "command",
-            listener: async (e: Event) => {
-              e.stopPropagation(); // Prevent item selection
-              try {
-                if (attachmentType === "pdf") {
-                  // Try to view PDF in Zotero reader
-                  await pane.viewPDF(viewableAttachment.id, { page: 1 });
-                } else if (attachmentType === "snapshot") {
-                  // Open web snapshot in Zotero reader
-                  await pane.viewPDF(viewableAttachment.id, { page: 1 });
-                } else if (attachmentType === "epub") {
-                  // Open EPUB in Zotero reader
-                  await pane.viewPDF(viewableAttachment.id, { page: 1 });
-                }
-              } catch (err) {
-                // Fallback: try to open attachment file
-                try {
-                  const file = viewableAttachment.getFilePath();
-                  if (file) {
-                    Zotero.File.pathToFile(file).reveal();
-                  } else {
-                    // For snapshots, try to get the URL
-                    if (attachmentType === "snapshot") {
-                      const snapshotUrl = viewableAttachment.getField("url");
-                      if (snapshotUrl) {
-                        Zotero.launchURL(snapshotUrl);
-                      }
-                    }
-                  }
-                } catch (fileErr) {
-                  ztoolkit.log("Error opening attachment:", fileErr);
+      const viewButtonFragment = parseXULTemplate(`
+        <button class="toolbarbutton-1" label="${escapeHTML(buttonLabel)}" tooltiptext="${escapeHTML(buttonTooltip)}" />
+      `);
+      const viewButton = viewButtonFragment.firstElementChild as XUL.Button;
+      viewButton.addEventListener("command", async (e: Event) => {
+        e.stopPropagation(); // Prevent item selection
+        try {
+          if (attachmentType === "pdf") {
+            // Try to view PDF in Zotero reader
+            await pane.viewPDF(viewableAttachment.id, { page: 1 });
+          } else if (attachmentType === "snapshot") {
+            // Open web snapshot in Zotero reader
+            await pane.viewPDF(viewableAttachment.id, { page: 1 });
+          } else if (attachmentType === "epub") {
+            // Open EPUB in Zotero reader
+            await pane.viewPDF(viewableAttachment.id, { page: 1 });
+          }
+        } catch (err) {
+          // Fallback: try to open attachment file
+          try {
+            const file = viewableAttachment.getFilePath();
+            if (file) {
+              Zotero.File.pathToFile(file).reveal();
+            } else {
+              // For snapshots, try to get the URL
+              if (attachmentType === "snapshot") {
+                const snapshotUrl = viewableAttachment.getField("url");
+                if (snapshotUrl) {
+                  Zotero.launchURL(snapshotUrl);
                 }
               }
-            },
-          },
-        ],
+            }
+          } catch (fileErr) {
+            ztoolkit.log("Error opening attachment:", fileErr);
+          }
+        }
       });
       actionsRow.appendChild(viewButton);
     }
 
-    // Append actions row to right side
-    rightSide.appendChild(actionsRow);
-
-    // Append right side to item content
-    itemContent.appendChild(rightSide);
+    // Append item content to item element
     itemElement.appendChild(itemContent);
 
     // Track if we're dragging to prevent click after drag
@@ -1822,9 +1710,9 @@ export class SyllabusManager {
             },
             styles: opt.color
               ? {
-                  color: opt.color,
-                  fontWeight: "500",
-                }
+                color: opt.color,
+                fontWeight: "500",
+              }
               : undefined,
           });
           prioritySelect.appendChild(option);
