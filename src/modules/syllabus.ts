@@ -12,7 +12,7 @@ import {
   escapeHTML,
   parseHTMLTemplate,
 } from "../utils/ui";
-import { renderPanel } from "./Panel";
+import { renderSyllabusPage } from "./SyllabusPage";
 
 enum SyllabusPriority {
   COURSE_INFO = "course-info",
@@ -499,7 +499,7 @@ export class SyllabusManager {
           }
 
           // Clear previous content before rendering React
-          customView.textContent = "";
+          customView.textContent = "Loading...";
 
           // Ensure window is available globally for React
           // React may try to access window during initialization
@@ -508,9 +508,11 @@ export class SyllabusManager {
           }
 
           try {
-            renderPanel(w, customView);
+            if (selectedCollection) {
+              renderSyllabusPage(w, customView, selectedCollection);
+            }
           } catch (e) {
-            ztoolkit.log("Error in renderPanel:", e);
+            ztoolkit.log("Error in renderSyllabusPage:", e);
           }
           // customView.innerHTML = await SyllabusManager.renderSyllabusPageHTML(selectedCollection);
 
