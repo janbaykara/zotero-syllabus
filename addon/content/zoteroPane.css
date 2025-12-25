@@ -319,7 +319,7 @@
   flex-shrink: 0;
   width: 60px;
   height: 60px;
-  background: #f5f5f5;
+  background: transparent;
   border-radius: 4px;
   display: flex;
   align-items: center;
@@ -439,7 +439,7 @@
   border: 1px solid #e5e5e5;
   border-radius: 4px;
   background: #fff;
-  padding: 0;
+  padding: 4px 0;
 }
 
 .syllabus-item-slim:hover {
@@ -615,7 +615,7 @@
   }
 
   .syllabus-item-thumbnail {
-    background: #38383a;
+    background: transparent;
   }
 
   .syllabus-item-thumbnail-placeholder {
@@ -828,9 +828,12 @@
 
 :root[data-theme="dark"] .syllabus-item-thumbnail,
 :root.dark .syllabus-item-thumbnail,
-#main-window[data-theme="dark"] .syllabus-item-thumbnail,
-#main-window.dark .syllabus-item-thumbnail {
+#main-window[data-theme="dark"] .syllabus-item-thumbnail {
   background: #38383a;
+}
+
+#main-window.dark .syllabus-item-thumbnail {
+  background: transparent;
 }
 
 :root[data-theme="dark"] .syllabus-item-thumbnail-placeholder,

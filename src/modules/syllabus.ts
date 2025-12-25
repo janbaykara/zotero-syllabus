@@ -11,7 +11,6 @@ import {
   createEditableTextInput,
   escapeHTML,
   parseHTMLTemplate,
-  parseXULTemplate,
 } from "../utils/ui";
 
 enum SyllabusPriority {
@@ -48,6 +47,42 @@ interface CollectionMetadata {
 export class SyllabusManager {
   static notifierID: string | null = null;
   static syllabusItemPaneSection: false | string | null = null;
+
+  /**
+   * Map Zotero item type to icon name
+   */
+  static getItemTypeIconName(itemType: string): string {
+    // Map item types to icon names
+    const iconMap: Record<string, string> = {
+      book: "book",
+      bookSection: "book",
+      journalArticle: "article",
+      article: "article",
+      magazineArticle: "article",
+      newspaperArticle: "article",
+      webpage: "web",
+      website: "web",
+      blogPost: "web",
+      videoRecording: "video",
+      audioRecording: "audio",
+      film: "video",
+      thesis: "document",
+      report: "document",
+      document: "document",
+      letter: "letter",
+      email: "email",
+      interview: "interview",
+      conferencePaper: "paper",
+      presentation: "presentation",
+      patent: "patent",
+      map: "map",
+      artwork: "artwork",
+      software: "software",
+      dataset: "dataset",
+    };
+
+    return iconMap[itemType] || "document";
+  }
 
   /**
    * Color definitions for syllabus priorities
@@ -824,8 +859,7 @@ export class SyllabusManager {
     pane: any,
   ): HTMLElement {
     const title = item.getField("title") || "Untitled";
-    const itemType = item.itemType;
-    const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(itemType);
+    const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(item.itemType);
 
     // Get author (first creator)
     let author = "";
@@ -844,37 +878,6 @@ export class SyllabusManager {
 
     const date = item.getField("date") || "";
 
-    // Try to get item image/thumbnail
-    let imageSrc: string | null = null;
-
-    // First try getImageSrc method if available
-    if ((item as any).getImageSrc) {
-      imageSrc = (item as any).getImageSrc();
-    }
-
-    // If no image, try to get from attachments
-    if (!imageSrc) {
-      const attachments = item.getAttachments();
-      for (const attId of attachments) {
-        try {
-          const att = Zotero.Items.get(attId);
-          if (
-            att &&
-            att.isAttachment() &&
-            att.attachmentContentType?.startsWith("image/")
-          ) {
-            const file = att.getFilePath();
-            if (file) {
-              imageSrc = `file://${file}`;
-              break;
-            }
-          }
-        } catch (e) {
-          // Continue to next attachment
-        }
-      }
-    }
-
     // Build metadata parts array
     const metadataParts = [itemTypeLabel, author, date].filter(Boolean);
 
@@ -883,10 +886,16 @@ export class SyllabusManager {
       <div class="syllabus-item syllabus-item-slim" data-item-id="${item.id}" draggable="true">
         <div class="syllabus-item-content">
           <div class="syllabus-item-main-content">
-            <div class="syllabus-item-thumbnail syllabus-item-thumbnail-slim">
-              ${imageSrc
-        ? `<img class="syllabus-item-thumbnail-img" src="${escapeHTML(imageSrc)}" alt="${escapeHTML(title)}" />`
-        : `<div class="syllabus-item-thumbnail-placeholder">📄</div>`}
+            <div class="syllabus-item-thumbnail">
+              <span class="icon icon-css icon-item-type cell-icon" data-item-type="${item.itemType}" style="
+                width: 100%;
+                height: 100%;
+                background-origin: padding-box, padding-box, padding-box, padding-box;
+                background-position-x: 50%, 50%, 50%, 50%;
+                background-position-y: 50%, 50%, 50%, 50%;
+                background-repeat: no-repeat, repeat, repeat, repeat;
+                background-size: contain, 0px, 0px, 0px;
+              "></span>
             </div>
             <div class="syllabus-item-text">
               <div class="syllabus-item-title-row">
@@ -903,22 +912,6 @@ export class SyllabusManager {
 
     const fragment = parseHTMLTemplate(doc, html);
     const itemElement = fragment.firstElementChild as HTMLElement;
-
-    // Handle image error case
-    if (imageSrc) {
-      const thumbnailImg = itemElement.querySelector(
-        ".syllabus-item-thumbnail-img",
-      ) as HTMLImageElement;
-      if (thumbnailImg) {
-        thumbnailImg.onerror = () => {
-          thumbnailImg.style.display = "none";
-          const placeholder = doc.createElement("div");
-          placeholder.className = "syllabus-item-thumbnail-placeholder";
-          placeholder.textContent = "📄";
-          thumbnailImg.parentElement!.appendChild(placeholder);
-        };
-      }
-    }
 
     // Track if we're dragging to prevent click after drag
     let isDragging = false;
@@ -986,8 +979,7 @@ export class SyllabusManager {
     const title = item.getField("title") || "Untitled";
 
     // Get item metadata
-    const itemType = item.itemType;
-    const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(itemType);
+    const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(item.itemType);
 
     // Get author (first creator)
     let author = "";
@@ -1055,38 +1047,6 @@ export class SyllabusManager {
       }
     }
 
-    // Try to get item image/thumbnail
-    let imageSrc: string | null = null;
-
-    // First try getImageSrc method if available
-    if ((item as any).getImageSrc) {
-      imageSrc = (item as any).getImageSrc();
-    }
-
-    // If no image, try to get from attachments
-    if (!imageSrc) {
-      const attachments = item.getAttachments();
-      for (const attId of attachments) {
-        try {
-          const att = Zotero.Items.get(attId);
-          if (
-            att &&
-            att.isAttachment() &&
-            att.attachmentContentType?.startsWith("image/")
-          ) {
-            // Try to get attachment file path or URL
-            const file = att.getFilePath();
-            if (file) {
-              imageSrc = `file://${file}`;
-              break;
-            }
-          }
-        } catch (e) {
-          // Continue to next attachment
-        }
-      }
-    }
-
     // Build metadata parts array
     const metadataParts = [itemTypeLabel, author, date].filter(Boolean);
 
@@ -1099,14 +1059,39 @@ export class SyllabusManager {
       }
     }
 
+    // Determine button label and tooltip for attachment
+    let buttonLabel = "";
+    let buttonTooltip = "";
+    if (viewableAttachment && attachmentType) {
+      if (attachmentType === "pdf") {
+        buttonLabel = "PDF";
+        buttonTooltip = "Open PDF";
+      } else if (attachmentType === "snapshot") {
+        buttonLabel = "Snapshot";
+        buttonTooltip = "Open web snapshot";
+      } else if (attachmentType === "epub") {
+        buttonLabel = "EPUB";
+        buttonTooltip = "Open EPUB";
+      } else {
+        buttonLabel = "View";
+        buttonTooltip = "Open attachment";
+      }
+    }
+
     // Build the main HTML structure
     const html = `
       <div class="syllabus-item-content">
         <div class="syllabus-item-main-content">
           <div class="syllabus-item-thumbnail">
-            ${imageSrc
-        ? `<img class="syllabus-item-thumbnail-img" src="${escapeHTML(imageSrc)}" alt="${escapeHTML(title)}" />`
-        : `<div class="syllabus-item-thumbnail-placeholder">📄</div>`}
+            <span class="icon icon-css icon-item-type cell-icon" data-item-type="${item.itemType}" style="
+              width: 100%;
+              height: 100%;
+              background-origin: padding-box, padding-box, padding-box, padding-box;
+              background-position-x: 50%, 50%, 50%, 50%;
+              background-position-y: 50%, 50%, 50%, 50%;
+              background-repeat: no-repeat, repeat, repeat, repeat;
+              background-size: contain, 0px, 0px, 0px;
+            "></span>
           </div>
           <div class="syllabus-item-text">
             <div class="syllabus-item-title-row">
@@ -1137,7 +1122,14 @@ export class SyllabusManager {
           </div>
         </div>
         <div class="syllabus-item-right-side" draggable="false">
-          <div class="syllabus-item-actions" draggable="false"></div>
+          <div class="syllabus-item-actions" draggable="false">
+            ${url
+        ? `<button class="toolbarbutton-1 syllabus-action-button" data-action="url" label="URL" tooltiptext="Open URL" />`
+        : ""}
+            ${viewableAttachment && attachmentType
+        ? `<button class="toolbarbutton-1 syllabus-action-button" data-action="attachment" data-attachment-type="${attachmentType}" label="${escapeHTML(buttonLabel)}" tooltiptext="${escapeHTML(buttonTooltip)}" />`
+        : ""}
+          </div>
         </div>
       </div>
     `;
@@ -1145,93 +1137,61 @@ export class SyllabusManager {
     const fragment = parseHTMLTemplate(doc, html);
     const itemContent = fragment.firstElementChild as HTMLElement;
 
-    // Handle image error case
-    if (imageSrc) {
-      const thumbnailImg = itemContent.querySelector(
-        ".syllabus-item-thumbnail-img",
-      ) as HTMLImageElement;
-      if (thumbnailImg) {
-        thumbnailImg.onerror = () => {
-          thumbnailImg.style.display = "none";
-          const placeholder = doc.createElement("div");
-          placeholder.className = "syllabus-item-thumbnail-placeholder";
-          placeholder.textContent = "📄";
-          thumbnailImg.parentElement!.appendChild(placeholder);
-        };
+    // Attach event listeners to buttons
+    const actionButtons = itemContent.querySelectorAll(
+      ".syllabus-action-button",
+    );
+
+    for (const button of actionButtons) {
+      const action = button.getAttribute("data-action");
+      const attType = button.getAttribute("data-attachment-type");
+
+      // Set button text content from label attribute
+      const label = button.getAttribute("label");
+      if (label) {
+        button.textContent = label;
       }
-    }
-
-    // Get the actions row for buttons
-    const actionsRow = itemContent.querySelector(
-      ".syllabus-item-actions",
-    ) as HTMLElement;
-
-    // Create XUL buttons using parseXULToFragment
-    if (url) {
-      const urlButtonFragment = parseXULTemplate(`
-        <button class="toolbarbutton-1" label="URL" tooltiptext="Open URL" />
-      `);
-      const urlButton = urlButtonFragment.firstElementChild as XUL.Button;
-      urlButton.addEventListener("command", (e: Event) => {
-        e.stopPropagation(); // Prevent item selection
-        Zotero.launchURL(url);
-      });
-      actionsRow.appendChild(urlButton);
-    }
-
-    if (viewableAttachment && attachmentType) {
-      // Determine button label based on attachment type
-      let buttonLabel = "View";
-      let buttonTooltip = "Open attachment";
-      if (attachmentType === "pdf") {
-        buttonLabel = "PDF";
-        buttonTooltip = "Open PDF";
-      } else if (attachmentType === "snapshot") {
-        buttonLabel = "Snapshot";
-        buttonTooltip = "Open web snapshot";
-      } else if (attachmentType === "epub") {
-        buttonLabel = "EPUB";
-        buttonTooltip = "Open EPUB";
+      const tooltip = button.getAttribute("tooltiptext");
+      if (tooltip) {
+        button.setAttribute("title", tooltip);
       }
 
-      const viewButtonFragment = parseXULTemplate(`
-        <button class="toolbarbutton-1" label="${escapeHTML(buttonLabel)}" tooltiptext="${escapeHTML(buttonTooltip)}" />
-      `);
-      const viewButton = viewButtonFragment.firstElementChild as XUL.Button;
-      viewButton.addEventListener("command", async (e: Event) => {
-        e.stopPropagation(); // Prevent item selection
-        try {
-          if (attachmentType === "pdf") {
-            // Try to view PDF in Zotero reader
-            await pane.viewPDF(viewableAttachment.id, { page: 1 });
-          } else if (attachmentType === "snapshot") {
-            // Open web snapshot in Zotero reader
-            await pane.viewPDF(viewableAttachment.id, { page: 1 });
-          } else if (attachmentType === "epub") {
-            // Open EPUB in Zotero reader
-            await pane.viewPDF(viewableAttachment.id, { page: 1 });
-          }
-        } catch (err) {
-          // Fallback: try to open attachment file
+      // Attach event listeners
+      if (action === "url") {
+        button.addEventListener("click", (e: Event) => {
+          e.stopPropagation(); // Prevent item selection
+          Zotero.launchURL(url);
+        });
+      } else if (action === "attachment") {
+        button.addEventListener("click", async (e: Event) => {
+          e.stopPropagation(); // Prevent item selection
+          if (!viewableAttachment || !attType) return;
           try {
-            const file = viewableAttachment.getFilePath();
-            if (file) {
-              Zotero.File.pathToFile(file).reveal();
-            } else {
-              // For snapshots, try to get the URL
-              if (attachmentType === "snapshot") {
-                const snapshotUrl = viewableAttachment.getField("url");
-                if (snapshotUrl) {
-                  Zotero.launchURL(snapshotUrl);
+            if (attType === "pdf" || attType === "snapshot" || attType === "epub") {
+              // Try to view in Zotero reader
+              await pane.viewPDF(viewableAttachment.id, { page: 1 });
+            }
+          } catch (err) {
+            // Fallback: try to open attachment file
+            try {
+              const file = viewableAttachment.getFilePath();
+              if (file) {
+                Zotero.File.pathToFile(file).reveal();
+              } else {
+                // For snapshots, try to get the URL
+                if (attType === "snapshot") {
+                  const snapshotUrl = viewableAttachment.getField("url");
+                  if (snapshotUrl) {
+                    Zotero.launchURL(snapshotUrl);
+                  }
                 }
               }
+            } catch (fileErr) {
+              ztoolkit.log("Error opening attachment:", fileErr);
             }
-          } catch (fileErr) {
-            ztoolkit.log("Error opening attachment:", fileErr);
           }
-        }
-      });
-      actionsRow.appendChild(viewButton);
+        });
+      }
     }
 
     // Append item content to item element
