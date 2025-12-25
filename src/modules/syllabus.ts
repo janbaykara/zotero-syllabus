@@ -25,6 +25,64 @@ import {
 let notifierID: string | null = null;
 const classNumberMenuUpdateHandlers: Map<Window, () => void> = new Map();
 
+/**
+ * Generate a bibliographic reference for an item using Zotero's CSL processor
+ * and the user's preferred citation style.
+ * @param item - The Zotero item to generate a reference for
+ * @returns The formatted bibliographic reference, or null if generation fails
+ */
+async function generateBibliographicReference(
+  item: Zotero.Item,
+): Promise<string | null> {
+  try {
+    // Get the user's preferred citation style ID from Zotero preferences
+    // The preference stores the style ID (e.g., "apa", "chicago-note-bibliography")
+    const styleID = Zotero.Prefs.get("export.quickCopy.setting", true) as
+      | string
+      | null;
+
+    if (!styleID) {
+      ztoolkit.log(
+        "No citation style preference found, using fallback method",
+      );
+      return null;
+    }
+
+    // Verify the style exists
+    const style = await Zotero.Styles.get(styleID);
+    if (!style) {
+      ztoolkit.log(`Style "${styleID}" not found, using fallback method`);
+      return null;
+    }
+
+    // Use Zotero's QuickCopy API to generate bibliography entry
+    // Format "bibliography" generates a full bibliographic reference (not in-text citation)
+    // This method may return a Promise or a string directly depending on Zotero version
+    const format = "bibliography";
+    const result = await Zotero.QuickCopy.getContentFromItems(
+      [item],
+      format,
+      styleID,
+    );
+
+    if (result && typeof result === "string" && result.trim()) {
+      // Clean up the result (remove extra whitespace, normalize)
+      // Remove HTML tags if present and normalize whitespace
+      const cleaned = result
+        .trim()
+        .replace(/<[^>]*>/g, "") // Remove HTML tags
+        .replace(/\s+/g, " ") // Normalize whitespace
+        .trim();
+      return cleaned || null;
+    }
+
+    return null;
+  } catch (error) {
+    ztoolkit.log("Error generating bibliographic reference:", error);
+    return null;
+  }
+}
+
 export class SyllabusManager {
   static registerNotifier() {
     const callback = {
@@ -463,34 +521,53 @@ export class SyllabusManager {
       const bookTitle = item.getField("bookTitle") || "";
       const publicationName = publicationTitle || bookTitle || "";
 
-      // Get bibliographic reference (build citation manually)
-      const citationParts: string[] = [];
-      if (author) citationParts.push(author);
-      if (date) {
-        const year = date.substring(0, 4);
-        if (year && year !== "0000") citationParts.push(`(${year})`);
-      }
-      if (title) citationParts.push(title);
-      if (publicationName) citationParts.push(`In ${publicationName}`);
+      // Fallback function to build citation manually (used if CSL generation fails)
+      const buildFallbackReference = (): string => {
+        const citationParts: string[] = [];
+        if (author) citationParts.push(author);
+        if (date) {
+          const year = date.substring(0, 4);
+          if (year && year !== "0000") citationParts.push(`(${year})`);
+        }
+        if (title) citationParts.push(title);
+        if (publicationName) citationParts.push(`In ${publicationName}`);
 
-      // Add additional citation details
-      const volume = item.getField("volume");
-      const issue = item.getField("issue");
-      const pages = item.getField("pages");
-      const publisher = item.getField("publisher");
-      const place = item.getField("place");
+        // Add additional citation details
+        const volume = item.getField("volume");
+        const issue = item.getField("issue");
+        const pages = item.getField("pages");
+        const publisher = item.getField("publisher");
+        const place = item.getField("place");
 
-      if (volume) {
-        citationParts.push(`Vol. ${volume}`);
-        if (issue) citationParts.push(`No. ${issue}`);
-      }
-      if (pages) citationParts.push(`pp. ${pages}`);
-      if (publisher) {
-        const publisherInfo = place ? `${place}: ${publisher}` : publisher;
-        citationParts.push(publisherInfo);
-      }
+        if (volume) {
+          citationParts.push(`Vol. ${volume}`);
+          if (issue) citationParts.push(`No. ${issue}`);
+        }
+        if (pages) citationParts.push(`pp. ${pages}`);
+        if (publisher) {
+          const publisherInfo = place ? `${place}: ${publisher}` : publisher;
+          citationParts.push(publisherInfo);
+        }
 
-      const bibliographicReference = citationParts.join(". ");
+        return citationParts.join(". ");
+      };
+
+      // Start with fallback reference, will be updated with CSL-generated reference if available
+      let bibliographicReference = buildFallbackReference();
+
+      // Generate bibliographic reference using Zotero's CSL processor (async)
+      // This will update the reference element once generated
+      generateBibliographicReference(item).then((cslReference) => {
+        if (cslReference) {
+          // Find the reference element and update it
+          const referenceElement = itemElement.querySelector(
+            ".syllabus-item-reference",
+          );
+          if (referenceElement) {
+            referenceElement.textContent = cslReference;
+          }
+        }
+      });
 
       // Get URL and viewable attachment (PDF, web snapshot, or EPUB)
       const url = item.getField("url") || "";
