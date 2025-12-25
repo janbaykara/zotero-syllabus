@@ -7,6 +7,7 @@ import { getLocaleID } from "../utils/locale";
 import { getPref } from "../utils/prefs";
 import { ExtraFieldTool } from "zotero-plugin-toolkit";
 import { getCurrentTab } from "../utils/window";
+import { createEditableTextInput } from "../utils/ui";
 
 enum SyllabusPriority {
   COURSE_INFO = "course-info",
@@ -84,18 +85,34 @@ export class SyllabusManager {
     this.registerStyleSheet(win);
     this.registerContextMenu(win);
     this.updateClassNumberMenus();
-    this.setupSyllabusView();
+    this.setupUI();
     this.setupSyllabusViewTabListener();
+    this.setupSyllabusViewReloadListener();
   }
 
   static onItemUpdated(item: Zotero.Item) {
-    if (this.syllabusItemPaneSection) {
-      Zotero.ItemPaneManager.refreshInfoRow(this.syllabusItemPaneSection);
-    }
+    this.setupUI();
+    // TODO: refresh Item Pane
+  }
+
+  /**
+   * E.g. the class title or description has been updated
+   */
+  static onClassUpdated(classNumber: number) {
+    this.setupUI();
+    // TODO: refresh Class Number Menu
+    this.setupPage();
+  }
+
+  /**
+   * E.g. the description of the collection has been updated
+   */
+  static onCollectionUpdated(collection: Zotero.Collection) {
+    this.setupPage();
   }
 
   static onMainWindowUnload(win: _ZoteroTypes.MainWindow) {
-    this.setupSyllabusView();
+    this.setupUI();
     this.cleanupSyllabusViewTabListener();
     this.unregisterClassNumberMenuUpdater(win);
   }
@@ -159,10 +176,22 @@ export class SyllabusManager {
       if (newTab && newTab.title !== currentTabTitle) {
         ztoolkit.log("newTab", newTab);
         currentTabTitle = newTab.title;
-        SyllabusManager.setupSyllabusView();
+        SyllabusManager.setupUI();
       }
     }, 500);
     this.syllabusViewTabListener = interval;
+  }
+
+  static setupSyllabusViewReloadListener() {
+    // Re-render custom view when collection or sort changes
+    const pane = ztoolkit.getGlobal("ZoteroPane");
+    if (pane) {
+      pane.addReloadListener(() => {
+        Zotero.Promise.delay(100).then(() => {
+          SyllabusManager.setupUI()
+        });
+      });
+    }
   }
 
   static cleanupSyllabusViewTabListener() {
@@ -172,1172 +201,512 @@ export class SyllabusManager {
     }
   }
 
-  static async setupSyllabusView(): Promise<void> {
+  static async setupUI(): Promise<void> {
     ztoolkit.log("Setting up syllabus view");
+    SyllabusManager.setupToggleButton();
+    SyllabusManager.setupPage();
+  }
 
-    // Prevent multiple setups by checking if already patched
-    const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-    if ((zoteroPane?.itemsView as any)?._syllabusHeadersSetup) {
-      return; // Already set up
+  // Function to get/set syllabus view toggle state (per collection)
+  static getSyllabusPageVisible(): boolean {
+    const pane = ztoolkit.getGlobal("ZoteroPane");
+    const selectedCollection = pane?.getSelectedCollection();
+
+    // If no collection is selected, default to false (tree view)
+    if (!selectedCollection) {
+      return false;
     }
 
-    // Function to get/set syllabus view toggle state (per collection)
-    function getSyllabusViewEnabled(): boolean {
-      const pane = ztoolkit.getGlobal("ZoteroPane");
-      const selectedCollection = pane?.getSelectedCollection();
+    const collectionId = String(selectedCollection.id);
+    const prefKey = `${addon.data.config.prefsPrefix}.collectionViewModes`;
+    const _viewModes = String(Zotero.Prefs.get(prefKey, true) || "");
+    const viewModes = _viewModes
+      ? (JSON.parse(_viewModes) as Record<string, boolean>)
+      : {};
 
-      // If no collection is selected, default to false (tree view)
-      if (!selectedCollection) {
-        return false;
+    // Default to false (tree view) if not set for this collection
+    return viewModes?.[collectionId] === true;
+  }
+
+  static setSyllabusPageVisible(enabled: boolean): void {
+    const pane = ztoolkit.getGlobal("ZoteroPane");
+    const selectedCollection = pane?.getSelectedCollection();
+
+    // If no collection is selected, don't save preference
+    if (!selectedCollection) {
+      return;
+    }
+
+    const collectionId = String(selectedCollection.id);
+    const prefKey = `${addon.data.config.prefsPrefix}.collectionViewModes`;
+    const _viewModes = String(Zotero.Prefs.get(prefKey, true) || "");
+    const viewModes = _viewModes
+      ? (JSON.parse(_viewModes) as Record<string, boolean>)
+      : {};
+
+    // Update the preference for this collection
+    viewModes[collectionId] = enabled;
+    Zotero.Prefs.set(prefKey, JSON.stringify(viewModes), true);
+  }
+
+  // Function to create/update the toggle button
+  static setupToggleButton() {
+    const pane = ztoolkit.getGlobal("ZoteroPane");
+    const w = Zotero.getMainWindow();
+    const doc = w.document;
+
+    // Find the items toolbar
+    const itemsToolbar = doc.getElementById("zotero-items-toolbar");
+    if (!itemsToolbar) return;
+
+    // Find the search spinner to insert before it
+    const searchSpinner = doc.getElementById("zotero-tb-search-spinner");
+
+    // Check if toggle button already exists
+    let toggleButton = doc.getElementById(
+      "syllabus-view-toggle",
+    )
+    let spacer = doc.getElementById("syllabus-view-spacer") as Element | null;
+
+    if (!toggleButton) {
+      // Create toggle button
+      toggleButton = ztoolkit.UI.createElement(doc, "toolbarbutton", {
+        id: "syllabus-view-toggle",
+        classList: ["syllabus-view-toggle"],
+        properties: {
+          type: "menu"
+        },
+        listeners: [
+          {
+            type: "click",
+            listener: (e: Event) => {
+              const target = e.target as XUL.MenuItem;
+              const checked = !SyllabusManager.getSyllabusPageVisible();
+              SyllabusManager.setSyllabusPageVisible(checked);
+              SyllabusManager.updateButtonLabel(target);
+              SyllabusManager.setupPage();
+            },
+          },
+        ],
+      }) as XUL.Checkbox;
+
+      // Set initial label
+      SyllabusManager.updateButtonLabel(toggleButton);
+
+      // Create spacer element if it doesn't exist
+      if (!spacer) {
+        spacer = doc.createElementNS(
+          "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
+          "spacer",
+        );
+        spacer.id = "syllabus-view-spacer";
+        spacer.setAttribute("flex", "1");
       }
 
-      const collectionId = String(selectedCollection.id);
-      const prefKey = `${addon.data.config.prefsPrefix}.collectionViewModes`;
-      const _viewModes = String(Zotero.Prefs.get(prefKey, true) || "");
-      const viewModes = _viewModes
-        ? (JSON.parse(_viewModes) as Record<string, boolean>)
-        : {};
-
-      // Default to false (tree view) if not set for this collection
-      return viewModes?.[collectionId] === true;
+      // Insert button and spacer before the search spinner, or append to toolbar if spinner not found
+      if (searchSpinner && searchSpinner.parentNode) {
+        searchSpinner.parentNode.insertBefore(toggleButton, searchSpinner);
+        searchSpinner.parentNode.insertBefore(spacer, searchSpinner);
+      } else {
+        itemsToolbar.appendChild(toggleButton);
+        itemsToolbar.appendChild(spacer);
+      }
+    } else {
+      // Update button state and label
+      SyllabusManager.updateButtonLabel(toggleButton);
     }
+  }
 
-    function setSyllabusViewEnabled(enabled: boolean): void {
+
+  // Function to update button label based on current state
+  static updateButtonLabel(button: Element) {
+    const isEnabled = SyllabusManager.getSyllabusPageVisible();
+
+    button.setAttribute("data-syllabus-current-ui-mode", SyllabusManager.getSyllabusPageVisible() ? "syllabus" : "collection");
+
+    (button as XUL.Button).label = isEnabled
+      ? "View as Collection"
+      : "View as Syllabus";
+
+    (button as XUL.Button).tooltiptext = isEnabled
+      ? "Switch to Collection View"
+      : "Switch to Syllabus View";
+  };
+
+  // Function to render a completely custom syllabus view
+  static async setupPage() {
+    try {
+      /**
+       * Lead with a hide/show check
+       */
+
+      // Get collection
       const pane = ztoolkit.getGlobal("ZoteroPane");
-      const selectedCollection = pane?.getSelectedCollection();
+      const selectedCollection = pane.getSelectedCollection();
 
-      // If no collection is selected, don't save preference
-      if (!selectedCollection) {
+      // Confirm item tree
+      // Find the items tree container
+      const w = Zotero.getMainWindow();
+      const doc = w.document;
+      const itemsTreeContainer = doc.getElementById(
+        "zotero-items-pane-container",
+      );
+      if (!itemsTreeContainer) {
         return;
       }
 
-      const collectionId = String(selectedCollection.id);
-      const prefKey = `${addon.data.config.prefsPrefix}.collectionViewModes`;
-      const _viewModes = String(Zotero.Prefs.get(prefKey, true) || "");
-      const viewModes = _viewModes
-        ? (JSON.parse(_viewModes) as Record<string, boolean>)
-        : {};
+      // Check if we should show custom view
+      // Show if: syllabus view is enabled AND we have a collection
+      const syllabusViewEnabled = SyllabusManager.getSyllabusPageVisible();
+      const shouldShowCustomView = syllabusViewEnabled && selectedCollection;
 
-      // Update the preference for this collection
-      viewModes[collectionId] = enabled;
-      Zotero.Prefs.set(prefKey, JSON.stringify(viewModes), true);
-    }
+      // Find or create custom syllabus view container
+      let customView = doc.getElementById("syllabus-custom-view");
+      const itemsTree = doc.getElementById("zotero-items-tree");
 
-    // Function to create/update the toggle button
-    function createToggleButton() {
-      const pane = ztoolkit.getGlobal("ZoteroPane");
-      const w = Zotero.getMainWindow();
-      const doc = w.document;
-
-      // Find the items toolbar
-      const itemsToolbar = doc.getElementById("zotero-items-toolbar");
-      if (!itemsToolbar) return;
-
-      // Find the search spinner to insert before it
-      const searchSpinner = doc.getElementById("zotero-tb-search-spinner");
-
-      // Function to update button label based on current state
-      const updateButtonLabel = (button: XUL.Checkbox) => {
-        const isEnabled = button.checked;
-        // Label should reflect what will happen when clicked (opposite of current state)
-        // Render button inner HTML with icon + label based on state
-        const listIcon = `
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="vertical-align:middle;">
-            <rect x="2" y="3" width="12" height="2" fill="currentColor"/>
-            <rect x="2" y="7" width="12" height="2" fill="currentColor"/>
-            <rect x="2" y="11" width="12" height="2" fill="currentColor"/>
-          </svg>
-        `;
-
-        const bookIcon = `
-          <image xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" width="16" height="16" src="chrome://zotero/skin/20/universal/book.svg"/>
-        `;
-
-        const icon = isEnabled ? listIcon : bookIcon;
-
-        const label = isEnabled ? `View as list` : `View as syllabus`;
-
-        button.innerHTML = `${icon} <label xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" class="toolbarbutton-text" crop="end" flex="1">${label}</label>`;
-        button.tooltipText = isEnabled
-          ? "Switch to List View"
-          : "Switch to Syllabus View";
-      };
-
-      // Check if toggle button already exists
-      let toggleButton = doc.getElementById(
-        "syllabus-view-toggle",
-      ) as XUL.Checkbox | null;
-      let spacer = doc.getElementById("syllabus-view-spacer") as Element | null;
-
-      if (!toggleButton) {
-        // Create toggle button
-        toggleButton = ztoolkit.UI.createElement(doc, "toolbarbutton", {
-          id: "syllabus-view-toggle",
-          classList: ["toolbarbutton-1"],
-          properties: {
-            type: "checkbox",
-            checked: getSyllabusViewEnabled(),
-          },
-          listeners: [
-            {
-              type: "command",
-              listener: (e: Event) => {
-                const target = e.target as XUL.Checkbox;
-                setSyllabusViewEnabled(target.checked);
-                updateButtonLabel(target);
-                renderCustomSyllabusView();
-              },
-            },
-          ],
-        }) as XUL.Checkbox;
-
-        // Set initial label
-        updateButtonLabel(toggleButton);
-
-        // Create spacer element if it doesn't exist
-        if (!spacer) {
-          spacer = doc.createElementNS(
-            "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
-            "spacer",
-          );
-          spacer.id = "syllabus-view-spacer";
-          spacer.setAttribute("flex", "1");
+      if (!shouldShowCustomView) {
+        // Hide custom view and show default tree
+        if (customView) {
+          (customView as HTMLElement).style.display = "none";
         }
-
-        // Insert button and spacer before the search spinner, or append to toolbar if spinner not found
-        if (searchSpinner && searchSpinner.parentNode) {
-          searchSpinner.parentNode.insertBefore(toggleButton, searchSpinner);
-          searchSpinner.parentNode.insertBefore(spacer, searchSpinner);
-        } else {
-          itemsToolbar.appendChild(toggleButton);
-          itemsToolbar.appendChild(spacer);
+        if (itemsTree) {
+          (itemsTree as HTMLElement).style.display = "";
         }
       } else {
-        // Update button state and label
-        toggleButton.checked = getSyllabusViewEnabled();
-        updateButtonLabel(toggleButton);
-      }
-    }
-
-    // Helper function to create a slim syllabus item card (for items without priority)
-    function createSyllabusItemCardSlim(
-      doc: Document,
-      item: Zotero.Item,
-      collectionId: number,
-      pane: any,
-    ): HTMLElement {
-      const title = item.getField("title") || "Untitled";
-      const itemType = item.itemType;
-      const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(itemType);
-
-      // Get author (first creator)
-      let author = "";
-      if (item.firstCreator) {
-        author = item.firstCreator;
-      } else {
-        const creators = item.getCreators();
-        if (creators.length > 0) {
-          const creatorName = item.getCreator(0);
-          if (creatorName) {
-            author =
-              `${creatorName.firstName || ""} ${creatorName.lastName || ""}`.trim();
-          }
-        }
-      }
-
-      const date = item.getField("date") || "";
-
-      const itemElement = doc.createElement("div");
-      itemElement.className = "syllabus-item syllabus-item-slim";
-      itemElement.setAttribute("data-item-id", String(item.id));
-      itemElement.setAttribute("draggable", "true");
-
-      // Create item content container
-      const itemContent = doc.createElement("div");
-      itemContent.className = "syllabus-item-content";
-
-      // Create main content wrapper (small thumbnail + text)
-      const mainContent = doc.createElement("div");
-      mainContent.className = "syllabus-item-main-content";
-
-      // Add small thumbnail image on the left
-      const thumbnailContainer = doc.createElement("div");
-      thumbnailContainer.className =
-        "syllabus-item-thumbnail syllabus-item-thumbnail-slim";
-
-      // Try to get item image/thumbnail
-      let imageSrc: string | null = null;
-
-      // First try getImageSrc method if available
-      if ((item as any).getImageSrc) {
-        imageSrc = (item as any).getImageSrc();
-      }
-
-      // If no image, try to get from attachments
-      if (!imageSrc) {
-        const attachments = item.getAttachments();
-        for (const attId of attachments) {
-          try {
-            const att = Zotero.Items.get(attId);
-            if (
-              att &&
-              att.isAttachment() &&
-              att.attachmentContentType?.startsWith("image/")
-            ) {
-              const file = att.getFilePath();
-              if (file) {
-                imageSrc = `file://${file}`;
-                break;
-              }
-            }
-          } catch (e) {
-            // Continue to next attachment
-          }
-        }
-      }
-
-      if (imageSrc) {
-        const thumbnailImg = doc.createElement("img");
-        thumbnailImg.className = "syllabus-item-thumbnail-img";
-        thumbnailImg.src = imageSrc;
-        thumbnailImg.alt = title;
-        thumbnailImg.onerror = () => {
-          thumbnailImg.style.display = "none";
-          const placeholder = doc.createElement("div");
-          placeholder.className = "syllabus-item-thumbnail-placeholder";
-          placeholder.textContent = "📄";
-          thumbnailContainer.appendChild(placeholder);
-        };
-        thumbnailContainer.appendChild(thumbnailImg);
-      } else {
-        const placeholder = doc.createElement("div");
-        placeholder.className = "syllabus-item-thumbnail-placeholder";
-        placeholder.textContent = "📄";
-        thumbnailContainer.appendChild(placeholder);
-      }
-
-      mainContent.appendChild(thumbnailContainer);
-
-      // Create text content container
-      const textContent = doc.createElement("div");
-      textContent.className = "syllabus-item-text";
-
-      // Create item title row
-      const itemTitleRow = doc.createElement("div");
-      itemTitleRow.className = "syllabus-item-title-row";
-
-      const itemTitle = doc.createElement("div");
-      itemTitle.className = "syllabus-item-title";
-      itemTitle.textContent = title;
-      itemTitleRow.appendChild(itemTitle);
-
-      textContent.appendChild(itemTitleRow);
-
-      // Add item metadata row (type, author, date) - compact
-      const metadataParts: string[] = [];
-      if (itemTypeLabel) {
-        metadataParts.push(itemTypeLabel);
-      }
-      if (author) {
-        metadataParts.push(author);
-      }
-      if (date) {
-        metadataParts.push(date);
-      }
-
-      if (metadataParts.length > 0) {
-        const metadataRow = doc.createElement("div");
-        metadataRow.className = "syllabus-item-metadata";
-        const metadataText = doc.createElement("span");
-        metadataText.textContent = metadataParts.join(" • ");
-        metadataRow.appendChild(metadataText);
-        textContent.appendChild(metadataRow);
-      }
-
-      mainContent.appendChild(textContent);
-      itemContent.appendChild(mainContent);
-      itemElement.appendChild(itemContent);
-
-      // Track if we're dragging to prevent click after drag
-      let isDragging = false;
-
-      // Add click handler to select item
-      itemElement.addEventListener("click", (e: MouseEvent) => {
-        if (isDragging) {
-          isDragging = false;
-          return;
-        }
-        pane.selectItem(item.id);
-      });
-
-      // Prevent drag from triggering click
-      itemElement.addEventListener("dragstart", (e: DragEvent) => {
-        e.stopPropagation();
-        isDragging = true;
-        if (e.dataTransfer) {
-          e.dataTransfer.effectAllowed = "move";
-          e.dataTransfer.setData("text/plain", String(item.id));
-        }
-        itemElement.classList.add("syllabus-item-dragging");
-      });
-
-      itemElement.addEventListener("dragend", () => {
-        itemElement.classList.remove("syllabus-item-dragging");
-        setTimeout(() => {
-          isDragging = false;
-        }, 100);
-      });
-
-      return itemElement;
-    }
-
-    // Helper function to create a syllabus item card
-    async function createSyllabusItemCard(
-      doc: Document,
-      item: Zotero.Item,
-      collectionId: number,
-      pane: any,
-    ): Promise<HTMLElement> {
-      // Get item data
-      const priority = SyllabusManager.getSyllabusPriority(item, collectionId);
-
-      const itemElement = doc.createElement("div");
-      itemElement.className = "syllabus-item";
-      itemElement.setAttribute("data-item-id", String(item.id));
-      itemElement.setAttribute("draggable", "true");
-
-      // Add subtle background and border coloring based on priority
-      if (priority && priority in SyllabusManager.PRIORITY_COLORS) {
-        const priorityColor = SyllabusManager.PRIORITY_COLORS[priority as SyllabusPriority];
-        // Convert hex to rgba for subtle background (5% opacity) and border (20% opacity)
-        const r = parseInt(priorityColor.slice(1, 3), 16);
-        const g = parseInt(priorityColor.slice(3, 5), 16);
-        const b = parseInt(priorityColor.slice(5, 7), 16);
-        itemElement.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.05)`;
-        itemElement.style.borderColor = `rgba(${r}, ${g}, ${b}, 0.2)`;
-      }
-      const classInstruction = SyllabusManager.getSyllabusClassInstruction(item, collectionId);
-      const title = item.getField("title") || "Untitled";
-
-      // Get item metadata
-      const itemType = item.itemType;
-      const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(itemType);
-
-      // Get author (first creator)
-      let author = "";
-      if (item.firstCreator) {
-        author = item.firstCreator;
-      } else {
-        const creators = item.getCreators();
-        if (creators.length > 0) {
-          const creatorName = item.getCreator(0);
-          if (creatorName) {
-            author =
-              `${creatorName.firstName || ""} ${creatorName.lastName || ""}`.trim();
-          }
-        }
-      }
-
-      const date = item.getField("date") || "";
-
-      // Get publication name (for "In..." display)
-      const publicationTitle = item.getField("publicationTitle") || "";
-      const bookTitle = item.getField("bookTitle") || "";
-      const publicationName = publicationTitle || bookTitle || "";
-
-      // Get URL and viewable attachment (PDF, web snapshot, or EPUB)
-      const url = item.getField("url") || "";
-      const attachments = item.getAttachments();
-      let viewableAttachment: Zotero.Item | null = null;
-      let attachmentType: "pdf" | "snapshot" | "epub" | null = null;
-
-      for (const attId of attachments) {
-        try {
-          const att = Zotero.Items.get(attId);
-          if (att && att.isAttachment()) {
-            const contentType = att.attachmentContentType || "";
-            const linkMode = att.attachmentLinkMode;
-            const path = att.attachmentPath?.toLowerCase() || "";
-
-            // Check for PDF
-            if (contentType === "application/pdf" || path.endsWith(".pdf")) {
-              viewableAttachment = att;
-              attachmentType = "pdf";
-              break;
-            }
-
-            // Check for web snapshot (linkMode 3 = imported snapshot)
-            if (linkMode === 3) {
-              viewableAttachment = att;
-              attachmentType = "snapshot";
-              break;
-            }
-
-            // Check for EPUB
-            if (
-              contentType === "application/epub+zip" ||
-              contentType === "application/epub" ||
-              path.endsWith(".epub")
-            ) {
-              viewableAttachment = att;
-              attachmentType = "epub";
-              break;
-            }
-          }
-        } catch (e) {
-          // Continue
-        }
-      }
-
-      // Create item content container
-      const itemContent = doc.createElement("div");
-      itemContent.className = "syllabus-item-content";
-
-      // Create main content wrapper (thumbnail + text)
-      const mainContent = doc.createElement("div");
-      mainContent.className = "syllabus-item-main-content";
-
-      // Add thumbnail image on the left
-      const thumbnailContainer = doc.createElement("div");
-      thumbnailContainer.className = "syllabus-item-thumbnail";
-
-      // Try to get item image/thumbnail
-      let imageSrc: string | null = null;
-
-      // First try getImageSrc method if available
-      if ((item as any).getImageSrc) {
-        imageSrc = (item as any).getImageSrc();
-      }
-
-      // If no image, try to get from attachments
-      if (!imageSrc) {
-        const attachments = item.getAttachments();
-        for (const attId of attachments) {
-          try {
-            const att = Zotero.Items.get(attId);
-            if (
-              att &&
-              att.isAttachment() &&
-              att.attachmentContentType?.startsWith("image/")
-            ) {
-              // Try to get attachment file path or URL
-              const file = att.getFilePath();
-              if (file) {
-                imageSrc = `file://${file}`;
-                break;
-              }
-            }
-          } catch (e) {
-            // Continue to next attachment
-          }
-        }
-      }
-
-      if (imageSrc) {
-        const thumbnailImg = doc.createElement("img");
-        thumbnailImg.className = "syllabus-item-thumbnail-img";
-        thumbnailImg.src = imageSrc;
-        thumbnailImg.alt = title;
-        thumbnailImg.onerror = () => {
-          // If image fails to load, show placeholder
-          thumbnailImg.style.display = "none";
-          const placeholder = doc.createElement("div");
-          placeholder.className = "syllabus-item-thumbnail-placeholder";
-          placeholder.textContent = "📄";
-          thumbnailContainer.appendChild(placeholder);
-        };
-        thumbnailContainer.appendChild(thumbnailImg);
-      } else {
-        // Use a placeholder
-        const placeholder = doc.createElement("div");
-        placeholder.className = "syllabus-item-thumbnail-placeholder";
-        placeholder.textContent = "📄";
-        thumbnailContainer.appendChild(placeholder);
-      }
-
-      mainContent.appendChild(thumbnailContainer);
-
-      // Create text content container
-      const textContent = doc.createElement("div");
-      textContent.className = "syllabus-item-text";
-
-      // Create item title row (just title, no priority)
-      const itemTitleRow = doc.createElement("div");
-      itemTitleRow.className = "syllabus-item-title-row";
-
-      // Add title text
-      const itemTitle = doc.createElement("div");
-      itemTitle.className = "syllabus-item-title";
-      itemTitle.textContent = title;
-      itemTitleRow.appendChild(itemTitle);
-
-      textContent.appendChild(itemTitleRow);
-
-      // Add "In..." publication name under title
-      if (publicationName) {
-        const publicationRow = doc.createElement("div");
-        publicationRow.className = "syllabus-item-publication";
-        publicationRow.textContent = `In ${publicationName}`;
-        textContent.appendChild(publicationRow);
-      }
-
-      // Add item metadata row (priority, type, author, date)
-      const metadataRow = doc.createElement("div");
-      metadataRow.className = "syllabus-item-metadata";
-
-      // Add priority as first item in metadata row
-      if (priority && priority in SyllabusManager.PRIORITY_LABELS) {
-        const priorityContainer = doc.createElement("span");
-        priorityContainer.className = "syllabus-item-priority-inline";
-
-        const priorityIcon = doc.createElement("span");
-        priorityIcon.className = "syllabus-priority-icon";
-        priorityIcon.style.backgroundColor =
-          SyllabusManager.PRIORITY_COLORS[priority as SyllabusPriority];
-        priorityContainer.appendChild(priorityIcon);
-
-        const priorityLabel = doc.createElement("span");
-        priorityLabel.className = "syllabus-priority-label";
-        priorityLabel.textContent =
-          SyllabusManager.PRIORITY_LABELS[priority as SyllabusPriority];
-        priorityLabel.style.color =
-          SyllabusManager.PRIORITY_COLORS[priority as SyllabusPriority];
-        priorityContainer.appendChild(priorityLabel);
-
-        metadataRow.appendChild(priorityContainer);
-      }
-
-      const metadataParts: string[] = [];
-      if (itemTypeLabel) {
-        metadataParts.push(itemTypeLabel);
-      }
-      if (author) {
-        metadataParts.push(author);
-      }
-      if (date) {
-        metadataParts.push(date);
-      }
-
-      if (metadataParts.length > 0) {
-        const metadataText = doc.createElement("span");
-        metadataText.textContent = metadataParts.join(" • ");
-        metadataRow.appendChild(metadataText);
-      }
-
-      if (metadataRow.children.length > 0) {
-        textContent.appendChild(metadataRow);
-      }
-
-      // Add bibliographic reference (after metadata)
-      if (getPref("showBibliography")) {
-        const bibliographicReference =
-          await generateBibliographicReference(item);
-        if (bibliographicReference) {
-          const referenceRow = doc.createElement("div");
-          referenceRow.className = "syllabus-item-reference";
-          referenceRow.textContent = bibliographicReference;
-          textContent.appendChild(referenceRow);
-        }
-      }
-
-      // Add class instruction if available
-      if (classInstruction) {
-        const itemDesc = doc.createElement("div");
-        itemDesc.className = "syllabus-item-description";
-        itemDesc.textContent = classInstruction;
-        textContent.appendChild(itemDesc);
-      }
-
-      mainContent.appendChild(textContent);
-      itemContent.appendChild(mainContent);
-
-      // Create right side container (buttons)
-      const rightSide = doc.createElement("div");
-      rightSide.className = "syllabus-item-right-side";
-      // Prevent buttons area from interfering with drag
-      rightSide.setAttribute("draggable", "false");
-
-      // Add action buttons row (URL, PDF) - on the right side
-      const actionsRow = doc.createElement("div");
-      actionsRow.className = "syllabus-item-actions";
-      actionsRow.setAttribute("draggable", "false");
-
-      if (url) {
-        const urlButton = ztoolkit.UI.createElement(doc, "button", {
-          namespace: "xul",
-          classList: ["toolbarbutton-1"],
-          properties: {
-            label: "URL",
-            tooltiptext: "Open URL",
-          },
-          listeners: [
-            {
-              type: "command",
-              listener: (e: Event) => {
-                e.stopPropagation(); // Prevent item selection
-                Zotero.launchURL(url);
-              },
-            },
-          ],
-        });
-        actionsRow.appendChild(urlButton);
-      }
-
-      if (viewableAttachment && attachmentType) {
-        // Determine button label based on attachment type
-        let buttonLabel = "View";
-        let buttonTooltip = "Open attachment";
-        if (attachmentType === "pdf") {
-          buttonLabel = "PDF";
-          buttonTooltip = "Open PDF";
-        } else if (attachmentType === "snapshot") {
-          buttonLabel = "Snapshot";
-          buttonTooltip = "Open web snapshot";
-        } else if (attachmentType === "epub") {
-          buttonLabel = "EPUB";
-          buttonTooltip = "Open EPUB";
+        /**
+         * If we should show custom view, create it
+         */
+
+        // Hide the default tree
+        if (itemsTree) {
+          (itemsTree as HTMLElement).style.display = "none";
         }
 
-        const viewButton = ztoolkit.UI.createElement(doc, "button", {
-          namespace: "xul",
-          classList: ["toolbarbutton-1"],
-          properties: {
-            label: buttonLabel,
-            tooltiptext: buttonTooltip,
-          },
-          listeners: [
-            {
-              type: "command",
-              listener: async (e: Event) => {
-                e.stopPropagation(); // Prevent item selection
-                try {
-                  if (attachmentType === "pdf") {
-                    // Try to view PDF in Zotero reader
-                    await pane.viewPDF(viewableAttachment.id, { page: 1 });
-                  } else if (attachmentType === "snapshot") {
-                    // Open web snapshot in Zotero reader
-                    await pane.viewPDF(viewableAttachment.id, { page: 1 });
-                  } else if (attachmentType === "epub") {
-                    // Open EPUB in Zotero reader
-                    await pane.viewPDF(viewableAttachment.id, { page: 1 });
-                  }
-                } catch (err) {
-                  // Fallback: try to open attachment file
-                  try {
-                    const file = viewableAttachment.getFilePath();
-                    if (file) {
-                      Zotero.File.pathToFile(file).reveal();
-                    } else {
-                      // For snapshots, try to get the URL
-                      if (attachmentType === "snapshot") {
-                        const snapshotUrl = viewableAttachment.getField("url");
-                        if (snapshotUrl) {
-                          Zotero.launchURL(snapshotUrl);
-                        }
-                      }
-                    }
-                  } catch (fileErr) {
-                    ztoolkit.log("Error opening attachment:", fileErr);
-                  }
-                }
-              },
-            },
-          ],
-        });
-        actionsRow.appendChild(viewButton);
-      }
-
-      // Append actions row to right side
-      rightSide.appendChild(actionsRow);
-
-      // Append right side to item content
-      itemContent.appendChild(rightSide);
-      itemElement.appendChild(itemContent);
-
-      // Track if we're dragging to prevent click after drag
-      let isDragging = false;
-
-      // Add click handler to select item (only if not dragging)
-      itemElement.addEventListener("click", (e: MouseEvent) => {
-        // Don't select if we just finished dragging or if clicking on a button
-        if (isDragging) {
-          isDragging = false;
-          return;
-        }
-        // Don't select if clicking on action buttons
-        const target = e.target as HTMLElement;
-        if (
-          target.closest(".syllabus-item-actions") ||
-          target.closest("button")
-        ) {
-          return;
-        }
-        pane.selectItem(item.id);
-      });
-
-      // Prevent drag from triggering click
-      itemElement.addEventListener("dragstart", (e: DragEvent) => {
-        e.stopPropagation();
-        isDragging = true;
-        if (e.dataTransfer) {
-          e.dataTransfer.effectAllowed = "move";
-          e.dataTransfer.setData("text/plain", String(item.id));
-        }
-        itemElement.classList.add("syllabus-item-dragging");
-      });
-
-      itemElement.addEventListener("dragend", () => {
-        itemElement.classList.remove("syllabus-item-dragging");
-        // Reset dragging flag after a short delay to prevent click
-        setTimeout(() => {
-          isDragging = false;
-        }, 100);
-      });
-
-      return itemElement;
-    }
-
-    /**
-     * Creates a reusable editable text input element that wraps text
-     * @param doc - The document to create the element in
-     * @param options - Configuration options
-     * @returns The created textarea element
-     */
-    function createEditableTextInput(
-      doc: Document,
-      options: {
-        className: string;
-        initialValue: string;
-        onSave: (newValue: string) => Promise<void>;
-        onCancel?: () => void;
-        placeholder?: string;
-        emptyBehavior?: "reset" | "delete"; // 'reset' reverts to original value, 'delete' saves empty string
-      },
-    ): HTMLTextAreaElement {
-      const {
-        className,
-        initialValue,
-        onSave,
-        onCancel,
-        placeholder,
-        emptyBehavior = "reset",
-      } = options;
-
-      // Check if an element with this class already exists and is being edited
-      const existingElement = doc.querySelector(
-        `.${className}`,
-      ) as HTMLTextAreaElement | null;
-      let textToPreserve: string | null = null;
-      let wasEditing = false;
-
-      if (existingElement && doc.activeElement === existingElement) {
-        textToPreserve = existingElement.value || "";
-        wasEditing = true;
-      }
-
-      // Create textarea element (allows text wrapping)
-      const textareaElement = doc.createElement("textarea");
-      textareaElement.className = className;
-      textareaElement.setAttribute("spellcheck", "false");
-      textareaElement.setAttribute("rows", "1"); // Start with single line
-      textareaElement.setAttribute("wrap", "soft"); // Allow wrapping
-      if (placeholder) {
-        textareaElement.placeholder = placeholder;
-      }
-
-      // Set initial value
-      const valueToUse =
-        textToPreserve !== null ? textToPreserve : initialValue;
-      textareaElement.value = valueToUse;
-
-      // Auto-resize textarea to fit content
-      const autoResize = () => {
-        // Temporarily remove height constraint to get accurate scrollHeight
-        const currentHeight = textareaElement.style.height;
-        textareaElement.style.height = "auto";
-        // Get the scroll height (content height)
-        const scrollHeight = textareaElement.scrollHeight;
-        // Set the height to match scroll height
-        textareaElement.style.height = `${scrollHeight}px`;
-        // Ensure overflow is hidden to prevent scrollbars
-        textareaElement.style.overflowY = "hidden";
-      };
-
-      // Store original value for comparison and cancellation
-      let originalValue = initialValue;
-
-      // Prevent clicks from propagating to parent handlers
-      textareaElement.addEventListener("click", (e: MouseEvent) => {
-        e.stopPropagation();
-      });
-
-      // Helper function to save the value
-      const saveValue = async () => {
-        const newValue = textareaElement.value.trim();
-
-        // Handle empty value based on emptyBehavior mode
-        if (!newValue) {
-          if (emptyBehavior === "delete") {
-            // Delete mode: save empty string
-            try {
-              await onSave("");
-              originalValue = "";
-              // Update textarea height after save
-              autoResize();
-            } catch (err) {
-              ztoolkit.log("Error saving editable text:", err);
-              // Revert to original value on error
-              textareaElement.value = originalValue;
-              autoResize();
-            }
+        // Create custom view if it doesn't exist
+        if (!customView) {
+          customView = doc.createElement("div");
+          customView.id = "syllabus-custom-view";
+          customView.className = "syllabus-custom-view";
+          // Insert before items tree or append to container
+          if (itemsTree && itemsTree.parentNode) {
+            itemsTree.parentNode.insertBefore(customView, itemsTree);
           } else {
-            // Reset mode: revert to original value
-            textareaElement.value = originalValue;
-            autoResize();
-          }
-          return;
-        }
-
-        // Only update if value actually changed
-        if (newValue !== originalValue) {
-          try {
-            await onSave(newValue);
-            originalValue = newValue;
-            // Update textarea height after save
-            autoResize();
-          } catch (err) {
-            ztoolkit.log("Error saving editable text:", err);
-            // Revert to original value on error
-            textareaElement.value = originalValue;
-            autoResize();
+            itemsTreeContainer.appendChild(customView);
           }
         }
-      };
 
-      // Handle blur event (when user clicks away or tabs out)
-      textareaElement.addEventListener("blur", async (e: FocusEvent) => {
-        await saveValue();
-      });
+        // Show custom view
+        (customView as HTMLElement).style.display = "block";
 
-      // Handle input event to auto-resize
-      textareaElement.addEventListener("input", () => {
-        // Use setTimeout to ensure the input has been processed
-        setTimeout(() => {
-          autoResize();
-        }, 0);
-      });
+        // Clear and render
+        customView.innerHTML = "";
 
-      // Handle keyboard events
-      textareaElement.addEventListener("keydown", (e: KeyboardEvent) => {
-        // Stop propagation to prevent Zotero's handlers from interfering
-        e.stopPropagation();
+        // Add collection name as title (using reusable editable input function)
+        const titleElement = createEditableTextInput(doc, {
+          className: "syllabus-view-title",
+          initialValue: selectedCollection.name || "",
+          onSave: async (newName: string) => {
+            selectedCollection.name = newName;
+            await selectedCollection.saveTx();
+          },
+          emptyBehavior: "reset", // Collection title resets to original when cleared
+        });
 
-        // Handle Enter: if Ctrl/Cmd is pressed, save; otherwise allow new line
-        if (e.key === "Enter") {
-          if (e.ctrlKey || e.metaKey) {
-            // Ctrl+Enter or Cmd+Enter saves and blurs
-            e.preventDefault();
-            saveValue();
-            textareaElement.blur();
-            return;
-          }
-          // Regular Enter creates a new line (default behavior)
-          // Don't prevent default
-          return;
-        }
+        // Wrap title in a sticky container to eliminate gaps
+        const titleContainer = doc.createElement("div");
+        titleContainer.className = "syllabus-view-title-container";
+        titleContainer.appendChild(titleElement);
 
-        // Allow Escape to cancel editing
-        if (e.key === "Escape") {
-          e.preventDefault();
-          textareaElement.value = originalValue;
-          autoResize();
-          if (onCancel) {
-            onCancel();
-          }
-          textareaElement.blur();
-          return;
-        }
+        customView.appendChild(titleContainer);
 
-        // For all other keys (backspace, delete, typing, etc.),
-        // just stop propagation but let the textarea handle them normally
-        // Don't prevent default - textarea elements handle these natively
-      });
-
-      // Handle clicks outside the textarea to ensure blur works
-      const handleDocumentClick = (e: MouseEvent) => {
-        const target = e.target as HTMLElement;
-        if (
-          !textareaElement.contains(target) &&
-          doc.activeElement === textareaElement
-        ) {
-          // Clicked outside - blur will fire naturally, but ensure it does
-          textareaElement.blur();
-        }
-      };
-
-      // Add document click listener (will be cleaned up when view re-renders)
-      doc.addEventListener("click", handleDocumentClick, true);
-
-      // Auto-resize after element is in DOM and styled
-      // Use setTimeout to ensure layout is complete
-      setTimeout(() => {
-        autoResize();
-      }, 0);
-
-      // If it was being edited, restore focus
-      if (wasEditing && textToPreserve !== null) {
-        // Use setTimeout to ensure the element is in the DOM
-        setTimeout(() => {
-          textareaElement.focus();
-          // Move cursor to end for textarea elements
-          textareaElement.setSelectionRange(
-            textareaElement.value.length,
-            textareaElement.value.length,
-          );
-          // Resize again after focus to ensure correct height
-          autoResize();
-        }, 0);
-      }
-
-      return textareaElement;
-    }
-
-    // Function to render a completely custom syllabus view
-    async function renderCustomSyllabusView() {
-      try {
-        const pane = ztoolkit.getGlobal("ZoteroPane");
-        const selectedCollection = pane.getSelectedCollection();
-        const w = Zotero.getMainWindow();
-        const doc = w.document;
-
-        // Find the items tree container
-        const itemsTreeContainer = doc.getElementById(
-          "zotero-items-pane-container",
-        );
-        if (!itemsTreeContainer) {
-          return;
-        }
-
-        // Check if we should show custom view
-        // Show if: syllabus view is enabled AND we have a collection
-        const syllabusViewEnabled = getSyllabusViewEnabled();
-        const shouldShowCustomView = syllabusViewEnabled && selectedCollection;
-
-        // Find or create custom syllabus view container
-        let customView = doc.getElementById("syllabus-custom-view");
-        const itemsTree = doc.getElementById("zotero-items-tree");
-
-        if (shouldShowCustomView) {
-          // Hide the default tree
-          if (itemsTree) {
-            (itemsTree as HTMLElement).style.display = "none";
-          }
-
-          // Create custom view if it doesn't exist
-          if (!customView) {
-            customView = doc.createElement("div");
-            customView.id = "syllabus-custom-view";
-            customView.className = "syllabus-custom-view";
-            // Insert before items tree or append to container
-            if (itemsTree && itemsTree.parentNode) {
-              itemsTree.parentNode.insertBefore(customView, itemsTree);
-            } else {
-              itemsTreeContainer.appendChild(customView);
-            }
-          }
-
-          // Show custom view
-          (customView as HTMLElement).style.display = "block";
-
-          // Clear and render
-          customView.innerHTML = "";
-
-          // Add collection name as title (using reusable editable input function)
-          const titleElement = createEditableTextInput(doc, {
-            className: "syllabus-view-title",
-            initialValue: selectedCollection.name || "",
-            onSave: async (newName: string) => {
-              selectedCollection.name = newName;
-              await selectedCollection.saveTx();
-            },
-            emptyBehavior: "reset", // Collection title resets to original when cleared
-          });
-
-          // Wrap title in a sticky container to eliminate gaps
-          const titleContainer = doc.createElement("div");
-          titleContainer.className = "syllabus-view-title-container";
-          titleContainer.appendChild(titleElement);
-
-          customView.appendChild(titleContainer);
-
-          // Add collection description field
-          const collectionDescriptionElement = createEditableTextInput(doc, {
-            className: "syllabus-collection-description",
-            initialValue: SyllabusManager.getCollectionDescription(selectedCollection.id),
-            onSave: async (newDescription: string) => {
-              await SyllabusManager.setCollectionDescription(
-                selectedCollection.id,
-                newDescription,
-              );
-            },
-            placeholder: "Add a description...",
-            emptyBehavior: "delete", // Collection description deletes when cleared
-          });
-
-          customView.appendChild(collectionDescriptionElement);
-
-          // Get all items from the collection
-          const items = selectedCollection.getChildItems();
-
-          // Separate items that have both no priority AND no class number (for "Further reading")
-          const furtherReadingItems: Zotero.Item[] = [];
-
-          // Group items by class number
-          // Use null as a sentinel for "no class number" to ensure consistent grouping
-          const itemsByClass: Map<number | null, Zotero.Item[]> = new Map();
-          for (const item of items) {
-            if (!item.isRegularItem()) continue;
-            const classNumber = SyllabusManager.getSyllabusClassNumber(
-              item,
+        // Add collection description field
+        const collectionDescriptionElement = createEditableTextInput(doc, {
+          className: "syllabus-collection-description",
+          initialValue: SyllabusManager.getCollectionDescription(selectedCollection.id),
+          onSave: async (newDescription: string) => {
+            await SyllabusManager.setCollectionDescription(
               selectedCollection.id,
+              newDescription,
             );
-            const priority = SyllabusManager.getSyllabusPriority(item, selectedCollection.id);
+          },
+          placeholder: "Add a description...",
+          emptyBehavior: "delete", // Collection description deletes when cleared
+        });
 
-            // Check if item has both no priority AND no class number
-            const hasNoPriority = priority === "";
-            const hasNoClassNumber = classNumber === undefined;
+        customView.appendChild(collectionDescriptionElement);
 
-            if (hasNoPriority && hasNoClassNumber) {
-              // Add to "Further reading" section (rendered at bottom)
-              furtherReadingItems.push(item);
-              continue;
-            }
+        // Get all items from the collection
+        const items = selectedCollection.getChildItems();
 
-            // Normalize undefined to null for consistent Map key handling
-            const normalizedClassNumber =
-              classNumber === undefined ? null : classNumber;
-            if (!itemsByClass.has(normalizedClassNumber)) {
-              itemsByClass.set(normalizedClassNumber, []);
-            }
-            itemsByClass.get(normalizedClassNumber)!.push(item);
+        // Separate items that have both no priority AND no class number (for "Further reading")
+        const furtherReadingItems: Zotero.Item[] = [];
+
+        // Group items by class number
+        // Use null as a sentinel for "no class number" to ensure consistent grouping
+        const itemsByClass: Map<number | null, Zotero.Item[]> = new Map();
+        for (const item of items) {
+          if (!item.isRegularItem()) continue;
+          const classNumber = SyllabusManager.getSyllabusClassNumber(
+            item,
+            selectedCollection.id,
+          );
+          const priority = SyllabusManager.getSyllabusPriority(item, selectedCollection.id);
+
+          // Check if item has both no priority AND no class number
+          const hasNoPriority = priority === "";
+          const hasNoClassNumber = classNumber === undefined;
+
+          if (hasNoPriority && hasNoClassNumber) {
+            // Add to "Further reading" section (rendered at bottom)
+            furtherReadingItems.push(item);
+            continue;
           }
 
-          // Sort class numbers (null goes FIRST, then numeric order)
-          // This ensures items without class number (but with priority) appear at the top
-          const sortedClassNumbers = Array.from(itemsByClass.keys()).sort(
-            (a, b) => {
-              // null represents "no class number"
-              if (a === null && b === null) return 0;
-              if (a === null) return -1; // null goes first (top)
-              if (b === null) return 1;
-              return a - b;
-            },
-          );
+          // Normalize undefined to null for consistent Map key handling
+          const normalizedClassNumber =
+            classNumber === undefined ? null : classNumber;
+          if (!itemsByClass.has(normalizedClassNumber)) {
+            itemsByClass.set(normalizedClassNumber, []);
+          }
+          itemsByClass.get(normalizedClassNumber)!.push(item);
+        }
 
-          // Render each class group
-          for (const classNumber of sortedClassNumbers) {
-            const classItems = itemsByClass.get(classNumber)!;
+        // Sort class numbers (null goes FIRST, then numeric order)
+        // This ensures items without class number (but with priority) appear at the top
+        const sortedClassNumbers = Array.from(itemsByClass.keys()).sort(
+          (a, b) => {
+            // null represents "no class number"
+            if (a === null && b === null) return 0;
+            if (a === null) return -1; // null goes first (top)
+            if (b === null) return 1;
+            return a - b;
+          },
+        );
 
-            // Sort items by priority: course-info, essential, recommended, optional, none
-            classItems.sort((a, b) => {
-              const priorityA = SyllabusManager.getSyllabusPriority(a, selectedCollection.id);
-              const priorityB = SyllabusManager.getSyllabusPriority(b, selectedCollection.id);
+        // Render each class group
+        for (const classNumber of sortedClassNumbers) {
+          const classItems = itemsByClass.get(classNumber)!;
 
-              const getPriorityOrder = (
-                priority: SyllabusPriority | "" | undefined,
-              ): number => {
-                if (priority === SyllabusPriority.COURSE_INFO) return 0;
-                if (priority === SyllabusPriority.ESSENTIAL) return 1;
-                if (priority === SyllabusPriority.RECOMMENDED) return 2;
-                if (priority === SyllabusPriority.OPTIONAL) return 3;
-                return 4; // none/undefined/empty string
-              };
+          // Sort items by priority: course-info, essential, recommended, optional, none
+          classItems.sort((a, b) => {
+            const priorityA = SyllabusManager.getSyllabusPriority(a, selectedCollection.id);
+            const priorityB = SyllabusManager.getSyllabusPriority(b, selectedCollection.id);
 
-              return getPriorityOrder(priorityA) - getPriorityOrder(priorityB);
-            });
+            const getPriorityOrder = (
+              priority: SyllabusPriority | "" | undefined,
+            ): number => {
+              if (priority === SyllabusPriority.COURSE_INFO) return 0;
+              if (priority === SyllabusPriority.ESSENTIAL) return 1;
+              if (priority === SyllabusPriority.RECOMMENDED) return 2;
+              if (priority === SyllabusPriority.OPTIONAL) return 3;
+              return 4; // none/undefined/empty string
+            };
 
-            // Create class group container
-            const classGroup = doc.createElement("div");
-            classGroup.className = "syllabus-class-group";
+            return getPriorityOrder(priorityA) - getPriorityOrder(priorityB);
+          });
 
-            // Add class header (only for items with a class number)
-            if (classNumber !== null) {
-              // Create header container with class number and title on same line
-              const classHeaderContainer = doc.createElement("div");
-              classHeaderContainer.className =
-                "syllabus-class-header-container";
+          // Create class group container
+          const classGroup = doc.createElement("div");
+          classGroup.className = "syllabus-class-group";
 
-              const classHeader = doc.createElement("div");
-              classHeader.className = "syllabus-class-header";
-              classHeader.textContent = `Class ${classNumber}`;
-              classHeaderContainer.appendChild(classHeader);
+          // Add class header (only for items with a class number)
+          if (classNumber !== null) {
+            // Create header container with class number and title on same line
+            const classHeaderContainer = doc.createElement("div");
+            classHeaderContainer.className =
+              "syllabus-class-header-container";
 
-              // Add class title field on same line
-              const classTitleElement = createEditableTextInput(doc, {
-                className: "syllabus-class-title",
-                initialValue: SyllabusManager.getClassTitle(selectedCollection.id, classNumber),
-                onSave: async (newTitle: string) => {
-                  await SyllabusManager.setClassTitle(
-                    selectedCollection.id,
-                    classNumber,
-                    newTitle,
-                  );
-                },
-                placeholder: "Add a title...",
-                emptyBehavior: "delete", // Class title deletes when cleared
-              });
-              classHeaderContainer.appendChild(classTitleElement);
+            const classHeader = doc.createElement("div");
+            classHeader.className = "syllabus-class-header";
+            classHeader.textContent = `Class ${classNumber}`;
+            classHeaderContainer.appendChild(classHeader);
 
-              classGroup.appendChild(classHeaderContainer);
-
-              // Add class description field
-              const classDescriptionElement = createEditableTextInput(doc, {
-                className: "syllabus-class-description",
-                initialValue: SyllabusManager.getClassDescription(
+            // Add class title field on same line
+            const classTitleElement = createEditableTextInput(doc, {
+              className: "syllabus-class-title",
+              initialValue: SyllabusManager.getClassTitle(selectedCollection.id, classNumber),
+              onSave: async (newTitle: string) => {
+                await SyllabusManager.setClassTitle(
                   selectedCollection.id,
                   classNumber,
-                ),
-                onSave: async (newDescription: string) => {
-                  await SyllabusManager.setClassDescription(
-                    selectedCollection.id,
-                    classNumber,
-                    newDescription,
-                  );
-                },
-                placeholder: "Add a description...",
-                emptyBehavior: "delete", // Class description deletes when cleared
-              });
-              classGroup.appendChild(classDescriptionElement);
-            }
+                  newTitle,
+                );
+              },
+              placeholder: "Add a title...",
+              emptyBehavior: "delete", // Class title deletes when cleared
+            });
+            classHeaderContainer.appendChild(classTitleElement);
 
-            // Add items in this class
-            const itemsContainer = doc.createElement("div");
-            itemsContainer.className = "syllabus-class-items";
-            // Store class number in data attribute for drop handling
-            if (classNumber !== null) {
-              itemsContainer.setAttribute(
-                "data-class-number",
-                String(classNumber),
+            classGroup.appendChild(classHeaderContainer);
+
+            // Add class description field
+            const classDescriptionElement = createEditableTextInput(doc, {
+              className: "syllabus-class-description",
+              initialValue: SyllabusManager.getClassDescription(
+                selectedCollection.id,
+                classNumber,
+              ),
+              onSave: async (newDescription: string) => {
+                await SyllabusManager.setClassDescription(
+                  selectedCollection.id,
+                  classNumber,
+                  newDescription,
+                );
+              },
+              placeholder: "Add a description...",
+              emptyBehavior: "delete", // Class description deletes when cleared
+            });
+            classGroup.appendChild(classDescriptionElement);
+          }
+
+          // Add items in this class
+          const itemsContainer = doc.createElement("div");
+          itemsContainer.className = "syllabus-class-items";
+          // Store class number in data attribute for drop handling
+          if (classNumber !== null) {
+            itemsContainer.setAttribute(
+              "data-class-number",
+              String(classNumber),
+            );
+          } else {
+            itemsContainer.setAttribute("data-class-number", "");
+          }
+
+          // Make itemsContainer a drop zone
+          itemsContainer.addEventListener("dragover", (e: DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.dataTransfer) {
+              e.dataTransfer.dropEffect = "move";
+            }
+            itemsContainer.classList.add("syllabus-dropzone-active");
+          });
+
+          itemsContainer.addEventListener("dragleave", (e: DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Only remove class if we're actually leaving the container
+            const rect = itemsContainer.getBoundingClientRect();
+            const x = e.clientX;
+            const y = e.clientY;
+            if (
+              x < rect.left ||
+              x > rect.right ||
+              y < rect.top ||
+              y > rect.bottom
+            ) {
+              itemsContainer.classList.remove("syllabus-dropzone-active");
+            }
+          });
+
+          itemsContainer.addEventListener("drop", async (e: DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            itemsContainer.classList.remove("syllabus-dropzone-active");
+
+            const itemIdStr = e.dataTransfer?.getData("text/plain");
+            if (!itemIdStr) return;
+
+            const itemId = parseInt(itemIdStr, 10);
+            if (isNaN(itemId)) return;
+
+            try {
+              const draggedItem = Zotero.Items.get(itemId);
+              if (!draggedItem || !draggedItem.isRegularItem()) return;
+
+              // Get the target class number
+              const targetClassNumberStr =
+                itemsContainer.getAttribute("data-class-number");
+              const targetClassNumber =
+                targetClassNumberStr === "" || targetClassNumberStr === null
+                  ? undefined
+                  : parseInt(targetClassNumberStr, 10);
+
+              // Update the item's class number
+              await SyllabusManager.setSyllabusClassNumber(
+                draggedItem,
+                selectedCollection.id,
+                targetClassNumber,
               );
-            } else {
-              itemsContainer.setAttribute("data-class-number", "");
-            }
+              await draggedItem.saveTx();
 
-            // Make itemsContainer a drop zone
-            itemsContainer.addEventListener("dragover", (e: DragEvent) => {
+              // Re-render the view to reflect the change
+              SyllabusManager.setupPage();
+            } catch (err) {
+              ztoolkit.log("Error handling drop:", err);
+            }
+          });
+
+          for (const item of classItems) {
+            const priority = SyllabusManager.getSyllabusPriority(item, selectedCollection.id);
+            // Use slim card for items without priority, full card for items with priority
+            const itemElement = priority
+              ? await SyllabusManager.createSyllabusItemCard(
+                doc,
+                item,
+                selectedCollection.id,
+                pane,
+              )
+              : await SyllabusManager.createSyllabusItemCardSlim(
+                doc,
+                item,
+                selectedCollection.id,
+                pane,
+              );
+            itemsContainer.appendChild(itemElement);
+          }
+
+          classGroup.appendChild(itemsContainer);
+          customView.appendChild(classGroup);
+        }
+
+        // Render "Further reading" section at the bottom (items with no priority AND no class number)
+        if (furtherReadingItems.length > 0) {
+          // Sort items by title for consistent ordering
+          furtherReadingItems.sort((a, b) => {
+            const titleA = a.getField("title") || "";
+            const titleB = b.getField("title") || "";
+            return titleA.localeCompare(titleB);
+          });
+
+          // Create "Further reading" class group container
+          const furtherReadingGroup = doc.createElement("div");
+          furtherReadingGroup.className = "syllabus-class-group";
+
+          // Add "Further reading" header
+          const furtherReadingHeader = doc.createElement("div");
+          furtherReadingHeader.className = "syllabus-class-header";
+          furtherReadingHeader.textContent = "Further reading";
+          furtherReadingGroup.appendChild(furtherReadingHeader);
+
+          // Add items container
+          const furtherReadingItemsContainer = doc.createElement("div");
+          furtherReadingItemsContainer.className =
+            "syllabus-class-items syllabus-further-reading-items";
+          furtherReadingItemsContainer.setAttribute("data-class-number", "");
+
+          // Make itemsContainer a drop zone
+          furtherReadingItemsContainer.addEventListener(
+            "dragover",
+            (e: DragEvent) => {
               e.preventDefault();
               e.stopPropagation();
               if (e.dataTransfer) {
                 e.dataTransfer.dropEffect = "move";
               }
-              itemsContainer.classList.add("syllabus-dropzone-active");
-            });
+              furtherReadingItemsContainer.classList.add(
+                "syllabus-dropzone-active",
+              );
+            },
+          );
 
-            itemsContainer.addEventListener("dragleave", (e: DragEvent) => {
+          furtherReadingItemsContainer.addEventListener(
+            "dragleave",
+            (e: DragEvent) => {
               e.preventDefault();
               e.stopPropagation();
-              // Only remove class if we're actually leaving the container
-              const rect = itemsContainer.getBoundingClientRect();
+              const rect =
+                furtherReadingItemsContainer.getBoundingClientRect();
               const x = e.clientX;
               const y = e.clientY;
               if (
@@ -1346,14 +715,21 @@ export class SyllabusManager {
                 y < rect.top ||
                 y > rect.bottom
               ) {
-                itemsContainer.classList.remove("syllabus-dropzone-active");
+                furtherReadingItemsContainer.classList.remove(
+                  "syllabus-dropzone-active",
+                );
               }
-            });
+            },
+          );
 
-            itemsContainer.addEventListener("drop", async (e: DragEvent) => {
+          furtherReadingItemsContainer.addEventListener(
+            "drop",
+            async (e: DragEvent) => {
               e.preventDefault();
               e.stopPropagation();
-              itemsContainer.classList.remove("syllabus-dropzone-active");
+              furtherReadingItemsContainer.classList.remove(
+                "syllabus-dropzone-active",
+              );
 
               const itemIdStr = e.dataTransfer?.getData("text/plain");
               if (!itemIdStr) return;
@@ -1365,193 +741,618 @@ export class SyllabusManager {
                 const draggedItem = Zotero.Items.get(itemId);
                 if (!draggedItem || !draggedItem.isRegularItem()) return;
 
-                // Get the target class number
-                const targetClassNumberStr =
-                  itemsContainer.getAttribute("data-class-number");
-                const targetClassNumber =
-                  targetClassNumberStr === "" || targetClassNumberStr === null
-                    ? undefined
-                    : parseInt(targetClassNumberStr, 10);
-
-                // Update the item's class number
+                // Remove class number (set to undefined) to keep item in "Further reading"
                 await SyllabusManager.setSyllabusClassNumber(
                   draggedItem,
                   selectedCollection.id,
-                  targetClassNumber,
+                  undefined,
                 );
                 await draggedItem.saveTx();
 
                 // Re-render the view to reflect the change
-                renderCustomSyllabusView();
+                SyllabusManager.setupPage();
               } catch (err) {
                 ztoolkit.log("Error handling drop:", err);
               }
-            });
+            },
+          );
 
-            for (const item of classItems) {
-              const priority = SyllabusManager.getSyllabusPriority(item, selectedCollection.id);
-              // Use slim card for items without priority, full card for items with priority
-              const itemElement = priority
-                ? await createSyllabusItemCard(
-                  doc,
-                  item,
-                  selectedCollection.id,
-                  pane,
-                )
-                : await createSyllabusItemCardSlim(
-                  doc,
-                  item,
-                  selectedCollection.id,
-                  pane,
-                );
-              itemsContainer.appendChild(itemElement);
-            }
-
-            classGroup.appendChild(itemsContainer);
-            customView.appendChild(classGroup);
-          }
-
-          // Render "Further reading" section at the bottom (items with no priority AND no class number)
-          if (furtherReadingItems.length > 0) {
-            // Sort items by title for consistent ordering
-            furtherReadingItems.sort((a, b) => {
-              const titleA = a.getField("title") || "";
-              const titleB = b.getField("title") || "";
-              return titleA.localeCompare(titleB);
-            });
-
-            // Create "Further reading" class group container
-            const furtherReadingGroup = doc.createElement("div");
-            furtherReadingGroup.className = "syllabus-class-group";
-
-            // Add "Further reading" header
-            const furtherReadingHeader = doc.createElement("div");
-            furtherReadingHeader.className = "syllabus-class-header";
-            furtherReadingHeader.textContent = "Further reading";
-            furtherReadingGroup.appendChild(furtherReadingHeader);
-
-            // Add items container
-            const furtherReadingItemsContainer = doc.createElement("div");
-            furtherReadingItemsContainer.className =
-              "syllabus-class-items syllabus-further-reading-items";
-            furtherReadingItemsContainer.setAttribute("data-class-number", "");
-
-            // Make itemsContainer a drop zone
-            furtherReadingItemsContainer.addEventListener(
-              "dragover",
-              (e: DragEvent) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (e.dataTransfer) {
-                  e.dataTransfer.dropEffect = "move";
-                }
-                furtherReadingItemsContainer.classList.add(
-                  "syllabus-dropzone-active",
-                );
-              },
+          // Add all further reading items (all should be slim cards since they have no priority)
+          for (const item of furtherReadingItems) {
+            const itemElement = SyllabusManager.createSyllabusItemCardSlim(
+              doc,
+              item,
+              selectedCollection.id,
+              pane,
             );
-
-            furtherReadingItemsContainer.addEventListener(
-              "dragleave",
-              (e: DragEvent) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const rect =
-                  furtherReadingItemsContainer.getBoundingClientRect();
-                const x = e.clientX;
-                const y = e.clientY;
-                if (
-                  x < rect.left ||
-                  x > rect.right ||
-                  y < rect.top ||
-                  y > rect.bottom
-                ) {
-                  furtherReadingItemsContainer.classList.remove(
-                    "syllabus-dropzone-active",
-                  );
-                }
-              },
-            );
-
-            furtherReadingItemsContainer.addEventListener(
-              "drop",
-              async (e: DragEvent) => {
-                e.preventDefault();
-                e.stopPropagation();
-                furtherReadingItemsContainer.classList.remove(
-                  "syllabus-dropzone-active",
-                );
-
-                const itemIdStr = e.dataTransfer?.getData("text/plain");
-                if (!itemIdStr) return;
-
-                const itemId = parseInt(itemIdStr, 10);
-                if (isNaN(itemId)) return;
-
-                try {
-                  const draggedItem = Zotero.Items.get(itemId);
-                  if (!draggedItem || !draggedItem.isRegularItem()) return;
-
-                  // Remove class number (set to undefined) to keep item in "Further reading"
-                  await SyllabusManager.setSyllabusClassNumber(
-                    draggedItem,
-                    selectedCollection.id,
-                    undefined,
-                  );
-                  await draggedItem.saveTx();
-
-                  // Re-render the view to reflect the change
-                  renderCustomSyllabusView();
-                } catch (err) {
-                  ztoolkit.log("Error handling drop:", err);
-                }
-              },
-            );
-
-            // Add all further reading items (all should be slim cards since they have no priority)
-            for (const item of furtherReadingItems) {
-              const itemElement = createSyllabusItemCardSlim(
-                doc,
-                item,
-                selectedCollection.id,
-                pane,
-              );
-              furtherReadingItemsContainer.appendChild(itemElement);
-            }
-
-            furtherReadingGroup.appendChild(furtherReadingItemsContainer);
-            customView.appendChild(furtherReadingGroup);
+            furtherReadingItemsContainer.appendChild(itemElement);
           }
-        } else {
-          // Hide custom view and show default tree
-          if (customView) {
-            (customView as HTMLElement).style.display = "none";
-          }
-          if (itemsTree) {
-            (itemsTree as HTMLElement).style.display = "";
-          }
+
+          furtherReadingGroup.appendChild(furtherReadingItemsContainer);
+          customView.appendChild(furtherReadingGroup);
         }
-      } catch (e) {
-        ztoolkit.log("Error in renderCustomSyllabusView:", e);
+      }
+    } catch (e) {
+      ztoolkit.log("Error in setupPage:", e);
+    }
+  }
+
+  // Helper function to create a slim syllabus item card (for items without priority)
+  static createSyllabusItemCardSlim(
+    doc: Document,
+    item: Zotero.Item,
+    collectionId: number,
+    pane: any,
+  ): HTMLElement {
+    const title = item.getField("title") || "Untitled";
+    const itemType = item.itemType;
+    const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(itemType);
+
+    // Get author (first creator)
+    let author = "";
+    if (item.firstCreator) {
+      author = item.firstCreator;
+    } else {
+      const creators = item.getCreators();
+      if (creators.length > 0) {
+        const creatorName = item.getCreator(0);
+        if (creatorName) {
+          author =
+            `${creatorName.firstName || ""} ${creatorName.lastName || ""}`.trim();
+        }
       }
     }
 
-    // Create toggle button and update view after a short delay on startup
-    Zotero.Promise.delay(0).then(() => {
-      createToggleButton();
-      renderCustomSyllabusView();
+    const date = item.getField("date") || "";
+
+    const itemElement = doc.createElement("div");
+    itemElement.className = "syllabus-item syllabus-item-slim";
+    itemElement.setAttribute("data-item-id", String(item.id));
+    itemElement.setAttribute("draggable", "true");
+
+    // Create item content container
+    const itemContent = doc.createElement("div");
+    itemContent.className = "syllabus-item-content";
+
+    // Create main content wrapper (small thumbnail + text)
+    const mainContent = doc.createElement("div");
+    mainContent.className = "syllabus-item-main-content";
+
+    // Add small thumbnail image on the left
+    const thumbnailContainer = doc.createElement("div");
+    thumbnailContainer.className =
+      "syllabus-item-thumbnail syllabus-item-thumbnail-slim";
+
+    // Try to get item image/thumbnail
+    let imageSrc: string | null = null;
+
+    // First try getImageSrc method if available
+    if ((item as any).getImageSrc) {
+      imageSrc = (item as any).getImageSrc();
+    }
+
+    // If no image, try to get from attachments
+    if (!imageSrc) {
+      const attachments = item.getAttachments();
+      for (const attId of attachments) {
+        try {
+          const att = Zotero.Items.get(attId);
+          if (
+            att &&
+            att.isAttachment() &&
+            att.attachmentContentType?.startsWith("image/")
+          ) {
+            const file = att.getFilePath();
+            if (file) {
+              imageSrc = `file://${file}`;
+              break;
+            }
+          }
+        } catch (e) {
+          // Continue to next attachment
+        }
+      }
+    }
+
+    if (imageSrc) {
+      const thumbnailImg = doc.createElement("img");
+      thumbnailImg.className = "syllabus-item-thumbnail-img";
+      thumbnailImg.src = imageSrc;
+      thumbnailImg.alt = title;
+      thumbnailImg.onerror = () => {
+        thumbnailImg.style.display = "none";
+        const placeholder = doc.createElement("div");
+        placeholder.className = "syllabus-item-thumbnail-placeholder";
+        placeholder.textContent = "📄";
+        thumbnailContainer.appendChild(placeholder);
+      };
+      thumbnailContainer.appendChild(thumbnailImg);
+    } else {
+      const placeholder = doc.createElement("div");
+      placeholder.className = "syllabus-item-thumbnail-placeholder";
+      placeholder.textContent = "📄";
+      thumbnailContainer.appendChild(placeholder);
+    }
+
+    mainContent.appendChild(thumbnailContainer);
+
+    // Create text content container
+    const textContent = doc.createElement("div");
+    textContent.className = "syllabus-item-text";
+
+    // Create item title row
+    const itemTitleRow = doc.createElement("div");
+    itemTitleRow.className = "syllabus-item-title-row";
+
+    const itemTitle = doc.createElement("div");
+    itemTitle.className = "syllabus-item-title";
+    itemTitle.textContent = title;
+    itemTitleRow.appendChild(itemTitle);
+
+    textContent.appendChild(itemTitleRow);
+
+    // Add item metadata row (type, author, date) - compact
+    const metadataParts: string[] = [];
+    if (itemTypeLabel) {
+      metadataParts.push(itemTypeLabel);
+    }
+    if (author) {
+      metadataParts.push(author);
+    }
+    if (date) {
+      metadataParts.push(date);
+    }
+
+    if (metadataParts.length > 0) {
+      const metadataRow = doc.createElement("div");
+      metadataRow.className = "syllabus-item-metadata";
+      const metadataText = doc.createElement("span");
+      metadataText.textContent = metadataParts.join(" • ");
+      metadataRow.appendChild(metadataText);
+      textContent.appendChild(metadataRow);
+    }
+
+    mainContent.appendChild(textContent);
+    itemContent.appendChild(mainContent);
+    itemElement.appendChild(itemContent);
+
+    // Track if we're dragging to prevent click after drag
+    let isDragging = false;
+
+    // Add click handler to select item
+    itemElement.addEventListener("click", (e: MouseEvent) => {
+      if (isDragging) {
+        isDragging = false;
+        return;
+      }
+      pane.selectItem(item.id);
     });
 
-    // Re-render custom view when collection or sort changes
-    const pane = ztoolkit.getGlobal("ZoteroPane");
-    if (pane) {
-      pane.addReloadListener(() => {
-        Zotero.Promise.delay(100).then(() => {
-          createToggleButton();
-          renderCustomSyllabusView();
-        });
-      });
+    // Prevent drag from triggering click
+    itemElement.addEventListener("dragstart", (e: DragEvent) => {
+      e.stopPropagation();
+      isDragging = true;
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", String(item.id));
+      }
+      itemElement.classList.add("syllabus-item-dragging");
+    });
+
+    itemElement.addEventListener("dragend", () => {
+      itemElement.classList.remove("syllabus-item-dragging");
+      setTimeout(() => {
+        isDragging = false;
+      }, 100);
+    });
+
+    return itemElement;
+  }
+
+  // Helper function to create a syllabus item card
+  static async createSyllabusItemCard(
+    doc: Document,
+    item: Zotero.Item,
+    collectionId: number,
+    pane: any,
+  ): Promise<HTMLElement> {
+    // Get item data
+    const priority = SyllabusManager.getSyllabusPriority(item, collectionId);
+
+    const itemElement = doc.createElement("div");
+    itemElement.className = "syllabus-item";
+    itemElement.setAttribute("data-item-id", String(item.id));
+    itemElement.setAttribute("draggable", "true");
+
+    // Add subtle background and border coloring based on priority
+    if (priority && priority in SyllabusManager.PRIORITY_COLORS) {
+      const priorityColor = SyllabusManager.PRIORITY_COLORS[priority as SyllabusPriority];
+      // Convert hex to rgba for subtle background (5% opacity) and border (20% opacity)
+      const r = parseInt(priorityColor.slice(1, 3), 16);
+      const g = parseInt(priorityColor.slice(3, 5), 16);
+      const b = parseInt(priorityColor.slice(5, 7), 16);
+      itemElement.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.05)`;
+      itemElement.style.borderColor = `rgba(${r}, ${g}, ${b}, 0.2)`;
     }
+    const classInstruction = SyllabusManager.getSyllabusClassInstruction(item, collectionId);
+    const title = item.getField("title") || "Untitled";
+
+    // Get item metadata
+    const itemType = item.itemType;
+    const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(itemType);
+
+    // Get author (first creator)
+    let author = "";
+    if (item.firstCreator) {
+      author = item.firstCreator;
+    } else {
+      const creators = item.getCreators();
+      if (creators.length > 0) {
+        const creatorName = item.getCreator(0);
+        if (creatorName) {
+          author =
+            `${creatorName.firstName || ""} ${creatorName.lastName || ""}`.trim();
+        }
+      }
+    }
+
+    const date = item.getField("date") || "";
+
+    // Get publication name (for "In..." display)
+    const publicationTitle = item.getField("publicationTitle") || "";
+    const bookTitle = item.getField("bookTitle") || "";
+    const publicationName = publicationTitle || bookTitle || "";
+
+    // Get URL and viewable attachment (PDF, web snapshot, or EPUB)
+    const url = item.getField("url") || "";
+    const attachments = item.getAttachments();
+    let viewableAttachment: Zotero.Item | null = null;
+    let attachmentType: "pdf" | "snapshot" | "epub" | null = null;
+
+    for (const attId of attachments) {
+      try {
+        const att = Zotero.Items.get(attId);
+        if (att && att.isAttachment()) {
+          const contentType = att.attachmentContentType || "";
+          const linkMode = att.attachmentLinkMode;
+          const path = att.attachmentPath?.toLowerCase() || "";
+
+          // Check for PDF
+          if (contentType === "application/pdf" || path.endsWith(".pdf")) {
+            viewableAttachment = att;
+            attachmentType = "pdf";
+            break;
+          }
+
+          // Check for web snapshot (linkMode 3 = imported snapshot)
+          if (linkMode === 3) {
+            viewableAttachment = att;
+            attachmentType = "snapshot";
+            break;
+          }
+
+          // Check for EPUB
+          if (
+            contentType === "application/epub+zip" ||
+            contentType === "application/epub" ||
+            path.endsWith(".epub")
+          ) {
+            viewableAttachment = att;
+            attachmentType = "epub";
+            break;
+          }
+        }
+      } catch (e) {
+        // Continue
+      }
+    }
+
+    // Create item content container
+    const itemContent = doc.createElement("div");
+    itemContent.className = "syllabus-item-content";
+
+    // Create main content wrapper (thumbnail + text)
+    const mainContent = doc.createElement("div");
+    mainContent.className = "syllabus-item-main-content";
+
+    // Add thumbnail image on the left
+    const thumbnailContainer = doc.createElement("div");
+    thumbnailContainer.className = "syllabus-item-thumbnail";
+
+    // Try to get item image/thumbnail
+    let imageSrc: string | null = null;
+
+    // First try getImageSrc method if available
+    if ((item as any).getImageSrc) {
+      imageSrc = (item as any).getImageSrc();
+    }
+
+    // If no image, try to get from attachments
+    if (!imageSrc) {
+      const attachments = item.getAttachments();
+      for (const attId of attachments) {
+        try {
+          const att = Zotero.Items.get(attId);
+          if (
+            att &&
+            att.isAttachment() &&
+            att.attachmentContentType?.startsWith("image/")
+          ) {
+            // Try to get attachment file path or URL
+            const file = att.getFilePath();
+            if (file) {
+              imageSrc = `file://${file}`;
+              break;
+            }
+          }
+        } catch (e) {
+          // Continue to next attachment
+        }
+      }
+    }
+
+    if (imageSrc) {
+      const thumbnailImg = doc.createElement("img");
+      thumbnailImg.className = "syllabus-item-thumbnail-img";
+      thumbnailImg.src = imageSrc;
+      thumbnailImg.alt = title;
+      thumbnailImg.onerror = () => {
+        // If image fails to load, show placeholder
+        thumbnailImg.style.display = "none";
+        const placeholder = doc.createElement("div");
+        placeholder.className = "syllabus-item-thumbnail-placeholder";
+        placeholder.textContent = "📄";
+        thumbnailContainer.appendChild(placeholder);
+      };
+      thumbnailContainer.appendChild(thumbnailImg);
+    } else {
+      // Use a placeholder
+      const placeholder = doc.createElement("div");
+      placeholder.className = "syllabus-item-thumbnail-placeholder";
+      placeholder.textContent = "📄";
+      thumbnailContainer.appendChild(placeholder);
+    }
+
+    mainContent.appendChild(thumbnailContainer);
+
+    // Create text content container
+    const textContent = doc.createElement("div");
+    textContent.className = "syllabus-item-text";
+
+    // Create item title row (just title, no priority)
+    const itemTitleRow = doc.createElement("div");
+    itemTitleRow.className = "syllabus-item-title-row";
+
+    // Add title text
+    const itemTitle = doc.createElement("div");
+    itemTitle.className = "syllabus-item-title";
+    itemTitle.textContent = title;
+    itemTitleRow.appendChild(itemTitle);
+
+    textContent.appendChild(itemTitleRow);
+
+    // Add "In..." publication name under title
+    if (publicationName) {
+      const publicationRow = doc.createElement("div");
+      publicationRow.className = "syllabus-item-publication";
+      publicationRow.textContent = `In ${publicationName}`;
+      textContent.appendChild(publicationRow);
+    }
+
+    // Add item metadata row (priority, type, author, date)
+    const metadataRow = doc.createElement("div");
+    metadataRow.className = "syllabus-item-metadata";
+
+    // Add priority as first item in metadata row
+    if (priority && priority in SyllabusManager.PRIORITY_LABELS) {
+      const priorityContainer = doc.createElement("span");
+      priorityContainer.className = "syllabus-item-priority-inline";
+
+      const priorityIcon = doc.createElement("span");
+      priorityIcon.className = "syllabus-priority-icon";
+      priorityIcon.style.backgroundColor =
+        SyllabusManager.PRIORITY_COLORS[priority as SyllabusPriority];
+      priorityContainer.appendChild(priorityIcon);
+
+      const priorityLabel = doc.createElement("span");
+      priorityLabel.className = "syllabus-priority-label";
+      priorityLabel.textContent =
+        SyllabusManager.PRIORITY_LABELS[priority as SyllabusPriority];
+      priorityLabel.style.color =
+        SyllabusManager.PRIORITY_COLORS[priority as SyllabusPriority];
+      priorityContainer.appendChild(priorityLabel);
+
+      metadataRow.appendChild(priorityContainer);
+    }
+
+    const metadataParts: string[] = [];
+    if (itemTypeLabel) {
+      metadataParts.push(itemTypeLabel);
+    }
+    if (author) {
+      metadataParts.push(author);
+    }
+    if (date) {
+      metadataParts.push(date);
+    }
+
+    if (metadataParts.length > 0) {
+      const metadataText = doc.createElement("span");
+      metadataText.textContent = metadataParts.join(" • ");
+      metadataRow.appendChild(metadataText);
+    }
+
+    if (metadataRow.children.length > 0) {
+      textContent.appendChild(metadataRow);
+    }
+
+    // Add bibliographic reference (after metadata)
+    if (getPref("showBibliography")) {
+      const bibliographicReference =
+        await generateBibliographicReference(item);
+      if (bibliographicReference) {
+        const referenceRow = doc.createElement("div");
+        referenceRow.className = "syllabus-item-reference";
+        referenceRow.textContent = bibliographicReference;
+        textContent.appendChild(referenceRow);
+      }
+    }
+
+    // Add class instruction if available
+    if (classInstruction) {
+      const itemDesc = doc.createElement("div");
+      itemDesc.className = "syllabus-item-description";
+      itemDesc.textContent = classInstruction;
+      textContent.appendChild(itemDesc);
+    }
+
+    mainContent.appendChild(textContent);
+    itemContent.appendChild(mainContent);
+
+    // Create right side container (buttons)
+    const rightSide = doc.createElement("div");
+    rightSide.className = "syllabus-item-right-side";
+    // Prevent buttons area from interfering with drag
+    rightSide.setAttribute("draggable", "false");
+
+    // Add action buttons row (URL, PDF) - on the right side
+    const actionsRow = doc.createElement("div");
+    actionsRow.className = "syllabus-item-actions";
+    actionsRow.setAttribute("draggable", "false");
+
+    if (url) {
+      const urlButton = ztoolkit.UI.createElement(doc, "button", {
+        namespace: "xul",
+        classList: ["toolbarbutton-1"],
+        properties: {
+          label: "URL",
+          tooltiptext: "Open URL",
+        },
+        listeners: [
+          {
+            type: "command",
+            listener: (e: Event) => {
+              e.stopPropagation(); // Prevent item selection
+              Zotero.launchURL(url);
+            },
+          },
+        ],
+      });
+      actionsRow.appendChild(urlButton);
+    }
+
+    if (viewableAttachment && attachmentType) {
+      // Determine button label based on attachment type
+      let buttonLabel = "View";
+      let buttonTooltip = "Open attachment";
+      if (attachmentType === "pdf") {
+        buttonLabel = "PDF";
+        buttonTooltip = "Open PDF";
+      } else if (attachmentType === "snapshot") {
+        buttonLabel = "Snapshot";
+        buttonTooltip = "Open web snapshot";
+      } else if (attachmentType === "epub") {
+        buttonLabel = "EPUB";
+        buttonTooltip = "Open EPUB";
+      }
+
+      const viewButton = ztoolkit.UI.createElement(doc, "button", {
+        namespace: "xul",
+        classList: ["toolbarbutton-1"],
+        properties: {
+          label: buttonLabel,
+          tooltiptext: buttonTooltip,
+        },
+        listeners: [
+          {
+            type: "command",
+            listener: async (e: Event) => {
+              e.stopPropagation(); // Prevent item selection
+              try {
+                if (attachmentType === "pdf") {
+                  // Try to view PDF in Zotero reader
+                  await pane.viewPDF(viewableAttachment.id, { page: 1 });
+                } else if (attachmentType === "snapshot") {
+                  // Open web snapshot in Zotero reader
+                  await pane.viewPDF(viewableAttachment.id, { page: 1 });
+                } else if (attachmentType === "epub") {
+                  // Open EPUB in Zotero reader
+                  await pane.viewPDF(viewableAttachment.id, { page: 1 });
+                }
+              } catch (err) {
+                // Fallback: try to open attachment file
+                try {
+                  const file = viewableAttachment.getFilePath();
+                  if (file) {
+                    Zotero.File.pathToFile(file).reveal();
+                  } else {
+                    // For snapshots, try to get the URL
+                    if (attachmentType === "snapshot") {
+                      const snapshotUrl = viewableAttachment.getField("url");
+                      if (snapshotUrl) {
+                        Zotero.launchURL(snapshotUrl);
+                      }
+                    }
+                  }
+                } catch (fileErr) {
+                  ztoolkit.log("Error opening attachment:", fileErr);
+                }
+              }
+            },
+          },
+        ],
+      });
+      actionsRow.appendChild(viewButton);
+    }
+
+    // Append actions row to right side
+    rightSide.appendChild(actionsRow);
+
+    // Append right side to item content
+    itemContent.appendChild(rightSide);
+    itemElement.appendChild(itemContent);
+
+    // Track if we're dragging to prevent click after drag
+    let isDragging = false;
+
+    // Add click handler to select item (only if not dragging)
+    itemElement.addEventListener("click", (e: MouseEvent) => {
+      // Don't select if we just finished dragging or if clicking on a button
+      if (isDragging) {
+        isDragging = false;
+        return;
+      }
+      // Don't select if clicking on action buttons
+      const target = e.target as HTMLElement;
+      if (
+        target.closest(".syllabus-item-actions") ||
+        target.closest("button")
+      ) {
+        return;
+      }
+      pane.selectItem(item.id);
+    });
+
+    // Prevent drag from triggering click
+    itemElement.addEventListener("dragstart", (e: DragEvent) => {
+      e.stopPropagation();
+      isDragging = true;
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", String(item.id));
+      }
+      itemElement.classList.add("syllabus-item-dragging");
+    });
+
+    itemElement.addEventListener("dragend", () => {
+      itemElement.classList.remove("syllabus-item-dragging");
+      // Reset dragging flag after a short delay to prevent click
+      setTimeout(() => {
+        isDragging = false;
+      }, 100);
+    });
+
+    return itemElement;
   }
 
   static unregisterNotifier() {
@@ -1844,9 +1645,10 @@ export class SyllabusManager {
             const classTitle = SyllabusManager.getClassTitle(
               selectedCollection.id,
               classNumber,
+              true,
             );
             if (classTitle) {
-              displayText += ` (${classTitle})`;
+              displayText = classTitle;
             }
           }
 
@@ -1904,9 +1706,10 @@ export class SyllabusManager {
       },
       sidenav: {
         l10nID: getLocaleID("item-section-syllabus-sidenav-tooltip"),
-        icon: "chrome://zotero/skin/20/universal/book.svg",
+        icon: "chrome://zotero/skin/16/universal/book.svg",
       },
       onItemChange: ({ item, setEnabled, tabType }) => {
+        this.onItemUpdated(item);
         // Only enable in library view (not reader)
         const enabled = tabType === "library" && item?.isRegularItem();
         setEnabled(enabled);
@@ -2401,9 +2204,10 @@ export class SyllabusManager {
 
       // Add menu items for each class number
       for (const classNumber of sortedClassNumbers) {
+        const classTitle = SyllabusManager.getClassTitle(selectedCollection.id, classNumber, true);
         children.push({
           tag: "menuitem",
-          label: `Class ${classNumber}`,
+          label: classTitle ? classTitle : `Class ${classNumber}`,
           commandListener: async () => {
             const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
             const selectedCollection = zoteroPane.getSelectedCollection();
@@ -2505,6 +2309,7 @@ export class SyllabusManager {
   ): Promise<void> {
     const jsonStr = JSON.stringify(data);
     await this.extraFieldTool.setExtraField(item, this.SYLLABUS_DATA_KEY, jsonStr);
+    this.onItemUpdated(item);
   }
 
   /**
@@ -2707,11 +2512,16 @@ export class SyllabusManager {
   static getClassTitle(
     collectionId: number | string,
     classNumber: number,
+    includeClassNumber: boolean = false,
   ): string {
     const metadata = SyllabusManager.getCollectionMetadata();
     const collectionIdStr = String(collectionId);
     const classNumberStr = String(classNumber);
-    return metadata[collectionIdStr]?.classes?.[classNumberStr]?.title || "";
+    const title = metadata[collectionIdStr]?.classes?.[classNumberStr]?.title || "";
+    if (includeClassNumber) {
+      return `Class ${classNumber} (${title})`;
+    }
+    return title;
   }
 
   /**

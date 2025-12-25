@@ -1097,3 +1097,21 @@
   background-color: #1c1c1e;
   color: #6e6e73;
 }
+
+.syllabus-view-toggle {
+  fill: currentColor;
+  -moz-context-properties: fill, fill-opacity;
+  width: auto !important;
+  gap: 4px;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+  border: 0.5px solid var(--fill-secondary);
+}
+
+.syllabus-view-toggle[data-syllabus-current-ui-mode="syllabus"] {
+  list-style-image: url("chrome://zotero/skin/16/universal/folder.svg");
+}
+
+.syllabus-view-toggle[data-syllabus-current-ui-mode="collection"] {
+  list-style-image: url("chrome://zotero/skin/16/universal/book.svg");
+}
