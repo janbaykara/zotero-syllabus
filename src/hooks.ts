@@ -58,6 +58,22 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
     }
   }
 
+  // Listen for tab changes and refresh syllabus view
+  (async () => {
+    const z = ztoolkit.getGlobal("Zotero")
+    const mainWindow = z.getMainWindow();
+    let currentTab = mainWindow.Zotero_Tabs.getState()[0].title;
+    while (true) {
+      await Zotero.Promise.delay(500);
+      const newTab = mainWindow.Zotero_Tabs.getState()[0].title;
+      if (newTab !== currentTab) {
+        ztoolkit.log("newTab", newTab);
+        currentTab = newTab;
+        SyllabusManager.setupSyllabusView();
+      }
+    }
+  })();
+
   win.MozXULElement.insertFTLIfNeeded(
     `${addon.data.config.addonRef}-mainWindow.ftl`,
   );
