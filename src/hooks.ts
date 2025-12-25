@@ -1,8 +1,7 @@
-import { SyllabusManager, SyllabusUIFactory } from "./modules/syllabus";
+import { SyllabusManager } from "./modules/syllabus";
 import { getString, initLocale } from "./utils/locale";
 import { registerPrefsScripts } from "./modules/preferenceScript";
 import { createZToolkit } from "./utils/ztoolkit";
-import { getCurrentTab } from "./utils/window";
 
 async function onStartup() {
   await Promise.all([
@@ -13,17 +12,7 @@ async function onStartup() {
 
   initLocale();
 
-  SyllabusManager.registerPrefs();
-
-  SyllabusManager.registerNotifier();
-
-  await SyllabusUIFactory.registerSyllabusPriorityColumn();
-
-  await SyllabusUIFactory.registerSyllabusClassInstructionColumn();
-
-  await SyllabusUIFactory.registerSyllabusClassNumberColumn();
-
-  SyllabusUIFactory.registerSyllabusItemPaneSection();
+  SyllabusManager.onStartup();
 
   await Promise.all(
     Zotero.getMainWindows().map((win) => onMainWindowLoad(win)),
@@ -38,42 +27,7 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
   // Create ztoolkit for every window
   addon.data.ztoolkit = createZToolkit();
 
-  const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-  // Use addReloadListener to catch view reloads (which happen on sort changes)
-  if (zoteroPane) {
-    // Set up class group row styling after window loads
-    ztoolkit.log("onMainWindowLoad->setupSyllabusView");
-    SyllabusManager.setupSyllabusView();
-
-    zoteroPane.addReloadListener(() => {
-      ztoolkit.log("reloadListener->setupSyllabusView");
-      SyllabusManager.setupSyllabusView();
-    });
-
-    const itemsView = zoteroPane.itemsView;
-    if (itemsView) {
-      itemsView.window.addEventListener("click", (e: Event) => {
-        ztoolkit.log("itemsView.click->setupSyllabusView", e);
-        SyllabusManager.setupSyllabusView();
-      });
-    }
-  }
-
-  // Listen for tab changes and refresh syllabus view
-  (async () => {
-    const z = ztoolkit.getGlobal("Zotero");
-    const mainWindow = z.getMainWindow();
-    let currentTabTitle = getCurrentTab(mainWindow)?.title;
-    while (true) {
-      await Zotero.Promise.delay(500);
-      const newTab = getCurrentTab(mainWindow);
-      if (newTab && newTab.title !== currentTabTitle) {
-        ztoolkit.log("newTab", newTab);
-        currentTabTitle = newTab.title;
-        SyllabusManager.setupSyllabusView();
-      }
-    }
-  })();
+  SyllabusManager.onMainWindowLoad(win);
 
   win.MozXULElement.insertFTLIfNeeded(
     `${addon.data.config.addonRef}-mainWindow.ftl`,
@@ -96,10 +50,6 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
     text: `[30%] ${getString("startup-begin")}`,
   });
 
-  SyllabusUIFactory.registerStyleSheet(win);
-
-  SyllabusUIFactory.registerContextMenu(win);
-
   await Zotero.Promise.delay(1000);
 
   popupWin.changeLine({
@@ -109,15 +59,14 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
   popupWin.startCloseTimer(5000);
 }
 
-async function onMainWindowUnload(win: Window): Promise<void> {
+async function onMainWindowUnload(win: _ZoteroTypes.MainWindow): Promise<void> {
   ztoolkit.unregisterAll();
   addon.data.dialog?.window?.close();
-  ztoolkit.log("onMainWindowUnload->setupSyllabusView");
-  SyllabusManager.setupSyllabusView();
-  SyllabusManager.unregisterClassNumberMenu(win);
+  SyllabusManager.onMainWindowUnload(win);
 }
 
 function onShutdown(): void {
+  SyllabusManager.onShutdown();
   ztoolkit.unregisterAll();
   addon.data.dialog?.window?.close();
   // Remove addon object
@@ -136,9 +85,6 @@ async function onNotify(
   extraData: { [key: string]: any },
 ) {
   ztoolkit.log("onNotify", event, type, ids, extraData);
-
-  ztoolkit.log("onNotify->setupSyllabusView");
-  await SyllabusManager.setupSyllabusView();
 
   // Update class number menu when items are modified
   if (type === "item" && (event === "modify" || event === "add")) {

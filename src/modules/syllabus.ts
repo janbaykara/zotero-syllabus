@@ -2,8 +2,9 @@
  * Syllabus Manager - Core functionality for syllabus view and metadata
  */
 
-import { getLocaleID, getString } from "../utils/locale";
-import { getPref, setPref } from "../utils/prefs";
+import { generateBibliographicReference } from "../utils/cite";
+import { getLocaleID } from "../utils/locale";
+import { getPref } from "../utils/prefs";
 import {
   getSyllabusPriority,
   getSyllabusClassInstruction,
@@ -22,76 +23,39 @@ import {
   PRIORITY_LABELS,
   SYLLABUS_CLASS_NUMBER_FIELD,
 } from "../utils/syllabus";
-
-let notifierID: string | null = null;
-const classNumberMenuUpdateHandlers: Map<Window, () => void> = new Map();
-
-/**
- * Generate a bibliographic reference for an item using Zotero's CSL processor
- * and the user's preferred citation style.
- * @param item - The Zotero item to generate a reference for
- * @returns The formatted bibliographic reference, or null if generation fails
- */
-async function generateBibliographicReference(
-  item: Zotero.Item,
-): Promise<string | null> {
-  try {
-    const styles = Zotero.Styles.getVisible();
-    const style = styles[styles.length - 1];
-    const result = await Zotero.QuickCopy.getContentFromItems(
-      [item],
-      // format,
-      `bibliography=${style.url}`,
-    );
-    if (result?.text) {
-      return result.text;
-    }
-  } catch (error) {
-    ztoolkit.log("Error generating bibliographic reference:", error);
-  }
-
-  return buildFallbackReference(item);
-}
-
-function buildFallbackReference(item: Zotero.Item): string {
-  const author = item
-    .getCreators()
-    .map((creator) => creator.lastName)
-    .join(", ");
-  const date = item.getField("date");
-  const title = item.getField("title");
-  const publicationName = item.getField("publicationTitle");
-
-  const citationParts: string[] = [];
-  if (author) citationParts.push(author);
-  if (date) {
-    const year = date.substring(0, 4);
-    if (year && year !== "0000") citationParts.push(`(${year})`);
-  }
-  if (title) citationParts.push(title);
-  if (publicationName) citationParts.push(`In ${publicationName}`);
-
-  // Add additional citation details
-  const volume = item.getField("volume");
-  const issue = item.getField("issue");
-  const pages = item.getField("pages");
-  const publisher = item.getField("publisher");
-  const place = item.getField("place");
-
-  if (volume) {
-    citationParts.push(`Vol. ${volume}`);
-    if (issue) citationParts.push(`No. ${issue}`);
-  }
-  if (pages) citationParts.push(`pp. ${pages}`);
-  if (publisher) {
-    const publisherInfo = place ? `${place}: ${publisher}` : publisher;
-    citationParts.push(publisherInfo);
-  }
-
-  return citationParts.join(" ");
-}
+import { getCurrentTab } from "../utils/window";
 
 export class SyllabusManager {
+  static notifierID: string | null = null;
+  static classNumberMenuUpdateHandlers: Map<Window, () => void> = new Map();
+
+  static onStartup() {
+    this.registerPrefs();
+    this.registerNotifier();
+    this.registerSyllabusPriorityColumn();
+    this.registerSyllabusClassInstructionColumn();
+    this.registerSyllabusClassNumberColumn();
+    this.registerSyllabusItemPaneSection();
+  }
+
+  static onMainWindowLoad(win: _ZoteroTypes.MainWindow) {
+    this.registerStyleSheet(win);
+    this.registerContextMenu(win);
+    this.updateClassNumberMenus();
+    this.setupSyllabusView();
+    this.setupSyllabusViewTabListener();
+  }
+
+  static onMainWindowUnload(win: _ZoteroTypes.MainWindow) {
+    this.setupSyllabusView();
+    this.cleanupSyllabusViewTabListener();
+    this.unregisterClassNumberMenuUpdater(win);
+  }
+
+  static onShutdown() {
+    this.unregisterNotifier();
+  }
+
   static registerNotifier() {
     const callback = {
       notify: async (
@@ -100,14 +64,6 @@ export class SyllabusManager {
         ids: number[] | string[],
         extraData: { [key: string]: any },
       ) => {
-        ztoolkit.log(
-          "notifier->setupSyllabusView",
-          event,
-          type,
-          ids,
-          extraData,
-        );
-
         if (!addon?.data.alive) {
           SyllabusManager.unregisterNotifier();
           return;
@@ -117,7 +73,7 @@ export class SyllabusManager {
     };
 
     // Register the callback in Zotero as an item observer
-    notifierID = Zotero.Notifier.registerObserver(callback, [
+    this.notifierID = Zotero.Notifier.registerObserver(callback, [
       "collection",
       "search",
       "share",
@@ -140,20 +96,32 @@ export class SyllabusManager {
       "itemtree",
       "itempane",
     ]);
+  }
 
-    Zotero.Plugins.addObserver({
-      startup: () => {
-        ztoolkit.log("startup->setupSyllabusView");
+  // Listen for tab changes and refresh syllabus view
+  // Initial setup
+  static syllabusViewTabListener: NodeJS.Timeout | null = null;
+
+  static setupSyllabusViewTabListener() {
+    const z = ztoolkit.getGlobal("Zotero");
+    const mainWindow = z.getMainWindow();
+    let currentTabTitle = getCurrentTab(mainWindow)?.title;
+    const interval = setInterval(async () => {
+      const newTab = getCurrentTab(mainWindow);
+      if (newTab && newTab.title !== currentTabTitle) {
+        ztoolkit.log("newTab", newTab);
+        currentTabTitle = newTab.title;
         SyllabusManager.setupSyllabusView();
-      },
-      shutdown: ({ id }) => {
-        if (id === addon.data.config.addonID)
-          SyllabusManager.unregisterNotifier();
-      },
-    });
+      }
+    }, 500);
+    this.syllabusViewTabListener = interval;
+  }
 
-    ztoolkit.log("registerNotifier->setupSyllabusView");
-    SyllabusManager.setupSyllabusView();
+  static cleanupSyllabusViewTabListener() {
+    if (this.syllabusViewTabListener) {
+      clearInterval(this.syllabusViewTabListener);
+      this.syllabusViewTabListener = null;
+    }
   }
 
   static async setupSyllabusView(): Promise<void> {
@@ -1377,17 +1345,17 @@ export class SyllabusManager {
               // Use slim card for items without priority, full card for items with priority
               const itemElement = priority
                 ? await createSyllabusItemCard(
-                    doc,
-                    item,
-                    selectedCollection.id,
-                    pane,
-                  )
+                  doc,
+                  item,
+                  selectedCollection.id,
+                  pane,
+                )
                 : await createSyllabusItemCardSlim(
-                    doc,
-                    item,
-                    selectedCollection.id,
-                    pane,
-                  );
+                  doc,
+                  item,
+                  selectedCollection.id,
+                  pane,
+                );
               itemsContainer.appendChild(itemElement);
             }
 
@@ -1539,15 +1507,15 @@ export class SyllabusManager {
   }
 
   static unregisterNotifier() {
-    if (notifierID) {
-      Zotero.Notifier.unregisterObserver(notifierID);
-      notifierID = null;
+    if (this.notifierID) {
+      Zotero.Notifier.unregisterObserver(this.notifierID);
+      this.notifierID = null;
     }
   }
 
   static updateClassNumberMenus() {
     // Update the class number menu for all windows when items are updated
-    for (const updateHandler of classNumberMenuUpdateHandlers.values()) {
+    for (const updateHandler of this.classNumberMenuUpdateHandlers.values()) {
       try {
         updateHandler();
       } catch (e) {
@@ -1556,9 +1524,9 @@ export class SyllabusManager {
     }
   }
 
-  static unregisterClassNumberMenu(win: Window) {
+  static unregisterClassNumberMenuUpdater(win: Window) {
     // Remove the update handler when a window is unloaded
-    classNumberMenuUpdateHandlers.delete(win);
+    this.classNumberMenuUpdateHandlers.delete(win);
   }
 
   static registerPrefs() {
@@ -1569,9 +1537,7 @@ export class SyllabusManager {
       image: `chrome://${addon.data.config.addonRef}/content/icons/favicon.png`,
     });
   }
-}
 
-export class SyllabusUIFactory {
   static registerStyleSheet(win: _ZoteroTypes.MainWindow) {
     const doc = win.document;
     const styles = ztoolkit.UI.createElement(doc, "link", {
@@ -2033,9 +1999,9 @@ export class SyllabusUIFactory {
             },
             styles: opt.color
               ? {
-                  color: opt.color,
-                  fontWeight: "500",
-                }
+                color: opt.color,
+                fontWeight: "500",
+              }
               : undefined,
           });
           prioritySelect.appendChild(option);
@@ -2350,28 +2316,6 @@ export class SyllabusUIFactory {
       ],
     });
 
-    // Register toggle bibliography menu
-    ztoolkit.Menu.register("item", {
-      tag: "menuitem",
-      id: "syllabus-toggle-bibliography-menu",
-      label: getString("menu-toggle-bibliography"),
-      icon: "chrome://zotero/skin/16/universal/book.svg",
-      commandListener: async () => {
-        const currentValue = getPref("showBibliography");
-        setPref("showBibliography", !currentValue);
-
-        // Refresh the item pane to reflect the change
-        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-        const itemPane = zoteroPane?.itemPane;
-        if (itemPane) {
-          itemPane.render();
-        }
-
-        // Also refresh the syllabus view if it's visible
-        SyllabusManager.setupSyllabusView();
-      },
-    });
-
     // Register class number reassignment menu (dynamic)
     // Helper function to build children array dynamically
     const buildClassNumberChildren = (): any[] => {
@@ -2481,7 +2425,7 @@ export class SyllabusUIFactory {
     };
 
     // Store the update handler for this window so it can be called when items are updated
-    classNumberMenuUpdateHandlers.set(win, updateMenuHandler);
+    this.classNumberMenuUpdateHandlers.set(win, updateMenuHandler);
 
     updateMenuHandler();
   }
