@@ -70,7 +70,7 @@
   z-index: 10;
   background: #fafafa;
   margin: 0;
-  padding: 8px 0 12px 0;
+  padding: 8px 0 8px 0;
   border-radius: 4px;
 }
 
@@ -228,14 +228,13 @@
   gap: 12px;
   margin-bottom: 6px;
   position: sticky;
-  top: calc(
-    var(--syllabus-custom-view-padding) * 0.75
-  ); /* Below collection title */
-  z-index: 5;
+  top: var(--syllabus-custom-view-padding);
+  z-index: 9;
   background: #fafafa;
-  padding: 8px 8px 4px 8px;
+  padding: 0 8px 8px 8px;
   margin: 0 -8px;
   border-radius: 4px;
+  margin-top: 8px;
 }
 
 .syllabus-class-header {

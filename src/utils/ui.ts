@@ -51,8 +51,9 @@ export function createEditableTextInput(
     onCancel?: () => void;
     placeholder?: string;
     emptyBehavior?: "reset" | "delete"; // 'reset' reverts to original value, 'delete' saves empty string
+    element?: "textarea" | "input";
   },
-): HTMLTextAreaElement {
+): HTMLTextAreaElement | HTMLInputElement {
   const {
     className,
     initialValue,
@@ -60,6 +61,7 @@ export function createEditableTextInput(
     onCancel,
     placeholder,
     emptyBehavior = "reset",
+    element = "textarea",
   } = options;
 
   // Check if an element with this class already exists and is being edited
@@ -75,7 +77,7 @@ export function createEditableTextInput(
   }
 
   // Create textarea element (allows text wrapping)
-  const textareaElement = doc.createElement("textarea");
+  const textareaElement = doc.createElement(element);
   textareaElement.className = className;
   textareaElement.setAttribute("spellcheck", "false");
   textareaElement.setAttribute("rows", "1"); // Start with single line

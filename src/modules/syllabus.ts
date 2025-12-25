@@ -964,9 +964,9 @@ export class SyllabusManager {
             await selectedCollection.saveTx();
           },
           emptyBehavior: "reset",
+          element: "input",
         });
         const titleContainer = doc.createElement("div");
-        titleContainer.className = "syllabus-view-title-container";
         titleContainer.appendChild(inputElement);
         placeholder.replaceWith(titleContainer);
       } else if (type === "collection-description") {
