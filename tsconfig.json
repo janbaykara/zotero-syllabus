@@ -1,5 +1,8 @@
 {
   "extends": "zotero-types/entries/sandbox/",
   "include": ["src", "typings"],
-  "exclude": ["build", "addon"]
+  "exclude": ["build", "addon"],
+  "compilerOptions": {
+    "jsx": "react"
+  }
 }

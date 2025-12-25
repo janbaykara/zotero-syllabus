@@ -12,6 +12,7 @@ import {
   escapeHTML,
   parseHTMLTemplate,
 } from "../utils/ui";
+import { renderPanel } from "./Panel";
 
 enum SyllabusPriority {
   COURSE_INFO = "course-info",
@@ -484,21 +485,42 @@ export class SyllabusManager {
         // Show custom view
         customView.style.display = "block";
 
-        // Build master template
-        const masterTemplate =
-          await SyllabusManager.renderSyllabusPageHTML(selectedCollection);
-
         // Insert the master template
         if (customView) {
-          customView.innerHTML = masterTemplate;
+          // Unmount existing React root before clearing content
+          // This prevents "Node.removeChild" errors during hot reload
+          if (w.myPluginUnmount) {
+            try {
+              w.myPluginUnmount();
+            } catch (e) {
+              ztoolkit.log("Error unmounting during setupPage:", e);
+            }
+            delete w.myPluginUnmount;
+          }
 
-          // Attach all event listeners
-          SyllabusManager.attachPageEventListeners(
-            doc,
-            customView,
-            selectedCollection,
-            pane,
-          );
+          // Clear previous content before rendering React
+          customView.textContent = "";
+
+          // Ensure window is available globally for React
+          // React may try to access window during initialization
+          if (typeof (globalThis as any).window === "undefined") {
+            (globalThis as any).window = w;
+          }
+
+          try {
+            renderPanel(w, customView);
+          } catch (e) {
+            ztoolkit.log("Error in renderPanel:", e);
+          }
+          // customView.innerHTML = await SyllabusManager.renderSyllabusPageHTML(selectedCollection);
+
+          // // Attach all event listeners
+          // SyllabusManager.attachPageEventListeners(
+          //   doc,
+          //   customView,
+          //   selectedCollection,
+          //   pane,
+          // );
         }
       }
     } catch (e) {

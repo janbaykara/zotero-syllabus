@@ -6,6 +6,8 @@ export type FluentMessageId =
   | 'item-section-syllabus-head-text'
   | 'item-section-syllabus-sidenav-tooltip'
   | 'menu-toggle-bibliography'
+  | 'panel-demo-header'
+  | 'panel-demo-sidenav'
   | 'pref-enable'
   | 'pref-help'
   | 'pref-input'
