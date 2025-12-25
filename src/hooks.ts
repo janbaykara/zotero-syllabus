@@ -2,6 +2,7 @@ import { SyllabusManager, SyllabusUIFactory } from "./modules/syllabus";
 import { getString, initLocale } from "./utils/locale";
 import { registerPrefsScripts } from "./modules/preferenceScript";
 import { createZToolkit } from "./utils/ztoolkit";
+import { getCurrentTab } from "./utils/window";
 
 async function onStartup() {
   await Promise.all([
@@ -62,13 +63,13 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
   (async () => {
     const z = ztoolkit.getGlobal("Zotero");
     const mainWindow = z.getMainWindow();
-    let currentTab = mainWindow.Zotero_Tabs.getState()[0].title;
+    let currentTabTitle = getCurrentTab(mainWindow)?.title;
     while (true) {
       await Zotero.Promise.delay(500);
-      const newTab = mainWindow.Zotero_Tabs.getState()[0].title;
-      if (newTab !== currentTab) {
+      const newTab = getCurrentTab(mainWindow);
+      if (newTab && newTab.title !== currentTabTitle) {
         ztoolkit.log("newTab", newTab);
-        currentTab = newTab;
+        currentTabTitle = newTab.title;
         SyllabusManager.setupSyllabusView();
       }
     }
