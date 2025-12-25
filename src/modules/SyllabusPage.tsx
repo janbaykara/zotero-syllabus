@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
-import ReactDOM from "react-dom/client";
 import { generateBibliographicReference } from "../utils/cite";
 import { getPref } from "../utils/prefs";
 import { SyllabusManager } from "./syllabus";
+import { renderReactComponent } from "../utils/react";
 
 // Define priority type for use in this file
 // These values match SyllabusPriority enum in syllabus.ts
@@ -10,7 +10,6 @@ type SyllabusPriorityType = "course-info" | "essential" | "recommended" | "optio
 
 interface SyllabusPageProps {
   collection: Zotero.Collection;
-  onRefresh: () => void;
 }
 
 interface ClassGroup {
@@ -18,7 +17,7 @@ interface ClassGroup {
   items: Zotero.Item[];
 }
 
-export function SyllabusPage({ collection, onRefresh }: SyllabusPageProps) {
+export function SyllabusPage({ collection }: SyllabusPageProps) {
   const [classGroups, setClassGroups] = useState<ClassGroup[]>([]);
   const [furtherReadingItems, setFurtherReadingItems] = useState<Zotero.Item[]>(
     [],
@@ -141,7 +140,6 @@ export function SyllabusPage({ collection, onRefresh }: SyllabusPageProps) {
       newTitle,
       "page",
     );
-    onRefresh();
   };
 
   const handleClassDescriptionSave = async (
@@ -154,7 +152,6 @@ export function SyllabusPage({ collection, onRefresh }: SyllabusPageProps) {
       newDescription,
       "page",
     );
-    onRefresh();
   };
 
   const handleDrop = async (
@@ -184,8 +181,6 @@ export function SyllabusPage({ collection, onRefresh }: SyllabusPageProps) {
         "page",
       );
       await draggedItem.saveTx();
-
-      onRefresh();
     } catch (err) {
       ztoolkit.log("Error handling drop:", err);
     }
@@ -229,7 +224,6 @@ export function SyllabusPage({ collection, onRefresh }: SyllabusPageProps) {
           onClassDescriptionSave={handleClassDescriptionSave}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
-          onRefresh={onRefresh}
         />
       ))}
 
@@ -249,7 +243,6 @@ export function SyllabusPage({ collection, onRefresh }: SyllabusPageProps) {
                 key={item.id}
                 item={item}
                 collectionId={collection.id}
-                onRefresh={onRefresh}
               />
             ))}
           </div>
@@ -270,7 +263,6 @@ interface ClassGroupComponentProps {
   ) => Promise<void>;
   onDrop: (e: React.DragEvent, classNumber: number | null) => Promise<void>;
   onDragOver: (e: React.DragEvent) => void;
-  onRefresh: () => void;
 }
 
 function ClassGroupComponent({
@@ -281,7 +273,6 @@ function ClassGroupComponent({
   onClassDescriptionSave,
   onDrop,
   onDragOver,
-  onRefresh,
 }: ClassGroupComponentProps) {
   const classTitle = SyllabusManager.getClassTitle(collectionId, classNumber!);
   const classDescription = SyllabusManager.getClassDescription(
@@ -330,14 +321,12 @@ function ClassGroupComponent({
               key={item.id}
               item={item}
               collectionId={collectionId}
-              onRefresh={onRefresh}
             />
           ) : (
             <SyllabusItemCardSlim
               key={item.id}
               item={item}
               collectionId={collectionId}
-              onRefresh={onRefresh}
             />
           );
         })}
@@ -508,7 +497,6 @@ function EditableDescription({
 interface SyllabusItemCardProps {
   item: Zotero.Item;
   collectionId: number;
-  onRefresh: () => void;
 }
 
 function SyllabusItemCard({
@@ -772,7 +760,6 @@ function SyllabusItemCard({
 interface SyllabusItemCardSlimProps {
   item: Zotero.Item;
   collectionId: number;
-  onRefresh: () => void;
 }
 
 function SyllabusItemCardSlim({
@@ -854,47 +841,6 @@ export function renderSyllabusPage(
   rootElement: HTMLElement,
   collection: Zotero.Collection,
 ) {
-  // Ensure window is available for React
-  if (typeof (globalThis as any).window === "undefined" && win) {
-    (globalThis as any).window = win;
-  }
-
-  // Unmount existing root if it exists
-  if (win.myPluginUnmount) {
-    try {
-      if (rootElement.isConnected || rootElement.parentNode) {
-        win.myPluginUnmount();
-      }
-    } catch (e) {
-      ztoolkit.log("Error during unmount:", e);
-    }
-    delete win.myPluginUnmount;
-  }
-
-  // Create new React root and render
-  const root = ReactDOM.createRoot(rootElement);
-
-  const handleRefresh = () => {
-    // Re-render the component
-    root.render(
-      <SyllabusPage
-        collection={collection}
-        onRefresh={handleRefresh}
-      />,
-    );
-  };
-
-  root.render(<SyllabusPage collection={collection} onRefresh={handleRefresh} />);
-
-  // Store teardown function
-  win.myPluginUnmount = () => {
-    try {
-      if (rootElement.isConnected || rootElement.parentNode) {
-        root.unmount();
-      }
-    } catch (e) {
-      ztoolkit.log("Error during React unmount:", e);
-    }
-  };
+  renderReactComponent(win, rootElement, <SyllabusPage collection={collection} />);
 }
 
