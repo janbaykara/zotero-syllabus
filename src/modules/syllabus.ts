@@ -54,7 +54,10 @@ async function generateBibliographicReference(
 }
 
 function buildFallbackReference(item: Zotero.Item): string {
-  const author = item.getCreators().map((creator) => creator.lastName).join(", ")
+  const author = item
+    .getCreators()
+    .map((creator) => creator.lastName)
+    .join(", ");
   const date = item.getField("date");
   const title = item.getField("title");
   const publicationName = item.getField("publicationTitle");
@@ -86,7 +89,7 @@ function buildFallbackReference(item: Zotero.Item): string {
   }
 
   return citationParts.join(" ");
-};
+}
 
 export class SyllabusManager {
   static registerNotifier() {
@@ -711,7 +714,8 @@ export class SyllabusManager {
 
       // Add bibliographic reference (after metadata)
       if (getPref("showBibliography")) {
-        const bibliographicReference = await generateBibliographicReference(item);
+        const bibliographicReference =
+          await generateBibliographicReference(item);
         if (bibliographicReference) {
           const referenceRow = doc.createElement("div");
           referenceRow.className = "syllabus-item-reference";
@@ -1372,13 +1376,18 @@ export class SyllabusManager {
               const priority = getSyllabusPriority(item, selectedCollection.id);
               // Use slim card for items without priority, full card for items with priority
               const itemElement = priority
-                ? await createSyllabusItemCard(doc, item, selectedCollection.id, pane)
+                ? await createSyllabusItemCard(
+                    doc,
+                    item,
+                    selectedCollection.id,
+                    pane,
+                  )
                 : await createSyllabusItemCardSlim(
-                  doc,
-                  item,
-                  selectedCollection.id,
-                  pane
-                );
+                    doc,
+                    item,
+                    selectedCollection.id,
+                    pane,
+                  );
               itemsContainer.appendChild(itemElement);
             }
 
@@ -1597,9 +1606,10 @@ export class SyllabusUIFactory {
           // Format: "priorityPrefix_priorityValue_classNumber"
           // This ensures proper sort order: Priority first, then Class Number
           // Class numbers without a value get 999 to sort last
-          const classNumberStr = classNumber !== undefined
-            ? String(classNumber).padStart(4, "0") // Pad to 4 digits for proper string sorting
-            : "9999"; // Items without class number sort last
+          const classNumberStr =
+            classNumber !== undefined
+              ? String(classNumber).padStart(4, "0") // Pad to 4 digits for proper string sorting
+              : "9999"; // Items without class number sort last
 
           // Return sortable value with priority encoded: "0_course-info", "1_essential", etc.
           // This ensures proper sort order: Course Info < Essential < Recommended < Optional < Blank
@@ -1817,7 +1827,10 @@ export class SyllabusUIFactory {
           let displayText = String(classNumber);
 
           if (selectedCollection) {
-            const classTitle = getClassTitle(selectedCollection.id, classNumber);
+            const classTitle = getClassTitle(
+              selectedCollection.id,
+              classNumber,
+            );
             if (classTitle) {
               displayText += ` (${classTitle})`;
             }
@@ -2020,9 +2033,9 @@ export class SyllabusUIFactory {
             },
             styles: opt.color
               ? {
-                color: opt.color,
-                fontWeight: "500",
-              }
+                  color: opt.color,
+                  fontWeight: "500",
+                }
               : undefined,
           });
           prioritySelect.appendChild(option);
