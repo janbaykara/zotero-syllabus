@@ -85,11 +85,6 @@ async function onNotify(
   extraData: { [key: string]: any },
 ) {
   ztoolkit.log("onNotify", event, type, ids, extraData);
-
-  // Update class number menu when items are modified
-  if (type === "item" && (event === "modify" || event === "add")) {
-    SyllabusManager.updateClassNumberMenus();
-  }
 }
 
 /**
