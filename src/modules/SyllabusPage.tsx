@@ -3,12 +3,16 @@ import { h, Fragment } from "preact";
 import { useState, useEffect, useMemo, useRef } from "preact/hooks";
 import type { JSX } from "preact";
 import { generateBibliographicReference } from "../utils/cite";
-import { getPref } from "../utils/prefs";
+import { getPref } from '../utils/prefs';
 import { SyllabusManager } from "./syllabus";
 import { renderComponent } from "../utils/react";
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
+import { ExtraFieldTool } from "zotero-plugin-toolkit";
+import { getItemReadStatus, getItemReadStatusName, getReadingListStatusNameAndIconList, getReadStatusMetadata } from "../zotero-reading-list/compat";
+
+const extraFieldTool = new ExtraFieldTool();
 
 // Define priority type for use in this file
 // These values match SyllabusPriority enum in syllabus.ts
@@ -640,17 +644,17 @@ function SyllabusItemCard({
       : null;
   const priorityStyle = priorityColor
     ? (() => {
-        const r = parseInt(priorityColor.slice(1, 3), 16);
-        const g = parseInt(priorityColor.slice(3, 5), 16);
-        const b = parseInt(priorityColor.slice(5, 7), 16);
-        return {
-          backgroundColor: `rgba(${r}, ${g}, ${b}, 0.05)`,
-          borderColor: `rgba(${r}, ${g}, ${b}, 0.2)`,
-        };
-      })()
+      const r = parseInt(priorityColor.slice(1, 3), 16);
+      const g = parseInt(priorityColor.slice(3, 5), 16);
+      const b = parseInt(priorityColor.slice(5, 7), 16);
+      return {
+        backgroundColor: `rgba(${r}, ${g}, ${b}, 0.05)`,
+        borderColor: `rgba(${r}, ${g}, ${b}, 0.2)`,
+      };
+    })()
     : {};
 
-  const metadataParts = [itemTypeLabel, author, date].filter(Boolean);
+  const metadataParts = [itemTypeLabel, author, date, publicationName ? `in ${publicationName}` : undefined].filter(Boolean);
 
   const handleDragStart = (e: JSX.TargetedDragEvent<HTMLElement>) => {
     e.stopPropagation();
@@ -707,6 +711,8 @@ function SyllabusItemCard({
           ? "EPUB"
           : "View";
 
+  const readStatusName = useMemo(() => getItemReadStatusName(item), [item]);
+
   return (
     <div
       className={slim ? "syllabus-item syllabus-item-slim" : "syllabus-item"}
@@ -737,50 +743,18 @@ function SyllabusItemCard({
             />
           </div>
           <div className="syllabus-item-text">
+            <div style={{ display: "flex", alignItems: "baseline", gap: "16px" }}>
+              {!!priority && <PriorityIcon priority={priority} />}
+              {!!readStatusName && <ReadStatusIcon readStatusName={readStatusName} />}
+            </div>
             <div className="syllabus-item-title-row">
               <div className="syllabus-item-title">{title}</div>
             </div>
-            {!slim && publicationName && (
-              <div className="syllabus-item-publication">
-                In {publicationName}
-              </div>
-            )}
-            {slim
-              ? metadataParts.length > 0 && (
-                  <div className="syllabus-item-metadata">
-                    <span>{metadataParts.join(" • ")}</span>
-                  </div>
-                )
-              : (priority || metadataParts.length > 0) && (
-                  <div className="syllabus-item-metadata">
-                    {priority &&
-                      priority in SyllabusManager.PRIORITY_LABELS && (
-                        <span className="syllabus-item-priority-inline">
-                          <span
-                            className="syllabus-priority-icon"
-                            style={{
-                              backgroundColor: (
-                                SyllabusManager.PRIORITY_COLORS as any
-                              )[priority],
-                            }}
-                          />
-                          <span
-                            className="syllabus-priority-label"
-                            style={{
-                              color: (SyllabusManager.PRIORITY_COLORS as any)[
-                                priority
-                              ],
-                            }}
-                          >
-                            {(SyllabusManager.PRIORITY_LABELS as any)[priority]}
-                          </span>
-                        </span>
-                      )}
-                    {metadataParts.length > 0 && (
-                      <span>{metadataParts.join(" • ")}</span>
-                    )}
-                  </div>
-                )}
+            <div className="syllabus-item-metadata">
+              {metadataParts.length > 0 && (
+                <span>{metadataParts.join(" • ")}</span>
+              )}
+            </div>
             {!slim && bibliographicReference && (
               <div className="syllabus-item-reference">
                 {bibliographicReference}
@@ -794,59 +768,94 @@ function SyllabusItemCard({
           </div>
         </div>
       </div>
-      {!slim && (
-        <div
-          className="syllabus-item-right-side focus-states-target"
-          draggable={false}
-        >
-          <div className="syllabus-item-actions" draggable={false}>
-            {url && (
-              <div className="syllabus-action-item row">
-                <button
-                  className="syllabus-action-button"
-                  onClick={handleUrlClick}
-                  title="Open URL"
-                  aria-label="Open URL"
-                >
-                  <span
-                    className="syllabus-action-icon icon icon-css icon-attachment-type"
-                    data-item-type="attachmentLink"
-                    aria-label="Open URL"
-                  />
-                  <span className="syllabus-action-label">Open Link</span>
-                </button>
-              </div>
-            )}
-            {viewableAttachment && (
-              <div className="syllabus-action-item row">
-                <button
-                  className="syllabus-action-button"
-                  onClick={handleAttachmentClick}
-                  title={`Open ${attachmentLabel}`}
+      <div
+        className="syllabus-item-right-side focus-states-target"
+        draggable={false}
+      >
+        <div className="syllabus-item-actions" draggable={false}>
+          {viewableAttachment && (
+            <div className="syllabus-action-item row">
+              <button
+                className="syllabus-action-button"
+                onClick={handleAttachmentClick}
+                title={`Open ${attachmentLabel}`}
+                aria-label={`Open ${attachmentLabel}`}
+              >
+                <span
+                  className="syllabus-action-icon icon icon-css icon-attachment-type"
+                  data-item-type={
+                    viewableAttachment.type === "pdf"
+                      ? "attachmentPDF"
+                      : viewableAttachment.type === "epub"
+                        ? "attachmentEPUB"
+                        : "attachmentSnapshot"
+                  }
                   aria-label={`Open ${attachmentLabel}`}
-                >
-                  <span
-                    className="syllabus-action-icon icon icon-css icon-attachment-type"
-                    data-item-type={
-                      viewableAttachment.type === "pdf"
-                        ? "attachmentPDF"
-                        : viewableAttachment.type === "epub"
-                          ? "attachmentEPUB"
-                          : "attachmentSnapshot"
-                    }
-                    aria-label={`Open ${attachmentLabel}`}
-                  />
-                  <span className="syllabus-action-label">
-                    Open {attachmentLabel}
-                  </span>
-                </button>
-              </div>
-            )}
-          </div>
+                />
+                <span className="syllabus-action-label">
+                  Open {attachmentLabel}
+                </span>
+              </button>
+            </div>
+          )}
+          {url && (
+            <div className="syllabus-action-item row">
+              <button
+                className="syllabus-action-button"
+                onClick={handleUrlClick}
+                title="Open URL"
+                aria-label="Open URL"
+              >
+                <span
+                  className="syllabus-action-icon icon icon-css icon-attachment-type"
+                  data-item-type="attachmentLink"
+                  aria-label="Open URL"
+                />
+                <span className="syllabus-action-label">Open Link</span>
+              </button>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
+}
+
+function PriorityIcon({ priority }: { priority: SyllabusPriorityType }) {
+  if (!priority || !(priority in SyllabusManager.PRIORITY_LABELS)) return null;
+  return (
+    <span className="syllabus-item-priority-inline">
+      <span
+        className="syllabus-priority-icon"
+        style={{
+          backgroundColor: (
+            SyllabusManager.PRIORITY_COLORS as any
+          )[priority],
+        }}
+      />
+      <span
+        className="syllabus-priority-label"
+        style={{
+          color: (SyllabusManager.PRIORITY_COLORS as any)[
+            priority
+          ],
+        }}
+      >
+        {(SyllabusManager.PRIORITY_LABELS as any)[priority]}
+      </span>
+    </span>
+  )
+}
+
+function ReadStatusIcon({ readStatusName }: { readStatusName: string }) {
+  const readStatus = useMemo(() => getReadStatusMetadata(readStatusName), [readStatusName]);
+  if (!readStatus) return null;
+  return (
+    <span className="syllabus-item-priority-inline" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+      <span>{readStatus.icon}</span>
+      <span className="syllabus-priority-label" style={{ background: "var(--fill-quinary)" }}>{readStatus.name}</span>
+    </span>
+  )
 }
 
 export function renderSyllabusPage(
