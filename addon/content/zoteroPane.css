@@ -319,15 +319,20 @@
 }
 
 .syllabus-item-thumbnail {
+  --thumbnail-size: 60px;
   flex-shrink: 0;
-  width: 60px;
-  height: 60px;
+  width: var(--thumbnail-size);
+  height: var(--thumbnail-size);
   background: transparent;
   border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+}
+
+.syllabus-item-slim .syllabus-item-thumbnail {
+  --thumbnail-size: 32px;
 }
 
 .syllabus-item-thumbnail-img {
@@ -539,7 +544,7 @@
 }
 
 .syllabus-item-slim .syllabus-item-text {
-  gap: 4px;
+  gap: 2px;
 }
 
 .syllabus-item-slim .syllabus-item-title {
@@ -549,7 +554,6 @@
 }
 
 .syllabus-item-slim .syllabus-item-metadata {
-  font-size: 12px;
   color: #888;
   margin-top: 2px;
 }

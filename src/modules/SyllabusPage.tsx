@@ -724,9 +724,11 @@ function SyllabusItemCard({
           </div>
           <div className="syllabus-item-text">
             <div className="syllabus-item-title-row">
-              <div className="syllabus-item-title">{title}</div>
+              <div className="syllabus-item-title" style={{
+                opacity: slim ? 0.7 : 1,
+              }}>{title}</div>
             </div>
-            {!slim && publicationName && (
+            {publicationName && (
               <div className="syllabus-item-publication">
                 In {publicationName}
               </div>
@@ -782,7 +784,7 @@ function SyllabusItemCard({
           </div>
         </div>
       </div>
-      {!slim && (
+      {(
         <div className="syllabus-item-right-side focus-states-target" draggable={false}>
           <div className="syllabus-item-actions" draggable={false}>
             {url && (
