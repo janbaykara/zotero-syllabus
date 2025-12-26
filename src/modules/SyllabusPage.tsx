@@ -180,6 +180,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     e.preventDefault();
     e.stopPropagation();
 
+    // Remove the dropzone active class after drop
+    e.currentTarget.classList.remove("syllabus-dropzone-active");
+
     const itemIdStr = e.dataTransfer.getData("text/plain");
     if (!itemIdStr) return;
 
@@ -212,6 +215,24 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       e.dataTransfer.dropEffect = "move";
     }
     e.currentTarget.classList.add("syllabus-dropzone-active");
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    // Only remove the class if we're actually leaving the drop zone
+    // (not just moving to a child element)
+    if (
+      x < rect.left ||
+      x > rect.right ||
+      y < rect.top ||
+      y > rect.bottom
+    ) {
+      e.currentTarget.classList.remove("syllabus-dropzone-active");
+    }
   };
 
   // Early return if collection not found
@@ -248,6 +269,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
           onClassDescriptionSave={handleClassDescriptionSave}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
         />
       ))}
 
@@ -258,9 +280,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
             className="syllabus-class-items syllabus-further-reading-items"
             onDrop={(e) => handleDrop(e, null)}
             onDragOver={handleDragOver}
-            onDragLeave={() => {
-              // Handled by CSS
-            }}
+            onDragLeave={handleDragLeave}
           >
             {furtherReadingItems.map((item) => (
               <SyllabusItemCardSlim
@@ -287,6 +307,7 @@ interface ClassGroupComponentProps {
   ) => Promise<void>;
   onDrop: (e: React.DragEvent, classNumber: number | null) => Promise<void>;
   onDragOver: (e: React.DragEvent) => void;
+  onDragLeave: (e: React.DragEvent) => void;
 }
 
 function ClassGroupComponent({
@@ -297,6 +318,7 @@ function ClassGroupComponent({
   onClassDescriptionSave,
   onDrop,
   onDragOver,
+  onDragLeave,
 }: ClassGroupComponentProps) {
   // Sync with collection metadata to get class title/description
   const collectionMetadata = useZoteroCollectionMetadataData(collectionId);
@@ -339,9 +361,7 @@ function ClassGroupComponent({
         className="syllabus-class-items"
         onDrop={(e) => onDrop(e, classNumber)}
         onDragOver={onDragOver}
-        onDragLeave={() => {
-          // Handled by CSS
-        }}
+        onDragLeave={onDragLeave}
       >
         {items.map((item) => {
           const priority = SyllabusManager.getSyllabusPriority(
