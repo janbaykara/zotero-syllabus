@@ -9,10 +9,7 @@ import { renderComponent } from "../utils/react";
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
-import { ExtraFieldTool } from "zotero-plugin-toolkit";
-import { getItemReadStatus, getItemReadStatusName, getReadingListStatusNameAndIconList, getReadStatusMetadata } from "../zotero-reading-list/compat";
-
-const extraFieldTool = new ExtraFieldTool();
+import { getItemReadStatusName, getReadStatusMetadata } from "../zotero-reading-list/compat";
 
 // Define priority type for use in this file
 // These values match SyllabusPriority enum in syllabus.ts
@@ -213,8 +210,6 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                 key={item.id}
                 item={item}
                 collectionId={collectionId}
-                onClick={() => onClick(item)}
-                onDoubleClick={() => onDoubleClick(item)}
                 slim={true}
               />
             ))}
@@ -297,62 +292,18 @@ function ClassGroupComponent({
             item,
             collectionId,
           );
-          return priority ? (
+          return (
             <SyllabusItemCard
               key={item.id}
               item={item}
               collectionId={collectionId}
-              onClick={onClick}
-              onDoubleClick={onDoubleClick}
+              slim={!priority || priority === SyllabusManager.priorityKeys.OPTIONAL}
             />
-          ) : (
-            <SyllabusItemCard
-              key={item.id}
-              item={item}
-              collectionId={collectionId}
-              onClick={onClick}
-              onDoubleClick={onDoubleClick}
-              slim={true}
-            />
-          );
+          )
         })}
       </div>
     </div>
   );
-}
-
-function onClick(item: Zotero.Item, __e?: JSX.TargetedMouseEvent<HTMLElement>) {
-  // const target = e.target as HTMLElement;
-  // if (
-  //   target.closest(".syllabus-item-actions") ||
-  //   target.closest("button")
-  // ) {
-  //   return;
-  // }
-  const pane = ztoolkit.getGlobal("ZoteroPane");
-  pane.selectItem(item.id);
-}
-
-function onDoubleClick(
-  item: Zotero.Item,
-  __e?: JSX.TargetedMouseEvent<HTMLElement>,
-) {
-  const url = item.getField("url");
-  const attachments = item.getAttachments();
-  const viewableAttachment = attachments.find((attId) => {
-    const att = Zotero.Items.get(attId);
-    if (att && att.isAttachment()) {
-      return true;
-    }
-    return false;
-  });
-  // If there's an attachment, go to it
-  if (viewableAttachment) {
-    const pane = ztoolkit.getGlobal("ZoteroPane");
-    pane.viewPDF(viewableAttachment, { page: 1 } as any);
-  } else if (url) {
-    Zotero.launchURL(url);
-  }
 }
 
 interface EditableTitleProps {
@@ -556,19 +507,12 @@ function EditableDescription({
 interface SyllabusItemCardProps {
   item: Zotero.Item;
   collectionId: number;
-  onClick: (item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) => void;
-  onDoubleClick: (
-    item: Zotero.Item,
-    e: JSX.TargetedMouseEvent<HTMLElement>,
-  ) => void;
   slim?: boolean;
 }
 
 function SyllabusItemCard({
   item,
   collectionId,
-  onClick,
-  onDoubleClick,
   slim = false,
 }: SyllabusItemCardProps) {
   // Get priority and class instruction from item
@@ -591,52 +535,47 @@ function SyllabusItemCard({
   const url = item.getField("url") || "";
 
   const [bibliographicReference, setBibliographicReference] = useState("");
-  const [viewableAttachment, setViewableAttachment] = useState<{
-    item: Zotero.Item;
-    type: "pdf" | "snapshot" | "epub";
-  } | null>(null);
-
   useEffect(() => {
-    if (slim) return;
-
-    const loadData = async () => {
+    (async () => {
+      if (slim) return;
       if (getPref("showBibliography")) {
         const ref = await generateBibliographicReference(item);
         setBibliographicReference(ref || "");
       }
+    })();
+  }, [item, slim]);
 
-      const attachments = item.getAttachments();
-      for (const attId of attachments) {
-        try {
-          const att = Zotero.Items.get(attId);
-          if (att && att.isAttachment()) {
-            const contentType = att.attachmentContentType || "";
-            const linkMode = att.attachmentLinkMode;
-            const path = att.attachmentPath?.toLowerCase() || "";
-            if (contentType === "application/pdf" || path.endsWith(".pdf")) {
-              setViewableAttachment({ item: att, type: "pdf" });
-              break;
-            }
-            if (linkMode === 3) {
-              setViewableAttachment({ item: att, type: "snapshot" });
-              break;
-            }
-            if (
-              contentType === "application/epub+zip" ||
-              contentType === "application/epub" ||
-              path.endsWith(".epub")
-            ) {
-              setViewableAttachment({ item: att, type: "epub" });
-              break;
-            }
+  const viewableAttachments = useMemo(() => {
+    return item.getAttachments().map((attId) => {
+      try {
+        const att = Zotero.Items.get(attId);
+        if (att && att.isAttachment()) {
+          const contentType = att.attachmentContentType || "";
+          const linkMode = att.attachmentLinkMode;
+          const path = att.attachmentPath?.toLowerCase() || "";
+          if (contentType === "application/pdf" || path.endsWith(".pdf")) {
+            return { item: att, type: "pdf" };
           }
-        } catch {
-          // Continue
+          if (linkMode === 3) {
+            return { item: att, type: "snapshot" };
+          }
+          if (
+            contentType === "application/epub+zip" ||
+            contentType === "application/epub" ||
+            path.endsWith(".epub")
+          ) {
+            return { item: att, type: "epub" };
+          }
         }
+      } catch {
+        // Continue
       }
-    };
-    loadData();
-  }, [item.id, slim]);
+      return null;
+    }).filter(Boolean) as Array<{
+      item: Zotero.Item;
+      type: "pdf" | "snapshot" | "epub";
+    }>;
+  }, [item, slim]);
 
   const priorityColor =
     priority && priority in SyllabusManager.PRIORITY_COLORS
@@ -674,10 +613,39 @@ function SyllabusItemCard({
     Zotero.launchURL(url);
   };
 
+  function onClick(item: Zotero.Item, __e?: JSX.TargetedMouseEvent<HTMLElement>) {
+    const pane = ztoolkit.getGlobal("ZoteroPane");
+    pane.selectItem(item.id);
+  }
+
+  function onDoubleClick(
+    item: Zotero.Item,
+    __e?: JSX.TargetedMouseEvent<HTMLElement>,
+  ) {
+    const url = item.getField("url");
+    const attachments = item.getAttachments();
+    const viewableAttachment = attachments.find((attId) => {
+      const att = Zotero.Items.get(attId);
+      if (att && att.isAttachment()) {
+        return true;
+      }
+      return false;
+    });
+    // If there's an attachment, go to it
+    if (viewableAttachment) {
+      const pane = ztoolkit.getGlobal("ZoteroPane");
+      pane.viewPDF(viewableAttachment, { page: 1 } as any);
+    } else if (url) {
+      Zotero.launchURL(url);
+    }
+  }
+
   const handleAttachmentClick = async (
-    e: JSX.TargetedMouseEvent<HTMLButtonElement>,
+    viewableAttachment?: {
+      item: Zotero.Item;
+      type: "pdf" | "snapshot" | "epub";
+    },
   ) => {
-    e.stopPropagation();
     if (!viewableAttachment) return;
 
     try {
@@ -701,15 +669,6 @@ function SyllabusItemCard({
       }
     }
   };
-
-  const attachmentLabel =
-    viewableAttachment?.type === "pdf"
-      ? "PDF"
-      : viewableAttachment?.type === "snapshot"
-        ? "Snapshot"
-        : viewableAttachment?.type === "epub"
-          ? "EPUB"
-          : "View";
 
   const readStatusName = useMemo(() => getItemReadStatusName(item), [item]);
 
@@ -773,31 +732,42 @@ function SyllabusItemCard({
         draggable={false}
       >
         <div className="syllabus-item-actions" draggable={false}>
-          {viewableAttachment && (
-            <div className="syllabus-action-item row">
-              <button
-                className="syllabus-action-button"
-                onClick={handleAttachmentClick}
-                title={`Open ${attachmentLabel}`}
-                aria-label={`Open ${attachmentLabel}`}
-              >
-                <span
-                  className="syllabus-action-icon icon icon-css icon-attachment-type"
-                  data-item-type={
-                    viewableAttachment.type === "pdf"
-                      ? "attachmentPDF"
-                      : viewableAttachment.type === "epub"
-                        ? "attachmentEPUB"
-                        : "attachmentSnapshot"
-                  }
+          {viewableAttachments.map((viewableAttachment) => {
+            const attachmentLabel =
+              viewableAttachment?.type === "pdf"
+                ? "PDF"
+                : viewableAttachment?.type === "snapshot"
+                  ? "Snapshot"
+                  : viewableAttachment?.type === "epub"
+                    ? "EPUB"
+                    : "View";
+
+            return (
+              <div className="syllabus-action-item row">
+                <button
+                  className="syllabus-action-button"
+                  onClick={() => handleAttachmentClick(viewableAttachment)}
+                  title={`Open ${attachmentLabel}`}
                   aria-label={`Open ${attachmentLabel}`}
-                />
-                <span className="syllabus-action-label">
-                  Open {attachmentLabel}
-                </span>
-              </button>
-            </div>
-          )}
+                >
+                  <span
+                    className="syllabus-action-icon icon icon-css icon-attachment-type"
+                    data-item-type={
+                      viewableAttachment.type === "pdf"
+                        ? "attachmentPDF"
+                        : viewableAttachment.type === "epub"
+                          ? "attachmentEPUB"
+                          : "attachmentSnapshot"
+                    }
+                    aria-label={`Open ${attachmentLabel}`}
+                  />
+                  <span className="syllabus-action-label">
+                    Open {attachmentLabel}
+                  </span>
+                </button>
+              </div>
+            )
+          })}
           {url && (
             <div className="syllabus-action-item row">
               <button

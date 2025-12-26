@@ -52,6 +52,7 @@ export class SyllabusManager {
   static syllabusItemPaneSection: false | string | null = null;
 
   static settingsKeys = SyllabusSettingsKey;
+  static priorityKeys = SyllabusPriority;
   static getPreferenceKey(key: SyllabusSettingsKey): string {
     return `${addon.data.config.prefsPrefix}.${key}`;
   }
@@ -933,9 +934,9 @@ export class SyllabusManager {
             },
             styles: opt.color
               ? {
-                  color: opt.color,
-                  fontWeight: "500",
-                }
+                color: opt.color,
+                fontWeight: "500",
+              }
               : undefined,
           });
           prioritySelect.appendChild(option);
