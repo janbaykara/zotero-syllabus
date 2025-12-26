@@ -24,7 +24,12 @@ enum SyllabusPriority {
   OPTIONAL = "optional",
 }
 
-interface SyllabusData {
+enum SyllabusSettingsKey {
+  COLLECTION_METADATA = "collectionMetadata",
+  COLLECTION_VIEW_MODES = "collectionViewModes",
+}
+
+export interface ItemSyllabusData {
   [collectionId: string]: {
     priority?: SyllabusPriority;
     classInstruction?: string;
@@ -36,7 +41,7 @@ interface SyllabusData {
  * Collection metadata stored in preferences
  * Structure: { [collectionId]: { description: string, classes: { [classNumber]: { title: string, description: string } } } }
  */
-interface CollectionMetadata {
+export interface SettingsCollectionMetadata {
   [collectionId: string]: {
     description?: string;
     classes?: {
@@ -51,6 +56,11 @@ interface CollectionMetadata {
 export class SyllabusManager {
   static notifierID: string | null = null;
   static syllabusItemPaneSection: false | string | null = null;
+
+  static settingsKeys = SyllabusSettingsKey
+  static getPreferenceKey(key: SyllabusSettingsKey): string {
+    return `${addon.data.config.prefsPrefix}.${key}`;
+  }
 
   /**
    * Map Zotero item type to icon name
@@ -313,7 +323,7 @@ export class SyllabusManager {
     }
 
     const collectionId = String(selectedCollection.id);
-    const prefKey = `${addon.data.config.prefsPrefix}.collectionViewModes`;
+    const prefKey = SyllabusManager.getPreferenceKey(SyllabusSettingsKey.COLLECTION_VIEW_MODES);
     const _viewModes = String(Zotero.Prefs.get(prefKey, true) || "");
     const viewModes = _viewModes
       ? (JSON.parse(_viewModes) as Record<string, boolean>)
@@ -358,7 +368,7 @@ export class SyllabusManager {
     const searchSpinner = doc.getElementById("zotero-tb-search-spinner");
 
     // Check if toggle button already exists
-    let toggleButton = doc.getElementById("syllabus-view-toggle");
+    let toggleButton = doc.getElementById("syllabus-view-toggle") as unknown as XULButtonElement;
     let spacer = doc.getElementById("syllabus-view-spacer") as Element | null;
 
     if (!toggleButton) {
@@ -381,7 +391,7 @@ export class SyllabusManager {
             },
           },
         ],
-      }) as XUL.Checkbox;
+      });
 
       // Set initial label
       SyllabusManager.updateButtonLabel(toggleButton);
@@ -947,9 +957,9 @@ export class SyllabusManager {
     pane: any,
   ) {
     // Replace editable placeholders with actual editable inputs
-    const editablePlaceholders = customView.querySelectorAll(
+    const editablePlaceholders = Array.from(customView.querySelectorAll(
       ".syllabus-editable-placeholder",
-    );
+    )).filter(Boolean) as HTMLElement[];
 
     for (const placeholder of editablePlaceholders) {
       const type = placeholder.getAttribute("data-type");
@@ -1145,7 +1155,7 @@ export class SyllabusManager {
       });
 
       // Attach button listeners
-      const actionButtons = card.querySelectorAll(".syllabus-action-button");
+      const actionButtons = Array.from(card.querySelectorAll(".syllabus-action-button")).filter(Boolean) as HTMLElement[];
       for (const button of actionButtons) {
         const action = button.getAttribute("data-action");
         const attType = button.getAttribute("data-attachment-type");
@@ -2034,7 +2044,7 @@ export class SyllabusManager {
   /**
    * Get syllabus data from an item's extra field
    */
-  static getSyllabusData(item: Zotero.Item): SyllabusData {
+  static getSyllabusData(item: Zotero.Item): ItemSyllabusData {
     const jsonStr = this.extraFieldTool.getExtraField(
       item,
       this.SYLLABUS_DATA_KEY,
@@ -2045,7 +2055,7 @@ export class SyllabusManager {
     }
 
     try {
-      return JSON.parse(jsonStr) as SyllabusData;
+      return JSON.parse(jsonStr) as ItemSyllabusData;
     } catch (e) {
       ztoolkit.log("Error parsing syllabus data:", e);
       return {};
@@ -2057,7 +2067,7 @@ export class SyllabusManager {
    */
   static async setSyllabusData(
     item: Zotero.Item,
-    data: SyllabusData,
+    data: ItemSyllabusData,
     source: "page" | "item-pane" | "context-menu",
   ): Promise<void> {
     const jsonStr = JSON.stringify(data);
@@ -2204,14 +2214,14 @@ export class SyllabusManager {
   /**
    * Get collection metadata from preferences
    */
-  static getCollectionMetadata(): CollectionMetadata {
-    const prefKey = `${addon.data.config.prefsPrefix}.collectionMetadata`;
+  static getCollectionMetadata(): SettingsCollectionMetadata {
+    const prefKey = SyllabusManager.getPreferenceKey(SyllabusSettingsKey.COLLECTION_METADATA);
     const metadataStr = String(Zotero.Prefs.get(prefKey, true) || "");
     if (!metadataStr) {
       return {};
     }
     try {
-      return JSON.parse(metadataStr) as CollectionMetadata;
+      return JSON.parse(metadataStr) as SettingsCollectionMetadata;
     } catch (e) {
       ztoolkit.log("Error parsing collection metadata:", e);
       return {};
@@ -2222,7 +2232,7 @@ export class SyllabusManager {
    * Set collection metadata in preferences
    */
   static async setCollectionMetadata(
-    metadata: CollectionMetadata,
+    metadata: SettingsCollectionMetadata,
     source: "page" | "item-pane",
   ): Promise<void> {
     const prefKey = `${addon.data.config.prefsPrefix}.collectionMetadata`;
