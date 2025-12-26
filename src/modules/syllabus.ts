@@ -277,6 +277,16 @@ export class SyllabusManager {
 
   static registerStyleSheet(win: _ZoteroTypes.MainWindow) {
     const doc = win.document;
+    // Load Tailwind CSS first
+    const tailwindStyles = ztoolkit.UI.createElement(doc, "link", {
+      properties: {
+        type: "text/css",
+        rel: "stylesheet",
+        href: `chrome://${addon.data.config.addonRef}/content/tailwind.css`,
+      },
+    });
+    doc.documentElement?.appendChild(tailwindStyles);
+    // Load existing stylesheet
     const styles = ztoolkit.UI.createElement(doc, "link", {
       properties: {
         type: "text/css",
@@ -1129,9 +1139,9 @@ export class SyllabusManager {
             },
             styles: opt.color
               ? {
-                  color: opt.color,
-                  fontWeight: "500",
-                }
+                color: opt.color,
+                fontWeight: "500",
+              }
               : undefined,
           });
           prioritySelect.appendChild(option);

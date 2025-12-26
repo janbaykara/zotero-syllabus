@@ -246,6 +246,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
   return (
     <div className="syllabus-page">
+      <div className='text-5xl text-red-500'>Test</div>
       <div className="syllabus-view-title-container">
         <EditableTitle
           initialValue={title || ""}
@@ -761,9 +762,9 @@ function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-      item: Zotero.Item;
-      type: "pdf" | "snapshot" | "epub";
-    }>;
+        item: Zotero.Item;
+        type: "pdf" | "snapshot" | "epub";
+      }>;
   }, [item, slim]);
 
   const priorityColor =
@@ -772,14 +773,14 @@ function SyllabusItemCard({
       : null;
   const priorityStyle = priorityColor
     ? (() => {
-        const r = parseInt(priorityColor.slice(1, 3), 16);
-        const g = parseInt(priorityColor.slice(3, 5), 16);
-        const b = parseInt(priorityColor.slice(5, 7), 16);
-        return {
-          backgroundColor: `rgba(${r}, ${g}, ${b}, 0.05)`,
-          borderColor: `rgba(${r}, ${g}, ${b}, 0.2)`,
-        };
-      })()
+      const r = parseInt(priorityColor.slice(1, 3), 16);
+      const g = parseInt(priorityColor.slice(3, 5), 16);
+      const b = parseInt(priorityColor.slice(5, 7), 16);
+      return {
+        backgroundColor: `rgba(${r}, ${g}, ${b}, 0.05)`,
+        borderColor: `rgba(${r}, ${g}, ${b}, 0.2)`,
+      };
+    })()
     : {};
 
   const metadataParts = [
