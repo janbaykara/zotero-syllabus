@@ -13,7 +13,6 @@ import {
   createPreferenceStore,
   createSelectedCollectionStore,
 } from "./stores";
-import { getPref } from "../prefs";
 import { config } from "../../../package.json";
 import { SyllabusManager } from "../../modules/syllabus";
 
@@ -133,7 +132,6 @@ export function useZoteroPluginPreferences<T extends Record<string, any>>(
 
   // Call hooks in consistent order
   for (const [key, defaultValue] of keyEntries) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
     prefs[key] = useZoteroPluginPreference(key, defaultValue);
   }
 

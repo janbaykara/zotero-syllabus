@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-empty-object-type */
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference types="preact" />
 
 // This file configures TypeScript to use Preact's JSX types instead of React's
