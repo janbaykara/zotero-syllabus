@@ -198,45 +198,45 @@ export class SyllabusManager {
   }
 
   static registerNotifier() {
-    const callback = {
-      notify: async (
-        event: string,
-        type: string,
-        ids: number[] | string[],
-        extraData: { [key: string]: any },
-      ) => {
-        if (!addon?.data.alive) {
-          SyllabusManager.unregisterNotifier();
-          return;
-        }
-        addon.hooks.onNotify(event, type, ids, extraData);
-      },
-    };
+    // const callback = {
+    //   notify: async (
+    //     event: string,
+    //     type: string,
+    //     ids: number[] | string[],
+    //     extraData: { [key: string]: any },
+    //   ) => {
+    //     if (!addon?.data.alive) {
+    //       SyllabusManager.unregisterNotifier();
+    //       return;
+    //     }
+    //     addon.hooks.onNotify(event, type, ids, extraData);
+    //   },
+    // };
 
-    // Register the callback in Zotero as an item observer
-    this.notifierID = Zotero.Notifier.registerObserver(callback, [
-      "collection",
-      "search",
-      "share",
-      "share-items",
-      "item",
-      "file",
-      "collection-item",
-      "item-tag",
-      "tag",
-      "setting",
-      "group",
-      "trash",
-      "bucket",
-      "relation",
-      "feed",
-      "feedItem",
-      "sync",
-      "api-key",
-      "tab",
-      "itemtree",
-      "itempane",
-    ]);
+    // // Register the callback in Zotero as an item observer
+    // this.notifierID = Zotero.Notifier.registerObserver(callback, [
+    //   "collection",
+    //   "search",
+    //   "share",
+    //   "share-items",
+    //   "item",
+    //   "file",
+    //   "collection-item",
+    //   "item-tag",
+    //   "tag",
+    //   "setting",
+    //   "group",
+    //   "trash",
+    //   "bucket",
+    //   "relation",
+    //   "feed",
+    //   "feedItem",
+    //   "sync",
+    //   "api-key",
+    //   "tab",
+    //   "itemtree",
+    //   "itempane",
+    // ]);
   }
 
   static unregisterNotifier() {
