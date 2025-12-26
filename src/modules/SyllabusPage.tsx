@@ -262,28 +262,20 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       />
 
       {classGroups.map(
-        (group: { classNumber: number | null; items: Zotero.Item[] }) => {
-          const range = SyllabusManager.getClassNumberRange(collectionId, syllabusMetadata);
-          const isLastClass =
-            group.classNumber !== null &&
-            range.max !== null &&
-            group.classNumber === range.max;
-          return (
-            <ClassGroupComponent
-              key={group.classNumber ?? "null"}
-              classNumber={group.classNumber}
-              items={group.items}
-              collectionId={collectionId}
-              syllabusMetadata={syllabusMetadata}
-              onClassTitleSave={setClassTitle}
-              onClassDescriptionSave={setClassDescription}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              isLastClass={isLastClass}
-            />
-          );
-        },
+        (group: { classNumber: number | null; items: Zotero.Item[] }) => (
+          <ClassGroupComponent
+            key={group.classNumber ?? "null"}
+            classNumber={group.classNumber}
+            items={group.items}
+            collectionId={collectionId}
+            syllabusMetadata={syllabusMetadata}
+            onClassTitleSave={setClassTitle}
+            onClassDescriptionSave={setClassDescription}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+          />
+        ),
       )}
 
       {isDragging && (() => {
@@ -384,7 +376,6 @@ interface ClassGroupComponentProps {
   ) => Promise<void>;
   onDragOver: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
   onDragLeave: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
-  isLastClass?: boolean;
 }
 
 function ClassGroupComponent({
@@ -397,7 +388,6 @@ function ClassGroupComponent({
   onDrop,
   onDragOver,
   onDragLeave,
-  isLastClass = false,
 }: ClassGroupComponentProps) {
   // Get class title and description from metadata
   const classTitle =
@@ -432,16 +422,14 @@ function ClassGroupComponent({
               placeholder="Add a title..."
               emptyBehavior="delete"
             />
-            {isLastClass && items.length === 0 && (
-              <button
-                className="syllabus-class-delete-button"
-                onClick={handleDeleteClass}
-                title="Delete class"
-                aria-label="Delete class"
-              >
-                ×
-              </button>
-            )}
+            <button
+              className="syllabus-class-delete-button"
+              onClick={handleDeleteClass}
+              title="Delete class"
+              aria-label="Delete class"
+            >
+              ×
+            </button>
           </div>
           <EditableDescription
             initialValue={classDescription}

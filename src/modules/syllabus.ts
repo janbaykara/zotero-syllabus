@@ -2009,10 +2009,7 @@ export class SyllabusManager {
 
     // Create the class entry if it doesn't exist
     if (!allData[collectionIdStr].classes![classNumber]) {
-      allData[collectionIdStr].classes![classNumber] = {
-        title: "",
-        description: "",
-      };
+      allData[collectionIdStr].classes![classNumber] = {};
     }
 
     ztoolkit.log("Creating additional class:", allData);
