@@ -80,4 +80,3 @@ export function createSelectedItemStore() {
 
   return { getSnapshot, subscribe };
 }
-

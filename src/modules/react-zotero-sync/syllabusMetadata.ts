@@ -101,9 +101,8 @@ export function createSyllabusMetadataStore(collectionId: number) {
 
     // Also listen to the custom event emitter for collection metadata changes
     // (since preference changes aren't notifiable in Zotero)
-    const unsubscribeEmitter = SyllabusManager.onCollectionMetadataChange(
-      onStoreChange,
-    );
+    const unsubscribeEmitter =
+      SyllabusManager.onCollectionMetadataChange(onStoreChange);
 
     // Return an unsubscribe fn
     return () => {

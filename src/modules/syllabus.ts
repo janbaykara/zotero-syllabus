@@ -1129,9 +1129,9 @@ export class SyllabusManager {
             },
             styles: opt.color
               ? {
-                color: opt.color,
-                fontWeight: "500",
-              }
+                  color: opt.color,
+                  fontWeight: "500",
+                }
               : undefined,
           });
           prioritySelect.appendChild(option);

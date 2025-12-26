@@ -97,7 +97,10 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     }
 
     // Get min/max class range from items and metadata
-    const range = useMemo(() => SyllabusManager.getClassNumberRange(collectionId, syllabusMetadata), [collectionId, syllabusMetadata]);
+    const range = useMemo(
+      () => SyllabusManager.getClassNumberRange(collectionId, syllabusMetadata),
+      [collectionId, syllabusMetadata],
+    );
 
     ztoolkit.log("Range:", range, syllabusMetadata);
 
@@ -278,33 +281,44 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         ),
       )}
 
-      {isDragging && (() => {
-        const range = SyllabusManager.getClassNumberRange(collectionId, syllabusMetadata);
-        const nextClassNumber =
-          range.max !== null ? range.max + 1 : range.min !== null ? range.min : 1;
-        return (
-          <div className="syllabus-class-group syllabus-add-class-dropzone">
-            <div className="syllabus-class-header-container">
-              <div className="syllabus-class-header">
-                Add to Class {nextClassNumber}
+      {isDragging &&
+        (() => {
+          const range = SyllabusManager.getClassNumberRange(
+            collectionId,
+            syllabusMetadata,
+          );
+          const nextClassNumber =
+            range.max !== null
+              ? range.max + 1
+              : range.min !== null
+                ? range.min
+                : 1;
+          return (
+            <div className="syllabus-class-group syllabus-add-class-dropzone">
+              <div className="syllabus-class-header-container">
+                <div className="syllabus-class-header">
+                  Add to Class {nextClassNumber}
+                </div>
+              </div>
+              <div
+                className="syllabus-class-items syllabus-add-class-dropzone-items"
+                onDrop={(e) => handleDrop(e, nextClassNumber)}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+              >
+                <div className="syllabus-add-class-dropzone-placeholder">
+                  Drop item here to create Class {nextClassNumber}
+                </div>
               </div>
             </div>
-            <div
-              className="syllabus-class-items syllabus-add-class-dropzone-items"
-              onDrop={(e) => handleDrop(e, nextClassNumber)}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-            >
-              <div className="syllabus-add-class-dropzone-placeholder">
-                Drop item here to create Class {nextClassNumber}
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
       {(() => {
-        const range = SyllabusManager.getClassNumberRange(collectionId, syllabusMetadata);
+        const range = SyllabusManager.getClassNumberRange(
+          collectionId,
+          syllabusMetadata,
+        );
         const nextClassNumber =
           range.max !== null
             ? range.max + 1
@@ -462,7 +476,8 @@ function ClassGroupComponent({
                 item={item}
                 collectionId={collectionId}
                 slim={
-                  !priority || priority === SyllabusManager.priorityKeys.OPTIONAL
+                  !priority ||
+                  priority === SyllabusManager.priorityKeys.OPTIONAL
                 }
               />
             );
@@ -746,9 +761,9 @@ function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-        item: Zotero.Item;
-        type: "pdf" | "snapshot" | "epub";
-      }>;
+      item: Zotero.Item;
+      type: "pdf" | "snapshot" | "epub";
+    }>;
   }, [item, slim]);
 
   const priorityColor =
@@ -757,14 +772,14 @@ function SyllabusItemCard({
       : null;
   const priorityStyle = priorityColor
     ? (() => {
-      const r = parseInt(priorityColor.slice(1, 3), 16);
-      const g = parseInt(priorityColor.slice(3, 5), 16);
-      const b = parseInt(priorityColor.slice(5, 7), 16);
-      return {
-        backgroundColor: `rgba(${r}, ${g}, ${b}, 0.05)`,
-        borderColor: `rgba(${r}, ${g}, ${b}, 0.2)`,
-      };
-    })()
+        const r = parseInt(priorityColor.slice(1, 3), 16);
+        const g = parseInt(priorityColor.slice(3, 5), 16);
+        const b = parseInt(priorityColor.slice(5, 7), 16);
+        return {
+          backgroundColor: `rgba(${r}, ${g}, ${b}, 0.05)`,
+          borderColor: `rgba(${r}, ${g}, ${b}, 0.2)`,
+        };
+      })()
     : {};
 
   const metadataParts = [
