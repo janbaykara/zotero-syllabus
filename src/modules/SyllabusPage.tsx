@@ -6,13 +6,9 @@ import { generateBibliographicReference } from "../utils/cite";
 import { getPref } from "../utils/prefs";
 import { SyllabusManager } from "./syllabus";
 import { renderComponent } from "../utils/react";
-import {
-  useZoteroCollection,
-  useZoteroCollectionItems,
-  useZoteroItemExtraFields,
-  useZoteroCollectionMetadataData,
-  useZoteroCollectionName,
-} from "../utils/react/hooks";
+import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
+import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
+import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
 
 // Define priority type for use in this file
 // These values match SyllabusPriority enum in syllabus.ts
@@ -24,16 +20,12 @@ interface SyllabusPageProps {
 
 export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   // Sync with external Zotero stores using hooks
-  const collection = useZoteroCollection(collectionId);
+  const [title, setTitle] = useZoteroCollectionTitle(collectionId);
+  const [syllabusMetadata, setDescription, setClassDescription, setClassTitle] = useZoteroSyllabusMetadata(collectionId);
   const items = useZoteroCollectionItems(collectionId);
-  const itemExtraFieldsVersion = useZoteroItemExtraFields(collectionId);
-  const collectionMetadata = useZoteroCollectionMetadataData(collectionId);
-  const collectionTitle = useZoteroCollectionName(collectionId);
-
-  // Note: showBibliography preference is handled in SyllabusItemCard component
 
   // Compute class groups and further reading items from synced items
-  // Re-compute when items change or when item extra fields change
+  // Re-compute when items change
   const { classGroups, furtherReadingItems } = useMemo(() => {
     const furtherReading: Zotero.Item[] = [];
     const itemsByClass: Map<number | null, Zotero.Item[]> = new Map();
@@ -112,69 +104,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       })),
       furtherReadingItems: furtherReading,
     };
-  }, [items, itemExtraFieldsVersion, collectionId]);
-
-  const handleCollectionTitleSave = async (newTitle: string) => {
-    if (!collection) return;
-    try {
-      collection.name = newTitle;
-      await collection.saveTx();
-      // Store will automatically update via notifier
-    } catch (err) {
-      ztoolkit.log("Error saving collection title:", err);
-      throw err;
-    }
-  };
-
-  const handleCollectionDescriptionSave = async (newDescription: string) => {
-    try {
-      await SyllabusManager.setCollectionDescription(
-        collectionId,
-        newDescription,
-        "page",
-      );
-      // Store will automatically update via notifier
-    } catch (err) {
-      ztoolkit.log("Error saving collection description:", err);
-      throw err;
-    }
-  };
-
-  const handleClassTitleSave = async (
-    classNumber: number,
-    newTitle: string,
-  ) => {
-    try {
-      await SyllabusManager.setClassTitle(
-        collectionId,
-        classNumber,
-        newTitle,
-        "page",
-      );
-      // Store will automatically update via notifier
-    } catch (err) {
-      ztoolkit.log("Error saving class title:", err);
-      throw err;
-    }
-  };
-
-  const handleClassDescriptionSave = async (
-    classNumber: number,
-    newDescription: string,
-  ) => {
-    try {
-      await SyllabusManager.setClassDescription(
-        collectionId,
-        classNumber,
-        newDescription,
-        "page",
-      );
-      // Store will automatically update via notifier
-    } catch (err) {
-      ztoolkit.log("Error saving class description:", err);
-      throw err;
-    }
-  };
+  }, [items, collectionId]);
 
   const handleDrop = async (
     e: JSX.TargetedDragEvent<HTMLElement>,
@@ -186,6 +116,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     // Remove the dropzone active class after drop
     e.currentTarget.classList.remove("syllabus-dropzone-active");
 
+    if (!e.dataTransfer) return;
     const itemIdStr = e.dataTransfer.getData("text/plain");
     if (!itemIdStr) return;
 
@@ -238,17 +169,12 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     }
   };
 
-  // Early return if collection not found
-  if (!collection) {
-    return <div className="syllabus-page">Collection not found</div>;
-  }
-
   return (
     <div className="syllabus-page">
       <div className="syllabus-view-title-container">
         <EditableTitle
-          initialValue={collectionTitle}
-          onSave={handleCollectionTitleSave}
+          initialValue={title || ""}
+          onSave={setTitle}
           className="syllabus-view-title"
           emptyBehavior="reset"
           placeholder="Add a title..."
@@ -256,8 +182,8 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       </div>
 
       <EditableDescription
-        initialValue={collectionMetadata.description}
-        onSave={handleCollectionDescriptionSave}
+        initialValue={syllabusMetadata.description || ""}
+        onSave={setDescription}
         className="syllabus-collection-description"
         placeholder="Add a description..."
         emptyBehavior="delete"
@@ -269,8 +195,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
           classNumber={group.classNumber}
           items={group.items}
           collectionId={collectionId}
-          onClassTitleSave={handleClassTitleSave}
-          onClassDescriptionSave={handleClassDescriptionSave}
+          syllabusMetadata={syllabusMetadata}
+          onClassTitleSave={setClassTitle}
+          onClassDescriptionSave={setClassDescription}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -304,11 +231,9 @@ interface ClassGroupComponentProps {
   classNumber: number | null;
   items: Zotero.Item[];
   collectionId: number;
-  onClassTitleSave: (classNumber: number, title: string) => Promise<void>;
-  onClassDescriptionSave: (
-    classNumber: number,
-    description: string,
-  ) => Promise<void>;
+  syllabusMetadata: { classes?: { [key: string]: { title?: string; description?: string } } };
+  onClassTitleSave: (classNumber: number, title: string) => void;
+  onClassDescriptionSave: (classNumber: number, description: string) => void;
   onDrop: (e: JSX.TargetedDragEvent<HTMLElement>, classNumber: number | null) => Promise<void>;
   onDragOver: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
   onDragLeave: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
@@ -318,25 +243,16 @@ function ClassGroupComponent({
   classNumber,
   items,
   collectionId,
+  syllabusMetadata,
   onClassTitleSave,
   onClassDescriptionSave,
   onDrop,
   onDragOver,
   onDragLeave,
 }: ClassGroupComponentProps) {
-  // Sync with collection metadata to get class title/description
-  const collectionMetadata = useZoteroCollectionMetadataData(collectionId);
-
-  // Get class title and description using the metadata helpers
-  const classTitle = useMemo(() => {
-    if (classNumber === null) return "";
-    return collectionMetadata.getClassTitle(classNumber);
-  }, [collectionId, classNumber, collectionMetadata]);
-
-  const classDescription = useMemo(() => {
-    if (classNumber === null) return "";
-    return collectionMetadata.getClassDescription(classNumber);
-  }, [collectionId, classNumber, collectionMetadata]);
+  // Get class title and description from metadata
+  const classTitle = classNumber !== null ? (syllabusMetadata.classes?.[classNumber]?.title || "") : "";
+  const classDescription = classNumber !== null ? (syllabusMetadata.classes?.[classNumber]?.description || "") : "";
 
   return (
     <div className="syllabus-class-group">
@@ -393,7 +309,7 @@ function ClassGroupComponent({
 
 interface EditableTitleProps {
   initialValue: string;
-  onSave: (value: string) => Promise<void>;
+  onSave: (value: string) => void | Promise<void>;
   className: string;
   placeholder?: string;
   emptyBehavior?: "reset" | "delete";
@@ -476,7 +392,7 @@ function EditableTitle({
       type="text"
       className={className}
       value={value}
-      onChange={(e) => setValue(e.target.value)}
+      onChange={(e) => setValue((e.target as HTMLInputElement).value)}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
       onMouseDown={handleMouseDown}
@@ -488,7 +404,7 @@ function EditableTitle({
 
 interface EditableDescriptionProps {
   initialValue: string;
-  onSave: (value: string) => Promise<void>;
+  onSave: (value: string) => void | Promise<void>;
   className: string;
   placeholder?: string;
   emptyBehavior?: "reset" | "delete";
@@ -576,7 +492,7 @@ function EditableDescription({
       ref={textareaRef}
       className={className}
       value={value}
-      onChange={(e) => setValue(e.target.value)}
+      onChange={(e) => setValue((e.target as HTMLTextAreaElement).value)}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
       onMouseDown={handleMouseDown}
@@ -596,17 +512,9 @@ function SyllabusItemCard({
   item,
   collectionId,
 }: SyllabusItemCardProps) {
-  // Sync with item extra fields to detect changes to priority/class instruction
-  const itemExtraFieldsVersion = useZoteroItemExtraFields(collectionId);
-
-  // Re-compute when extra fields change
-  const priority = useMemo(() => {
-    return SyllabusManager.getSyllabusPriority(item, collectionId);
-  }, [item, collectionId, itemExtraFieldsVersion]);
-
-  const classInstruction = useMemo(() => {
-    return SyllabusManager.getSyllabusClassInstruction(item, collectionId);
-  }, [item, collectionId, itemExtraFieldsVersion]);
+  // Get priority and class instruction from item
+  const priority = SyllabusManager.getSyllabusPriority(item, collectionId);
+  const classInstruction = SyllabusManager.getSyllabusClassInstruction(item, collectionId);
   const title = item.getField("title") || "Untitled";
   const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(item.itemType);
   const creator = item.getCreators().length > 0 ? item.getCreator(0) : null;
@@ -938,8 +846,8 @@ function SyllabusItemCardSlim({
 export function renderSyllabusPage(
   win: _ZoteroTypes.MainWindow,
   rootElement: HTMLElement,
-  collection: Zotero.Collection,
+  collectionId: number,
 ) {
-  renderComponent(win, rootElement, <SyllabusPage collectionId={collection.id} />);
+  renderComponent(win, rootElement, <SyllabusPage collectionId={collectionId} />);
 }
 

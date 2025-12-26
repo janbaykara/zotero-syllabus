@@ -1,9 +1,16 @@
 import { useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
 import SuperJSON from "superjson";
+import { SyllabusManager, ItemSyllabusData } from "../syllabus";
 
 export type ItemID = {
+  [field in _ZoteroTypes.Item.ItemField]: string | unknown;
+} & {
   id: number;
+}
+
+export type CollectionItemsSnapshot = {
+  items: ItemID[];
 }
 
 export function useZoteroCollectionItems(collectionId: number) {
@@ -19,8 +26,8 @@ export function useZoteroCollectionItems(collectionId: number) {
   );
 
   const parsedItems = useMemo(() => {
-    const items = SuperJSON.parse(__itemsFromZotero) as ItemID[]
-    return items.map(item => Zotero.Items.get(item.id));
+    const snapshot = SuperJSON.parse(__itemsFromZotero) as CollectionItemsSnapshot
+    return snapshot.items.map(item => Zotero.Items.get(item.id));
   }, [__itemsFromZotero]);
 
   return parsedItems;
@@ -32,24 +39,31 @@ export function createCollectionItemsStore(collectionId: number) {
     // Read directly from Zotero
     const collection = Zotero.Collections.get(collectionId);
     if (!collection) {
-      return SuperJSON.stringify([]);
+      return SuperJSON.stringify({ items: [] });
     }
-    const items: ItemID[] = collection.getChildItems().filter(item => item.isRegularItem()).map(item => ({
-      id: item.id,
-    }))
-    return SuperJSON.stringify(items);
+    const items: ItemID[] = collection.getChildItems()
+      .filter(item => item.isRegularItem())
+      .map(item => {
+        const syllabusData = SyllabusManager.getItemSyllabusData(item);
+        return {
+          id: item.id,
+          ...item.toJSON(),
+        };
+      });
+    return SuperJSON.stringify({ items });
   }
 
   function subscribe(onStoreChange: () => void) {
     const observer = {
       notify(event: string, type: string, ids: (number | string)[], extraData: any) {
-        onStoreChange();
+        let shouldUpdate = false;
+
         // Listen to collection-item events (items added/removed from collections)
         if (type === 'collection-item') {
-          onStoreChange();
+          shouldUpdate = true;
         }
         // Also listen to item events (add, modify, delete) that might affect items in this collection
-        if (type === 'item' && (event === 'add' || event === 'modify' || event === 'delete')) {
+        else if (type === 'item' && (event === 'add' || event === 'modify' || event === 'delete')) {
           // Check if the item belongs to our collection
           const itemIds = ids as number[];
           for (const itemId of itemIds) {
@@ -58,19 +72,23 @@ export function createCollectionItemsStore(collectionId: number) {
               if (item && item.isRegularItem()) {
                 const collections = item.getCollections();
                 if (collections.includes(collectionId)) {
-                  onStoreChange();
+                  shouldUpdate = true;
                   break;
                 }
               }
             } catch (e) {
               // Item might not exist anymore, trigger update anyway
-              onStoreChange();
+              shouldUpdate = true;
               break;
             }
           }
         }
         // Listen to collection modify/refresh events
-        if (type === 'collection' && ids.includes(collectionId) && (event === 'modify' || event === 'refresh')) {
+        else if (type === 'collection' && ids.includes(collectionId) && (event === 'modify' || event === 'refresh')) {
+          shouldUpdate = true;
+        }
+
+        if (shouldUpdate) {
           onStoreChange();
         }
       }
