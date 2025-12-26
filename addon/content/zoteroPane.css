@@ -470,7 +470,7 @@
 
 .syllabus-action-icon {
   display: inline-block;
-  --size: 24px;
+  --size: 20px;
   width: var(--size);
   height: var(--size);
   min-width: var(--size);

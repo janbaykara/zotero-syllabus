@@ -582,8 +582,6 @@ function SyllabusItemCard({
   } | null>(null);
 
   useEffect(() => {
-    if (slim) return;
-
     const loadData = async () => {
       if (getPref("showBibliography")) {
         const ref = await generateBibliographicReference(item);
@@ -621,7 +619,7 @@ function SyllabusItemCard({
       }
     };
     loadData();
-  }, [item.id, slim]);
+  }, [item.id]);
 
   const priorityColor =
     priority && priority in SyllabusManager.PRIORITY_COLORS
@@ -784,54 +782,52 @@ function SyllabusItemCard({
           </div>
         </div>
       </div>
-      {(
-        <div className="syllabus-item-right-side focus-states-target" draggable={false}>
-          <div className="syllabus-item-actions" draggable={false}>
-            {url && (
-              <div className="syllabus-action-item row">
-                <button
-                  className="syllabus-action-button"
-                  onClick={handleUrlClick}
-                  title="Open URL"
-                  aria-label="Open URL"
-                >
-                  <span
-                    className="syllabus-action-icon icon icon-css icon-attachment-type"
-                    data-item-type="attachmentLink"
-                    aria-label="Open URL"
-                  />
-                  <span className="syllabus-action-label">Open Link</span>
-                </button>
-              </div>
-            )}
-            {viewableAttachment && (
-              <div className="syllabus-action-item row">
-                <button
-                  className="syllabus-action-button"
-                  onClick={handleAttachmentClick}
-                  title={`Open ${attachmentLabel}`}
+      <div className="syllabus-item-right-side focus-states-target" draggable={false}>
+        <div className="syllabus-item-actions" draggable={false}>
+          {viewableAttachment && (
+            <div className="syllabus-action-item row">
+              <button
+                className="syllabus-action-button"
+                onClick={handleAttachmentClick}
+                title={`Open ${attachmentLabel}`}
+                aria-label={`Open ${attachmentLabel}`}
+              >
+                <span
+                  className="syllabus-action-icon icon icon-css icon-attachment-type"
+                  data-item-type={
+                    viewableAttachment.type === "pdf"
+                      ? "attachmentPDF"
+                      : viewableAttachment.type === "epub"
+                        ? "attachmentEPUB"
+                        : "attachmentSnapshot"
+                  }
                   aria-label={`Open ${attachmentLabel}`}
-                >
-                  <span
-                    className="syllabus-action-icon icon icon-css icon-attachment-type"
-                    data-item-type={
-                      viewableAttachment.type === "pdf"
-                        ? "attachmentPDF"
-                        : viewableAttachment.type === "epub"
-                          ? "attachmentEPUB"
-                          : "attachmentSnapshot"
-                    }
-                    aria-label={`Open ${attachmentLabel}`}
-                  />
-                  <span className="syllabus-action-label">
-                    Open {attachmentLabel}
-                  </span>
-                </button>
-              </div>
-            )}
-          </div>
+                />
+                <span className="syllabus-action-label">
+                  Open {attachmentLabel}
+                </span>
+              </button>
+            </div>
+          )}
+          {url && (
+            <div className="syllabus-action-item row">
+              <button
+                className="syllabus-action-button"
+                onClick={handleUrlClick}
+                title="Open URL"
+                aria-label="Open URL"
+              >
+                <span
+                  className="syllabus-action-icon icon icon-css icon-attachment-type"
+                  data-item-type="attachmentLink"
+                  aria-label="Open URL"
+                />
+                <span className="syllabus-action-label">Open Link</span>
+              </button>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
