@@ -2,6 +2,7 @@
 import { h, Fragment } from "preact";
 import { useState, useEffect, useMemo, useRef } from "preact/hooks";
 import type { JSX } from "preact";
+import { twMerge } from "tailwind-merge";
 import { generateBibliographicReference } from "../utils/cite";
 import { getPref } from "../utils/prefs";
 import { SyllabusManager } from "./syllabus";

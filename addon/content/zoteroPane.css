@@ -57,11 +57,12 @@
 
 /* Custom Syllabus View Styles */
 #syllabus-custom-view {
-  display: none;
+  padding: 0;
+  /* display: none;
   padding: var(--syllabus-custom-view-padding);
   overflow-y: auto;
   height: 100%;
-  background: #fafafa;
+  background: #fafafa; */
 }
 
 .syllabus-view-title-container {

@@ -2,3 +2,103 @@
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
 @source "./**/*.{ts,tsx,js,jsx}";
+
+@theme {
+  /**
+   From zotero
+  */
+  --color-background: light-dark(#fff, #1e1e1e);
+  --color-background-50: light-dark(
+    rgba(255, 255, 255, 0.5019607843),
+    rgba(30, 30, 30, 0.5019607843)
+  );
+  --color-background-70: light-dark(
+    rgba(255, 255, 255, 0.6980392157),
+    rgba(30, 30, 30, 0.6980392157)
+  );
+
+  --color-accent-azure: #66adff;
+  --color-accent-blue: #4072e5;
+  --color-accent-blue10: rgba(64, 114, 229, 0.1019607843);
+  --color-accent-blue30: rgba(64, 114, 229, 0.3019607843);
+  --color-accent-blue50: rgba(64, 114, 229, 0.5019607843);
+  --color-accent-gold: #cc9200;
+  --color-accent-green: #39bf68;
+  --color-accent-highlight: rgba(255, 234, 0, 0.5019607843);
+  --color-accent-orange: #ff794c;
+  --color-accent-red: #db2c3a;
+  --color-accent-teal: #59adc4;
+  --color-accent-white: #fff;
+  --color-accent-wood: #cc7a52;
+  --color-accent-wood-dark: #996b6f;
+  --color-accent-yellow: #faa700 --icon-color: light-dark(#5b5b66, #fbfbfe);
+  --color-critical: light-dark(oklch(55% 0.21 15), oklch(83% 0.14 15));
+  --color-information: light-dark(oklch(55% 0.24 260), oklch(83% 0.17 260));
+  --color-success: light-dark(oklch(55% 0.21 145), oklch(83% 0.14 145));
+  --color-warning: light-dark(oklch(58% 0.24 90), oklch(86% 0.14 90));
+  --color-primary: light-dark(
+    rgba(0, 0, 0, 0.8509803922),
+    rgba(255, 255, 255, 0.8980392157)
+  );
+  --color-quarternary: light-dark(
+    rgba(0, 0, 0, 0.1019607843),
+    rgba(255, 255, 255, 0.1215686275)
+  );
+  --color-quinary: light-dark(
+    rgba(0, 0, 0, 0.0509803922),
+    rgba(255, 255, 255, 0.0588235294)
+  );
+  --color-secondary: light-dark(
+    rgba(0, 0, 0, 0.5490196078),
+    rgba(255, 255, 255, 0.5490196078)
+  );
+  --color-senary: light-dark(
+    rgba(0, 0, 0, 0.0196078431),
+    rgba(255, 255, 255, 0.031372549)
+  );
+  --color-tertiary: light-dark(
+    rgba(0, 0, 0, 0.2509803922),
+    rgba(255, 255, 255, 0.2509803922)
+  );
+
+  --box-shadow-card:
+    0 0.25px 0.75px light-dark(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.2)),
+    0 2px 6px light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.4));
+  --box-shadow-card-hover:
+    0 0.5px 2px light-dark(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.2)),
+    0 4px 16px light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.4));
+  --box-shadow-color-darker-layer-1: light-dark(
+    rgba(0, 0, 0, 0.15),
+    rgba(0, 0, 0, 0.2)
+  );
+  --box-shadow-color-darker-layer-2: light-dark(
+    rgba(0, 0, 0, 0.2),
+    rgba(0, 0, 0, 0.4)
+  );
+  --box-shadow-color-lighter-layer-1: light-dark(
+    rgba(0, 0, 0, 0.05),
+    rgba(0, 0, 0, 0.2)
+  );
+  --box-shadow-color-lighter-layer-2: light-dark(
+    rgba(0, 0, 0, 0.1),
+    rgba(0, 0, 0, 0.4)
+  );
+  --box-shadow-level-1:
+    0 0 1px light-dark(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.2)),
+    0 1px 2px light-dark(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.4));
+  --box-shadow-level-2:
+    0 0.25px 0.75px light-dark(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.2)),
+    0 2px 6px light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.4));
+  --box-shadow-level-3:
+    0 0.375px 1.5px light-dark(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.2)),
+    0 3px 12px light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.4));
+  --box-shadow-level-4:
+    0 0.5px 2px light-dark(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.2)),
+    0 4px 16px light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.4));
+  --box-shadow-popup:
+    0 0.375px 1.5px light-dark(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.2)),
+    0 3px 12px light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.4));
+  --box-shadow-tab:
+    0 0 1px light-dark(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.2)),
+    0 1px 2px light-dark(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.4));
+}
