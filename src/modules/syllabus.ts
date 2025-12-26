@@ -6,6 +6,7 @@ import { getLocaleID } from "../utils/locale";
 import { ExtraFieldTool } from "zotero-plugin-toolkit";
 import { renderSyllabusPage } from "./SyllabusPage";
 import { getSelectedCollection } from "../utils/zotero";
+import { getCSSUrl } from "../utils/css";
 import { set } from "lodash-es";
 
 enum SyllabusPriority {
@@ -277,21 +278,37 @@ export class SyllabusManager {
 
   static registerStyleSheet(win: _ZoteroTypes.MainWindow) {
     const doc = win.document;
-    // Load Tailwind CSS first
+    
+    // Remove any existing stylesheets from previous loads (for hot reload)
+    const existingStylesheets = doc.querySelectorAll(
+      'link[data-syllabus-stylesheet="true"]'
+    );
+    existingStylesheets.forEach((link) => {
+      link.remove();
+    });
+    
+    // Load Tailwind CSS with cache-busting hash
     const tailwindStyles = ztoolkit.UI.createElement(doc, "link", {
       properties: {
         type: "text/css",
         rel: "stylesheet",
-        href: `chrome://${addon.data.config.addonRef}/content/tailwind.css`,
+        href: getCSSUrl(),
+      },
+      attributes: {
+        "data-syllabus-stylesheet": "true",
       },
     });
     doc.documentElement?.appendChild(tailwindStyles);
+    
     // Load existing stylesheet
     const styles = ztoolkit.UI.createElement(doc, "link", {
       properties: {
         type: "text/css",
         rel: "stylesheet",
         href: `chrome://${addon.data.config.addonRef}/content/zoteroPane.css`,
+      },
+      attributes: {
+        "data-syllabus-stylesheet": "true",
       },
     });
     doc.documentElement?.appendChild(styles);

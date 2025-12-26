@@ -12,5 +12,14 @@ export default zotero({
         "@typescript-eslint/no-unused-vars": "off",
       },
     },
+    {
+      files: ["scripts/**/*.js"],
+      languageOptions: {
+        globals: {
+          console: "readonly",
+          process: "readonly",
+        },
+      },
+    },
   ],
 });

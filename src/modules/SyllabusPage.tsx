@@ -246,7 +246,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
   return (
     <div className="syllabus-page">
-      <div className='text-5xl text-red-500'>Test</div>
+      <div className='text-5xl text-orange-700'>Test</div>
       <div className="syllabus-view-title-container">
         <EditableTitle
           initialValue={title || ""}

@@ -8,7 +8,12 @@
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
       "Courier New", monospace;
     --color-red-500: oklch(63.7% 0.237 25.331);
-    --color-blue-600: oklch(54.6% 0.245 262.881);
+    --color-orange-700: oklch(55.3% 0.195 38.402);
+    --color-yellow-500: oklch(79.5% 0.184 86.047);
+    --color-cyan-500: oklch(71.5% 0.143 215.221);
+    --color-purple-500: oklch(62.7% 0.265 303.9);
+    --color-pink-500: oklch(65.6% 0.241 354.308);
+    --color-gray-500: oklch(55.1% 0.027 264.364);
     --text-5xl: 3rem;
     --text-5xl--line-height: 1;
     --default-font-family: var(--font-sans);
@@ -223,8 +228,20 @@
     font-size: var(--text-5xl);
     line-height: var(--tw-leading, var(--text-5xl--line-height));
   }
+  .text-gray-500 {
+    color: var(--color-gray-500);
+  }
+  .text-orange-700 {
+    color: var(--color-orange-700);
+  }
+  .text-purple-500 {
+    color: var(--color-purple-500);
+  }
   .text-red-500 {
     color: var(--color-red-500);
+  }
+  .text-yellow-500 {
+    color: var(--color-yellow-500);
   }
   .italic {
     font-style: italic;
@@ -337,4 +354,3 @@
     }
   }
 }
-

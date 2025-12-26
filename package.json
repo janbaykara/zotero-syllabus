@@ -23,7 +23,8 @@
   "packageManager": "pnpm@10.25.0",
   "scripts": {
     "build:css": "node scripts/build-css.js",
-    "start": "pnpm build:css && zotero-plugin serve",
+    "watch:css": "npx @tailwindcss/cli -i ./src/tailwind.css -o ./addon/content/tailwind.css --watch",
+    "start": "concurrently \"pnpm watch:css\" \"zotero-plugin serve\"",
     "build": "pnpm build:css && zotero-plugin build && tsc --noEmit",
     "lint:check": "prettier --check . && eslint .",
     "lint:fix": "prettier --write . && eslint . --fix",
@@ -32,6 +33,7 @@
     "update-deps": "pnpm update --save"
   },
   "dependencies": {
+    "concurrently": "^9.2.1",
     "lodash-es": "^4.17.22",
     "preact": "^10.19.3",
     "superjson": "^2.2.6",
