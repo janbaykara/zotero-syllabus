@@ -277,6 +277,10 @@
   transition: all 0.2s ease;
   overflow: hidden;
   user-select: none;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .syllabus-item[draggable="true"] {
@@ -303,7 +307,7 @@
 .syllabus-item-content {
   display: flex;
   gap: 16px;
-  padding: 16px;
+  padding: 16px 12px;
   align-items: flex-start;
 }
 
@@ -424,13 +428,76 @@
   gap: 8px;
   flex-shrink: 0;
   align-items: flex-end;
+  justify-content: flex-start;
+  padding: 8px 16px;
 }
 
 .syllabus-item-actions {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   align-items: flex-end;
+  padding: 4px 0;
+}
+
+.syllabus-action-item {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.syllabus-action-button {
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: none;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.syllabus-action-icon {
+  display: inline-block;
+  --size: 24px;
+  width: var(--size);
+  height: var(--size);
+  min-width: var(--size);
+  min-height: var(--size);
+  max-height: var(--size);
+}
+
+.syllabus-action-button:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.syllabus-action-button:active {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.syllabus-action-button .icon {
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 0.7;
+}
+
+.syllabus-action-button:hover .icon {
+  opacity: 1;
+}
+
+.syllabus-action-label {
+  font-size: 12px;
+  color: #666;
+  line-height: 24px;
+  white-space: nowrap;
+  user-select: none;
 }
 
 /* Slim card styles for items without priority */
@@ -449,7 +516,7 @@
 }
 
 .syllabus-item-slim .syllabus-item-content {
-  padding: 8px 12px;
+  padding: 8px 12px 8px 12px;
   gap: 10px;
   align-items: center;
 }
@@ -672,6 +739,22 @@
 
   .syllabus-item-slim .syllabus-item-metadata {
     color: #8e8e93;
+  }
+
+  .syllabus-action-button {
+    background: transparent;
+  }
+
+  .syllabus-action-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .syllabus-action-button:active {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  .syllabus-action-label {
+    color: #a1a1a6;
   }
 
   /* Item Pane dark mode */
@@ -934,6 +1017,34 @@
 #main-window[data-theme="dark"] .syllabus-item-slim .syllabus-item-metadata,
 #main-window.dark .syllabus-item-slim .syllabus-item-metadata {
   color: #8e8e93;
+}
+
+:root[data-theme="dark"] .syllabus-action-button,
+:root.dark .syllabus-action-button,
+#main-window[data-theme="dark"] .syllabus-action-button,
+#main-window.dark .syllabus-action-button {
+  background: transparent;
+}
+
+:root[data-theme="dark"] .syllabus-action-button:hover,
+:root.dark .syllabus-action-button:hover,
+#main-window[data-theme="dark"] .syllabus-action-button:hover,
+#main-window.dark .syllabus-action-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme="dark"] .syllabus-action-button:active,
+:root.dark .syllabus-action-button:active,
+#main-window[data-theme="dark"] .syllabus-action-button:active,
+#main-window.dark .syllabus-action-button:active {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+:root[data-theme="dark"] .syllabus-action-label,
+:root.dark .syllabus-action-label,
+#main-window[data-theme="dark"] .syllabus-action-label,
+#main-window.dark .syllabus-action-label {
+  color: #a1a1a6;
 }
 
 :root[data-theme="dark"] #zotero-items-tree .row[data-row-class-number]::before,
