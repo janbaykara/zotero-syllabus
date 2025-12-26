@@ -9,7 +9,7 @@ import { renderComponent } from "../utils/react";
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
-import { useZoteroSelectedItemId } from "../utils/react/hooks";
+import { useZoteroSelectedItemId } from "./react-zotero-sync/selectedItem";
 import {
   getItemReadStatusName,
   getReadStatusMetadata,
