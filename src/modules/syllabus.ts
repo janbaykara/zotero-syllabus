@@ -137,7 +137,7 @@ export class SyllabusManager {
     source: "page" | "item-pane" | "context-menu",
   ) {
     ztoolkit.log("SyllabusManager.onItemUpdate", source, item.id);
-    if (source !== "page") this.setupPage();
+    // No need to call setupPage() - React stores will trigger re-render automatically
     if (source !== "item-pane") this.reloadItemPane();
     // Class numbers are stored in the items, so we need to update the context menu
     this.onClassListUpdate();
@@ -148,7 +148,7 @@ export class SyllabusManager {
    */
   static onClassUpdate(classNumber: number, source: "page") {
     ztoolkit.log("SyllabusManager.onClassUpdate", classNumber, source);
-    if (source !== "page") this.setupPage();
+    // No need to call setupPage() - React stores will trigger re-render automatically
     this.onClassListUpdate();
   }
 
@@ -162,7 +162,7 @@ export class SyllabusManager {
    */
   static onCollectionUpdated(collection: Zotero.Collection, source: "page") {
     ztoolkit.log("SyllabusManager.onCollectionUpdated", collection);
-    this.setupPage();
+    // No need to call setupPage() - React stores will trigger re-render automatically
   }
 
   static onMainWindowUnload(win: _ZoteroTypes.MainWindow) {
@@ -259,6 +259,8 @@ export class SyllabusManager {
       if (newTab && newTab.title !== currentTabTitle) {
         ztoolkit.log("newTab", newTab);
         currentTabTitle = newTab.title;
+        // setupUI() calls setupPage() which re-renders React component for new collection
+        // Once mounted, React stores handle all data updates automatically
         SyllabusManager.setupUI();
       }
     }, 500);
@@ -267,6 +269,8 @@ export class SyllabusManager {
 
   static setupSyllabusViewReloadListener() {
     // Re-render custom view when collection or sort changes
+    // setupUI() calls setupPage() which re-renders React component
+    // Once mounted, React stores handle all data updates automatically
     const pane = ztoolkit.getGlobal("ZoteroPane");
     if (pane) {
       pane.addReloadListener(() => {
@@ -287,6 +291,8 @@ export class SyllabusManager {
   static async setupUI(): Promise<void> {
     ztoolkit.log("Setting up syllabus view");
     SyllabusManager.setupToggleButton();
+    // setupPage() renders the React component for the current collection
+    // After initial render, React stores handle all updates automatically
     SyllabusManager.setupPage();
   }
 
@@ -1108,7 +1114,7 @@ export class SyllabusManager {
           );
           await draggedItem.saveTx();
 
-          SyllabusManager.setupPage();
+          // No need to call setupPage() - React stores will trigger re-render automatically
         } catch (err) {
           ztoolkit.log("Error handling drop:", err);
         }
@@ -2230,7 +2236,7 @@ export class SyllabusManager {
   ): Promise<void> {
     const prefKey = `${addon.data.config.prefsPrefix}.collectionMetadata`;
     Zotero.Prefs.set(prefKey, JSON.stringify(metadata), true);
-    if (source !== "page") this.setupPage();
+    // No need to call setupPage() - React stores will trigger re-render automatically
     if (source !== "item-pane") this.reloadItemPane();
     this.onClassListUpdate();
   }

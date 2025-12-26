@@ -1,37 +1,37 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { generateBibliographicReference } from "../utils/cite";
 import { getPref } from "../utils/prefs";
 import { SyllabusManager } from "./syllabus";
 import { renderReactComponent } from "../utils/react";
+import {
+  useZoteroCollection,
+  useZoteroCollectionItems,
+  useZoteroItemExtraFields,
+  useZoteroCollectionMetadataData,
+  useZoteroCollectionName,
+} from "../utils/react/hooks";
 
 // Define priority type for use in this file
 // These values match SyllabusPriority enum in syllabus.ts
 type SyllabusPriorityType = "course-info" | "essential" | "recommended" | "optional";
 
 interface SyllabusPageProps {
-  collection: Zotero.Collection;
+  collectionId: number;
 }
 
-interface ClassGroup {
-  classNumber: number | null;
-  items: Zotero.Item[];
-}
+export function SyllabusPage({ collectionId }: SyllabusPageProps) {
+  // Sync with external Zotero stores using hooks
+  const collection = useZoteroCollection(collectionId);
+  const items = useZoteroCollectionItems(collectionId);
+  const itemExtraFieldsVersion = useZoteroItemExtraFields(collectionId);
+  const collectionMetadata = useZoteroCollectionMetadataData(collectionId);
+  const collectionTitle = useZoteroCollectionName(collectionId);
 
-export function SyllabusPage({ collection }: SyllabusPageProps) {
-  const [classGroups, setClassGroups] = useState<ClassGroup[]>([]);
-  const [furtherReadingItems, setFurtherReadingItems] = useState<Zotero.Item[]>(
-    [],
-  );
-  const [collectionTitle, setCollectionTitle] = useState(collection.name || "");
-  const [collectionDescription, setCollectionDescription] = useState("");
+  // Note: showBibliography preference is handled in SyllabusItemCard component
 
-  // Load data
-  useEffect(() => {
-    loadSyllabusData();
-  }, [collection.id]);
-
-  const loadSyllabusData = useCallback(() => {
-    const items = collection.getChildItems();
+  // Compute class groups and further reading items from synced items
+  // Re-compute when items change or when item extra fields change
+  const { classGroups, furtherReadingItems } = useMemo(() => {
     const furtherReading: Zotero.Item[] = [];
     const itemsByClass: Map<number | null, Zotero.Item[]> = new Map();
 
@@ -40,11 +40,11 @@ export function SyllabusPage({ collection }: SyllabusPageProps) {
 
       const classNumber = SyllabusManager.getSyllabusClassNumber(
         item,
-        collection.id,
+        collectionId,
       );
       const priority = SyllabusManager.getSyllabusPriority(
         item,
-        collection.id,
+        collectionId,
       );
 
       if (priority === "" && classNumber === undefined) {
@@ -76,11 +76,11 @@ export function SyllabusPage({ collection }: SyllabusPageProps) {
       classItems.sort((a, b) => {
         const priorityA = SyllabusManager.getSyllabusPriority(
           a,
-          collection.id,
+          collectionId,
         );
         const priorityB = SyllabusManager.getSyllabusPriority(
           b,
-          collection.id,
+          collectionId,
         );
         const getPriorityOrder = (
           priority: SyllabusPriorityType | "" | undefined,
@@ -102,56 +102,75 @@ export function SyllabusPage({ collection }: SyllabusPageProps) {
       return titleA.localeCompare(titleB);
     });
 
-    setClassGroups(
-      sortedClassNumbers.map((classNumber) => ({
+    return {
+      classGroups: sortedClassNumbers.map((classNumber) => ({
         classNumber,
         items: itemsByClass.get(classNumber)!,
       })),
-    );
-    setFurtherReadingItems(furtherReading);
-    setCollectionTitle(collection.name || "");
-    setCollectionDescription(
-      SyllabusManager.getCollectionDescription(collection.id),
-    );
-  }, [collection.id]);
+      furtherReadingItems: furtherReading,
+    };
+  }, [items, itemExtraFieldsVersion, collectionId]);
 
   const handleCollectionTitleSave = async (newTitle: string) => {
-    collection.name = newTitle;
-    await collection.saveTx();
-    setCollectionTitle(newTitle);
+    if (!collection) return;
+    try {
+      collection.name = newTitle;
+      await collection.saveTx();
+      // Store will automatically update via notifier
+    } catch (err) {
+      ztoolkit.log("Error saving collection title:", err);
+      throw err;
+    }
   };
 
   const handleCollectionDescriptionSave = async (newDescription: string) => {
-    await SyllabusManager.setCollectionDescription(
-      collection.id,
-      newDescription,
-      "page",
-    );
-    setCollectionDescription(newDescription);
+    try {
+      await SyllabusManager.setCollectionDescription(
+        collectionId,
+        newDescription,
+        "page",
+      );
+      // Store will automatically update via notifier
+    } catch (err) {
+      ztoolkit.log("Error saving collection description:", err);
+      throw err;
+    }
   };
 
   const handleClassTitleSave = async (
     classNumber: number,
     newTitle: string,
   ) => {
-    await SyllabusManager.setClassTitle(
-      collection.id,
-      classNumber,
-      newTitle,
-      "page",
-    );
+    try {
+      await SyllabusManager.setClassTitle(
+        collectionId,
+        classNumber,
+        newTitle,
+        "page",
+      );
+      // Store will automatically update via notifier
+    } catch (err) {
+      ztoolkit.log("Error saving class title:", err);
+      throw err;
+    }
   };
 
   const handleClassDescriptionSave = async (
     classNumber: number,
     newDescription: string,
   ) => {
-    await SyllabusManager.setClassDescription(
-      collection.id,
-      classNumber,
-      newDescription,
-      "page",
-    );
+    try {
+      await SyllabusManager.setClassDescription(
+        collectionId,
+        classNumber,
+        newDescription,
+        "page",
+      );
+      // Store will automatically update via notifier
+    } catch (err) {
+      ztoolkit.log("Error saving class description:", err);
+      throw err;
+    }
   };
 
   const handleDrop = async (
@@ -176,7 +195,7 @@ export function SyllabusPage({ collection }: SyllabusPageProps) {
 
       await SyllabusManager.setSyllabusClassNumber(
         draggedItem,
-        collection.id,
+        collectionId,
         targetClassNumberValue,
         "page",
       );
@@ -195,6 +214,11 @@ export function SyllabusPage({ collection }: SyllabusPageProps) {
     e.currentTarget.classList.add("syllabus-dropzone-active");
   };
 
+  // Early return if collection not found
+  if (!collection) {
+    return <div className="syllabus-page">Collection not found</div>;
+  }
+
   return (
     <div className="syllabus-page">
       <div className="syllabus-view-title-container">
@@ -207,7 +231,7 @@ export function SyllabusPage({ collection }: SyllabusPageProps) {
       </div>
 
       <EditableDescription
-        initialValue={collectionDescription}
+        initialValue={collectionMetadata.description}
         onSave={handleCollectionDescriptionSave}
         className="syllabus-collection-description"
         placeholder="Add a description..."
@@ -219,7 +243,7 @@ export function SyllabusPage({ collection }: SyllabusPageProps) {
           key={group.classNumber ?? "null"}
           classNumber={group.classNumber}
           items={group.items}
-          collectionId={collection.id}
+          collectionId={collectionId}
           onClassTitleSave={handleClassTitleSave}
           onClassDescriptionSave={handleClassDescriptionSave}
           onDrop={handleDrop}
@@ -242,7 +266,7 @@ export function SyllabusPage({ collection }: SyllabusPageProps) {
               <SyllabusItemCardSlim
                 key={item.id}
                 item={item}
-                collectionId={collection.id}
+                collectionId={collectionId}
               />
             ))}
           </div>
@@ -274,11 +298,19 @@ function ClassGroupComponent({
   onDrop,
   onDragOver,
 }: ClassGroupComponentProps) {
-  const classTitle = SyllabusManager.getClassTitle(collectionId, classNumber!);
-  const classDescription = SyllabusManager.getClassDescription(
-    collectionId,
-    classNumber!,
-  );
+  // Sync with collection metadata to get class title/description
+  const collectionMetadata = useZoteroCollectionMetadataData(collectionId);
+
+  // Get class title and description using the metadata helpers
+  const classTitle = useMemo(() => {
+    if (classNumber === null) return "";
+    return collectionMetadata.getClassTitle(classNumber);
+  }, [collectionId, classNumber, collectionMetadata]);
+
+  const classDescription = useMemo(() => {
+    if (classNumber === null) return "";
+    return collectionMetadata.getClassDescription(classNumber);
+  }, [collectionId, classNumber, collectionMetadata]);
 
   return (
     <div className="syllabus-class-group">
@@ -365,24 +397,40 @@ function EditableTitle({
     }
   }, [isEditing]);
 
-  const handleBlur = async () => {
-    if (value.trim() === "" && emptyBehavior === "delete") {
-      setValue(initialValue);
-    } else if (value.trim() === "" && emptyBehavior === "reset") {
-      setValue(initialValue);
-    } else if (value !== initialValue) {
-      await onSave(value);
-    }
-    setIsEditing(false);
+  const handleBlur = async (_e: React.FocusEvent) => {
+    // Use setTimeout to ensure blur completes before we check what was clicked
+    setTimeout(async () => {
+      if (value.trim() === "" && emptyBehavior === "delete") {
+        setValue(initialValue);
+      } else if (value.trim() === "" && emptyBehavior === "reset") {
+        setValue(initialValue);
+      } else if (value !== initialValue) {
+        try {
+          await onSave(value);
+        } catch (err) {
+          ztoolkit.log("Error saving title:", err);
+          // Revert on error
+          setValue(initialValue);
+        }
+      }
+      setIsEditing(false);
+    }, 0);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
+      e.preventDefault();
       inputRef.current?.blur();
     } else if (e.key === "Escape") {
+      e.preventDefault();
       setValue(initialValue);
       setIsEditing(false);
     }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Prevent blur when clicking on the input itself
+    e.stopPropagation();
   };
 
   if (!isEditing) {
@@ -390,6 +438,7 @@ function EditableTitle({
       <div
         className={className}
         onClick={() => setIsEditing(true)}
+        onMouseDown={(e) => e.stopPropagation()}
         style={{ cursor: "text" }}
       >
         {value || placeholder || "Click to edit"}
@@ -406,7 +455,9 @@ function EditableTitle({
       onChange={(e) => setValue(e.target.value)}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
+      onMouseDown={handleMouseDown}
       placeholder={placeholder}
+      autoFocus
     />
   );
 }
@@ -444,23 +495,38 @@ function EditableDescription({
     }
   }, [isEditing]);
 
-  const handleBlur = async () => {
-    if (value.trim() === "" && emptyBehavior === "delete") {
-      // Don't save empty description
-      setValue(initialValue);
-    } else if (value.trim() === "" && emptyBehavior === "reset") {
-      setValue(initialValue);
-    } else if (value !== initialValue) {
-      await onSave(value);
-    }
-    setIsEditing(false);
+  const handleBlur = async (_e: React.FocusEvent) => {
+    // Use setTimeout to ensure blur completes before we check what was clicked
+    setTimeout(async () => {
+      if (value.trim() === "" && emptyBehavior === "delete") {
+        // Don't save empty description
+        setValue(initialValue);
+      } else if (value.trim() === "" && emptyBehavior === "reset") {
+        setValue(initialValue);
+      } else if (value !== initialValue) {
+        try {
+          await onSave(value);
+        } catch (err) {
+          ztoolkit.log("Error saving description:", err);
+          // Revert on error
+          setValue(initialValue);
+        }
+      }
+      setIsEditing(false);
+    }, 0);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
+      e.preventDefault();
       setValue(initialValue);
       setIsEditing(false);
     }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Prevent blur when clicking on the textarea itself
+    e.stopPropagation();
   };
 
   if (!isEditing) {
@@ -469,6 +535,7 @@ function EditableDescription({
       <div
         className={className}
         onClick={() => setIsEditing(true)}
+        onMouseDown={(e) => e.stopPropagation()}
         style={{ cursor: "text", minHeight: "1.5em" }}
       >
         {value || (
@@ -488,8 +555,10 @@ function EditableDescription({
       onChange={(e) => setValue(e.target.value)}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
+      onMouseDown={handleMouseDown}
       placeholder={placeholder}
       rows={3}
+      autoFocus
     />
   );
 }
@@ -503,11 +572,17 @@ function SyllabusItemCard({
   item,
   collectionId,
 }: SyllabusItemCardProps) {
-  const priority = SyllabusManager.getSyllabusPriority(item, collectionId);
-  const classInstruction = SyllabusManager.getSyllabusClassInstruction(
-    item,
-    collectionId,
-  );
+  // Sync with item extra fields to detect changes to priority/class instruction
+  const itemExtraFieldsVersion = useZoteroItemExtraFields(collectionId);
+
+  // Re-compute when extra fields change
+  const priority = useMemo(() => {
+    return SyllabusManager.getSyllabusPriority(item, collectionId);
+  }, [item, collectionId, itemExtraFieldsVersion]);
+
+  const classInstruction = useMemo(() => {
+    return SyllabusManager.getSyllabusClassInstruction(item, collectionId);
+  }, [item, collectionId, itemExtraFieldsVersion]);
   const title = item.getField("title") || "Untitled";
   const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(item.itemType);
   const creator = item.getCreators().length > 0 ? item.getCreator(0) : null;
@@ -841,6 +916,6 @@ export function renderSyllabusPage(
   rootElement: HTMLElement,
   collection: Zotero.Collection,
 ) {
-  renderReactComponent(win, rootElement, <SyllabusPage collection={collection} />);
+  renderReactComponent(win, rootElement, <SyllabusPage collectionId={collection.id} />);
 }
 
