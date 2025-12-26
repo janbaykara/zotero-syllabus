@@ -1,12 +1,11 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
 import { renderComponent } from "../utils/react";
-import { useZoteroCollectionTitle } from "./react/collectionTitle";
+import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 // import { useZoteroCollectionItems } from './react/hooks';
 
 function Page({ collectionId }: { collectionId: number }) {
   const [title, setTitle] = useZoteroCollectionTitle(collectionId);
-  // const items = useZoteroCollectionItems(collectionId);
 
   return (
     <div>

@@ -15,6 +15,7 @@ import {
 import { renderSyllabusPage } from "./SyllabusPage";
 import { renderComponent } from "../utils/react";
 import { getSelectedCollection } from "../utils/zotero";
+import { renderPage } from "./Page";
 
 enum SyllabusPriority {
   COURSE_INFO = "course-info",
@@ -498,7 +499,8 @@ export class SyllabusManager {
 
         // Insert the master template
         if (customView && selectedCollection) {
-          renderSyllabusPage(w, customView, selectedCollection);
+          // renderSyllabusPage(w, customView, selectedCollection);
+          renderPage(w, customView, selectedCollection.id);
           // customView.innerHTML = await SyllabusManager.renderSyllabusPageHTML(selectedCollection);
 
           // // Attach all event listeners
