@@ -2,6 +2,7 @@ import { SyllabusManager } from "./modules/syllabus";
 import { getString, initLocale } from "./utils/locale";
 import { registerPrefsScripts } from "./modules/preferenceScript";
 import { createZToolkit } from "./utils/ztoolkit";
+import { getCSSUrl } from "./utils/css";
 
 async function onStartup() {
   await Promise.all([
@@ -23,9 +24,50 @@ async function onStartup() {
   addon.data.initialized = true;
 }
 
+function registerStyleSheet(win: _ZoteroTypes.MainWindow) {
+  const doc = win.document;
+  
+  // Remove any existing stylesheets from previous loads (for hot reload)
+  const existingStylesheets = doc.querySelectorAll(
+    'link[data-syllabus-stylesheet="true"]'
+  );
+  existingStylesheets.forEach((link) => {
+    link.remove();
+  });
+  
+  // Load Tailwind CSS with cache-busting hash
+  const tailwindStyles = ztoolkit.UI.createElement(doc, "link", {
+    properties: {
+      type: "text/css",
+      rel: "stylesheet",
+      href: getCSSUrl(),
+    },
+    attributes: {
+      "data-syllabus-stylesheet": "true",
+    },
+  });
+  doc.documentElement?.appendChild(tailwindStyles);
+  
+  // Load existing stylesheet
+  const styles = ztoolkit.UI.createElement(doc, "link", {
+    properties: {
+      type: "text/css",
+      rel: "stylesheet",
+      href: `chrome://${addon.data.config.addonRef}/content/zoteroPane.css`,
+    },
+    attributes: {
+      "data-syllabus-stylesheet": "true",
+    },
+  });
+  doc.documentElement?.appendChild(styles);
+}
+
 async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
   // Create ztoolkit for every window
   addon.data.ztoolkit = createZToolkit();
+
+  // Register stylesheets
+  registerStyleSheet(win);
 
   SyllabusManager.onMainWindowLoad(win);
 
