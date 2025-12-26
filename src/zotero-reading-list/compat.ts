@@ -1,10 +1,11 @@
 import { ExtraFieldTool } from "zotero-plugin-toolkit";
-import SuperJSON from 'superjson';
+import SuperJSON from "superjson";
 
 const extraFieldTool = new ExtraFieldTool();
 
 // Constants from https://github.com/Dominic-DallOsto/zotero-reading-list/blob/master/src/modules/overlay.ts
-const ZOTERO_READING_LIST_PLUGIN_NAMESPACE = "extensions.zotero.zotero-reading-list"
+const ZOTERO_READING_LIST_PLUGIN_NAMESPACE =
+  "extensions.zotero.zotero-reading-list";
 const READ_STATUS_COLUMN_ID = "readstatus";
 const READ_STATUS_EXTRA_FIELD = "Read_Status";
 const READ_DATE_EXTRA_FIELD = "Read_Status_Date";
@@ -26,24 +27,34 @@ export const STATUS_CHANGE_ON_OPEN_ITEM_LIST_PREF =
 //////////////////////////////////////////////////////////
 
 export function getItemReadStatusName(item: Zotero.Item) {
-  return extraFieldTool.getExtraField(item, READ_STATUS_EXTRA_FIELD)
+  return extraFieldTool.getExtraField(item, READ_STATUS_EXTRA_FIELD);
 }
 
 export function getItemReadStatus(item: Zotero.Item) {
-  const name = getItemReadStatusName(item)
+  const name = getItemReadStatusName(item);
   if (!name) return undefined;
-  return getReadStatusMetadata(name)
+  return getReadStatusMetadata(name);
 }
 
 export function getReadStatusMetadata(readStatusName: string) {
-  return getReadingListStatusNameAndIconList()?.find(icon => icon.name === readStatusName)
+  return getReadingListStatusNameAndIconList()?.find(
+    (icon) => icon.name === readStatusName,
+  );
 }
 
 export function getReadingListStatusNameAndIconList() {
-  const readStatusPluginSettings = getZoteroPref(ZOTERO_READING_LIST_PLUGIN_NAMESPACE, STATUS_NAME_AND_ICON_LIST_PREF)
+  const readStatusPluginSettings = getZoteroPref(
+    ZOTERO_READING_LIST_PLUGIN_NAMESPACE,
+    STATUS_NAME_AND_ICON_LIST_PREF,
+  );
   if (readStatusPluginSettings) {
-    const [statusNames, statusIcons] = prefStringToList(String(readStatusPluginSettings))
-    return statusNames.map((name, index) => ({ name, icon: statusIcons[index] }))
+    const [statusNames, statusIcons] = prefStringToList(
+      String(readStatusPluginSettings),
+    );
+    return statusNames.map((name, index) => ({
+      name,
+      icon: statusIcons[index],
+    }));
   }
 }
 

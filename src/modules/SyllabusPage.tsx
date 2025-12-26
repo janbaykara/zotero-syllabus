@@ -3,13 +3,16 @@ import { h, Fragment } from "preact";
 import { useState, useEffect, useMemo, useRef } from "preact/hooks";
 import type { JSX } from "preact";
 import { generateBibliographicReference } from "../utils/cite";
-import { getPref } from '../utils/prefs';
+import { getPref } from "../utils/prefs";
 import { SyllabusManager } from "./syllabus";
 import { renderComponent } from "../utils/react";
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
-import { getItemReadStatusName, getReadStatusMetadata } from "../zotero-reading-list/compat";
+import {
+  getItemReadStatusName,
+  getReadStatusMetadata,
+} from "../zotero-reading-list/compat";
 
 // Define priority type for use in this file
 // These values match SyllabusPriority enum in syllabus.ts
@@ -297,9 +300,11 @@ function ClassGroupComponent({
               key={item.id}
               item={item}
               collectionId={collectionId}
-              slim={!priority || priority === SyllabusManager.priorityKeys.OPTIONAL}
+              slim={
+                !priority || priority === SyllabusManager.priorityKeys.OPTIONAL
+              }
             />
-          )
+          );
         })}
       </div>
     </div>
@@ -546,32 +551,35 @@ function SyllabusItemCard({
   }, [item, slim]);
 
   const viewableAttachments = useMemo(() => {
-    return item.getAttachments().map((attId) => {
-      try {
-        const att = Zotero.Items.get(attId);
-        if (att && att.isAttachment()) {
-          const contentType = att.attachmentContentType || "";
-          const linkMode = att.attachmentLinkMode;
-          const path = att.attachmentPath?.toLowerCase() || "";
-          if (contentType === "application/pdf" || path.endsWith(".pdf")) {
-            return { item: att, type: "pdf" };
+    return item
+      .getAttachments()
+      .map((attId) => {
+        try {
+          const att = Zotero.Items.get(attId);
+          if (att && att.isAttachment()) {
+            const contentType = att.attachmentContentType || "";
+            const linkMode = att.attachmentLinkMode;
+            const path = att.attachmentPath?.toLowerCase() || "";
+            if (contentType === "application/pdf" || path.endsWith(".pdf")) {
+              return { item: att, type: "pdf" };
+            }
+            if (linkMode === 3) {
+              return { item: att, type: "snapshot" };
+            }
+            if (
+              contentType === "application/epub+zip" ||
+              contentType === "application/epub" ||
+              path.endsWith(".epub")
+            ) {
+              return { item: att, type: "epub" };
+            }
           }
-          if (linkMode === 3) {
-            return { item: att, type: "snapshot" };
-          }
-          if (
-            contentType === "application/epub+zip" ||
-            contentType === "application/epub" ||
-            path.endsWith(".epub")
-          ) {
-            return { item: att, type: "epub" };
-          }
+        } catch {
+          // Continue
         }
-      } catch {
-        // Continue
-      }
-      return null;
-    }).filter(Boolean) as Array<{
+        return null;
+      })
+      .filter(Boolean) as Array<{
       item: Zotero.Item;
       type: "pdf" | "snapshot" | "epub";
     }>;
@@ -583,17 +591,22 @@ function SyllabusItemCard({
       : null;
   const priorityStyle = priorityColor
     ? (() => {
-      const r = parseInt(priorityColor.slice(1, 3), 16);
-      const g = parseInt(priorityColor.slice(3, 5), 16);
-      const b = parseInt(priorityColor.slice(5, 7), 16);
-      return {
-        backgroundColor: `rgba(${r}, ${g}, ${b}, 0.05)`,
-        borderColor: `rgba(${r}, ${g}, ${b}, 0.2)`,
-      };
-    })()
+        const r = parseInt(priorityColor.slice(1, 3), 16);
+        const g = parseInt(priorityColor.slice(3, 5), 16);
+        const b = parseInt(priorityColor.slice(5, 7), 16);
+        return {
+          backgroundColor: `rgba(${r}, ${g}, ${b}, 0.05)`,
+          borderColor: `rgba(${r}, ${g}, ${b}, 0.2)`,
+        };
+      })()
     : {};
 
-  const metadataParts = [itemTypeLabel, author, date, publicationName ? `in ${publicationName}` : undefined].filter(Boolean);
+  const metadataParts = [
+    itemTypeLabel,
+    author,
+    date,
+    publicationName ? `in ${publicationName}` : undefined,
+  ].filter(Boolean);
 
   const handleDragStart = (e: JSX.TargetedDragEvent<HTMLElement>) => {
     e.stopPropagation();
@@ -613,7 +626,10 @@ function SyllabusItemCard({
     Zotero.launchURL(url);
   };
 
-  function onClick(item: Zotero.Item, __e?: JSX.TargetedMouseEvent<HTMLElement>) {
+  function onClick(
+    item: Zotero.Item,
+    __e?: JSX.TargetedMouseEvent<HTMLElement>,
+  ) {
     const pane = ztoolkit.getGlobal("ZoteroPane");
     pane.selectItem(item.id);
   }
@@ -640,12 +656,10 @@ function SyllabusItemCard({
     }
   }
 
-  const handleAttachmentClick = async (
-    viewableAttachment?: {
-      item: Zotero.Item;
-      type: "pdf" | "snapshot" | "epub";
-    },
-  ) => {
+  const handleAttachmentClick = async (viewableAttachment?: {
+    item: Zotero.Item;
+    type: "pdf" | "snapshot" | "epub";
+  }) => {
     if (!viewableAttachment) return;
 
     try {
@@ -702,9 +716,13 @@ function SyllabusItemCard({
             />
           </div>
           <div className="syllabus-item-text">
-            <div style={{ display: "flex", alignItems: "baseline", gap: "16px" }}>
+            <div
+              style={{ display: "flex", alignItems: "baseline", gap: "16px" }}
+            >
               {!!priority && <PriorityIcon priority={priority} />}
-              {!!readStatusName && <ReadStatusIcon readStatusName={readStatusName} />}
+              {!!readStatusName && (
+                <ReadStatusIcon readStatusName={readStatusName} />
+              )}
             </div>
             <div className="syllabus-item-title-row">
               <div className="syllabus-item-title">{title}</div>
@@ -766,7 +784,7 @@ function SyllabusItemCard({
                   </span>
                 </button>
               </div>
-            )
+            );
           })}
           {url && (
             <div className="syllabus-action-item row">
@@ -798,34 +816,41 @@ function PriorityIcon({ priority }: { priority: SyllabusPriorityType }) {
       <span
         className="syllabus-priority-icon"
         style={{
-          backgroundColor: (
-            SyllabusManager.PRIORITY_COLORS as any
-          )[priority],
+          backgroundColor: (SyllabusManager.PRIORITY_COLORS as any)[priority],
         }}
       />
       <span
         className="syllabus-priority-label"
         style={{
-          color: (SyllabusManager.PRIORITY_COLORS as any)[
-            priority
-          ],
+          color: (SyllabusManager.PRIORITY_COLORS as any)[priority],
         }}
       >
         {(SyllabusManager.PRIORITY_LABELS as any)[priority]}
       </span>
     </span>
-  )
+  );
 }
 
 function ReadStatusIcon({ readStatusName }: { readStatusName: string }) {
-  const readStatus = useMemo(() => getReadStatusMetadata(readStatusName), [readStatusName]);
+  const readStatus = useMemo(
+    () => getReadStatusMetadata(readStatusName),
+    [readStatusName],
+  );
   if (!readStatus) return null;
   return (
-    <span className="syllabus-item-priority-inline" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+    <span
+      className="syllabus-item-priority-inline"
+      style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
+    >
       <span>{readStatus.icon}</span>
-      <span className="syllabus-priority-label" style={{ background: "var(--fill-quinary)" }}>{readStatus.name}</span>
+      <span
+        className="syllabus-priority-label"
+        style={{ background: "var(--fill-quinary)" }}
+      >
+        {readStatus.name}
+      </span>
     </span>
-  )
+  );
 }
 
 export function renderSyllabusPage(

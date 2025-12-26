@@ -826,14 +826,18 @@ export class SyllabusManager {
           const pipeIndex = dataStr.indexOf("|");
           if (pipeIndex !== -1) {
             const priorityValue = dataStr.substring(pipeIndex + 1);
-            if (priorityValue && SyllabusManager.PRIORITY_LABELS[priorityValue as SyllabusPriority]) {
+            if (
+              priorityValue &&
+              SyllabusManager.PRIORITY_LABELS[priorityValue as SyllabusPriority]
+            ) {
               const priorityEnum = priorityValue as SyllabusPriority;
               // Create colored dot
               const dot = doc.createElement("span");
               dot.style.width = "8px";
               dot.style.height = "8px";
               dot.style.borderRadius = "50%";
-              dot.style.backgroundColor = SyllabusManager.PRIORITY_COLORS[priorityEnum];
+              dot.style.backgroundColor =
+                SyllabusManager.PRIORITY_COLORS[priorityEnum];
               dot.style.flexShrink = "0";
               container.appendChild(dot);
 
@@ -886,14 +890,18 @@ export class SyllabusManager {
           container.appendChild(classNumberSpan);
 
           // Display priority if available
-          if (priorityValue && SyllabusManager.PRIORITY_LABELS[priorityValue as SyllabusPriority]) {
+          if (
+            priorityValue &&
+            SyllabusManager.PRIORITY_LABELS[priorityValue as SyllabusPriority]
+          ) {
             const priorityEnum = priorityValue as SyllabusPriority;
             // Create colored dot
             const dot = doc.createElement("span");
             dot.style.width = "8px";
             dot.style.height = "8px";
             dot.style.borderRadius = "50%";
-            dot.style.backgroundColor = SyllabusManager.PRIORITY_COLORS[priorityEnum];
+            dot.style.backgroundColor =
+              SyllabusManager.PRIORITY_COLORS[priorityEnum];
             dot.style.flexShrink = "0";
             container.appendChild(dot);
 
@@ -1107,9 +1115,9 @@ export class SyllabusManager {
             },
             styles: opt.color
               ? {
-                color: opt.color,
-                fontWeight: "500",
-              }
+                  color: opt.color,
+                  fontWeight: "500",
+                }
               : undefined,
           });
           prioritySelect.appendChild(option);
