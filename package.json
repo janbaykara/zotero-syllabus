@@ -1,7 +1,7 @@
 {
   "name": "zotero-syllabus",
   "type": "module",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "Zotero Syllabus Plugin",
   "config": {
     "addonName": "Zotero Syllabus",
