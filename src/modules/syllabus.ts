@@ -2019,6 +2019,16 @@ export class SyllabusManager {
     return children;
   }
 
+  static setCollectionTitle(collectionId: number, title: string, source: "page") {
+    const collectionIdStr = String(collectionId);
+    const collection = Zotero.Collections.get(collectionId);
+    if (collection) {
+      collection.name = title;
+      collection.saveTx();
+    }
+    this.onCollectionUpdated(collection, source);
+  }
+
   /**
    * Get syllabus data from an item's extra field
    */
