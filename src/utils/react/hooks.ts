@@ -12,6 +12,7 @@ import {
   createCollectionStore,
   createPreferenceStore,
   createSelectedCollectionStore,
+  createSelectedItemStore,
 } from "./stores";
 import { config } from "../../../package.json";
 import { SyllabusManager } from "../../modules/syllabus";
@@ -157,5 +158,14 @@ export function useZoteroCollectionName(collectionId: number): string {
     () => createCollectionStore(collectionId),
     [collectionId],
   );
+  return useSyncExternalStore(store.subscribe, store.getSnapshot);
+}
+
+/**
+ * Hook to get the currently selected item ID in Zotero
+ * @returns The currently selected item ID, or null if none is selected
+ */
+export function useZoteroSelectedItemId(): number | null {
+  const store = useMemo(() => createSelectedItemStore(), []);
   return useSyncExternalStore(store.subscribe, store.getSnapshot);
 }

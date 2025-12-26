@@ -9,6 +9,7 @@ import { renderComponent } from "../utils/react";
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
+import { useZoteroSelectedItemId } from "../utils/react/hooks";
 import {
   getItemReadStatusName,
   getReadStatusMetadata,
@@ -520,6 +521,10 @@ function SyllabusItemCard({
   collectionId,
   slim = false,
 }: SyllabusItemCardProps) {
+  // Get the currently selected item ID
+  const selectedItemId = useZoteroSelectedItemId();
+  const isSelected = selectedItemId === item.id;
+
   // Get priority and class instruction from item
   const priority = SyllabusManager.getSyllabusPriority(item, collectionId);
   const classInstruction = SyllabusManager.getSyllabusClassInstruction(
@@ -580,9 +585,9 @@ function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-      item: Zotero.Item;
-      type: "pdf" | "snapshot" | "epub";
-    }>;
+        item: Zotero.Item;
+        type: "pdf" | "snapshot" | "epub";
+      }>;
   }, [item, slim]);
 
   const priorityColor =
@@ -591,14 +596,14 @@ function SyllabusItemCard({
       : null;
   const priorityStyle = priorityColor
     ? (() => {
-        const r = parseInt(priorityColor.slice(1, 3), 16);
-        const g = parseInt(priorityColor.slice(3, 5), 16);
-        const b = parseInt(priorityColor.slice(5, 7), 16);
-        return {
-          backgroundColor: `rgba(${r}, ${g}, ${b}, 0.05)`,
-          borderColor: `rgba(${r}, ${g}, ${b}, 0.2)`,
-        };
-      })()
+      const r = parseInt(priorityColor.slice(1, 3), 16);
+      const g = parseInt(priorityColor.slice(3, 5), 16);
+      const b = parseInt(priorityColor.slice(5, 7), 16);
+      return {
+        backgroundColor: `rgba(${r}, ${g}, ${b}, 0.05)`,
+        borderColor: `rgba(${r}, ${g}, ${b}, 0.2)`,
+      };
+    })()
     : {};
 
   const metadataParts = [
@@ -688,7 +693,11 @@ function SyllabusItemCard({
 
   return (
     <div
-      className={slim ? "syllabus-item syllabus-item-slim" : "syllabus-item"}
+      className={
+        slim
+          ? `syllabus-item syllabus-item-slim${isSelected ? " syllabus-item-selected" : ""}`
+          : `syllabus-item${isSelected ? " syllabus-item-selected" : ""}`
+      }
       data-item-id={item.id}
       draggable
       style={slim ? {} : priorityStyle}

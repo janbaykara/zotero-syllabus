@@ -304,6 +304,37 @@
   transform: translateY(-2px);
 }
 
+.syllabus-item-selected {
+  border: 3px solid #0060df !important;
+  box-shadow: 0 6px 16px rgba(0, 96, 223, 0.3) !important;
+  background: #0060df !important;
+}
+
+.syllabus-item-selected .syllabus-item-title {
+  color: #ffffff !important;
+}
+
+.syllabus-item-selected .syllabus-item-metadata {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.syllabus-item-selected .syllabus-item-reference {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.syllabus-item-selected .syllabus-item-description {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.syllabus-item-selected .syllabus-priority-label {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+
+.syllabus-item-selected .syllabus-action-label {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
 .syllabus-item-content {
   display: flex;
   gap: 16px;
@@ -513,6 +544,20 @@
   transform: none;
 }
 
+.syllabus-item-slim.syllabus-item-selected {
+  border: 3px solid #0060df !important;
+  box-shadow: 0 6px 16px rgba(0, 96, 223, 0.3) !important;
+  background: #0060df !important;
+}
+
+.syllabus-item-slim.syllabus-item-selected .syllabus-item-title {
+  color: #ffffff !important;
+}
+
+.syllabus-item-slim.syllabus-item-selected .syllabus-item-metadata {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
 .syllabus-item-slim .syllabus-item-content {
   padding: 8px 12px 8px 12px;
   gap: 10px;
@@ -675,6 +720,51 @@
     background: #3a3a3c;
     border-color: #48484a;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .syllabus-item-selected {
+    border: 3px solid #0060df !important;
+    box-shadow: 0 6px 16px rgba(0, 96, 223, 0.4) !important;
+    background: #0060df !important;
+  }
+
+  .syllabus-item-selected .syllabus-item-title {
+    color: #ffffff !important;
+  }
+
+  .syllabus-item-selected .syllabus-item-metadata {
+    color: rgba(255, 255, 255, 0.9) !important;
+  }
+
+  .syllabus-item-selected .syllabus-item-reference {
+    color: rgba(255, 255, 255, 0.85) !important;
+  }
+
+  .syllabus-item-selected .syllabus-item-description {
+    color: rgba(255, 255, 255, 0.9) !important;
+  }
+
+  .syllabus-item-selected .syllabus-priority-label {
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+  }
+
+  .syllabus-item-selected .syllabus-action-label {
+    color: rgba(255, 255, 255, 0.9) !important;
+  }
+
+  .syllabus-item-slim.syllabus-item-selected {
+    border: 3px solid #0060df !important;
+    box-shadow: 0 6px 16px rgba(0, 96, 223, 0.4) !important;
+    background: #0060df !important;
+  }
+
+  .syllabus-item-slim.syllabus-item-selected .syllabus-item-title {
+    color: #ffffff !important;
+  }
+
+  .syllabus-item-slim.syllabus-item-selected .syllabus-item-metadata {
+    color: rgba(255, 255, 255, 0.9) !important;
   }
 
   .syllabus-item-thumbnail {
@@ -903,6 +993,99 @@
   background: #3a3a3c;
   border-color: #48484a;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+:root[data-theme="dark"] .syllabus-item-selected,
+:root.dark .syllabus-item-selected,
+#main-window[data-theme="dark"] .syllabus-item-selected,
+#main-window.dark .syllabus-item-selected {
+  border: 3px solid #0060df !important;
+  box-shadow: 0 6px 16px rgba(0, 96, 223, 0.4) !important;
+  background: #0060df !important;
+}
+
+:root[data-theme="dark"] .syllabus-item-selected .syllabus-item-title,
+:root.dark .syllabus-item-selected .syllabus-item-title,
+#main-window[data-theme="dark"] .syllabus-item-selected .syllabus-item-title,
+#main-window.dark .syllabus-item-selected .syllabus-item-title {
+  color: #ffffff !important;
+}
+
+:root[data-theme="dark"] .syllabus-item-selected .syllabus-item-metadata,
+:root.dark .syllabus-item-selected .syllabus-item-metadata,
+#main-window[data-theme="dark"] .syllabus-item-selected .syllabus-item-metadata,
+#main-window.dark .syllabus-item-selected .syllabus-item-metadata {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+:root[data-theme="dark"] .syllabus-item-selected .syllabus-item-reference,
+:root.dark .syllabus-item-selected .syllabus-item-reference,
+#main-window[data-theme="dark"]
+  .syllabus-item-selected
+  .syllabus-item-reference,
+#main-window.dark .syllabus-item-selected .syllabus-item-reference {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+:root[data-theme="dark"] .syllabus-item-selected .syllabus-item-description,
+:root.dark .syllabus-item-selected .syllabus-item-description,
+#main-window[data-theme="dark"]
+  .syllabus-item-selected
+  .syllabus-item-description,
+#main-window.dark .syllabus-item-selected .syllabus-item-description {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+:root[data-theme="dark"] .syllabus-item-selected .syllabus-priority-label,
+:root.dark .syllabus-item-selected .syllabus-priority-label,
+#main-window[data-theme="dark"]
+  .syllabus-item-selected
+  .syllabus-priority-label,
+#main-window.dark .syllabus-item-selected .syllabus-priority-label {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="dark"] .syllabus-item-selected .syllabus-action-label,
+:root.dark .syllabus-item-selected .syllabus-action-label,
+#main-window[data-theme="dark"] .syllabus-item-selected .syllabus-action-label,
+#main-window.dark .syllabus-item-selected .syllabus-action-label {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+:root[data-theme="dark"] .syllabus-item-slim.syllabus-item-selected,
+:root.dark .syllabus-item-slim.syllabus-item-selected,
+#main-window[data-theme="dark"] .syllabus-item-slim.syllabus-item-selected,
+#main-window.dark .syllabus-item-slim.syllabus-item-selected {
+  border: 3px solid #0060df !important;
+  box-shadow: 0 6px 16px rgba(0, 96, 223, 0.4) !important;
+  background: #0060df !important;
+}
+
+:root[data-theme="dark"]
+  .syllabus-item-slim.syllabus-item-selected
+  .syllabus-item-title,
+:root.dark .syllabus-item-slim.syllabus-item-selected .syllabus-item-title,
+#main-window[data-theme="dark"]
+  .syllabus-item-slim.syllabus-item-selected
+  .syllabus-item-title,
+#main-window.dark
+  .syllabus-item-slim.syllabus-item-selected
+  .syllabus-item-title {
+  color: #ffffff !important;
+}
+
+:root[data-theme="dark"]
+  .syllabus-item-slim.syllabus-item-selected
+  .syllabus-item-metadata,
+:root.dark .syllabus-item-slim.syllabus-item-selected .syllabus-item-metadata,
+#main-window[data-theme="dark"]
+  .syllabus-item-slim.syllabus-item-selected
+  .syllabus-item-metadata,
+#main-window.dark
+  .syllabus-item-slim.syllabus-item-selected
+  .syllabus-item-metadata {
+  color: rgba(255, 255, 255, 0.9) !important;
 }
 
 :root[data-theme="dark"] .syllabus-item-thumbnail,

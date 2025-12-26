@@ -359,3 +359,76 @@ export function createSelectedCollectionStore() {
 
   return { getSnapshot, subscribe };
 }
+
+/**
+ * Store for the currently selected item in Zotero
+ */
+export function createSelectedItemStore() {
+  let selectedItemId: number | null = null;
+  const listeners = new Set<() => void>();
+  let notifierID: string | null = null;
+  let intervalID: NodeJS.Timeout | null = null;
+
+  const getSnapshot = () => selectedItemId;
+
+  const subscribe = (listener: () => void) => {
+    listeners.add(listener);
+
+    const notifierCallback = {
+      notify: async (
+        event: string,
+        type: string,
+        ids: number[] | string[],
+        extraData: { [key: string]: any },
+      ) => {
+        // Listen to item selection changes
+        if (type === "item" || type === "tab") {
+          const pane = ztoolkit.getGlobal("ZoteroPane");
+          const selectedItems = pane?.getSelectedItems() || [];
+          const newSelectedItemId =
+            selectedItems.length > 0 ? selectedItems[0].id : null;
+          if (newSelectedItemId !== selectedItemId) {
+            selectedItemId = newSelectedItemId;
+            listeners.forEach((l) => l());
+          }
+        }
+      },
+    };
+
+    notifierID = Zotero.Notifier.registerObserver(notifierCallback, [
+      "item",
+      "tab",
+    ]);
+
+    // Also poll for changes as a fallback (Zotero doesn't always fire selection events reliably)
+    intervalID = setInterval(() => {
+      const pane = ztoolkit.getGlobal("ZoteroPane");
+      const selectedItems = pane?.getSelectedItems() || [];
+      const newSelectedItemId =
+        selectedItems.length > 0 ? selectedItems[0].id : null;
+      if (newSelectedItemId !== selectedItemId) {
+        selectedItemId = newSelectedItemId;
+        listeners.forEach((l) => l());
+      }
+    }, 200);
+
+    // Initial load
+    const pane = ztoolkit.getGlobal("ZoteroPane");
+    const selectedItems = pane?.getSelectedItems() || [];
+    selectedItemId = selectedItems.length > 0 ? selectedItems[0].id : null;
+
+    return () => {
+      listeners.delete(listener);
+      if (intervalID) {
+        clearInterval(intervalID);
+        intervalID = null;
+      }
+      if (listeners.size === 0 && notifierID) {
+        Zotero.Notifier.unregisterObserver(notifierID);
+        notifierID = null;
+      }
+    };
+  };
+
+  return { getSnapshot, subscribe };
+}
