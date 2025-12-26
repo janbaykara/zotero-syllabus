@@ -16,43 +16,41 @@ A Zotero plugin that turns your collections into syllabi and course reading list
 - For **bug reports** and **feature requests**, please use the [GitHub Issues](https://github.com/janbaykara/zotero-syllabus/issues) page.
 - For **general discussion**, please use the [Zotero Forum Thread](https://forums.zotero.org/discussion/128688/zotero-syllabus-a-plugin-for-managing-your-uni-course-reading-lists) or [Reddit Thread](https://www.reddit.com/r/zotero/comments/1puxigg/zotero_syllabus_a_plugin_for_managing_your_uni/).
 
-## Screenshots
+## A tour of the features
 
-#### Syllabus Metadata
+### Syllabus Metadata
 
-![Syllabus module interface showing class organization](doc/images/module.png)
-_Pin important course information to the top of the syllabus._
+Items are grouped by class number, and can be given a priority. Assign classes a name and description.
 
 ![Syllabus module interface showing class organization](doc/images/classes.png)
-_Items are grouped by class number, and can be given a priority. Assign classes a name and description._
 
-#### Standard List View
+Pin important course information to the top of the syllabus.
+
+![Syllabus module interface showing class organization](doc/images/module.png)
+
+### Standard List View
+
+The standard Zotero item list view has added columns for class numbers, instructions, and reading priority levels. There's also an 'all in one' column that shows all the syllabus metadata at once. Sorting by this column will sort by class number first, then by priority.
 
 ![Standard Zotero list view](doc/images/list.png)
-_The standard Zotero item list view has added columns for class numbers, instructions, and reading priority levels. There's also an 'all in one' column that shows all the syllabus metadata at once. Sorting by this column will sort by class number first, then by priority._
 
 #### How to edit an item's syllabus metadata
 
+Drag and drop items between classes.
+
 ![Drag and drop functionality demonstration](doc/images/drag-drop.gif)
-_Drag and drop items between classes._
+
+Use the item pane to edit class number, instruction, and priority for an item.
 
 ![Editing pane showing class number, instruction, and priority](doc/images/editing.png)
-_Use the item pane to edit class number, instruction, and priority for an item._
+
+Right-click an item to re-assign class number or priority.
 
 ![Context menu showing syllabus operations](doc/images/right-click.png)
-_Right-click an item to re-assign class number or priority._
 
-## Features
+### Other features
 
-- **Syllabus View**: Enhanced item view with syllabus-specific columns and organization
-- **Class Management**: Group items by course/class with custom titles and descriptions
-- **Priority System**: Assign priorities to syllabus items with color-coded visual indicators
-- **Custom Columns**: Dedicated columns for class numbers, instructions, and priority levels
-- **Collection Descriptions**: Add detailed descriptions to syllabus collections
-- **Context Menus**: Right-click menus for quick syllabus operations
-- **Item Pane Integration**: Syllabus information displayed directly in the item pane
-- **Drag & Drop Support**: Intuitive organization of course materials
-- **Localization**: Multi-language support (English, French, Chinese)
+- **Zotero Reading List compatibility**: if you have the [Zotero Reading List](https://github.com/Dominic-DallOsto/zotero-reading-list) plugin installed, reading status will be displayed in the syllabus view
 
 ## Development
 
