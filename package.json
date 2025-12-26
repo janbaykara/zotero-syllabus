@@ -31,16 +31,13 @@
     "update-deps": "pnpm update --save"
   },
   "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "preact": "^10.19.3",
     "zotero-plugin-toolkit": "^5.1.0-beta.13"
   },
   "devDependencies": {
     "@types/chai": "^5.2.3",
     "@types/mocha": "^10.0.10",
     "@types/node": "^24.10.0",
-    "@types/react": "^18.3.27",
-    "@types/react-dom": "^18.3.7",
     "@zotero-plugin/eslint-config": "^0.6.7",
     "chai": "^6.2.1",
     "eslint": "^9.39.2",

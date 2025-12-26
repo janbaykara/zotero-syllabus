@@ -1,9 +1,10 @@
 /**
- * React hooks for syncing with Zotero's external state
+ * Preact hooks for syncing with Zotero's external state
  * These hooks abstract away the store creation and useSyncExternalStore usage
  */
 
-import { useSyncExternalStore, useMemo } from "react";
+import { useMemo } from "preact/hooks";
+import { useSyncExternalStore } from "preact/compat";
 import {
   createCollectionItemsStore,
   createItemExtraFieldsStore,
@@ -27,7 +28,7 @@ export function useZoteroCollection(collectionId: number): Zotero.Collection | n
     [collectionId],
   );
   const name = useSyncExternalStore(store.subscribe, store.getSnapshot);
-  
+
   // Return the collection object, re-fetching when name changes
   return useMemo(() => {
     const collection = Zotero.Collections.get(collectionId);
@@ -85,14 +86,14 @@ export function useZoteroCollectionMetadata(collectionId: number): number {
  */
 export function useZoteroCollectionMetadataData(collectionId: number) {
   const version = useZoteroCollectionMetadata(collectionId);
-  
+
   return useMemo(() => {
     const description = SyllabusManager.getCollectionDescription(collectionId);
     const getClassTitle = (classNumber: number) =>
       SyllabusManager.getClassTitle(collectionId, classNumber);
     const getClassDescription = (classNumber: number) =>
       SyllabusManager.getClassDescription(collectionId, classNumber);
-    
+
     return {
       description,
       getClassTitle,
@@ -132,13 +133,13 @@ export function useZoteroPluginPreferences<T extends Record<string, any>>(
   // Get all keys as an array to ensure consistent hook call order
   const keyEntries = Object.entries(keys);
   const prefs: any = {};
-  
+
   // Call hooks in consistent order
   for (const [key, defaultValue] of keyEntries) {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     prefs[key] = useZoteroPluginPreference(key, defaultValue);
   }
-  
+
   return prefs as { [K in keyof T]: T[K] };
 }
 

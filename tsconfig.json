@@ -3,6 +3,8 @@
   "include": ["src", "typings"],
   "exclude": ["build", "addon"],
   "compilerOptions": {
-    "jsx": "react"
+    "jsx": "react",
+    "jsxFactory": "h",
+    "jsxFragmentFactory": "Fragment"
   }
 }

@@ -1,4 +1,7 @@
-import React, { useState, useEffect, useMemo } from "react";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { h, Fragment } from "preact";
+import { useState, useEffect, useMemo, useRef } from "preact/hooks";
+import type { JSX } from "preact";
 import { generateBibliographicReference } from "../utils/cite";
 import { getPref } from "../utils/prefs";
 import { SyllabusManager } from "./syllabus";
@@ -174,7 +177,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   };
 
   const handleDrop = async (
-    e: React.DragEvent,
+    e: JSX.TargetedDragEvent<HTMLElement>,
     targetClassNumber: number | null,
   ) => {
     e.preventDefault();
@@ -208,7 +211,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.dataTransfer) {
@@ -217,7 +220,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     e.currentTarget.classList.add("syllabus-dropzone-active");
   };
 
-  const handleDragLeave = (e: React.DragEvent) => {
+  const handleDragLeave = (e: JSX.TargetedDragEvent<HTMLElement>) => {
     e.preventDefault();
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
@@ -259,7 +262,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         emptyBehavior="delete"
       />
 
-      {classGroups.map((group) => (
+      {classGroups.map((group: { classNumber: number | null; items: Zotero.Item[] }) => (
         <ClassGroupComponent
           key={group.classNumber ?? "null"}
           classNumber={group.classNumber}
@@ -282,7 +285,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
           >
-            {furtherReadingItems.map((item) => (
+            {furtherReadingItems.map((item: Zotero.Item) => (
               <SyllabusItemCardSlim
                 key={item.id}
                 item={item}
@@ -305,9 +308,9 @@ interface ClassGroupComponentProps {
     classNumber: number,
     description: string,
   ) => Promise<void>;
-  onDrop: (e: React.DragEvent, classNumber: number | null) => Promise<void>;
-  onDragOver: (e: React.DragEvent) => void;
-  onDragLeave: (e: React.DragEvent) => void;
+  onDrop: (e: JSX.TargetedDragEvent<HTMLElement>, classNumber: number | null) => Promise<void>;
+  onDragOver: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
+  onDragLeave: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
 }
 
 function ClassGroupComponent({
@@ -404,7 +407,7 @@ function EditableTitle({
 }: EditableTitleProps) {
   const [value, setValue] = useState(initialValue);
   const [isEditing, setIsEditing] = useState(false);
-  const inputRef = React.useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setValue(initialValue);
@@ -417,7 +420,7 @@ function EditableTitle({
     }
   }, [isEditing]);
 
-  const handleBlur = async (_e: React.FocusEvent) => {
+  const handleBlur = async (_e: JSX.TargetedFocusEvent<HTMLInputElement>) => {
     // Use setTimeout to ensure blur completes before we check what was clicked
     setTimeout(async () => {
       if (value.trim() === "" && emptyBehavior === "delete") {
@@ -437,7 +440,7 @@ function EditableTitle({
     }, 0);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: JSX.TargetedKeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
       inputRef.current?.blur();
@@ -448,7 +451,7 @@ function EditableTitle({
     }
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = (e: JSX.TargetedMouseEvent<HTMLInputElement>) => {
     // Prevent blur when clicking on the input itself
     e.stopPropagation();
   };
@@ -499,7 +502,7 @@ function EditableDescription({
 }: EditableDescriptionProps) {
   const [value, setValue] = useState(initialValue);
   const [isEditing, setIsEditing] = useState(false);
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     setValue(initialValue);
@@ -515,7 +518,7 @@ function EditableDescription({
     }
   }, [isEditing]);
 
-  const handleBlur = async (_e: React.FocusEvent) => {
+  const handleBlur = async (_e: JSX.TargetedFocusEvent<HTMLTextAreaElement>) => {
     // Use setTimeout to ensure blur completes before we check what was clicked
     setTimeout(async () => {
       if (value.trim() === "" && emptyBehavior === "delete") {
@@ -536,7 +539,7 @@ function EditableDescription({
     }, 0);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: JSX.TargetedKeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Escape") {
       e.preventDefault();
       setValue(initialValue);
@@ -544,7 +547,7 @@ function EditableDescription({
     }
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = (e: JSX.TargetedMouseEvent<HTMLTextAreaElement>) => {
     // Prevent blur when clicking on the textarea itself
     e.stopPropagation();
   };
@@ -682,7 +685,7 @@ function SyllabusItemCard({
 
   const metadataParts = [itemTypeLabel, author, date].filter(Boolean);
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = (e: JSX.TargetedMouseEvent<HTMLElement>) => {
     const target = e.target as HTMLElement;
     if (
       target.closest(".syllabus-item-actions") ||
@@ -694,25 +697,25 @@ function SyllabusItemCard({
     pane.selectItem(item.id);
   };
 
-  const handleDragStart = (e: React.DragEvent) => {
+  const handleDragStart = (e: JSX.TargetedDragEvent<HTMLElement>) => {
     e.stopPropagation();
     if (e.dataTransfer) {
       e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData("text/plain", String(item.id));
     }
-    e.currentTarget.classList.add("syllabus-item-dragging");
+    (e.currentTarget as HTMLElement).classList.add("syllabus-item-dragging");
   };
 
-  const handleDragEnd = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove("syllabus-item-dragging");
+  const handleDragEnd = (e: JSX.TargetedDragEvent<HTMLElement>) => {
+    (e.currentTarget as HTMLElement).classList.remove("syllabus-item-dragging");
   };
 
-  const handleUrlClick = (e: React.MouseEvent) => {
+  const handleUrlClick = (e: JSX.TargetedMouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     Zotero.launchURL(url);
   };
 
-  const handleAttachmentClick = async (e: React.MouseEvent) => {
+  const handleAttachmentClick = async (e: JSX.TargetedMouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     if (!viewableAttachment) return;
 
@@ -876,17 +879,17 @@ function SyllabusItemCardSlim({
     pane.selectItem(item.id);
   };
 
-  const handleDragStart = (e: React.DragEvent) => {
+  const handleDragStart = (e: JSX.TargetedDragEvent<HTMLElement>) => {
     e.stopPropagation();
     if (e.dataTransfer) {
       e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData("text/plain", String(item.id));
     }
-    e.currentTarget.classList.add("syllabus-item-dragging");
+    (e.currentTarget as HTMLElement).classList.add("syllabus-item-dragging");
   };
 
-  const handleDragEnd = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove("syllabus-item-dragging");
+  const handleDragEnd = (e: JSX.TargetedDragEvent<HTMLElement>) => {
+    (e.currentTarget as HTMLElement).classList.remove("syllabus-item-dragging");
   };
 
   return (
@@ -936,6 +939,11 @@ export function renderSyllabusPage(
   rootElement: HTMLElement,
   collection: Zotero.Collection,
 ) {
-  createReactRoot("syllabus-page", win, rootElement, <SyllabusPage collectionId={collection.id} />);
+  createReactRoot(
+    "syllabus-page",
+    win,
+    rootElement,
+    <SyllabusPage collectionId={collection.id} />,
+  );
 }
 

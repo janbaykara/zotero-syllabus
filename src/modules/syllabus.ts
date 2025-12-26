@@ -14,6 +14,7 @@ import {
 } from "../utils/ui";
 import { renderSyllabusPage } from "./SyllabusPage";
 import { renderWithHotReload } from "../utils/react";
+import { getSelectedCollection } from "../utils/zotero";
 
 enum SyllabusPriority {
   COURSE_INFO = "course-info",
@@ -254,12 +255,12 @@ export class SyllabusManager {
   static setupSyllabusViewTabListener() {
     const z = ztoolkit.getGlobal("Zotero");
     const mainWindow = z.getMainWindow();
-    let currentTabTitle = getCurrentTab(mainWindow)?.title;
+    let selectedCollectionId = getSelectedCollection()?.id;
     const interval = setInterval(async () => {
-      const newTab = getCurrentTab(mainWindow);
-      if (newTab && newTab.title !== currentTabTitle) {
-        ztoolkit.log("newTab", newTab);
-        currentTabTitle = newTab.title;
+      const collection = getSelectedCollection()
+      if (collection && collection.id !== selectedCollectionId) {
+        ztoolkit.log("Selected collection changed", collection.id);
+        selectedCollectionId = collection.id;
         // setupUI() calls setupPage() which re-renders React component for new collection
         // Once mounted, React stores handle all data updates automatically
         SyllabusManager.setupUI();
