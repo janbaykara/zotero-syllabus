@@ -16,6 +16,7 @@ import { renderSyllabusPage } from "./SyllabusPage";
 import { renderComponent } from "../utils/react";
 import { getSelectedCollection } from "../utils/zotero";
 import { renderPage } from "./Page";
+import { set, get } from "lodash-es"
 
 enum SyllabusPriority {
   COURSE_INFO = "course-info",
@@ -41,17 +42,21 @@ export interface ItemSyllabusData {
  * Collection metadata stored in preferences
  * Structure: { [collectionId]: { description: string, classes: { [classNumber]: { title: string, description: string } } } }
  */
-export interface SettingsCollectionMetadata {
-  [collectionId: string]: {
-    description?: string;
-    classes?: {
-      [classNumber: string]: {
-        title?: string;
-        description?: string;
-      };
-    };
-  };
+export interface SettingsCollectionDictionaryData {
+  [collectionId: string]: SettingsSyllabusMetadata;
 }
+
+export interface SettingsSyllabusMetadata {
+  description?: string;
+  classes?: {
+    [classNumber: string]: SettingsClassMetadata;
+  };
+};
+
+export interface SettingsClassMetadata {
+  title?: string;
+  description?: string;
+};
 
 export class SyllabusManager {
   static notifierID: string | null = null;
@@ -343,7 +348,7 @@ export class SyllabusManager {
     }
 
     const collectionId = String(selectedCollection.id);
-    const prefKey = `${addon.data.config.prefsPrefix}.collectionViewModes`;
+    const prefKey = SyllabusManager.getPreferenceKey(SyllabusSettingsKey.COLLECTION_VIEW_MODES);
     const _viewModes = String(Zotero.Prefs.get(prefKey, true) || "");
     const viewModes = _viewModes
       ? (JSON.parse(_viewModes) as Record<string, boolean>)
@@ -2044,7 +2049,7 @@ export class SyllabusManager {
   /**
    * Get syllabus data from an item's extra field
    */
-  static getSyllabusData(item: Zotero.Item): ItemSyllabusData {
+  static getItemSyllabusData(item: Zotero.Item): ItemSyllabusData {
     const jsonStr = this.extraFieldTool.getExtraField(
       item,
       this.SYLLABUS_DATA_KEY,
@@ -2086,7 +2091,7 @@ export class SyllabusManager {
     item: Zotero.Item,
     collectionId: number | string,
   ): SyllabusPriority | "" {
-    const data = this.getSyllabusData(item);
+    const data = this.getItemSyllabusData(item);
     const collectionIdStr = String(collectionId);
     return data[collectionIdStr]?.priority || "";
   }
@@ -2100,7 +2105,7 @@ export class SyllabusManager {
     priority: SyllabusPriority | "",
     source: "page" | "item-pane" | "context-menu",
   ): Promise<void> {
-    const data = this.getSyllabusData(item);
+    const data = this.getItemSyllabusData(item);
     const collectionIdStr = String(collectionId);
 
     if (!data[collectionIdStr]) {
@@ -2130,7 +2135,7 @@ export class SyllabusManager {
     item: Zotero.Item,
     collectionId: number | string,
   ): string {
-    const data = this.getSyllabusData(item);
+    const data = this.getItemSyllabusData(item);
     const collectionIdStr = String(collectionId);
     return data[collectionIdStr]?.classInstruction || "";
   }
@@ -2144,7 +2149,7 @@ export class SyllabusManager {
     classInstruction: string,
     source: "page" | "item-pane" | "context-menu",
   ): Promise<void> {
-    const data = this.getSyllabusData(item);
+    const data = this.getItemSyllabusData(item);
     const collectionIdStr = String(collectionId);
 
     if (!data[collectionIdStr]) {
@@ -2174,7 +2179,7 @@ export class SyllabusManager {
     item: Zotero.Item,
     collectionId: number | string,
   ): number | undefined {
-    const data = this.getSyllabusData(item);
+    const data = this.getItemSyllabusData(item);
     const collectionIdStr = String(collectionId);
     return data[collectionIdStr]?.classNumber;
   }
@@ -2188,7 +2193,7 @@ export class SyllabusManager {
     classNumber: number | undefined,
     source: "page" | "item-pane" | "context-menu",
   ) {
-    const data = this.getSyllabusData(item);
+    const data = this.getItemSyllabusData(item);
     const collectionIdStr = String(collectionId);
 
     if (!data[collectionIdStr]) {
@@ -2211,17 +2216,14 @@ export class SyllabusManager {
     await this.setSyllabusData(item, data, source);
   }
 
-  /**
-   * Get collection metadata from preferences
-   */
-  static getCollectionMetadata(): SettingsCollectionMetadata {
+  static getSettingsCollectionDictionaryData(): SettingsCollectionDictionaryData {
     const prefKey = SyllabusManager.getPreferenceKey(SyllabusSettingsKey.COLLECTION_METADATA);
     const metadataStr = String(Zotero.Prefs.get(prefKey, true) || "");
     if (!metadataStr) {
       return {};
     }
     try {
-      return JSON.parse(metadataStr) as SettingsCollectionMetadata;
+      return JSON.parse(metadataStr) as SettingsCollectionDictionaryData;
     } catch (e) {
       ztoolkit.log("Error parsing collection metadata:", e);
       return {};
@@ -2229,13 +2231,22 @@ export class SyllabusManager {
   }
 
   /**
+   * Get collection metadata from preferences
+   */
+  static getSyllabusMetadata(collectionId: number | string): SettingsSyllabusMetadata {
+    const data = this.getSettingsCollectionDictionaryData();
+    const collectionIdStr = String(collectionId);
+    return data[collectionIdStr] || {};
+  }
+
+  /**
    * Set collection metadata in preferences
    */
   static async setCollectionMetadata(
-    metadata: SettingsCollectionMetadata,
+    metadata: SettingsSyllabusMetadata,
     source: "page" | "item-pane",
   ): Promise<void> {
-    const prefKey = `${addon.data.config.prefsPrefix}.collectionMetadata`;
+    const prefKey = SyllabusManager.getPreferenceKey(SyllabusSettingsKey.COLLECTION_METADATA);
     Zotero.Prefs.set(prefKey, JSON.stringify(metadata), true);
     // No need to call setupPage() - React stores will trigger re-render automatically
     if (source !== "item-pane") this.reloadItemPane();
@@ -2246,9 +2257,8 @@ export class SyllabusManager {
    * Get collection description for a specific collection
    */
   static getCollectionDescription(collectionId: number | string): string {
-    const metadata = SyllabusManager.getCollectionMetadata();
-    const collectionIdStr = String(collectionId);
-    return metadata[collectionIdStr]?.description || "";
+    const metadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    return metadata.description || "";
   }
 
   /**
@@ -2259,27 +2269,14 @@ export class SyllabusManager {
     description: string,
     source: "page",
   ): Promise<void> {
-    const metadata = SyllabusManager.getCollectionMetadata();
-    const collectionIdStr = String(collectionId);
+    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
+    set(allData, `${collectionId}.description`, description.trim());
+    await SyllabusManager.setCollectionMetadata(allData, source);
+  }
 
-    if (!metadata[collectionIdStr]) {
-      metadata[collectionIdStr] = {};
-    }
-
-    if (description && description.trim()) {
-      metadata[collectionIdStr].description = description.trim();
-    } else {
-      delete metadata[collectionIdStr].description;
-      // Remove collection entry if it's empty
-      if (
-        !metadata[collectionIdStr].classes ||
-        Object.keys(metadata[collectionIdStr].classes || {}).length === 0
-      ) {
-        delete metadata[collectionIdStr];
-      }
-    }
-
-    await SyllabusManager.setCollectionMetadata(metadata, source);
+  static getClassMetadata(collectionId: number | string, classNumber: number) {
+    const metadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    return metadata.classes?.[classNumber] || {};
   }
 
   /**
@@ -2290,11 +2287,8 @@ export class SyllabusManager {
     classNumber: number,
     includeClassNumber: boolean = false,
   ): string {
-    const metadata = SyllabusManager.getCollectionMetadata();
-    const collectionIdStr = String(collectionId);
-    const classNumberStr = String(classNumber);
-    const title =
-      metadata[collectionIdStr]?.classes?.[classNumberStr]?.title || "";
+    const cls = SyllabusManager.getClassMetadata(collectionId, classNumber);
+    const title = cls.title || "";
     if (includeClassNumber) {
       return `#${classNumber}: ${title}`;
     }
@@ -2310,42 +2304,9 @@ export class SyllabusManager {
     title: string,
     source: "page" | "item-pane",
   ): Promise<void> {
-    const metadata = SyllabusManager.getCollectionMetadata();
-    const collectionIdStr = String(collectionId);
-    const classNumberStr = String(classNumber);
-
-    if (!metadata[collectionIdStr]) {
-      metadata[collectionIdStr] = {};
-    }
-    if (!metadata[collectionIdStr].classes) {
-      metadata[collectionIdStr].classes = {};
-    }
-    if (!metadata[collectionIdStr].classes[classNumberStr]) {
-      metadata[collectionIdStr].classes[classNumberStr] = {};
-    }
-
-    if (title && title.trim()) {
-      metadata[collectionIdStr].classes[classNumberStr].title = title.trim();
-    } else {
-      delete metadata[collectionIdStr].classes[classNumberStr].title;
-      // Remove class entry if it's empty
-      if (!metadata[collectionIdStr].classes[classNumberStr].description) {
-        delete metadata[collectionIdStr].classes[classNumberStr];
-      }
-      // Remove classes object if empty
-      if (Object.keys(metadata[collectionIdStr].classes || {}).length === 0) {
-        delete metadata[collectionIdStr].classes;
-      }
-      // Remove collection entry if it's empty
-      if (
-        !metadata[collectionIdStr].description &&
-        !metadata[collectionIdStr].classes
-      ) {
-        delete metadata[collectionIdStr];
-      }
-    }
-
-    await SyllabusManager.setCollectionMetadata(metadata, source);
+    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
+    set(allData, `${collectionId}.classes.${classNumber}.title`, title);
+    await SyllabusManager.setCollectionMetadata(allData, source);
   }
 
   /**
@@ -2355,12 +2316,8 @@ export class SyllabusManager {
     collectionId: number | string,
     classNumber: number,
   ): string {
-    const metadata = SyllabusManager.getCollectionMetadata();
-    const collectionIdStr = String(collectionId);
-    const classNumberStr = String(classNumber);
-    return (
-      metadata[collectionIdStr]?.classes?.[classNumberStr]?.description || ""
-    );
+    const metadata = SyllabusManager.getClassMetadata(collectionId, classNumber);
+    return metadata.description || "";
   }
 
   /**
@@ -2372,42 +2329,8 @@ export class SyllabusManager {
     description: string,
     source: "page",
   ): Promise<void> {
-    const metadata = SyllabusManager.getCollectionMetadata();
-    const collectionIdStr = String(collectionId);
-    const classNumberStr = String(classNumber);
-
-    if (!metadata[collectionIdStr]) {
-      metadata[collectionIdStr] = {};
-    }
-    if (!metadata[collectionIdStr].classes) {
-      metadata[collectionIdStr].classes = {};
-    }
-    if (!metadata[collectionIdStr].classes[classNumberStr]) {
-      metadata[collectionIdStr].classes[classNumberStr] = {};
-    }
-
-    if (description && description.trim()) {
-      metadata[collectionIdStr].classes[classNumberStr].description =
-        description.trim();
-    } else {
-      delete metadata[collectionIdStr].classes[classNumberStr].description;
-      // Remove class entry if it's empty
-      if (!metadata[collectionIdStr].classes[classNumberStr].title) {
-        delete metadata[collectionIdStr].classes[classNumberStr];
-      }
-      // Remove classes object if empty
-      if (Object.keys(metadata[collectionIdStr].classes || {}).length === 0) {
-        delete metadata[collectionIdStr].classes;
-      }
-      // Remove collection entry if it's empty
-      if (
-        !metadata[collectionIdStr].description &&
-        !metadata[collectionIdStr].classes
-      ) {
-        delete metadata[collectionIdStr];
-      }
-    }
-
-    await SyllabusManager.setCollectionMetadata(metadata, source);
+    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
+    set(allData, `${collectionId}.classes.${classNumber}.description`, description);
+    await SyllabusManager.setCollectionMetadata(allData, source);
   }
 }

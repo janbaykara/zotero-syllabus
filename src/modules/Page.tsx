@@ -2,8 +2,8 @@
 import { h, Fragment } from "preact";
 import { renderComponent } from "../utils/react";
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
-import { useZoteroCollectionDescription } from "./react-zotero-sync/collectionDescription";
 // import { useZoteroClassMetadata } from "./react-zotero-sync/classMetadata";
+import { useZoteroCollectionDescription } from "./react-zotero-sync/collectionMetadata";
 // import { useZoteroCollectionItems } from './react-zotero-sync/collectionItems';
 
 function Page({ collectionId }: { collectionId: number }) {
