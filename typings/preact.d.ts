@@ -19,4 +19,3 @@ declare global {
 // These will be used by the build system (esbuild) when transforming JSX
 import { h, Fragment } from "preact";
 export { h, Fragment };
-

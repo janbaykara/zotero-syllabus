@@ -12,7 +12,11 @@ import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
 
 // Define priority type for use in this file
 // These values match SyllabusPriority enum in syllabus.ts
-type SyllabusPriorityType = "course-info" | "essential" | "recommended" | "optional";
+type SyllabusPriorityType =
+  | "course-info"
+  | "essential"
+  | "recommended"
+  | "optional";
 
 interface SyllabusPageProps {
   collectionId: number;
@@ -21,7 +25,8 @@ interface SyllabusPageProps {
 export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   // Sync with external Zotero stores using hooks
   const [title, setTitle] = useZoteroCollectionTitle(collectionId);
-  const [syllabusMetadata, setDescription, setClassDescription, setClassTitle] = useZoteroSyllabusMetadata(collectionId);
+  const [syllabusMetadata, setDescription, setClassDescription, setClassTitle] =
+    useZoteroSyllabusMetadata(collectionId);
   const items = useZoteroCollectionItems(collectionId);
 
   // Compute class groups and further reading items from synced items
@@ -37,10 +42,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         item,
         collectionId,
       );
-      const priority = SyllabusManager.getSyllabusPriority(
-        item,
-        collectionId,
-      );
+      const priority = SyllabusManager.getSyllabusPriority(item, collectionId);
 
       if (priority === "" && classNumber === undefined) {
         furtherReading.push(item);
@@ -56,27 +58,19 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     }
 
     // Sort class numbers
-    const sortedClassNumbers = Array.from(itemsByClass.keys()).sort(
-      (a, b) => {
-        if (a === null && b === null) return 0;
-        if (a === null) return -1;
-        if (b === null) return 1;
-        return a - b;
-      },
-    );
+    const sortedClassNumbers = Array.from(itemsByClass.keys()).sort((a, b) => {
+      if (a === null && b === null) return 0;
+      if (a === null) return -1;
+      if (b === null) return 1;
+      return a - b;
+    });
 
     // Sort items within each class by priority
     for (const classNumber of sortedClassNumbers) {
       const classItems = itemsByClass.get(classNumber)!;
       classItems.sort((a, b) => {
-        const priorityA = SyllabusManager.getSyllabusPriority(
-          a,
-          collectionId,
-        );
-        const priorityB = SyllabusManager.getSyllabusPriority(
-          b,
-          collectionId,
-        );
+        const priorityA = SyllabusManager.getSyllabusPriority(a, collectionId);
+        const priorityB = SyllabusManager.getSyllabusPriority(b, collectionId);
         const getPriorityOrder = (
           priority: SyllabusPriorityType | "" | undefined,
         ): number => {
@@ -159,12 +153,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     const y = e.clientY;
     // Only remove the class if we're actually leaving the drop zone
     // (not just moving to a child element)
-    if (
-      x < rect.left ||
-      x > rect.right ||
-      y < rect.top ||
-      y > rect.bottom
-    ) {
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
       e.currentTarget.classList.remove("syllabus-dropzone-active");
     }
   };
@@ -189,20 +178,22 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         emptyBehavior="delete"
       />
 
-      {classGroups.map((group: { classNumber: number | null; items: Zotero.Item[] }) => (
-        <ClassGroupComponent
-          key={group.classNumber ?? "null"}
-          classNumber={group.classNumber}
-          items={group.items}
-          collectionId={collectionId}
-          syllabusMetadata={syllabusMetadata}
-          onClassTitleSave={setClassTitle}
-          onClassDescriptionSave={setClassDescription}
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-        />
-      ))}
+      {classGroups.map(
+        (group: { classNumber: number | null; items: Zotero.Item[] }) => (
+          <ClassGroupComponent
+            key={group.classNumber ?? "null"}
+            classNumber={group.classNumber}
+            items={group.items}
+            collectionId={collectionId}
+            syllabusMetadata={syllabusMetadata}
+            onClassTitleSave={setClassTitle}
+            onClassDescriptionSave={setClassDescription}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+          />
+        ),
+      )}
 
       {furtherReadingItems.length > 0 && (
         <div className="syllabus-class-group">
@@ -234,10 +225,15 @@ interface ClassGroupComponentProps {
   classNumber: number | null;
   items: Zotero.Item[];
   collectionId: number;
-  syllabusMetadata: { classes?: { [key: string]: { title?: string; description?: string } } };
+  syllabusMetadata: {
+    classes?: { [key: string]: { title?: string; description?: string } };
+  };
   onClassTitleSave: (classNumber: number, title: string) => void;
   onClassDescriptionSave: (classNumber: number, description: string) => void;
-  onDrop: (e: JSX.TargetedDragEvent<HTMLElement>, classNumber: number | null) => Promise<void>;
+  onDrop: (
+    e: JSX.TargetedDragEvent<HTMLElement>,
+    classNumber: number | null,
+  ) => Promise<void>;
   onDragOver: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
   onDragLeave: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
 }
@@ -254,8 +250,14 @@ function ClassGroupComponent({
   onDragLeave,
 }: ClassGroupComponentProps) {
   // Get class title and description from metadata
-  const classTitle = classNumber !== null ? (syllabusMetadata.classes?.[classNumber]?.title || "") : "";
-  const classDescription = classNumber !== null ? (syllabusMetadata.classes?.[classNumber]?.description || "") : "";
+  const classTitle =
+    classNumber !== null
+      ? syllabusMetadata.classes?.[classNumber]?.title || ""
+      : "";
+  const classDescription =
+    classNumber !== null
+      ? syllabusMetadata.classes?.[classNumber]?.description || ""
+      : "";
 
   return (
     <div className="syllabus-class-group">
@@ -325,9 +327,12 @@ function onClick(item: Zotero.Item, _e: JSX.TargetedMouseEvent<HTMLElement>) {
   // }
   const pane = ztoolkit.getGlobal("ZoteroPane");
   pane.selectItem(item.id);
-};
+}
 
-function onDoubleClick(item: Zotero.Item, _e: JSX.TargetedMouseEvent<HTMLElement>) {
+function onDoubleClick(
+  item: Zotero.Item,
+  _e: JSX.TargetedMouseEvent<HTMLElement>,
+) {
   const url = item.getField("url");
   const attachments = item.getAttachments();
   const viewableAttachment = attachments.find((attId) => {
@@ -344,7 +349,7 @@ function onDoubleClick(item: Zotero.Item, _e: JSX.TargetedMouseEvent<HTMLElement
   } else if (url) {
     Zotero.launchURL(url);
   }
-};
+}
 
 interface EditableTitleProps {
   initialValue: string;
@@ -474,7 +479,9 @@ function EditableDescription({
     }
   }, [isEditing]);
 
-  const handleBlur = async (_e: JSX.TargetedFocusEvent<HTMLTextAreaElement>) => {
+  const handleBlur = async (
+    _e: JSX.TargetedFocusEvent<HTMLTextAreaElement>,
+  ) => {
     // Use setTimeout to ensure blur completes before we check what was clicked
     setTimeout(async () => {
       if (value.trim() === "" && emptyBehavior === "delete") {
@@ -546,7 +553,10 @@ interface SyllabusItemCardProps {
   item: Zotero.Item;
   collectionId: number;
   onClick: (item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) => void;
-  onDoubleClick: (item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) => void;
+  onDoubleClick: (
+    item: Zotero.Item,
+    e: JSX.TargetedMouseEvent<HTMLElement>,
+  ) => void;
   slim?: boolean;
 }
 
@@ -559,7 +569,10 @@ function SyllabusItemCard({
 }: SyllabusItemCardProps) {
   // Get priority and class instruction from item
   const priority = SyllabusManager.getSyllabusPriority(item, collectionId);
-  const classInstruction = SyllabusManager.getSyllabusClassInstruction(item, collectionId);
+  const classInstruction = SyllabusManager.getSyllabusClassInstruction(
+    item,
+    collectionId,
+  );
   const title = item.getField("title") || "Untitled";
   const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(item.itemType);
   const creator = item.getCreators().length > 0 ? item.getCreator(0) : null;
@@ -570,9 +583,7 @@ function SyllabusItemCard({
       : "");
   const date = item.getField("date") || "";
   const publicationName =
-    item.getField("publicationTitle") ||
-    item.getField("bookTitle") ||
-    "";
+    item.getField("publicationTitle") || item.getField("bookTitle") || "";
   const url = item.getField("url") || "";
 
   const [bibliographicReference, setBibliographicReference] = useState("");
@@ -627,14 +638,14 @@ function SyllabusItemCard({
       : null;
   const priorityStyle = priorityColor
     ? (() => {
-      const r = parseInt(priorityColor.slice(1, 3), 16);
-      const g = parseInt(priorityColor.slice(3, 5), 16);
-      const b = parseInt(priorityColor.slice(5, 7), 16);
-      return {
-        backgroundColor: `rgba(${r}, ${g}, ${b}, 0.05)`,
-        borderColor: `rgba(${r}, ${g}, ${b}, 0.2)`,
-      };
-    })()
+        const r = parseInt(priorityColor.slice(1, 3), 16);
+        const g = parseInt(priorityColor.slice(3, 5), 16);
+        const b = parseInt(priorityColor.slice(5, 7), 16);
+        return {
+          backgroundColor: `rgba(${r}, ${g}, ${b}, 0.05)`,
+          borderColor: `rgba(${r}, ${g}, ${b}, 0.2)`,
+        };
+      })()
     : {};
 
   const metadataParts = [itemTypeLabel, author, date].filter(Boolean);
@@ -657,7 +668,9 @@ function SyllabusItemCard({
     Zotero.launchURL(url);
   };
 
-  const handleAttachmentClick = async (e: JSX.TargetedMouseEvent<HTMLButtonElement>) => {
+  const handleAttachmentClick = async (
+    e: JSX.TargetedMouseEvent<HTMLButtonElement>,
+  ) => {
     e.stopPropagation();
     if (!viewableAttachment) return;
 
@@ -712,7 +725,8 @@ function SyllabusItemCard({
               style={{
                 width: "100%",
                 height: "100%",
-                backgroundOrigin: "padding-box, padding-box, padding-box, padding-box",
+                backgroundOrigin:
+                  "padding-box, padding-box, padding-box, padding-box",
                 backgroundPositionX: "50%, 50%, 50%, 50%",
                 backgroundPositionY: "50%, 50%, 50%, 50%",
                 backgroundRepeat: "no-repeat, repeat, repeat, repeat",
@@ -722,53 +736,56 @@ function SyllabusItemCard({
           </div>
           <div className="syllabus-item-text">
             <div className="syllabus-item-title-row">
-              <div className="syllabus-item-title" style={{
-                opacity: slim ? 0.7 : 1,
-              }}>{title}</div>
+              <div
+                className="syllabus-item-title"
+                style={{
+                  opacity: slim ? 0.7 : 1,
+                }}
+              >
+                {title}
+              </div>
             </div>
             {publicationName && (
               <div className="syllabus-item-publication">
                 In {publicationName}
               </div>
             )}
-            {slim ? (
-              metadataParts.length > 0 && (
-                <div className="syllabus-item-metadata">
-                  <span>{metadataParts.join(" • ")}</span>
-                </div>
-              )
-            ) : (
-              (priority || metadataParts.length > 0) && (
-                <div className="syllabus-item-metadata">
-                  {priority &&
-                    priority in SyllabusManager.PRIORITY_LABELS && (
-                      <span className="syllabus-item-priority-inline">
-                        <span
-                          className="syllabus-priority-icon"
-                          style={{
-                            backgroundColor:
-                              (SyllabusManager.PRIORITY_COLORS as any)[priority],
-                          }}
-                        />
-                        <span
-                          className="syllabus-priority-label"
-                          style={{
-                            color:
-                              (SyllabusManager.PRIORITY_COLORS as any)[priority],
-                          }}
-                        >
-                          {
-                            (SyllabusManager.PRIORITY_LABELS as any)[priority]
-                          }
-                        </span>
-                      </span>
-                    )}
-                  {metadataParts.length > 0 && (
+            {slim
+              ? metadataParts.length > 0 && (
+                  <div className="syllabus-item-metadata">
                     <span>{metadataParts.join(" • ")}</span>
-                  )}
-                </div>
-              )
-            )}
+                  </div>
+                )
+              : (priority || metadataParts.length > 0) && (
+                  <div className="syllabus-item-metadata">
+                    {priority &&
+                      priority in SyllabusManager.PRIORITY_LABELS && (
+                        <span className="syllabus-item-priority-inline">
+                          <span
+                            className="syllabus-priority-icon"
+                            style={{
+                              backgroundColor: (
+                                SyllabusManager.PRIORITY_COLORS as any
+                              )[priority],
+                            }}
+                          />
+                          <span
+                            className="syllabus-priority-label"
+                            style={{
+                              color: (SyllabusManager.PRIORITY_COLORS as any)[
+                                priority
+                              ],
+                            }}
+                          >
+                            {(SyllabusManager.PRIORITY_LABELS as any)[priority]}
+                          </span>
+                        </span>
+                      )}
+                    {metadataParts.length > 0 && (
+                      <span>{metadataParts.join(" • ")}</span>
+                    )}
+                  </div>
+                )}
             {!slim && bibliographicReference && (
               <div className="syllabus-item-reference">
                 {bibliographicReference}
@@ -782,7 +799,10 @@ function SyllabusItemCard({
           </div>
         </div>
       </div>
-      <div className="syllabus-item-right-side focus-states-target" draggable={false}>
+      <div
+        className="syllabus-item-right-side focus-states-target"
+        draggable={false}
+      >
         <div className="syllabus-item-actions" draggable={false}>
           {viewableAttachment && (
             <div className="syllabus-action-item row">
@@ -832,12 +852,14 @@ function SyllabusItemCard({
   );
 }
 
-
 export function renderSyllabusPage(
   win: _ZoteroTypes.MainWindow,
   rootElement: HTMLElement,
   collectionId: number,
 ) {
-  renderComponent(win, rootElement, <SyllabusPage collectionId={collectionId} />);
+  renderComponent(
+    win,
+    rootElement,
+    <SyllabusPage collectionId={collectionId} />,
+  );
 }
-

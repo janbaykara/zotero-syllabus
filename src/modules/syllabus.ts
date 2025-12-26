@@ -6,7 +6,7 @@ import { getLocaleID } from "../utils/locale";
 import { ExtraFieldTool } from "zotero-plugin-toolkit";
 import { renderSyllabusPage } from "./SyllabusPage";
 import { getSelectedCollection } from "../utils/zotero";
-import { set } from "lodash-es"
+import { set } from "lodash-es";
 
 enum SyllabusPriority {
   COURSE_INFO = "course-info",
@@ -40,18 +40,18 @@ export interface SettingsSyllabusMetadata {
   classes?: {
     [classNumber: string]: SettingsClassMetadata;
   };
-};
+}
 
 export interface SettingsClassMetadata {
   title?: string;
   description?: string;
-};
+}
 
 export class SyllabusManager {
   static notifierID: string | null = null;
   static syllabusItemPaneSection: false | string | null = null;
 
-  static settingsKeys = SyllabusSettingsKey
+  static settingsKeys = SyllabusSettingsKey;
   static getPreferenceKey(key: SyllabusSettingsKey): string {
     return `${addon.data.config.prefsPrefix}.${key}`;
   }
@@ -139,7 +139,12 @@ export class SyllabusManager {
     this.setupSyllabusViewReloadListener();
   }
 
-  static onNotify(event: string, type: string, ids: (string | number)[], extraData: { [key: string]: any }) {
+  static onNotify(
+    event: string,
+    type: string,
+    ids: (string | number)[],
+    extraData: { [key: string]: any },
+  ) {
     ztoolkit.log("SyllabusManager.onNotify", { event, type, ids, extraData });
   }
 
@@ -202,7 +207,6 @@ export class SyllabusManager {
     //     addon.hooks.onNotify(event, type, ids, extraData);
     //   },
     // };
-
     // // Register the callback in Zotero as an item observer
     // this.notifierID = Zotero.Notifier.registerObserver(callback, [
     //   "collection",
@@ -265,7 +269,7 @@ export class SyllabusManager {
     ztoolkit.log("SyllabusManager.setupSyllabusViewTabListener");
     let selectedCollectionId = getSelectedCollection()?.id.toString() || "";
     const interval = setInterval(async () => {
-      const collection = getSelectedCollection()
+      const collection = getSelectedCollection();
       if (collection && collection.id.toString() !== selectedCollectionId) {
         ztoolkit.log("Selected collection changed", collection.id);
         selectedCollectionId = collection.id.toString();
@@ -317,7 +321,9 @@ export class SyllabusManager {
     }
 
     const collectionId = String(selectedCollection.id);
-    const prefKey = SyllabusManager.getPreferenceKey(SyllabusSettingsKey.COLLECTION_VIEW_MODES);
+    const prefKey = SyllabusManager.getPreferenceKey(
+      SyllabusSettingsKey.COLLECTION_VIEW_MODES,
+    );
     const _viewModes = String(Zotero.Prefs.get(prefKey, true) || "");
     const viewModes = _viewModes
       ? (JSON.parse(_viewModes) as Record<string, boolean>)
@@ -337,7 +343,9 @@ export class SyllabusManager {
     }
 
     const collectionId = String(selectedCollection.id);
-    const prefKey = SyllabusManager.getPreferenceKey(SyllabusSettingsKey.COLLECTION_VIEW_MODES);
+    const prefKey = SyllabusManager.getPreferenceKey(
+      SyllabusSettingsKey.COLLECTION_VIEW_MODES,
+    );
     const _viewModes = String(Zotero.Prefs.get(prefKey, true) || "");
     const viewModes = _viewModes
       ? (JSON.parse(_viewModes) as Record<string, boolean>)
@@ -362,7 +370,9 @@ export class SyllabusManager {
     const searchSpinner = doc.getElementById("zotero-tb-search-spinner");
 
     // Check if toggle button already exists
-    let toggleButton = doc.getElementById("syllabus-view-toggle") as unknown as XULButtonElement;
+    let toggleButton = doc.getElementById(
+      "syllabus-view-toggle",
+    ) as unknown as XULButtonElement;
     let spacer = doc.getElementById("syllabus-view-spacer") as Element | null;
 
     if (!toggleButton) {
@@ -913,9 +923,9 @@ export class SyllabusManager {
             },
             styles: opt.color
               ? {
-                color: opt.color,
-                fontWeight: "500",
-              }
+                  color: opt.color,
+                  fontWeight: "500",
+                }
               : undefined,
           });
           prioritySelect.appendChild(option);
@@ -1324,7 +1334,11 @@ export class SyllabusManager {
     return children;
   }
 
-  static setCollectionTitle(collectionId: number, title: string, source: "page") {
+  static setCollectionTitle(
+    collectionId: number,
+    title: string,
+    source: "page",
+  ) {
     const collectionIdStr = String(collectionId);
     const collection = Zotero.Collections.get(collectionId);
     if (collection) {
@@ -1505,7 +1519,9 @@ export class SyllabusManager {
   }
 
   static getSettingsCollectionDictionaryData(): SettingsCollectionDictionaryData {
-    const prefKey = SyllabusManager.getPreferenceKey(SyllabusSettingsKey.COLLECTION_METADATA);
+    const prefKey = SyllabusManager.getPreferenceKey(
+      SyllabusSettingsKey.COLLECTION_METADATA,
+    );
     const metadataStr = String(Zotero.Prefs.get(prefKey, true) || "");
     if (!metadataStr) {
       return {};
@@ -1521,7 +1537,9 @@ export class SyllabusManager {
   /**
    * Get collection metadata from preferences
    */
-  static getSyllabusMetadata(collectionId: number | string): SettingsSyllabusMetadata {
+  static getSyllabusMetadata(
+    collectionId: number | string,
+  ): SettingsSyllabusMetadata {
     const data = this.getSettingsCollectionDictionaryData();
     const collectionIdStr = String(collectionId);
     return data[collectionIdStr] || {};
@@ -1534,7 +1552,9 @@ export class SyllabusManager {
     metadata: SettingsSyllabusMetadata,
     source: "page" | "item-pane",
   ): Promise<void> {
-    const prefKey = SyllabusManager.getPreferenceKey(SyllabusSettingsKey.COLLECTION_METADATA);
+    const prefKey = SyllabusManager.getPreferenceKey(
+      SyllabusSettingsKey.COLLECTION_METADATA,
+    );
     Zotero.Prefs.set(prefKey, JSON.stringify(metadata), true);
     // No need to call setupPage() - React stores will trigger re-render automatically
     if (source !== "item-pane") this.reloadItemPane();
@@ -1604,7 +1624,10 @@ export class SyllabusManager {
     collectionId: number | string,
     classNumber: number,
   ): string {
-    const metadata = SyllabusManager.getClassMetadata(collectionId, classNumber);
+    const metadata = SyllabusManager.getClassMetadata(
+      collectionId,
+      classNumber,
+    );
     return metadata.description || "";
   }
 
@@ -1618,7 +1641,11 @@ export class SyllabusManager {
     source: "page",
   ): Promise<void> {
     const allData = SyllabusManager.getSettingsCollectionDictionaryData();
-    set(allData, `${collectionId}.classes.${classNumber}.description`, description);
+    set(
+      allData,
+      `${collectionId}.classes.${classNumber}.description`,
+      description,
+    );
     await SyllabusManager.setCollectionMetadata(allData, source);
   }
 }

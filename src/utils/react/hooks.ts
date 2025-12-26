@@ -22,7 +22,9 @@ import { SyllabusManager } from "../../modules/syllabus";
  * @param collectionId - The ID of the collection
  * @returns The collection object, or null if not found
  */
-export function useZoteroCollection(collectionId: number): Zotero.Collection | null {
+export function useZoteroCollection(
+  collectionId: number,
+): Zotero.Collection | null {
   const store = useMemo(
     () => createCollectionStore(collectionId),
     [collectionId],
@@ -41,9 +43,7 @@ export function useZoteroCollection(collectionId: number): Zotero.Collection | n
  * @param collectionId - The ID of the collection
  * @returns Array of items in the collection
  */
-export function useZoteroCollectionItems(
-  collectionId: number,
-): Zotero.Item[] {
+export function useZoteroCollectionItems(collectionId: number): Zotero.Item[] {
   const store = useMemo(
     () => createCollectionItemsStore(collectionId),
     [collectionId],
@@ -109,10 +109,7 @@ export function useZoteroCollectionMetadataData(collectionId: number) {
  * @param defaultValue - Default value if preference is not set
  * @returns The current preference value
  */
-export function useZoteroPluginPreference<T>(
-  key: string,
-  defaultValue: T,
-): T {
+export function useZoteroPluginPreference<T>(key: string, defaultValue: T): T {
   const prefKey = `${config.prefsPrefix}.${key}`;
   const store = useMemo(
     () => createPreferenceStore(prefKey, defaultValue),
@@ -164,4 +161,3 @@ export function useZoteroCollectionName(collectionId: number): string {
   );
   return useSyncExternalStore(store.subscribe, store.getSnapshot);
 }
-

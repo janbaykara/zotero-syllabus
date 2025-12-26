@@ -1,4 +1,3 @@
-
 import { useCallback, useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
 import { SettingsClassMetadata, SyllabusManager } from "../syllabus";
@@ -7,28 +6,43 @@ export function useZoteroClassMetadata(collectionId: number) {
   // Create the store once per ID
   const store = useMemo(
     () => createClassMetadataStore(collectionId),
-    [collectionId]
+    [collectionId],
   );
 
   const metadataFromZotero = useSyncExternalStore(
     store.subscribe,
-    store.getSnapshot
+    store.getSnapshot,
   );
 
-  const setClassMetadata = useCallback((classNumber: number, metadata: Partial<SettingsClassMetadata>) => {
-    if (metadata.title) {
-      SyllabusManager.setClassTitle(collectionId, classNumber, metadata.title, "page");
-    }
-    if (metadata.description) {
-      SyllabusManager.setClassDescription(collectionId, classNumber, metadata.description, "page");
-    }
-  }, [collectionId]);
+  const setClassMetadata = useCallback(
+    (classNumber: number, metadata: Partial<SettingsClassMetadata>) => {
+      if (metadata.title) {
+        SyllabusManager.setClassTitle(
+          collectionId,
+          classNumber,
+          metadata.title,
+          "page",
+        );
+      }
+      if (metadata.description) {
+        SyllabusManager.setClassDescription(
+          collectionId,
+          classNumber,
+          metadata.description,
+          "page",
+        );
+      }
+    },
+    [collectionId],
+  );
 
   return [metadataFromZotero, setClassMetadata] as const;
 }
 
 export function createClassMetadataStore(collectionId: number) {
-  const prefKey = SyllabusManager.getPreferenceKey(SyllabusManager.settingsKeys.COLLECTION_METADATA);
+  const prefKey = SyllabusManager.getPreferenceKey(
+    SyllabusManager.settingsKeys.COLLECTION_METADATA,
+  );
 
   function getSnapshot() {
     // Read from preferences via SyllabusManager
@@ -38,19 +52,31 @@ export function createClassMetadataStore(collectionId: number) {
 
   function subscribe(onStoreChange: () => void) {
     const observer = {
-      notify(event: string, type: string, ids: (number | string)[], extraData: any) {
+      notify(
+        event: string,
+        type: string,
+        ids: (number | string)[],
+        extraData: any,
+      ) {
         // Listen to setting events for our preference key
-        if (type === 'setting' && extraData?.pref === prefKey) {
+        if (type === "setting" && extraData?.pref === prefKey) {
           onStoreChange();
         }
         // Also listen to collection modify/refresh events in case metadata is updated
-        if (type === 'collection' && ids.includes(collectionId) && (event === 'modify' || event === 'refresh')) {
+        if (
+          type === "collection" &&
+          ids.includes(collectionId) &&
+          (event === "modify" || event === "refresh")
+        ) {
           onStoreChange();
         }
-      }
+      },
     };
 
-    const notifierId = Zotero.Notifier.registerObserver(observer, ['setting', 'collection']);
+    const notifierId = Zotero.Notifier.registerObserver(observer, [
+      "setting",
+      "collection",
+    ]);
 
     // Return an unsubscribe fn
     return () => {
@@ -60,4 +86,3 @@ export function createClassMetadataStore(collectionId: number) {
 
   return { getSnapshot, subscribe };
 }
-

@@ -6,17 +6,20 @@ export function useZoteroCollectionTitle(collectionId: number) {
   // Create the store once per ID
   const store = useMemo(
     () => createCollectionTitleStore(collectionId),
-    [collectionId]
+    [collectionId],
   );
 
   const titleFromZotero = useSyncExternalStore(
     store.subscribe,
-    store.getSnapshot
+    store.getSnapshot,
   );
 
-  const setTitle = useCallback((title: string) => {
-    SyllabusManager.setCollectionTitle(collectionId, title, "page");
-  }, [collectionId]);
+  const setTitle = useCallback(
+    (title: string) => {
+      SyllabusManager.setCollectionTitle(collectionId, title, "page");
+    },
+    [collectionId],
+  );
 
   return [titleFromZotero, setTitle] as const;
 }
@@ -30,15 +33,26 @@ export function createCollectionTitleStore(collectionId: number) {
 
   function subscribe(onStoreChange: () => void) {
     const observer = {
-      notify(event: string, type: string, ids: (number | string)[], extraData: any) {
+      notify(
+        event: string,
+        type: string,
+        ids: (number | string)[],
+        extraData: any,
+      ) {
         // Only care about this collection, and events that can change the title
-        if (type === 'collection' && ids.includes(collectionId) && (event === 'modify' || event === 'refresh')) {
+        if (
+          type === "collection" &&
+          ids.includes(collectionId) &&
+          (event === "modify" || event === "refresh")
+        ) {
           onStoreChange();
         }
-      }
+      },
     };
 
-    const notifierId = Zotero.Notifier.registerObserver(observer, ['collection']);
+    const notifierId = Zotero.Notifier.registerObserver(observer, [
+      "collection",
+    ]);
 
     // Return an unsubscribe fn
     return () => {

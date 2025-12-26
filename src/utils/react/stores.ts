@@ -29,7 +29,10 @@ export function createCollectionItemsStore(collectionId: number) {
         extraData: { [key: string]: any },
       ) => {
         // Refresh if items in this collection changed
-        if (type === "item" && (event === "modify" || event === "add" || event === "delete")) {
+        if (
+          type === "item" &&
+          (event === "modify" || event === "add" || event === "delete")
+        ) {
           const collection = Zotero.Collections.get(collectionId);
           if (collection) {
             const newItems = collection.getChildItems();
@@ -106,7 +109,9 @@ export function createItemExtraFieldsStore(collectionId: number) {
           // Check if any of the modified items are in our collection
           const collection = Zotero.Collections.get(collectionId);
           if (collection) {
-            const collectionItemIds = new Set(collection.getChildItems().map((i) => i.id));
+            const collectionItemIds = new Set(
+              collection.getChildItems().map((i) => i.id),
+            );
             const modifiedIds = ids as number[];
             if (modifiedIds.some((id) => collectionItemIds.has(id))) {
               version++;
@@ -163,7 +168,9 @@ export function createCollectionMetadataStore(collectionId: number) {
       },
     };
 
-    notifierID = Zotero.Notifier.registerObserver(notifierCallback, ["setting"]);
+    notifierID = Zotero.Notifier.registerObserver(notifierCallback, [
+      "setting",
+    ]);
 
     return () => {
       listeners.delete(listener);
@@ -352,4 +359,3 @@ export function createSelectedCollectionStore() {
 
   return { getSnapshot, subscribe };
 }
-
