@@ -209,8 +209,8 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                 key={item.id}
                 item={item}
                 collectionId={collectionId}
-                onClick={(e) => onClick(item, e)}
-                onDoubleClick={(e) => onDoubleClick(item, e)}
+                onClick={() => onClick(item)}
+                onDoubleClick={() => onDoubleClick(item)}
                 slim={true}
               />
             ))}
@@ -317,7 +317,7 @@ function ClassGroupComponent({
   );
 }
 
-function onClick(item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) {
+function onClick(item: Zotero.Item, __e?: JSX.TargetedMouseEvent<HTMLElement>) {
   // const target = e.target as HTMLElement;
   // if (
   //   target.closest(".syllabus-item-actions") ||
@@ -331,7 +331,7 @@ function onClick(item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) {
 
 function onDoubleClick(
   item: Zotero.Item,
-  e: JSX.TargetedMouseEvent<HTMLElement>,
+  __e?: JSX.TargetedMouseEvent<HTMLElement>,
 ) {
   const url = item.getField("url");
   const attachments = item.getAttachments();
