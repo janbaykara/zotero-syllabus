@@ -56,6 +56,13 @@ export class SyllabusManager {
     return `${addon.data.config.prefsPrefix}.${key}`;
   }
 
+  // Cache for parsed syllabus data per item to avoid repeated JSON parsing
+  private static syllabusDataCache = new WeakMap<Zotero.Item, ItemSyllabusData>();
+
+  // Cache for class titles per collection to avoid repeated preference reads
+  private static classTitleCache = new Map<string, Map<number, string>>();
+  private static classTitleCacheCollectionId: string | null = null;
+
   /**
    * Map Zotero item type to icon name
    */
@@ -532,14 +539,13 @@ export class SyllabusManager {
         const selectedCollection = zoteroPane.getSelectedCollection();
 
         if (selectedCollection) {
-          const priority = SyllabusManager.getSyllabusPriority(
-            item,
-            selectedCollection.id,
-          );
-          const classNumber = SyllabusManager.getSyllabusClassNumber(
-            item,
-            selectedCollection.id,
-          );
+          // Optimize: Parse syllabus data once and extract both values
+          const syllabusData = SyllabusManager.getItemSyllabusData(item);
+          const collectionIdStr = String(selectedCollection.id);
+          const itemData = syllabusData[collectionIdStr];
+
+          const priority = itemData?.priority || "";
+          const classNumber = itemData?.classNumber;
 
           // Return sortable value with priority and class number encoded
           // Format: "priorityPrefix_priorityValue_classNumber"
@@ -554,28 +560,28 @@ export class SyllabusManager {
           // This ensures proper sort order: Course Info < Essential < Recommended < Optional < Blank
           // The prefix determines sort order, the suffix is the actual priority for display
           if (priority === SyllabusPriority.COURSE_INFO) {
-            return `0_course-info_${classNumberStr}`;
+            return `0___course-info___${classNumberStr}`;
           }
           if (priority === SyllabusPriority.ESSENTIAL) {
-            return `1_essential_${classNumberStr}`;
+            return `1___essential___${classNumberStr}`;
           }
           if (priority === SyllabusPriority.RECOMMENDED) {
-            return `2_recommended_${classNumberStr}`;
+            return `2___recommended___${classNumberStr}`;
           }
           if (priority === SyllabusPriority.OPTIONAL) {
-            return `3_optional_${classNumberStr}`;
+            return `3___optional___${classNumberStr}`;
           }
-          return `4__${classNumberStr}`; // empty/blank priority
+          return `4___${classNumberStr}`; // empty/blank priority
         }
 
         // If not in a collection view, return empty
-        return "4__9999";
+        return "4___9999";
       },
       renderCell: (index, data, column, isFirstColumn, doc) => {
         // Parse the data to extract the priority for display
         // data format: "0_essential_0001", "1_recommended_0002", "2_optional_0003", or "4__9999"
         // Format: "priorityPrefix_priorityValue_classNumber"
-        const parts = String(data).split("_");
+        const parts = String(data).split("___");
         const priority = parts.length > 1 ? parts[1] : "";
 
         const container = doc.createElement("span");
@@ -621,10 +627,10 @@ export class SyllabusManager {
         const selectedCollection = zoteroPane.getSelectedCollection();
 
         if (selectedCollection) {
-          return SyllabusManager.getSyllabusClassInstruction(
-            item,
-            selectedCollection.id,
-          );
+          // Optimize: Parse syllabus data once and extract instruction directly
+          const syllabusData = SyllabusManager.getItemSyllabusData(item);
+          const collectionIdStr = String(selectedCollection.id);
+          return syllabusData[collectionIdStr]?.classInstruction || "";
         }
 
         // If not in a collection view, return empty
@@ -644,14 +650,13 @@ export class SyllabusManager {
         const selectedCollection = zoteroPane.getSelectedCollection();
 
         if (selectedCollection) {
-          const classNumber = SyllabusManager.getSyllabusClassNumber(
-            item,
-            selectedCollection.id,
-          );
-          const priority = SyllabusManager.getSyllabusPriority(
-            item,
-            selectedCollection.id,
-          );
+          // Optimize: Parse syllabus data once and extract both values
+          const syllabusData = SyllabusManager.getItemSyllabusData(item);
+          const collectionIdStr = String(selectedCollection.id);
+          const itemData = syllabusData[collectionIdStr];
+
+          const classNumber = itemData?.classNumber;
+          const priority = itemData?.priority || "" || "";
 
           // Get priority sort order: 0=course-info, 1=essential, 2=recommended, 3=optional, 4=blank
           let priorityOrder = "4"; // default to blank
@@ -674,8 +679,17 @@ export class SyllabusManager {
             return `0_${priorityOrder}`;
           } else if (hasClassNumber) {
             // Group 2: Class numbered items - sort by class number, then priority
+            // Also encode the class title in the return value to avoid lookup in renderCell
             const paddedClassNumber = String(classNumber).padStart(5, "0");
-            return `1_${paddedClassNumber}_${priorityOrder}`;
+            const classTitle = SyllabusManager.getClassTitle(
+              selectedCollection.id,
+              classNumber,
+              true,
+            );
+            // Encode title in format: "1_paddedClassNumber_priorityOrder|classTitle"
+            // Use | as separator since it's unlikely to appear in class titles
+            const titlePart = classTitle ? `|${classTitle}` : "";
+            return `1_${paddedClassNumber}_${priorityOrder}${titlePart}`;
           } else {
             // Group 3: Un-numbered and un-statused items - sort last
             return `2_99999_4`;
@@ -687,8 +701,9 @@ export class SyllabusManager {
       },
       renderCell: (index, data, column, isFirstColumn, doc) => {
         // Parse the composite value to extract just the class number for display
-        // data format: "0_priorityOrder", "1_paddedClassNumber_priorityOrder", or "2_99999_4"
-        const parts = String(data).split("_");
+        // data format: "0_priorityOrder", "1_paddedClassNumber_priorityOrder|classTitle", or "2_99999_4"
+        const dataStr = String(data);
+        const parts = dataStr.split("_");
         const groupIndicator = parts[0];
 
         // Group 0 and 2: No class number (either prioritized or un-statused)
@@ -707,20 +722,12 @@ export class SyllabusManager {
           const span = doc.createElement("span");
           span.className = `cell ${column.className}`;
 
-          // Get the custom class name/title if it exists
-          const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-          const selectedCollection = zoteroPane.getSelectedCollection();
+          // Extract class title from encoded data (format: "1_classNumber_priority|title")
+          // If title is encoded, use it; otherwise fall back to just the number
           let displayText = String(classNumber);
-
-          if (selectedCollection) {
-            const classTitle = SyllabusManager.getClassTitle(
-              selectedCollection.id,
-              classNumber,
-              true,
-            );
-            if (classTitle) {
-              displayText = classTitle;
-            }
+          const titleSeparatorIndex = dataStr.indexOf("|");
+          if (titleSeparatorIndex !== -1) {
+            displayText = dataStr.substring(titleSeparatorIndex + 1);
           }
 
           span.textContent = displayText;
@@ -923,9 +930,9 @@ export class SyllabusManager {
             },
             styles: opt.color
               ? {
-                  color: opt.color,
-                  fontWeight: "500",
-                }
+                color: opt.color,
+                fontWeight: "500",
+              }
               : undefined,
           });
           prioritySelect.appendChild(option);
@@ -1350,23 +1357,41 @@ export class SyllabusManager {
 
   /**
    * Get syllabus data from an item's extra field
+   * Uses caching to avoid repeated JSON parsing for the same item
    */
   static getItemSyllabusData(item: Zotero.Item): ItemSyllabusData {
+    // Check cache first
+    const cached = this.syllabusDataCache.get(item);
+    if (cached !== undefined) {
+      return cached;
+    }
+
     const jsonStr = this.extraFieldTool.getExtraField(
       item,
       this.SYLLABUS_DATA_KEY,
     );
 
-    if (!jsonStr) {
-      return {};
+    let data: ItemSyllabusData = {};
+    if (jsonStr) {
+      try {
+        data = JSON.parse(jsonStr) as ItemSyllabusData;
+      } catch (e) {
+        ztoolkit.log("Error parsing syllabus data:", e);
+        data = {};
+      }
     }
 
-    try {
-      return JSON.parse(jsonStr) as ItemSyllabusData;
-    } catch (e) {
-      ztoolkit.log("Error parsing syllabus data:", e);
-      return {};
-    }
+    // Cache the parsed data
+    this.syllabusDataCache.set(item, data);
+    return data;
+  }
+
+  /**
+   * Invalidate cached syllabus data for an item
+   * Call this when an item's extra fields are modified
+   */
+  static invalidateSyllabusDataCache(item: Zotero.Item) {
+    this.syllabusDataCache.delete(item);
   }
 
   /**
@@ -1383,6 +1408,8 @@ export class SyllabusManager {
       this.SYLLABUS_DATA_KEY,
       jsonStr,
     );
+    // Invalidate cache when data changes
+    this.invalidateSyllabusDataCache(item);
     this.onItemUpdate(item, source);
   }
 
@@ -1556,6 +1583,10 @@ export class SyllabusManager {
       SyllabusSettingsKey.COLLECTION_METADATA,
     );
     Zotero.Prefs.set(prefKey, JSON.stringify(metadata), true);
+    // Invalidate class title cache when metadata changes
+    // Note: We need to get the collectionId from context, but since this is called
+    // from methods that have collectionId, we'll invalidate all to be safe
+    this.invalidateClassTitleCache();
     // No need to call setupPage() - React stores will trigger re-render automatically
     if (source !== "item-pane") this.reloadItemPane();
     this.onClassListUpdate();
@@ -1589,18 +1620,62 @@ export class SyllabusManager {
 
   /**
    * Get class title for a specific collection and class number
+   * Uses caching to avoid repeated preference reads
    */
   static getClassTitle(
     collectionId: number | string,
     classNumber: number,
     includeClassNumber: boolean = false,
   ): string {
-    const cls = SyllabusManager.getClassMetadata(collectionId, classNumber);
-    const title = cls.title || "";
+    const collectionIdStr = String(collectionId);
+
+    // Check if we need to rebuild the cache
+    if (
+      this.classTitleCacheCollectionId !== collectionIdStr ||
+      !this.classTitleCache.has(collectionIdStr)
+    ) {
+      // Rebuild cache for this collection
+      const metadata = this.getSyllabusMetadata(collectionId);
+      const classMap = new Map<number, string>();
+
+      if (metadata.classes) {
+        for (const [classNumStr, classData] of Object.entries(metadata.classes)) {
+          const classNum = parseInt(classNumStr, 10);
+          if (!isNaN(classNum) && classData.title) {
+            classMap.set(classNum, classData.title);
+          }
+        }
+      }
+
+      this.classTitleCache.set(collectionIdStr, classMap);
+      this.classTitleCacheCollectionId = collectionIdStr;
+    }
+
+    const classMap = this.classTitleCache.get(collectionIdStr)!;
+    const title = classMap.get(classNumber) || "";
+
     if (includeClassNumber) {
       return `#${classNumber}: ${title}`;
     }
     return title;
+  }
+
+  /**
+   * Invalidate class title cache
+   * Call this when collection metadata is updated
+   */
+  static invalidateClassTitleCache(collectionId?: number | string) {
+    if (collectionId !== undefined) {
+      const collectionIdStr = String(collectionId);
+      this.classTitleCache.delete(collectionIdStr);
+      if (this.classTitleCacheCollectionId === collectionIdStr) {
+        this.classTitleCacheCollectionId = null;
+      }
+    } else {
+      // Invalidate all
+      this.classTitleCache.clear();
+      this.classTitleCacheCollectionId = null;
+    }
   }
 
   /**
