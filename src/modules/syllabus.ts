@@ -57,7 +57,10 @@ export class SyllabusManager {
   }
 
   // Cache for parsed syllabus data per item to avoid repeated JSON parsing
-  private static syllabusDataCache = new WeakMap<Zotero.Item, ItemSyllabusData>();
+  private static syllabusDataCache = new WeakMap<
+    Zotero.Item,
+    ItemSyllabusData
+  >();
 
   // Cache for class titles per collection to avoid repeated preference reads
   private static classTitleCache = new Map<string, Map<number, string>>();
@@ -930,9 +933,9 @@ export class SyllabusManager {
             },
             styles: opt.color
               ? {
-                color: opt.color,
-                fontWeight: "500",
-              }
+                  color: opt.color,
+                  fontWeight: "500",
+                }
               : undefined,
           });
           prioritySelect.appendChild(option);
@@ -1639,7 +1642,9 @@ export class SyllabusManager {
       const classMap = new Map<number, string>();
 
       if (metadata.classes) {
-        for (const [classNumStr, classData] of Object.entries(metadata.classes)) {
+        for (const [classNumStr, classData] of Object.entries(
+          metadata.classes,
+        )) {
           const classNum = parseInt(classNumStr, 10);
           if (!isNaN(classNum) && classData.title) {
             classMap.set(classNum, classData.title);
