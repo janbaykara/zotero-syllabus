@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { generateBibliographicReference } from "../utils/cite";
 import { getPref } from "../utils/prefs";
 import { SyllabusManager } from "./syllabus";
-import { renderReactComponent } from "../utils/react";
+import { createReactRoot } from "../utils/react";
 import {
   useZoteroCollection,
   useZoteroCollectionItems,
@@ -916,6 +916,6 @@ export function renderSyllabusPage(
   rootElement: HTMLElement,
   collection: Zotero.Collection,
 ) {
-  renderReactComponent(win, rootElement, <SyllabusPage collectionId={collection.id} />);
+  createReactRoot("syllabus-page", win, rootElement, <SyllabusPage collectionId={collection.id} />);
 }
 

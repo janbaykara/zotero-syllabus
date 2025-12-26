@@ -13,6 +13,7 @@ import {
   parseHTMLTemplate,
 } from "../utils/ui";
 import { renderSyllabusPage } from "./SyllabusPage";
+import { renderWithHotReload } from "../utils/react";
 
 enum SyllabusPriority {
   COURSE_INFO = "course-info",
@@ -492,34 +493,10 @@ export class SyllabusManager {
         customView.style.display = "block";
 
         // Insert the master template
-        if (customView) {
-          // Unmount existing React root before clearing content
-          // This prevents "Node.removeChild" errors during hot reload
-          if (w.myPluginUnmount) {
-            try {
-              w.myPluginUnmount();
-            } catch (e) {
-              ztoolkit.log("Error unmounting during setupPage:", e);
-            }
-            delete w.myPluginUnmount;
-          }
-
-          // Clear previous content before rendering React
-          customView.textContent = "Loading...";
-
-          // Ensure window is available globally for React
-          // React may try to access window during initialization
-          if (typeof (globalThis as any).window === "undefined") {
-            (globalThis as any).window = w;
-          }
-
-          try {
-            if (selectedCollection) {
-              renderSyllabusPage(w, customView, selectedCollection);
-            }
-          } catch (e) {
-            ztoolkit.log("Error in renderSyllabusPage:", e);
-          }
+        if (customView && selectedCollection) {
+          renderWithHotReload("syllabus-page", w, customView, () => {
+            renderSyllabusPage(w, customView!, selectedCollection);
+          });
           // customView.innerHTML = await SyllabusManager.renderSyllabusPageHTML(selectedCollection);
 
           // // Attach all event listeners
