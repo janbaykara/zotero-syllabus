@@ -5,7 +5,7 @@ import type { JSX } from "preact";
 import { generateBibliographicReference } from "../utils/cite";
 import { getPref } from "../utils/prefs";
 import { SyllabusManager } from "./syllabus";
-import { createReactRoot } from "../utils/react";
+import { renderComponent } from "../utils/react";
 import {
   useZoteroCollection,
   useZoteroCollectionItems,
@@ -251,6 +251,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
           onSave={handleCollectionTitleSave}
           className="syllabus-view-title"
           emptyBehavior="reset"
+          placeholder="Add a title..."
         />
       </div>
 
@@ -939,11 +940,6 @@ export function renderSyllabusPage(
   rootElement: HTMLElement,
   collection: Zotero.Collection,
 ) {
-  createReactRoot(
-    "syllabus-page",
-    win,
-    rootElement,
-    <SyllabusPage collectionId={collection.id} />,
-  );
+  renderComponent(win, rootElement, <SyllabusPage collectionId={collection.id} />);
 }
 

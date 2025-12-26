@@ -13,7 +13,7 @@ import {
   parseHTMLTemplate,
 } from "../utils/ui";
 import { renderSyllabusPage } from "./SyllabusPage";
-import { renderWithHotReload } from "../utils/react";
+import { renderComponent } from "../utils/react";
 import { getSelectedCollection } from "../utils/zotero";
 
 enum SyllabusPriority {
@@ -495,9 +495,7 @@ export class SyllabusManager {
 
         // Insert the master template
         if (customView && selectedCollection) {
-          renderWithHotReload("syllabus-page", w, customView, () => {
-            renderSyllabusPage(w, customView!, selectedCollection);
-          });
+          renderSyllabusPage(w, customView, selectedCollection);
           // customView.innerHTML = await SyllabusManager.renderSyllabusPageHTML(selectedCollection);
 
           // // Attach all event listeners
