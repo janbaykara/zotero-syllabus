@@ -134,6 +134,10 @@ export class SyllabusManager {
     this.setupSyllabusViewReloadListener();
   }
 
+  static onNotify(event: string, type: string, ids: (string | number)[], extraData: { [key: string]: any }) {
+    ztoolkit.log("SyllabusManager.onNotify", { event, type, ids, extraData });
+  }
+
   static onItemUpdate(
     item: Zotero.Item,
     source: "page" | "item-pane" | "context-menu",
