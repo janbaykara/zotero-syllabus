@@ -1,32 +1,45 @@
 import { useCallback, useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
-import { SyllabusManager } from "../syllabus";
+import { SettingsSyllabusMetadata, SyllabusManager } from "../syllabus";
+import SuperJSON from "superjson";
 
-export function useZoteroCollectionDescription(collectionId: number) {
+export function useZoteroSyllabusMetadata(collectionId: number) {
   // Create the store once per ID
   const store = useMemo(
-    () => createCollectionDescriptionStore(collectionId),
+    () => createSyllabusMetadataStore(collectionId),
     [collectionId]
   );
 
-  const descriptionFromZotero = useSyncExternalStore(
+  const __syllabusMetadata = useSyncExternalStore(
     store.subscribe,
     store.getSnapshot
   );
+
+  const syllabusMetadata = useMemo(() => {
+    return SuperJSON.parse(__syllabusMetadata) as SettingsSyllabusMetadata;
+  }, [__syllabusMetadata]);
 
   const setDescription = useCallback((description: string) => {
     SyllabusManager.setCollectionDescription(collectionId, description, "page");
   }, [collectionId]);
 
-  return [descriptionFromZotero, setDescription] as const;
+  const setClassDescription = useCallback((classNumber: number, description: string) => {
+    SyllabusManager.setClassDescription(collectionId, classNumber, description, "page");
+  }, [collectionId]);
+
+  const setClassTitle = useCallback((classNumber: number, title: string) => {
+    SyllabusManager.setClassTitle(collectionId, classNumber, title, "page");
+  }, [collectionId]);
+
+  return [syllabusMetadata, setDescription, setClassDescription, setClassTitle] as const;
 }
 
-export function createCollectionDescriptionStore(collectionId: number) {
+export function createSyllabusMetadataStore(collectionId: number) {
   const prefKey = SyllabusManager.getPreferenceKey(SyllabusManager.settingsKeys.COLLECTION_METADATA);
 
   function getSnapshot() {
     // Read from preferences via SyllabusManager
-    return SyllabusManager.getCollectionDescription(collectionId);
+    return SuperJSON.stringify(SyllabusManager.getSyllabusMetadata(collectionId));
   }
 
   function subscribe(onStoreChange: () => void) {

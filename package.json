@@ -33,6 +33,7 @@
   "dependencies": {
     "lodash-es": "^4.17.22",
     "preact": "^10.19.3",
+    "superjson": "^2.2.6",
     "zotero-plugin-toolkit": "^5.1.0-beta.13"
   },
   "devDependencies": {

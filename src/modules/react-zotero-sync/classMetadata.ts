@@ -1,32 +1,39 @@
+
 import { useCallback, useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
-import { SyllabusManager } from "../syllabus";
+import { SettingsClassMetadata, SyllabusManager } from "../syllabus";
 
-export function useZoteroCollectionDescription(collectionId: number) {
+export function useZoteroClassMetadata(collectionId: number) {
   // Create the store once per ID
   const store = useMemo(
-    () => createCollectionDescriptionStore(collectionId),
+    () => createClassMetadataStore(collectionId),
     [collectionId]
   );
 
-  const descriptionFromZotero = useSyncExternalStore(
+  const metadataFromZotero = useSyncExternalStore(
     store.subscribe,
     store.getSnapshot
   );
 
-  const setDescription = useCallback((description: string) => {
-    SyllabusManager.setCollectionDescription(collectionId, description, "page");
+  const setClassMetadata = useCallback((classNumber: number, metadata: Partial<SettingsClassMetadata>) => {
+    if (metadata.title) {
+      SyllabusManager.setClassTitle(collectionId, classNumber, metadata.title, "page");
+    }
+    if (metadata.description) {
+      SyllabusManager.setClassDescription(collectionId, classNumber, metadata.description, "page");
+    }
   }, [collectionId]);
 
-  return [descriptionFromZotero, setDescription] as const;
+  return [metadataFromZotero, setClassMetadata] as const;
 }
 
-export function createCollectionDescriptionStore(collectionId: number) {
+export function createClassMetadataStore(collectionId: number) {
   const prefKey = SyllabusManager.getPreferenceKey(SyllabusManager.settingsKeys.COLLECTION_METADATA);
 
   function getSnapshot() {
     // Read from preferences via SyllabusManager
-    return SyllabusManager.getCollectionDescription(collectionId);
+    const metadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    return metadata;
   }
 
   function subscribe(onStoreChange: () => void) {
@@ -36,7 +43,7 @@ export function createCollectionDescriptionStore(collectionId: number) {
         if (type === 'setting' && extraData?.pref === prefKey) {
           onStoreChange();
         }
-        // Also listen to collection modify/refresh events in case description is updated
+        // Also listen to collection modify/refresh events in case metadata is updated
         if (type === 'collection' && ids.includes(collectionId) && (event === 'modify' || event === 'refresh')) {
           onStoreChange();
         }
