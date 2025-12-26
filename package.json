@@ -31,10 +31,14 @@
     "update-deps": "pnpm update --save"
   },
   "dependencies": {
+    "lodash-es": "^4.17.22",
+    "preact": "^10.19.3",
+    "superjson": "^2.2.6",
     "zotero-plugin-toolkit": "^5.1.0-beta.13"
   },
   "devDependencies": {
     "@types/chai": "^5.2.3",
+    "@types/lodash-es": "^4.17.12",
     "@types/mocha": "^10.0.10",
     "@types/node": "^24.10.0",
     "@zotero-plugin/eslint-config": "^0.6.7",
