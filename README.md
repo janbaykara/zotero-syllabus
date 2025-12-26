@@ -11,6 +11,11 @@ A Zotero plugin that turns your collections into syllabi and course reading list
 3. Click the gear icon and select `Install Add-on From File...`
 4. Select the downloaded `.xpi` file
 
+## Discussion
+
+- For **bug reports** and **feature requests**, please use the [GitHub Issues](https://github.com/janbaykara/zotero-syllabus/issues) page.
+- For **general discussion**, please use the [Zotero Forum Thread](https://forums.zotero.org/discussion/128688/zotero-syllabus-a-plugin-for-managing-your-uni-course-reading-lists?new=1) or [Reddit Thread](https://www.reddit.com/r/zotero/comments/1puxigg/zotero_syllabus_a_plugin_for_managing_your_uni/).
+
 ## Screenshots
 
 ### Class Management
@@ -51,6 +56,10 @@ _The standard Zotero item list view has added columns for class numbers, instruc
 ## Development
 
 This plugin is built using the [Zotero Plugin Template](https://github.com/windingwind/zotero-plugin-template).
+
+### Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ### Requirements
 
@@ -150,15 +159,3 @@ addon/
 ├── content/              # UI content
 └── locale/               # Localization files
 ```
-
-## License
-
-AGPL-3.0-or-later
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## Support
-
-For issues and feature requests, please use the [GitHub Issues](https://github.com/janbaykara/zotero-syllabus/issues) page.
