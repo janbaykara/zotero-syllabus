@@ -237,6 +237,32 @@
   margin-top: 8px;
 }
 
+.syllabus-class-delete-button {
+  margin-left: auto;
+  padding: 2px 6px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #999;
+  font-size: 20px;
+  font-weight: 300;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  opacity: 0.6;
+}
+
+.syllabus-class-delete-button:hover {
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+  opacity: 1;
+}
+
+.syllabus-class-delete-button:active {
+  background: rgba(220, 53, 69, 0.2);
+}
+
 .syllabus-class-header {
   font-size: 16px;
   font-weight: 600;
@@ -257,6 +283,26 @@
   margin-top: 8px;
 }
 
+.syllabus-class-items-empty {
+  min-height: 60px;
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px dashed rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.syllabus-empty-class-placeholder {
+  color: #999;
+  font-size: 14px;
+  font-style: italic;
+  text-align: center;
+  pointer-events: none;
+  user-select: none;
+}
+
 /* Add extra spacing for "Further reading" section items */
 .syllabus-further-reading-items {
   margin-top: 12px;
@@ -267,6 +313,82 @@
   border-radius: 8px;
   padding: 8px;
   margin: -8px;
+}
+
+.syllabus-class-items-empty.syllabus-dropzone-active {
+  /* Maintain the same padding and margin for empty classes when active */
+  padding: 16px;
+  margin: 0;
+  background-color: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+/* Create Additional Class Button */
+.syllabus-create-class-control {
+  margin: 16px 0;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.syllabus-create-class-button {
+  padding: 6px 12px;
+  max-height: 32px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  background: #fff;
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.syllabus-create-class-button:hover {
+  background: #f5f5f5;
+  border-color: #0060df;
+  color: #0060df;
+}
+
+.syllabus-create-class-button:active {
+  background: #e8e8e8;
+  transform: scale(0.98);
+}
+
+/* Add to Class X Dropzone */
+.syllabus-add-class-dropzone {
+  border: 2px dashed #0060df;
+  border-radius: 8px;
+  background: rgba(0, 96, 223, 0.05);
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+
+.syllabus-add-class-dropzone .syllabus-class-header {
+  color: #0060df;
+  font-weight: 600;
+}
+
+.syllabus-add-class-dropzone-items {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.syllabus-add-class-dropzone-placeholder {
+  color: #0060df;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.syllabus-add-class-dropzone-items.syllabus-dropzone-active {
+  background-color: rgba(0, 96, 223, 0.15);
+  border-radius: 8px;
 }
 
 .syllabus-item {
@@ -709,6 +831,68 @@
 
   .syllabus-class-items.syllabus-dropzone-active {
     background-color: rgba(59, 130, 246, 0.2);
+  }
+
+  .syllabus-class-items-empty {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .syllabus-class-items-empty.syllabus-dropzone-active {
+    padding: 16px;
+    margin: 0;
+    background-color: rgba(59, 130, 246, 0.25);
+    border-color: rgba(59, 130, 246, 0.4);
+  }
+
+  .syllabus-empty-class-placeholder {
+    color: #8e8e93;
+  }
+
+  .syllabus-create-class-button {
+    border-color: #48484a;
+    background: #2c2c2e;
+    color: #f5f5f7;
+  }
+
+  .syllabus-create-class-button:hover {
+    background: #3a3a3c;
+    border-color: #0060df;
+    color: #0060df;
+  }
+
+  .syllabus-create-class-button:active {
+    background: #1c1c1e;
+  }
+
+  .syllabus-class-delete-button {
+    color: #8e8e93;
+  }
+
+  .syllabus-class-delete-button:hover {
+    background: rgba(220, 53, 69, 0.2);
+    color: #ff453a;
+  }
+
+  .syllabus-class-delete-button:active {
+    background: rgba(220, 53, 69, 0.3);
+  }
+
+  .syllabus-add-class-dropzone {
+    border-color: #0060df;
+    background: rgba(0, 96, 223, 0.1);
+  }
+
+  .syllabus-add-class-dropzone .syllabus-class-header {
+    color: #0060df;
+  }
+
+  .syllabus-add-class-dropzone-placeholder {
+    color: #0060df;
+  }
+
+  .syllabus-add-class-dropzone-items.syllabus-dropzone-active {
+    background-color: rgba(0, 96, 223, 0.25);
   }
 
   .syllabus-item {
@@ -1389,6 +1573,86 @@
   textarea:disabled {
   background-color: #1c1c1e;
   color: #6e6e73;
+}
+
+:root[data-theme="dark"] .syllabus-create-class-button,
+:root.dark .syllabus-create-class-button,
+#main-window[data-theme="dark"] .syllabus-create-class-button,
+#main-window.dark .syllabus-create-class-button {
+  border-color: #48484a;
+  background: #2c2c2e;
+  color: #f5f5f7;
+}
+
+:root[data-theme="dark"] .syllabus-create-class-button:hover,
+:root.dark .syllabus-create-class-button:hover,
+#main-window[data-theme="dark"] .syllabus-create-class-button:hover,
+#main-window.dark .syllabus-create-class-button:hover {
+  background: #3a3a3c;
+  border-color: #0060df;
+  color: #0060df;
+}
+
+:root[data-theme="dark"] .syllabus-create-class-button:active,
+:root.dark .syllabus-create-class-button:active,
+#main-window[data-theme="dark"] .syllabus-create-class-button:active,
+#main-window.dark .syllabus-create-class-button:active {
+  background: #1c1c1e;
+}
+
+:root[data-theme="dark"] .syllabus-class-delete-button,
+:root.dark .syllabus-class-delete-button,
+#main-window[data-theme="dark"] .syllabus-class-delete-button,
+#main-window.dark .syllabus-class-delete-button {
+  color: #8e8e93;
+}
+
+:root[data-theme="dark"] .syllabus-class-delete-button:hover,
+:root.dark .syllabus-class-delete-button:hover,
+#main-window[data-theme="dark"] .syllabus-class-delete-button:hover,
+#main-window.dark .syllabus-class-delete-button:hover {
+  background: rgba(220, 53, 69, 0.2);
+  color: #ff453a;
+}
+
+:root[data-theme="dark"] .syllabus-class-delete-button:active,
+:root.dark .syllabus-class-delete-button:active,
+#main-window[data-theme="dark"] .syllabus-class-delete-button:active,
+#main-window.dark .syllabus-class-delete-button:active {
+  background: rgba(220, 53, 69, 0.3);
+}
+
+:root[data-theme="dark"] .syllabus-add-class-dropzone,
+:root.dark .syllabus-add-class-dropzone,
+#main-window[data-theme="dark"] .syllabus-add-class-dropzone,
+#main-window.dark .syllabus-add-class-dropzone {
+  border-color: #0060df;
+  background: rgba(0, 96, 223, 0.1);
+}
+
+:root[data-theme="dark"] .syllabus-add-class-dropzone .syllabus-class-header,
+:root.dark .syllabus-add-class-dropzone .syllabus-class-header,
+#main-window[data-theme="dark"]
+  .syllabus-add-class-dropzone
+  .syllabus-class-header,
+#main-window.dark .syllabus-add-class-dropzone .syllabus-class-header {
+  color: #0060df;
+}
+
+:root[data-theme="dark"] .syllabus-add-class-dropzone-placeholder,
+:root.dark .syllabus-add-class-dropzone-placeholder,
+#main-window[data-theme="dark"] .syllabus-add-class-dropzone-placeholder,
+#main-window.dark .syllabus-add-class-dropzone-placeholder {
+  color: #0060df;
+}
+
+:root[data-theme="dark"]
+  .syllabus-add-class-dropzone-items.syllabus-dropzone-active,
+:root.dark .syllabus-add-class-dropzone-items.syllabus-dropzone-active,
+#main-window[data-theme="dark"]
+  .syllabus-add-class-dropzone-items.syllabus-dropzone-active,
+#main-window.dark .syllabus-add-class-dropzone-items.syllabus-dropzone-active {
+  background-color: rgba(0, 96, 223, 0.25);
 }
 
 .syllabus-view-toggle {

@@ -57,6 +57,20 @@ export class SyllabusManager {
     return `${addon.data.config.prefsPrefix}.${key}`;
   }
 
+  // Event emitter for collection metadata changes
+  private static collectionMetadataListeners = new Set<() => void>();
+
+  static onCollectionMetadataChange(listener: () => void): () => void {
+    this.collectionMetadataListeners.add(listener);
+    return () => {
+      this.collectionMetadataListeners.delete(listener);
+    };
+  }
+
+  private static emitCollectionMetadataChange() {
+    this.collectionMetadataListeners.forEach((listener) => listener());
+  }
+
   // Cache for parsed syllabus data per item to avoid repeated JSON parsing
   private static syllabusDataCache = new WeakMap<
     Zotero.Item,
@@ -1115,9 +1129,9 @@ export class SyllabusManager {
             },
             styles: opt.color
               ? {
-                  color: opt.color,
-                  fontWeight: "500",
-                }
+                color: opt.color,
+                fontWeight: "500",
+              }
               : undefined,
           });
           prioritySelect.appendChild(option);
@@ -1699,6 +1713,60 @@ export class SyllabusManager {
   }
 
   /**
+   * Get the min and max class number range for a collection
+   * Considers both items with class numbers and classes defined in metadata
+   */
+  static getClassNumberRange(
+    collectionId: number | string,
+    syllabusMetadata?: SettingsSyllabusMetadata,
+  ): { min: number | null; max: number | null } {
+    const classNumbers = new Set<number>();
+
+    // Get class numbers from items in the collection
+    try {
+      const collection = Zotero.Collections.get(
+        typeof collectionId === "string"
+          ? parseInt(collectionId, 10)
+          : collectionId,
+      );
+      if (collection) {
+        const items = collection.getChildItems();
+        for (const item of items) {
+          if (item.isRegularItem()) {
+            const classNumber = this.getSyllabusClassNumber(item, collectionId);
+            if (classNumber !== undefined) {
+              classNumbers.add(classNumber);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      ztoolkit.log("Error getting class numbers from items:", e);
+    }
+
+    // Get class numbers from metadata
+    const metadata = syllabusMetadata || this.getSyllabusMetadata(collectionId);
+    if (metadata.classes) {
+      for (const classNumStr of Object.keys(metadata.classes)) {
+        const classNum = parseInt(classNumStr, 10);
+        if (!isNaN(classNum)) {
+          classNumbers.add(classNum);
+        }
+      }
+    }
+
+    if (classNumbers.size === 0) {
+      return { min: null, max: null };
+    }
+
+    const sortedNumbers = Array.from(classNumbers).sort((a, b) => a - b);
+    return {
+      min: sortedNumbers[0],
+      max: sortedNumbers[sortedNumbers.length - 1],
+    };
+  }
+
+  /**
    * Set syllabus session number for a specific collection
    */
   static async setSyllabusClassNumber(
@@ -1759,19 +1827,27 @@ export class SyllabusManager {
 
   /**
    * Set collection metadata in preferences
+   * Note: This method is called with the full dictionary (SettingsCollectionDictionaryData)
+   * even though it's typed as SettingsSyllabusMetadata for backward compatibility
    */
   static async setCollectionMetadata(
-    metadata: SettingsSyllabusMetadata,
+    metadata: SettingsSyllabusMetadata | SettingsCollectionDictionaryData,
     source: "page" | "item-pane",
   ): Promise<void> {
+    ztoolkit.log("Setting collection metadata:", metadata);
+
     const prefKey = SyllabusManager.getPreferenceKey(
       SyllabusSettingsKey.COLLECTION_METADATA,
     );
-    Zotero.Prefs.set(prefKey, JSON.stringify(metadata), true);
+    // All callers pass the full dictionary, so we can safely cast
+    const dataToSave = metadata as SettingsCollectionDictionaryData;
+    Zotero.Prefs.set(prefKey, JSON.stringify(dataToSave), true);
     // Invalidate class title cache when metadata changes
     // Note: We need to get the collectionId from context, but since this is called
     // from methods that have collectionId, we'll invalidate all to be safe
     this.invalidateClassTitleCache();
+    // Emit event for store listeners (preference changes aren't notifiable in Zotero)
+    this.emitCollectionMetadataChange();
     // No need to call setupPage() - React stores will trigger re-render automatically
     if (source !== "item-pane") this.reloadItemPane();
     this.onClassListUpdate();
@@ -1909,5 +1985,61 @@ export class SyllabusManager {
       description,
     );
     await SyllabusManager.setCollectionMetadata(allData, source);
+  }
+
+  /**
+   * Create an additional class (even if empty) to extend the range
+   * This ensures the class appears in the rendered range
+   */
+  static async createAdditionalClass(
+    collectionId: number | string,
+    classNumber: number,
+    source: "page",
+  ): Promise<void> {
+    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
+    const collectionIdStr = String(collectionId);
+
+    // Ensure the classes object exists
+    if (!allData[collectionIdStr]) {
+      allData[collectionIdStr] = {};
+    }
+    if (!allData[collectionIdStr].classes) {
+      allData[collectionIdStr].classes = {};
+    }
+
+    // Create the class entry if it doesn't exist
+    if (!allData[collectionIdStr].classes![classNumber]) {
+      allData[collectionIdStr].classes![classNumber] = {
+        title: "",
+        description: "",
+      };
+    }
+
+    ztoolkit.log("Creating additional class:", allData);
+
+    // Save using setCollectionMetadata to ensure proper store updates
+    // Following the same pattern as setClassTitle - pass the full dictionary
+    await SyllabusManager.setCollectionMetadata(allData as any, source);
+  }
+
+  /**
+   * Delete a class from metadata
+   */
+  static async deleteClass(
+    collectionId: number | string,
+    classNumber: number,
+    source: "page",
+  ): Promise<void> {
+    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
+    const collectionIdStr = String(collectionId);
+
+    if (allData[collectionIdStr]?.classes?.[classNumber]) {
+      delete allData[collectionIdStr].classes![classNumber];
+      // Clean up empty classes object if needed
+      if (Object.keys(allData[collectionIdStr].classes || {}).length === 0) {
+        delete allData[collectionIdStr].classes;
+      }
+      await SyllabusManager.setCollectionMetadata(allData as any, source);
+    }
   }
 }

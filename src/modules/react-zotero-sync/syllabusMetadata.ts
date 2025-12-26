@@ -77,6 +77,8 @@ export function createSyllabusMetadataStore(collectionId: number) {
         ids: (number | string)[],
         extraData: any,
       ) {
+        ztoolkit.log("Syllabus metadata changed:", event, type, ids, extraData);
+
         // Listen to setting events for our preference key
         if (type === "setting" && extraData?.pref === prefKey) {
           onStoreChange();
@@ -97,9 +99,16 @@ export function createSyllabusMetadataStore(collectionId: number) {
       "collection",
     ]);
 
+    // Also listen to the custom event emitter for collection metadata changes
+    // (since preference changes aren't notifiable in Zotero)
+    const unsubscribeEmitter = SyllabusManager.onCollectionMetadataChange(
+      onStoreChange,
+    );
+
     // Return an unsubscribe fn
     return () => {
       Zotero.Notifier.unregisterObserver(notifierId);
+      unsubscribeEmitter();
     };
   }
 

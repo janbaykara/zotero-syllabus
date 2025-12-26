@@ -34,6 +34,40 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     useZoteroSyllabusMetadata(collectionId);
   const items = useZoteroCollectionItems(collectionId);
 
+  // Track drag state for showing "Add to Class X" dropzone
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Set up global drag event listeners
+  useEffect(() => {
+    const handleGlobalDragStart = (e: DragEvent) => {
+      // Only track drags that originate from syllabus items
+      const target = e.target as HTMLElement;
+      if (target?.closest?.(".syllabus-item[draggable='true']")) {
+        setIsDragging(true);
+      }
+    };
+
+    const handleGlobalDragEnd = () => {
+      setIsDragging(false);
+    };
+
+    const handleGlobalDrop = () => {
+      // Reset drag state when drop occurs
+      setIsDragging(false);
+    };
+
+    // Listen to drag events on the document
+    document.addEventListener("dragstart", handleGlobalDragStart);
+    document.addEventListener("dragend", handleGlobalDragEnd);
+    document.addEventListener("drop", handleGlobalDrop);
+
+    return () => {
+      document.removeEventListener("dragstart", handleGlobalDragStart);
+      document.removeEventListener("dragend", handleGlobalDragEnd);
+      document.removeEventListener("drop", handleGlobalDrop);
+    };
+  }, []);
+
   // Compute class groups and further reading items from synced items
   // Re-compute when items change
   const { classGroups, furtherReadingItems } = useMemo(() => {
@@ -62,7 +96,20 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       itemsByClass.get(normalizedClassNumber)!.push(item);
     }
 
-    // Sort class numbers
+    // Get min/max class range from items and metadata
+    const range = useMemo(() => SyllabusManager.getClassNumberRange(collectionId, syllabusMetadata), [collectionId, syllabusMetadata]);
+
+    ztoolkit.log("Range:", range, syllabusMetadata);
+
+    // Generate all class numbers in the range (even if empty)
+    const allClassNumbers: (number | null)[] = [];
+    if (range.min !== null && range.max !== null) {
+      for (let i = range.min; i <= range.max; i++) {
+        allClassNumbers.push(i);
+      }
+    }
+
+    // Add classes that have items but are outside the range (for null classNumber)
     const sortedClassNumbers = Array.from(itemsByClass.keys()).sort((a, b) => {
       if (a === null && b === null) return 0;
       if (a === null) return -1;
@@ -70,9 +117,27 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       return a - b;
     });
 
+    // Merge: use allClassNumbers as base, but ensure we include any classes with items
+    const finalClassNumbers = new Set<number | null>();
+    for (const num of allClassNumbers) {
+      finalClassNumbers.add(num);
+    }
+    for (const num of sortedClassNumbers) {
+      finalClassNumbers.add(num);
+    }
+
+    const sortedFinalClassNumbers = Array.from(finalClassNumbers).sort(
+      (a, b) => {
+        if (a === null && b === null) return 0;
+        if (a === null) return -1;
+        if (b === null) return 1;
+        return a - b;
+      },
+    );
+
     // Sort items within each class by priority
-    for (const classNumber of sortedClassNumbers) {
-      const classItems = itemsByClass.get(classNumber)!;
+    for (const classNumber of sortedFinalClassNumbers) {
+      const classItems = itemsByClass.get(classNumber) || [];
       classItems.sort((a, b) => {
         const priorityA = SyllabusManager.getSyllabusPriority(a, collectionId);
         const priorityB = SyllabusManager.getSyllabusPriority(b, collectionId);
@@ -97,13 +162,13 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     });
 
     return {
-      classGroups: sortedClassNumbers.map((classNumber) => ({
+      classGroups: sortedFinalClassNumbers.map((classNumber) => ({
         classNumber,
-        items: itemsByClass.get(classNumber)!,
+        items: itemsByClass.get(classNumber) || [],
       })),
       furtherReadingItems: furtherReading,
     };
-  }, [items, collectionId]);
+  }, [items, collectionId, syllabusMetadata]);
 
   const handleDrop = async (
     e: JSX.TargetedDragEvent<HTMLElement>,
@@ -128,6 +193,19 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
       const targetClassNumberValue =
         targetClassNumber === null ? undefined : targetClassNumber;
+
+      // If dropping to a specific class number, ensure it exists in metadata
+      if (targetClassNumberValue !== undefined) {
+        const metadata = SyllabusManager.getSyllabusMetadata(collectionId);
+        if (!metadata.classes || !metadata.classes[targetClassNumberValue]) {
+          // Auto-create the class metadata entry
+          await SyllabusManager.createAdditionalClass(
+            collectionId,
+            targetClassNumberValue,
+            "page",
+          );
+        }
+      }
 
       await SyllabusManager.setSyllabusClassNumber(
         draggedItem,
@@ -184,21 +262,88 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       />
 
       {classGroups.map(
-        (group: { classNumber: number | null; items: Zotero.Item[] }) => (
-          <ClassGroupComponent
-            key={group.classNumber ?? "null"}
-            classNumber={group.classNumber}
-            items={group.items}
-            collectionId={collectionId}
-            syllabusMetadata={syllabusMetadata}
-            onClassTitleSave={setClassTitle}
-            onClassDescriptionSave={setClassDescription}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-          />
-        ),
+        (group: { classNumber: number | null; items: Zotero.Item[] }) => {
+          const range = SyllabusManager.getClassNumberRange(collectionId, syllabusMetadata);
+          const isLastClass =
+            group.classNumber !== null &&
+            range.max !== null &&
+            group.classNumber === range.max;
+          return (
+            <ClassGroupComponent
+              key={group.classNumber ?? "null"}
+              classNumber={group.classNumber}
+              items={group.items}
+              collectionId={collectionId}
+              syllabusMetadata={syllabusMetadata}
+              onClassTitleSave={setClassTitle}
+              onClassDescriptionSave={setClassDescription}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              isLastClass={isLastClass}
+            />
+          );
+        },
       )}
+
+      {isDragging && (() => {
+        const range = SyllabusManager.getClassNumberRange(collectionId, syllabusMetadata);
+        const nextClassNumber =
+          range.max !== null ? range.max + 1 : range.min !== null ? range.min : 1;
+        return (
+          <div className="syllabus-class-group syllabus-add-class-dropzone">
+            <div className="syllabus-class-header-container">
+              <div className="syllabus-class-header">
+                Add to Class {nextClassNumber}
+              </div>
+            </div>
+            <div
+              className="syllabus-class-items syllabus-add-class-dropzone-items"
+              onDrop={(e) => handleDrop(e, nextClassNumber)}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+            >
+              <div className="syllabus-add-class-dropzone-placeholder">
+                Drop item here to create Class {nextClassNumber}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {(() => {
+        const range = SyllabusManager.getClassNumberRange(collectionId, syllabusMetadata);
+        const nextClassNumber =
+          range.max !== null
+            ? range.max + 1
+            : range.min !== null
+              ? range.min
+              : 1;
+        return (
+          <div className="syllabus-create-class-control">
+            <button
+              className="syllabus-create-class-button"
+              onClick={async () => {
+                try {
+                  await SyllabusManager.createAdditionalClass(
+                    collectionId,
+                    nextClassNumber,
+                    "page",
+                  );
+                  // The store should update automatically via the Zotero notifier
+                  // when the preference changes. The useSyncExternalStore hook will
+                  // re-render when the store's getSnapshot returns new data.
+                } catch (err) {
+                  ztoolkit.log("Error creating additional class:", err);
+                }
+              }}
+              title={`Add Class ${nextClassNumber}`}
+            >
+              Add Class {nextClassNumber}
+            </button>
+          </div>
+        );
+      })()}
 
       {furtherReadingItems.length > 0 && (
         <div className="syllabus-class-group">
@@ -239,6 +384,7 @@ interface ClassGroupComponentProps {
   ) => Promise<void>;
   onDragOver: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
   onDragLeave: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
+  isLastClass?: boolean;
 }
 
 function ClassGroupComponent({
@@ -251,6 +397,7 @@ function ClassGroupComponent({
   onDrop,
   onDragOver,
   onDragLeave,
+  isLastClass = false,
 }: ClassGroupComponentProps) {
   // Get class title and description from metadata
   const classTitle =
@@ -261,6 +408,16 @@ function ClassGroupComponent({
     classNumber !== null
       ? syllabusMetadata.classes?.[classNumber]?.description || ""
       : "";
+
+  const handleDeleteClass = async () => {
+    if (classNumber !== null) {
+      try {
+        await SyllabusManager.deleteClass(collectionId, classNumber, "page");
+      } catch (err) {
+        ztoolkit.log("Error deleting class:", err);
+      }
+    }
+  };
 
   return (
     <div className="syllabus-class-group">
@@ -275,6 +432,16 @@ function ClassGroupComponent({
               placeholder="Add a title..."
               emptyBehavior="delete"
             />
+            {isLastClass && items.length === 0 && (
+              <button
+                className="syllabus-class-delete-button"
+                onClick={handleDeleteClass}
+                title="Delete class"
+                aria-label="Delete class"
+              >
+                ×
+              </button>
+            )}
           </div>
           <EditableDescription
             initialValue={classDescription}
@@ -286,27 +453,33 @@ function ClassGroupComponent({
         </>
       )}
       <div
-        className="syllabus-class-items"
+        className={`syllabus-class-items ${items.length === 0 ? "syllabus-class-items-empty" : ""}`}
         onDrop={(e) => onDrop(e, classNumber)}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
       >
-        {items.map((item) => {
-          const priority = SyllabusManager.getSyllabusPriority(
-            item,
-            collectionId,
-          );
-          return (
-            <SyllabusItemCard
-              key={item.id}
-              item={item}
-              collectionId={collectionId}
-              slim={
-                !priority || priority === SyllabusManager.priorityKeys.OPTIONAL
-              }
-            />
-          );
-        })}
+        {items.length === 0 && classNumber !== null ? (
+          <div className="syllabus-empty-class-placeholder">
+            Drag items here
+          </div>
+        ) : (
+          items.map((item) => {
+            const priority = SyllabusManager.getSyllabusPriority(
+              item,
+              collectionId,
+            );
+            return (
+              <SyllabusItemCard
+                key={item.id}
+                item={item}
+                collectionId={collectionId}
+                slim={
+                  !priority || priority === SyllabusManager.priorityKeys.OPTIONAL
+                }
+              />
+            );
+          })
+        )}
       </div>
     </div>
   );
