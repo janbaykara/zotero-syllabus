@@ -214,12 +214,13 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
             onDragLeave={handleDragLeave}
           >
             {furtherReadingItems.map((item: Zotero.Item) => (
-              <SyllabusItemCardSlim
+              <SyllabusItemCard
                 key={item.id}
                 item={item}
                 collectionId={collectionId}
-                onClick={(e) => onClick(item, e)}
-                onDoubleClick={(e) => onDoubleClick(item, e)}
+                onClick={onClick}
+                onDoubleClick={onDoubleClick}
+                slim={true}
               />
             ))}
           </div>
@@ -299,12 +300,13 @@ function ClassGroupComponent({
               onDoubleClick={onDoubleClick}
             />
           ) : (
-            <SyllabusItemCardSlim
+            <SyllabusItemCard
               key={item.id}
               item={item}
               collectionId={collectionId}
               onClick={onClick}
               onDoubleClick={onDoubleClick}
+              slim={true}
             />
           );
         })}
@@ -313,7 +315,7 @@ function ClassGroupComponent({
   );
 }
 
-function onClick(item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) {
+function onClick(item: Zotero.Item, _e: JSX.TargetedMouseEvent<HTMLElement>) {
   // const target = e.target as HTMLElement;
   // if (
   //   target.closest(".syllabus-item-actions") ||
@@ -325,7 +327,7 @@ function onClick(item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) {
   pane.selectItem(item.id);
 };
 
-function onDoubleClick(item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) {
+function onDoubleClick(item: Zotero.Item, _e: JSX.TargetedMouseEvent<HTMLElement>) {
   const url = item.getField("url");
   const attachments = item.getAttachments();
   const viewableAttachment = attachments.find((attId) => {
@@ -545,6 +547,7 @@ interface SyllabusItemCardProps {
   collectionId: number;
   onClick: (item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) => void;
   onDoubleClick: (item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) => void;
+  slim?: boolean;
 }
 
 function SyllabusItemCard({
@@ -552,6 +555,7 @@ function SyllabusItemCard({
   collectionId,
   onClick,
   onDoubleClick,
+  slim = false,
 }: SyllabusItemCardProps) {
   // Get priority and class instruction from item
   const priority = SyllabusManager.getSyllabusPriority(item, collectionId);
@@ -578,6 +582,8 @@ function SyllabusItemCard({
   } | null>(null);
 
   useEffect(() => {
+    if (slim) return;
+
     const loadData = async () => {
       if (getPref("showBibliography")) {
         const ref = await generateBibliographicReference(item);
@@ -615,7 +621,7 @@ function SyllabusItemCard({
       }
     };
     loadData();
-  }, [item.id]);
+  }, [item.id, slim]);
 
   const priorityColor =
     priority && priority in SyllabusManager.PRIORITY_COLORS
@@ -690,10 +696,10 @@ function SyllabusItemCard({
 
   return (
     <div
-      className="syllabus-item"
+      className={slim ? "syllabus-item syllabus-item-slim" : "syllabus-item"}
       data-item-id={item.id}
       draggable
-      style={priorityStyle}
+      style={slim ? {} : priorityStyle}
       onClick={(e) => onClick(item, e)}
       onDblClick={(e) => onDoubleClick(item, e)}
       onDragStart={handleDragStart}
@@ -720,47 +726,55 @@ function SyllabusItemCard({
             <div className="syllabus-item-title-row">
               <div className="syllabus-item-title">{title}</div>
             </div>
-            {publicationName && (
+            {!slim && publicationName && (
               <div className="syllabus-item-publication">
                 In {publicationName}
               </div>
             )}
-            {(priority || metadataParts.length > 0) && (
-              <div className="syllabus-item-metadata">
-                {priority &&
-                  priority in SyllabusManager.PRIORITY_LABELS && (
-                    <span className="syllabus-item-priority-inline">
-                      <span
-                        className="syllabus-priority-icon"
-                        style={{
-                          backgroundColor:
-                            (SyllabusManager.PRIORITY_COLORS as any)[priority],
-                        }}
-                      />
-                      <span
-                        className="syllabus-priority-label"
-                        style={{
-                          color:
-                            (SyllabusManager.PRIORITY_COLORS as any)[priority],
-                        }}
-                      >
-                        {
-                          (SyllabusManager.PRIORITY_LABELS as any)[priority]
-                        }
-                      </span>
-                    </span>
-                  )}
-                {metadataParts.length > 0 && (
+            {slim ? (
+              metadataParts.length > 0 && (
+                <div className="syllabus-item-metadata">
                   <span>{metadataParts.join(" • ")}</span>
-                )}
-              </div>
+                </div>
+              )
+            ) : (
+              (priority || metadataParts.length > 0) && (
+                <div className="syllabus-item-metadata">
+                  {priority &&
+                    priority in SyllabusManager.PRIORITY_LABELS && (
+                      <span className="syllabus-item-priority-inline">
+                        <span
+                          className="syllabus-priority-icon"
+                          style={{
+                            backgroundColor:
+                              (SyllabusManager.PRIORITY_COLORS as any)[priority],
+                          }}
+                        />
+                        <span
+                          className="syllabus-priority-label"
+                          style={{
+                            color:
+                              (SyllabusManager.PRIORITY_COLORS as any)[priority],
+                          }}
+                        >
+                          {
+                            (SyllabusManager.PRIORITY_LABELS as any)[priority]
+                          }
+                        </span>
+                      </span>
+                    )}
+                  {metadataParts.length > 0 && (
+                    <span>{metadataParts.join(" • ")}</span>
+                  )}
+                </div>
+              )
             )}
-            {bibliographicReference && (
+            {!slim && bibliographicReference && (
               <div className="syllabus-item-reference">
                 {bibliographicReference}
               </div>
             )}
-            {classInstruction && (
+            {!slim && classInstruction && (
               <div className="syllabus-item-description">
                 {classInstruction}
               </div>
@@ -768,134 +782,58 @@ function SyllabusItemCard({
           </div>
         </div>
       </div>
-      <div className="syllabus-item-right-side focus-states-target" draggable={false}>
-        <div className="syllabus-item-actions" draggable={false}>
-          {url && (
-            <div className="syllabus-action-item row">
-              <button
-                className="syllabus-action-button"
-                onClick={handleUrlClick}
-                title="Open URL"
-                aria-label="Open URL"
-              >
-                <span
-                  className="syllabus-action-icon icon icon-css icon-attachment-type"
-                  data-item-type="attachmentLink"
+      {!slim && (
+        <div className="syllabus-item-right-side focus-states-target" draggable={false}>
+          <div className="syllabus-item-actions" draggable={false}>
+            {url && (
+              <div className="syllabus-action-item row">
+                <button
+                  className="syllabus-action-button"
+                  onClick={handleUrlClick}
+                  title="Open URL"
                   aria-label="Open URL"
-                />
-                <span className="syllabus-action-label">Open Link</span>
-              </button>
-            </div>
-          )}
-          {viewableAttachment && (
-            <div className="syllabus-action-item row">
-              <button
-                className="syllabus-action-button"
-                onClick={handleAttachmentClick}
-                title={`Open ${attachmentLabel}`}
-                aria-label={`Open ${attachmentLabel}`}
-              >
-                <span
-                  className="syllabus-action-icon icon icon-css icon-attachment-type"
-                  data-item-type={
-                    viewableAttachment.type === "pdf"
-                      ? "attachmentPDF"
-                      : viewableAttachment.type === "epub"
-                        ? "attachmentEPUB"
-                        : "attachmentSnapshot"
-                  }
+                >
+                  <span
+                    className="syllabus-action-icon icon icon-css icon-attachment-type"
+                    data-item-type="attachmentLink"
+                    aria-label="Open URL"
+                  />
+                  <span className="syllabus-action-label">Open Link</span>
+                </button>
+              </div>
+            )}
+            {viewableAttachment && (
+              <div className="syllabus-action-item row">
+                <button
+                  className="syllabus-action-button"
+                  onClick={handleAttachmentClick}
+                  title={`Open ${attachmentLabel}`}
                   aria-label={`Open ${attachmentLabel}`}
-                />
-                <span className="syllabus-action-label">
-                  Open {attachmentLabel}
-                </span>
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface SyllabusItemCardSlimProps {
-  item: Zotero.Item;
-  collectionId: number;
-  onClick: (item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) => void;
-  onDoubleClick: (item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) => void;
-}
-
-function SyllabusItemCardSlim({
-  item,
-  onClick,
-  onDoubleClick,
-}: SyllabusItemCardSlimProps) {
-  const title = item.getField("title") || "Untitled";
-  const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(item.itemType);
-  const creator = item.getCreators().length > 0 ? item.getCreator(0) : null;
-  const author =
-    item.firstCreator ||
-    (creator && typeof creator !== "boolean"
-      ? `${creator.firstName || ""} ${creator.lastName || ""}`.trim()
-      : "");
-  const date = item.getField("date") || "";
-  const metadataParts = [itemTypeLabel, author, date].filter(Boolean);
-
-  const handleDragStart = (e: JSX.TargetedDragEvent<HTMLElement>) => {
-    e.stopPropagation();
-    if (e.dataTransfer) {
-      e.dataTransfer.effectAllowed = "move";
-      e.dataTransfer.setData("text/plain", String(item.id));
-    }
-    (e.currentTarget as HTMLElement).classList.add("syllabus-item-dragging");
-  };
-
-  const handleDragEnd = (e: JSX.TargetedDragEvent<HTMLElement>) => {
-    (e.currentTarget as HTMLElement).classList.remove("syllabus-item-dragging");
-  };
-
-  return (
-    <div
-      className="syllabus-item syllabus-item-slim"
-      data-item-id={item.id}
-      draggable
-      onClick={(e) => onClick(item, e)}
-      onDblClick={(e) => onDoubleClick(item, e)}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="syllabus-item-content">
-        <div className="syllabus-item-main-content">
-          <div className="syllabus-item-thumbnail">
-            <span
-              className="icon icon-css icon-item-type cell-icon"
-              data-item-type={item.itemType}
-              style={{
-                width: "100%",
-                height: "100%",
-                backgroundOrigin: "padding-box, padding-box, padding-box, padding-box",
-                backgroundPositionX: "50%, 50%, 50%, 50%",
-                backgroundPositionY: "50%, 50%, 50%, 50%",
-                backgroundRepeat: "no-repeat, repeat, repeat, repeat",
-                backgroundSize: "contain, 0px, 0px, 0px",
-              }}
-            />
-          </div>
-          <div className="syllabus-item-text">
-            <div className="syllabus-item-title-row">
-              <div className="syllabus-item-title">{title}</div>
-            </div>
-            {metadataParts.length > 0 && (
-              <div className="syllabus-item-metadata">
-                <span>{metadataParts.join(" • ")}</span>
+                >
+                  <span
+                    className="syllabus-action-icon icon icon-css icon-attachment-type"
+                    data-item-type={
+                      viewableAttachment.type === "pdf"
+                        ? "attachmentPDF"
+                        : viewableAttachment.type === "epub"
+                          ? "attachmentEPUB"
+                          : "attachmentSnapshot"
+                    }
+                    aria-label={`Open ${attachmentLabel}`}
+                  />
+                  <span className="syllabus-action-label">
+                    Open {attachmentLabel}
+                  </span>
+                </button>
               </div>
             )}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
+
 
 export function renderSyllabusPage(
   win: _ZoteroTypes.MainWindow,
