@@ -15,6 +15,8 @@ import {
   getItemReadStatusName,
   getReadStatusMetadata,
 } from "../zotero-reading-list/compat";
+import { useDebouncedEffect } from "../utils/react/useDebouncedEffect";
+import { useElementSize } from "../utils/react/useElementSize";
 
 // Define priority type for use in this file
 // These values match SyllabusPriority enum in syllabus.ts
@@ -182,7 +184,14 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     e.stopPropagation();
 
     // Remove the dropzone active class after drop
-    e.currentTarget.classList.remove("syllabus-dropzone-active");
+    // e.currentTarget.classList.remove("syllabus-dropzone-active");
+    const allDropzones = Array.from(document.querySelectorAll<HTMLElement>("[data-dropzone-active='true']")) as HTMLElement[];
+    for (const dropzone of allDropzones) {
+      if (dropzone?.dataset?.dropzoneActive) {
+        dropzone.dataset.dropzoneActive = "false";
+      }
+    }
+    e.currentTarget.dataset.dropzoneActive = "false";
 
     if (!e.dataTransfer) return;
     const itemIdStr = e.dataTransfer.getData("text/plain");
@@ -229,7 +238,8 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     if (e.dataTransfer) {
       e.dataTransfer.dropEffect = "move";
     }
-    e.currentTarget.classList.add("syllabus-dropzone-active");
+    // e.currentTarget.classList.add("syllabus-dropzone-active");
+    e.currentTarget.dataset.dropzoneActive = "true";
   };
 
   const handleDragLeave = (e: JSX.TargetedDragEvent<HTMLElement>) => {
@@ -241,33 +251,61 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     // Only remove the class if we're actually leaving the drop zone
     // (not just moving to a child element)
     if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
-      e.currentTarget.classList.remove("syllabus-dropzone-active");
+      // e.currentTarget.classList.remove("syllabus-dropzone-active");
+      e.currentTarget.dataset.dropzoneActive = "false";
     }
   };
 
+  const nextClassNumber = useMemo(() => {
+    const range = SyllabusManager.getClassNumberRange(
+      collectionId,
+      syllabusMetadata,
+    );
+
+    const nextClassNumber =
+      range.max !== null
+        ? range.max + 1
+        : range.min !== null
+          ? range.min
+          : 1;
+
+    return nextClassNumber;
+  }, [collectionId, syllabusMetadata]);
+
   return (
-    <div className="syllabus-page">
-      <div className='text-5xl text-green-300'>Test</div>
-      <div className="syllabus-view-title-container">
-        <EditableTitle
-          initialValue={title || ""}
-          onSave={setTitle}
-          className="syllabus-view-title"
-          emptyBehavior="reset"
-          placeholder="Add a title..."
-        />
+    <div className="syllabus-page overflow-y-auto overflow-x-hidden h-[calc(100%-70px)]">
+      <div syllabus-view-title-container className="sticky top-0 z-10 bg-background py-1 md:pt-8 text-3xl font-semibold">
+        <div className="container-padded bg-background">
+          <div>
+            <TextInput
+              elementType="input"
+              initialValue={title || ""}
+              onSave={setTitle}
+              emptyBehavior="reset"
+              placeholder="Add a title..."
+              className='w-full px-0! mx-0!'
+            />
+          </div>
+        </div>
       </div>
 
-      <EditableDescription
-        initialValue={syllabusMetadata.description || ""}
-        onSave={setDescription}
-        className="syllabus-collection-description"
-        placeholder="Add a description..."
-        emptyBehavior="delete"
-      />
+      <div className="container-padded">
+        <div className="py-2 text-lg">
+          <TextInput
+            elementType="textarea"
+            initialValue={syllabusMetadata.description || ""}
+            onSave={setDescription}
+            syllabus-collection-description
+            className="w-full px-0! mx-0! text-primary"
+            placeholder="Add a description..."
+            emptyBehavior="delete"
+            fieldSizing="content"
+          />
+        </div>
+      </div>
 
-      {classGroups.map(
-        (group: { classNumber: number | null; items: Zotero.Item[] }) => (
+      <div className="flex flex-col gap-14 my-14">
+        {classGroups.map((group) => (
           <ClassGroupComponent
             key={group.classNumber ?? "null"}
             classNumber={group.classNumber}
@@ -281,104 +319,82 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
             onDragLeave={handleDragLeave}
           />
         ),
-      )}
+        )}
+      </div>
 
-      {isDragging &&
-        (() => {
-          const range = SyllabusManager.getClassNumberRange(
-            collectionId,
-            syllabusMetadata,
-          );
-          const nextClassNumber =
-            range.max !== null
-              ? range.max + 1
-              : range.min !== null
-                ? range.min
-                : 1;
-          return (
-            <div className="syllabus-class-group syllabus-add-class-dropzone">
-              <div className="syllabus-class-header-container">
-                <div className="syllabus-class-header">
-                  Add to Class {nextClassNumber}
-                </div>
-              </div>
-              <div
-                className="syllabus-class-items syllabus-add-class-dropzone-items"
-                onDrop={(e) => handleDrop(e, nextClassNumber)}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-              >
-                <div className="syllabus-add-class-dropzone-placeholder">
-                  Drop item here to create Class {nextClassNumber}
-                </div>
+      <div className="container-padded">
+        {isDragging &&
+          <div className="syllabus-class-group syllabus-add-class-dropzone">
+            <div className="syllabus-class-header-container">
+              <div className="syllabus-class-header">
+                Add to Class {nextClassNumber}
               </div>
             </div>
-          );
-        })()}
-
-      {(() => {
-        const range = SyllabusManager.getClassNumberRange(
-          collectionId,
-          syllabusMetadata,
-        );
-        const nextClassNumber =
-          range.max !== null
-            ? range.max + 1
-            : range.min !== null
-              ? range.min
-              : 1;
-        return (
-          <div className="syllabus-create-class-control">
-            <button
-              className="syllabus-create-class-button"
-              onClick={async () => {
-                try {
-                  await SyllabusManager.createAdditionalClass(
-                    collectionId,
-                    nextClassNumber,
-                    "page",
-                  );
-                  // The store should update automatically via the Zotero notifier
-                  // when the preference changes. The useSyncExternalStore hook will
-                  // re-render when the store's getSnapshot returns new data.
-                } catch (err) {
-                  ztoolkit.log("Error creating additional class:", err);
-                }
-              }}
-              title={`Add Class ${nextClassNumber}`}
+            <div
+              className="syllabus-class-items syllabus-add-class-dropzone-items"
+              onDrop={(e) => handleDrop(e, nextClassNumber)}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
             >
-              Add Class {nextClassNumber}
-            </button>
+              <div className="syllabus-add-class-dropzone-placeholder bg-quinary rounded-md p-16 text-secondary border-2 border-dashed border-secondary">
+                Drop item here to create Class {nextClassNumber}
+              </div>
+            </div>
           </div>
-        );
-      })()}
+        }
 
-      {furtherReadingItems.length > 0 && (
-        <div className="syllabus-class-group">
-          <div className="syllabus-class-header">Further reading</div>
-          <div
-            className="syllabus-class-items syllabus-further-reading-items"
-            onDrop={(e) => handleDrop(e, null)}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
+        <div className="syllabus-create-class-control">
+          <button
+            className="syllabus-create-class-button"
+            onClick={createAdditionalClass}
+            title={`Add Class ${nextClassNumber}`}
           >
-            {furtherReadingItems.map((item: Zotero.Item) => (
-              <SyllabusItemCard
-                key={item.id}
-                item={item}
-                collectionId={collectionId}
-                slim={true}
-              />
-            ))}
-          </div>
+            Add Class {nextClassNumber}
+          </button>
         </div>
-      )}
+
+        {furtherReadingItems.length > 0 && (
+          <div className="syllabus-class-group">
+            <div className="text-2xl font-semibold mt-12 mb-4">Further reading</div>
+            <div
+              className="space-y-4"
+              onDrop={(e) => handleDrop(e, null)}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+            >
+              {furtherReadingItems.map((item: Zotero.Item) => (
+                <SyllabusItemCard
+                  key={item.id}
+                  item={item}
+                  collectionId={collectionId}
+                  slim={true}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
+
+  async function createAdditionalClass() {
+    try {
+      await SyllabusManager.createAdditionalClass(
+        collectionId,
+        nextClassNumber,
+        "page",
+      );
+      // The store should update automatically via the Zotero notifier
+      // when the preference changes. The useSyncExternalStore hook will
+      // re-render when the store's getSnapshot returns new data.
+    } catch (err) {
+      ztoolkit.log("Error creating additional class:", err);
+    }
+  }
 }
 
 interface ClassGroupComponentProps {
-  classNumber: number | null;
+  classNumber: number;
   items: Zotero.Item[];
   collectionId: number;
   syllabusMetadata: {
@@ -427,264 +443,167 @@ function ClassGroupComponent({
 
   return (
     <div className="syllabus-class-group">
-      {classNumber !== null && (
-        <>
-          <div className="syllabus-class-header-container">
-            <div className="syllabus-class-header">Class {classNumber}</div>
-            <EditableTitle
-              initialValue={classTitle}
-              onSave={(title) => onClassTitleSave(classNumber, title)}
-              className="syllabus-class-title"
-              placeholder="Add a title..."
+      <>
+        <div className="sticky top-18 z-5 bg-background">
+          <div className="container-padded rounded-xs py-1">
+            <div className="flex gap-2 items-baseline justify-start w-full">
+              <div className="syllabus-class-header shrink-0 uppercase text-lg text-secondary font-semibold">
+                Class {classNumber}
+              </div>
+              <div className='text-2xl w-full font-semibold'>
+                <TextInput
+                  elementType="input"
+                  initialValue={classTitle}
+                  onSave={(title) => onClassTitleSave(classNumber, title)}
+                  className="w-full text-primary"
+                  placeholder="Add a title..."
+                  emptyBehavior="delete"
+                />
+              </div>
+              <button
+                className="ml-auto! shrink-0 bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-red-500/15 text-secondary hover:text-red-400 inline-flex flex-row items-center justify-center w-8"
+                onClick={handleDeleteClass}
+                title="Delete class"
+                aria-label="Delete class"
+              >
+                <div className='text-2xl text-center'>
+                  ×
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="container-padded">
+          <div className="text-lg pt-2">
+            <TextInput
+              elementType="textarea"
+              initialValue={classDescription}
+              onSave={(desc) => onClassDescriptionSave(classNumber, desc)}
+              className="w-full px-0! mx-0! text-primary"
+              placeholder="Add a description..."
               emptyBehavior="delete"
+              fieldSizing="content"
             />
-            <button
-              className="syllabus-class-delete-button"
-              onClick={handleDeleteClass}
-              title="Delete class"
-              aria-label="Delete class"
-            >
-              ×
-            </button>
           </div>
-          <EditableDescription
-            initialValue={classDescription}
-            onSave={(desc) => onClassDescriptionSave(classNumber, desc)}
-            className="syllabus-class-description"
-            placeholder="Add a description..."
-            emptyBehavior="delete"
-          />
-        </>
-      )}
-      <div
-        className={`syllabus-class-items ${items.length === 0 ? "syllabus-class-items-empty" : ""}`}
-        onDrop={(e) => onDrop(e, classNumber)}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-      >
-        {items.length === 0 && classNumber !== null ? (
-          <div className="syllabus-empty-class-placeholder">
-            Drag items here
-          </div>
-        ) : (
-          items.map((item) => {
-            const priority = SyllabusManager.getSyllabusPriority(
-              item,
-              collectionId,
-            );
-            return (
-              <SyllabusItemCard
-                key={item.id}
-                item={item}
-                collectionId={collectionId}
-                slim={
-                  !priority ||
-                  priority === SyllabusManager.priorityKeys.OPTIONAL
-                }
-              />
-            );
-          })
-        )}
+        </div>
+      </>
+      <div className="container-padded mt-2">
+        <div
+          className={twMerge(
+            "mt-4 space-y-4 syllabus-class-items p-2 -m-2 box-border! rounded-lg",
+            "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:outline-accent-blue! data-[dropzone-active='true']:text-accent-blue! transition-all duration-200 outline-transparent outline-2! outline-dashed!"
+          )}
+          onDrop={(e) => onDrop(e, classNumber)}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+        >
+          {items.length === 0 && classNumber !== null ? (
+            <div className="text-center bg-quinary/50 rounded-md p-8 text-secondary border-2 border-dashed border-tertiary/50">
+              Drag items to Class {classNumber}
+            </div>
+          ) : (
+            items.map((item) => {
+              const priority = SyllabusManager.getSyllabusPriority(
+                item,
+                collectionId,
+              );
+              return (
+                <SyllabusItemCard
+                  key={item.id}
+                  item={item}
+                  collectionId={collectionId}
+                  slim={
+                    !priority ||
+                    priority === SyllabusManager.priorityKeys.OPTIONAL
+                  }
+                />
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-interface EditableTitleProps {
-  initialValue: string;
-  onSave: (value: string) => void | Promise<void>;
-  className: string;
-  placeholder?: string;
-  emptyBehavior?: "reset" | "delete";
-}
-
-function EditableTitle({
+function TextInput({
   initialValue,
   onSave,
-  className,
   placeholder,
+  elementType = "input",
   emptyBehavior = "reset",
-}: EditableTitleProps) {
-  const [value, setValue] = useState(initialValue);
-  const [isEditing, setIsEditing] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    setValue(initialValue);
-  }, [initialValue]);
-
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [isEditing]);
-
-  const handleBlur = async (_e: JSX.TargetedFocusEvent<HTMLInputElement>) => {
-    // Use setTimeout to ensure blur completes before we check what was clicked
-    setTimeout(async () => {
-      if (value.trim() === "" && emptyBehavior === "delete") {
-        setValue(initialValue);
-      } else if (value.trim() === "" && emptyBehavior === "reset") {
-        setValue(initialValue);
-      } else if (value !== initialValue) {
-        try {
-          await onSave(value);
-        } catch (err) {
-          ztoolkit.log("Error saving title:", err);
-          // Revert on error
-          setValue(initialValue);
-        }
-      }
-      setIsEditing(false);
-    }, 0);
-  };
-
-  const handleKeyDown = (e: JSX.TargetedKeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      inputRef.current?.blur();
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      setValue(initialValue);
-      setIsEditing(false);
-    }
-  };
-
-  const handleMouseDown = (e: JSX.TargetedMouseEvent<HTMLInputElement>) => {
-    // Prevent blur when clicking on the input itself
-    e.stopPropagation();
-  };
-
-  if (!isEditing) {
-    return (
-      <div
-        className={className}
-        onClick={() => setIsEditing(true)}
-        onMouseDown={(e) => e.stopPropagation()}
-        style={{ cursor: "text" }}
-      >
-        {value || placeholder || "Click to edit"}
-      </div>
-    );
-  }
-
-  return (
-    <input
-      ref={inputRef}
-      type="text"
-      className={className}
-      value={value}
-      onChange={(e) => setValue((e.target as HTMLInputElement).value)}
-      onBlur={handleBlur}
-      onKeyDown={handleKeyDown}
-      onMouseDown={handleMouseDown}
-      placeholder={placeholder}
-      autoFocus
-    />
-  );
-}
-
-interface EditableDescriptionProps {
+  className,
+  fieldSizing = "content",
+  ...elementProps
+}: {
   initialValue: string;
   onSave: (value: string) => void | Promise<void>;
-  className: string;
   placeholder?: string;
   emptyBehavior?: "reset" | "delete";
-}
-
-function EditableDescription({
-  initialValue,
-  onSave,
-  className,
-  placeholder,
-  emptyBehavior = "delete",
-}: EditableDescriptionProps) {
+  elementType?: "input" | "textarea";
+  className?: string;
+  fieldSizing?: "content" | "fixed" | "auto";
+} & JSX.HTMLAttributes<HTMLInputElement | HTMLTextAreaElement>) {
   const [value, setValue] = useState(initialValue);
-  const [isEditing, setIsEditing] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  function save(value: string) {
+    onSave(emptyBehavior === "reset" ? value || initialValue : value);
+  }
 
   useEffect(() => {
+    // This means the global value has changed, so we need to update the local value
     setValue(initialValue);
   }, [initialValue]);
 
+  useDebouncedEffect(() => {
+    // Don't update the global API too often
+    save(value);
+  }, [value], 500);
+
+  const [setSizeRef, size] = useElementSize();
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+
   useEffect(() => {
-    if (isEditing && textareaRef.current) {
-      textareaRef.current.focus();
-      textareaRef.current.setSelectionRange(
-        textareaRef.current.value.length,
-        textareaRef.current.value.length,
-      );
-    }
-  }, [isEditing]);
-
-  const handleBlur = async (
-    _e: JSX.TargetedFocusEvent<HTMLTextAreaElement>,
-  ) => {
-    // Use setTimeout to ensure blur completes before we check what was clicked
-    setTimeout(async () => {
-      if (value.trim() === "" && emptyBehavior === "delete") {
-        // Don't save empty description
-        setValue(initialValue);
-      } else if (value.trim() === "" && emptyBehavior === "reset") {
-        setValue(initialValue);
-      } else if (value !== initialValue) {
-        try {
-          await onSave(value);
-        } catch (err) {
-          ztoolkit.log("Error saving description:", err);
-          // Revert on error
-          setValue(initialValue);
-        }
+    if (fieldSizing === "content" && inputRef.current && elementType === "textarea") {
+      if (value) {
+        // Set it to 1px so we can measure the scrollheight
+        inputRef.current.style.height = "1px";
+        const contentHeight = inputRef.current.scrollHeight;
+        inputRef.current.style.height = contentHeight + "px";
+        inputRef.current.removeAttribute("rows");
+      } else {
+        inputRef.current.style.height = "auto";
+        inputRef.current.setAttribute("rows", "1");
       }
-      setIsEditing(false);
-    }, 0);
-  };
-
-  const handleKeyDown = (e: JSX.TargetedKeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Escape") {
-      e.preventDefault();
-      setValue(initialValue);
-      setIsEditing(false);
     }
-  };
-
-  const handleMouseDown = (e: JSX.TargetedMouseEvent<HTMLTextAreaElement>) => {
-    // Prevent blur when clicking on the textarea itself
-    e.stopPropagation();
-  };
-
-  if (!isEditing) {
-    if (!value && !placeholder) return null;
-    return (
-      <div
-        className={className}
-        onClick={() => setIsEditing(true)}
-        onMouseDown={(e) => e.stopPropagation()}
-        style={{ cursor: "text", minHeight: "1.5em" }}
-      >
-        {value || (
-          <span style={{ color: "#999", fontStyle: "italic" }}>
-            {placeholder}
-          </span>
-        )}
-      </div>
-    );
-  }
+  }, [value, fieldSizing, size, elementType]);
 
   return (
-    <textarea
-      ref={textareaRef}
-      className={className}
-      value={value}
-      onChange={(e) => setValue((e.target as HTMLTextAreaElement).value)}
-      onBlur={handleBlur}
-      onKeyDown={handleKeyDown}
-      onMouseDown={handleMouseDown}
-      placeholder={placeholder}
-      rows={3}
-      autoFocus
-    />
+    <div ref={setSizeRef} className="w-full">
+      {h(
+        elementType,
+        {
+          ref: inputRef,
+          type: "text",
+          value,
+          onChange: (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => setValue((e.target as HTMLInputElement).value),
+          onBlur: () => save(value),
+          onKeyDown: (e: JSX.TargetedKeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+            if (e.key === "Escape" || e.key === "Enter") {
+              e.preventDefault();
+              e.currentTarget.blur();
+              save(value);
+            }
+          },
+          placeholder: placeholder || "Click to edit",
+          className: twMerge("bg-transparent border-none focus:outline-3 focus:outline-accent-blue focus:rounded-xs focus:outline-offset-2 field-sizing-content", className),
+          style: {
+            "--color-focus-border": "var(--color-accent-blue)",
+          },
+          ...elementProps,
+        }
+      )}
+    </div>
   );
 }
 
@@ -768,26 +687,10 @@ function SyllabusItemCard({
       }>;
   }, [item, slim]);
 
-  const priorityColor =
-    priority && priority in SyllabusManager.PRIORITY_COLORS
-      ? (SyllabusManager.PRIORITY_COLORS as any)[priority]
-      : null;
-  const priorityStyle = priorityColor
-    ? (() => {
-      const r = parseInt(priorityColor.slice(1, 3), 16);
-      const g = parseInt(priorityColor.slice(3, 5), 16);
-      const b = parseInt(priorityColor.slice(5, 7), 16);
-      return {
-        backgroundColor: `rgba(${r}, ${g}, ${b}, 0.05)`,
-        borderColor: `rgba(${r}, ${g}, ${b}, 0.2)`,
-      };
-    })()
-    : {};
-
   const metadataParts = [
-    itemTypeLabel,
     author,
     date,
+    slim ? itemTypeLabel : undefined,
     publicationName ? `in ${publicationName}` : undefined,
   ].filter(Boolean);
 
@@ -804,7 +707,7 @@ function SyllabusItemCard({
     (e.currentTarget as HTMLElement).classList.remove("syllabus-item-dragging");
   };
 
-  const handleUrlClick = (e: JSX.TargetedMouseEvent<HTMLButtonElement>) => {
+  const handleUrlClick = (e: JSX.TargetedMouseEvent<HTMLElement>) => {
     e.stopPropagation();
     Zotero.launchURL(url);
   };
@@ -869,152 +772,163 @@ function SyllabusItemCard({
 
   const readStatusName = useMemo(() => getItemReadStatusName(item), [item]);
 
+  const priorityColor = SyllabusManager.PRIORITY_COLORS[priority as SyllabusPriorityType]
+
   return (
     <div
-      className={
-        slim
-          ? `syllabus-item syllabus-item-slim${isSelected ? " syllabus-item-selected" : ""}`
-          : `syllabus-item${isSelected ? " syllabus-item-selected" : ""}`
-      }
+      style={{
+        backgroundColor: priorityColor + "15",
+        borderColor: priorityColor + "30",
+        colorScheme: isSelected ? "dark" : undefined,
+      }}
+      className={twMerge(
+        "rounded-lg px-4 flex flex-row items-start justify-between shrink-0 gap-4",
+        "bg-quinary border-none text-primary cursor-grab",
+        !slim ? "py-4" : "py-2.5",
+        isSelected && "bg-accent-blue!"
+      )}
       data-item-id={item.id}
       draggable
-      style={slim ? {} : priorityStyle}
       onClick={(e) => onClick(item, e)}
       onDblClick={(e) => onDoubleClick(item, e)}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="syllabus-item-content">
-        <div className="syllabus-item-main-content">
-          <div className="syllabus-item-thumbnail">
-            <span
-              className="icon icon-css icon-item-type cell-icon"
-              data-item-type={item.itemType}
-              style={{
-                width: "100%",
-                height: "100%",
-                backgroundOrigin:
-                  "padding-box, padding-box, padding-box, padding-box",
-                backgroundPositionX: "50%, 50%, 50%, 50%",
-                backgroundPositionY: "50%, 50%, 50%, 50%",
-                backgroundRepeat: "no-repeat, repeat, repeat, repeat",
-                backgroundSize: "contain, 0px, 0px, 0px",
-              }}
-            />
-          </div>
-          <div className="syllabus-item-text">
-            <div
-              style={{ display: "flex", alignItems: "baseline", gap: "16px" }}
-            >
-              {!!priority && <PriorityIcon priority={priority} />}
-              {!!readStatusName && (
-                <ReadStatusIcon readStatusName={readStatusName} />
-              )}
-            </div>
-            <div className="syllabus-item-title-row">
-              <div className="syllabus-item-title">{title}</div>
-            </div>
-            <div className="syllabus-item-metadata">
-              {metadataParts.length > 0 && (
-                <span>{metadataParts.join(" • ")}</span>
-              )}
-            </div>
-            {!slim && bibliographicReference && (
-              <div className="syllabus-item-reference">
-                {bibliographicReference}
-              </div>
-            )}
-            {!slim && classInstruction && (
-              <div className="syllabus-item-description">
-                {classInstruction}
-              </div>
-            )}
-          </div>
-        </div>
+      <div className={twMerge("self-center syllabus-item-thumbnail grow-0 shrink-0", slim ? "size-10" : "size-20")}>
+        <span
+          className="icon icon-css icon-item-type cell-icon"
+          data-item-type={item.itemType}
+          style={{
+            width: "100%",
+            height: "100%",
+            backgroundOrigin:
+              "padding-box, padding-box, padding-box, padding-box",
+            backgroundPositionX: "50%, 50%, 50%, 50%",
+            backgroundPositionY: "50%, 50%, 50%, 50%",
+            backgroundRepeat: "no-repeat, repeat, repeat, repeat",
+            backgroundSize: "contain, 0px, 0px, 0px",
+            filter: isSelected ? "invert(0.85) brightness(2.5) contrast(1) hue-rotate(175deg)" : undefined
+          }}
+        />
       </div>
-      <div
-        className="syllabus-item-right-side focus-states-target"
-        draggable={false}
-      >
-        <div className="syllabus-item-actions" draggable={false}>
-          {viewableAttachments.map((viewableAttachment) => {
-            const attachmentLabel =
-              viewableAttachment?.type === "pdf"
-                ? "PDF"
-                : viewableAttachment?.type === "snapshot"
-                  ? "Snapshot"
-                  : viewableAttachment?.type === "epub"
-                    ? "EPUB"
-                    : "View";
-
-            return (
-              <div className="syllabus-action-item row">
-                <button
-                  className="syllabus-action-button"
-                  onClick={() => handleAttachmentClick(viewableAttachment)}
-                  title={`Open ${attachmentLabel}`}
-                  aria-label={`Open ${attachmentLabel}`}
-                >
-                  <span
-                    className="syllabus-action-icon icon icon-css icon-attachment-type"
-                    data-item-type={
-                      viewableAttachment.type === "pdf"
-                        ? "attachmentPDF"
-                        : viewableAttachment.type === "epub"
-                          ? "attachmentEPUB"
-                          : "attachmentSnapshot"
-                    }
-                    aria-label={`Open ${attachmentLabel}`}
-                  />
-                  <span className="syllabus-action-label">
-                    Open {attachmentLabel}
-                  </span>
-                </button>
-              </div>
-            );
-          })}
-          {url && (
-            <div className="syllabus-action-item row">
-              <button
-                className="syllabus-action-button"
-                onClick={handleUrlClick}
-                title="Open URL"
-                aria-label="Open URL"
-              >
-                <span
-                  className="syllabus-action-icon icon icon-css icon-attachment-type"
-                  data-item-type="attachmentLink"
-                  aria-label="Open URL"
-                />
-                <span className="syllabus-action-label">Open Link</span>
-              </button>
+      <div className={twMerge("syllabus-item-text grow flex flex-col", !slim ? "gap-1" : "gap-0.25")}>
+        <div
+          className="flex flex-row gap-3 items-baseline justify-start"
+        >
+          {!!priority &&
+            <div className="grow-0 shrink-0">
+              <PriorityIcon priority={priority} colors={!isSelected} />
+            </div>
+          }
+          {!slim && itemTypeLabel && (
+            <div className="grow-0 shrink-0">
+              <span className="text-secondary">{itemTypeLabel}</span>
+            </div>
+          )}
+          {!!readStatusName && (
+            <div className="grow-0 shrink-0">
+              <ReadStatusIcon readStatusName={readStatusName} />
             </div>
           )}
         </div>
+        <div className="syllabus-item-title-row">
+          <div className={twMerge(!slim ? "text-xl font-medium" : "text-lg font-medium")}>{title}</div>
+        </div>
+        <div className="syllabus-item-metadata text-secondary">
+          {metadataParts.length > 0 && (
+            <span>{metadataParts.join(" • ")}</span>
+          )}
+        </div>
+        {!slim && bibliographicReference && (
+          <div className="syllabus-item-reference">
+            {bibliographicReference}
+          </div>
+        )}
+        {classInstruction && (
+          <div className="syllabus-item-description">
+            {classInstruction}
+          </div>
+        )}
+      </div>
+      <div className="syllabus-item-actions shrink-0 inline-flex flex-col gap-1" draggable={false}>
+        {viewableAttachments.map((viewableAttachment) => {
+          const attachmentLabel =
+            viewableAttachment?.type === "pdf"
+              ? "PDF"
+              : viewableAttachment?.type === "snapshot"
+                ? "Snapshot"
+                : viewableAttachment?.type === "epub"
+                  ? "EPUB"
+                  : "View";
+
+          return (
+            <div className="focus-states-target">
+              <button
+                className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
+                onClick={() => handleAttachmentClick(viewableAttachment)}
+                title={`Open ${attachmentLabel}`}
+                aria-label={`Open ${attachmentLabel}`}
+              >
+                <span
+                  className="syllabus-action-icon icon icon-css icon-attachment-type"
+                  data-item-type={
+                    viewableAttachment.type === "pdf"
+                      ? "attachmentPDF"
+                      : viewableAttachment.type === "epub"
+                        ? "attachmentEPUB"
+                        : "attachmentSnapshot"
+                  }
+                  aria-label={`Open ${attachmentLabel}`}
+                />
+                <span className="syllabus-action-label">
+                  {attachmentLabel}
+                </span>
+              </button>
+            </div>
+          );
+        })}
+        {url && (
+          <div className="focus-states-target">
+            <button
+              className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
+              onClick={handleUrlClick}
+              title="Open URL"
+              aria-label="Open URL"
+            >
+              <span
+                className="syllabus-action-icon icon icon-css icon-attachment-type"
+                data-item-type="attachmentLink"
+                aria-label="Open URL"
+              />
+              <span className="syllabus-action-label">Link</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function PriorityIcon({ priority }: { priority: SyllabusPriorityType }) {
+function PriorityIcon({ priority, colors = true }: { priority: SyllabusPriorityType, colors?: boolean }) {
   if (!priority || !(priority in SyllabusManager.PRIORITY_LABELS)) return null;
   return (
-    <span className="syllabus-item-priority-inline">
+    <span className="uppercase font-semibold tracking-wide flex flex-row gap-1.5 items-baseline">
       <span
-        className="syllabus-priority-icon"
+        className="w-3 h-3 rounded-full inline-block"
         style={{
-          backgroundColor: (SyllabusManager.PRIORITY_COLORS as any)[priority],
+          backgroundColor: colors ? SyllabusManager.PRIORITY_COLORS[priority] : "var(--color-primary)",
         }}
       />
       <span
-        className="syllabus-priority-label"
+        className="rounded-md px-1 py-0.25"
         style={{
-          color: (SyllabusManager.PRIORITY_COLORS as any)[priority],
+          backgroundColor: colors ? SyllabusManager.PRIORITY_COLORS[priority] + "15" : undefined,
+          color: colors ? SyllabusManager.PRIORITY_COLORS[priority] : undefined,
         }}
       >
-        {(SyllabusManager.PRIORITY_LABELS as any)[priority]}
+        {SyllabusManager.PRIORITY_LABELS[priority]}
       </span>
-    </span>
+    </span >
   );
 }
 
@@ -1026,16 +940,10 @@ function ReadStatusIcon({ readStatusName }: { readStatusName: string }) {
   if (!readStatus) return null;
   return (
     <span
-      className="syllabus-item-priority-inline"
-      style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
+      className="uppercase font-semibold tracking-wide flex flex-row gap-2 items-baseline rounded-md px-1 py-0.25"
     >
-      <span>{readStatus.icon}</span>
-      <span
-        className="syllabus-priority-label"
-        style={{ background: "var(--fill-quinary)" }}
-      >
-        {readStatus.name}
-      </span>
+      <span className="w-3 h-3 rounded-full inline-block">{readStatus.icon}</span>
+      <span>{readStatus.name}</span>
     </span>
   );
 }
