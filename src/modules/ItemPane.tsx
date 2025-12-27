@@ -180,29 +180,7 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
     await handleSave();
   }, [item, collectionId, handleSave]);
 
-  const priorityOptions = [
-    { value: "", label: "(None)" },
-    {
-      value: SyllabusPriority.COURSE_INFO,
-      label: SyllabusManager.PRIORITY_LABELS[SyllabusPriority.COURSE_INFO],
-      color: SyllabusManager.PRIORITY_COLORS[SyllabusPriority.COURSE_INFO],
-    },
-    {
-      value: SyllabusPriority.ESSENTIAL,
-      label: SyllabusManager.PRIORITY_LABELS[SyllabusPriority.ESSENTIAL],
-      color: SyllabusManager.PRIORITY_COLORS[SyllabusPriority.ESSENTIAL],
-    },
-    {
-      value: SyllabusPriority.RECOMMENDED,
-      label: SyllabusManager.PRIORITY_LABELS[SyllabusPriority.RECOMMENDED],
-      color: SyllabusManager.PRIORITY_COLORS[SyllabusPriority.RECOMMENDED],
-    },
-    {
-      value: SyllabusPriority.OPTIONAL,
-      label: SyllabusManager.PRIORITY_LABELS[SyllabusPriority.OPTIONAL],
-      color: SyllabusManager.PRIORITY_COLORS[SyllabusPriority.OPTIONAL],
-    },
-  ];
+  const priorityOptions = SyllabusManager.getPriorityOptions();
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>

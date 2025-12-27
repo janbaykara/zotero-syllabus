@@ -162,6 +162,36 @@ export class SyllabusManager {
     [SyllabusPriority.OPTIONAL]: "Optional",
   };
 
+  /**
+   * Get priority options for dropdowns/selects
+   * Returns array of { value, label, color } objects
+   */
+  static getPriorityOptions(): Array<{ value: string; label: string; color?: string }> {
+    return [
+      {
+        value: SyllabusPriority.COURSE_INFO,
+        label: this.PRIORITY_LABELS[SyllabusPriority.COURSE_INFO],
+        color: this.PRIORITY_COLORS[SyllabusPriority.COURSE_INFO],
+      },
+      {
+        value: SyllabusPriority.ESSENTIAL,
+        label: this.PRIORITY_LABELS[SyllabusPriority.ESSENTIAL],
+        color: this.PRIORITY_COLORS[SyllabusPriority.ESSENTIAL],
+      },
+      {
+        value: SyllabusPriority.RECOMMENDED,
+        label: this.PRIORITY_LABELS[SyllabusPriority.RECOMMENDED],
+        color: this.PRIORITY_COLORS[SyllabusPriority.RECOMMENDED],
+      },
+      {
+        value: SyllabusPriority.OPTIONAL,
+        label: this.PRIORITY_LABELS[SyllabusPriority.OPTIONAL],
+        color: this.PRIORITY_COLORS[SyllabusPriority.OPTIONAL],
+      },
+      { value: "", label: "(None)" },
+    ];
+  }
+
   static SYLLABUS_DATA_KEY = "syllabus";
 
   static SYLLABUS_CLASS_NUMBER_FIELD = "syllabus-class-number";
@@ -903,7 +933,7 @@ export class SyllabusManager {
   /**
    * Apply a change to the first assignment or create one if none exists
    */
-  private static async applyToFirstAssignment(
+  static async applyToFirstAssignment(
     item: Zotero.Item,
     collectionId: number,
     update: Partial<ItemSyllabusAssignment>,
@@ -936,24 +966,31 @@ export class SyllabusManager {
       }
     };
 
+    const priorityOptions = this.getPriorityOptions();
+
     ztoolkit.Menu.register("item", {
       tag: "menu",
       id: "syllabus-set-priority-menu",
       label: "Set Priority",
       icon: "chrome://zotero/skin/16/universal/book.svg",
-      children: [
-        ...Object.values(SyllabusPriority).map((priority) => ({
+      children: priorityOptions.map((opt) => {
+        // Separate "(None)" option with a separator before it
+        if (opt.value === "") {
+          return [
+            { tag: "menuseparator" as const },
+            {
+              tag: "menuitem" as const,
+              label: opt.label,
+              commandListener: createPriorityHandler(""),
+            },
+          ];
+        }
+        return {
           tag: "menuitem" as const,
-          label: SyllabusManager.PRIORITY_LABELS[priority],
-          commandListener: createPriorityHandler(priority),
-        })),
-        { tag: "menuseparator" as const },
-        {
-          tag: "menuitem" as const,
-          label: "(None)",
-          commandListener: createPriorityHandler(""),
-        },
-      ],
+          label: opt.label,
+          commandListener: createPriorityHandler(opt.value as SyllabusPriority),
+        };
+      }).flat(),
     });
   }
 
