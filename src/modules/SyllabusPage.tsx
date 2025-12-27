@@ -5,6 +5,7 @@ import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
 import { generateFallbackBibliographicReference, generateBibliographicReference } from "../utils/cite";
 import { getPref } from "../utils/prefs";
+import { getCSSUrl } from "../utils/css";
 import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
 import { renderComponent } from "../utils/react";
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
@@ -17,6 +18,7 @@ import {
 } from "../zotero-reading-list/compat";
 import { useDebouncedEffect } from "../utils/react/useDebouncedEffect";
 import { useElementSize } from "../utils/react/useElementSize";
+import slugify from 'slugify'
 
 // Define priority type for use in this file
 // These values match SyllabusPriority enum in syllabus.ts
@@ -39,6 +41,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
   // Track drag state for showing "Add to Class X" dropzone
   const [isDragging, setIsDragging] = useState(false);
+
+  // Ref for the syllabus page container to access DOM for printing
+  const syllabusPageRef = useRef<HTMLDivElement>(null);
 
   // Set up global drag event listeners
   useEffect(() => {
@@ -371,19 +376,129 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     return nextClassNumber;
   }, [collectionId, syllabusMetadata]);
 
+  const handlePrint = async () => {
+    try {
+      // Get the syllabus page element
+      const syllabusPageElement = syllabusPageRef.current;
+      if (!syllabusPageElement) {
+        ztoolkit.log("Syllabus page element not found");
+        return;
+      }
+
+      // Read CSS files
+      const readCSS = (url: string): Promise<string> => {
+        return new Promise((resolve) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("GET", url, true);
+          xhr.onload = () => {
+            if (xhr.status === 200 || xhr.status === 0) {
+              resolve(xhr.responseText);
+            } else {
+              ztoolkit.log(`Failed to load CSS from ${url}: ${xhr.status}`);
+              resolve(""); // Return empty string on error
+            }
+          };
+          xhr.onerror = () => {
+            ztoolkit.log(`Error loading CSS from ${url}`);
+            resolve(""); // Return empty string on error
+          };
+          xhr.send();
+        });
+      };
+
+      // Get CSS URLs (use getCSSUrl for Tailwind to include cache busting)
+      const tailwindCSSUrl = getCSSUrl();
+      const zoteroCSSUrl = `chrome://${addon.data.config.addonRef}/content/zoteroPane.css`;
+
+      // Read both CSS files
+      const [tailwindCSS, zoteroCSS] = await Promise.all([
+        readCSS(tailwindCSSUrl),
+        readCSS(zoteroCSSUrl),
+      ]);
+
+      // Create HTML content with inline CSS
+      const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${(title || "Syllabus").replace(/"/g, "&quot;")}</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      padding: 20px;
+      color: #000;
+      background: #fff;
+    }
+    @media print {
+      body { margin: 0; padding: 10px; }
+      .syllabus-page { overflow: visible !important; }
+    }
+    /* Apply print styles when .print class is present */
+    body.print {
+      margin: 0 !important;
+      padding: 10px !important;
+    }
+    body.print .syllabus-page {
+      overflow: visible !important;
+    }
+    ${tailwindCSS ? `/* Tailwind CSS */\n${tailwindCSS}` : ""}
+    ${zoteroCSS ? `/* Zotero CSS */\n${zoteroCSS}` : ""}
+  </style>
+  <script>
+    // Always apply .print class to enable print styles in browser view
+    document.body.classList.add('print');
+  </script>
+</head>
+<body class="print">
+  ${syllabusPageElement.innerHTML}
+</body>
+</html>`;
+
+      // Create a temporary file and open it
+      const tempDir = Zotero.getTempDirectory();
+      const tempFile = tempDir.clone();
+      tempFile.append(`printable-syllabus--${slugify(title) || "syllabus"}.html`);
+      // NORMAL_FILE_TYPE = 0
+      tempFile.createUnique(0, 0o666);
+
+      // Write content to file using Zotero.File
+      const fileObj = Zotero.File.pathToFile(tempFile.path);
+      await Zotero.File.putContentsAsync(fileObj, htmlContent, "utf-8");
+
+      // Open the file in the default external browser using reveal()
+      // This will open HTML files with the system's default browser
+      fileObj.reveal();
+    } catch (err) {
+      ztoolkit.log("Error printing syllabus:", err);
+    }
+  };
+
   return (
-    <div className="syllabus-page overflow-y-auto overflow-x-hidden h-[calc(100%-70px)]">
-      <div syllabus-view-title-container className="sticky top-0 z-10 bg-background py-1 md:pt-8 text-3xl font-semibold">
+    <div ref={syllabusPageRef} className="syllabus-page overflow-y-auto overflow-x-hidden h-[calc(100%-70px)] in-[.print]:scheme-light">
+      <div syllabus-view-title-container className="sticky top-0 z-10 bg-background py-1 md:pt-8 in-[.print]:static">
         <div className="container-padded bg-background">
-          <div>
-            <TextInput
-              elementType="input"
-              initialValue={title || ""}
-              onSave={setTitle}
-              emptyBehavior="reset"
-              placeholder="Add a title..."
-              className='w-full px-0! mx-0!'
-            />
+          <div className="flex items-center gap-4 justify-between">
+            <div className="flex-1 text-3xl font-semibold ">
+              <TextInput
+                elementType="input"
+                initialValue={title || ""}
+                onSave={setTitle}
+                emptyBehavior="reset"
+                placeholder="Add a title..."
+                className='w-full px-0! mx-0!'
+              />
+            </div>
+            <div>
+              <button
+                onClick={handlePrint}
+                className="grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden"
+                title="Print the list in Syllabus view as a PDF"
+                aria-label="Print the list in Syllabus view as a PDF"
+              >
+                <span aria-hidden="true">🖨️</span>
+                <span>Print</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -423,7 +538,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
       <div className="container-padded">
         {isDragging &&
-          <div className="syllabus-class-group syllabus-add-class-dropzone">
+          <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
             <div className="syllabus-class-header-container">
               <div className="syllabus-class-header">
                 Add to Class {nextClassNumber}
@@ -442,7 +557,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
           </div>
         }
 
-        <div className="syllabus-create-class-control">
+        <div className="syllabus-create-class-control in-[.print]:hidden">
           <button
             className="syllabus-create-class-button"
             onClick={createAdditionalClass}
@@ -453,7 +568,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         </div>
 
         {furtherReadingItems.length > 0 && (
-          <div className="syllabus-class-group">
+          <div className="syllabus-class-group in-[.print]:scheme-light">
             <div className="text-2xl font-semibold mt-12 mb-4">Further reading</div>
             <p className="text-secondary text-lg">Items in this section have not been assigned to any class.</p>
             <div
@@ -547,9 +662,9 @@ function ClassGroupComponent({
   };
 
   return (
-    <div className="syllabus-class-group">
+    <div className="syllabus-class-group in-[.print]:scheme-light">
       {classNumber && (<>
-        <div className="sticky top-18 z-5 bg-background">
+        <div className="sticky top-18 z-5 bg-background in-[.print]:static">
           <div className="container-padded rounded-xs py-1">
             <div className="flex gap-2 items-baseline justify-start w-full">
               <div className="syllabus-class-header shrink-0 uppercase text-lg text-secondary font-semibold">
@@ -566,7 +681,7 @@ function ClassGroupComponent({
                 />
               </div>
               <button
-                className="ml-auto! shrink-0 bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-red-500/15 text-secondary hover:text-red-400 inline-flex flex-row items-center justify-center w-8"
+                className="ml-auto! shrink-0 bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-red-500/15 text-secondary hover:text-red-400 inline-flex flex-row items-center justify-center w-8 in-[.print]:hidden"
                 onClick={handleDeleteClass}
                 title="Delete class"
                 aria-label="Delete class"
@@ -603,7 +718,7 @@ function ClassGroupComponent({
           onDragLeave={onDragLeave}
         >
           {itemAssignments.length === 0 && classNumber !== null ? (
-            <div className="text-center bg-quinary/50 rounded-md p-8 text-secondary border-2 border-dashed border-tertiary/50">
+            <div className="text-center bg-quinary/50 rounded-md p-8 text-secondary border-2 border-dashed border-tertiary/50 in-[.print]:hidden">
               Drag items to Class {classNumber}
             </div>
           ) : (
@@ -712,13 +827,17 @@ function TextInput({
             }
           },
           placeholder: placeholder || "Click to edit",
-          className: twMerge("bg-transparent border-none focus:outline-3 focus:outline-accent-blue focus:rounded-xs focus:outline-offset-2 field-sizing-content", className),
+          className: twMerge("bg-transparent border-none focus:outline-3 focus:outline-accent-blue focus:rounded-xs focus:outline-offset-2 field-sizing-content in-[.print]:hidden", className),
           style: {
             "--color-focus-border": "var(--color-accent-blue)",
           },
           ...elementProps,
         }
       )}
+      {/* Print-only div that shows the value */}
+      <div className="hidden in-[.print]:block" style={{ whiteSpace: elementType === "textarea" ? "pre-wrap" : "normal" }}>
+        {value || initialValue || ""}
+      </div>
     </div>
   );
 }
@@ -914,6 +1033,7 @@ function SyllabusItemCard({
     <div
       style={colors}
       className={twMerge(
+        "in-[.print]:scheme-light",
         "rounded-lg px-4 flex flex-row items-start justify-between shrink-0 gap-4",
         "bg-quinary border-none text-primary cursor-grab",
         // For hovering contextual btns
@@ -928,7 +1048,7 @@ function SyllabusItemCard({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className={twMerge("self-center syllabus-item-thumbnail grow-0 shrink-0", slim ? "size-10" : "size-20")}>
+      <div className={twMerge("self-center syllabus-item-thumbnail grow-0 shrink-0 in-[.print]:hidden", slim ? "size-10" : "size-20")}>
         <span
           className="icon icon-css icon-item-type cell-icon"
           data-item-type={item.itemType}
@@ -984,7 +1104,7 @@ function SyllabusItemCard({
           </div>
         )}
       </div>
-      <div className="syllabus-item-actions shrink-0 inline-flex flex-col gap-1" draggable={false}>
+      <div className="syllabus-item-actions shrink-0 inline-flex flex-col gap-1 in-[.print]:hidden" draggable={false}>
         {/* Delete assignment button - only show if there's an assignment */}
         {viewableAttachments.map((viewableAttachment) => {
           const attachmentLabel =
@@ -997,7 +1117,7 @@ function SyllabusItemCard({
                   : "View";
 
           return (
-            <div className="focus-states-target">
+            <div className="focus-states-target in-[.print]:hidden">
               <button
                 className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
                 onClick={() => handleAttachmentClick(viewableAttachment)}
@@ -1023,7 +1143,7 @@ function SyllabusItemCard({
           );
         })}
         {url && (
-          <div className="focus-states-target">
+          <div className="focus-states-target print:hidden">
             <button
               className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
               onClick={handleUrlClick}
@@ -1042,7 +1162,7 @@ function SyllabusItemCard({
       </div>
       {hasAssignment && (
         <div className={twMerge(
-          "flex-row gap-2 hidden group-hover:flex absolute top-full left-1/2 -translate-x-1/2 p-2 pt-0 bg-quinary rounded-b-lg z-10",
+          "flex-row gap-2 hidden group-hover:flex absolute top-full left-1/2 -translate-x-1/2 p-2 pt-0 bg-quinary rounded-b-lg z-10 in-[.print]:hidden",
           isSelected && "bg-accent-blue!"
         )} style={colors}>
           <div className="focus-states-target">
@@ -1151,7 +1271,7 @@ function PriorityIcon({ priority, colors = true }: { priority: SyllabusPriorityT
   return (
     <span className="uppercase font-semibold tracking-wide flex flex-row gap-1.5 items-baseline">
       <span
-        className="w-3 h-3 rounded-full inline-block"
+        className="w-3 h-3 rounded-full inline-block in-[.print]:hidden"
         style={{
           backgroundColor: colors ? SyllabusManager.PRIORITY_COLORS[priority] : "var(--color-primary)",
         }}
@@ -1177,7 +1297,7 @@ function ReadStatusIcon({ readStatusName }: { readStatusName: string }) {
   if (!readStatus) return null;
   return (
     <span
-      className="uppercase font-semibold tracking-wide flex flex-row gap-2 items-baseline rounded-md px-1 py-0.25"
+      className="uppercase font-semibold tracking-wide flex flex-row gap-2 items-baseline rounded-md px-1 py-0.25 in-[.print]:hidden"
     >
       <span className="w-3 h-3 rounded-full inline-block">{readStatus.icon}</span>
       <span>{readStatus.name}</span>
