@@ -343,14 +343,15 @@ export class SyllabusManager {
     let selectedCollectionId = getSelectedCollection()?.id.toString() || "";
     const interval = setInterval(async () => {
       const collection = getSelectedCollection();
-      if (collection && collection.id.toString() !== selectedCollectionId) {
-        ztoolkit.log("Selected collection changed", collection.id);
-        selectedCollectionId = collection.id.toString();
+      const currentCollectionId = collection?.id.toString() || "";
+      if (currentCollectionId !== selectedCollectionId) {
+        ztoolkit.log("Selected collection changed", collection?.id || "My Library");
+        selectedCollectionId = currentCollectionId;
         // setupUI() calls setupPage() which re-renders React component for new collection
         // Once mounted, React stores handle all data updates automatically
         SyllabusManager.setupUI();
       }
-    }, 500);
+    }, 300);
     this.syllabusViewTabListener = interval;
   }
 
