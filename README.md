@@ -56,6 +56,13 @@ Right-click an item to re-assign class number or priority.
 
 This plugin is built using the [Zotero Plugin Template](https://github.com/windingwind/zotero-plugin-template).
 
+Here's how I've thought about the plugin's data model:
+
+- 'Syllabi' are organised representations of a collection. Syllabi must mirror the items of a collection. If it's not in the collection, it's not in the syllabus.
+- Syllabi have 'classes', which represent the different sections of the syllabus. Since they aren't items, and apply to multiple items, they are stored in the plugin's preferences, not the items themselves.
+- Classes are made up of groups of 1+ 'assignments'. Assignments are the items that are assigned to a class, plus instructions and priorities.
+- Since assignments relate strongly to items, they are stored in the items' extra fields themselves.
+
 ### Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.

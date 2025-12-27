@@ -38,6 +38,7 @@
     "preact": "^10.19.3",
     "superjson": "^2.2.6",
     "tailwind-merge": "^3.4.0",
+    "uuidv7": "^1.1.0",
     "zotero-plugin-toolkit": "^5.1.0-beta.13"
   },
   "devDependencies": {

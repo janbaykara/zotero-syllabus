@@ -7,8 +7,12 @@ import { ExtraFieldTool } from "zotero-plugin-toolkit";
 import { renderSyllabusPage } from "./SyllabusPage";
 import { getSelectedCollection } from "../utils/zotero";
 import { set } from "lodash-es";
+import { renderComponent } from "../utils/react";
+import { ItemPane } from "./ItemPane";
+import { h } from "preact";
+import { uuidv7 } from "uuidv7";
 
-enum SyllabusPriority {
+export enum SyllabusPriority {
   COURSE_INFO = "course-info",
   ESSENTIAL = "essential",
   RECOMMENDED = "recommended",
@@ -18,13 +22,27 @@ enum SyllabusPriority {
 enum SyllabusSettingsKey {
   COLLECTION_METADATA = "collectionMetadata",
   COLLECTION_VIEW_MODES = "collectionViewModes",
+  COLLECTION_ITEM_ORDER = "collectionItemOrder",
+}
+
+export interface ItemSyllabusAssignment {
+  id: string; // Unique ID for React rendering (auto-generated if not present)
+  classNumber?: number;
+  priority?: SyllabusPriority;
+  classInstruction?: string;
 }
 
 export interface ItemSyllabusData {
+  [collectionId: string]: ItemSyllabusAssignment[];
+}
+
+/**
+ * Manual ordering of items within classes, stored in preferences
+ * Array order represents display order; empty array means use natural order
+ */
+export interface SettingsClassItemOrder {
   [collectionId: string]: {
-    priority?: SyllabusPriority;
-    classInstruction?: string;
-    classNumber?: number;
+    [classNumber: string]: string[]; // ordered itemIds
   };
 }
 
@@ -45,6 +63,13 @@ export interface SettingsSyllabusMetadata {
 export interface SettingsClassMetadata {
   title?: string;
   description?: string;
+  items?: SettingsClassItemMetadata[];
+}
+
+export interface SettingsClassItemMetadata {
+  itemId: string;
+  priority?: SyllabusPriority;
+  classInstruction?: string;
 }
 
 export class SyllabusManager {
@@ -152,11 +177,15 @@ export class SyllabusManager {
     this.registerSyllabusClassInstructionColumn();
     this.registerSyllabusClassNumberColumn();
     this.registerSyllabusInfoColumn();
-    this.registerSyllabusItemPaneSection();
+    this.reloadItemPane();
   }
 
   static onMainWindowLoad(win: _ZoteroTypes.MainWindow) {
     ztoolkit.log("SyllabusManager.onMainWindowLoad", win);
+    // const collectionId = win.getSelectedCollection()?.id;
+    // if (collectionId) {
+    //   this.cleanupItemMetadata(collectionId);
+    // }
     this.setupContextMenuSetPriority();
     this.setupContextMenuSetClassNumber();
     this.setupUI();
@@ -201,8 +230,8 @@ export class SyllabusManager {
   /**
    * E.g. the description of the collection has been updated
    */
-  static onCollectionUpdated(collection: Zotero.Collection, source: "page") {
-    ztoolkit.log("SyllabusManager.onCollectionUpdated", collection);
+  static onCollectionUpdated(collection: Zotero.Collection, source: "page", reason: string) {
+    ztoolkit.log("SyllabusManager.onCollectionUpdated", reason, source, collection);
     // No need to call setupPage() - React stores will trigger re-render automatically
   }
 
@@ -458,6 +487,7 @@ export class SyllabusManager {
 
   // Function to render a completely custom syllabus view
   static async setupPage() {
+    ztoolkit.log("SyllabusManager.setupPage");
     try {
       /**
        * Lead with a hide/show check
@@ -546,50 +576,27 @@ export class SyllabusManager {
         const selectedCollection = zoteroPane.getSelectedCollection();
 
         if (selectedCollection) {
-          // Optimize: Parse syllabus data once and extract both values
-          const syllabusData = SyllabusManager.getItemSyllabusData(item);
-          const collectionIdStr = String(selectedCollection.id);
-          const itemData = syllabusData[collectionIdStr];
+          // Get all class assignments for this item
+          const assignments = SyllabusManager.getAllClassAssignments(
+            item,
+            selectedCollection.id,
+          ).map(assignment => {
+            return SyllabusManager.getAssignmentSortKey(assignment);
+          }).sort();
 
-          const priority = itemData?.priority || "";
-          const classNumber = itemData?.classNumber;
-
-          // Return sortable value with priority and class number encoded
-          // Format: "priorityPrefix_priorityValue_classNumber"
-          // This ensures proper sort order: Priority first, then Class Number
-          // Class numbers without a value get 999 to sort last
-          const classNumberStr =
-            classNumber !== undefined
-              ? String(classNumber).padStart(4, "0") // Pad to 4 digits for proper string sorting
-              : "9999"; // Items without class number sort last
-
-          // Return sortable value with priority encoded: "0_course-info", "1_essential", etc.
-          // This ensures proper sort order: Course Info < Essential < Recommended < Optional < Blank
-          // The prefix determines sort order, the suffix is the actual priority for display
-          if (priority === SyllabusPriority.COURSE_INFO) {
-            return `0___course-info___${classNumberStr}`;
-          }
-          if (priority === SyllabusPriority.ESSENTIAL) {
-            return `1___essential___${classNumberStr}`;
-          }
-          if (priority === SyllabusPriority.RECOMMENDED) {
-            return `2___recommended___${classNumberStr}`;
-          }
-          if (priority === SyllabusPriority.OPTIONAL) {
-            return `3___optional___${classNumberStr}`;
-          }
-          return `4___${classNumberStr}`; // empty/blank priority
+          return assignments[0]
         }
 
         // If not in a collection view, return empty
-        return "4___9999";
+        return "";
       },
       renderCell: (index, data, column, isFirstColumn, doc) => {
+        // TODO: fix this
         // Parse the data to extract the priority for display
-        // data format: "0_essential_0001", "1_recommended_0002", "2_optional_0003", or "4__9999"
-        // Format: "priorityPrefix_priorityValue_classNumber"
+        // data format: "0001___1___essential", "0002___2___recommended", "9999___4___"
+        // Format: "classNumber_priorityOrder_priorityValue"
         const parts = String(data).split("___");
-        const priority = parts.length > 1 ? parts[1] : "";
+        const priority = parts.length > 2 ? parts[2] : "";
 
         const container = doc.createElement("span");
         container.className = `cell ${column.className}`;
@@ -634,10 +641,12 @@ export class SyllabusManager {
         const selectedCollection = zoteroPane.getSelectedCollection();
 
         if (selectedCollection) {
-          // Optimize: Parse syllabus data once and extract instruction directly
-          const syllabusData = SyllabusManager.getItemSyllabusData(item);
-          const collectionIdStr = String(selectedCollection.id);
-          return syllabusData[collectionIdStr]?.classInstruction || "";
+          // Get first entry's instruction (for backward compatibility)
+          const assignments = SyllabusManager.getAllClassAssignments(
+            item,
+            selectedCollection.id,
+          );
+          return assignments[0]?.classInstruction || "";
         }
 
         // If not in a collection view, return empty
@@ -657,13 +666,16 @@ export class SyllabusManager {
         const selectedCollection = zoteroPane.getSelectedCollection();
 
         if (selectedCollection) {
-          // Optimize: Parse syllabus data once and extract both values
-          const syllabusData = SyllabusManager.getItemSyllabusData(item);
-          const collectionIdStr = String(selectedCollection.id);
-          const itemData = syllabusData[collectionIdStr];
+          // Get all class assignments
+          const assignments = SyllabusManager.getAllClassAssignments(
+            item,
+            selectedCollection.id,
+          );
 
-          const classNumber = itemData?.classNumber;
-          const priority = itemData?.priority || "" || "";
+          // Use first entry for sorting (or first class number if available)
+          const firstClassNumber = assignments.find((a) => a.classNumber !== undefined)?.classNumber;
+          const classNumber = firstClassNumber;
+          const priority = assignments[0]?.priority || "";
 
           // Get priority sort order: 0=course-info, 1=essential, 2=recommended, 3=optional, 4=blank
           let priorityOrder = "4"; // default to blank
@@ -761,13 +773,16 @@ export class SyllabusManager {
         const selectedCollection = zoteroPane.getSelectedCollection();
 
         if (selectedCollection) {
-          // Optimize: Parse syllabus data once and extract both values
-          const syllabusData = SyllabusManager.getItemSyllabusData(item);
-          const collectionIdStr = String(selectedCollection.id);
-          const itemData = syllabusData[collectionIdStr];
+          // Get all class assignments
+          const assignments = SyllabusManager.getAllClassAssignments(
+            item,
+            selectedCollection.id,
+          );
 
-          const classNumber = itemData?.classNumber;
-          const priority = itemData?.priority || "";
+          // Use first entry with class number, or first entry
+          const firstClassNumber = assignments.find((a) => a.classNumber !== undefined)?.classNumber;
+          const classNumber = firstClassNumber;
+          const priority = assignments[0]?.priority || "";
 
           // Get priority sort order: 0=course-info, 1=essential, 2=recommended, 3=optional, 4=blank
           let priorityOrder = "4"; // default to blank
@@ -941,13 +956,20 @@ export class SyllabusManager {
   static destroyItemPaneSection() {
     ztoolkit.log("SyllabusManager.destroyItemPaneSection");
     if (this.syllabusItemPaneSection) {
-      Zotero.ItemPaneManager.unregisterSection(this.syllabusItemPaneSection);
+      try {
+        Zotero.ItemPaneManager.unregisterSection(this.syllabusItemPaneSection);
+      } catch (e) {
+        ztoolkit.log("Error unregistering item pane section:", e);
+      }
       this.syllabusItemPaneSection = null;
     }
   }
 
   static registerSyllabusItemPaneSection() {
     ztoolkit.log("SyllabusManager.registerSyllabusItemPaneSection");
+    // Always unregister first to avoid duplicate registration errors
+    this.destroyItemPaneSection();
+
     this.syllabusItemPaneSection = Zotero.ItemPaneManager.registerSection({
       paneID: "syllabus",
       pluginID: addon.data.config.addonID,
@@ -977,282 +999,54 @@ export class SyllabusManager {
       onRender: ({ body, item, editable }) => {
         const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
         const selectedCollection = zoteroPane.getSelectedCollection();
-        const doc = body.ownerDocument || ztoolkit.getGlobal("document");
+        const win = Zotero.getMainWindow();
 
-        // Clear previous content
+        //   if (!selectedCollection) {
+        //     const doc = body.ownerDocument || ztoolkit.getGlobal("document");
+        //     body.textContent = "";
+        //     const message = ztoolkit.UI.createElement(doc, "div", {
+        //       namespace: "html",
+        //       properties: {
+        //         innerText: "Select a collection to view syllabus assignments",
+        //       },
+        //       styles: {
+        //         padding: "10px",
+        //         color: "#666",
+        //       },
+        //     });
+        //     body.appendChild(message);
+        //     return;
+        //   }
+
+        //   // Clear previous content
         body.textContent = "";
 
-        if (!selectedCollection) {
-          const message = ztoolkit.UI.createElement(doc, "div", {
-            namespace: "html",
-            properties: {
-              innerText: "Select a collection to view syllabus settings",
-            },
-            styles: {
-              padding: "10px",
-              color: "#666",
-            },
-          });
-          body.appendChild(message);
-          return;
-        }
+        const root = body.ownerDocument?.createElement("div");
+        body.appendChild(root);
 
-        const collectionId = selectedCollection.id;
-        const currentPriority = SyllabusManager.getSyllabusPriority(
-          item,
-          collectionId,
+        // renderComponent(
+        //   win,
+        //   root,
+        //   h("div", {
+        //     innerText: selectedCollection ? `${selectedCollection.name} is selected` : "No collection selected",
+        //     className: "text-center text-gray-500 p-4",
+        //   })
+        // );
+
+        //   // Render Preact component
+        renderComponent(
+          win,
+          body,
+          selectedCollection ? h(ItemPane, {
+            item,
+            collectionId: selectedCollection.id,
+            editable,
+          }) : h("div", {
+            innerText: "Select a collection to view syllabus assignments",
+            className: "text-center text-gray-500 p-4",
+          }),
+          "syllabus-item-pane"
         );
-        const currentClassInstruction =
-          SyllabusManager.getSyllabusClassInstruction(item, collectionId);
-        const currentclassNumber = SyllabusManager.getSyllabusClassNumber(
-          item,
-          collectionId,
-        );
-        const currentClassTitle = currentclassNumber
-          ? SyllabusManager.getClassTitle(collectionId, currentclassNumber)
-          : "";
-
-        // Create container
-        const container = ztoolkit.UI.createElement(doc, "div", {
-          namespace: "html",
-          styles: {
-            display: "grid",
-            gridTemplateColumns: "max-content 1fr",
-            columnGap: "18px",
-            rowGap: "10px",
-          },
-        });
-
-        // Helper function to create a two-column field row
-        const createFieldRow = (
-          labelText: string,
-          inputElement: HTMLElement,
-        ) => {
-          const row = ztoolkit.UI.createElement(doc, "div", {
-            namespace: "html",
-            styles: {
-              display: "grid",
-              gridTemplateColumns: "subgrid",
-              gridColumn: "span 2",
-              alignItems: "center",
-            },
-          });
-
-          const label = ztoolkit.UI.createElement(doc, "label", {
-            namespace: "html",
-            properties: {
-              innerText: labelText,
-            },
-            styles: {
-              fontWeight: "normal",
-              textAlign: "end",
-              color: "var(--fill-secondary)",
-            },
-          });
-          row.appendChild(label);
-
-          const inputContainer = ztoolkit.UI.createElement(doc, "div", {
-            namespace: "html",
-            styles: {
-              flex: "1",
-              minWidth: "0",
-            },
-          });
-          inputContainer.appendChild(inputElement);
-          row.appendChild(inputContainer);
-
-          return row;
-        };
-
-        // Priority dropdown
-        const prioritySelect = ztoolkit.UI.createElement(doc, "select", {
-          namespace: "html",
-          id: "syllabus-priority-select",
-          attributes: {
-            disabled: !editable ? "true" : undefined,
-          },
-          styles: {
-            padding: "5px",
-            fontSize: "13px",
-            width: "100%",
-            margin: "0",
-          },
-        });
-
-        const options = [
-          { value: "", label: "(None)" },
-          {
-            value: SyllabusPriority.COURSE_INFO,
-            label:
-              SyllabusManager.PRIORITY_LABELS[SyllabusPriority.COURSE_INFO],
-            color:
-              SyllabusManager.PRIORITY_COLORS[SyllabusPriority.COURSE_INFO],
-          },
-          {
-            value: SyllabusPriority.ESSENTIAL,
-            label: SyllabusManager.PRIORITY_LABELS[SyllabusPriority.ESSENTIAL],
-            color: SyllabusManager.PRIORITY_COLORS[SyllabusPriority.ESSENTIAL],
-          },
-          {
-            value: SyllabusPriority.RECOMMENDED,
-            label:
-              SyllabusManager.PRIORITY_LABELS[SyllabusPriority.RECOMMENDED],
-            color:
-              SyllabusManager.PRIORITY_COLORS[SyllabusPriority.RECOMMENDED],
-          },
-          {
-            value: SyllabusPriority.OPTIONAL,
-            label: SyllabusManager.PRIORITY_LABELS[SyllabusPriority.OPTIONAL],
-            color: SyllabusManager.PRIORITY_COLORS[SyllabusPriority.OPTIONAL],
-          },
-        ];
-
-        options.forEach((opt) => {
-          const option = ztoolkit.UI.createElement(doc, "option", {
-            namespace: "html",
-            properties: {
-              value: opt.value,
-              innerText: opt.label,
-              selected: opt.value === currentPriority,
-            },
-            styles: opt.color
-              ? {
-                color: opt.color,
-                fontWeight: "500",
-              }
-              : undefined,
-          });
-          prioritySelect.appendChild(option);
-        });
-
-        if (editable) {
-          prioritySelect.addEventListener("change", async (e) => {
-            const target = e.target as HTMLSelectElement;
-            await SyllabusManager.setSyllabusPriority(
-              item,
-              collectionId,
-              target.value as any,
-              "item-pane",
-            );
-            await item.saveTx();
-
-            const itemPane = zoteroPane.itemPane;
-            if (itemPane) {
-              itemPane.render();
-            }
-          });
-        }
-
-        const priorityRow = createFieldRow("Priority", prioritySelect);
-        container.appendChild(priorityRow);
-
-        // Class number input
-        const sessionInput = ztoolkit.UI.createElement(doc, "input", {
-          namespace: "html",
-          id: "syllabus-class-number-input",
-          attributes: {
-            type: "number",
-            min: "1",
-            step: "1",
-            disabled: !editable ? "true" : undefined,
-            placeholder: "e.g., 1, 2, 3...",
-          },
-          properties: {
-            value: currentclassNumber?.toString() || "",
-          },
-          styles: {
-            textAlign: "start",
-            border: "none",
-            fontSize: "13px",
-            width: "100%",
-            margin: "0",
-          },
-        }) as HTMLInputElement;
-
-        if (editable) {
-          sessionInput.addEventListener("change", async () => {
-            const value = sessionInput.value.trim();
-            const sessionNum = value ? parseInt(value, 10) : undefined;
-            if (value && (isNaN(sessionNum!) || sessionNum! < 1)) {
-              // Invalid input, reset to current value
-              sessionInput.value = currentclassNumber?.toString() || "";
-              return;
-            }
-            await SyllabusManager.setSyllabusClassNumber(
-              item,
-              collectionId,
-              sessionNum,
-              "item-pane",
-            );
-            await item.saveTx();
-
-            const itemPane = zoteroPane.itemPane;
-            if (itemPane) {
-              itemPane.render();
-            }
-          });
-        }
-
-        const classNumberRow = createFieldRow("Class Number", sessionInput);
-        container.appendChild(classNumberRow);
-
-        // Class instruction textarea
-        const classInstructionTextarea = ztoolkit.UI.createElement(
-          doc,
-          "textarea",
-          {
-            namespace: "html",
-            id: "syllabus-class-instruction-textarea",
-            attributes: {
-              disabled: !editable ? "true" : undefined,
-              rows: "4",
-            },
-            styles: {
-              padding: "0",
-              margin: "0",
-              border: "none",
-              fontSize: "13px",
-              width: "100%",
-              resize: "vertical",
-              fontFamily: "inherit",
-            },
-          },
-        ) as HTMLTextAreaElement;
-
-        // Set value after creation
-        classInstructionTextarea.value = currentClassInstruction;
-
-        if (editable) {
-          let saveTimeout: ReturnType<typeof setTimeout> | undefined;
-          classInstructionTextarea.addEventListener("input", async () => {
-            // Debounce saves
-            if (saveTimeout) {
-              clearTimeout(saveTimeout);
-            }
-            saveTimeout = setTimeout(async () => {
-              await SyllabusManager.setSyllabusClassInstruction(
-                item,
-                collectionId,
-                classInstructionTextarea.value,
-                "item-pane",
-              );
-              await item.saveTx();
-
-              const itemPane = zoteroPane.itemPane;
-              if (itemPane) {
-                itemPane.render();
-              }
-            }, 500);
-          });
-        }
-
-        const classInstructionRow = createFieldRow(
-          "Instructions",
-          classInstructionTextarea,
-        );
-        container.appendChild(classInstructionRow);
-
-        body.appendChild(container);
       },
     });
   }
@@ -1265,6 +1059,7 @@ export class SyllabusManager {
       label: "Set Priority",
       icon: "chrome://zotero/skin/16/universal/book.svg",
       children: [
+        // TODO: encapsulate item in generator function to keep things DRY
         {
           tag: "menuitem",
           label: SyllabusManager.PRIORITY_LABELS[SyllabusPriority.COURSE_INFO],
@@ -1438,12 +1233,15 @@ export class SyllabusManager {
     const classNumbers = new Set<number>();
     for (const item of collectionItems) {
       if (item.isRegularItem()) {
-        const classNumber = SyllabusManager.getSyllabusClassNumber(
+        // Get all class assignments to find all class numbers
+        const assignments = SyllabusManager.getAllClassAssignments(
           item,
           selectedCollection.id,
         );
-        if (classNumber !== undefined) {
-          classNumbers.add(classNumber);
+        for (const assignment of assignments) {
+          if (assignment.classNumber !== undefined) {
+            classNumbers.add(assignment.classNumber);
+          }
         }
       }
     }
@@ -1533,18 +1331,18 @@ export class SyllabusManager {
     title: string,
     source: "page",
   ) {
-    const collectionIdStr = String(collectionId);
     const collection = Zotero.Collections.get(collectionId);
     if (collection) {
       collection.name = title;
       collection.saveTx();
     }
-    this.onCollectionUpdated(collection, source);
+    this.onCollectionUpdated(collection, source, "setCollectionTitle");
   }
 
   /**
    * Get syllabus data from an item's extra field
    * Uses caching to avoid repeated JSON parsing for the same item
+   * Handles migration from old format (single object) to new format (array)
    */
   static getItemSyllabusData(item: Zotero.Item): ItemSyllabusData {
     // Check cache first
@@ -1561,7 +1359,9 @@ export class SyllabusManager {
     let data: ItemSyllabusData = {};
     if (jsonStr) {
       try {
-        data = JSON.parse(jsonStr) as ItemSyllabusData;
+        const parsed = JSON.parse(jsonStr);
+        // Migrate from old format (single object) to new format (array)
+        data = this.migrateItemExtraFieldsToArray(parsed);
       } catch (e) {
         ztoolkit.log("Error parsing syllabus data:", e);
         data = {};
@@ -1571,6 +1371,80 @@ export class SyllabusManager {
     // Cache the parsed data
     this.syllabusDataCache.set(item, data);
     return data;
+  }
+
+  /**
+   * Generate a unique ID for an assignment entry
+   */
+  private static generateAssignmentId(): string {
+    return `assignment-${uuidv7()}`;
+  }
+
+  /**
+   * Ensure all entries have unique IDs
+   */
+  private static ensureAssignmentIds(
+    entries: ItemSyllabusAssignment[],
+  ): ItemSyllabusAssignment[] {
+    return entries.map((entry, index) => {
+      if (!entry.id) {
+        return { ...entry, id: this.generateAssignmentId() };
+      }
+      return entry;
+    });
+  }
+
+  /**
+   * Ensure items are usable by the plugin for the current view.
+   */
+  private static cleanupItemMetadata(collectionId: string | number) {
+    // get all items in the collection, then run them through migrateItemExtraFieldsToArray
+    const items = Zotero.Collections.get(Number(collectionId)).getChildItems();
+    for (const item of items) {
+      this.migrateItemExtraFieldsToArray(this.getItemSyllabusData(item));
+    }
+  }
+
+  /**
+   * Migrate item extra field data from old format (single object) to new format (array)
+   * Old format: { [collectionId]: { priority?, classInstruction?, classNumber? } }
+   * New format: { [collectionId]: Array<{ id?, priority?, classInstruction?, classNumber? }> }
+   */
+  private static migrateItemExtraFieldsToArray(
+    parsed: any,
+  ): ItemSyllabusData {
+    if (!parsed || typeof parsed !== "object") {
+      return {};
+    }
+
+    const migrated: ItemSyllabusData = {};
+
+    for (const [collectionId, value] of Object.entries(parsed)) {
+      if (Array.isArray(value)) {
+        // Already in new format, ensure IDs
+        migrated[collectionId] = this.ensureAssignmentIds(
+          value as ItemSyllabusAssignment[],
+        );
+      } else if (value && typeof value === "object") {
+        // Old format: single object, convert to array
+        const entry = value as ItemSyllabusAssignment;
+        // Only migrate if it has actual data
+        if (
+          entry.priority ||
+          entry.classInstruction ||
+          entry.classNumber !== undefined
+        ) {
+          const entries = this.ensureAssignmentIds([entry]);
+          migrated[collectionId] = entries;
+        } else {
+          migrated[collectionId] = [];
+        }
+      } else {
+        migrated[collectionId] = [];
+      }
+    }
+
+    return migrated;
   }
 
   /**
@@ -1589,7 +1463,13 @@ export class SyllabusManager {
     data: ItemSyllabusData,
     source: "page" | "item-pane" | "context-menu",
   ): Promise<void> {
-    const jsonStr = JSON.stringify(data);
+    // Ensure all entries have IDs before saving
+    const dataWithIds: ItemSyllabusData = {};
+    for (const [collectionId, entries] of Object.entries(data)) {
+      dataWithIds[collectionId] = this.ensureAssignmentIds(entries);
+    }
+
+    const jsonStr = JSON.stringify(dataWithIds);
     await this.extraFieldTool.setExtraField(
       item,
       this.SYLLABUS_DATA_KEY,
@@ -1601,95 +1481,137 @@ export class SyllabusManager {
   }
 
   /**
-   * Get syllabus priority for a specific collection
+   * Get syllabus priority for a specific collection and class
+   * If classNumber is provided, returns priority for that class
+   * Otherwise, returns priority from first entry
    */
   static getSyllabusPriority(
     item: Zotero.Item,
     collectionId: number | string,
+    classNumber?: number,
   ): SyllabusPriority | "" {
     const data = this.getItemSyllabusData(item);
     const collectionIdStr = String(collectionId);
-    return data[collectionIdStr]?.priority || "";
+    const entries = data[collectionIdStr] || [];
+
+    if (classNumber !== undefined) {
+      const entry = entries.find((e) => e.classNumber === classNumber);
+      return entry?.priority || "";
+    }
+
+    // Return first entry's priority if no classNumber specified
+    return entries[0]?.priority || "";
   }
 
   /**
-   * Set syllabus priority for a specific collection
+   * Set syllabus priority for a specific collection and class
+   * If assignmentId is provided, updates that specific assignment (preferred)
+   * If classNumber is provided, finds first matching assignment or creates one
+   * Otherwise, updates the first entry or creates one if none exists
+   * 
+   * Note: For new code, prefer using updateClassAssignment with assignmentId
    */
   static async setSyllabusPriority(
     item: Zotero.Item,
     collectionId: number | string,
     priority: SyllabusPriority | "",
     source: "page" | "item-pane" | "context-menu",
+    classNumber?: number,
+    assignmentId?: string,
   ): Promise<void> {
-    const data = this.getItemSyllabusData(item);
-    const collectionIdStr = String(collectionId);
-
-    if (!data[collectionIdStr]) {
-      data[collectionIdStr] = {};
+    // If assignmentId is provided, use updateClassAssignment (preferred)
+    if (assignmentId) {
+      await this.updateClassAssignment(
+        item,
+        collectionId,
+        assignmentId,
+        { priority: priority || undefined },
+        source,
+      );
+      return;
     }
 
-    if (priority) {
-      data[collectionIdStr].priority = priority;
-    } else {
-      delete data[collectionIdStr].priority;
-      // Remove collection entry if priority, classInstruction, and classNumber are all empty
-      if (
-        !data[collectionIdStr].classInstruction &&
-        !data[collectionIdStr].classNumber
-      ) {
-        delete data[collectionIdStr];
+    // Fallback to legacy behavior for context menus
+    const data = this.getItemSyllabusData(item);
+    const collectionIdStr = String(collectionId);
+    let entries = data[collectionIdStr] || [];
+
+    if (classNumber !== undefined) {
+      // Find or create entry for specific class
+      let entryIndex = entries.findIndex((e) => e.classNumber === classNumber);
+      if (entryIndex === -1) {
+        entries.push({ classNumber });
+        entryIndex = entries.length - 1;
       }
+
+      if (priority) {
+        entries[entryIndex].priority = priority;
+      } else {
+        delete entries[entryIndex].priority;
+        // Remove entry if all fields are empty
+        if (
+          !entries[entryIndex].classInstruction &&
+          entries[entryIndex].classNumber === undefined
+        ) {
+          entries.splice(entryIndex, 1);
+        }
+      }
+    } else {
+      // Update first entry or create one
+      if (entries.length === 0) {
+        entries.push({});
+      }
+
+      if (priority) {
+        entries[0].priority = priority;
+      } else {
+        delete entries[0].priority;
+        // Remove entry if all fields are empty
+        if (
+          !entries[0].classInstruction &&
+          entries[0].classNumber === undefined
+        ) {
+          entries = [];
+        }
+      }
+    }
+
+    if (entries.length === 0) {
+      delete data[collectionIdStr];
+    } else {
+      data[collectionIdStr] = entries;
     }
 
     await this.setSyllabusData(item, data, source);
   }
 
   /**
-   * Get class instruction for a specific collection
+   * Get class instruction for a specific collection and class
+   * If classNumber is provided, returns instruction for that class
+   * Otherwise, returns instruction from first entry
    */
   static getSyllabusClassInstruction(
     item: Zotero.Item,
     collectionId: number | string,
+    classNumber?: number,
   ): string {
     const data = this.getItemSyllabusData(item);
     const collectionIdStr = String(collectionId);
-    return data[collectionIdStr]?.classInstruction || "";
+    const entries = data[collectionIdStr] || [];
+
+    if (classNumber !== undefined) {
+      const entry = entries.find((e) => e.classNumber === classNumber);
+      return entry?.classInstruction || "";
+    }
+
+    // Return first entry's instruction if no classNumber specified
+    return entries[0]?.classInstruction || "";
   }
 
   /**
-   * Set class instruction for a specific collection
-   */
-  static async setSyllabusClassInstruction(
-    item: Zotero.Item,
-    collectionId: number | string,
-    classInstruction: string,
-    source: "page" | "item-pane" | "context-menu",
-  ): Promise<void> {
-    const data = this.getItemSyllabusData(item);
-    const collectionIdStr = String(collectionId);
-
-    if (!data[collectionIdStr]) {
-      data[collectionIdStr] = {};
-    }
-
-    if (classInstruction && classInstruction.trim()) {
-      data[collectionIdStr].classInstruction = classInstruction.trim();
-    } else {
-      delete data[collectionIdStr].classInstruction;
-      // Remove collection entry if priority, classInstruction, and classNumber are all empty
-      if (
-        !data[collectionIdStr].priority &&
-        !data[collectionIdStr].classNumber
-      ) {
-        delete data[collectionIdStr];
-      }
-    }
-
-    await this.setSyllabusData(item, data, source);
-  }
-
-  /**
-   * Get syllabus session number for a specific collection
+   * Get syllabus class number for a specific collection
+   * Returns the first class number found, or undefined if none
+   * For multiple class assignments, use getAllClassAssignments()
    */
   static getSyllabusClassNumber(
     item: Zotero.Item,
@@ -1697,7 +1619,8 @@ export class SyllabusManager {
   ): number | undefined {
     const data = this.getItemSyllabusData(item);
     const collectionIdStr = String(collectionId);
-    return data[collectionIdStr]?.classNumber;
+    const entries = data[collectionIdStr] || [];
+    return entries[0]?.classNumber;
   }
 
   /**
@@ -1721,9 +1644,12 @@ export class SyllabusManager {
         const items = collection.getChildItems();
         for (const item of items) {
           if (item.isRegularItem()) {
-            const classNumber = this.getSyllabusClassNumber(item, collectionId);
-            if (classNumber !== undefined) {
-              classNumbers.add(classNumber);
+            // Get all class assignments for this item
+            const assignments = this.getAllClassAssignments(item, collectionId);
+            for (const assignment of assignments) {
+              if (assignment.classNumber !== undefined) {
+                classNumbers.add(assignment.classNumber);
+              }
             }
           }
         }
@@ -1755,7 +1681,9 @@ export class SyllabusManager {
   }
 
   /**
-   * Set syllabus session number for a specific collection
+   * Set syllabus class number for a specific collection
+   * If the item already has an entry for this classNumber, updates it
+   * Otherwise, creates a new entry or updates the first entry if no classNumber specified
    */
   static async setSyllabusClassNumber(
     item: Zotero.Item,
@@ -1765,25 +1693,407 @@ export class SyllabusManager {
   ) {
     const data = this.getItemSyllabusData(item);
     const collectionIdStr = String(collectionId);
+    let assignments = data[collectionIdStr] || [];
 
-    if (!data[collectionIdStr]) {
-      data[collectionIdStr] = {};
-    }
-
-    if (classNumber !== undefined && classNumber !== null) {
-      data[collectionIdStr].classNumber = classNumber;
+    if (classNumber) {
+      // Find or create assignment for this class number
+      const assignment = assignments.find((e) => e.classNumber === classNumber);
+      if (!assignment) {
+        // Create new assignment
+        await this.addClassAssignment(item, collectionId, classNumber, {}, source);
+        // Re-fetch data after adding
+        const updatedData = this.getItemSyllabusData(item);
+        assignments = updatedData[collectionIdStr] || [];
+      } else {
+        // Update existing assignment
+        await this.updateClassAssignment(item, collectionId, assignment.id, { classNumber }, source);
+        // Re-fetch data after updating
+        const updatedData = this.getItemSyllabusData(item);
+        assignments = updatedData[collectionIdStr] || [];
+      }
     } else {
-      delete data[collectionIdStr].classNumber;
-      // Remove collection entry if priority, classInstruction, and classNumber are all empty
-      if (
-        !data[collectionIdStr].priority &&
-        !data[collectionIdStr].classInstruction
-      ) {
-        delete data[collectionIdStr];
+      // Remove classNumber from first assignment, or remove assignment if empty
+      if (assignments.length > 0) {
+        delete assignments[0].classNumber;
+        // Remove assignment if all fields are empty
+        if (!assignments[0].priority && !assignments[0].classInstruction) {
+          assignments = assignments.slice(1);
+        }
       }
     }
 
+    if (assignments.length === 0) {
+      delete data[collectionIdStr];
+    } else {
+      data[collectionIdStr] = assignments;
+    }
+
     await this.setSyllabusData(item, data, source);
+  }
+
+  /**
+   * Get all class assignments for an item in a collection
+   */
+  static getAllClassAssignments(
+    item: Zotero.Item,
+    collectionId: number | string,
+  ): ItemSyllabusAssignment[] {
+    const data = this.getItemSyllabusData(item);
+    const collectionIdStr = String(collectionId);
+    const entries = data[collectionIdStr] || [];
+    // Ensure all assignments have IDs for React keying
+    return this.ensureAssignmentIds(entries);
+  }
+
+  /**
+   * Get priority order number for sorting (lower = higher priority)
+   */
+  static getPriorityOrder(
+    priority: SyllabusPriority | "" | undefined,
+  ): number {
+    try {
+      if (priority === SyllabusPriority.COURSE_INFO) return 2;
+      if (priority === SyllabusPriority.ESSENTIAL) return 4;
+      if (priority === SyllabusPriority.RECOMMENDED) return 6;
+      if (priority === SyllabusPriority.OPTIONAL) return 8;
+      return 9; // blank/undefined
+    } catch (e) {
+      ztoolkit.log("Error getting priority order:", e);
+      return 9;
+    }
+  }
+
+  /**
+   * Compare two assignments for sorting.
+   * Sort order: class number (undefined last), then priority, then by assignment ID for stability.
+   * Returns: negative if a < b, positive if a > b, 0 if equal
+   */
+  static compareAssignments(
+    a: ItemSyllabusAssignment,
+    b: ItemSyllabusAssignment,
+  ): number {
+    return SyllabusManager.getAssignmentSortKey(a).localeCompare(SyllabusManager.getAssignmentSortKey(b));
+  }
+
+  /**
+   * Generate a sort key for an assignment (for column renderer compatibility).
+   * Here's the rule:
+   * 1. Unassigned priority'd items go first.
+   * 2. Then assigned items.
+   * 3. Then everything else.
+   * 
+   * Within each group, sort by class number, then priority, then assignmentID.
+   */
+  static getAssignmentSortKey(assignment: ItemSyllabusAssignment): string {
+    const isCourseInfo = assignment.priority === SyllabusPriority.COURSE_INFO && assignment.classNumber === undefined;
+    const isClassAssignment = assignment.classNumber !== undefined;
+
+    return [
+      // Group
+      isCourseInfo ? "AAAA" : isClassAssignment ? "BBBB" : "CCCC",
+      assignment.classNumber !== undefined ? String(assignment.classNumber).padStart(4, "0") : "9999",
+      // Group priority
+      String(SyllabusManager.getPriorityOrder(assignment.priority)).padStart(4, "0"),
+      assignment.priority || "",
+      // Group class instruction
+      assignment.classInstruction?.slice(0, 4).replace(/[^a-zA-Z0-9]/g, "_") || "",
+      // Group assignment ID
+      assignment.id || "",
+    ].join("___");
+  }
+
+  /**
+   * Add a new class assignment for an item
+   */
+  static async addClassAssignment(
+    item: Zotero.Item,
+    collectionId: number | string,
+    classNumber: number | undefined,
+    metadata: Partial<ItemSyllabusAssignment>,
+    source: "page" | "item-pane" | "context-menu",
+  ): Promise<void> {
+    const data = this.getItemSyllabusData(item);
+    const collectionIdStr = String(collectionId);
+    const assignments = data[collectionIdStr] || [];
+
+    // Add new entry with ID
+    const newEntry: ItemSyllabusAssignment = {
+      classNumber,
+      ...metadata,
+      id: this.generateAssignmentId(),
+    };
+    assignments.push(newEntry);
+
+    // Ensure all entries have IDs before saving
+    data[collectionIdStr] = this.ensureAssignmentIds(assignments);
+    await this.setSyllabusData(item, data, source);
+  }
+
+  /**
+   * Remove a specific class assignment from an item by classNumber
+   * Note: For more precise removal, use removeAssignmentById
+   */
+  static async removeClassAssignment(
+    item: Zotero.Item,
+    collectionId: number | string,
+    classNumber: number,
+    source: "page" | "item-pane" | "context-menu",
+  ): Promise<void> {
+    const data = this.getItemSyllabusData(item);
+    const collectionIdStr = String(collectionId);
+    let entries = data[collectionIdStr] || [];
+
+    entries = entries.filter((e) => e.classNumber !== classNumber);
+
+    if (entries.length === 0) {
+      delete data[collectionIdStr];
+    } else {
+      data[collectionIdStr] = entries;
+    }
+
+    await this.setSyllabusData(item, data, source);
+  }
+
+  /**
+   * Remove a specific assignment from an item by its ID
+   */
+  static async removeAssignmentById(
+    item: Zotero.Item,
+    collectionId: number | string,
+    assignmentId: string,
+    source: "page" | "item-pane" | "context-menu",
+  ): Promise<void> {
+    const data = this.getItemSyllabusData(item);
+    const collectionIdStr = String(collectionId);
+    let entries = data[collectionIdStr] || [];
+
+    entries = entries.filter((e) => e.id !== assignmentId);
+
+    if (entries.length === 0) {
+      delete data[collectionIdStr];
+    } else {
+      data[collectionIdStr] = entries;
+    }
+
+    await this.setSyllabusData(item, data, source);
+  }
+
+  /**
+   * Remove all assignments for an item in a collection
+   */
+  static async removeAllAssignments(
+    item: Zotero.Item,
+    collectionId: number | string,
+    source: "page" | "item-pane" | "context-menu",
+  ): Promise<void> {
+    const data = this.getItemSyllabusData(item);
+    const collectionIdStr = String(collectionId);
+    delete data[collectionIdStr];
+    await this.setSyllabusData(item, data, source);
+  }
+
+  /**
+   * Update an existing class assignment by its ID
+   * Uses the assignment ID to find the exact assignment to update
+   */
+  static async updateClassAssignment(
+    item: Zotero.Item,
+    collectionId: number | string,
+    assignmentId: string,
+    metadata: Partial<ItemSyllabusAssignment>,
+    source: "page" | "item-pane" | "context-menu",
+  ): Promise<void> {
+    const data = this.getItemSyllabusData(item);
+    const collectionIdStr = String(collectionId);
+    const entries = data[collectionIdStr] || [];
+
+    // Find the entry by ID
+    const entryIndex = entries.findIndex((e) => e.id === assignmentId);
+
+    if (entryIndex >= 0) {
+      // Update existing entry
+      entries[entryIndex] = { ...entries[entryIndex], ...metadata };
+
+      // If classNumber is being changed to undefined/null, handle it
+      if (metadata.classNumber === undefined && entries[entryIndex].classNumber === undefined) {
+        // Remove entry if all fields are empty
+        if (
+          !entries[entryIndex].priority &&
+          !entries[entryIndex].classInstruction
+        ) {
+          entries.splice(entryIndex, 1);
+        }
+      }
+    } else {
+      // Assignment not found by ID - this shouldn't happen, but log it
+      ztoolkit.log("Warning: Assignment not found by ID:", assignmentId);
+    }
+
+    // Ensure all entries have IDs
+    const entriesWithIds = this.ensureAssignmentIds(entries);
+
+    if (entriesWithIds.length === 0) {
+      delete data[collectionIdStr];
+    } else {
+      data[collectionIdStr] = entriesWithIds;
+    }
+
+    await this.setSyllabusData(item, data, source);
+  }
+
+  /**
+   * Get manual ordering of items for a specific class
+   * Returns array of itemIds in display order, or empty array if no manual order
+   */
+  static getClassItemOrder(
+    collectionId: number | string,
+    classNumber: number | null,
+  ): string[] {
+    const prefKey = this.getPreferenceKey(
+      SyllabusSettingsKey.COLLECTION_ITEM_ORDER,
+    );
+    const orderStr = String(Zotero.Prefs.get(prefKey, true) || "");
+    if (!orderStr) {
+      return [];
+    }
+    try {
+      const orderData = JSON.parse(orderStr) as SettingsClassItemOrder;
+      const collectionIdStr = String(collectionId);
+      const classKey = classNumber === null ? "null" : String(classNumber);
+      return orderData[collectionIdStr]?.[classKey] || [];
+    } catch (e) {
+      ztoolkit.log("Error parsing item order:", e);
+      return [];
+    }
+  }
+
+  /**
+   * Set manual ordering of items for a specific class
+   */
+  static async setClassItemOrder(
+    collectionId: number | string,
+    classNumber: number | null,
+    itemIds: string[],
+  ): Promise<void> {
+    const prefKey = this.getPreferenceKey(
+      SyllabusSettingsKey.COLLECTION_ITEM_ORDER,
+    );
+    const orderStr = String(Zotero.Prefs.get(prefKey, true) || "");
+    let orderData: SettingsClassItemOrder = {};
+    if (orderStr) {
+      try {
+        orderData = JSON.parse(orderStr) as SettingsClassItemOrder;
+      } catch (e) {
+        ztoolkit.log("Error parsing item order:", e);
+        orderData = {};
+      }
+    }
+
+    const collectionIdStr = String(collectionId);
+    const classKey = classNumber === null ? "null" : String(classNumber);
+
+    if (!orderData[collectionIdStr]) {
+      orderData[collectionIdStr] = {};
+    }
+
+    if (itemIds.length === 0) {
+      // Remove ordering if empty
+      delete orderData[collectionIdStr][classKey];
+      // Clean up empty collection entry
+      if (Object.keys(orderData[collectionIdStr]).length === 0) {
+        delete orderData[collectionIdStr];
+      }
+    } else {
+      orderData[collectionIdStr][classKey] = itemIds;
+    }
+
+    Zotero.Prefs.set(prefKey, JSON.stringify(orderData), true);
+  }
+
+  /**
+   * Reorder items within a class
+   */
+  static async reorderClassItems(
+    collectionId: number | string,
+    classNumber: number | null,
+    itemIds: string[],
+  ): Promise<void> {
+    await this.setClassItemOrder(collectionId, classNumber, itemIds);
+  }
+
+  /**
+   * Validate ordering preferences and clean up orphaned itemIds
+   */
+  static async validateOrderingPrefs(
+    collectionId: number | string,
+  ): Promise<void> {
+    const prefKey = this.getPreferenceKey(
+      SyllabusSettingsKey.COLLECTION_ITEM_ORDER,
+    );
+    const orderStr = String(Zotero.Prefs.get(prefKey, true) || "");
+    if (!orderStr) {
+      return;
+    }
+
+    let orderData: SettingsClassItemOrder = {};
+    try {
+      orderData = JSON.parse(orderStr) as SettingsClassItemOrder;
+    } catch (e) {
+      ztoolkit.log("Error parsing item order:", e);
+      return;
+    }
+
+    const collectionIdStr = String(collectionId);
+    const classOrder = orderData[collectionIdStr];
+    if (!classOrder) {
+      return;
+    }
+
+    // Get all valid itemIds in the collection
+    try {
+      const collection = Zotero.Collections.get(
+        typeof collectionId === "string"
+          ? parseInt(collectionId, 10)
+          : collectionId,
+      );
+      if (!collection) {
+        return;
+      }
+
+      const items = collection.getChildItems();
+      const validItemIds = new Set(
+        items
+          .filter((item) => item.isRegularItem())
+          .map((item) => String(item.id)),
+      );
+
+      // Clean up orphaned itemIds
+      let hasChanges = false;
+      for (const [classKey, itemIds] of Object.entries(classOrder)) {
+        const filtered = itemIds.filter((id) => validItemIds.has(id));
+        if (filtered.length !== itemIds.length) {
+          classOrder[classKey] = filtered;
+          hasChanges = true;
+        }
+        // Remove empty arrays
+        if (filtered.length === 0) {
+          delete classOrder[classKey];
+          hasChanges = true;
+        }
+      }
+
+      // Clean up empty collection entry
+      if (Object.keys(classOrder).length === 0) {
+        delete orderData[collectionIdStr];
+        hasChanges = true;
+      }
+
+      if (hasChanges) {
+        Zotero.Prefs.set(prefKey, JSON.stringify(orderData), true);
+      }
+    } catch (e) {
+      ztoolkit.log("Error validating ordering prefs:", e);
+    }
   }
 
   static getSettingsCollectionDictionaryData(): SettingsCollectionDictionaryData {

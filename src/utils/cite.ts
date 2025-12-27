@@ -5,13 +5,15 @@
  * @returns The formatted bibliographic reference, or null if generation fails
  */
 export async function generateBibliographicReference(
-  item: Zotero.Item,
+  item: Zotero.Item | Zotero.Item[],
+  fallback = true
 ): Promise<string | null> {
+  const itemArray = Array.isArray(item) ? item : [item];
   try {
     const styles = Zotero.Styles.getVisible();
     const style = styles[styles.length - 1];
     const result = await Zotero.QuickCopy.getContentFromItems(
-      [item],
+      itemArray,
       // format,
       `bibliography=${style.url}`,
     );
@@ -22,10 +24,17 @@ export async function generateBibliographicReference(
     ztoolkit.log("Error generating bibliographic reference:", error);
   }
 
-  return buildFallbackReference(item);
+  return fallback ? generateFallbackBibliographicReference(item) : null;
 }
 
-export function buildFallbackReference(item: Zotero.Item): string {
+export function generateFallbackBibliographicReference(item: Zotero.Item | Zotero.Item[]): string {
+  const itemArray = Array.isArray(item) ? item : [item];
+  return itemArray.sort(
+    (a, b) => a.getCreators()?.[0]?.lastName.localeCompare(b.getCreators()?.[0]?.lastName || ""),
+  ).map(buildFallbackBibliographicReference).join("\n\n");
+}
+
+export function buildFallbackBibliographicReference(item: Zotero.Item): string {
   const author = item
     .getCreators()
     .map((creator) => creator.lastName)
