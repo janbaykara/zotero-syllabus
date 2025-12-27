@@ -900,152 +900,58 @@ export class SyllabusManager {
     });
   }
 
+  /**
+   * Apply a change to the first assignment or create one if none exists
+   */
+  private static async applyToFirstAssignment(
+    item: Zotero.Item,
+    collectionId: number,
+    update: Partial<ItemSyllabusAssignment>,
+  ): Promise<void> {
+    const assignment = this.getFirstAssignment(item, collectionId);
+    if (assignment?.id) {
+      await this.updateClassAssignment(item, collectionId, assignment.id, update, "context-menu");
+    } else {
+      await this.addClassAssignment(item, collectionId, undefined, update, "context-menu");
+    }
+  }
+
   static setupContextMenuSetPriority() {
     ztoolkit.Menu.unregister("syllabus-set-priority-menu");
+    const createPriorityHandler = (priority: SyllabusPriority | "") => async () => {
+      const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+      const selectedCollection = zoteroPane.getSelectedCollection();
+      if (!selectedCollection) return;
+      const items = zoteroPane.getSelectedItems();
+      for (const item of items) {
+        if (item.isRegularItem()) {
+          await this.applyToFirstAssignment(item, selectedCollection.id, {
+            priority: priority || undefined,
+          });
+          await item.saveTx();
+        }
+      }
+      if (zoteroPane.itemPane) {
+        zoteroPane.itemPane.render();
+      }
+    };
+
     ztoolkit.Menu.register("item", {
       tag: "menu",
       id: "syllabus-set-priority-menu",
       label: "Set Priority",
       icon: "chrome://zotero/skin/16/universal/book.svg",
       children: [
-        // TODO: encapsulate item in generator function to keep things DRY
+        ...Object.values(SyllabusPriority).map((priority) => ({
+          tag: "menuitem" as const,
+          label: SyllabusManager.PRIORITY_LABELS[priority],
+          commandListener: createPriorityHandler(priority),
+        })),
+        { tag: "menuseparator" as const },
         {
-          tag: "menuitem",
-          label: SyllabusManager.PRIORITY_LABELS[SyllabusPriority.COURSE_INFO],
-          commandListener: async () => {
-            const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-            const selectedCollection = zoteroPane.getSelectedCollection();
-            if (!selectedCollection) return;
-            const items = zoteroPane.getSelectedItems();
-            const collectionId = selectedCollection.id;
-            for (const item of items) {
-              if (item.isRegularItem()) {
-                await SyllabusManager.setSyllabusPriority(
-                  item,
-                  collectionId,
-                  SyllabusPriority.COURSE_INFO,
-                  "context-menu",
-                );
-                await item.saveTx();
-              }
-            }
-
-            const itemPane = zoteroPane.itemPane;
-            if (itemPane) {
-              itemPane.render();
-            }
-          },
-        },
-        {
-          tag: "menuitem",
-          label: SyllabusManager.PRIORITY_LABELS[SyllabusPriority.ESSENTIAL],
-          commandListener: async () => {
-            const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-            const selectedCollection = zoteroPane.getSelectedCollection();
-            if (!selectedCollection) return;
-            const items = zoteroPane.getSelectedItems();
-            const collectionId = selectedCollection.id;
-            for (const item of items) {
-              if (item.isRegularItem()) {
-                await SyllabusManager.setSyllabusPriority(
-                  item,
-                  collectionId,
-                  SyllabusPriority.ESSENTIAL,
-                  "context-menu",
-                );
-                await item.saveTx();
-              }
-            }
-
-            const itemPane = zoteroPane.itemPane;
-            if (itemPane) {
-              itemPane.render();
-            }
-          },
-        },
-        {
-          tag: "menuitem",
-          label: SyllabusManager.PRIORITY_LABELS[SyllabusPriority.RECOMMENDED],
-          commandListener: async () => {
-            const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-            const selectedCollection = zoteroPane.getSelectedCollection();
-            if (!selectedCollection) return;
-            const items = zoteroPane.getSelectedItems();
-            const collectionId = selectedCollection.id;
-            for (const item of items) {
-              if (item.isRegularItem()) {
-                await SyllabusManager.setSyllabusPriority(
-                  item,
-                  collectionId,
-                  SyllabusPriority.RECOMMENDED,
-                  "context-menu",
-                );
-                await item.saveTx();
-              }
-            }
-
-            const itemPane = zoteroPane.itemPane;
-            if (itemPane) {
-              itemPane.render();
-            }
-          },
-        },
-        {
-          tag: "menuitem",
-          label: SyllabusManager.PRIORITY_LABELS[SyllabusPriority.OPTIONAL],
-          commandListener: async () => {
-            const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-            const selectedCollection = zoteroPane.getSelectedCollection();
-            if (!selectedCollection) return;
-            const items = zoteroPane.getSelectedItems();
-            const collectionId = selectedCollection.id;
-            for (const item of items) {
-              if (item.isRegularItem()) {
-                await SyllabusManager.setSyllabusPriority(
-                  item,
-                  collectionId,
-                  SyllabusPriority.OPTIONAL,
-                  "context-menu",
-                );
-                await item.saveTx();
-              }
-            }
-
-            const itemPane = zoteroPane.itemPane;
-            if (itemPane) {
-              itemPane.render();
-            }
-          },
-        },
-        {
-          tag: "menuseparator",
-        },
-        {
-          tag: "menuitem",
+          tag: "menuitem" as const,
           label: "(None)",
-          commandListener: async () => {
-            const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-            const selectedCollection = zoteroPane.getSelectedCollection();
-            if (!selectedCollection) return;
-            const items = zoteroPane.getSelectedItems();
-            const collectionId = selectedCollection.id;
-            for (const item of items) {
-              if (item.isRegularItem()) {
-                await SyllabusManager.setSyllabusPriority(
-                  item,
-                  collectionId,
-                  "",
-                  "context-menu",
-                );
-                await item.saveTx();
-              }
-            }
-
-            const itemPane = zoteroPane.itemPane;
-            if (itemPane) {
-              itemPane.render();
-            }
-          },
+          commandListener: createPriorityHandler(""),
         },
       ],
     });
@@ -1068,26 +974,14 @@ export class SyllabusManager {
     const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
     const selectedCollection = zoteroPane.getSelectedCollection();
     if (!selectedCollection) {
-      return [
-        {
-          tag: "menuitem",
-          label: "(No collection selected)",
-          disabled: true,
-        },
-      ];
+      return [{ tag: "menuitem" as const, label: "(No collection selected)", disabled: true }];
     }
 
-    // Get all items in the collection to find existing class numbers
-    const collectionItems = selectedCollection.getChildItems();
+    // Get all class numbers from collection items
     const classNumbers = new Set<number>();
-    for (const item of collectionItems) {
+    for (const item of selectedCollection.getChildItems()) {
       if (item.isRegularItem()) {
-        // Get all class assignments to find all class numbers
-        const assignments = SyllabusManager.getAllClassAssignments(
-          item,
-          selectedCollection.id,
-        );
-        for (const assignment of assignments) {
+        for (const assignment of this.getAllClassAssignments(item, selectedCollection.id)) {
           if (assignment.classNumber !== undefined) {
             classNumbers.add(assignment.classNumber);
           }
@@ -1095,81 +989,42 @@ export class SyllabusManager {
       }
     }
 
-    // Sort class numbers
     const sortedClassNumbers = Array.from(classNumbers).sort((a, b) => a - b);
+    const createClassHandler = (classNumber: number | undefined) => async () => {
+      const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+      const selectedCollection = zoteroPane.getSelectedCollection();
+      if (!selectedCollection) return;
+      const items = zoteroPane.getSelectedItems();
+      for (const item of items) {
+        if (item.isRegularItem()) {
+          await this.applyToFirstAssignment(item, selectedCollection.id, {
+            classNumber,
+          });
+          await item.saveTx();
+        }
+      }
+      if (zoteroPane.itemPane) {
+        zoteroPane.itemPane.render();
+      }
+    };
 
-    const children: any[] = [];
+    const children: any[] = sortedClassNumbers.map((classNumber) => {
+      const classTitle = this.getClassTitle(selectedCollection.id, classNumber, true);
+      return {
+        tag: "menuitem" as const,
+        label: classTitle || `Class ${classNumber}`,
+        commandListener: createClassHandler(classNumber),
+      };
+    });
 
-    // Add menu items for each class number
-    for (const classNumber of sortedClassNumbers) {
-      const classTitle = SyllabusManager.getClassTitle(
-        selectedCollection.id,
-        classNumber,
-        true,
-      );
-      children.push({
-        tag: "menuitem",
-        label: classTitle ? classTitle : `Class ${classNumber}`,
-        commandListener: async () => {
-          const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-          const selectedCollection = zoteroPane.getSelectedCollection();
-          if (!selectedCollection) return;
-          const items = zoteroPane.getSelectedItems();
-          const collectionId = selectedCollection.id;
-          for (const item of items) {
-            if (item.isRegularItem()) {
-              await SyllabusManager.setSyllabusClassNumber(
-                item,
-                collectionId,
-                classNumber,
-                "context-menu",
-              );
-              await item.saveTx();
-            }
-          }
-
-          const itemPane = zoteroPane.itemPane;
-          if (itemPane) {
-            itemPane.render();
-          }
-        },
-      });
-    }
-
-    // Add separator if there are class numbers
     if (sortedClassNumbers.length > 0) {
-      children.push({
-        tag: "menuseparator",
-      });
+      children.push({ tag: "menuseparator" as const });
     }
 
-    // Add "None" option
     children.push({
-      tag: "menuitem",
+      tag: "menuitem" as const,
       label: "(None)",
-      commandListener: async () => {
-        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-        const selectedCollection = zoteroPane.getSelectedCollection();
-        if (!selectedCollection) return;
-        const items = zoteroPane.getSelectedItems();
-        const collectionId = selectedCollection.id;
-        for (const item of items) {
-          if (item.isRegularItem()) {
-            await SyllabusManager.setSyllabusClassNumber(
-              item,
-              collectionId,
-              undefined,
-              "context-menu",
-            );
-            await item.saveTx();
-          }
-        }
-
-        const itemPane = zoteroPane.itemPane;
-        if (itemPane) {
-          itemPane.render();
-        }
-      },
+      commandListener: createClassHandler(undefined),
     });
 
     return children;
@@ -1389,7 +1244,7 @@ export class SyllabusManager {
       // Find or create entry for specific class
       let entryIndex = entries.findIndex((e) => e.classNumber === classNumber);
       if (entryIndex === -1) {
-        entries.push({ classNumber });
+        entries.push({ classNumber, id: this.generateAssignmentId() });
         entryIndex = entries.length - 1;
       }
 
@@ -1408,7 +1263,7 @@ export class SyllabusManager {
     } else {
       // Update first entry or create one
       if (entries.length === 0) {
-        entries.push({});
+        entries.push({ id: this.generateAssignmentId() });
       }
 
       if (priority) {

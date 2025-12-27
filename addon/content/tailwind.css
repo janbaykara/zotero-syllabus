@@ -277,10 +277,6 @@
   .rounded-xs {
     border-radius: var(--radius-xs);
   }
-  .rounded-t-none {
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
-  }
   .rounded-b-lg {
     border-bottom-right-radius: var(--radius-lg);
     border-bottom-left-radius: var(--radius-lg);
@@ -421,9 +417,6 @@
   }
   .scheme-dark {
     color-scheme: dark;
-  }
-  .scheme-normal {
-    color-scheme: normal;
   }
   .outline-2\! {
     outline-style: var(--tw-outline-style) !important;
