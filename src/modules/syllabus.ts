@@ -1473,14 +1473,14 @@ export class SyllabusManager {
     priority: SyllabusPriority | "" | undefined,
   ): number {
     try {
-      if (priority === SyllabusPriority.COURSE_INFO) return 2;
-      if (priority === SyllabusPriority.ESSENTIAL) return 4;
-      if (priority === SyllabusPriority.RECOMMENDED) return 6;
-      if (priority === SyllabusPriority.OPTIONAL) return 8;
-      return 9; // blank/undefined
+      if (priority === SyllabusPriority.COURSE_INFO) return 1;
+      if (priority === SyllabusPriority.ESSENTIAL) return 2;
+      if (priority === SyllabusPriority.RECOMMENDED) return 3;
+      if (priority === SyllabusPriority.OPTIONAL) return 4;
+      return 4; // blank/undefined
     } catch (e) {
       ztoolkit.log("Error getting priority order:", e);
-      return 9;
+      return 4;
     }
   }
 
@@ -1499,26 +1499,32 @@ export class SyllabusManager {
   /**
    * Generate a sort key for an assignment (for column renderer compatibility).
    * Here's the rule:
-   * 1. Unassigned priority'd items go first.
-   * 2. Then assigned items.
-   * 3. Then everything else.
+   * 1. No-class, priority'd items go first; by priority order.
+   * 2. Then class assignments; by priority order
+   * 3. Then everything else (no-class, no-priority)
    * 
    * Within each group, sort by class number, then priority, then assignmentID.
    */
   static getAssignmentSortKey(assignment: ItemSyllabusAssignment): string {
-    const isCourseInfo = assignment.priority === SyllabusPriority.COURSE_INFO && assignment.classNumber === undefined;
-    const isClassAssignment = assignment.classNumber !== undefined;
+    const hasPriority = !!assignment.priority;
+    const hasClassNumber = assignment.classNumber !== undefined;
+
+    // Determine group: 1=no-class+priority, 2=class, 3=no-class+no-priority
+    let group: string;
+    if (!hasClassNumber && hasPriority) {
+      group = "AAAA"; // Group 1: No-class, priority'd
+    } else if (hasClassNumber) {
+      group = "BBBB"; // Group 2: Class assignments
+    } else {
+      group = "CCCC"; // Group 3: No-class, unprioritized
+    }
 
     return [
-      // Group
-      isCourseInfo ? "AAAA" : isClassAssignment ? "BBBB" : "CCCC",
-      assignment.classNumber !== undefined ? String(assignment.classNumber).padStart(4, "0") : "9999",
-      // Group priority
+      group,
+      hasClassNumber ? String(assignment.classNumber).padStart(4, "0") : "9999",
       String(SyllabusManager.getPriorityOrder(assignment.priority)).padStart(4, "0"),
       assignment.priority || "",
-      // Group class instruction
       assignment.classInstruction?.slice(0, 4).replace(/[^a-zA-Z0-9]/g, "_") || "",
-      // Group assignment ID
       assignment.id || "",
     ].join("___");
   }
