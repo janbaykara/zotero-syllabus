@@ -576,33 +576,27 @@ export class SyllabusManager {
         const selectedCollection = zoteroPane.getSelectedCollection();
 
         if (selectedCollection) {
-          // Get all class assignments for this item
-          const assignments = SyllabusManager.getAllClassAssignments(
+          const firstAssignment = SyllabusManager.getFirstAssignment(
             item,
             selectedCollection.id,
-          ).map(assignment => {
-            return SyllabusManager.getAssignmentSortKey(assignment);
-          }).sort();
-
-          return assignments[0]
+          );
+          if (firstAssignment) {
+            return SyllabusManager.getAssignmentSortKey(firstAssignment);
+          }
         }
 
-        // If not in a collection view, return empty
         return "";
       },
       renderCell: (index, data, column, isFirstColumn, doc) => {
-        // TODO: fix this
-        // Parse the data to extract the priority for display
-        // data format: "0001___1___essential", "0002___2___recommended", "9999___4___"
-        // Format: "classNumber_priorityOrder_priorityValue"
-        const parts = String(data).split("___");
-        const priority = parts.length > 2 ? parts[2] : "";
-
         const container = doc.createElement("span");
         container.className = `cell ${column.className}`;
         container.style.display = "flex";
         container.style.alignItems = "center";
         container.style.gap = "6px";
+
+        // Parse the sort key: "classNumber___priorityOrder___priorityValue"
+        const parts = String(data).split("___");
+        const priority = parts.length > 2 ? parts[2] : "";
 
         if (
           priority &&
@@ -641,15 +635,15 @@ export class SyllabusManager {
         const selectedCollection = zoteroPane.getSelectedCollection();
 
         if (selectedCollection) {
-          // Get first entry's instruction (for backward compatibility)
-          const assignments = SyllabusManager.getAllClassAssignments(
+          const firstAssignment = SyllabusManager.getFirstAssignment(
             item,
             selectedCollection.id,
           );
-          return assignments[0]?.classInstruction || "";
+          // Use sort key for sorting, but we'll extract instruction in renderCell if needed
+          // For now, just return the instruction for sorting (empty string sorts first)
+          return firstAssignment?.classInstruction || "";
         }
 
-        // If not in a collection view, return empty
         return "";
       },
     });
@@ -666,97 +660,43 @@ export class SyllabusManager {
         const selectedCollection = zoteroPane.getSelectedCollection();
 
         if (selectedCollection) {
-          // Get all class assignments
-          const assignments = SyllabusManager.getAllClassAssignments(
+          const firstAssignment = SyllabusManager.getFirstAssignment(
             item,
             selectedCollection.id,
           );
-
-          // Use first entry for sorting (or first class number if available)
-          const firstClassNumber = assignments.find((a) => a.classNumber !== undefined)?.classNumber;
-          const classNumber = firstClassNumber;
-          const priority = assignments[0]?.priority || "";
-
-          // Get priority sort order: 0=course-info, 1=essential, 2=recommended, 3=optional, 4=blank
-          let priorityOrder = "4"; // default to blank
-          if (priority === SyllabusPriority.COURSE_INFO) priorityOrder = "0";
-          else if (priority === SyllabusPriority.ESSENTIAL) priorityOrder = "1";
-          else if (priority === SyllabusPriority.RECOMMENDED)
-            priorityOrder = "2";
-          else if (priority === SyllabusPriority.OPTIONAL) priorityOrder = "3";
-
-          const hasClassNumber = classNumber !== undefined;
-          const hasPriority = priority !== "";
-
-          // Create sorting key to match Syllabus View order:
-          // 1. No-class numbered items that have a priority status (in priority status order)
-          // 2. Class numbered items (in priority status order)
-          // 3. Un-numbered and un-statused items
-
-          if (!hasClassNumber && hasPriority) {
-            // Group 1: No-class numbered items with priority - sort first by priority
-            return `0_${priorityOrder}`;
-          } else if (hasClassNumber) {
-            // Group 2: Class numbered items - sort by class number, then priority
-            // Also encode the class title in the return value to avoid lookup in renderCell
-            const paddedClassNumber = String(classNumber).padStart(5, "0");
-            const classTitle = SyllabusManager.getClassTitle(
-              selectedCollection.id,
-              classNumber,
-              true,
-            );
-            // Encode title in format: "1_paddedClassNumber_priorityOrder|classTitle"
-            // Use | as separator since it's unlikely to appear in class titles
-            const titlePart = classTitle ? `|${classTitle}` : "";
-            return `1_${paddedClassNumber}_${priorityOrder}${titlePart}`;
-          } else {
-            // Group 3: Un-numbered and un-statused items - sort last
-            return `2_99999_4`;
+          if (firstAssignment) {
+            // Use sort key for consistent sorting
+            const sortKey = SyllabusManager.getAssignmentSortKey(firstAssignment);
+            // Encode class number and title for display
+            const classNumber = firstAssignment.classNumber;
+            const classTitle = classNumber !== undefined
+              ? SyllabusManager.getClassTitle(selectedCollection.id, classNumber, true)
+              : "";
+            // Format: "sortKey|classNumber|classTitle" for renderCell
+            return `${sortKey}|${classNumber ?? ""}|${classTitle}`;
           }
         }
 
-        // If not in a collection view, return empty
-        return "2_99999_4";
+        return "";
       },
       renderCell: (index, data, column, isFirstColumn, doc) => {
-        // Parse the composite value to extract just the class number for display
-        // data format: "0_priorityOrder", "1_paddedClassNumber_priorityOrder|classTitle", or "2_99999_4"
-        const dataStr = String(data);
-        const parts = dataStr.split("_");
-        const groupIndicator = parts[0];
-
-        // Group 0 and 2: No class number (either prioritized or un-statused)
-        if (groupIndicator === "0" || groupIndicator === "2") {
-          const span = doc.createElement("span");
-          span.className = `cell ${column.className}`;
-          span.textContent = "";
-          return span;
-        }
-
-        // Group 1: Class numbered items - extract and display class number
-        if (groupIndicator === "1" && parts.length >= 2) {
-          const classNumberStr = parts[1];
-          // Remove leading zeros and display the class number
-          const classNumber = parseInt(classNumberStr, 10);
-          const span = doc.createElement("span");
-          span.className = `cell ${column.className}`;
-
-          // Extract class title from encoded data (format: "1_classNumber_priority|title")
-          // If title is encoded, use it; otherwise fall back to just the number
-          let displayText = String(classNumber);
-          const titleSeparatorIndex = dataStr.indexOf("|");
-          if (titleSeparatorIndex !== -1) {
-            displayText = dataStr.substring(titleSeparatorIndex + 1);
-          }
-
-          span.textContent = displayText;
-          return span;
-        }
-
-        // Fallback
         const span = doc.createElement("span");
         span.className = `cell ${column.className}`;
-        span.textContent = "";
+
+        const dataStr = String(data);
+        // Parse: "sortKey|classNumber|classTitle"
+        const parts = dataStr.split("|");
+
+        if (parts.length >= 3) {
+          const classNumber = parts[1];
+          const classTitle = parts[2];
+
+          if (classNumber) {
+            // Display class title if available, otherwise just the number
+            span.textContent = classTitle || classNumber;
+          }
+        }
+
         return span;
       },
     });
@@ -773,64 +713,26 @@ export class SyllabusManager {
         const selectedCollection = zoteroPane.getSelectedCollection();
 
         if (selectedCollection) {
-          // Get all class assignments
-          const assignments = SyllabusManager.getAllClassAssignments(
+          const firstAssignment = SyllabusManager.getFirstAssignment(
             item,
             selectedCollection.id,
           );
-
-          // Use first entry with class number, or first entry
-          const firstClassNumber = assignments.find((a) => a.classNumber !== undefined)?.classNumber;
-          const classNumber = firstClassNumber;
-          const priority = assignments[0]?.priority || "";
-
-          // Get priority sort order: 0=course-info, 1=essential, 2=recommended, 3=optional, 4=blank
-          let priorityOrder = "4"; // default to blank
-          if (priority === SyllabusPriority.COURSE_INFO) priorityOrder = "0";
-          else if (priority === SyllabusPriority.ESSENTIAL) priorityOrder = "1";
-          else if (priority === SyllabusPriority.RECOMMENDED)
-            priorityOrder = "2";
-          else if (priority === SyllabusPriority.OPTIONAL) priorityOrder = "3";
-
-          const hasClassNumber = classNumber !== undefined;
-          const hasPriority = priority !== "";
-
-          // Create sorting key to match Syllabus View order:
-          // 1. No-class numbered items that have a priority status (in priority status order)
-          // 2. Class numbered items (in priority status order)
-          // 3. Un-numbered and un-statused items
-
-          if (!hasClassNumber && hasPriority) {
-            // Group 1: No-class numbered items with priority - sort first by priority
-            // Encode: "0_priorityOrder|priorityValue"
-            return `0_${priorityOrder}|${priority}`;
-          } else if (hasClassNumber) {
-            // Group 2: Class numbered items - sort by class number, then priority
-            // Encode: "1_paddedClassNumber_priorityOrder|priorityValue||classTitle"
-            // Use double pipe (||) to separate priority and title, allowing empty values
-            const paddedClassNumber = String(classNumber).padStart(5, "0");
-            const classTitle = SyllabusManager.getClassTitle(
-              selectedCollection.id,
-              classNumber,
-              false, // Don't include class number prefix since we'll show it separately
-            );
-            return `1_${paddedClassNumber}_${priorityOrder}|${priority || ""}||${classTitle || ""}`;
-          } else {
-            // Group 3: Un-numbered and un-statused items - sort last
-            return `2_99999_4`;
+          if (firstAssignment) {
+            // Use sort key for consistent sorting
+            const sortKey = SyllabusManager.getAssignmentSortKey(firstAssignment);
+            // Encode data for display: "sortKey|priority|classNumber|classTitle"
+            const classNumber = firstAssignment.classNumber;
+            const classTitle = classNumber !== undefined
+              ? SyllabusManager.getClassTitle(selectedCollection.id, classNumber, false)
+              : "";
+            const priority = firstAssignment.priority || "";
+            return `${sortKey}|${priority}|${classNumber ?? ""}|${classTitle}`;
           }
         }
 
-        // If not in a collection view, return empty
-        return "2_99999_4";
+        return "";
       },
       renderCell: (index, data, column, isFirstColumn, doc) => {
-        // Parse the composite value to extract class number, priority, and class title for display
-        // data format: "0_priorityOrder|priorityValue", "1_paddedClassNumber_priorityOrder|priorityValue|classTitle", or "2_99999_4"
-        const dataStr = String(data);
-        const parts = dataStr.split("_");
-        const groupIndicator = parts[0];
-
         const container = doc.createElement("span");
         container.className = `cell ${column.className}`;
         container.style.display = "flex";
@@ -838,80 +740,29 @@ export class SyllabusManager {
         container.style.gap = "6px";
         container.style.flexWrap = "nowrap";
 
-        // Group 0: No class number but has priority
-        if (groupIndicator === "0") {
-          const pipeIndex = dataStr.indexOf("|");
-          if (pipeIndex !== -1) {
-            const priorityValue = dataStr.substring(pipeIndex + 1);
-            if (
-              priorityValue &&
-              SyllabusManager.PRIORITY_LABELS[priorityValue as SyllabusPriority]
-            ) {
-              const priorityEnum = priorityValue as SyllabusPriority;
-              // Create colored dot
-              const dot = doc.createElement("span");
-              dot.style.width = "8px";
-              dot.style.height = "8px";
-              dot.style.borderRadius = "50%";
-              dot.style.backgroundColor =
-                SyllabusManager.PRIORITY_COLORS[priorityEnum];
-              dot.style.flexShrink = "0";
-              container.appendChild(dot);
+        // Parse: "sortKey|priority|classNumber|classTitle"
+        const dataStr = String(data);
+        const parts = dataStr.split("|");
 
-              // Create text label
-              const label = doc.createElement("span");
-              label.textContent = SyllabusManager.PRIORITY_LABELS[priorityEnum];
-              container.appendChild(label);
-            }
+        if (parts.length >= 4) {
+          const priority = parts[1];
+          const classNumber = parts[2];
+          const classTitle = parts[3];
+
+          // Display class number if available
+          if (classNumber) {
+            const classNumberSpan = doc.createElement("span");
+            classNumberSpan.textContent = `#${classNumber}`;
+            classNumberSpan.style.fontWeight = "500";
+            container.appendChild(classNumberSpan);
           }
-          return container;
-        }
-
-        // Group 2: Un-numbered and un-statused items
-        if (groupIndicator === "2") {
-          return container; // Empty container
-        }
-
-        // Group 1: Class numbered items - extract and display class number, priority, and title
-        if (groupIndicator === "1" && parts.length >= 2) {
-          const classNumberStr = parts[1];
-          const classNumber = parseInt(classNumberStr, 10);
-
-          // Extract priority and title from encoded data
-          // Format: "1_classNumber_priorityOrder|priorityValue||classTitle"
-          // Use double pipe (||) to separate priority and title
-          const firstPipeIndex = dataStr.indexOf("|");
-          let priorityValue = "";
-          let classTitle = "";
-
-          if (firstPipeIndex !== -1) {
-            // Extract everything after the first pipe
-            const afterFirstPipe = dataStr.substring(firstPipeIndex + 1);
-            // Find the double pipe separator (||)
-            const doublePipeIndex = afterFirstPipe.indexOf("||");
-
-            if (doublePipeIndex !== -1) {
-              // Both fields are present (may be empty strings)
-              priorityValue = afterFirstPipe.substring(0, doublePipeIndex);
-              classTitle = afterFirstPipe.substring(doublePipeIndex + 2);
-            } else {
-              // Fallback: only priority (old format compatibility)
-              priorityValue = afterFirstPipe;
-            }
-          }
-
-          // Display class number
-          const classNumberSpan = doc.createElement("span");
-          classNumberSpan.textContent = `#${classNumber}`;
-          classNumberSpan.style.fontWeight = "500";
-          container.appendChild(classNumberSpan);
 
           // Display priority if available
           if (
-            priorityValue &&
-            SyllabusManager.PRIORITY_LABELS[priorityValue as SyllabusPriority]
+            priority &&
+            SyllabusManager.PRIORITY_LABELS[priority as SyllabusPriority]
           ) {
-            const priorityEnum = priorityValue as SyllabusPriority;
+            const priorityEnum = priority as SyllabusPriority;
             // Create colored dot
             const dot = doc.createElement("span");
             dot.style.width = "8px";
@@ -935,11 +786,8 @@ export class SyllabusManager {
             titleSpan.style.color = "var(--fill-secondary)";
             container.appendChild(titleSpan);
           }
-
-          return container;
         }
 
-        // Fallback
         return container;
       },
     });
@@ -1743,6 +1591,23 @@ export class SyllabusManager {
     const entries = data[collectionIdStr] || [];
     // Ensure all assignments have IDs for React keying
     return this.ensureAssignmentIds(entries);
+  }
+
+  /**
+   * Get the first assignment for an item in a collection (sorted by compareAssignments).
+   * This is used to drive column rendering and sorting consistently.
+   */
+  static getFirstAssignment(
+    item: Zotero.Item,
+    collectionId: number | string,
+  ): ItemSyllabusAssignment | undefined {
+    const assignments = this.getAllClassAssignments(item, collectionId)
+    if (assignments.length === 0) {
+      return undefined;
+    }
+    // Sort and return the first one
+    const sorted = [...assignments].sort(this.compareAssignments);
+    return sorted[0];
   }
 
   /**
