@@ -988,5 +988,6 @@ export function renderSyllabusPage(
     win,
     rootElement,
     <SyllabusPage collectionId={collectionId} />,
+    "syllabus-page"
   );
 }
