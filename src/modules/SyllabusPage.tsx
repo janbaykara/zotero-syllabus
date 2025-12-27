@@ -3,7 +3,7 @@ import { h, Fragment } from "preact";
 import { useState, useEffect, useMemo, useRef } from "preact/hooks";
 import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
-import { generateBibliographicReference } from "../utils/cite";
+import { generateFallbackBibliographicReference, generateBibliographicReference } from "../utils/cite";
 import { getPref } from "../utils/prefs";
 import { SyllabusManager } from "./syllabus";
 import { renderComponent } from "../utils/react";
@@ -373,6 +373,10 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
             </div>
           </div>
         )}
+
+        <Bibliography
+          items={furtherReadingItems}
+        />
       </div>
     </div>
   );
@@ -945,6 +949,33 @@ function ReadStatusIcon({ readStatusName }: { readStatusName: string }) {
       <span className="w-3 h-3 rounded-full inline-block">{readStatus.icon}</span>
       <span>{readStatus.name}</span>
     </span>
+  );
+}
+
+export function Bibliography({ items }: { items: Zotero.Item[] }) {
+  const [bibliographicReference, setBibliographicReference] = useState(
+    generateFallbackBibliographicReference(items),
+  );
+  useEffect(() => {
+    (async () => {
+      const ref = await generateBibliographicReference(items, false);
+      if (ref) {
+        setBibliographicReference(ref);
+      }
+    })();
+  }, [items]);
+
+  return (
+    <div>
+      <header className="syllabus-bibliography">
+        <div className="text-2xl font-semibold mt-12 mb-4">Bibliography</div>
+      </header>
+      <div className="flex flex-col gap-4">
+        {bibliographicReference.split("\n").map(line => (
+          <div key={line}>{line}</div>
+        ))}
+      </div>
+    </div>
   );
 }
 
