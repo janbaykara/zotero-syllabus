@@ -304,7 +304,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-14 my-14">
+      <div className="flex flex-col gap-12 mt-6 mb-12">
         {classGroups.map((group) => (
           <ClassGroupComponent
             key={group.classNumber ?? "null"}
@@ -394,7 +394,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 }
 
 interface ClassGroupComponentProps {
-  classNumber: number;
+  classNumber?: number | null;
   items: Zotero.Item[];
   collectionId: number;
   syllabusMetadata: {
@@ -423,16 +423,16 @@ function ClassGroupComponent({
 }: ClassGroupComponentProps) {
   // Get class title and description from metadata
   const classTitle =
-    classNumber !== null
+    classNumber
       ? syllabusMetadata.classes?.[classNumber]?.title || ""
       : "";
   const classDescription =
-    classNumber !== null
+    classNumber
       ? syllabusMetadata.classes?.[classNumber]?.description || ""
       : "";
 
   const handleDeleteClass = async () => {
-    if (classNumber !== null) {
+    if (classNumber) {
       try {
         await SyllabusManager.deleteClass(collectionId, classNumber, "page");
       } catch (err) {
@@ -443,7 +443,7 @@ function ClassGroupComponent({
 
   return (
     <div className="syllabus-class-group">
-      <>
+      {classNumber && (<>
         <div className="sticky top-18 z-5 bg-background">
           <div className="container-padded rounded-xs py-1">
             <div className="flex gap-2 items-baseline justify-start w-full">
@@ -486,14 +486,14 @@ function ClassGroupComponent({
             />
           </div>
         </div>
-      </>
+      </>)}
       <div className="container-padded mt-2">
         <div
           className={twMerge(
             "mt-4 space-y-4 syllabus-class-items p-2 -m-2 box-border! rounded-lg",
             "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:outline-accent-blue! data-[dropzone-active='true']:text-accent-blue! transition-all duration-200 outline-transparent outline-2! outline-dashed!"
           )}
-          onDrop={(e) => onDrop(e, classNumber)}
+          onDrop={(e) => onDrop(e, classNumber ?? null)}
           onDragOver={onDragOver}
           onDragLeave={onDragLeave}
         >
