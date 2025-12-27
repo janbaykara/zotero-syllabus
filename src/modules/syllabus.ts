@@ -779,11 +779,12 @@ export class SyllabusManager {
             container.appendChild(label);
           }
 
-          // Display class title if available
+          // Display class title at the end if available
           if (classTitle) {
             const titleSpan = doc.createElement("span");
             titleSpan.textContent = classTitle;
             titleSpan.style.color = "var(--fill-secondary)";
+            titleSpan.style.fontSize = "1em";
             container.appendChild(titleSpan);
           }
         }
