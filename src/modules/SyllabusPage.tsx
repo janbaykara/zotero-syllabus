@@ -694,6 +694,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               compactMode={compactMode}
+              onResetSortOrder={() => setItemOrderVersion((v) => v + 1)}
             />
           ))}
         </div>
@@ -808,6 +809,7 @@ interface ClassGroupComponentProps {
   onDragOver: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
   onDragLeave: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
   compactMode?: boolean;
+  onResetSortOrder?: () => void;
 }
 
 function ClassGroupComponent({
@@ -821,6 +823,7 @@ function ClassGroupComponent({
   onDragOver,
   onDragLeave,
   compactMode = false,
+  onResetSortOrder,
 }: ClassGroupComponentProps) {
   // Get class title and description from metadata
   const classTitle = classNumber
@@ -830,12 +833,33 @@ function ClassGroupComponent({
     ? syllabusMetadata.classes?.[classNumber]?.description || ""
     : "";
 
+  // Check if there's a manual order for this class
+  const hasManualOrder =
+    classNumber !== null &&
+    classNumber !== undefined &&
+    SyllabusManager.getClassItemOrder(collectionId, classNumber).length > 0;
+
   const handleDeleteClass = async () => {
     if (classNumber) {
       try {
         await SyllabusManager.deleteClass(collectionId, classNumber, "page");
       } catch (err) {
         ztoolkit.log("Error deleting class:", err);
+      }
+    }
+  };
+
+  const handleResetSortOrder = async () => {
+    if (classNumber !== null && classNumber !== undefined) {
+      try {
+        // Clear manual order by setting it to empty array
+        await SyllabusManager.setClassItemOrder(collectionId, classNumber, []);
+        // Force immediate re-render
+        if (onResetSortOrder) {
+          onResetSortOrder();
+        }
+      } catch (err) {
+        ztoolkit.log("Error resetting sort order:", err);
       }
     }
   };
@@ -880,14 +904,26 @@ function ClassGroupComponent({
                     emptyBehavior="delete"
                   />
                 </div>
-                <button
-                  className="ml-auto! shrink-0 bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-red-500/15 text-secondary hover:text-red-400 inline-flex flex-row items-center justify-center w-8 in-[.print]:hidden"
-                  onClick={handleDeleteClass}
-                  title="Delete class"
-                  aria-label="Delete class"
-                >
-                  <div className="text-2xl text-center">×</div>
-                </button>
+                <div className="ml-auto! shrink-0 inline-flex flex-row items-baseline gap-1 in-[.print]:hidden">
+                  {hasManualOrder && (
+                    <button
+                      className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
+                      onClick={handleResetSortOrder}
+                      title="Reset sort order"
+                      aria-label="Reset sort order"
+                    >
+                      <div className="text-lg text-center">⇅</div>
+                    </button>
+                  )}
+                  <button
+                    className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-red-500/15 text-secondary hover:text-red-400 inline-flex flex-row items-center justify-center w-8 h-8"
+                    onClick={handleDeleteClass}
+                    title="Delete class"
+                    aria-label="Delete class"
+                  >
+                    <div className="text-2xl text-center">×</div>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

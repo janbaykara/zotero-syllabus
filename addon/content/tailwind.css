@@ -203,6 +203,9 @@
   .h-3 {
     height: calc(var(--spacing) * 3);
   }
+  .h-8 {
+    height: calc(var(--spacing) * 8);
+  }
   .h-full {
     height: 100%;
   }
@@ -541,6 +544,13 @@
       }
     }
   }
+  .hover\:bg-quinary {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-quinary);
+      }
+    }
+  }
   .hover\:bg-red-500\/15 {
     &:hover {
       @media (hover: hover) {
@@ -548,6 +558,13 @@
         @supports (color: color-mix(in lab, red, red)) {
           background-color: color-mix(in oklab, var(--color-red-500) 15%, transparent);
         }
+      }
+    }
+  }
+  .hover\:text-primary {
+    &:hover {
+      @media (hover: hover) {
+        color: var(--color-primary);
       }
     }
   }
