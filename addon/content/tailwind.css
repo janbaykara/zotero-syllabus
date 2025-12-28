@@ -156,9 +156,6 @@
   .mb-12 {
     margin-bottom: calc(var(--spacing) * 12);
   }
-  .ml-auto {
-    margin-left: auto;
-  }
   .ml-auto\! {
     margin-left: auto !important;
   }
@@ -218,9 +215,6 @@
   }
   .w-20 {
     width: calc(var(--spacing) * 20);
-  }
-  .w-auto {
-    width: auto;
   }
   .w-full {
     width: 100%;

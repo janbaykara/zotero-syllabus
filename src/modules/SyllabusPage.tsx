@@ -1224,7 +1224,7 @@ function SyllabusItemCard({
       >
         {compactMode ? (
           <>
-            <div className="syllabus-item-title-row flex flex-row gap-2 items-baseline justify-between w-full">
+            <div className="syllabus-item-title-row flex flex-row gap-2 items-baseline justify-between">
               <div className="text-base font-medium grow wrap-break-word">
                 {title}
               </div>
@@ -1232,7 +1232,7 @@ function SyllabusItemCard({
                 <PriorityIcon
                   priority={priority}
                   colors={!isSelected}
-                  className="shrink-0 grow-0 w-20 text-right block"
+                  className="shrink-0 grow-0 text-right block"
                 />
               )}
             </div>
