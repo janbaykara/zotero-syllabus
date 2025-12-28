@@ -513,11 +513,11 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     <div
       ref={syllabusPageRef}
       className={twMerge(
-        "syllabus-page overflow-y-auto overflow-x-hidden h-[calc(100%-70px)] in-[.print]:scheme-light",
+        "syllabus-page overflow-y-auto overflow-x-hidden h-full in-[.print]:scheme-light",
         compactMode && "compact-mode",
       )}
     >
-      <div
+      <div className='pb-12'>
         syllabus-view-title-container
         className="sticky top-0 z-10 bg-background py-1 md:pt-8 in-[.print]:static"
       >
@@ -670,6 +670,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         )}
 
         <Bibliography items={items} compactMode={compactMode} />
+        </div>
       </div>
     </div>
   );
