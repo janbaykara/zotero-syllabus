@@ -725,10 +725,10 @@ export class SyllabusManager {
             const classTitle =
               classNumber !== undefined
                 ? SyllabusManager.getClassTitle(
-                  selectedCollection.id,
-                  classNumber,
-                  true,
-                )
+                    selectedCollection.id,
+                    classNumber,
+                    true,
+                  )
                 : "";
             // Format: "sortKey|classNumber|classTitle" for renderCell
             return `${sortKey}|${classNumber ?? ""}|${classTitle}`;
@@ -787,10 +787,10 @@ export class SyllabusManager {
             const classTitle =
               classNumber !== undefined
                 ? SyllabusManager.getClassTitle(
-                  selectedCollection.id,
-                  classNumber,
-                  false,
-                )
+                    selectedCollection.id,
+                    classNumber,
+                    false,
+                  )
                 : "";
             const priority = firstAssignment.priority || "";
             return `${sortKey}|${priority}|${classNumber ?? ""}|${classTitle}`;
@@ -955,14 +955,14 @@ export class SyllabusManager {
           body,
           selectedCollection
             ? h(ItemPane, {
-              item,
-              collectionId: selectedCollection.id,
-              editable,
-            })
+                item,
+                collectionId: selectedCollection.id,
+                editable,
+              })
             : h("div", {
-              innerText: "Select a collection to view syllabus assignments",
-              className: "text-center text-gray-500 p-4",
-            }),
+                innerText: "Select a collection to view syllabus assignments",
+                className: "text-center text-gray-500 p-4",
+              }),
           "syllabus-item-pane",
         );
       },
@@ -1696,7 +1696,7 @@ export class SyllabusManager {
       // This ensures OPTIONAL ("optional") sorts before unprioritized ("zzzz")
       assignment.priority || "zzzz",
       assignment.classInstruction?.slice(0, 4).replace(/[^a-zA-Z0-9]/g, "_") ||
-      "",
+        "",
       assignment.id || "",
     );
 
@@ -1712,7 +1712,9 @@ export class SyllabusManager {
    * @param classNumber The class number (or null for unassigned)
    * @returns Sorted array of items with assignments
    */
-  static sortClassItems<T extends { item: Zotero.Item; assignment: ItemSyllabusAssignment }>(
+  static sortClassItems<
+    T extends { item: Zotero.Item; assignment: ItemSyllabusAssignment },
+  >(
     items: T[],
     collectionId: number | string,
     classNumber: number | null,
@@ -1724,10 +1726,7 @@ export class SyllabusManager {
       // Apply manual ordering - takes full precedence over priority
       // Manual order now uses assignment IDs to allow independent sorting of multiple assignments
       const assignmentMap = new Map(
-        items.map((entry) => [
-          entry.assignment.id,
-          entry,
-        ]),
+        items.map((entry) => [entry.assignment.id, entry]),
       );
 
       const orderedItems: T[] = [];
@@ -1758,7 +1757,10 @@ export class SyllabusManager {
       // Natural order: by class number, then priority, then title
       return [...items].sort((a, b) => {
         // First compare by assignment (class number, then priority)
-        const assignmentDiff = this.compareAssignments(a.assignment, b.assignment);
+        const assignmentDiff = this.compareAssignments(
+          a.assignment,
+          b.assignment,
+        );
         if (assignmentDiff !== 0) return assignmentDiff;
 
         // Then by title

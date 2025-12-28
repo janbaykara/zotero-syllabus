@@ -306,7 +306,10 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         // If no manual order exists, initialize it with current assignment order from the class
         if (currentOrder.length === 0) {
           // Get all assignments in this class to initialize the order
-          const classAssignments: Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }> = [];
+          const classAssignments: Array<{
+            item: Zotero.Item;
+            assignment: ItemSyllabusAssignment;
+          }> = [];
           for (const item of items) {
             if (!item.isRegularItem()) continue;
             const assignments = SyllabusManager.getAllClassAssignments(
@@ -314,14 +317,20 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
               collectionId,
             );
             for (const assignment of assignments) {
-              if (assignment.classNumber === targetClassNumberValue && assignment.id) {
+              if (
+                assignment.classNumber === targetClassNumberValue &&
+                assignment.id
+              ) {
                 classAssignments.push({ item, assignment });
               }
             }
           }
           // Sort by current display order (priority, then title)
           classAssignments.sort((a, b) => {
-            const diff = SyllabusManager.compareAssignments(a.assignment, b.assignment);
+            const diff = SyllabusManager.compareAssignments(
+              a.assignment,
+              b.assignment,
+            );
             if (diff !== 0) return diff;
             const titleA = a.item.getField("title") || "";
             const titleB = b.item.getField("title") || "";
@@ -378,7 +387,11 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
           targetClassNumberValue,
           newOrder,
         );
-        ztoolkit.log("Updated manual order for class", targetClassNumberValue, newOrder);
+        ztoolkit.log(
+          "Updated manual order for class",
+          targetClassNumberValue,
+          newOrder,
+        );
         // Force immediate re-render by updating state
         setItemOrderVersion((v) => v + 1);
         return; // Early return - no need to update assignment
@@ -462,7 +475,10 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
             collectionId,
             sourceClassNumber,
           );
-          if (sourceOrder.length > 0 && sourceOrder.includes(sourceAssignmentId)) {
+          if (
+            sourceOrder.length > 0 &&
+            sourceOrder.includes(sourceAssignmentId)
+          ) {
             const updatedSourceOrder = sourceOrder.filter(
               (id) => id !== sourceAssignmentId,
             );
@@ -479,7 +495,10 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
               collectionId,
               targetClassNumberValue,
             );
-            if (targetOrder.length > 0 && !targetOrder.includes(sourceAssignmentId)) {
+            if (
+              targetOrder.length > 0 &&
+              !targetOrder.includes(sourceAssignmentId)
+            ) {
               // Add to end of manual order
               const updatedTargetOrder = [...targetOrder, sourceAssignmentId];
               await SyllabusManager.setClassItemOrder(
@@ -533,7 +552,10 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
               collectionId,
               targetClassNumberValue,
             );
-            if (targetOrder.length > 0 && !targetOrder.includes(newAssignment.id)) {
+            if (
+              targetOrder.length > 0 &&
+              !targetOrder.includes(newAssignment.id)
+            ) {
               // Add to end of manual order
               const updatedTargetOrder = [...targetOrder, newAssignment.id];
               await SyllabusManager.setClassItemOrder(
@@ -706,7 +728,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         compactMode && "compact-mode",
       )}
     >
-      <div className='pb-12'>
+      <div className="pb-12">
         <div
           syllabus-view-title-container
           className="sticky top-0 z-10 bg-background py-1 md:pt-8 in-[.print]:static"
@@ -756,7 +778,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         </div>
 
         <div className="container-padded">
-          <div className={twMerge("py-2", compactMode ? "text-base" : "text-lg")}>
+          <div
+            className={twMerge("py-2", compactMode ? "text-base" : "text-lg")}
+          >
             <TextInput
               elementType="textarea"
               initialValue={syllabusMetadata.description || ""}
@@ -861,7 +885,6 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
           )}
 
           <Bibliography items={items} compactMode={compactMode} />
-
         </div>
       </div>
     </div>
@@ -1294,9 +1317,9 @@ function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-        item: Zotero.Item;
-        type: "pdf" | "snapshot" | "epub";
-      }>;
+      item: Zotero.Item;
+      type: "pdf" | "snapshot" | "epub";
+    }>;
   }, [item, slim]);
 
   const metadataParts = [
