@@ -32,6 +32,11 @@ export interface ItemSyllabusAssignment {
   classInstruction?: string;
 }
 
+export interface ItemSyllabusAssignmentWithParentData extends ItemSyllabusAssignment {
+  item: Zotero.Item;
+  collectionId: number;
+}
+
 export interface ItemSyllabusData {
   [collectionId: string]: ItemSyllabusAssignment[];
 }
@@ -627,7 +632,11 @@ export class SyllabusManager {
             selectedCollection.id,
           );
           if (firstAssignment) {
-            return SyllabusManager.getAssignmentSortKey(firstAssignment);
+            return SyllabusManager.getAssignmentSortKey(
+              firstAssignment,
+              item,
+              selectedCollection.id,
+            );
           }
         }
 
@@ -712,17 +721,20 @@ export class SyllabusManager {
           );
           if (firstAssignment) {
             // Use sort key for consistent sorting
-            const sortKey =
-              SyllabusManager.getAssignmentSortKey(firstAssignment);
+            const sortKey = SyllabusManager.getAssignmentSortKey(
+              firstAssignment,
+              item,
+              selectedCollection.id,
+            );
             // Encode class number and title for display
             const classNumber = firstAssignment.classNumber;
             const classTitle =
               classNumber !== undefined
                 ? SyllabusManager.getClassTitle(
-                    selectedCollection.id,
-                    classNumber,
-                    true,
-                  )
+                  selectedCollection.id,
+                  classNumber,
+                  true,
+                )
                 : "";
             // Format: "sortKey|classNumber|classTitle" for renderCell
             return `${sortKey}|${classNumber ?? ""}|${classTitle}`;
@@ -771,17 +783,20 @@ export class SyllabusManager {
           );
           if (firstAssignment) {
             // Use sort key for consistent sorting
-            const sortKey =
-              SyllabusManager.getAssignmentSortKey(firstAssignment);
+            const sortKey = SyllabusManager.getAssignmentSortKey(
+              firstAssignment,
+              item,
+              selectedCollection.id,
+            );
             // Encode data for display: "sortKey|priority|classNumber|classTitle"
             const classNumber = firstAssignment.classNumber;
             const classTitle =
               classNumber !== undefined
                 ? SyllabusManager.getClassTitle(
-                    selectedCollection.id,
-                    classNumber,
-                    false,
-                  )
+                  selectedCollection.id,
+                  classNumber,
+                  false,
+                )
                 : "";
             const priority = firstAssignment.priority || "";
             return `${sortKey}|${priority}|${classNumber ?? ""}|${classTitle}`;
@@ -946,14 +961,14 @@ export class SyllabusManager {
           body,
           selectedCollection
             ? h(ItemPane, {
-                item,
-                collectionId: selectedCollection.id,
-                editable,
-              })
+              item,
+              collectionId: selectedCollection.id,
+              editable,
+            })
             : h("div", {
-                innerText: "Select a collection to view syllabus assignments",
-                className: "text-center text-gray-500 p-4",
-              }),
+              innerText: "Select a collection to view syllabus assignments",
+              className: "text-center text-gray-500 p-4",
+            }),
           "syllabus-item-pane",
         );
       },
@@ -1612,10 +1627,43 @@ export class SyllabusManager {
    * 3. Then everything else (no-class, no-priority)
    *
    * Within each group, sort by class number, then priority, then assignmentID.
+   * If manual order exists for the class, it takes precedence.
+   *
+   * @param assignment The assignment to generate a sort key for
+   * @param item Optional item (needed to check manual order)
+   * @param collectionId Optional collection ID (needed to check manual order)
    */
-  static getAssignmentSortKey(assignment: ItemSyllabusAssignment): string {
+  static getAssignmentSortKey(
+    assignment: ItemSyllabusAssignment,
+    item?: Zotero.Item,
+    collectionId?: number | string,
+  ): string {
     const hasPriority = !!assignment.priority;
     const hasClassNumber = assignment.classNumber !== undefined;
+
+    // Check for manual order if item and collectionId are provided
+    let manualOrderPosition: string | null = null;
+    let hasManualOrder = false;
+    if (
+      item &&
+      collectionId !== undefined &&
+      hasClassNumber &&
+      assignment.classNumber !== undefined
+    ) {
+      const manualOrder = this.getClassItemOrder(
+        collectionId,
+        assignment.classNumber,
+      );
+      if (manualOrder.length > 0) {
+        hasManualOrder = true;
+        const position = manualOrder.indexOf(String(item.id));
+        if (position !== -1) {
+          // Use position in manual order (padded to ensure proper sorting)
+          // Lower numbers come first, so we pad with zeros
+          manualOrderPosition = String(position).padStart(6, "0");
+        }
+      }
+    }
 
     // Determine group: 1=no-class+priority, 2=class, 3=no-class+no-priority
     let group: string;
@@ -1627,18 +1675,98 @@ export class SyllabusManager {
       group = "CCCC"; // Group 3: No-class, unprioritized
     }
 
-    return [
-      group,
+    // Build sort key parts
+    const sortKeyParts = [group];
+
+    // Class number comes first (after group)
+    sortKeyParts.push(
       hasClassNumber ? String(assignment.classNumber).padStart(4, "0") : "9999",
+    );
+
+    // Only include manual order position if manual order exists for this class
+    // Items in manual order get their position, items not in manual order get "999999" to sort after
+    // This comes after class number so items in the same class sort by manual order
+    if (hasManualOrder) {
+      sortKeyParts.push(
+        manualOrderPosition !== null ? manualOrderPosition : "999999",
+      );
+    }
+
+    // Then priority order, etc.
+    sortKeyParts.push(
       String(SyllabusManager.getPriorityOrder(assignment.priority)).padStart(
         4,
         "0",
       ),
-      assignment.priority || "",
+      // For priority value: use the priority string, or "zzzz" for unprioritized
+      // This ensures OPTIONAL ("optional") sorts before unprioritized ("zzzz")
+      assignment.priority || "zzzz",
       assignment.classInstruction?.slice(0, 4).replace(/[^a-zA-Z0-9]/g, "_") ||
-        "",
+      "",
       assignment.id || "",
-    ].join("___");
+    );
+
+    return sortKeyParts.join("___");
+  }
+
+  /**
+   * Sort items within a class, respecting manual order if it exists.
+   * Manual order takes full precedence over priority-based sorting.
+   *
+   * @param items Array of items with their assignments for a specific class
+   * @param collectionId The collection ID
+   * @param classNumber The class number (or null for unassigned)
+   * @returns Sorted array of items with assignments
+   */
+  static sortClassItems<T extends { item: Zotero.Item; assignment: ItemSyllabusAssignment }>(
+    items: T[],
+    collectionId: number | string,
+    classNumber: number | null,
+  ): T[] {
+    // Get manual ordering from preferences
+    const manualOrder = this.getClassItemOrder(collectionId, classNumber);
+
+    if (manualOrder.length > 0) {
+      // Apply manual ordering - takes full precedence over priority
+      const itemMap = new Map(
+        items.map((entry) => [String(entry.item.id), entry]),
+      );
+      const orderedItems: T[] = [];
+      const unorderedItems: T[] = [];
+
+      // Add items in manual order
+      for (const itemId of manualOrder) {
+        const entry = itemMap.get(itemId);
+        if (entry) {
+          orderedItems.push(entry);
+          itemMap.delete(itemId);
+        }
+      }
+
+      // Add remaining items that weren't in manual order
+      itemMap.forEach((entry) => unorderedItems.push(entry));
+
+      // Sort unordered items by title only (manual order takes precedence, so no priority sorting)
+      unorderedItems.sort((a, b) => {
+        const titleA = a.item.getField("title") || "";
+        const titleB = b.item.getField("title") || "";
+        return titleA.localeCompare(titleB);
+      });
+
+      return [...orderedItems, ...unorderedItems];
+    } else {
+      // Natural order: by class number, then priority, then title
+      return [...items].sort((a, b) => {
+        // First compare by assignment (class number, then priority)
+        const assignmentDiff = this.compareAssignments(a.assignment, b.assignment);
+        if (assignmentDiff !== 0) return assignmentDiff;
+
+        // Then by title
+        const titleA = a.item.getField("title") || "";
+        const titleB = b.item.getField("title") || "";
+        return titleA.localeCompare(titleB);
+      });
+    }
   }
 
   /**

@@ -45,6 +45,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   // Track drag state for showing "Add to Class X" dropzone
   const [isDragging, setIsDragging] = useState(false);
 
+  // Track item order changes to trigger re-computation
+  const [itemOrderVersion, setItemOrderVersion] = useState(0);
+
   // Compact mode state
   const [compactMode, setCompactModeState] = useState(
     getPref("compactMode") || false,
@@ -90,8 +93,34 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     };
   }, []);
 
+  // Listen to preference changes for item order
+  useEffect(() => {
+    const prefKey = SyllabusManager.getPreferenceKey(
+      SyllabusManager.settingsKeys.COLLECTION_ITEM_ORDER,
+    );
+    const observer = {
+      notify(
+        event: string,
+        type: string,
+        ids: (number | string)[],
+        extraData: any,
+      ) {
+        // Listen to setting events for item order preference
+        if (type === "setting" && extraData?.pref === prefKey) {
+          setItemOrderVersion((v) => v + 1);
+        }
+      },
+    };
+
+    const notifierId = Zotero.Notifier.registerObserver(observer, ["setting"]);
+
+    return () => {
+      Zotero.Notifier.unregisterObserver(notifierId);
+    };
+  }, []);
+
   // Compute class groups and further reading items from synced items
-  // Re-compute when items change
+  // Re-compute when items change or item order changes
   const { classGroups, furtherReadingItems } = useMemo(() => {
     const furtherReading: Zotero.Item[] = [];
     // Track items with their specific assignments to support multiple assignments per class
@@ -185,74 +214,14 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
     // Sort items within each class by manual order or natural order
     for (const classNumber of sortedFinalClassNumbers) {
-      let classItemAssignments = itemsByClass.get(classNumber) || [];
-
-      // Get manual ordering from preferences
-      const manualOrder = SyllabusManager.getClassItemOrder(
+      const classItemAssignments = itemsByClass.get(classNumber) || [];
+      // Use the core sorting function which respects manual order
+      const sortedItems = SyllabusManager.sortClassItems(
+        classItemAssignments,
         collectionId,
         classNumber,
       );
-
-      if (manualOrder.length > 0) {
-        // Apply manual ordering
-        const itemMap = new Map(
-          classItemAssignments.map((entry) => [String(entry.item.id), entry]),
-        );
-        const orderedItems: Array<{
-          item: Zotero.Item;
-          assignment: ItemSyllabusAssignment;
-        }> = [];
-        const unorderedItems: Array<{
-          item: Zotero.Item;
-          assignment: ItemSyllabusAssignment;
-        }> = [];
-
-        // Add items in manual order
-        for (const itemId of manualOrder) {
-          const entry = itemMap.get(itemId);
-          if (entry) {
-            orderedItems.push(entry);
-            itemMap.delete(itemId);
-          }
-        }
-
-        // Add remaining items that weren't in manual order
-        itemMap.forEach((entry) => unorderedItems.push(entry));
-
-        // Sort unordered items by natural order (class number, then priority, then title)
-        unorderedItems.sort((a, b) => {
-          // First compare by assignment (class number, then priority)
-          const assignmentDiff = SyllabusManager.compareAssignments(
-            a.assignment,
-            b.assignment,
-          );
-          if (assignmentDiff !== 0) return assignmentDiff;
-
-          // Then by title
-          const titleA = a.item.getField("title") || "";
-          const titleB = b.item.getField("title") || "";
-          return titleA.localeCompare(titleB);
-        });
-
-        classItemAssignments = [...orderedItems, ...unorderedItems];
-      } else {
-        // Natural order: by class number, then priority, then title
-        classItemAssignments.sort((a, b) => {
-          // First compare by assignment (class number, then priority)
-          const assignmentDiff = SyllabusManager.compareAssignments(
-            a.assignment,
-            b.assignment,
-          );
-          if (assignmentDiff !== 0) return assignmentDiff;
-
-          // Then by title
-          const titleA = a.item.getField("title") || "";
-          const titleB = b.item.getField("title") || "";
-          return titleA.localeCompare(titleB);
-        });
-      }
-
-      itemsByClass.set(classNumber, classItemAssignments);
+      itemsByClass.set(classNumber, sortedItems);
     }
 
     // Sort further reading by title
@@ -269,11 +238,13 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       })),
       furtherReadingItems: furtherReading,
     };
-  }, [items, collectionId, syllabusMetadata]);
+  }, [items, collectionId, syllabusMetadata, itemOrderVersion]);
 
   const handleDrop = async (
     e: JSX.TargetedDragEvent<HTMLElement>,
     targetClassNumber: number | null,
+    targetItemId?: number,
+    insertBefore?: boolean,
   ) => {
     e.preventDefault();
     e.stopPropagation();
@@ -309,6 +280,77 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         "application/x-syllabus-assignment-id",
       );
 
+      // Get source class number for reordering
+      const sourceClassNumberStr = e.dataTransfer.getData(
+        "application/x-syllabus-source-class",
+      );
+      const sourceClassNumber =
+        sourceClassNumberStr !== ""
+          ? parseInt(sourceClassNumberStr, 10)
+          : undefined;
+
+      // Check if this is a reorder within the same class
+      if (
+        sourceClassNumber !== undefined &&
+        targetClassNumberValue !== undefined &&
+        sourceClassNumber === targetClassNumberValue &&
+        targetItemId !== undefined
+      ) {
+        // Reordering within the same class - update manual order
+        let currentOrder = SyllabusManager.getClassItemOrder(
+          collectionId,
+          targetClassNumberValue,
+        );
+
+        // If no manual order exists, initialize it with current item order from the class
+        if (currentOrder.length === 0) {
+          // Get all items in this class to initialize the order
+          const classItems = items.filter((item) => {
+            if (!item.isRegularItem()) return false;
+            const assignments = SyllabusManager.getAllClassAssignments(
+              item,
+              collectionId,
+            );
+            return assignments.some(
+              (a) => a.classNumber === targetClassNumberValue,
+            );
+          });
+          // Initialize order with current item IDs (sorted by current display order)
+          currentOrder = classItems.map((item) => String(item.id));
+        }
+
+        // Remove dragged item from current order
+        const newOrder = currentOrder.filter((id) => id !== String(itemId));
+
+        // Find target position
+        const targetIndex = newOrder.findIndex(
+          (id) => id === String(targetItemId),
+        );
+
+        if (targetIndex !== -1) {
+          // Insert at target position
+          if (insertBefore) {
+            newOrder.splice(targetIndex, 0, String(itemId));
+          } else {
+            newOrder.splice(targetIndex + 1, 0, String(itemId));
+          }
+        } else {
+          // Target not found, append to end
+          newOrder.push(String(itemId));
+        }
+
+        // Update manual order
+        await SyllabusManager.setClassItemOrder(
+          collectionId,
+          targetClassNumberValue,
+          newOrder,
+        );
+        ztoolkit.log("Updated manual order for class", targetClassNumberValue, newOrder);
+        // Force immediate re-render by updating state
+        setItemOrderVersion((v) => v + 1);
+        return; // Early return - no need to update assignment
+      }
+
       // Get all existing assignments
       const assignments = SyllabusManager.getAllClassAssignments(
         draggedItem,
@@ -325,6 +367,58 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
             targetClassNumberValue,
             "page",
           );
+        }
+
+        // If moving to a different class, update manual order for target class
+        if (
+          sourceClassNumber !== undefined &&
+          sourceClassNumber !== targetClassNumberValue
+        ) {
+          // Remove from source class order
+          const sourceOrder = SyllabusManager.getClassItemOrder(
+            collectionId,
+            sourceClassNumber,
+          );
+          const updatedSourceOrder = sourceOrder.filter(
+            (id) => id !== String(itemId),
+          );
+          await SyllabusManager.setClassItemOrder(
+            collectionId,
+            sourceClassNumber,
+            updatedSourceOrder,
+          );
+
+          // Add to target class order at the end
+          const targetOrder = SyllabusManager.getClassItemOrder(
+            collectionId,
+            targetClassNumberValue,
+          );
+          if (!targetOrder.includes(String(itemId))) {
+            const updatedTargetOrder = [...targetOrder, String(itemId)];
+            await SyllabusManager.setClassItemOrder(
+              collectionId,
+              targetClassNumberValue,
+              updatedTargetOrder,
+            );
+          }
+          // Force immediate re-render
+          setItemOrderVersion((v) => v + 1);
+        } else if (sourceClassNumber === undefined) {
+          // New item to class - add to end of manual order if it exists
+          const targetOrder = SyllabusManager.getClassItemOrder(
+            collectionId,
+            targetClassNumberValue,
+          );
+          if (targetOrder.length > 0 && !targetOrder.includes(String(itemId))) {
+            const updatedTargetOrder = [...targetOrder, String(itemId)];
+            await SyllabusManager.setClassItemOrder(
+              collectionId,
+              targetClassNumberValue,
+              updatedTargetOrder,
+            );
+            // Force immediate re-render
+            setItemOrderVersion((v) => v + 1);
+          }
         }
       }
 
@@ -708,6 +802,8 @@ interface ClassGroupComponentProps {
   onDrop: (
     e: JSX.TargetedDragEvent<HTMLElement>,
     classNumber: number | null,
+    targetItemId?: number,
+    insertBefore?: boolean,
   ) => Promise<void>;
   onDragOver: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
   onDragLeave: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
@@ -863,6 +959,10 @@ function ClassGroupComponent({
                     priority === SyllabusManager.priorityKeys.OPTIONAL
                   }
                   compactMode={compactMode}
+                  onDrop={(e, insertBefore) =>
+                    onDrop(e, classNumber ?? null, item.id, insertBefore)
+                  }
+                  onDragOver={onDragOver}
                 />
               );
             })
@@ -984,6 +1084,11 @@ interface SyllabusItemCardProps {
   assignment?: ItemSyllabusAssignment; // Specific assignment for this rendering (to differentiate multiple assignments)
   slim?: boolean;
   compactMode?: boolean;
+  onDrop?: (
+    e: JSX.TargetedDragEvent<HTMLElement>,
+    insertBefore: boolean,
+  ) => void;
+  onDragOver?: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
 }
 
 function SyllabusItemCard({
@@ -993,6 +1098,8 @@ function SyllabusItemCard({
   assignment,
   slim = false,
   compactMode = false,
+  onDrop,
+  onDragOver,
 }: SyllabusItemCardProps) {
   // Get the currently selected item ID
   const selectedItemId = useZoteroSelectedItemId();
@@ -1056,9 +1163,9 @@ function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-      item: Zotero.Item;
-      type: "pdf" | "snapshot" | "epub";
-    }>;
+        item: Zotero.Item;
+        type: "pdf" | "snapshot" | "epub";
+      }>;
   }, [item, slim]);
 
   const metadataParts = [
@@ -1079,6 +1186,13 @@ function SyllabusItemCard({
         e.dataTransfer.setData(
           "application/x-syllabus-assignment-id",
           assignment.id,
+        );
+      }
+      // Store source class number for reordering within same class
+      if (classNumber !== null && classNumber !== undefined) {
+        e.dataTransfer.setData(
+          "application/x-syllabus-source-class",
+          String(classNumber),
         );
       }
     }
@@ -1170,6 +1284,32 @@ function SyllabusItemCard({
     borderColor: priorityColor + "30",
   };
 
+  const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = "move";
+    }
+    if (onDragOver) {
+      onDragOver(e);
+    }
+  };
+
+  const handleItemDrop = (e: JSX.TargetedDragEvent<HTMLElement>) => {
+    e.preventDefault();
+    if (!onDrop) return;
+
+    // Determine if drop should insert before or after based on mouse position
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY;
+    const midpoint = rect.top + rect.height / 2;
+    const insertBefore = y < midpoint;
+
+    // Stop propagation to prevent class container from also handling the drop
+    e.stopPropagation();
+    onDrop(e, insertBefore);
+  };
+
   return (
     <div
       style={colors}
@@ -1192,6 +1332,8 @@ function SyllabusItemCard({
       onDblClick={(e) => onDoubleClick(item, e)}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onDragOver={handleItemDragOver}
+      onDrop={handleItemDrop}
     >
       <div
         className={twMerge(
