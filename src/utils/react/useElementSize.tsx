@@ -1,4 +1,9 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from 'preact/hooks';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useState,
+} from "preact/hooks";
 
 export interface Size {
   width: number;
@@ -29,7 +34,8 @@ function useElementSize<T extends HTMLElement = HTMLDivElement>(): [
     }
   }, [ref]);
 
-  const useEnviromentEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+  const useEnviromentEffect =
+    typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
   useEnviromentEffect(() => {
     if (!ref) return;

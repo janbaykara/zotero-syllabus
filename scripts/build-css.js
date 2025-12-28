@@ -13,14 +13,17 @@ const outputFile = join(rootDir, "addon/content/tailwind.css");
 const hashFile = join(rootDir, "addon/content/tailwind-hash.json");
 
 try {
-  execSync(
-    `npx @tailwindcss/cli -i ${inputFile} -o ${outputFile}`,
-    { stdio: "inherit", cwd: rootDir }
-  );
+  execSync(`npx @tailwindcss/cli -i ${inputFile} -o ${outputFile}`, {
+    stdio: "inherit",
+    cwd: rootDir,
+  });
 
   // Compute hash of the generated CSS file
   const cssContent = readFileSync(outputFile, "utf8");
-  const hash = createHash("sha256").update(cssContent).digest("hex").substring(0, 8);
+  const hash = createHash("sha256")
+    .update(cssContent)
+    .digest("hex")
+    .substring(0, 8);
 
   // Write hash to JSON file
   writeFileSync(hashFile, JSON.stringify({ hash, version: hash }), "utf8");
@@ -31,4 +34,3 @@ try {
   console.error("Error building CSS:", err);
   process.exit(1);
 }
-

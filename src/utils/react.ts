@@ -27,7 +27,9 @@ export function renderComponent(
 
   // Generate a unique ID for this root if not provided
   // Use a combination of element properties to create a stable ID
-  const id = rootId || `preact-root-${rootElement.id || rootElement.className || Math.random().toString(36).substring(7)}`;
+  const id =
+    rootId ||
+    `preact-root-${rootElement.id || rootElement.className || Math.random().toString(36).substring(7)}`;
 
   // Unmount existing content for this specific root if present
   const existingUnmount = unmountMap.get(id);

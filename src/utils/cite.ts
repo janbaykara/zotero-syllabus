@@ -6,7 +6,7 @@
  */
 export async function generateBibliographicReference(
   item: Zotero.Item | Zotero.Item[],
-  fallback = true
+  fallback = true,
 ): Promise<string | null> {
   const itemArray = Array.isArray(item) ? item : [item];
   try {
@@ -27,11 +27,18 @@ export async function generateBibliographicReference(
   return fallback ? generateFallbackBibliographicReference(item) : null;
 }
 
-export function generateFallbackBibliographicReference(item: Zotero.Item | Zotero.Item[]): string {
+export function generateFallbackBibliographicReference(
+  item: Zotero.Item | Zotero.Item[],
+): string {
   const itemArray = Array.isArray(item) ? item : [item];
-  return itemArray.sort(
-    (a, b) => a.getCreators()?.[0]?.lastName.localeCompare(b.getCreators()?.[0]?.lastName || ""),
-  ).map(buildFallbackBibliographicReference).join("\n\n");
+  return itemArray
+    .sort((a, b) =>
+      a
+        .getCreators()?.[0]
+        ?.lastName.localeCompare(b.getCreators()?.[0]?.lastName || ""),
+    )
+    .map(buildFallbackBibliographicReference)
+    .join("\n\n");
 }
 
 export function buildFallbackBibliographicReference(item: Zotero.Item): string {

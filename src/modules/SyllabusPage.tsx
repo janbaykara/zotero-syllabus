@@ -3,7 +3,10 @@ import { h, Fragment } from "preact";
 import { useState, useEffect, useMemo, useRef } from "preact/hooks";
 import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
-import { generateFallbackBibliographicReference, generateBibliographicReference } from "../utils/cite";
+import {
+  generateFallbackBibliographicReference,
+  generateBibliographicReference,
+} from "../utils/cite";
 import { getPref, setPref } from "../utils/prefs";
 import { getCSSUrl } from "../utils/css";
 import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
@@ -18,7 +21,7 @@ import {
 } from "../zotero-reading-list/compat";
 import { useDebouncedEffect } from "../utils/react/useDebouncedEffect";
 import { useElementSize } from "../utils/react/useElementSize";
-import slugify from 'slugify'
+import slugify from "slugify";
 
 // Define priority type for use in this file
 // These values match SyllabusPriority enum in syllabus.ts
@@ -43,7 +46,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   const [isDragging, setIsDragging] = useState(false);
 
   // Compact mode state
-  const [compactMode, setCompactModeState] = useState(getPref("compactMode") || false);
+  const [compactMode, setCompactModeState] = useState(
+    getPref("compactMode") || false,
+  );
 
   // Ref for the syllabus page container to access DOM for printing
   const syllabusPageRef = useRef<HTMLDivElement>(null);
@@ -90,7 +95,10 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   const { classGroups, furtherReadingItems } = useMemo(() => {
     const furtherReading: Zotero.Item[] = [];
     // Track items with their specific assignments to support multiple assignments per class
-    const itemsByClass: Map<number | null, Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }>> = new Map();
+    const itemsByClass: Map<
+      number | null,
+      Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }>
+    > = new Map();
 
     for (const item of items) {
       if (!item.isRegularItem()) continue;
@@ -106,9 +114,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         assignments.length === 0 ||
         assignments.every(
           (a) =>
-            !a.priority &&
-            !a.classInstruction &&
-            a.classNumber === undefined,
+            !a.priority && !a.classInstruction && a.classNumber === undefined,
         )
       ) {
         furtherReading.push(item);
@@ -136,7 +142,10 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     }
 
     // Get min/max class range from items and metadata
-    const range = SyllabusManager.getClassNumberRange(collectionId, syllabusMetadata);
+    const range = SyllabusManager.getClassNumberRange(
+      collectionId,
+      syllabusMetadata,
+    );
 
     ztoolkit.log("Range:", range, syllabusMetadata);
 
@@ -186,9 +195,17 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
       if (manualOrder.length > 0) {
         // Apply manual ordering
-        const itemMap = new Map(classItemAssignments.map((entry) => [String(entry.item.id), entry]));
-        const orderedItems: Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }> = [];
-        const unorderedItems: Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }> = [];
+        const itemMap = new Map(
+          classItemAssignments.map((entry) => [String(entry.item.id), entry]),
+        );
+        const orderedItems: Array<{
+          item: Zotero.Item;
+          assignment: ItemSyllabusAssignment;
+        }> = [];
+        const unorderedItems: Array<{
+          item: Zotero.Item;
+          assignment: ItemSyllabusAssignment;
+        }> = [];
 
         // Add items in manual order
         for (const itemId of manualOrder) {
@@ -205,7 +222,10 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         // Sort unordered items by natural order (class number, then priority, then title)
         unorderedItems.sort((a, b) => {
           // First compare by assignment (class number, then priority)
-          const assignmentDiff = SyllabusManager.compareAssignments(a.assignment, b.assignment);
+          const assignmentDiff = SyllabusManager.compareAssignments(
+            a.assignment,
+            b.assignment,
+          );
           if (assignmentDiff !== 0) return assignmentDiff;
 
           // Then by title
@@ -219,7 +239,10 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         // Natural order: by class number, then priority, then title
         classItemAssignments.sort((a, b) => {
           // First compare by assignment (class number, then priority)
-          const assignmentDiff = SyllabusManager.compareAssignments(a.assignment, b.assignment);
+          const assignmentDiff = SyllabusManager.compareAssignments(
+            a.assignment,
+            b.assignment,
+          );
           if (assignmentDiff !== 0) return assignmentDiff;
 
           // Then by title
@@ -257,7 +280,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
     // Remove the dropzone active class after drop
     // e.currentTarget.classList.remove("syllabus-dropzone-active");
-    const allDropzones = Array.from(document.querySelectorAll<HTMLElement>("[data-dropzone-active='true']")) as HTMLElement[];
+    const allDropzones = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-dropzone-active='true']"),
+    ) as HTMLElement[];
     for (const dropzone of allDropzones) {
       if (dropzone?.dataset?.dropzoneActive) {
         dropzone.dataset.dropzoneActive = "false";
@@ -280,7 +305,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         targetClassNumber === null ? undefined : targetClassNumber;
 
       // Get source assignment ID from drag data (if dragging from a class)
-      const sourceAssignmentId = e.dataTransfer.getData("application/x-syllabus-assignment-id");
+      const sourceAssignmentId = e.dataTransfer.getData(
+        "application/x-syllabus-assignment-id",
+      );
 
       // Get all existing assignments
       const assignments = SyllabusManager.getAllClassAssignments(
@@ -335,7 +362,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
           ztoolkit.log("Assignment created successfully");
         } else {
           // Dropping to "further reading" with no assignment - nothing to do
-          ztoolkit.log("Dropping unassigned item to further reading - no action needed");
+          ztoolkit.log(
+            "Dropping unassigned item to further reading - no action needed",
+          );
         }
       }
 
@@ -376,11 +405,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     );
 
     const nextClassNumber =
-      range.max !== null
-        ? range.max + 1
-        : range.min !== null
-          ? range.min
-          : 1;
+      range.max !== null ? range.max + 1 : range.min !== null ? range.min : 1;
 
     return nextClassNumber;
   }, [collectionId, syllabusMetadata]);
@@ -466,7 +491,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       // Create a temporary file and open it
       const tempDir = Zotero.getTempDirectory();
       const tempFile = tempDir.clone();
-      tempFile.append(`printable-syllabus--${slugify(title) || "syllabus"}.html`);
+      tempFile.append(
+        `printable-syllabus--${slugify(title) || "syllabus"}.html`,
+      );
       // NORMAL_FILE_TYPE = 0
       tempFile.createUnique(0, 0o666);
 
@@ -483,8 +510,17 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   };
 
   return (
-    <div ref={syllabusPageRef} className={twMerge("syllabus-page overflow-y-auto overflow-x-hidden h-[calc(100%-70px)] in-[.print]:scheme-light", compactMode && "compact-mode")}>
-      <div syllabus-view-title-container className="sticky top-0 z-10 bg-background py-1 md:pt-8 in-[.print]:static">
+    <div
+      ref={syllabusPageRef}
+      className={twMerge(
+        "syllabus-page overflow-y-auto overflow-x-hidden h-[calc(100%-70px)] in-[.print]:scheme-light",
+        compactMode && "compact-mode",
+      )}
+    >
+      <div
+        syllabus-view-title-container
+        className="sticky top-0 z-10 bg-background py-1 md:pt-8 in-[.print]:static"
+      >
         <div className="container-padded bg-background">
           <div className="flex flex-row items-center gap-4 justify-between">
             <div className="flex-1 text-3xl font-semibold grow shrink-0">
@@ -494,15 +530,21 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                 onSave={setTitle}
                 emptyBehavior="reset"
                 placeholder="Add a title..."
-                className='w-full px-0! mx-0!'
+                className="w-full px-0! mx-0!"
               />
             </div>
             <div className="inline-flex items-center gap-2 shrink grow-0">
               <button
                 onClick={toggleCompactMode}
-                className={twMerge("grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden")}
-                title={compactMode ? "Disable compact mode" : "Enable compact mode"}
-                aria-label={compactMode ? "Disable compact mode" : "Enable compact mode"}
+                className={twMerge(
+                  "grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden",
+                )}
+                title={
+                  compactMode ? "Disable compact mode" : "Enable compact mode"
+                }
+                aria-label={
+                  compactMode ? "Disable compact mode" : "Enable compact mode"
+                }
               >
                 <span aria-hidden="true">📐</span>
                 <span className={compactMode ? "font-semibold" : ""}>
@@ -538,7 +580,12 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         </div>
       </div>
 
-      <div className={twMerge("flex flex-col mb-12", compactMode ? "gap-8 mt-4" : "gap-12 mt-6")}>
+      <div
+        className={twMerge(
+          "flex flex-col mb-12",
+          compactMode ? "gap-8 mt-4" : "gap-12 mt-6",
+        )}
+      >
         {classGroups.map((group) => (
           <ClassGroupComponent
             key={group.classNumber ?? "null"}
@@ -553,12 +600,11 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
             onDragLeave={handleDragLeave}
             compactMode={compactMode}
           />
-        ),
-        )}
+        ))}
       </div>
 
       <div className="container-padded">
-        {isDragging && !compactMode &&
+        {isDragging && !compactMode && (
           <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
             <div className="syllabus-class-header-container">
               <div className="syllabus-class-header">
@@ -576,7 +622,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
               </div>
             </div>
           </div>
-        }
+        )}
 
         <div className="syllabus-create-class-control in-[.print]:hidden">
           <button
@@ -590,8 +636,19 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
         {furtherReadingItems.length > 0 && (
           <div className="syllabus-class-group in-[.print]:scheme-light">
-            <div className={twMerge("font-semibold", compactMode ? "text-xl mt-8 mb-2" : "text-2xl mt-12 mb-4")}>Further reading</div>
-            {!compactMode && <p className="text-secondary text-lg">Items in this section have not been assigned to any class.</p>}
+            <div
+              className={twMerge(
+                "font-semibold",
+                compactMode ? "text-xl mt-8 mb-2" : "text-2xl mt-12 mb-4",
+              )}
+            >
+              Further reading
+            </div>
+            {!compactMode && (
+              <p className="text-secondary text-lg">
+                Items in this section have not been assigned to any class.
+              </p>
+            )}
             <div
               className={compactMode ? "space-y-2" : "space-y-4"}
               onDrop={(e) => handleDrop(e, null)}
@@ -612,10 +669,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
           </div>
         )}
 
-        <Bibliography
-          items={items}
-          compactMode={compactMode}
-        />
+        <Bibliography items={items} compactMode={compactMode} />
       </div>
     </div>
   );
@@ -638,7 +692,10 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
 interface ClassGroupComponentProps {
   classNumber?: number | null;
-  itemAssignments: Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }>;
+  itemAssignments: Array<{
+    item: Zotero.Item;
+    assignment: ItemSyllabusAssignment;
+  }>;
   collectionId: number;
   syllabusMetadata: {
     classes?: { [key: string]: { title?: string; description?: string } };
@@ -667,14 +724,12 @@ function ClassGroupComponent({
   compactMode = false,
 }: ClassGroupComponentProps) {
   // Get class title and description from metadata
-  const classTitle =
-    classNumber
-      ? syllabusMetadata.classes?.[classNumber]?.title || ""
-      : "";
-  const classDescription =
-    classNumber
-      ? syllabusMetadata.classes?.[classNumber]?.description || ""
-      : "";
+  const classTitle = classNumber
+    ? syllabusMetadata.classes?.[classNumber]?.title || ""
+    : "";
+  const classDescription = classNumber
+    ? syllabusMetadata.classes?.[classNumber]?.description || ""
+    : "";
 
   const handleDeleteClass = async () => {
     if (classNumber) {
@@ -688,70 +743,102 @@ function ClassGroupComponent({
 
   return (
     <div className="syllabus-class-group in-[.print]:scheme-light">
-      {classNumber && (<>
-        <div className={twMerge("sticky z-5 bg-background in-[.print]:static", compactMode ? "top-10 py-0" : "top-18 py-1")}>
-          <div className={twMerge("container-padded rounded-xs", compactMode ? "py-0.5" : "py-1")}>
-            <div className="flex gap-2 items-baseline justify-start w-full">
-              <div className={twMerge("syllabus-class-header shrink-0 uppercase text-secondary font-semibold", compactMode ? "text-sm" : "text-lg")}>
-                Class {classNumber}
-              </div>
-              <div className={twMerge("w-full font-semibold", compactMode ? "text-xl" : "text-2xl")}>
-                <TextInput
-                  elementType="input"
-                  initialValue={classTitle}
-                  onSave={(title) => onClassTitleSave(classNumber, title)}
-                  className="w-full text-primary"
-                  placeholder="Add a title..."
-                  emptyBehavior="delete"
-                />
-              </div>
-              <button
-                className="ml-auto! shrink-0 bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-red-500/15 text-secondary hover:text-red-400 inline-flex flex-row items-center justify-center w-8 in-[.print]:hidden"
-                onClick={handleDeleteClass}
-                title="Delete class"
-                aria-label="Delete class"
-              >
-                <div className='text-2xl text-center'>
-                  ×
+      {classNumber && (
+        <>
+          <div
+            className={twMerge(
+              "sticky z-5 bg-background in-[.print]:static",
+              compactMode ? "top-10 py-0" : "top-18 py-1",
+            )}
+          >
+            <div
+              className={twMerge(
+                "container-padded rounded-xs",
+                compactMode ? "py-0.5" : "py-1",
+              )}
+            >
+              <div className="flex gap-2 items-baseline justify-start w-full">
+                <div
+                  className={twMerge(
+                    "syllabus-class-header shrink-0 uppercase text-secondary font-semibold",
+                    compactMode ? "text-sm" : "text-lg",
+                  )}
+                >
+                  Class {classNumber}
                 </div>
-              </button>
+                <div
+                  className={twMerge(
+                    "w-full font-semibold",
+                    compactMode ? "text-xl" : "text-2xl",
+                  )}
+                >
+                  <TextInput
+                    elementType="input"
+                    initialValue={classTitle}
+                    onSave={(title) => onClassTitleSave(classNumber, title)}
+                    className="w-full text-primary"
+                    placeholder="Add a title..."
+                    emptyBehavior="delete"
+                  />
+                </div>
+                <button
+                  className="ml-auto! shrink-0 bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-red-500/15 text-secondary hover:text-red-400 inline-flex flex-row items-center justify-center w-8 in-[.print]:hidden"
+                  onClick={handleDeleteClass}
+                  title="Delete class"
+                  aria-label="Delete class"
+                >
+                  <div className="text-2xl text-center">×</div>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="container-padded">
-          <div className={twMerge(compactMode ? "text-base" : "text-lg pt-2")}>
-            <TextInput
-              elementType="textarea"
-              initialValue={classDescription}
-              onSave={(desc) => onClassDescriptionSave(classNumber, desc)}
-              className="w-full px-0! mx-0! text-primary"
-              placeholder="Add a description..."
-              emptyBehavior="delete"
-              fieldSizing="content"
-            />
+          <div className="container-padded">
+            <div
+              className={twMerge(compactMode ? "text-base" : "text-lg pt-2")}
+            >
+              <TextInput
+                elementType="textarea"
+                initialValue={classDescription}
+                onSave={(desc) => onClassDescriptionSave(classNumber, desc)}
+                className="w-full px-0! mx-0! text-primary"
+                placeholder="Add a description..."
+                emptyBehavior="delete"
+                fieldSizing="content"
+              />
+            </div>
           </div>
-        </div>
-      </>)}
-      <div className={twMerge("container-padded", compactMode ? "mt-0" : "mt-2")}>
+        </>
+      )}
+      <div
+        className={twMerge("container-padded", compactMode ? "mt-0" : "mt-2")}
+      >
         <div
           className={twMerge(
             "syllabus-class-items box-border! rounded-lg",
             compactMode ? "mt-1 space-y-2 p-1 -m-1" : "mt-4 space-y-4 p-2 -m-2",
-            "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:outline-accent-blue! data-[dropzone-active='true']:text-accent-blue! transition-all duration-200 outline-transparent outline-2! outline-dashed!"
+            "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:outline-accent-blue! data-[dropzone-active='true']:text-accent-blue! transition-all duration-200 outline-transparent outline-2! outline-dashed!",
           )}
           onDrop={(e) => onDrop(e, classNumber ?? null)}
           onDragOver={onDragOver}
           onDragLeave={onDragLeave}
         >
           {itemAssignments.length === 0 && classNumber !== null ? (
-            <div className={twMerge("text-center bg-quinary/50 rounded-md p-8 text-secondary border-2 border-dashed border-tertiary/50 in-[.print]:hidden", compactMode ? "p-4" : "p-8")}>
+            <div
+              className={twMerge(
+                "text-center bg-quinary/50 rounded-md p-8 text-secondary border-2 border-dashed border-tertiary/50 in-[.print]:hidden",
+                compactMode ? "p-4" : "p-8",
+              )}
+            >
               Drag items to Class {classNumber}
             </div>
           ) : (
             itemAssignments.map(({ item, assignment }) => {
               // Require assignment ID - if missing, skip this assignment
               if (!assignment.id) {
-                ztoolkit.log("Warning: Assignment missing ID, skipping render", assignment);
+                ztoolkit.log(
+                  "Warning: Assignment missing ID, skipping render",
+                  assignment,
+                );
                 return null;
               }
 
@@ -812,18 +899,26 @@ function TextInput({
     setValue(initialValue);
   }, [initialValue]);
 
-  useDebouncedEffect(() => {
-    // Don't update the global API too often
-    if (value !== initialValue) {
-      save(value);
-    }
-  }, [initialValue, value], 500);
+  useDebouncedEffect(
+    () => {
+      // Don't update the global API too often
+      if (value !== initialValue) {
+        save(value);
+      }
+    },
+    [initialValue, value],
+    500,
+  );
 
   const [setSizeRef, size] = useElementSize();
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (fieldSizing === "content" && inputRef.current && elementType === "textarea") {
+    if (
+      fieldSizing === "content" &&
+      inputRef.current &&
+      elementType === "textarea"
+    ) {
       if (value) {
         // Set it to 1px so we can measure the scrollheight
         inputRef.current.style.height = "1px";
@@ -839,31 +934,40 @@ function TextInput({
 
   return (
     <div ref={setSizeRef} className="w-full">
-      {h(
-        elementType,
-        {
-          ref: inputRef,
-          type: "text",
-          value,
-          onChange: (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => setValue((e.target as HTMLInputElement).value),
-          onBlur: () => save(value),
-          onKeyDown: (e: JSX.TargetedKeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            if (e.key === "Escape" || e.key === "Enter") {
-              e.preventDefault();
-              e.currentTarget.blur();
-              save(value);
-            }
-          },
-          placeholder: placeholder || "Click to edit",
-          className: twMerge("bg-transparent border-none focus:outline-3 focus:outline-accent-blue focus:rounded-xs focus:outline-offset-2 field-sizing-content in-[.print]:hidden", className),
-          style: {
-            "--color-focus-border": "var(--color-accent-blue)",
-          },
-          ...elementProps,
-        }
-      )}
+      {h(elementType, {
+        ref: inputRef,
+        type: "text",
+        value,
+        onChange: (
+          e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>,
+        ) => setValue((e.target as HTMLInputElement).value),
+        onBlur: () => save(value),
+        onKeyDown: (
+          e: JSX.TargetedKeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+        ) => {
+          if (e.key === "Escape" || e.key === "Enter") {
+            e.preventDefault();
+            e.currentTarget.blur();
+            save(value);
+          }
+        },
+        placeholder: placeholder || "Click to edit",
+        className: twMerge(
+          "bg-transparent border-none focus:outline-3 focus:outline-accent-blue focus:rounded-xs focus:outline-offset-2 field-sizing-content in-[.print]:hidden",
+          className,
+        ),
+        style: {
+          "--color-focus-border": "var(--color-accent-blue)",
+        },
+        ...elementProps,
+      })}
       {/* Print-only div that shows the value */}
-      <div className="hidden in-[.print]:block" style={{ whiteSpace: elementType === "textarea" ? "pre-wrap" : "normal" }}>
+      <div
+        className="hidden in-[.print]:block"
+        style={{
+          whiteSpace: elementType === "textarea" ? "pre-wrap" : "normal",
+        }}
+      >
         {value || initialValue || ""}
       </div>
     </div>
@@ -949,9 +1053,9 @@ function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-        item: Zotero.Item;
-        type: "pdf" | "snapshot" | "epub";
-      }>;
+      item: Zotero.Item;
+      type: "pdf" | "snapshot" | "epub";
+    }>;
   }, [item, slim]);
 
   const metadataParts = [
@@ -969,7 +1073,10 @@ function SyllabusItemCard({
       // Store the assignment ID so we can update the exact assignment instead of duplicating
       // Use the specific assignment if available
       if (assignment?.id) {
-        e.dataTransfer.setData("application/x-syllabus-assignment-id", assignment.id);
+        e.dataTransfer.setData(
+          "application/x-syllabus-assignment-id",
+          assignment.id,
+        );
       }
     }
     (e.currentTarget as HTMLElement).classList.add("syllabus-item-dragging");
@@ -1052,12 +1159,13 @@ function SyllabusItemCard({
   // Check if there's an assignment for this card
   const hasAssignment = !!assignment;
 
-  const priorityColor = SyllabusManager.PRIORITY_COLORS[priority as SyllabusPriorityType]
+  const priorityColor =
+    SyllabusManager.PRIORITY_COLORS[priority as SyllabusPriorityType];
 
   const colors = {
     backgroundColor: priorityColor + "15",
     borderColor: priorityColor + "30",
-  }
+  };
 
   return (
     <div
@@ -1068,8 +1176,12 @@ function SyllabusItemCard({
         "bg-quinary border-none text-primary cursor-grab",
         // For hovering contextual btns
         "group relative",
-        compactMode ? "px-4 py-1.5 gap-3" : slim ? "px-4 py-2.5 gap-4" : "px-4 py-4 gap-4",
-        isSelected && "bg-accent-blue! scheme-dark"
+        compactMode
+          ? "px-4 py-1.5 gap-3"
+          : slim
+            ? "px-4 py-2.5 gap-4"
+            : "px-4 py-4 gap-4",
+        isSelected && "bg-accent-blue! scheme-dark",
       )}
       data-item-id={item.id}
       draggable
@@ -1078,10 +1190,14 @@ function SyllabusItemCard({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className={twMerge("syllabus-item-thumbnail grow-0 shrink-0 in-[.print]:hidden", compactMode ? "size-6" : slim ? "size-10" : "size-20",
-        // !compactMode ? "self-center" : "mt-0.5"
-        "self-center"
-      )}>
+      <div
+        className={twMerge(
+          "syllabus-item-thumbnail grow-0 shrink-0 in-[.print]:hidden",
+          compactMode ? "size-6" : slim ? "size-10" : "size-20",
+          // !compactMode ? "self-center" : "mt-0.5"
+          "self-center",
+        )}
+      >
         <span
           className="icon icon-css icon-item-type cell-icon"
           data-item-type={item.itemType}
@@ -1094,12 +1210,18 @@ function SyllabusItemCard({
             backgroundPositionY: "50%, 50%, 50%, 50%",
             backgroundRepeat: "no-repeat, repeat, repeat, repeat",
             backgroundSize: "contain, 0px, 0px, 0px",
-            filter: isSelected ? "invert(0.85) brightness(2.5) contrast(1) hue-rotate(175deg)" : undefined
+            filter: isSelected
+              ? "invert(0.85) brightness(2.5) contrast(1) hue-rotate(175deg)"
+              : undefined,
           }}
         />
       </div>
-      <div className={twMerge("syllabus-item-text grow flex flex-col", compactMode ? "gap-0.5" : !slim ? "gap-1" : "gap-0.25",
-      )}>
+      <div
+        className={twMerge(
+          "syllabus-item-text grow flex flex-col",
+          compactMode ? "gap-0.5" : !slim ? "gap-1" : "gap-0.25",
+        )}
+      >
         {compactMode ? (
           <>
             <div className="syllabus-item-title-row">
@@ -1109,7 +1231,9 @@ function SyllabusItemCard({
               <span className="character-separator [--character-separator:'•']">
                 {author && <span>{author}</span>}
                 {date && <span>{date}</span>}
-                {itemTypeLabel && <span className="text-secondary">{itemTypeLabel}</span>}
+                {itemTypeLabel && (
+                  <span className="text-secondary">{itemTypeLabel}</span>
+                )}
                 {publicationName && <span>in {publicationName}</span>}
               </span>
               {!!priority && (
@@ -1124,14 +1248,12 @@ function SyllabusItemCard({
           </>
         ) : (
           <>
-            <div
-              className="flex flex-row gap-3 items-baseline justify-start"
-            >
-              {!!priority &&
+            <div className="flex flex-row gap-3 items-baseline justify-start">
+              {!!priority && (
                 <div className="grow-0 shrink-0">
                   <PriorityIcon priority={priority} colors={!isSelected} />
                 </div>
-              }
+              )}
               {!slim && itemTypeLabel && (
                 <div className="grow-0 shrink-0">
                   <span className="text-secondary">{itemTypeLabel}</span>
@@ -1144,7 +1266,13 @@ function SyllabusItemCard({
               )}
             </div>
             <div className="syllabus-item-title-row">
-              <div className={twMerge(!slim ? "text-xl font-medium" : "text-lg font-medium")}>{title}</div>
+              <div
+                className={twMerge(
+                  !slim ? "text-xl font-medium" : "text-lg font-medium",
+                )}
+              >
+                {title}
+              </div>
             </div>
             <div className="syllabus-item-metadata text-secondary">
               {metadataParts.length > 0 && (
@@ -1165,7 +1293,10 @@ function SyllabusItemCard({
         )}
       </div>
       {!compactMode && (
-        <div className="syllabus-item-actions shrink-0 inline-flex flex-col gap-1 in-[.print]:hidden" draggable={false}>
+        <div
+          className="syllabus-item-actions shrink-0 inline-flex flex-col gap-1 in-[.print]:hidden"
+          draggable={false}
+        >
           {/* Delete assignment button - only show if there's an assignment */}
           {viewableAttachments.map((viewableAttachment) => {
             const attachmentLabel =
@@ -1223,10 +1354,13 @@ function SyllabusItemCard({
         </div>
       )}
       {hasAssignment && !compactMode && (
-        <div className={twMerge(
-          "flex-row gap-2 hidden group-hover:flex absolute top-full left-1/2 -translate-x-1/2 p-2 pt-0 bg-quinary rounded-b-lg z-10 in-[.print]:hidden",
-          isSelected && "bg-accent-blue!"
-        )} style={colors}>
+        <div
+          className={twMerge(
+            "flex-row gap-2 hidden group-hover:flex absolute top-full left-1/2 -translate-x-1/2 p-2 pt-0 bg-quinary rounded-b-lg z-10 in-[.print]:hidden",
+            isSelected && "bg-accent-blue!",
+          )}
+          style={colors}
+        >
           <div className="focus-states-target">
             <button
               className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
@@ -1267,7 +1401,9 @@ function SyllabusItemCard({
               >
                 ⧉
               </span>
-              <span className="syllabus-action-label">Duplicate assignment</span>
+              <span className="syllabus-action-label">
+                Duplicate assignment
+              </span>
             </button>
           </div>
           <div className="focus-states-target">
@@ -1276,7 +1412,6 @@ function SyllabusItemCard({
               onClick={async (e) => {
                 e.stopPropagation();
                 try {
-
                   // Use the specific assignment ID if available
                   if (assignment?.id) {
                     await SyllabusManager.removeAssignmentById(
@@ -1285,7 +1420,10 @@ function SyllabusItemCard({
                       assignment.id,
                       "page",
                     );
-                  } else if (classNumber !== null && classNumber !== undefined) {
+                  } else if (
+                    classNumber !== null &&
+                    classNumber !== undefined
+                  ) {
                     // Fallback to classNumber-based removal
                     await SyllabusManager.removeClassAssignment(
                       item,
@@ -1306,8 +1444,16 @@ function SyllabusItemCard({
                   ztoolkit.log("Error deleting assignment:", err);
                 }
               }}
-              title={classNumber !== null && classNumber !== undefined ? "Remove from class" : "Remove from syllabus"}
-              aria-label={classNumber !== null && classNumber !== undefined ? "Remove from class" : "Remove from syllabus"}
+              title={
+                classNumber !== null && classNumber !== undefined
+                  ? "Remove from class"
+                  : "Remove from syllabus"
+              }
+              aria-label={
+                classNumber !== null && classNumber !== undefined
+                  ? "Remove from class"
+                  : "Remove from syllabus"
+              }
             >
               <span
                 className="syllabus-action-icon"
@@ -1328,26 +1474,36 @@ function SyllabusItemCard({
   );
 }
 
-function PriorityIcon({ priority, colors = true }: { priority: SyllabusPriorityType, colors?: boolean }) {
+function PriorityIcon({
+  priority,
+  colors = true,
+}: {
+  priority: SyllabusPriorityType;
+  colors?: boolean;
+}) {
   if (!priority || !(priority in SyllabusManager.PRIORITY_LABELS)) return null;
   return (
     <span className="uppercase font-semibold tracking-wide flex flex-row gap-1.5 items-baseline">
       <span
         className="w-3 h-3 rounded-full inline-block in-[.print]:hidden"
         style={{
-          backgroundColor: colors ? SyllabusManager.PRIORITY_COLORS[priority] : "var(--color-primary)",
+          backgroundColor: colors
+            ? SyllabusManager.PRIORITY_COLORS[priority]
+            : "var(--color-primary)",
         }}
       />
       <span
         className="rounded-md px-1 py-0.25"
         style={{
-          backgroundColor: colors ? SyllabusManager.PRIORITY_COLORS[priority] + "15" : undefined,
+          backgroundColor: colors
+            ? SyllabusManager.PRIORITY_COLORS[priority] + "15"
+            : undefined,
           color: colors ? SyllabusManager.PRIORITY_COLORS[priority] : undefined,
         }}
       >
         {SyllabusManager.PRIORITY_LABELS[priority]}
       </span>
-    </span >
+    </span>
   );
 }
 
@@ -1358,16 +1514,22 @@ function ReadStatusIcon({ readStatusName }: { readStatusName: string }) {
   );
   if (!readStatus) return null;
   return (
-    <span
-      className="uppercase font-semibold tracking-wide flex flex-row gap-2 items-baseline rounded-md px-1 py-0.25 in-[.print]:hidden"
-    >
-      <span className="w-3 h-3 rounded-full inline-block">{readStatus.icon}</span>
+    <span className="uppercase font-semibold tracking-wide flex flex-row gap-2 items-baseline rounded-md px-1 py-0.25 in-[.print]:hidden">
+      <span className="w-3 h-3 rounded-full inline-block">
+        {readStatus.icon}
+      </span>
       <span>{readStatus.name}</span>
     </span>
   );
 }
 
-export function Bibliography({ items, compactMode = false }: { items: Zotero.Item[]; compactMode?: boolean }) {
+export function Bibliography({
+  items,
+  compactMode = false,
+}: {
+  items: Zotero.Item[];
+  compactMode?: boolean;
+}) {
   const [bibliographicReference, setBibliographicReference] = useState(
     generateFallbackBibliographicReference(items),
   );
@@ -1383,10 +1545,17 @@ export function Bibliography({ items, compactMode = false }: { items: Zotero.Ite
   return (
     <div>
       <header className="syllabus-bibliography">
-        <div className={twMerge("font-semibold mt-12 mb-4", compactMode ? "text-xl" : "text-2xl")}>Bibliography</div>
+        <div
+          className={twMerge(
+            "font-semibold mt-12 mb-4",
+            compactMode ? "text-xl" : "text-2xl",
+          )}
+        >
+          Bibliography
+        </div>
       </header>
       <div className={twMerge("flex flex-col gap-4")}>
-        {bibliographicReference.split("\n").map(line => (
+        {bibliographicReference.split("\n").map((line) => (
           <div key={line}>{line}</div>
         ))}
       </div>
@@ -1403,6 +1572,6 @@ export function renderSyllabusPage(
     win,
     rootElement,
     <SyllabusPage collectionId={collectionId} />,
-    "syllabus-page"
+    "syllabus-page",
   );
 }
