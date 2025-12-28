@@ -518,158 +518,160 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       )}
     >
       <div className='pb-12'>
-        syllabus-view-title-container
-        className="sticky top-0 z-10 bg-background py-1 md:pt-8 in-[.print]:static"
-      >
-        <div className="container-padded bg-background">
-          <div className="flex flex-row items-center gap-4 justify-between">
-            <div className="flex-1 text-3xl font-semibold grow shrink-0">
-              <TextInput
-                elementType="input"
-                initialValue={title || ""}
-                onSave={setTitle}
-                emptyBehavior="reset"
-                placeholder="Add a title..."
-                className="w-full px-0! mx-0!"
-              />
-            </div>
-            <div className="inline-flex items-center gap-2 shrink grow-0">
-              <button
-                onClick={toggleCompactMode}
-                className={twMerge(
-                  "grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden",
-                )}
-                title={
-                  compactMode ? "Disable compact mode" : "Enable compact mode"
-                }
-                aria-label={
-                  compactMode ? "Disable compact mode" : "Enable compact mode"
-                }
-              >
-                <span aria-hidden="true">📐</span>
-                <span className={compactMode ? "font-semibold" : ""}>
-                  {compactMode ? "Normal" : "Compact"}
-                </span>
-              </button>
-              <button
-                onClick={handlePrint}
-                className="grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden"
-                title="Print the list in Syllabus view as a PDF"
-                aria-label="Print the list in Syllabus view as a PDF"
-              >
-                <span aria-hidden="true">🖨️</span>
-                <span>Print</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="container-padded">
-        <div className={twMerge("py-2", compactMode ? "text-base" : "text-lg")}>
-          <TextInput
-            elementType="textarea"
-            initialValue={syllabusMetadata.description || ""}
-            onSave={setDescription}
-            syllabus-collection-description
-            className="w-full px-0! mx-0! text-primary"
-            placeholder="Add a description..."
-            emptyBehavior="delete"
-            fieldSizing="content"
-          />
-        </div>
-      </div>
-
-      <div
-        className={twMerge(
-          "flex flex-col mb-12",
-          compactMode ? "gap-8 mt-4" : "gap-12 mt-6",
-        )}
-      >
-        {classGroups.map((group) => (
-          <ClassGroupComponent
-            key={group.classNumber ?? "null"}
-            classNumber={group.classNumber}
-            itemAssignments={group.itemAssignments}
-            collectionId={collectionId}
-            syllabusMetadata={syllabusMetadata}
-            onClassTitleSave={setClassTitle}
-            onClassDescriptionSave={setClassDescription}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            compactMode={compactMode}
-          />
-        ))}
-      </div>
-
-      <div className="container-padded">
-        {isDragging && !compactMode && (
-          <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
-            <div className="syllabus-class-header-container">
-              <div className="syllabus-class-header">
-                Add to Class {nextClassNumber}
-              </div>
-            </div>
-            <div
-              className="syllabus-class-items syllabus-add-class-dropzone-items"
-              onDrop={(e) => handleDrop(e, nextClassNumber)}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-            >
-              <div className="syllabus-add-class-dropzone-placeholder bg-quinary rounded-md p-16 text-secondary border-2 border-dashed border-secondary">
-                Drop item here to create Class {nextClassNumber}
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="syllabus-create-class-control in-[.print]:hidden">
-          <button
-            className="syllabus-create-class-button"
-            onClick={createAdditionalClass}
-            title={`Add Class ${nextClassNumber}`}
-          >
-            Add Class {nextClassNumber}
-          </button>
-        </div>
-
-        {furtherReadingItems.length > 0 && (
-          <div className="syllabus-class-group in-[.print]:scheme-light">
-            <div
-              className={twMerge(
-                "font-semibold",
-                compactMode ? "text-xl mt-8 mb-2" : "text-2xl mt-12 mb-4",
-              )}
-            >
-              Further reading
-            </div>
-            {!compactMode && (
-              <p className="text-secondary text-lg">
-                Items in this section have not been assigned to any class.
-              </p>
-            )}
-            <div
-              className={compactMode ? "space-y-2" : "space-y-4"}
-              onDrop={(e) => handleDrop(e, null)}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-            >
-              {furtherReadingItems.map((item: Zotero.Item) => (
-                <SyllabusItemCard
-                  key={item.id}
-                  item={item}
-                  collectionId={collectionId}
-                  classNumber={undefined}
-                  slim={true}
-                  compactMode={compactMode}
+        <div
+          syllabus-view-title-container
+          className="sticky top-0 z-10 bg-background py-1 md:pt-8 in-[.print]:static"
+        >
+          <div className="container-padded bg-background">
+            <div className="flex flex-row items-center gap-4 justify-between">
+              <div className="flex-1 text-3xl font-semibold grow shrink-0">
+                <TextInput
+                  elementType="input"
+                  initialValue={title || ""}
+                  onSave={setTitle}
+                  emptyBehavior="reset"
+                  placeholder="Add a title..."
+                  className="w-full px-0! mx-0!"
                 />
-              ))}
+              </div>
+              <div className="inline-flex items-center gap-2 shrink grow-0">
+                <button
+                  onClick={toggleCompactMode}
+                  className={twMerge(
+                    "grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden",
+                  )}
+                  title={
+                    compactMode ? "Disable compact mode" : "Enable compact mode"
+                  }
+                  aria-label={
+                    compactMode ? "Disable compact mode" : "Enable compact mode"
+                  }
+                >
+                  <span aria-hidden="true">📐</span>
+                  <span className={compactMode ? "font-semibold" : ""}>
+                    {compactMode ? "Normal" : "Compact"}
+                  </span>
+                </button>
+                <button
+                  onClick={handlePrint}
+                  className="grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden"
+                  title="Print the list in Syllabus view as a PDF"
+                  aria-label="Print the list in Syllabus view as a PDF"
+                >
+                  <span aria-hidden="true">🖨️</span>
+                  <span>Print</span>
+                </button>
+              </div>
             </div>
           </div>
-        )}
+        </div>
 
-        <Bibliography items={items} compactMode={compactMode} />
+        <div className="container-padded">
+          <div className={twMerge("py-2", compactMode ? "text-base" : "text-lg")}>
+            <TextInput
+              elementType="textarea"
+              initialValue={syllabusMetadata.description || ""}
+              onSave={setDescription}
+              syllabus-collection-description
+              className="w-full px-0! mx-0! text-primary"
+              placeholder="Add a description..."
+              emptyBehavior="delete"
+              fieldSizing="content"
+            />
+          </div>
+        </div>
+
+        <div
+          className={twMerge(
+            "flex flex-col mb-12",
+            compactMode ? "gap-8 mt-4" : "gap-12 mt-6",
+          )}
+        >
+          {classGroups.map((group) => (
+            <ClassGroupComponent
+              key={group.classNumber ?? "null"}
+              classNumber={group.classNumber}
+              itemAssignments={group.itemAssignments}
+              collectionId={collectionId}
+              syllabusMetadata={syllabusMetadata}
+              onClassTitleSave={setClassTitle}
+              onClassDescriptionSave={setClassDescription}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              compactMode={compactMode}
+            />
+          ))}
+        </div>
+
+        <div className="container-padded">
+          {isDragging && !compactMode && (
+            <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
+              <div className="syllabus-class-header-container">
+                <div className="syllabus-class-header">
+                  Add to Class {nextClassNumber}
+                </div>
+              </div>
+              <div
+                className="syllabus-class-items syllabus-add-class-dropzone-items"
+                onDrop={(e) => handleDrop(e, nextClassNumber)}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+              >
+                <div className="syllabus-add-class-dropzone-placeholder bg-quinary rounded-md p-16 text-secondary border-2 border-dashed border-secondary">
+                  Drop item here to create Class {nextClassNumber}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="syllabus-create-class-control in-[.print]:hidden">
+            <button
+              className="syllabus-create-class-button"
+              onClick={createAdditionalClass}
+              title={`Add Class ${nextClassNumber}`}
+            >
+              Add Class {nextClassNumber}
+            </button>
+          </div>
+
+          {furtherReadingItems.length > 0 && (
+            <div className="syllabus-class-group in-[.print]:scheme-light">
+              <div
+                className={twMerge(
+                  "font-semibold",
+                  compactMode ? "text-xl mt-8 mb-2" : "text-2xl mt-12 mb-4",
+                )}
+              >
+                Further reading
+              </div>
+              {!compactMode && (
+                <p className="text-secondary text-lg">
+                  Items in this section have not been assigned to any class.
+                </p>
+              )}
+              <div
+                className={compactMode ? "space-y-2" : "space-y-4"}
+                onDrop={(e) => handleDrop(e, null)}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+              >
+                {furtherReadingItems.map((item: Zotero.Item) => (
+                  <SyllabusItemCard
+                    key={item.id}
+                    item={item}
+                    collectionId={collectionId}
+                    classNumber={undefined}
+                    slim={true}
+                    compactMode={compactMode}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          <Bibliography items={items} compactMode={compactMode} />
+
         </div>
       </div>
     </div>
