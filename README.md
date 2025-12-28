@@ -54,7 +54,12 @@ Right-click an item to re-assign class number or priority.
 
 ### Other features
 
+- **Manual item re-ordering** within a class.
+- **Sortable "Syllabus Info" column** to your standard list view, to summarise all the key info. Sort by this column if you want to see what order your readings need to be done in.
+- **Assign an item multiple times** within a syllabus. Useful for breaking down larger readings into smaller chunks.
+- **Compact view mode** for when you'd like to see a bit more all at once.
 - **Zotero Reading List compatibility**: if you have the [Zotero Reading List](https://github.com/Dominic-DallOsto/zotero-reading-list) plugin installed, reading status will be displayed in the syllabus view
+- **Print to PDF** — as of right now it gives you a printable HTML page as a file, which you can open in a browser and print to PDF.
 
 ## Development
 
