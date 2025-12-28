@@ -144,9 +144,6 @@
   .mt-8 {
     margin-top: calc(var(--spacing) * 8);
   }
-  .mt-10 {
-    margin-top: calc(var(--spacing) * 10);
-  }
   .mt-12 {
     margin-top: calc(var(--spacing) * 12);
   }
@@ -385,16 +382,6 @@
   .bg-accent-blue\! {
     background-color: var(--color-accent-blue) !important;
   }
-  .bg-accent-blue\/15 {
-    background-color: color-mix(in srgb, #4072e5 15%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(
-        in oklab,
-        var(--color-accent-blue) 15%,
-        transparent
-      );
-    }
-  }
   .bg-background {
     background-color: var(--color-background);
   }
@@ -439,9 +426,6 @@
   }
   .px-1 {
     padding-inline: calc(var(--spacing) * 1);
-  }
-  .px-2 {
-    padding-inline: calc(var(--spacing) * 2);
   }
   .px-4 {
     padding-inline: calc(var(--spacing) * 4);
@@ -514,9 +498,6 @@
   .tracking-wide {
     --tw-tracking: var(--tracking-wide);
     letter-spacing: var(--tracking-wide);
-  }
-  .text-accent-blue {
-    color: var(--color-accent-blue);
   }
   .text-gray-500 {
     color: var(--color-gray-500);
