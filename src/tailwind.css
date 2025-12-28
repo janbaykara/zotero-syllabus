@@ -118,3 +118,12 @@
     @apply px-6 md:px-10;
   }
 }
+
+@utility character-separator {
+  @apply flex;
+
+  & > *:not(:first-child)::before {
+    content: var(--character-separator, "/"); /* default = "/" */
+    margin: 0 0.35ch;
+  }
+}

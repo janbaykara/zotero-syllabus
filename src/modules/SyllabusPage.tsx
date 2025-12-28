@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "preact/hooks";
 import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
 import { generateFallbackBibliographicReference, generateBibliographicReference } from "../utils/cite";
-import { getPref } from "../utils/prefs";
+import { getPref, setPref } from "../utils/prefs";
 import { getCSSUrl } from "../utils/css";
 import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
 import { renderComponent } from "../utils/react";
@@ -42,8 +42,17 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   // Track drag state for showing "Add to Class X" dropzone
   const [isDragging, setIsDragging] = useState(false);
 
+  // Compact mode state
+  const [compactMode, setCompactModeState] = useState(getPref("compactMode") || false);
+
   // Ref for the syllabus page container to access DOM for printing
   const syllabusPageRef = useRef<HTMLDivElement>(null);
+
+  const toggleCompactMode = () => {
+    const newValue = !compactMode;
+    setCompactModeState(newValue);
+    setPref("compactMode", newValue);
+  };
 
   // Set up global drag event listeners
   useEffect(() => {
@@ -474,11 +483,11 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   };
 
   return (
-    <div ref={syllabusPageRef} className="syllabus-page overflow-y-auto overflow-x-hidden h-[calc(100%-70px)] in-[.print]:scheme-light">
+    <div ref={syllabusPageRef} className={twMerge("syllabus-page overflow-y-auto overflow-x-hidden h-[calc(100%-70px)] in-[.print]:scheme-light", compactMode && "compact-mode")}>
       <div syllabus-view-title-container className="sticky top-0 z-10 bg-background py-1 md:pt-8 in-[.print]:static">
         <div className="container-padded bg-background">
-          <div className="flex items-center gap-4 justify-between">
-            <div className="flex-1 text-3xl font-semibold ">
+          <div className="flex flex-row items-center gap-4 justify-between">
+            <div className="flex-1 text-3xl font-semibold grow shrink-0">
               <TextInput
                 elementType="input"
                 initialValue={title || ""}
@@ -488,7 +497,18 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                 className='w-full px-0! mx-0!'
               />
             </div>
-            <div>
+            <div className="inline-flex items-center gap-2 shrink grow-0">
+              <button
+                onClick={toggleCompactMode}
+                className={twMerge("grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden")}
+                title={compactMode ? "Disable compact mode" : "Enable compact mode"}
+                aria-label={compactMode ? "Disable compact mode" : "Enable compact mode"}
+              >
+                <span aria-hidden="true">📐</span>
+                <span className={compactMode ? "font-semibold" : ""}>
+                  {compactMode ? "Normal" : "Compact"}
+                </span>
+              </button>
               <button
                 onClick={handlePrint}
                 className="grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden"
@@ -504,7 +524,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       </div>
 
       <div className="container-padded">
-        <div className="py-2 text-lg">
+        <div className={twMerge("py-2", compactMode ? "text-base" : "text-lg")}>
           <TextInput
             elementType="textarea"
             initialValue={syllabusMetadata.description || ""}
@@ -518,7 +538,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-12 mt-6 mb-12">
+      <div className={twMerge("flex flex-col mb-12", compactMode ? "gap-8 mt-4" : "gap-12 mt-6")}>
         {classGroups.map((group) => (
           <ClassGroupComponent
             key={group.classNumber ?? "null"}
@@ -531,13 +551,14 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
+            compactMode={compactMode}
           />
         ),
         )}
       </div>
 
       <div className="container-padded">
-        {isDragging &&
+        {isDragging && !compactMode &&
           <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
             <div className="syllabus-class-header-container">
               <div className="syllabus-class-header">
@@ -569,10 +590,10 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
         {furtherReadingItems.length > 0 && (
           <div className="syllabus-class-group in-[.print]:scheme-light">
-            <div className="text-2xl font-semibold mt-12 mb-4">Further reading</div>
-            <p className="text-secondary text-lg">Items in this section have not been assigned to any class.</p>
+            <div className={twMerge("font-semibold", compactMode ? "text-xl mt-8 mb-2" : "text-2xl mt-12 mb-4")}>Further reading</div>
+            {!compactMode && <p className="text-secondary text-lg">Items in this section have not been assigned to any class.</p>}
             <div
-              className="space-y-4"
+              className={compactMode ? "space-y-2" : "space-y-4"}
               onDrop={(e) => handleDrop(e, null)}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -584,6 +605,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                   collectionId={collectionId}
                   classNumber={undefined}
                   slim={true}
+                  compactMode={compactMode}
                 />
               ))}
             </div>
@@ -592,6 +614,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
         <Bibliography
           items={items}
+          compactMode={compactMode}
         />
       </div>
     </div>
@@ -628,6 +651,7 @@ interface ClassGroupComponentProps {
   ) => Promise<void>;
   onDragOver: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
   onDragLeave: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
+  compactMode?: boolean;
 }
 
 function ClassGroupComponent({
@@ -640,6 +664,7 @@ function ClassGroupComponent({
   onDrop,
   onDragOver,
   onDragLeave,
+  compactMode = false,
 }: ClassGroupComponentProps) {
   // Get class title and description from metadata
   const classTitle =
@@ -664,13 +689,13 @@ function ClassGroupComponent({
   return (
     <div className="syllabus-class-group in-[.print]:scheme-light">
       {classNumber && (<>
-        <div className="sticky top-18 z-5 bg-background in-[.print]:static">
-          <div className="container-padded rounded-xs py-1">
+        <div className={twMerge("sticky z-5 bg-background in-[.print]:static", compactMode ? "top-10 py-0" : "top-18 py-1")}>
+          <div className={twMerge("container-padded rounded-xs", compactMode ? "py-0.5" : "py-1")}>
             <div className="flex gap-2 items-baseline justify-start w-full">
-              <div className="syllabus-class-header shrink-0 uppercase text-lg text-secondary font-semibold">
+              <div className={twMerge("syllabus-class-header shrink-0 uppercase text-secondary font-semibold", compactMode ? "text-sm" : "text-lg")}>
                 Class {classNumber}
               </div>
-              <div className='text-2xl w-full font-semibold'>
+              <div className={twMerge("w-full font-semibold", compactMode ? "text-xl" : "text-2xl")}>
                 <TextInput
                   elementType="input"
                   initialValue={classTitle}
@@ -694,7 +719,7 @@ function ClassGroupComponent({
           </div>
         </div>
         <div className="container-padded">
-          <div className="text-lg pt-2">
+          <div className={twMerge(compactMode ? "text-base" : "text-lg pt-2")}>
             <TextInput
               elementType="textarea"
               initialValue={classDescription}
@@ -707,10 +732,11 @@ function ClassGroupComponent({
           </div>
         </div>
       </>)}
-      <div className="container-padded mt-2">
+      <div className={twMerge("container-padded", compactMode ? "mt-0" : "mt-2")}>
         <div
           className={twMerge(
-            "mt-4 space-y-4 syllabus-class-items p-2 -m-2 box-border! rounded-lg",
+            "syllabus-class-items box-border! rounded-lg",
+            compactMode ? "mt-1 space-y-2 p-1 -m-1" : "mt-4 space-y-4 p-2 -m-2",
             "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:outline-accent-blue! data-[dropzone-active='true']:text-accent-blue! transition-all duration-200 outline-transparent outline-2! outline-dashed!"
           )}
           onDrop={(e) => onDrop(e, classNumber ?? null)}
@@ -718,7 +744,7 @@ function ClassGroupComponent({
           onDragLeave={onDragLeave}
         >
           {itemAssignments.length === 0 && classNumber !== null ? (
-            <div className="text-center bg-quinary/50 rounded-md p-8 text-secondary border-2 border-dashed border-tertiary/50 in-[.print]:hidden">
+            <div className={twMerge("text-center bg-quinary/50 rounded-md p-8 text-secondary border-2 border-dashed border-tertiary/50 in-[.print]:hidden", compactMode ? "p-4" : "p-8")}>
               Drag items to Class {classNumber}
             </div>
           ) : (
@@ -742,9 +768,11 @@ function ClassGroupComponent({
                   classNumber={classNumber ?? undefined}
                   assignment={assignment}
                   slim={
+                    compactMode ||
                     !priority ||
                     priority === SyllabusManager.priorityKeys.OPTIONAL
                   }
+                  compactMode={compactMode}
                 />
               );
             })
@@ -848,6 +876,7 @@ interface SyllabusItemCardProps {
   classNumber?: number | null; // Specific class number for this rendering
   assignment?: ItemSyllabusAssignment; // Specific assignment for this rendering (to differentiate multiple assignments)
   slim?: boolean;
+  compactMode?: boolean;
 }
 
 function SyllabusItemCard({
@@ -856,6 +885,7 @@ function SyllabusItemCard({
   classNumber,
   assignment,
   slim = false,
+  compactMode = false,
 }: SyllabusItemCardProps) {
   // Get the currently selected item ID
   const selectedItemId = useZoteroSelectedItemId();
@@ -1034,11 +1064,11 @@ function SyllabusItemCard({
       style={colors}
       className={twMerge(
         "in-[.print]:scheme-light",
-        "rounded-lg px-4 flex flex-row items-start justify-between shrink-0 gap-4",
+        "rounded-lg flex flex-row items-start justify-between shrink-0",
         "bg-quinary border-none text-primary cursor-grab",
         // For hovering contextual btns
         "group relative",
-        !slim ? "py-4" : "py-2.5",
+        compactMode ? "px-4 py-1.5 gap-3" : slim ? "px-4 py-2.5 gap-4" : "px-4 py-4 gap-4",
         isSelected && "bg-accent-blue! scheme-dark"
       )}
       data-item-id={item.id}
@@ -1048,7 +1078,10 @@ function SyllabusItemCard({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className={twMerge("self-center syllabus-item-thumbnail grow-0 shrink-0 in-[.print]:hidden", slim ? "size-10" : "size-20")}>
+      <div className={twMerge("syllabus-item-thumbnail grow-0 shrink-0 in-[.print]:hidden", compactMode ? "size-6" : slim ? "size-10" : "size-20",
+        // !compactMode ? "self-center" : "mt-0.5"
+        "self-center"
+      )}>
         <span
           className="icon icon-css icon-item-type cell-icon"
           data-item-type={item.itemType}
@@ -1065,102 +1098,131 @@ function SyllabusItemCard({
           }}
         />
       </div>
-      <div className={twMerge("syllabus-item-text grow flex flex-col", !slim ? "gap-1" : "gap-0.25")}>
-        <div
-          className="flex flex-row gap-3 items-baseline justify-start"
-        >
-          {!!priority &&
-            <div className="grow-0 shrink-0">
-              <PriorityIcon priority={priority} colors={!isSelected} />
+      <div className={twMerge("syllabus-item-text grow flex flex-col", compactMode ? "gap-0.5" : !slim ? "gap-1" : "gap-0.25",
+      )}>
+        {compactMode ? (
+          <>
+            <div className="syllabus-item-title-row">
+              <div className="text-base font-medium">{title}</div>
             </div>
-          }
-          {!slim && itemTypeLabel && (
-            <div className="grow-0 shrink-0">
-              <span className="text-secondary">{itemTypeLabel}</span>
+            <div className="syllabus-item-metadata text-secondary flex flex-row gap-4">
+              <span className="character-separator [--character-separator:'•']">
+                {author && <span>{author}</span>}
+                {date && <span>{date}</span>}
+                {itemTypeLabel && <span className="text-secondary">{itemTypeLabel}</span>}
+                {publicationName && <span>in {publicationName}</span>}
+              </span>
+              {!!priority && (
+                <PriorityIcon priority={priority} colors={!isSelected} />
+              )}
             </div>
-          )}
-          {!!readStatusName && (
-            <div className="grow-0 shrink-0">
-              <ReadStatusIcon readStatusName={readStatusName} />
+            {classInstruction && (
+              <div className="syllabus-item-description">
+                {classInstruction}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div
+              className="flex flex-row gap-3 items-baseline justify-start"
+            >
+              {!!priority &&
+                <div className="grow-0 shrink-0">
+                  <PriorityIcon priority={priority} colors={!isSelected} />
+                </div>
+              }
+              {!slim && itemTypeLabel && (
+                <div className="grow-0 shrink-0">
+                  <span className="text-secondary">{itemTypeLabel}</span>
+                </div>
+              )}
+              {!!readStatusName && (
+                <div className="grow-0 shrink-0">
+                  <ReadStatusIcon readStatusName={readStatusName} />
+                </div>
+              )}
             </div>
-          )}
-        </div>
-        <div className="syllabus-item-title-row">
-          <div className={twMerge(!slim ? "text-xl font-medium" : "text-lg font-medium")}>{title}</div>
-        </div>
-        <div className="syllabus-item-metadata text-secondary">
-          {metadataParts.length > 0 && (
-            <span>{metadataParts.join(" • ")}</span>
-          )}
-        </div>
-        {!slim && bibliographicReference && (
-          <div className="syllabus-item-reference">
-            {bibliographicReference}
-          </div>
-        )}
-        {classInstruction && (
-          <div className="syllabus-item-description">
-            {classInstruction}
-          </div>
+            <div className="syllabus-item-title-row">
+              <div className={twMerge(!slim ? "text-xl font-medium" : "text-lg font-medium")}>{title}</div>
+            </div>
+            <div className="syllabus-item-metadata text-secondary">
+              {metadataParts.length > 0 && (
+                <span>{metadataParts.join(" • ")}</span>
+              )}
+            </div>
+            {!slim && bibliographicReference && (
+              <div className="syllabus-item-reference">
+                {bibliographicReference}
+              </div>
+            )}
+            {classInstruction && (
+              <div className="syllabus-item-description">
+                {classInstruction}
+              </div>
+            )}
+          </>
         )}
       </div>
-      <div className="syllabus-item-actions shrink-0 inline-flex flex-col gap-1 in-[.print]:hidden" draggable={false}>
-        {/* Delete assignment button - only show if there's an assignment */}
-        {viewableAttachments.map((viewableAttachment) => {
-          const attachmentLabel =
-            viewableAttachment?.type === "pdf"
-              ? "PDF"
-              : viewableAttachment?.type === "snapshot"
-                ? "Snapshot"
-                : viewableAttachment?.type === "epub"
-                  ? "EPUB"
-                  : "View";
+      {!compactMode && (
+        <div className="syllabus-item-actions shrink-0 inline-flex flex-col gap-1 in-[.print]:hidden" draggable={false}>
+          {/* Delete assignment button - only show if there's an assignment */}
+          {viewableAttachments.map((viewableAttachment) => {
+            const attachmentLabel =
+              viewableAttachment?.type === "pdf"
+                ? "PDF"
+                : viewableAttachment?.type === "snapshot"
+                  ? "Snapshot"
+                  : viewableAttachment?.type === "epub"
+                    ? "EPUB"
+                    : "View";
 
-          return (
-            <div className="focus-states-target in-[.print]:hidden">
+            return (
+              <div className="focus-states-target in-[.print]:hidden">
+                <button
+                  className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
+                  onClick={() => handleAttachmentClick(viewableAttachment)}
+                  title={`Open ${attachmentLabel}`}
+                  aria-label={`Open ${attachmentLabel}`}
+                >
+                  <span
+                    className="syllabus-action-icon icon icon-css icon-attachment-type"
+                    data-item-type={
+                      viewableAttachment.type === "pdf"
+                        ? "attachmentPDF"
+                        : viewableAttachment.type === "epub"
+                          ? "attachmentEPUB"
+                          : "attachmentSnapshot"
+                    }
+                    aria-label={`Open ${attachmentLabel}`}
+                  />
+                  <span className="syllabus-action-label">
+                    {attachmentLabel}
+                  </span>
+                </button>
+              </div>
+            );
+          })}
+          {url && (
+            <div className="focus-states-target print:hidden">
               <button
                 className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
-                onClick={() => handleAttachmentClick(viewableAttachment)}
-                title={`Open ${attachmentLabel}`}
-                aria-label={`Open ${attachmentLabel}`}
+                onClick={handleUrlClick}
+                title="Open URL"
+                aria-label="Open URL"
               >
                 <span
                   className="syllabus-action-icon icon icon-css icon-attachment-type"
-                  data-item-type={
-                    viewableAttachment.type === "pdf"
-                      ? "attachmentPDF"
-                      : viewableAttachment.type === "epub"
-                        ? "attachmentEPUB"
-                        : "attachmentSnapshot"
-                  }
-                  aria-label={`Open ${attachmentLabel}`}
+                  data-item-type="attachmentLink"
+                  aria-label="Open URL"
                 />
-                <span className="syllabus-action-label">
-                  {attachmentLabel}
-                </span>
+                <span className="syllabus-action-label">Link</span>
               </button>
             </div>
-          );
-        })}
-        {url && (
-          <div className="focus-states-target print:hidden">
-            <button
-              className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
-              onClick={handleUrlClick}
-              title="Open URL"
-              aria-label="Open URL"
-            >
-              <span
-                className="syllabus-action-icon icon icon-css icon-attachment-type"
-                data-item-type="attachmentLink"
-                aria-label="Open URL"
-              />
-              <span className="syllabus-action-label">Link</span>
-            </button>
-          </div>
-        )}
-      </div>
-      {hasAssignment && (
+          )}
+        </div>
+      )}
+      {hasAssignment && !compactMode && (
         <div className={twMerge(
           "flex-row gap-2 hidden group-hover:flex absolute top-full left-1/2 -translate-x-1/2 p-2 pt-0 bg-quinary rounded-b-lg z-10 in-[.print]:hidden",
           isSelected && "bg-accent-blue!"
@@ -1305,7 +1367,7 @@ function ReadStatusIcon({ readStatusName }: { readStatusName: string }) {
   );
 }
 
-export function Bibliography({ items }: { items: Zotero.Item[] }) {
+export function Bibliography({ items, compactMode = false }: { items: Zotero.Item[]; compactMode?: boolean }) {
   const [bibliographicReference, setBibliographicReference] = useState(
     generateFallbackBibliographicReference(items),
   );
@@ -1321,9 +1383,9 @@ export function Bibliography({ items }: { items: Zotero.Item[] }) {
   return (
     <div>
       <header className="syllabus-bibliography">
-        <div className="text-2xl font-semibold mt-12 mb-4">Bibliography</div>
+        <div className={twMerge("font-semibold mt-12 mb-4", compactMode ? "text-xl" : "text-2xl")}>Bibliography</div>
       </header>
-      <div className="flex flex-col gap-4">
+      <div className={twMerge("flex flex-col gap-4")}>
         {bibliographicReference.split("\n").map(line => (
           <div key={line}>{line}</div>
         ))}
