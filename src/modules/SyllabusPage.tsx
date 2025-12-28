@@ -1224,11 +1224,20 @@ function SyllabusItemCard({
       >
         {compactMode ? (
           <>
-            <div className="syllabus-item-title-row">
-              <div className="text-base font-medium">{title}</div>
+            <div className="syllabus-item-title-row flex flex-row gap-2 items-baseline justify-between w-full">
+              <div className="text-base font-medium grow wrap-break-word">
+                {title}
+              </div>
+              {!!priority && (
+                <PriorityIcon
+                  priority={priority}
+                  colors={!isSelected}
+                  className="shrink-0 grow-0 w-20 text-right block"
+                />
+              )}
             </div>
             <div className="syllabus-item-metadata text-secondary flex flex-row gap-4">
-              <span className="character-separator [--character-separator:'•']">
+              <span className="flex flex-row gap-1 flex-wrap character-separator [--character-separator:'•']">
                 {author && <span>{author}</span>}
                 {date && <span>{date}</span>}
                 {itemTypeLabel && (
@@ -1236,9 +1245,6 @@ function SyllabusItemCard({
                 )}
                 {publicationName && <span>in {publicationName}</span>}
               </span>
-              {!!priority && (
-                <PriorityIcon priority={priority} colors={!isSelected} />
-              )}
             </div>
             {classInstruction && (
               <div className="syllabus-item-description">
@@ -1477,13 +1483,20 @@ function SyllabusItemCard({
 function PriorityIcon({
   priority,
   colors = true,
+  className,
 }: {
   priority: SyllabusPriorityType;
   colors?: boolean;
+  className?: string;
 }) {
   if (!priority || !(priority in SyllabusManager.PRIORITY_LABELS)) return null;
   return (
-    <span className="uppercase font-semibold tracking-wide flex flex-row gap-1.5 items-baseline">
+    <span
+      className={twMerge(
+        "uppercase font-semibold tracking-wide flex flex-row gap-1.5 items-baseline",
+        className,
+      )}
+    >
       <span
         className="w-3 h-3 rounded-full inline-block in-[.print]:hidden"
         style={{
