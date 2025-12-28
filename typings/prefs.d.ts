@@ -9,6 +9,7 @@ declare namespace _ZoteroTypes {
     PluginPrefsMap: {
       "enable": boolean;
       "showBibliography": boolean;
+      "compactMode": boolean;
     };
   }
 }

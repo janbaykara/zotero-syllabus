@@ -26,15 +26,15 @@ async function onStartup() {
 
 function registerStyleSheet(win: _ZoteroTypes.MainWindow) {
   const doc = win.document;
-  
+
   // Remove any existing stylesheets from previous loads (for hot reload)
   const existingStylesheets = doc.querySelectorAll(
-    'link[data-syllabus-stylesheet="true"]'
+    'link[data-syllabus-stylesheet="true"]',
   );
   existingStylesheets.forEach((link) => {
     link.remove();
   });
-  
+
   // Load Tailwind CSS with cache-busting hash
   const tailwindStyles = ztoolkit.UI.createElement(doc, "link", {
     properties: {
@@ -47,7 +47,7 @@ function registerStyleSheet(win: _ZoteroTypes.MainWindow) {
     },
   });
   doc.documentElement?.appendChild(tailwindStyles);
-  
+
   // Load existing stylesheet
   const styles = ztoolkit.UI.createElement(doc, "link", {
     properties: {

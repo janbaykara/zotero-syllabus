@@ -1,7 +1,11 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
 import { useState, useCallback, useRef, useMemo } from "preact/hooks";
-import { SyllabusManager, SyllabusPriority, ItemSyllabusAssignment } from "./syllabus";
+import {
+  SyllabusManager,
+  SyllabusPriority,
+  ItemSyllabusAssignment,
+} from "./syllabus";
 import { useZoteroItemAssignments } from "./react-zotero-sync/itemAssignments";
 
 interface ItemPaneProps {
@@ -16,8 +20,14 @@ interface AssignmentEditorProps {
   editable: boolean;
   isSaving: boolean;
   priorityOptions: Array<{ value: string; label: string; color?: string }>;
-  onPriorityChange: (assignmentId: string, priority: SyllabusPriority | "") => void;
-  onClassNumberChange: (assignmentId: string, classNumber: number | undefined) => void;
+  onPriorityChange: (
+    assignmentId: string,
+    priority: SyllabusPriority | "",
+  ) => void;
+  onClassNumberChange: (
+    assignmentId: string,
+    classNumber: number | undefined,
+  ) => void;
   onInstructionChange: (assignmentId: string, instruction: string) => void;
   onDelete: (assignmentId: string) => void;
   onDuplicate: (assignmentId: string) => void;
@@ -85,7 +95,9 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
   );
 
   // Store debounce timeouts per assignment ID
-  const instructionTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const instructionTimeouts = useRef<
+    Map<string, ReturnType<typeof setTimeout>>
+  >(new Map());
 
   const handleInstructionChange = useCallback(
     (assignmentId: string, instruction: string) => {
@@ -144,7 +156,9 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
       }
 
       // Find the assignment to duplicate
-      const assignmentToDuplicate = assignments.find((a) => a.id === assignmentId);
+      const assignmentToDuplicate = assignments.find(
+        (a) => a.id === assignmentId,
+      );
       if (!assignmentToDuplicate) {
         ztoolkit.log("Error: Assignment not found for duplication");
         return;
@@ -185,14 +199,23 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       {assignments.length === 0 ? (
-        <div style={{ padding: "10px", color: "var(--fill-secondary)", fontSize: "13px" }}>
+        <div
+          style={{
+            padding: "10px",
+            color: "var(--fill-secondary)",
+            fontSize: "13px",
+          }}
+        >
           No assignments for this item in this collection.
         </div>
       ) : (
         assignments.map((assignment) => {
           // REQUIRE assignment ID - if missing, skip this assignment
           if (!assignment.id) {
-            ztoolkit.log("Warning: Assignment missing ID, skipping render", assignment);
+            ztoolkit.log(
+              "Warning: Assignment missing ID, skipping render",
+              assignment,
+            );
             return null;
           }
 
@@ -257,10 +280,7 @@ function AssignmentEditor({
 
   const classTitle =
     assignment.classNumber !== undefined
-      ? SyllabusManager.getClassTitle(
-        collectionId,
-        assignment.classNumber,
-      )
+      ? SyllabusManager.getClassTitle(collectionId, assignment.classNumber)
       : "";
 
   let legendText = "Syllabus item";
@@ -296,7 +316,6 @@ function AssignmentEditor({
           gap: "10px",
         }}
       >
-
         {/* Class Number */}
         <div
           style={{
@@ -384,9 +403,9 @@ function AssignmentEditor({
                 style={
                   opt.color
                     ? {
-                      color: opt.color,
-                      fontWeight: "500",
-                    }
+                        color: opt.color,
+                        fontWeight: "500",
+                      }
                     : undefined
                 }
               >
@@ -480,4 +499,3 @@ function AssignmentEditor({
     </fieldset>
   );
 }
-

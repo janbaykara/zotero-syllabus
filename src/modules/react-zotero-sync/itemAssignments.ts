@@ -1,10 +1,7 @@
 import { useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
 import SuperJSON from "superjson";
-import {
-  SyllabusManager,
-  ItemSyllabusAssignment,
-} from "../syllabus";
+import { SyllabusManager, ItemSyllabusAssignment } from "../syllabus";
 
 export type ItemAssignmentsSnapshot = {
   assignments: ItemSyllabusAssignment[];
@@ -29,9 +26,7 @@ export function useZoteroItemAssignments(
     if (!itemId || !collectionId) {
       return [];
     }
-    const snapshot = SuperJSON.parse(
-      __assignments,
-    ) as ItemAssignmentsSnapshot;
+    const snapshot = SuperJSON.parse(__assignments) as ItemAssignmentsSnapshot;
     return snapshot.assignments;
   }, [__assignments, itemId, collectionId]);
 
@@ -66,7 +61,7 @@ export function createItemAssignmentsStore(
 
   function subscribe(onStoreChange: () => void) {
     if (!itemId || !collectionId) {
-      return () => { }; // No-op unsubscribe
+      return () => {}; // No-op unsubscribe
     }
 
     const observer = {
@@ -124,4 +119,3 @@ export function createItemAssignmentsStore(
 
   return { getSnapshot, subscribe };
 }
-
