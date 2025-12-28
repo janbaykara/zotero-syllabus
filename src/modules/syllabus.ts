@@ -42,12 +42,13 @@ export interface ItemSyllabusData {
 }
 
 /**
- * Manual ordering of items within classes, stored in preferences
+ * Manual ordering of assignments within classes, stored in preferences
  * Array order represents display order; empty array means use natural order
+ * Uses assignment IDs to allow independent sorting of multiple assignments for the same item
  */
 export interface SettingsClassItemOrder {
   [collectionId: string]: {
-    [classNumber: string]: string[]; // ordered itemIds
+    [classNumber: string]: string[]; // ordered assignmentIds (or itemIds for backward compatibility)
   };
 }
 
@@ -1647,9 +1648,9 @@ export class SyllabusManager {
         collectionId,
         assignment.classNumber,
       );
-      if (manualOrder.length > 0) {
+      if (manualOrder.length > 0 && assignment.id) {
         hasManualOrder = true;
-        const position = manualOrder.indexOf(String(item.id));
+        const position = manualOrder.indexOf(assignment.id);
         if (position !== -1) {
           // Use position in manual order (padded to ensure proper sorting)
           // Lower numbers come first, so we pad with zeros
@@ -1721,23 +1722,29 @@ export class SyllabusManager {
 
     if (manualOrder.length > 0) {
       // Apply manual ordering - takes full precedence over priority
-      const itemMap = new Map(
-        items.map((entry) => [String(entry.item.id), entry]),
+      // Manual order now uses assignment IDs to allow independent sorting of multiple assignments
+      const assignmentMap = new Map(
+        items.map((entry) => [
+          entry.assignment.id,
+          entry,
+        ]),
       );
+
       const orderedItems: T[] = [];
       const unorderedItems: T[] = [];
 
-      // Add items in manual order
-      for (const itemId of manualOrder) {
-        const entry = itemMap.get(itemId);
-        if (entry) {
-          orderedItems.push(entry);
-          itemMap.delete(itemId);
+      // Add assignments in manual order (by assignment ID)
+      for (const assignmentId of manualOrder) {
+        if (assignmentMap.has(assignmentId)) {
+          orderedItems.push(assignmentMap.get(assignmentId)!);
+          assignmentMap.delete(assignmentId);
         }
+        // Note: If assignmentId doesn't exist (e.g., assignment was deleted),
+        // it's simply skipped - no need to handle it
       }
 
-      // Add remaining items that weren't in manual order
-      itemMap.forEach((entry) => unorderedItems.push(entry));
+      // Add remaining assignments that weren't in manual order
+      assignmentMap.forEach((entry) => unorderedItems.push(entry));
 
       // Sort unordered items by title only (manual order takes precedence, so no priority sorting)
       unorderedItems.sort((a, b) => {

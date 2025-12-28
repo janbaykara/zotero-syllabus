@@ -294,49 +294,82 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         sourceClassNumber !== undefined &&
         targetClassNumberValue !== undefined &&
         sourceClassNumber === targetClassNumberValue &&
-        targetItemId !== undefined
+        targetItemId !== undefined &&
+        sourceAssignmentId
       ) {
-        // Reordering within the same class - update manual order
+        // Reordering within the same class - update manual order using assignment IDs
         let currentOrder = SyllabusManager.getClassItemOrder(
           collectionId,
           targetClassNumberValue,
         );
 
-        // If no manual order exists, initialize it with current item order from the class
+        // If no manual order exists, initialize it with current assignment order from the class
         if (currentOrder.length === 0) {
-          // Get all items in this class to initialize the order
-          const classItems = items.filter((item) => {
-            if (!item.isRegularItem()) return false;
+          // Get all assignments in this class to initialize the order
+          const classAssignments: Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }> = [];
+          for (const item of items) {
+            if (!item.isRegularItem()) continue;
             const assignments = SyllabusManager.getAllClassAssignments(
               item,
               collectionId,
             );
-            return assignments.some(
-              (a) => a.classNumber === targetClassNumberValue,
-            );
+            for (const assignment of assignments) {
+              if (assignment.classNumber === targetClassNumberValue && assignment.id) {
+                classAssignments.push({ item, assignment });
+              }
+            }
+          }
+          // Sort by current display order (priority, then title)
+          classAssignments.sort((a, b) => {
+            const diff = SyllabusManager.compareAssignments(a.assignment, b.assignment);
+            if (diff !== 0) return diff;
+            const titleA = a.item.getField("title") || "";
+            const titleB = b.item.getField("title") || "";
+            return titleA.localeCompare(titleB);
           });
-          // Initialize order with current item IDs (sorted by current display order)
-          currentOrder = classItems.map((item) => String(item.id));
+          // Initialize order with assignment IDs
+          currentOrder = classAssignments
+            .map(({ assignment }) => assignment.id!)
+            .filter(Boolean);
         }
 
-        // Remove dragged item from current order
-        const newOrder = currentOrder.filter((id) => id !== String(itemId));
+        // Remove dragged assignment from current order
+        const newOrder = currentOrder.filter((id) => id !== sourceAssignmentId);
+
+        // Find target assignment ID - need to get it from the target item
+        let targetAssignmentId: string | undefined;
+        try {
+          const targetItem = Zotero.Items.get(targetItemId);
+          if (targetItem) {
+            const targetAssignments = SyllabusManager.getAllClassAssignments(
+              targetItem,
+              collectionId,
+            );
+            // Find the assignment for this class - prefer the one being dropped on
+            const targetAssignment = targetAssignments.find(
+              (a) => a.classNumber === targetClassNumberValue && a.id,
+            );
+            targetAssignmentId = targetAssignment?.id;
+          }
+        } catch (err) {
+          ztoolkit.log("Error finding target assignment:", err);
+        }
 
         // Find target position
-        const targetIndex = newOrder.findIndex(
-          (id) => id === String(targetItemId),
-        );
+        const targetIndex = targetAssignmentId
+          ? newOrder.findIndex((id) => id === targetAssignmentId)
+          : -1;
 
         if (targetIndex !== -1) {
           // Insert at target position
           if (insertBefore) {
-            newOrder.splice(targetIndex, 0, String(itemId));
+            newOrder.splice(targetIndex, 0, sourceAssignmentId);
           } else {
-            newOrder.splice(targetIndex + 1, 0, String(itemId));
+            newOrder.splice(targetIndex + 1, 0, sourceAssignmentId);
           }
         } else {
           // Target not found, append to end
-          newOrder.push(String(itemId));
+          newOrder.push(sourceAssignmentId);
         }
 
         // Update manual order
@@ -372,15 +405,16 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         // If moving to a different class, update manual order for target class
         if (
           sourceClassNumber !== undefined &&
-          sourceClassNumber !== targetClassNumberValue
+          sourceClassNumber !== targetClassNumberValue &&
+          sourceAssignmentId
         ) {
-          // Remove from source class order
+          // Remove from source class order (using assignment ID)
           const sourceOrder = SyllabusManager.getClassItemOrder(
             collectionId,
             sourceClassNumber,
           );
           const updatedSourceOrder = sourceOrder.filter(
-            (id) => id !== String(itemId),
+            (id) => id !== sourceAssignmentId,
           );
           await SyllabusManager.setClassItemOrder(
             collectionId,
@@ -388,37 +422,28 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
             updatedSourceOrder,
           );
 
-          // Add to target class order at the end
-          const targetOrder = SyllabusManager.getClassItemOrder(
-            collectionId,
-            targetClassNumberValue,
-          );
-          if (!targetOrder.includes(String(itemId))) {
-            const updatedTargetOrder = [...targetOrder, String(itemId)];
-            await SyllabusManager.setClassItemOrder(
+          // Add to target class order at the end (using assignment ID)
+          // The assignment will be updated to the new class, so use the same ID
+          if (sourceAssignmentId) {
+            const targetOrder = SyllabusManager.getClassItemOrder(
               collectionId,
               targetClassNumberValue,
-              updatedTargetOrder,
             );
+            if (!targetOrder.includes(sourceAssignmentId)) {
+              const updatedTargetOrder = [...targetOrder, sourceAssignmentId];
+              await SyllabusManager.setClassItemOrder(
+                collectionId,
+                targetClassNumberValue,
+                updatedTargetOrder,
+              );
+            }
           }
           // Force immediate re-render
           setItemOrderVersion((v) => v + 1);
         } else if (sourceClassNumber === undefined) {
           // New item to class - add to end of manual order if it exists
-          const targetOrder = SyllabusManager.getClassItemOrder(
-            collectionId,
-            targetClassNumberValue,
-          );
-          if (targetOrder.length > 0 && !targetOrder.includes(String(itemId))) {
-            const updatedTargetOrder = [...targetOrder, String(itemId)];
-            await SyllabusManager.setClassItemOrder(
-              collectionId,
-              targetClassNumberValue,
-              updatedTargetOrder,
-            );
-            // Force immediate re-render
-            setItemOrderVersion((v) => v + 1);
-          }
+          // We need to wait for the assignment to be created first, so this will be handled
+          // after the assignment is created below
         }
       }
 
@@ -426,6 +451,47 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         // Dragging from a class or "further reading" with an assignment: MOVE it
         // Update the assignment's classNumber using its ID
         // If target is undefined (dropping to "further reading"), remove classNumber
+
+        // If moving to a different class (or from class to further reading), update manual order
+        if (
+          sourceClassNumber !== undefined &&
+          sourceClassNumber !== targetClassNumberValue
+        ) {
+          // Remove from source class order (if it exists)
+          const sourceOrder = SyllabusManager.getClassItemOrder(
+            collectionId,
+            sourceClassNumber,
+          );
+          if (sourceOrder.length > 0 && sourceOrder.includes(sourceAssignmentId)) {
+            const updatedSourceOrder = sourceOrder.filter(
+              (id) => id !== sourceAssignmentId,
+            );
+            await SyllabusManager.setClassItemOrder(
+              collectionId,
+              sourceClassNumber,
+              updatedSourceOrder,
+            );
+          }
+
+          // If moving to a class (not further reading), add to target class order
+          if (targetClassNumberValue !== undefined) {
+            const targetOrder = SyllabusManager.getClassItemOrder(
+              collectionId,
+              targetClassNumberValue,
+            );
+            if (targetOrder.length > 0 && !targetOrder.includes(sourceAssignmentId)) {
+              // Add to end of manual order
+              const updatedTargetOrder = [...targetOrder, sourceAssignmentId];
+              await SyllabusManager.setClassItemOrder(
+                collectionId,
+                targetClassNumberValue,
+                updatedTargetOrder,
+              );
+            }
+            setItemOrderVersion((v) => v + 1);
+          }
+        }
+
         await SyllabusManager.updateClassAssignment(
           draggedItem,
           collectionId,
@@ -453,6 +519,32 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
             "page",
           );
 
+          // After creating assignment, get its ID and add to manual order if it exists
+          await draggedItem.saveTx();
+          const updatedAssignments = SyllabusManager.getAllClassAssignments(
+            draggedItem,
+            collectionId,
+          );
+          const newAssignment = updatedAssignments.find(
+            (a) => a.classNumber === targetClassNumberValue && a.id,
+          );
+          if (newAssignment?.id) {
+            const targetOrder = SyllabusManager.getClassItemOrder(
+              collectionId,
+              targetClassNumberValue,
+            );
+            if (targetOrder.length > 0 && !targetOrder.includes(newAssignment.id)) {
+              // Add to end of manual order
+              const updatedTargetOrder = [...targetOrder, newAssignment.id];
+              await SyllabusManager.setClassItemOrder(
+                collectionId,
+                targetClassNumberValue,
+                updatedTargetOrder,
+              );
+              setItemOrderVersion((v) => v + 1);
+            }
+          }
+
           ztoolkit.log("Assignment created successfully");
         } else {
           // Dropping to "further reading" with no assignment - nothing to do
@@ -462,7 +554,10 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         }
       }
 
-      await draggedItem.saveTx();
+      // Only save if we haven't already saved (for new assignment case)
+      if (sourceAssignmentId) {
+        await draggedItem.saveTx();
+      }
     } catch (err) {
       ztoolkit.log("Error handling drop:", err);
     }
