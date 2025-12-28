@@ -68,13 +68,6 @@ export interface SettingsSyllabusMetadata {
 export interface SettingsClassMetadata {
   title?: string;
   description?: string;
-  items?: SettingsClassItemMetadata[];
-}
-
-export interface SettingsClassItemMetadata {
-  itemId: string;
-  priority?: SyllabusPriority;
-  classInstruction?: string;
 }
 
 export class SyllabusManager {
