@@ -206,10 +206,8 @@ export class SyllabusManager {
     ztoolkit.log("SyllabusManager.onStartup");
     this.registerPrefs();
     this.registerNotifier();
-    this.registerSyllabusPriorityColumn();
-    this.registerSyllabusClassInstructionColumn();
-    this.registerSyllabusClassNumberColumn();
     this.registerSyllabusInfoColumn();
+    this.registerSyllabusClassInstructionColumn();
     this.reloadItemPane();
   }
 
@@ -610,69 +608,6 @@ export class SyllabusManager {
     }
   }
 
-  static async registerSyllabusPriorityColumn() {
-    const field = "syllabus-priority";
-    await Zotero.ItemTreeManager.registerColumns({
-      pluginID: addon.data.config.addonID,
-      dataKey: field,
-      label: "Priority",
-      dataProvider: (item: Zotero.Item, dataKey: string) => {
-        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-        const selectedCollection = zoteroPane.getSelectedCollection();
-
-        if (selectedCollection) {
-          const firstAssignment = SyllabusManager.getFirstAssignment(
-            item,
-            selectedCollection.id,
-          );
-          if (firstAssignment) {
-            return SyllabusManager.getAssignmentSortKey(
-              firstAssignment,
-              item,
-              selectedCollection.id,
-            );
-          }
-        }
-
-        return "";
-      },
-      renderCell: (index, data, column, isFirstColumn, doc) => {
-        const container = doc.createElement("span");
-        container.className = `cell ${column.className}`;
-        container.style.display = "flex";
-        container.style.alignItems = "center";
-        container.style.gap = "6px";
-
-        // Parse the sort key: "classNumber___priorityOrder___priorityValue"
-        const parts = String(data).split("___");
-        const priority = parts.length > 2 ? parts[2] : "";
-
-        if (
-          priority &&
-          SyllabusManager.PRIORITY_LABELS[priority as SyllabusPriority]
-        ) {
-          const priorityEnum = priority as SyllabusPriority;
-          // Create colored dot
-          const dot = doc.createElement("span");
-          dot.style.width = "8px";
-          dot.style.height = "8px";
-          dot.style.borderRadius = "50%";
-          dot.style.backgroundColor =
-            SyllabusManager.PRIORITY_COLORS[priorityEnum];
-          dot.style.flexShrink = "0";
-          container.appendChild(dot);
-
-          // Create text label
-          const label = doc.createElement("span");
-          label.textContent = SyllabusManager.PRIORITY_LABELS[priorityEnum];
-          container.appendChild(label);
-        }
-
-        return container;
-      },
-    });
-  }
-
   static async registerSyllabusClassInstructionColumn() {
     const field = "syllabus-class-instruction";
     await Zotero.ItemTreeManager.registerColumns({
@@ -694,68 +629,6 @@ export class SyllabusManager {
         }
 
         return "";
-      },
-    });
-  }
-
-  static async registerSyllabusClassNumberColumn() {
-    const field = this.SYLLABUS_CLASS_NUMBER_FIELD;
-    await Zotero.ItemTreeManager.registerColumns({
-      pluginID: addon.data.config.addonID,
-      dataKey: field,
-      label: "Class No.",
-      dataProvider: (item: Zotero.Item, dataKey: string) => {
-        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-        const selectedCollection = zoteroPane.getSelectedCollection();
-
-        if (selectedCollection) {
-          const firstAssignment = SyllabusManager.getFirstAssignment(
-            item,
-            selectedCollection.id,
-          );
-          if (firstAssignment) {
-            // Use sort key for consistent sorting
-            const sortKey = SyllabusManager.getAssignmentSortKey(
-              firstAssignment,
-              item,
-              selectedCollection.id,
-            );
-            // Encode class number and title for display
-            const classNumber = firstAssignment.classNumber;
-            const classTitle =
-              classNumber !== undefined
-                ? SyllabusManager.getClassTitle(
-                    selectedCollection.id,
-                    classNumber,
-                    true,
-                  )
-                : "";
-            // Format: "sortKey|classNumber|classTitle" for renderCell
-            return `${sortKey}|${classNumber ?? ""}|${classTitle}`;
-          }
-        }
-
-        return "";
-      },
-      renderCell: (index, data, column, isFirstColumn, doc) => {
-        const span = doc.createElement("span");
-        span.className = `cell ${column.className}`;
-
-        const dataStr = String(data);
-        // Parse: "sortKey|classNumber|classTitle"
-        const parts = dataStr.split("|");
-
-        if (parts.length >= 3) {
-          const classNumber = parts[1];
-          const classTitle = parts[2];
-
-          if (classNumber) {
-            // Display class title if available, otherwise just the number
-            span.textContent = classTitle || classNumber;
-          }
-        }
-
-        return span;
       },
     });
   }
@@ -787,10 +660,10 @@ export class SyllabusManager {
             const classTitle =
               classNumber !== undefined
                 ? SyllabusManager.getClassTitle(
-                    selectedCollection.id,
-                    classNumber,
-                    false,
-                  )
+                  selectedCollection.id,
+                  classNumber,
+                  false,
+                )
                 : "";
             const priority = firstAssignment.priority || "";
             return `${sortKey}|${priority}|${classNumber ?? ""}|${classTitle}`;
@@ -955,14 +828,14 @@ export class SyllabusManager {
           body,
           selectedCollection
             ? h(ItemPane, {
-                item,
-                collectionId: selectedCollection.id,
-                editable,
-              })
+              item,
+              collectionId: selectedCollection.id,
+              editable,
+            })
             : h("div", {
-                innerText: "Select a collection to view syllabus assignments",
-                className: "text-center text-gray-500 p-4",
-              }),
+              innerText: "Select a collection to view syllabus assignments",
+              className: "text-center text-gray-500 p-4",
+            }),
           "syllabus-item-pane",
         );
       },
@@ -1696,7 +1569,7 @@ export class SyllabusManager {
       // This ensures OPTIONAL ("optional") sorts before unprioritized ("zzzz")
       assignment.priority || "zzzz",
       assignment.classInstruction?.slice(0, 4).replace(/[^a-zA-Z0-9]/g, "_") ||
-        "",
+      "",
       assignment.id || "",
     );
 
