@@ -9,7 +9,11 @@ import {
 } from "../utils/cite";
 import { getPref, setPref } from "../utils/prefs";
 import { getCSSUrl } from "../utils/css";
-import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
+import {
+  SyllabusManager,
+  ItemSyllabusAssignment,
+  SyllabusPriority,
+} from "./syllabus";
 import { renderComponent } from "../utils/react";
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
@@ -22,6 +26,7 @@ import {
 import { useDebouncedEffect } from "../utils/react/useDebouncedEffect";
 import { useElementSize } from "../utils/react/useElementSize";
 import slugify from "slugify";
+import { SettingsPage } from "./SettingsPage";
 
 // Define priority type for use in this file
 // These values match SyllabusPriority enum in syllabus.ts
@@ -52,6 +57,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   const [compactMode, setCompactModeState] = useState(
     getPref("compactMode") || false,
   );
+
+  // Settings view state
+  const [showSettings, setShowSettings] = useState(false);
 
   // Ref for the syllabus page container to access DOM for printing
   const syllabusPageRef = useRef<HTMLDivElement>(null);
@@ -720,6 +728,16 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     }
   };
 
+  // If settings view is active, show settings page
+  if (showSettings) {
+    return (
+      <SettingsPage
+        collectionId={collectionId}
+        onBack={() => setShowSettings(false)}
+      />
+    );
+  }
+
   return (
     <div
       ref={syllabusPageRef}
@@ -746,6 +764,15 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                 />
               </div>
               <div className="inline-flex items-center gap-2 shrink grow-0">
+                <button
+                  onClick={() => setShowSettings(true)}
+                  className="grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden"
+                  title="Edit syllabus settings"
+                  aria-label="Edit syllabus settings"
+                >
+                  <span aria-hidden="true">⚙️</span>
+                  <span>Settings</span>
+                </button>
                 <button
                   onClick={toggleCompactMode}
                   className={twMerge(
@@ -819,35 +846,46 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         </div>
 
         <div className="container-padded">
-          {isDragging && !compactMode && (
-            <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
-              <div className="syllabus-class-header-container">
-                <div className="syllabus-class-header">
-                  Add to Class {nextClassNumber}
-                </div>
-              </div>
-              <div
-                className="syllabus-class-items syllabus-add-class-dropzone-items"
-                onDrop={(e) => handleDrop(e, nextClassNumber)}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-              >
-                <div className="syllabus-add-class-dropzone-placeholder bg-quinary rounded-md p-16 text-secondary border-2 border-dashed border-secondary">
-                  Drop item here to create Class {nextClassNumber}
-                </div>
-              </div>
-            </div>
-          )}
+          {(() => {
+            const nomenclature = SyllabusManager.getNomenclature(collectionId);
+            const nomenclatureCapitalized =
+              nomenclature.charAt(0).toUpperCase() + nomenclature.slice(1);
 
-          <div className="syllabus-create-class-control in-[.print]:hidden">
-            <button
-              className="syllabus-create-class-button"
-              onClick={createAdditionalClass}
-              title={`Add Class ${nextClassNumber}`}
-            >
-              Add Class {nextClassNumber}
-            </button>
-          </div>
+            return (
+              <>
+                {isDragging && !compactMode && (
+                  <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
+                    <div className="syllabus-class-header-container">
+                      <div className="syllabus-class-header">
+                        Add to {nomenclatureCapitalized} {nextClassNumber}
+                      </div>
+                    </div>
+                    <div
+                      className="syllabus-class-items syllabus-add-class-dropzone-items"
+                      onDrop={(e) => handleDrop(e, nextClassNumber)}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                    >
+                      <div className="syllabus-add-class-dropzone-placeholder bg-quinary rounded-md p-16 text-secondary border-2 border-dashed border-secondary">
+                        Drop item here to create {nomenclatureCapitalized}{" "}
+                        {nextClassNumber}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="syllabus-create-class-control in-[.print]:hidden">
+                  <button
+                    className="syllabus-create-class-button"
+                    onClick={createAdditionalClass}
+                    title={`Add ${nomenclatureCapitalized} ${nextClassNumber}`}
+                  >
+                    Add {nomenclatureCapitalized} {nextClassNumber}
+                  </button>
+                </div>
+              </>
+            );
+          })()}
 
           {furtherReadingItems.length > 0 && (
             <div className="syllabus-class-group in-[.print]:scheme-light">
@@ -943,6 +981,11 @@ function ClassGroupComponent({
   compactMode = false,
   onResetSortOrder,
 }: ClassGroupComponentProps) {
+  // Get nomenclature for this collection
+  const nomenclature = SyllabusManager.getNomenclature(collectionId);
+  const nomenclatureCapitalized =
+    nomenclature.charAt(0).toUpperCase() + nomenclature.slice(1);
+
   // Get class title and description from metadata
   const classTitle = classNumber
     ? syllabusMetadata.classes?.[classNumber]?.title || ""
@@ -1005,7 +1048,7 @@ function ClassGroupComponent({
                     compactMode ? "text-sm" : "text-lg",
                   )}
                 >
-                  Class {classNumber}
+                  {nomenclatureCapitalized} {classNumber}
                 </div>
                 <div
                   className={twMerge(
@@ -1036,8 +1079,8 @@ function ClassGroupComponent({
                   <button
                     className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-red-500/15 text-secondary hover:text-red-400 inline-flex flex-row items-center justify-center w-8 h-8"
                     onClick={handleDeleteClass}
-                    title="Delete class"
-                    aria-label="Delete class"
+                    title={`Delete ${nomenclature}`}
+                    aria-label={`Delete ${nomenclature}`}
                   >
                     <div className="text-2xl text-center">×</div>
                   </button>
@@ -1082,7 +1125,7 @@ function ClassGroupComponent({
                 compactMode ? "p-4" : "p-8",
               )}
             >
-              Drag items to Class {classNumber}
+              Drag items to {nomenclatureCapitalized} {classNumber}
             </div>
           ) : (
             itemAssignments.map(({ item, assignment }) => {
@@ -1317,9 +1360,9 @@ function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-      item: Zotero.Item;
-      type: "pdf" | "snapshot" | "epub";
-    }>;
+        item: Zotero.Item;
+        type: "pdf" | "snapshot" | "epub";
+      }>;
   }, [item, slim]);
 
   const metadataParts = [
@@ -1430,8 +1473,10 @@ function SyllabusItemCard({
   // Check if there's an assignment for this card
   const hasAssignment = !!assignment;
 
-  const priorityColor =
-    SyllabusManager.PRIORITY_COLORS[priority as SyllabusPriorityType];
+  const priorityColor = SyllabusManager.getPriorityColorForCollection(
+    collectionId,
+    priority as SyllabusPriority,
+  );
 
   const colors = {
     backgroundColor: priorityColor + "15",
@@ -1532,6 +1577,7 @@ function SyllabusItemCard({
                   priority={priority}
                   colors={!isSelected}
                   className="shrink-0 grow-0 text-right block"
+                  collectionId={collectionId}
                 />
               )}
             </div>
@@ -1556,7 +1602,11 @@ function SyllabusItemCard({
             <div className="flex flex-row gap-3 items-baseline justify-start">
               {!!priority && (
                 <div className="grow-0 shrink-0">
-                  <PriorityIcon priority={priority} colors={!isSelected} />
+                  <PriorityIcon
+                    priority={priority}
+                    colors={!isSelected}
+                    collectionId={collectionId}
+                  />
                 </div>
               )}
               {!slim && itemTypeLabel && (
@@ -1783,12 +1833,31 @@ function PriorityIcon({
   priority,
   colors = true,
   className,
+  collectionId,
 }: {
   priority: SyllabusPriorityType;
   colors?: boolean;
   className?: string;
+  collectionId?: number;
 }) {
-  if (!priority || !(priority in SyllabusManager.PRIORITY_LABELS)) return null;
+  if (!priority) return null;
+
+  // Use collection-specific colors and labels if collectionId is provided
+  const priorityColor = collectionId
+    ? SyllabusManager.getPriorityColorForCollection(
+      collectionId,
+      priority as SyllabusPriority,
+    )
+    : SyllabusManager.PRIORITY_COLORS[priority as SyllabusPriority] || "#AAA";
+  const priorityLabel = collectionId
+    ? SyllabusManager.getPriorityLabelForCollection(
+      collectionId,
+      priority as SyllabusPriority,
+    )
+    : SyllabusManager.PRIORITY_LABELS[priority as SyllabusPriority] || "";
+
+  if (!priorityLabel) return null;
+
   return (
     <span
       className={twMerge(
@@ -1799,21 +1868,17 @@ function PriorityIcon({
       <span
         className="w-3 h-3 rounded-full inline-block in-[.print]:hidden"
         style={{
-          backgroundColor: colors
-            ? SyllabusManager.PRIORITY_COLORS[priority]
-            : "var(--color-primary)",
+          backgroundColor: colors ? priorityColor : "var(--color-primary)",
         }}
       />
       <span
         className="rounded-md px-1 py-0.25"
         style={{
-          backgroundColor: colors
-            ? SyllabusManager.PRIORITY_COLORS[priority] + "15"
-            : undefined,
-          color: colors ? SyllabusManager.PRIORITY_COLORS[priority] : undefined,
+          backgroundColor: colors ? priorityColor + "15" : undefined,
+          color: colors ? priorityColor : undefined,
         }}
       >
-        {SyllabusManager.PRIORITY_LABELS[priority]}
+        {priorityLabel}
       </span>
     </span>
   );

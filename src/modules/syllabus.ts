@@ -23,6 +23,7 @@ enum SyllabusSettingsKey {
   COLLECTION_METADATA = "collectionMetadata",
   COLLECTION_VIEW_MODES = "collectionViewModes",
   COLLECTION_ITEM_ORDER = "collectionItemOrder",
+  COLLECTION_SETTINGS = "collectionSettings",
 }
 
 export interface ItemSyllabusAssignment {
@@ -69,6 +70,31 @@ export interface SettingsSyllabusMetadata {
 export interface SettingsClassMetadata {
   title?: string;
   description?: string;
+}
+
+/**
+ * Custom priority configuration for a collection
+ */
+export interface CustomPriority {
+  id: string; // Unique ID for the priority (e.g., "essential", "recommended")
+  name: string; // Display name (e.g., "Essential", "Recommended")
+  color: string; // Hex color code (e.g., "#8B5CF6")
+  order: number; // Sort order (lower = higher priority)
+}
+
+/**
+ * Collection-level settings stored in preferences
+ */
+export interface CollectionSettings {
+  nomenclature?: string; // Singular form (e.g., "week", "class", "session", "section")
+  priorities?: CustomPriority[]; // Custom priority configurations
+}
+
+/**
+ * Dictionary of collection settings by collection ID
+ */
+export interface SettingsCollectionSettingsData {
+  [collectionId: string]: CollectionSettings;
 }
 
 export class SyllabusManager {
@@ -655,18 +681,18 @@ export class SyllabusManager {
               item,
               selectedCollection.id,
             );
-            // Encode data for display: "sortKey|priority|classNumber|classTitle"
+            // Encode data for display: "sortKey|priority|classNumber|classTitle|collectionId"
             const classNumber = firstAssignment.classNumber;
             const classTitle =
               classNumber !== undefined
                 ? SyllabusManager.getClassTitle(
-                    selectedCollection.id,
-                    classNumber,
-                    false,
-                  )
+                  selectedCollection.id,
+                  classNumber,
+                  false,
+                )
                 : "";
             const priority = firstAssignment.priority || "";
-            return `${sortKey}|${priority}|${classNumber ?? ""}|${classTitle}`;
+            return `${sortKey}|${priority}|${classNumber ?? ""}|${classTitle}|${selectedCollection.id}`;
           }
         }
 
@@ -680,11 +706,73 @@ export class SyllabusManager {
         container.style.gap = "6px";
         container.style.flexWrap = "nowrap";
 
-        // Parse: "sortKey|priority|classNumber|classTitle"
+        // Parse: "sortKey|priority|classNumber|classTitle|collectionId"
         const dataStr = String(data);
         const parts = dataStr.split("|");
 
-        if (parts.length >= 4) {
+        if (parts.length >= 5) {
+          const priority = parts[1];
+          const classNumber = parts[2];
+          const classTitle = parts[3];
+          const collectionId = parts[4];
+
+          // Display class number if available
+          if (classNumber) {
+            const classNumberSpan = doc.createElement("span");
+            classNumberSpan.textContent = `#${classNumber}`;
+            classNumberSpan.style.fontWeight = "500";
+            container.appendChild(classNumberSpan);
+          }
+
+          // Display priority if available - use collection-specific colors and labels
+          if (priority) {
+            const collectionIdNum = collectionId
+              ? parseInt(collectionId, 10)
+              : undefined;
+            const priorityColor = collectionIdNum
+              ? SyllabusManager.getPriorityColorForCollection(
+                collectionIdNum,
+                priority as SyllabusPriority,
+              )
+              : SyllabusManager.PRIORITY_COLORS[
+              priority as SyllabusPriority
+              ] || "#AAA";
+            const priorityLabel = collectionIdNum
+              ? SyllabusManager.getPriorityLabelForCollection(
+                collectionIdNum,
+                priority as SyllabusPriority,
+              )
+              : SyllabusManager.PRIORITY_LABELS[
+              priority as SyllabusPriority
+              ] || "";
+
+            if (priorityLabel) {
+              // Create colored dot
+              const dot = doc.createElement("span");
+              dot.style.width = "8px";
+              dot.style.height = "8px";
+              dot.style.borderRadius = "50%";
+              dot.style.backgroundColor = priorityColor;
+              dot.style.flexShrink = "0";
+              container.appendChild(dot);
+
+              // Create text label
+              const label = doc.createElement("span");
+              label.textContent = priorityLabel;
+              container.appendChild(label);
+            }
+          }
+
+          // Display class title at the end if available
+          if (classTitle) {
+            const titleSpan = doc.createElement("span");
+            titleSpan.textContent = classTitle;
+            titleSpan.style.color = "var(--fill-secondary)";
+            titleSpan.style.fontSize = "1em";
+            container.appendChild(titleSpan);
+          }
+        } else if (parts.length >= 4) {
+          // Backward compatibility: handle old format without collectionId
           const priority = parts[1];
           const classNumber = parts[2];
           const classTitle = parts[3];
@@ -697,7 +785,7 @@ export class SyllabusManager {
             container.appendChild(classNumberSpan);
           }
 
-          // Display priority if available
+          // Display priority if available (using default colors/labels)
           if (
             priority &&
             SyllabusManager.PRIORITY_LABELS[priority as SyllabusPriority]
@@ -828,14 +916,14 @@ export class SyllabusManager {
           body,
           selectedCollection
             ? h(ItemPane, {
-                item,
-                collectionId: selectedCollection.id,
-                editable,
-              })
+              item,
+              collectionId: selectedCollection.id,
+              editable,
+            })
             : h("div", {
-                innerText: "Select a collection to view syllabus assignments",
-                className: "text-center text-gray-500 p-4",
-              }),
+              innerText: "Select a collection to view syllabus assignments",
+              className: "text-center text-gray-500 p-4",
+            }),
           "syllabus-item-pane",
         );
       },
@@ -1458,6 +1546,7 @@ export class SyllabusManager {
 
   /**
    * Get priority order number for sorting (lower = higher priority)
+   * @deprecated Use getPriorityOrderForCollection instead
    */
   static getPriorityOrder(priority: SyllabusPriority | "" | undefined): number {
     try {
@@ -1560,6 +1649,8 @@ export class SyllabusManager {
     }
 
     // Then priority order, etc.
+    // Note: getAssignmentSortKey doesn't have collectionId, so we use default order
+    // For collection-specific sorting, use sortClassItems which has collectionId
     sortKeyParts.push(
       String(SyllabusManager.getPriorityOrder(assignment.priority)).padStart(
         4,
@@ -1569,7 +1660,7 @@ export class SyllabusManager {
       // This ensures OPTIONAL ("optional") sorts before unprioritized ("zzzz")
       assignment.priority || "zzzz",
       assignment.classInstruction?.slice(0, 4).replace(/[^a-zA-Z0-9]/g, "_") ||
-        "",
+      "",
       assignment.id || "",
     );
 
@@ -1627,14 +1718,27 @@ export class SyllabusManager {
 
       return [...orderedItems, ...unorderedItems];
     } else {
-      // Natural order: by class number, then priority, then title
+      // Natural order: by class number, then priority (using collection-specific order), then title
       return [...items].sort((a, b) => {
-        // First compare by assignment (class number, then priority)
-        const assignmentDiff = this.compareAssignments(
-          a.assignment,
-          b.assignment,
+        // First compare by class number
+        const classNumA = a.assignment.classNumber ?? 9999;
+        const classNumB = b.assignment.classNumber ?? 9999;
+        if (classNumA !== classNumB) {
+          return classNumA - classNumB;
+        }
+
+        // Then by priority order (using collection-specific priorities)
+        const priorityOrderA = this.getPriorityOrderForCollection(
+          collectionId,
+          a.assignment.priority,
         );
-        if (assignmentDiff !== 0) return assignmentDiff;
+        const priorityOrderB = this.getPriorityOrderForCollection(
+          collectionId,
+          b.assignment.priority,
+        );
+        if (priorityOrderA !== priorityOrderB) {
+          return priorityOrderA - priorityOrderB;
+        }
 
         // Then by title
         const titleA = a.item.getField("title") || "";
@@ -2181,5 +2285,157 @@ export class SyllabusManager {
       }
       await SyllabusManager.setCollectionMetadata(allData as any, source);
     }
+  }
+
+  /**
+   * Get collection settings from preferences
+   */
+  static getCollectionSettings(
+    collectionId: number | string,
+  ): CollectionSettings {
+    const prefKey = this.getPreferenceKey(
+      SyllabusSettingsKey.COLLECTION_SETTINGS,
+    );
+    const settingsStr = String(Zotero.Prefs.get(prefKey, true) || "");
+    if (!settingsStr) {
+      return {};
+    }
+    try {
+      const data = JSON.parse(settingsStr) as SettingsCollectionSettingsData;
+      const collectionIdStr = String(collectionId);
+      return data[collectionIdStr] || {};
+    } catch (e) {
+      ztoolkit.log("Error parsing collection settings:", e);
+      return {};
+    }
+  }
+
+  /**
+   * Set collection settings in preferences
+   */
+  static async setCollectionSettings(
+    collectionId: number | string,
+    settings: CollectionSettings,
+    source: "page",
+  ): Promise<void> {
+    const prefKey = this.getPreferenceKey(
+      SyllabusSettingsKey.COLLECTION_SETTINGS,
+    );
+    const settingsStr = String(Zotero.Prefs.get(prefKey, true) || "");
+    let data: SettingsCollectionSettingsData = {};
+    if (settingsStr) {
+      try {
+        data = JSON.parse(settingsStr) as SettingsCollectionSettingsData;
+      } catch (e) {
+        ztoolkit.log("Error parsing collection settings:", e);
+        data = {};
+      }
+    }
+
+    const collectionIdStr = String(collectionId);
+    data[collectionIdStr] = settings;
+
+    Zotero.Prefs.set(prefKey, JSON.stringify(data), true);
+    // Emit event for store listeners
+    this.emitCollectionMetadataChange();
+  }
+
+  /**
+   * Get default priorities (used when no custom priorities are set)
+   */
+  static getDefaultPriorities(): CustomPriority[] {
+    return [
+      {
+        id: SyllabusPriority.COURSE_INFO,
+        name: this.PRIORITY_LABELS[SyllabusPriority.COURSE_INFO],
+        color: this.PRIORITY_COLORS[SyllabusPriority.COURSE_INFO],
+        order: 1,
+      },
+      {
+        id: SyllabusPriority.ESSENTIAL,
+        name: this.PRIORITY_LABELS[SyllabusPriority.ESSENTIAL],
+        color: this.PRIORITY_COLORS[SyllabusPriority.ESSENTIAL],
+        order: 2,
+      },
+      {
+        id: SyllabusPriority.RECOMMENDED,
+        name: this.PRIORITY_LABELS[SyllabusPriority.RECOMMENDED],
+        color: this.PRIORITY_COLORS[SyllabusPriority.RECOMMENDED],
+        order: 3,
+      },
+      {
+        id: SyllabusPriority.OPTIONAL,
+        name: this.PRIORITY_LABELS[SyllabusPriority.OPTIONAL],
+        color: this.PRIORITY_COLORS[SyllabusPriority.OPTIONAL],
+        order: 4,
+      },
+    ];
+  }
+
+  /**
+   * Get priorities for a collection (custom or default)
+   */
+  static getPrioritiesForCollection(
+    collectionId: number | string,
+  ): CustomPriority[] {
+    const settings = this.getCollectionSettings(collectionId);
+    if (settings.priorities && settings.priorities.length > 0) {
+      // Sort by order
+      return [...settings.priorities].sort((a, b) => a.order - b.order);
+    }
+    return this.getDefaultPriorities();
+  }
+
+  /**
+   * Get priority order for a specific priority in a collection
+   */
+  static getPriorityOrderForCollection(
+    collectionId: number | string,
+    priority: SyllabusPriority | "" | undefined,
+  ): number {
+    if (!priority) {
+      return 999; // No priority = lowest
+    }
+    const priorities = this.getPrioritiesForCollection(collectionId);
+    const customPriority = priorities.find((p) => p.id === priority);
+    return customPriority?.order ?? 999;
+  }
+
+  /**
+   * Get priority color for a specific priority in a collection
+   */
+  static getPriorityColorForCollection(
+    collectionId: number | string,
+    priority: SyllabusPriority | "" | undefined,
+  ): string {
+    if (!priority) {
+      return "#AAA";
+    }
+    const priorities = this.getPrioritiesForCollection(collectionId);
+    const customPriority = priorities.find((p) => p.id === priority);
+    return customPriority?.color ?? this.PRIORITY_COLORS[priority] ?? "#AAA";
+  }
+
+  /**
+   * Get priority label for a specific priority in a collection
+   */
+  static getPriorityLabelForCollection(
+    collectionId: number | string,
+    priority: SyllabusPriority | "" | undefined,
+  ): string {
+    if (!priority) {
+      return "";
+    }
+    const priorities = this.getPrioritiesForCollection(collectionId);
+    const customPriority = priorities.find((p) => p.id === priority);
+    return customPriority?.name ?? this.PRIORITY_LABELS[priority] ?? "";
+  }
+
+  /**
+   * Get nomenclature for a collection (defaults to "class")
+   */
+  static getNomenclature(collectionId: number | string): string {
+    const settings = this.getCollectionSettings(collectionId);
+    return settings.nomenclature || "class";
   }
 }

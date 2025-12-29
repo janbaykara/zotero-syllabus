@@ -194,7 +194,20 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
     await handleSave();
   }, [item, collectionId, handleSave]);
 
-  const priorityOptions = SyllabusManager.getPriorityOptions();
+  // Get collection-specific priority options
+  const priorityOptions = useMemo(() => {
+    const customPriorities = SyllabusManager.getPrioritiesForCollection(
+      collectionId,
+    );
+    const options = customPriorities.map((p) => ({
+      value: p.id,
+      label: p.name,
+      color: p.color,
+    }));
+    // Add "(None)" option
+    options.push({ value: "", label: "(None)", color: "" });
+    return options;
+  }, [collectionId]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -283,11 +296,15 @@ function AssignmentEditor({
       ? SyllabusManager.getClassTitle(collectionId, assignment.classNumber)
       : "";
 
+  const nomenclature = SyllabusManager.getNomenclature(collectionId);
+  const nomenclatureCapitalized =
+    nomenclature.charAt(0).toUpperCase() + nomenclature.slice(1);
+
   let legendText = "Syllabus item";
   if (assignment.classNumber !== undefined) {
     legendText = classTitle
-      ? `Class ${assignment.classNumber}: ${classTitle}`
-      : `Class ${assignment.classNumber}`;
+      ? `${nomenclatureCapitalized} ${assignment.classNumber}: ${classTitle}`
+      : `${nomenclatureCapitalized} ${assignment.classNumber}`;
   }
 
   return (
@@ -333,7 +350,7 @@ function AssignmentEditor({
               color: "var(--fill-secondary)",
             }}
           >
-            Class Number
+            {nomenclatureCapitalized} Number
           </label>
           <input
             type="number"
@@ -403,9 +420,9 @@ function AssignmentEditor({
                 style={
                   opt.color
                     ? {
-                        color: opt.color,
-                        fontWeight: "500",
-                      }
+                      color: opt.color,
+                      fontWeight: "500",
+                    }
                     : undefined
                 }
               >
