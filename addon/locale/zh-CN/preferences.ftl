@@ -5,5 +5,7 @@ pref-show-bibliography =
     .label = 显示参考文献
 pref-should-colour-syllabus-rows =
     .label = 按课程编号为行着色
+pref-compact-mode =
+    .label = 使用紧凑布局
 pref-input = 输入
 pref-help = { $name } Build { $version } { $time }

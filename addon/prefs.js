@@ -1,4 +1,4 @@
 pref("enable", true);
 pref("showBibliography", false);
 pref("compactMode", false);
-pref("shouldColourSyllabusRows", true);
+pref("shouldColourSyllabusRows", false);

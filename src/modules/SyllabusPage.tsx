@@ -7,7 +7,7 @@ import {
   generateFallbackBibliographicReference,
   generateBibliographicReference,
 } from "../utils/cite";
-import { getPref, setPref } from "../utils/prefs";
+import { getPref } from "../utils/prefs";
 import { getCSSUrl } from "../utils/css";
 import {
   SyllabusManager,
@@ -19,6 +19,7 @@ import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
 import { useZoteroSelectedItemId } from "./react-zotero-sync/selectedItem";
+import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import {
   getItemReadStatusName,
   getReadStatusMetadata,
@@ -59,10 +60,8 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   // Track item order changes to trigger re-computation
   const [itemOrderVersion, setItemOrderVersion] = useState(0);
 
-  // Compact mode state
-  const [compactMode, setCompactModeState] = useState(
-    getPref("compactMode") || false,
-  );
+  // Compact mode state - reactive to preference changes
+  const [compactMode, setCompactMode] = useZoteroCompactMode();
 
   // Settings view state
   const [showSettings, setShowSettings] = useState(false);
@@ -71,9 +70,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   const syllabusPageRef = useRef<HTMLDivElement>(null);
 
   const toggleCompactMode = () => {
-    const newValue = !compactMode;
-    setCompactModeState(newValue);
-    setPref("compactMode", newValue);
+    const nextMode = !compactMode
+    ztoolkit.log("toggleCompactMode", { compactMode, nextMode });
+    setCompactMode(nextMode);
   };
 
   // Set up global drag event listeners
@@ -1336,9 +1335,9 @@ function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-      item: Zotero.Item;
-      type: "pdf" | "snapshot" | "epub";
-    }>;
+        item: Zotero.Item;
+        type: "pdf" | "snapshot" | "epub";
+      }>;
   }, [item, slim]);
 
   const metadataParts = [
@@ -1456,9 +1455,9 @@ function SyllabusItemCard({
 
   const colors = priority
     ? {
-        backgroundColor: priorityColor + "15",
-        borderColor: priorityColor + "30",
-      }
+      backgroundColor: priorityColor + "15",
+      borderColor: priorityColor + "30",
+    }
     : {};
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
