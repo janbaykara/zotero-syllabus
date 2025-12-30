@@ -152,6 +152,9 @@
   .-mb-1 {
     margin-bottom: calc(var(--spacing) * -1);
   }
+  .mb-0\.5 {
+    margin-bottom: calc(var(--spacing) * 0.5);
+  }
   .mb-1 {
     margin-bottom: calc(var(--spacing) * 1);
   }
@@ -257,6 +260,9 @@
   }
   .transform {
     transform: var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,);
+  }
+  .cursor-default {
+    cursor: default;
   }
   .cursor-grab {
     cursor: grab;
@@ -558,6 +564,9 @@
   .text-primary {
     color: var(--color-primary);
   }
+  .text-primary\! {
+    color: var(--color-primary) !important;
+  }
   .text-red-500\! {
     color: var(--color-red-500) !important;
   }
@@ -595,6 +604,10 @@
   .outline-dashed\! {
     --tw-outline-style: dashed !important;
     outline-style: dashed !important;
+  }
+  .select-none {
+    -webkit-user-select: none;
+    user-select: none;
   }
   .\[--character-separator\:\'•\'\] {
     --character-separator: '•';
@@ -656,6 +669,11 @@
   .focus\:outline-accent-blue {
     &:focus {
       outline-color: var(--color-accent-blue);
+    }
+  }
+  .disabled\:text-primary\! {
+    &:disabled {
+      color: var(--color-primary) !important;
     }
   }
   .in-\[\.print\]\:static {

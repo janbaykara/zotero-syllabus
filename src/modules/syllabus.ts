@@ -67,6 +67,7 @@ export interface SettingsSyllabusMetadata {
   };
   nomenclature?: string;
   priorities?: CustomPriority[];
+  locked?: boolean;
 }
 
 export interface SettingsClassMetadata {
@@ -2205,6 +2206,27 @@ export class SyllabusManager {
   ): Promise<void> {
     const allData = SyllabusManager.getSettingsCollectionDictionaryData();
     set(allData, `${collectionId}.priorities`, priorities);
+    await SyllabusManager.setCollectionMetadata(allData, source);
+  }
+
+  /**
+   * Get locked state for a collection
+   */
+  static getLocked(collectionId: number | string): boolean {
+    const metadata = this.getSyllabusMetadata(collectionId);
+    return metadata.locked || false;
+  }
+
+  /**
+   * Set locked state for a collection
+   */
+  static async setLocked(
+    collectionId: number | string,
+    locked: boolean,
+    source: "page",
+  ): Promise<void> {
+    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
+    set(allData, `${collectionId}.locked`, locked);
     await SyllabusManager.setCollectionMetadata(allData, source);
   }
 

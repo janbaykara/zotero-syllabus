@@ -51,7 +51,10 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     setClassTitle,
     _setNomenclature,
     _setPriorities,
+    setLocked,
   ] = useZoteroSyllabusMetadata(collectionId);
+
+  const isLocked = syllabusMetadata.locked || false;
   const items = useZoteroCollectionItems(collectionId);
 
   // Track drag state for showing "Add to Class X" dropzone
@@ -734,10 +737,20 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                   onSave={setTitle}
                   emptyBehavior="reset"
                   placeholder="Add a title..."
-                  className="w-full px-0! mx-0!"
+                  className="w-full px-0! mx-0! text-primary! disabled:text-primary!"
+                  readOnly={isLocked}
                 />
               </div>
               <div className="inline-flex items-center gap-2 shrink grow-0">
+                <button
+                  onClick={() => setLocked(!isLocked)}
+                  className="grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden"
+                  title={isLocked ? "Unlock syllabus" : "Lock syllabus"}
+                  aria-label={isLocked ? "Unlock syllabus" : "Lock syllabus"}
+                >
+                  <span aria-hidden="true">{isLocked ? "🔓" : "🔒"}</span>
+                  <span>{isLocked ? "Unlock" : "Lock"}</span>
+                </button>
                 <button
                   onClick={() => setShowSettings(true)}
                   className="grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden"
@@ -789,6 +802,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
               placeholder="Add a description..."
               emptyBehavior="delete"
               fieldSizing="content"
+              readOnly={isLocked}
             />
           </div>
         </div>
@@ -812,6 +826,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               compactMode={compactMode}
+              isLocked={isLocked}
               onResetSortOrder={() => setItemOrderVersion((v) => v + 1)}
             />
           ))}
@@ -824,7 +839,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
             return (
               <>
-                {isDragging && !compactMode && (
+                {!isLocked && isDragging && !compactMode && (
                   <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
                     <div className="syllabus-class-header-container">
                       <div className="syllabus-class-header">
@@ -845,15 +860,17 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                   </div>
                 )}
 
-                <div className="syllabus-create-class-control in-[.print]:hidden">
-                  <button
-                    className="syllabus-create-class-button"
-                    onClick={createAdditionalClass}
-                    title={`Add ${singularCapitalized} ${nextClassNumber}`}
-                  >
-                    Add {singularCapitalized} {nextClassNumber}
-                  </button>
-                </div>
+                {!isLocked && (
+                  <div className="syllabus-create-class-control in-[.print]:hidden">
+                    <button
+                      className="syllabus-create-class-button"
+                      onClick={createAdditionalClass}
+                      title={`Add ${singularCapitalized} ${nextClassNumber}`}
+                    >
+                      Add {singularCapitalized} {nextClassNumber}
+                    </button>
+                  </div>
+                )}
               </>
             );
           })()}
@@ -936,6 +953,7 @@ interface ClassGroupComponentProps {
   onDragOver: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
   onDragLeave: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
   compactMode?: boolean;
+  isLocked?: boolean;
   onResetSortOrder?: () => void;
 }
 
@@ -950,6 +968,7 @@ function ClassGroupComponent({
   onDragOver,
   onDragLeave,
   compactMode = false,
+  isLocked = false,
   onResetSortOrder,
 }: ClassGroupComponentProps) {
   // Get nomenclature for this collection
@@ -1007,13 +1026,13 @@ function ClassGroupComponent({
           <div
             className={twMerge(
               "sticky z-5 bg-background in-[.print]:static",
-              compactMode ? "top-10 py-0" : "top-18 py-1",
+              compactMode ? "top-10" : "top-18",
             )}
           >
             <div
               className={twMerge(
-                "container-padded rounded-xs",
-                compactMode ? "py-0.5" : "py-1",
+                "container-padded rounded-xs mb-1",
+                // compactMode ? "py-0.5" : "py-1",
               )}
             >
               <div className="flex gap-2 items-baseline justify-start w-full">
@@ -1038,28 +1057,31 @@ function ClassGroupComponent({
                     className="w-full text-primary"
                     placeholder="Add a title..."
                     emptyBehavior="delete"
+                    readOnly={isLocked}
                   />
                 </div>
-                <div className="ml-auto! shrink-0 inline-flex flex-row items-baseline gap-1 in-[.print]:hidden">
-                  {hasManualOrder && (
+                {!isLocked && (
+                  <div className="ml-auto! shrink-0 inline-flex flex-row items-baseline gap-1 in-[.print]:hidden">
+                    {hasManualOrder && (
+                      <button
+                        className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
+                        onClick={handleResetSortOrder}
+                        title="Reset sort order"
+                        aria-label="Reset sort order"
+                      >
+                        <div className="text-lg text-center">⇅</div>
+                      </button>
+                    )}
                     <button
-                      className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
-                      onClick={handleResetSortOrder}
-                      title="Reset sort order"
-                      aria-label="Reset sort order"
+                      className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-red-500/15 text-secondary hover:text-red-400 inline-flex flex-row items-center justify-center w-8 h-8"
+                      onClick={handleDeleteClass}
+                      title={`Delete ${SyllabusManager.getNomenclatureFormatted(collectionId).singular}`}
+                      aria-label={`Delete ${SyllabusManager.getNomenclatureFormatted(collectionId).singular}`}
                     >
-                      <div className="text-lg text-center">⇅</div>
+                      <div className="text-2xl text-center">×</div>
                     </button>
-                  )}
-                  <button
-                    className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-red-500/15 text-secondary hover:text-red-400 inline-flex flex-row items-center justify-center w-8 h-8"
-                    onClick={handleDeleteClass}
-                    title={`Delete ${SyllabusManager.getNomenclatureFormatted(collectionId).singular}`}
-                    aria-label={`Delete ${SyllabusManager.getNomenclatureFormatted(collectionId).singular}`}
-                  >
-                    <div className="text-2xl text-center">×</div>
-                  </button>
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1075,6 +1097,7 @@ function ClassGroupComponent({
                 placeholder="Add a description..."
                 emptyBehavior="delete"
                 fieldSizing="content"
+                readOnly={isLocked}
               />
             </div>
           </div>
@@ -1089,11 +1112,11 @@ function ClassGroupComponent({
             compactMode ? "mt-1 space-y-2 p-1 -m-1" : "mt-4 space-y-4 p-2 -m-2",
             "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:outline-accent-blue! data-[dropzone-active='true']:text-accent-blue! transition-all duration-200 outline-transparent outline-2! outline-dashed!",
           )}
-          onDrop={(e) => onDrop(e, classNumber ?? null)}
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
+          onDrop={isLocked ? undefined : (e) => onDrop(e, classNumber ?? null)}
+          onDragOver={isLocked ? undefined : onDragOver}
+          onDragLeave={isLocked ? undefined : onDragLeave}
         >
-          {itemAssignments.length === 0 && classNumber !== null ? (
+          {!isLocked && itemAssignments.length === 0 && classNumber !== null ? (
             <div
               className={twMerge(
                 "text-center bg-quinary/50 rounded-md p-8 text-secondary border-2 border-dashed border-tertiary/50 in-[.print]:hidden",
@@ -1102,8 +1125,8 @@ function ClassGroupComponent({
             >
               Drag items to {singularCapitalized} {classNumber}
             </div>
-          ) : (
-            itemAssignments.map(({ item, assignment }) => {
+          ) : itemAssignments.length > 0
+            ? itemAssignments.map(({ item, assignment }) => {
               // Require assignment ID - if missing, skip this assignment
               if (!assignment.id) {
                 ztoolkit.log(
@@ -1131,6 +1154,7 @@ function ClassGroupComponent({
                     priority === SyllabusManager.priorityKeys.OPTIONAL
                   }
                   compactMode={compactMode}
+                  isLocked={isLocked}
                   onDrop={(e, insertBefore) =>
                     onDrop(e, classNumber ?? null, item.id, insertBefore)
                   }
@@ -1138,7 +1162,7 @@ function ClassGroupComponent({
                 />
               );
             })
-          )}
+            : null}
         </div>
       </div>
     </div>
@@ -1153,6 +1177,7 @@ function TextInput({
   emptyBehavior = "reset",
   className,
   fieldSizing = "content",
+  readOnly = false,
   ...elementProps
 }: {
   initialValue: string;
@@ -1162,6 +1187,7 @@ function TextInput({
   elementType?: "input" | "textarea";
   className?: string;
   fieldSizing?: "content" | "fixed" | "auto";
+  readOnly?: boolean;
 } & JSX.HTMLAttributes<HTMLInputElement | HTMLTextAreaElement>) {
   const [value, setValue] = useState(initialValue);
 
@@ -1184,6 +1210,11 @@ function TextInput({
     [initialValue, value],
     500,
   );
+
+  // Hide the entire component when readOnly and no value
+  if (readOnly && !value && !initialValue) {
+    return null;
+  }
 
   const [setSizeRef, size] = useElementSize();
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
@@ -1213,22 +1244,43 @@ function TextInput({
         ref: inputRef,
         type: "text",
         value,
-        onChange: (
-          e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>,
-        ) => setValue((e.target as HTMLInputElement).value),
-        onBlur: () => save(value),
-        onKeyDown: (
-          e: JSX.TargetedKeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
-        ) => {
-          if (e.key === "Escape" || e.key === "Enter") {
+        readOnly,
+        disabled: readOnly,
+        onChange: readOnly
+          ? undefined
+          : (
+            e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>,
+          ) => setValue((e.target as HTMLInputElement).value),
+        onBlur: readOnly ? undefined : () => save(value),
+        onKeyDown: readOnly
+          ? undefined
+          : (
+            e: JSX.TargetedKeyboardEvent<
+              HTMLInputElement | HTMLTextAreaElement
+            >,
+          ) => {
+            if (e.key === "Escape" || e.key === "Enter") {
+              e.preventDefault();
+              e.currentTarget.blur();
+              save(value);
+            }
+          },
+        onSelect: readOnly
+          ? (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+            e.preventDefault();
+            e.currentTarget.setSelectionRange(0, 0);
+          }
+          : undefined,
+        onClick: readOnly
+          ? (e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>) => {
             e.preventDefault();
             e.currentTarget.blur();
-            save(value);
           }
-        },
-        placeholder: placeholder || "Click to edit",
+          : undefined,
+        placeholder: readOnly ? undefined : (placeholder || "Click to edit"),
         className: twMerge(
           "bg-transparent border-none focus:outline-3 focus:outline-accent-blue focus:rounded-xs focus:outline-offset-2 field-sizing-content in-[.print]:hidden",
+          readOnly && "cursor-default select-none",
           className,
         ),
         style: {
@@ -1256,6 +1308,7 @@ interface SyllabusItemCardProps {
   assignment?: ItemSyllabusAssignment; // Specific assignment for this rendering (to differentiate multiple assignments)
   slim?: boolean;
   compactMode?: boolean;
+  isLocked?: boolean;
   onDrop?: (
     e: JSX.TargetedDragEvent<HTMLElement>,
     insertBefore: boolean,
@@ -1270,6 +1323,7 @@ function SyllabusItemCard({
   assignment,
   slim = false,
   compactMode = false,
+  isLocked = false,
   onDrop,
   onDragOver,
 }: SyllabusItemCardProps) {
@@ -1492,7 +1546,8 @@ function SyllabusItemCard({
       className={twMerge(
         "in-[.print]:scheme-light",
         "rounded-lg flex flex-row items-start justify-between shrink-0",
-        "bg-quinary border-none text-primary cursor-grab",
+        "bg-quinary border-none text-primary",
+        isLocked ? "cursor-default" : "cursor-grab",
         // For hovering contextual btns
         "group relative",
         compactMode
@@ -1503,13 +1558,13 @@ function SyllabusItemCard({
         isSelected && "bg-accent-blue! scheme-dark",
       )}
       data-item-id={item.id}
-      draggable
+      draggable={!isLocked}
       onClick={(e) => onClick(item, e)}
       onDblClick={(e) => onDoubleClick(item, e)}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      onDragOver={handleItemDragOver}
-      onDrop={handleItemDrop}
+      onDragStart={isLocked ? undefined : handleDragStart}
+      onDragEnd={isLocked ? undefined : handleDragEnd}
+      onDragOver={isLocked ? undefined : handleItemDragOver}
+      onDrop={isLocked ? undefined : handleItemDrop}
     >
       <div
         className={twMerge(
@@ -1685,7 +1740,7 @@ function SyllabusItemCard({
           )}
         </div>
       )}
-      {hasAssignment && (
+      {hasAssignment && !isLocked && (
         <div
           className={twMerge(
             "flex-row gap-2 hidden group-hover:flex absolute top-full left-1/2 -translate-x-1/2 p-2 pt-0 bg-quinary rounded-b-lg z-10 in-[.print]:hidden!",
@@ -1991,7 +2046,7 @@ export function Bibliography({
           Bibliography
         </div>
       </header>
-      <div className={twMerge("flex flex-col gap-4")}>
+      <div className={twMerge("flex flex-col gap-3")}>
         {bibliographicReference.split("\n").map((line) => (
           <div key={line}>{line}</div>
         ))}
