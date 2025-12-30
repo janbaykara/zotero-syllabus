@@ -12,6 +12,7 @@ import { ItemPane } from "./ItemPane";
 import { h } from "preact";
 import { uuidv7 } from "uuidv7";
 import pluralize from "pluralize";
+import { getPref } from "../utils/prefs";
 
 export enum SyllabusPriority {
   COURSE_INFO = "course-info",
@@ -650,6 +651,12 @@ export class SyllabusManager {
 
   static async registerSyllabusInfoColumn() {
     const field = "syllabus-info";
+    // Track previous class number and collection to detect first item in each class group
+    // These persist across renderCell calls within the same column registration
+    let previousClassNumber: string | null = null;
+    let previousCollectionId: string | null = null;
+    let previousSortKey: string | null = null;
+
     await Zotero.ItemTreeManager.registerColumns({
       pluginID: addon.data.config.addonID,
       dataKey: field,
@@ -675,10 +682,10 @@ export class SyllabusManager {
             const classTitle =
               classNumber !== undefined
                 ? SyllabusManager.getClassTitle(
-                    selectedCollection.id,
-                    classNumber,
-                    false,
-                  )
+                  selectedCollection.id,
+                  classNumber,
+                  false,
+                )
                 : "";
             const priority = firstAssignment.priority || "";
             return `${sortKey}|${priority}|${classNumber ?? ""}|${classTitle}|${selectedCollection.id}`;
@@ -699,11 +706,38 @@ export class SyllabusManager {
         const dataStr = String(data);
         const parts = dataStr.split("|");
 
+        // Generate color for left border based on class number
+        let currentClassNumber: string | null = null;
+        let currentCollectionId: string | null = null;
+        let isFirstInClassGroup = false;
+
         if (parts.length >= 5) {
           const priority = parts[1];
           const classNumber = parts[2];
           const classTitle = parts[3];
           const collectionId = parts[4];
+          currentClassNumber = classNumber || null;
+          currentCollectionId = collectionId || null;
+
+          // Check if this is the first item in a class group
+          // Reset tracking if collection changed
+          if (currentCollectionId !== previousCollectionId) {
+            previousClassNumber = null;
+            previousCollectionId = currentCollectionId;
+            previousSortKey = null;
+          }
+
+          // Extract sort key - if present, indicates this column is being used for sorting
+          const sortKey = parts[0] || "";
+
+          // Check if class number changed (first item in new class group)
+          // When sorted by this column, items are grouped by class number
+          // Only add border if we have a sortKey (indicating sorting) and class number changed
+          if (sortKey && currentClassNumber !== previousClassNumber) {
+            isFirstInClassGroup = true;
+          }
+          previousClassNumber = currentClassNumber;
+          previousSortKey = sortKey;
 
           // Display class number if available
           if (classNumber) {
@@ -741,6 +775,18 @@ export class SyllabusManager {
           const priority = parts[1];
           const classNumber = parts[2];
           const classTitle = parts[3];
+          currentClassNumber = classNumber || null;
+
+          // Extract sort key - if present, indicates this column is being used for sorting
+          const sortKey = parts[0] || "";
+
+          // Check if class number changed (first item in new class group)
+          // When sorted by this column, items are grouped by class number
+          // Only add border if we have a sortKey (indicating sorting) and class number changed
+          if (sortKey && currentClassNumber !== previousClassNumber) {
+            isFirstInClassGroup = true;
+          }
+          previousClassNumber = currentClassNumber;
 
           // Display class number if available
           if (classNumber) {
@@ -769,6 +815,55 @@ export class SyllabusManager {
             titleSpan.style.color = "var(--fill-secondary)";
             titleSpan.style.fontSize = "1em";
             container.appendChild(titleSpan);
+          }
+        }
+
+        // Add thin left border colored by class number
+        const shouldColourSyllabusRows = getPref("shouldColourSyllabusRows");
+        if (shouldColourSyllabusRows && currentClassNumber) {
+          const classNum = parseInt(currentClassNumber, 10);
+          if (!isNaN(classNum)) {
+            // Get the max class number range to calculate position on color wheel
+            let maxRange = 1;
+            let collectionIdForRange: number | string | undefined;
+
+            if (parts.length >= 5) {
+              collectionIdForRange = parts[4];
+            }
+
+            if (collectionIdForRange) {
+              try {
+                const fullRange = this.getFullClassNumberRange(collectionIdForRange);
+                if (fullRange.length > 0) {
+                  maxRange = Math.max(...fullRange);
+                }
+              } catch (e) {
+                ztoolkit.log("Error getting class range for color:", e);
+              }
+            }
+
+            // Generate color using 360-degree rotation: class 1 starts at 0°, evenly distributed
+            // Map class number to position in 360-degree color wheel
+            const hue = maxRange > 1
+              ? ((classNum - 1) * (360 / maxRange)) % 360
+              : 0;
+            const saturation = 45; // Moderate saturation for subtlety
+            const lightness = 65; // Light enough to be subtle
+            const borderColor = `hsla(${hue}, ${saturation}%, ${lightness}%)`;
+
+            container.style.borderLeft = `3px solid ${borderColor}`;
+            container.style.paddingLeft = "6px";
+            container.style.marginLeft = "-2px"; // Compensate for border width
+
+            container.style.background = `hsla(${hue}, ${saturation}%, ${lightness}%, 20%)`;;
+
+            // // Add top border to first item in each class group when sorted by this column
+            // // isFirstInClassGroup is only true when sortKey is present (indicating sorting)
+            // if (isFirstInClassGroup && index > 0) {
+            //   container.style.borderTop = `2px solid ${borderColor}`;
+            //   container.style.paddingTop = "4px";
+            //   container.style.marginTop = "2px";
+            // }
           }
         }
 
@@ -871,14 +966,14 @@ export class SyllabusManager {
           body,
           selectedCollection
             ? h(ItemPane, {
-                item,
-                collectionId: selectedCollection.id,
-                editable,
-              })
+              item,
+              collectionId: selectedCollection.id,
+              editable,
+            })
             : h("div", {
-                innerText: "Select a collection to view syllabus assignments",
-                className: "text-center text-gray-500 p-4",
-              }),
+              innerText: "Select a collection to view syllabus assignments",
+              className: "text-center text-gray-500 p-4",
+            }),
           "syllabus-item-pane",
         );
       },
@@ -941,18 +1036,18 @@ export class SyllabusManager {
     // Get collection-specific priority options if a collection is selected
     const priorityOptions = selectedCollection
       ? (() => {
-          const customPriorities = this.getPrioritiesForCollection(
-            selectedCollection.id,
-          );
-          const options = customPriorities.map((p) => ({
-            value: p.id,
-            label: p.name,
-            color: p.color,
-          }));
-          // Add "(None)" option
-          options.push({ value: "", label: "(None)", color: "" });
-          return options;
-        })()
+        const customPriorities = this.getPrioritiesForCollection(
+          selectedCollection.id,
+        );
+        const options = customPriorities.map((p) => ({
+          value: p.id,
+          label: p.name,
+          color: p.color,
+        }));
+        // Add "(None)" option
+        options.push({ value: "", label: "(None)", color: "" });
+        return options;
+      })()
       : this.getPriorityOptions();
 
     ztoolkit.Menu.register("item", {
@@ -1638,7 +1733,7 @@ export class SyllabusManager {
       // This ensures OPTIONAL ("optional") sorts before unprioritized ("zzzz")
       assignment.priority || "zzzz",
       assignment.classInstruction?.slice(0, 4).replace(/[^a-zA-Z0-9]/g, "_") ||
-        "",
+      "",
       assignment.id || "",
     );
 

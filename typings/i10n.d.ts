@@ -11,6 +11,7 @@ export type FluentMessageId =
   | 'pref-enable'
   | 'pref-help'
   | 'pref-input'
+  | 'pref-should-colour-syllabus-rows'
   | 'pref-show-bibliography'
   | 'pref-title'
   | 'prefs-table-detail'

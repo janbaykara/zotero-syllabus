@@ -3,5 +3,7 @@ pref-enable =
     .label = Enable
 pref-show-bibliography =
     .label = Show Bibliography
+pref-should-colour-syllabus-rows =
+    .label = Color-code rows by class number
 pref-input = Input
 pref-help = { $name } Build { $version } { $time }
