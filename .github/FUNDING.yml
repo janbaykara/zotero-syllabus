@@ -1,0 +1,11 @@
+# Funding configuration for Zotero Syllabus
+# These links support Gaza's universities, students, and academic life during reconstruction
+# See README.md for more information about these organizations
+
+custom: [
+  "https://taawon.org/en/isnad",
+  "https://www.gofundme.com/f/brismes-fund-for-higher-education-in-gaza",
+  "https://fobzu.org",
+  "https://buildpalestine.com"
+]
+
