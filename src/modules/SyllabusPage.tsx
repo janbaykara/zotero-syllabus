@@ -748,7 +748,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                   title={isLocked ? "Unlock syllabus" : "Lock syllabus"}
                   aria-label={isLocked ? "Unlock syllabus" : "Lock syllabus"}
                 >
-                  <span aria-hidden="true">{isLocked ? "🔓" : "🔒"}</span>
+                  {/* <span aria-hidden="true">{isLocked ? "🔓" : "🔒"}</span> */}
                   <span>{isLocked ? "Unlock" : "Lock"}</span>
                 </button>
                 <button
@@ -757,7 +757,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                   title="Edit syllabus settings"
                   aria-label="Edit syllabus settings"
                 >
-                  <span aria-hidden="true">⚙️</span>
+                  {/* <span aria-hidden="true">⚙️</span> */}
                   <span>Settings</span>
                 </button>
                 <button
@@ -772,7 +772,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                     compactMode ? "Disable compact mode" : "Enable compact mode"
                   }
                 >
-                  <span aria-hidden="true">📐</span>
+                  {/* <span aria-hidden="true">📐</span> */}
                   <span>{compactMode ? "Spacious" : "Compact"}</span>
                 </button>
                 <button
@@ -781,7 +781,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                   title="Print the list in Syllabus view as a PDF"
                   aria-label="Print the list in Syllabus view as a PDF"
                 >
-                  <span aria-hidden="true">🖨️</span>
+                  {/* <span aria-hidden="true">🖨️</span> */}
                   <span>Print</span>
                 </button>
               </div>
