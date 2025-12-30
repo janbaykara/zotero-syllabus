@@ -601,7 +601,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     const classNumbers = SyllabusManager.getFullClassNumberRange(collectionId);
     const max = classNumbers.length > 0 ? Math.max(...classNumbers) : null;
     return max !== null ? max + 1 : 1;
-  }, [collectionId]);
+  }, [collectionId, syllabusMetadata, items]);
 
   const handlePrint = async () => {
     try {
