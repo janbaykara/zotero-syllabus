@@ -1689,7 +1689,7 @@ function SyllabusItemCard({
       {hasAssignment && (
         <div
           className={twMerge(
-            "flex-row gap-2 hidden group-hover:flex absolute top-full left-1/2 -translate-x-1/2 p-2 pt-0 bg-quinary rounded-b-lg z-10 in-[.print]:hidden",
+            "flex-row gap-2 hidden group-hover:flex absolute top-full left-1/2 -translate-x-1/2 p-2 pt-0 bg-quinary rounded-b-lg z-10 in-[.print]:hidden!",
             isSelected && "bg-accent-blue!",
           )}
           style={colors}

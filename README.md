@@ -4,6 +4,8 @@
 
 A Zotero add-on / plugin that turns your collections into syllabi and course reading lists. Order your items by class, tag things as required / optional reading and pin course information.
 
+![Syllabus view](doc/images/demo.gif)
+
 ## Installation
 
 1. Download the latest release from the [Releases](https://github.com/janbaykara/zotero-syllabus/releases) page.
@@ -20,33 +22,71 @@ A Zotero add-on / plugin that turns your collections into syllabi and course rea
 - For **bug reports** and **feature requests**, please use the [GitHub Issues](https://github.com/janbaykara/zotero-syllabus/issues) page.
 - For **general discussion**, please use the [Zotero Forum Thread](https://forums.zotero.org/discussion/128688/zotero-syllabus-a-plugin-for-managing-your-uni-course-reading-lists) or [Reddit Thread](https://www.reddit.com/r/zotero/comments/1puxigg/zotero_syllabus_a_plugin_for_managing_your_uni/).
 
+## Show your thanks by donating 🙏🇵🇸🕊️
+
+If this project is useful to you, please consider showing support by donating to funds that help keep **Gaza’s universities, students, and academic life alive** during reconstruction, following the genocide of the Palestinian people by the Israeli-American occupation.
+
+We recommend reputable, sector-led initiatives that work in partnership with Gaza’s own university leadership:
+
+- **ISNAD — Emergency Fund for Gaza’s Universities (via Taawon / Welfare Association)**  
+  Primary Palestinian-led programme supporting scholarships, staff, and core university operations.  
+  https://taawon.org/en/isnad
+
+- **BRISMES Fund for Higher Education in Gaza**  
+  A UK academic-society fund that channels small donations in line with the priorities of Gaza’s Emergency Committee of Universities.  
+  https://www.gofundme.com/f/brismes-fund-for-higher-education-in-gaza
+
+- **Friends of Palestinian Universities (FoPU / Fobzu)**  
+  Long-standing UK charity supporting Palestinian universities, including emergency work for Gaza.  
+  https://fobzu.org
+
+- **BuildPalestine — Gaza Education & Community Projects**  
+  Palestinian-run crowdfunding platform that vets and supports grassroots education initiatives.  
+  https://buildpalestine.com
+
+Supporting these funds helps sustain students, staff, research, and educational infrastructure — the foundations for rebuilding Gaza’s higher-education system.
+
+_Thank you for contributing in solidarity._
+
 ## A tour of the features
 
-### Syllabus Metadata
+### Add assignments to classes
 
-Items are grouped by class number, and can be given a priority. Assign classes a name and description.
+Items are grouped by class number, and can be given a priority. Assign classes a name and description. Customize the terminology (e.g., "week", "class", "session", "section") and define custom priority levels with your own names and colors.
 
 ![Syllabus module interface showing class organization](doc/images/classes.png)
+
+### Course documents
 
 Pin important course information to the top of the syllabus.
 
 ![Syllabus module interface showing class organization](doc/images/module.png)
 
-### Standard List View
+### Order your items in list view
 
-The standard Zotero item list view has added columns for class numbers, instructions, and reading priority levels. There's also an 'all in one' column that shows all the syllabus metadata at once. Sorting by this column will sort by class number first, then by priority.
+A **sortable "Syllabus Info" column** to your standard list view, to summarise all the key info. Sort by this column if you want to see what order your readings need to be done in.
 
 ![Standard Zotero list view](doc/images/list.png)
 
-#### How to edit an item's syllabus metadata
+#### Manually reorder items within a class
+
+![Manual reordering demonstration](doc/images/reorder.gif)
+
+Drag and drop items to reorder them within a class, or reset to natural order.
+
+#### Move items between classes
 
 Drag and drop items between classes.
 
 ![Drag and drop functionality demonstration](doc/images/drag-drop.gif)
 
+#### Add reading instructions to assignments
+
 Use the item pane to edit class number, instruction, and priority for an item.
 
 ![Editing pane showing class number, instruction, and priority](doc/images/editing.png)
+
+#### Quickly re-assign class number or priority
 
 Right-click an item to re-assign class number or priority.
 
@@ -54,12 +94,11 @@ Right-click an item to re-assign class number or priority.
 
 ### Other features
 
-- **Manual item re-ordering** within a class.
-- **Sortable "Syllabus Info" column** to your standard list view, to summarise all the key info. Sort by this column if you want to see what order your readings need to be done in.
 - **Assign an item multiple times** within a syllabus. Useful for breaking down larger readings into smaller chunks.
-- **Compact view mode** for when you'd like to see a bit more all at once.
-- **Zotero Reading List compatibility**: if you have the [Zotero Reading List](https://github.com/Dominic-DallOsto/zotero-reading-list) plugin installed, reading status will be displayed in the syllabus view
 - **Print to PDF** — as of right now it gives you a printable HTML page as a file, which you can open in a browser and print to PDF.
+- **Zotero Reading List compatibility**: if you have the [Zotero Reading List](https://github.com/Dominic-DallOsto/zotero-reading-list) plugin installed, reading status will be displayed in the syllabus view
+- **Customizable priorities** — Define your own priority levels with custom names and colors, or use the defaults (Essential, Recommended, Optional, Course Information).
+- **Customizable nomenclature** — Change the terminology used throughout (e.g., "week", "class", "session", "section") with automatic pluralization.
 
 ## Development
 
