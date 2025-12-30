@@ -107,31 +107,13 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     };
   }, []);
 
-  // Listen to preference changes for item order
+  // Listen to metadata changes for item order (now part of metadata)
+  // The useZoteroSyllabusMetadata hook will trigger re-renders when metadata changes
+  // We use itemOrderVersion to force re-computation of class groups when order changes
   useEffect(() => {
-    const prefKey = SyllabusManager.getPreferenceKey(
-      SyllabusManager.settingsKeys.COLLECTION_ITEM_ORDER,
-    );
-    const observer = {
-      notify(
-        event: string,
-        type: string,
-        ids: (number | string)[],
-        extraData: any,
-      ) {
-        // Listen to setting events for item order preference
-        if (type === "setting" && extraData?.pref === prefKey) {
-          setItemOrderVersion((v) => v + 1);
-        }
-      },
-    };
-
-    const notifierId = Zotero.Notifier.registerObserver(observer, ["setting"]);
-
-    return () => {
-      Zotero.Notifier.unregisterObserver(notifierId);
-    };
-  }, []);
+    // This effect will run when syllabusMetadata changes, which includes item order
+    setItemOrderVersion((v) => v + 1);
+  }, [syllabusMetadata]);
 
   // Compute class groups and further reading items from synced items
   // Re-compute when items change or item order changes
@@ -388,6 +370,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
           collectionId,
           targetClassNumberValue,
           newOrder,
+          "page",
         );
         ztoolkit.log(
           "Updated manual order for class",
@@ -435,6 +418,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
             collectionId,
             sourceClassNumber,
             updatedSourceOrder,
+            "page",
           );
 
           // Add to target class order at the end (using assignment ID)
@@ -450,6 +434,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                 collectionId,
                 targetClassNumberValue,
                 updatedTargetOrder,
+                "page",
               );
             }
           }
@@ -507,6 +492,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                 collectionId,
                 targetClassNumberValue,
                 updatedTargetOrder,
+                "page",
               );
             }
             setItemOrderVersion((v) => v + 1);
@@ -564,6 +550,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                 collectionId,
                 targetClassNumberValue,
                 updatedTargetOrder,
+                "page",
               );
               setItemOrderVersion((v) => v + 1);
             }
@@ -998,7 +985,12 @@ function ClassGroupComponent({
     if (classNumber !== null && classNumber !== undefined) {
       try {
         // Clear manual order by setting it to empty array
-        await SyllabusManager.setClassItemOrder(collectionId, classNumber, []);
+        await SyllabusManager.setClassItemOrder(
+          collectionId,
+          classNumber,
+          [],
+          "page",
+        );
         // Force immediate re-render
         if (onResetSortOrder) {
           onResetSortOrder();
@@ -1344,9 +1336,9 @@ function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-      item: Zotero.Item;
-      type: "pdf" | "snapshot" | "epub";
-    }>;
+        item: Zotero.Item;
+        type: "pdf" | "snapshot" | "epub";
+      }>;
   }, [item, slim]);
 
   const metadataParts = [
@@ -1464,9 +1456,9 @@ function SyllabusItemCard({
 
   const colors = priority
     ? {
-        backgroundColor: priorityColor + "15",
-        borderColor: priorityColor + "30",
-      }
+      backgroundColor: priorityColor + "15",
+      borderColor: priorityColor + "30",
+    }
     : {};
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {

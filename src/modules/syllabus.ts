@@ -23,7 +23,6 @@ export enum SyllabusPriority {
 enum SyllabusSettingsKey {
   COLLECTION_METADATA = "collectionMetadata",
   COLLECTION_VIEW_MODES = "collectionViewModes",
-  COLLECTION_ITEM_ORDER = "collectionItemOrder",
 }
 
 export interface ItemSyllabusAssignment {
@@ -43,9 +42,9 @@ export interface ItemSyllabusData {
 }
 
 /**
- * Manual ordering of assignments within classes, stored in preferences
- * Array order represents display order; empty array means use natural order
- * Uses assignment IDs to allow independent sorting of multiple assignments for the same item
+ * @deprecated SettingsClassItemOrder is no longer used.
+ * Item order is now stored in SettingsClassMetadata.itemOrder within COLLECTION_METADATA.
+ * This interface is kept for potential migration purposes only.
  */
 export interface SettingsClassItemOrder {
   [collectionId: string]: {
@@ -72,6 +71,7 @@ export interface SettingsSyllabusMetadata {
 export interface SettingsClassMetadata {
   title?: string;
   description?: string;
+  itemOrder?: string[]; // Manual ordering of assignment IDs within this class
 }
 
 /**
@@ -675,10 +675,10 @@ export class SyllabusManager {
             const classTitle =
               classNumber !== undefined
                 ? SyllabusManager.getClassTitle(
-                    selectedCollection.id,
-                    classNumber,
-                    false,
-                  )
+                  selectedCollection.id,
+                  classNumber,
+                  false,
+                )
                 : "";
             const priority = firstAssignment.priority || "";
             return `${sortKey}|${priority}|${classNumber ?? ""}|${classTitle}|${selectedCollection.id}`;
@@ -871,14 +871,14 @@ export class SyllabusManager {
           body,
           selectedCollection
             ? h(ItemPane, {
-                item,
-                collectionId: selectedCollection.id,
-                editable,
-              })
+              item,
+              collectionId: selectedCollection.id,
+              editable,
+            })
             : h("div", {
-                innerText: "Select a collection to view syllabus assignments",
-                className: "text-center text-gray-500 p-4",
-              }),
+              innerText: "Select a collection to view syllabus assignments",
+              className: "text-center text-gray-500 p-4",
+            }),
           "syllabus-item-pane",
         );
       },
@@ -941,18 +941,18 @@ export class SyllabusManager {
     // Get collection-specific priority options if a collection is selected
     const priorityOptions = selectedCollection
       ? (() => {
-          const customPriorities = this.getPrioritiesForCollection(
-            selectedCollection.id,
-          );
-          const options = customPriorities.map((p) => ({
-            value: p.id,
-            label: p.name,
-            color: p.color,
-          }));
-          // Add "(None)" option
-          options.push({ value: "", label: "(None)", color: "" });
-          return options;
-        })()
+        const customPriorities = this.getPrioritiesForCollection(
+          selectedCollection.id,
+        );
+        const options = customPriorities.map((p) => ({
+          value: p.id,
+          label: p.name,
+          color: p.color,
+        }));
+        // Add "(None)" option
+        options.push({ value: "", label: "(None)", color: "" });
+        return options;
+      })()
       : this.getPriorityOptions();
 
     ztoolkit.Menu.register("item", {
@@ -1638,7 +1638,7 @@ export class SyllabusManager {
       // This ensures OPTIONAL ("optional") sorts before unprioritized ("zzzz")
       assignment.priority || "zzzz",
       assignment.classInstruction?.slice(0, 4).replace(/[^a-zA-Z0-9]/g, "_") ||
-        "",
+      "",
       assignment.id || "",
     );
 
@@ -1876,22 +1876,12 @@ export class SyllabusManager {
     collectionId: number | string,
     classNumber: number | null,
   ): string[] {
-    const prefKey = this.getPreferenceKey(
-      SyllabusSettingsKey.COLLECTION_ITEM_ORDER,
-    );
-    const orderStr = String(Zotero.Prefs.get(prefKey, true) || "");
-    if (!orderStr) {
+    const metadata = this.getSyllabusMetadata(collectionId);
+    if (!metadata.classes) {
       return [];
     }
-    try {
-      const orderData = JSON.parse(orderStr) as SettingsClassItemOrder;
-      const collectionIdStr = String(collectionId);
-      const classKey = classNumber === null ? "null" : String(classNumber);
-      return orderData[collectionIdStr]?.[classKey] || [];
-    } catch (e) {
-      ztoolkit.log("Error parsing item order:", e);
-      return [];
-    }
+    const classKey = classNumber === null ? "null" : String(classNumber);
+    return metadata.classes[classKey]?.itemOrder || [];
   }
 
   /**
@@ -1901,40 +1891,39 @@ export class SyllabusManager {
     collectionId: number | string,
     classNumber: number | null,
     itemIds: string[],
+    source: "page" | "item-pane" = "page",
   ): Promise<void> {
-    const prefKey = this.getPreferenceKey(
-      SyllabusSettingsKey.COLLECTION_ITEM_ORDER,
-    );
-    const orderStr = String(Zotero.Prefs.get(prefKey, true) || "");
-    let orderData: SettingsClassItemOrder = {};
-    if (orderStr) {
-      try {
-        orderData = JSON.parse(orderStr) as SettingsClassItemOrder;
-      } catch (e) {
-        ztoolkit.log("Error parsing item order:", e);
-        orderData = {};
-      }
-    }
-
+    const allData = this.getSettingsCollectionDictionaryData();
     const collectionIdStr = String(collectionId);
     const classKey = classNumber === null ? "null" : String(classNumber);
 
-    if (!orderData[collectionIdStr]) {
-      orderData[collectionIdStr] = {};
+    if (!allData[collectionIdStr]) {
+      allData[collectionIdStr] = {};
+    }
+    if (!allData[collectionIdStr].classes) {
+      allData[collectionIdStr].classes = {};
+    }
+    if (!allData[collectionIdStr].classes[classKey]) {
+      allData[collectionIdStr].classes[classKey] = {};
     }
 
     if (itemIds.length === 0) {
       // Remove ordering if empty
-      delete orderData[collectionIdStr][classKey];
-      // Clean up empty collection entry
-      if (Object.keys(orderData[collectionIdStr]).length === 0) {
-        delete orderData[collectionIdStr];
+      if (allData[collectionIdStr].classes[classKey]) {
+        delete allData[collectionIdStr].classes[classKey].itemOrder;
+        // Clean up empty class entry if no other fields
+        if (
+          !allData[collectionIdStr].classes[classKey].title &&
+          !allData[collectionIdStr].classes[classKey].description
+        ) {
+          delete allData[collectionIdStr].classes[classKey];
+        }
       }
     } else {
-      orderData[collectionIdStr][classKey] = itemIds;
+      allData[collectionIdStr].classes[classKey].itemOrder = itemIds;
     }
 
-    Zotero.Prefs.set(prefKey, JSON.stringify(orderData), true);
+    await this.setCollectionMetadata(allData, source);
   }
 
   /**
@@ -1944,39 +1933,24 @@ export class SyllabusManager {
     collectionId: number | string,
     classNumber: number | null,
     itemIds: string[],
+    source: "page" | "item-pane" = "page",
   ): Promise<void> {
-    await this.setClassItemOrder(collectionId, classNumber, itemIds);
+    await this.setClassItemOrder(collectionId, classNumber, itemIds, source);
   }
 
   /**
-   * Validate ordering preferences and clean up orphaned itemIds
+   * Validate ordering preferences and clean up orphaned assignmentIds
+   * Now validates itemOrder in metadata instead of separate preference
    */
   static async validateOrderingPrefs(
     collectionId: number | string,
   ): Promise<void> {
-    const prefKey = this.getPreferenceKey(
-      SyllabusSettingsKey.COLLECTION_ITEM_ORDER,
-    );
-    const orderStr = String(Zotero.Prefs.get(prefKey, true) || "");
-    if (!orderStr) {
+    const metadata = this.getSyllabusMetadata(collectionId);
+    if (!metadata.classes) {
       return;
     }
 
-    let orderData: SettingsClassItemOrder = {};
-    try {
-      orderData = JSON.parse(orderStr) as SettingsClassItemOrder;
-    } catch (e) {
-      ztoolkit.log("Error parsing item order:", e);
-      return;
-    }
-
-    const collectionIdStr = String(collectionId);
-    const classOrder = orderData[collectionIdStr];
-    if (!classOrder) {
-      return;
-    }
-
-    // Get all valid itemIds in the collection
+    // Get all valid assignment IDs in the collection
     try {
       const collection = Zotero.Collections.get(
         typeof collectionId === "string"
@@ -1988,35 +1962,45 @@ export class SyllabusManager {
       }
 
       const items = collection.getChildItems();
-      const validItemIds = new Set(
-        items
-          .filter((item) => item.isRegularItem())
-          .map((item) => String(item.id)),
-      );
-
-      // Clean up orphaned itemIds
-      let hasChanges = false;
-      for (const [classKey, itemIds] of Object.entries(classOrder)) {
-        const filtered = itemIds.filter((id) => validItemIds.has(id));
-        if (filtered.length !== itemIds.length) {
-          classOrder[classKey] = filtered;
-          hasChanges = true;
-        }
-        // Remove empty arrays
-        if (filtered.length === 0) {
-          delete classOrder[classKey];
-          hasChanges = true;
+      const validAssignmentIds = new Set<string>();
+      for (const item of items) {
+        if (item.isRegularItem()) {
+          const assignments = this.getAllClassAssignments(item, collectionId);
+          for (const assignment of assignments) {
+            if (assignment.id) {
+              validAssignmentIds.add(assignment.id);
+            }
+          }
         }
       }
 
-      // Clean up empty collection entry
-      if (Object.keys(classOrder).length === 0) {
-        delete orderData[collectionIdStr];
-        hasChanges = true;
+      // Clean up orphaned assignmentIds in itemOrder
+      const allData = this.getSettingsCollectionDictionaryData();
+      const collectionIdStr = String(collectionId);
+      let hasChanges = false;
+
+      if (allData[collectionIdStr]?.classes) {
+        for (const [classKey, classMetadata] of Object.entries(
+          allData[collectionIdStr].classes!,
+        )) {
+          if (classMetadata.itemOrder) {
+            const filtered = classMetadata.itemOrder.filter((id) =>
+              validAssignmentIds.has(id),
+            );
+            if (filtered.length !== classMetadata.itemOrder.length) {
+              if (filtered.length === 0) {
+                delete classMetadata.itemOrder;
+              } else {
+                classMetadata.itemOrder = filtered;
+              }
+              hasChanges = true;
+            }
+          }
+        }
       }
 
       if (hasChanges) {
-        Zotero.Prefs.set(prefKey, JSON.stringify(orderData), true);
+        await this.setCollectionMetadata(allData, "page");
       }
     } catch (e) {
       ztoolkit.log("Error validating ordering prefs:", e);
