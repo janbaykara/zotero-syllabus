@@ -196,9 +196,8 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
 
   // Get collection-specific priority options
   const priorityOptions = useMemo(() => {
-    const customPriorities = SyllabusManager.getPrioritiesForCollection(
-      collectionId,
-    );
+    const customPriorities =
+      SyllabusManager.getPrioritiesForCollection(collectionId);
     const options = customPriorities.map((p) => ({
       value: p.id,
       label: p.name,
@@ -296,7 +295,8 @@ function AssignmentEditor({
       ? SyllabusManager.getClassTitle(collectionId, assignment.classNumber)
       : "";
 
-  const { singularCapitalized } = SyllabusManager.getNomenclatureFormatted(collectionId);
+  const { singularCapitalized } =
+    SyllabusManager.getNomenclatureFormatted(collectionId);
 
   let legendText = "Syllabus item";
   if (assignment.classNumber !== undefined) {
@@ -426,9 +426,9 @@ function AssignmentEditor({
                   style={
                     opt.color
                       ? {
-                        color: opt.color,
-                        fontWeight: "500",
-                      }
+                          color: opt.color,
+                          fontWeight: "500",
+                        }
                       : undefined
                   }
                 >

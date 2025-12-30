@@ -185,9 +185,8 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     }
 
     // Get full range of class numbers (same logic as contextual menu)
-    const fullRangeClassNumbers = SyllabusManager.getFullClassNumberRange(
-      collectionId,
-    );
+    const fullRangeClassNumbers =
+      SyllabusManager.getFullClassNumberRange(collectionId);
 
     // Add classes that have items but are outside the range (for null classNumber)
     const sortedClassNumbers = Array.from(itemsByClass.keys()).sort((a, b) => {
@@ -775,9 +774,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                   }
                 >
                   <span aria-hidden="true">📐</span>
-                  <span>
-                    {compactMode ? "Spacious" : "Compact"}
-                  </span>
+                  <span>{compactMode ? "Spacious" : "Compact"}</span>
                 </button>
                 <button
                   onClick={handlePrint}
@@ -836,7 +833,8 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
         <div className="container-padded">
           {(() => {
-            const { singularCapitalized } = SyllabusManager.getNomenclatureFormatted(collectionId);
+            const { singularCapitalized } =
+              SyllabusManager.getNomenclatureFormatted(collectionId);
 
             return (
               <>
@@ -969,7 +967,8 @@ function ClassGroupComponent({
   onResetSortOrder,
 }: ClassGroupComponentProps) {
   // Get nomenclature for this collection
-  const { singularCapitalized } = SyllabusManager.getNomenclatureFormatted(collectionId);
+  const { singularCapitalized } =
+    SyllabusManager.getNomenclatureFormatted(collectionId);
 
   // Get class title and description from metadata
   const classTitle = classNumber
@@ -1345,9 +1344,9 @@ function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-        item: Zotero.Item;
-        type: "pdf" | "snapshot" | "epub";
-      }>;
+      item: Zotero.Item;
+      type: "pdf" | "snapshot" | "epub";
+    }>;
   }, [item, slim]);
 
   const metadataParts = [
@@ -1465,9 +1464,9 @@ function SyllabusItemCard({
 
   const colors = priority
     ? {
-      backgroundColor: priorityColor + "15",
-      borderColor: priorityColor + "30",
-    }
+        backgroundColor: priorityColor + "15",
+        borderColor: priorityColor + "30",
+      }
     : {};
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
@@ -1743,9 +1742,7 @@ function SyllabusItemCard({
               >
                 ⧉
               </span>
-              <span className="syllabus-action-label">
-                Duplicate
-              </span>
+              <span className="syllabus-action-label">Duplicate</span>
             </button>
           </div>
           <div className="focus-states-target">
@@ -1812,9 +1809,8 @@ function SyllabusItemCard({
           </div>
           &middot;
           {(() => {
-            const priorityOptions = SyllabusManager.getPrioritiesForCollection(
-              collectionId,
-            );
+            const priorityOptions =
+              SyllabusManager.getPrioritiesForCollection(collectionId);
             return [
               ...priorityOptions.map((priorityOption) => {
                 return (
@@ -1829,7 +1825,9 @@ function SyllabusItemCard({
                               item,
                               collectionId,
                               assignment.id,
-                              { priority: priorityOption.id as SyllabusPriority },
+                              {
+                                priority: priorityOption.id as SyllabusPriority,
+                              },
                               "page",
                             );
                           } else {
@@ -1837,7 +1835,9 @@ function SyllabusItemCard({
                               item,
                               collectionId,
                               assignment?.classNumber,
-                              { priority: priorityOption.id as SyllabusPriority },
+                              {
+                                priority: priorityOption.id as SyllabusPriority,
+                              },
                               "page",
                             );
                           }
@@ -1919,10 +1919,11 @@ function PriorityIcon({
   if (!priority) return null;
 
   // Use collection-specific colors and labels if collectionId is provided
-  const { color: priorityColor, label: priorityLabel } = SyllabusManager.getPriorityDisplay(
-    collectionId,
-    priority as SyllabusPriority,
-  );
+  const { color: priorityColor, label: priorityLabel } =
+    SyllabusManager.getPriorityDisplay(
+      collectionId,
+      priority as SyllabusPriority,
+    );
 
   if (!priorityLabel) return null;
 

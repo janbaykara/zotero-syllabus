@@ -675,10 +675,10 @@ export class SyllabusManager {
             const classTitle =
               classNumber !== undefined
                 ? SyllabusManager.getClassTitle(
-                  selectedCollection.id,
-                  classNumber,
-                  false,
-                )
+                    selectedCollection.id,
+                    classNumber,
+                    false,
+                  )
                 : "";
             const priority = firstAssignment.priority || "";
             return `${sortKey}|${priority}|${classNumber ?? ""}|${classTitle}|${selectedCollection.id}`;
@@ -871,14 +871,14 @@ export class SyllabusManager {
           body,
           selectedCollection
             ? h(ItemPane, {
-              item,
-              collectionId: selectedCollection.id,
-              editable,
-            })
+                item,
+                collectionId: selectedCollection.id,
+                editable,
+              })
             : h("div", {
-              innerText: "Select a collection to view syllabus assignments",
-              className: "text-center text-gray-500 p-4",
-            }),
+                innerText: "Select a collection to view syllabus assignments",
+                className: "text-center text-gray-500 p-4",
+              }),
           "syllabus-item-pane",
         );
       },
@@ -941,18 +941,18 @@ export class SyllabusManager {
     // Get collection-specific priority options if a collection is selected
     const priorityOptions = selectedCollection
       ? (() => {
-        const customPriorities = this.getPrioritiesForCollection(
-          selectedCollection.id,
-        );
-        const options = customPriorities.map((p) => ({
-          value: p.id,
-          label: p.name,
-          color: p.color,
-        }));
-        // Add "(None)" option
-        options.push({ value: "", label: "(None)", color: "" });
-        return options;
-      })()
+          const customPriorities = this.getPrioritiesForCollection(
+            selectedCollection.id,
+          );
+          const options = customPriorities.map((p) => ({
+            value: p.id,
+            label: p.name,
+            color: p.color,
+          }));
+          // Add "(None)" option
+          options.push({ value: "", label: "(None)", color: "" });
+          return options;
+        })()
       : this.getPriorityOptions();
 
     ztoolkit.Menu.register("item", {
@@ -1638,7 +1638,7 @@ export class SyllabusManager {
       // This ensures OPTIONAL ("optional") sorts before unprioritized ("zzzz")
       assignment.priority || "zzzz",
       assignment.classInstruction?.slice(0, 4).replace(/[^a-zA-Z0-9]/g, "_") ||
-      "",
+        "",
       assignment.id || "",
     );
 
@@ -2108,7 +2108,11 @@ export class SyllabusManager {
     source: "page",
   ): Promise<void> {
     const allData = SyllabusManager.getSettingsCollectionDictionaryData();
-    set(allData, `${collectionId}.nomenclature`, nomenclature.trim().toLowerCase());
+    set(
+      allData,
+      `${collectionId}.nomenclature`,
+      nomenclature.trim().toLowerCase(),
+    );
     await SyllabusManager.setCollectionMetadata(allData, source);
   }
 
@@ -2291,7 +2295,6 @@ export class SyllabusManager {
     }
   }
 
-
   /**
    * Get default priorities (used when no custom priorities are set)
    */
@@ -2394,9 +2397,7 @@ export class SyllabusManager {
   /**
    * Get formatted nomenclature for a collection
    */
-  static getNomenclatureFormatted(
-    collectionId: number | string,
-  ): {
+  static getNomenclatureFormatted(collectionId: number | string): {
     singular: string;
     plural: string;
     singularCapitalized: string;
@@ -2408,8 +2409,7 @@ export class SyllabusManager {
     return {
       singular,
       plural,
-      singularCapitalized:
-        singular.charAt(0).toUpperCase() + singular.slice(1),
+      singularCapitalized: singular.charAt(0).toUpperCase() + singular.slice(1),
       pluralCapitalized: plural.charAt(0).toUpperCase() + plural.slice(1),
     };
   }
@@ -2430,14 +2430,8 @@ export class SyllabusManager {
 
     if (collectionId !== undefined) {
       return {
-        color: this.getPriorityColorForCollection(
-          collectionId,
-          priorityEnum,
-        ),
-        label: this.getPriorityLabelForCollection(
-          collectionId,
-          priorityEnum,
-        ),
+        color: this.getPriorityColorForCollection(collectionId, priorityEnum),
+        label: this.getPriorityLabelForCollection(collectionId, priorityEnum),
       };
     }
 
@@ -2467,10 +2461,7 @@ export class SyllabusManager {
   /**
    * Render a priority label element (for DOM manipulation contexts like column rendering)
    */
-  static createPriorityLabel(
-    doc: Document,
-    label: string,
-  ): HTMLElement {
+  static createPriorityLabel(doc: Document, label: string): HTMLElement {
     const labelElement = doc.createElement("span");
     labelElement.textContent = label;
     return labelElement;

@@ -2,10 +2,7 @@
 import { h, Fragment } from "preact";
 import { useState, useEffect, useCallback, useMemo } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
-import {
-  SyllabusManager,
-  CustomPriority,
-} from "./syllabus";
+import { SyllabusManager, CustomPriority } from "./syllabus";
 import pluralize from "pluralize";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { useDebouncedEffect } from "../utils/react/useDebouncedEffect";
@@ -26,7 +23,8 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
   ] = useZoteroSyllabusMetadata(collectionId);
 
   // Use local state for immediate UI feedback, but save immediately
-  const priorities = metadata.priorities || SyllabusManager.getDefaultPriorities();
+  const priorities =
+    metadata.priorities || SyllabusManager.getDefaultPriorities();
   const nomenclature = metadata.nomenclature || "class";
 
   // Local state for nomenclature input (for immediate UI feedback)
@@ -49,12 +47,9 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
     500,
   );
 
-  const handleNomenclatureChange = useCallback(
-    (value: string) => {
-      setLocalNomenclature(value);
-    },
-    [],
-  );
+  const handleNomenclatureChange = useCallback((value: string) => {
+    setLocalNomenclature(value);
+  }, []);
 
   const handlePriorityChange = useCallback(
     (priorityId: string, updates: Partial<CustomPriority>) => {
@@ -151,8 +146,8 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
           <section className="space-y-4">
             <h2 className="text-2xl font-semibold">Nomenclature</h2>
             <p className="text-secondary">
-              Choose the term used to refer to individual sessions (e.g., "week",
-              "class", "session", "section").
+              Choose the term used to refer to individual sessions (e.g.,
+              "week", "class", "session", "section").
             </p>
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-secondary">
@@ -285,7 +280,7 @@ function PriorityEditor({
         </div>
 
         {/* Name Input */}
-        <div className='flex'>
+        <div className="flex">
           <label className="text-sm font-medium text-secondary block mb-1">
             Name
           </label>
@@ -315,9 +310,7 @@ function PriorityEditor({
       <div className="mt-4 pt-4 border-t border-quinary">
         <div className="flex items-center gap-2">
           <span className="text-sm text-secondary">Preview:</span>
-          <span
-            className="uppercase font-semibold tracking-wide flex flex-row gap-1.5 items-baseline"
-          >
+          <span className="uppercase font-semibold tracking-wide flex flex-row gap-1.5 items-baseline">
             <span
               className="w-3 h-3 rounded-full inline-block"
               style={{ backgroundColor: priority.color }}
@@ -337,4 +330,3 @@ function PriorityEditor({
     </div>
   );
 }
-
