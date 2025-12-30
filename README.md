@@ -24,9 +24,7 @@ A Zotero add-on / plugin that turns your collections into syllabi and course rea
 
 ## Show your thanks by donating 🙏🇵🇸🕊️
 
-If this project is useful to you, please consider showing support by donating to funds that help keep **Gaza’s universities, students, and academic life alive** during reconstruction, following the genocide of the Palestinian people by the Israeli-American occupation.
-
-We recommend reputable, sector-led initiatives that work in partnership with Gaza’s own university leadership:
+If this project is useful to you, [Buy Me a Coffee](https://buymeacoffee.com/janbaykara) and I will regularly donate proceeds to third party funds, including those that help keep **Gaza's universities, students, and academic life alive** during reconstruction, following the genocide of the Palestinian people by the Israeli-American occupation:
 
 - **ISNAD — Emergency Fund for Gaza’s Universities (via Taawon / Welfare Association)**  
   Primary Palestinian-led programme supporting scholarships, staff, and core university operations.  
