@@ -25,7 +25,7 @@
     "build:css": "node scripts/build-css.js",
     "watch:css": "npx @tailwindcss/cli -i ./src/tailwind.css -o ./addon/content/tailwind.css --watch",
     "start": "concurrently \"pnpm watch:css\" \"zotero-plugin serve\"",
-    "build": "pnpm build:css && zotero-plugin build && tsc --noEmit",
+    "build": "pnpm build:css && pnpm zotero-plugin build && pnpm tsc --noEmit",
     "lint:check": "prettier --check . && eslint .",
     "lint:fix": "prettier --write . && eslint . --fix",
     "release": "zotero-plugin release",
