@@ -775,8 +775,8 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                   }
                 >
                   <span aria-hidden="true">📐</span>
-                  <span className={compactMode ? "font-semibold" : ""}>
-                    {compactMode ? "Normal" : "Compact"}
+                  <span>
+                    {compactMode ? "Spacious" : "Compact"}
                   </span>
                 </button>
                 <button
