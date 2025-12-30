@@ -6,7 +6,6 @@
     --color-red-400: oklch(70.4% 0.191 22.216);
     --color-red-500: oklch(63.7% 0.237 25.331);
     --color-gray-500: oklch(55.1% 0.027 264.364);
-    --color-white: #fff;
     --spacing: 0.25rem;
     --container-4xl: 56rem;
     --text-sm: 0.875rem;
@@ -120,6 +119,9 @@
   .-m-2 {
     margin: calc(var(--spacing) * -2);
   }
+  .m-0 {
+    margin: calc(var(--spacing) * 0);
+  }
   .mx-0\! {
     margin-inline: calc(var(--spacing) * 0) !important;
   }
@@ -227,6 +229,9 @@
   }
   .w-full {
     width: 100%;
+  }
+  .flex-0\! {
+    flex: 0 !important;
   }
   .flex-1 {
     flex: 1;
@@ -340,6 +345,9 @@
   .self-center {
     align-self: center;
   }
+  .justify-self-end {
+    justify-self: flex-end;
+  }
   .overflow-x-hidden {
     overflow-x: hidden;
   }
@@ -400,9 +408,6 @@
       border-color: color-mix(in oklab, var(--color-tertiary) 50%, transparent);
     }
   }
-  .bg-accent-blue {
-    background-color: var(--color-accent-blue);
-  }
   .bg-accent-blue\! {
     background-color: var(--color-accent-blue) !important;
   }
@@ -429,9 +434,6 @@
     @supports (color: color-mix(in lab, red, red)) {
       background-color: color-mix(in oklab, var(--color-quinary) 50%, transparent);
     }
-  }
-  .bg-secondary {
-    background-color: var(--color-secondary);
   }
   .bg-transparent {
     background-color: transparent;
@@ -553,17 +555,14 @@
   .text-primary {
     color: var(--color-primary);
   }
-  .text-red-400 {
-    color: var(--color-red-400);
+  .text-red-500\! {
+    color: var(--color-red-500) !important;
   }
   .text-secondary {
     color: var(--color-secondary);
   }
   .text-tertiary {
     color: var(--color-tertiary);
-  }
-  .text-white {
-    color: var(--color-white);
   }
   .uppercase {
     text-transform: uppercase;
@@ -586,11 +585,6 @@
     transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
     transition-duration: var(--tw-duration, var(--default-transition-duration));
   }
-  .transition-colors {
-    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to;
-    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
-    transition-duration: var(--tw-duration, var(--default-transition-duration));
-  }
   .duration-200 {
     --tw-duration: 200ms;
     transition-duration: 200ms;
@@ -606,16 +600,6 @@
     &:is(:where(.group):hover *) {
       @media (hover: hover) {
         display: flex;
-      }
-    }
-  }
-  .hover\:bg-accent-blue\/90 {
-    &:hover {
-      @media (hover: hover) {
-        background-color: color-mix(in srgb, #4072e5 90%, transparent);
-        @supports (color: color-mix(in lab, red, red)) {
-          background-color: color-mix(in oklab, var(--color-accent-blue) 90%, transparent);
-        }
       }
     }
   }

@@ -11,6 +11,7 @@ import { renderComponent } from "../utils/react";
 import { ItemPane } from "./ItemPane";
 import { h } from "preact";
 import { uuidv7 } from "uuidv7";
+import pluralize from "pluralize";
 
 export enum SyllabusPriority {
   COURSE_INFO = "course-info",
@@ -23,7 +24,6 @@ enum SyllabusSettingsKey {
   COLLECTION_METADATA = "collectionMetadata",
   COLLECTION_VIEW_MODES = "collectionViewModes",
   COLLECTION_ITEM_ORDER = "collectionItemOrder",
-  COLLECTION_SETTINGS = "collectionSettings",
 }
 
 export interface ItemSyllabusAssignment {
@@ -65,6 +65,8 @@ export interface SettingsSyllabusMetadata {
   classes?: {
     [classNumber: string]: SettingsClassMetadata;
   };
+  nomenclature?: string;
+  priorities?: CustomPriority[];
 }
 
 export interface SettingsClassMetadata {
@@ -80,21 +82,6 @@ export interface CustomPriority {
   name: string; // Display name (e.g., "Essential", "Recommended")
   color: string; // Hex color code (e.g., "#8B5CF6")
   order: number; // Sort order (lower = higher priority)
-}
-
-/**
- * Collection-level settings stored in preferences
- */
-export interface CollectionSettings {
-  nomenclature?: string; // Singular form (e.g., "week", "class", "session", "section")
-  priorities?: CustomPriority[]; // Custom priority configurations
-}
-
-/**
- * Dictionary of collection settings by collection ID
- */
-export interface SettingsCollectionSettingsData {
-  [collectionId: string]: CollectionSettings;
 }
 
 export class SyllabusManager {
@@ -388,6 +375,8 @@ export class SyllabusManager {
         // setupUI() calls setupPage() which re-renders React component for new collection
         // Once mounted, React stores handle all data updates automatically
         SyllabusManager.setupUI();
+        // Reload context menus for the new collection
+        SyllabusManager.setupContextMenuSetPriority();
       }
     }, 300);
     this.syllabusViewTabListener = interval;
@@ -729,37 +718,13 @@ export class SyllabusManager {
             const collectionIdNum = collectionId
               ? parseInt(collectionId, 10)
               : undefined;
-            const priorityColor = collectionIdNum
-              ? SyllabusManager.getPriorityColorForCollection(
-                collectionIdNum,
-                priority as SyllabusPriority,
-              )
-              : SyllabusManager.PRIORITY_COLORS[
-              priority as SyllabusPriority
-              ] || "#AAA";
-            const priorityLabel = collectionIdNum
-              ? SyllabusManager.getPriorityLabelForCollection(
-                collectionIdNum,
-                priority as SyllabusPriority,
-              )
-              : SyllabusManager.PRIORITY_LABELS[
-              priority as SyllabusPriority
-              ] || "";
-
-            if (priorityLabel) {
-              // Create colored dot
-              const dot = doc.createElement("span");
-              dot.style.width = "8px";
-              dot.style.height = "8px";
-              dot.style.borderRadius = "50%";
-              dot.style.backgroundColor = priorityColor;
-              dot.style.flexShrink = "0";
-              container.appendChild(dot);
-
-              // Create text label
-              const label = doc.createElement("span");
-              label.textContent = priorityLabel;
-              container.appendChild(label);
+            const priorityElements = SyllabusManager.createPriorityDisplay(
+              doc,
+              collectionIdNum,
+              priority as SyllabusPriority,
+            );
+            for (const element of priorityElements) {
+              container.appendChild(element);
             }
           }
 
@@ -785,26 +750,16 @@ export class SyllabusManager {
             container.appendChild(classNumberSpan);
           }
 
-          // Display priority if available (using default colors/labels)
-          if (
-            priority &&
-            SyllabusManager.PRIORITY_LABELS[priority as SyllabusPriority]
-          ) {
-            const priorityEnum = priority as SyllabusPriority;
-            // Create colored dot
-            const dot = doc.createElement("span");
-            dot.style.width = "8px";
-            dot.style.height = "8px";
-            dot.style.borderRadius = "50%";
-            dot.style.backgroundColor =
-              SyllabusManager.PRIORITY_COLORS[priorityEnum];
-            dot.style.flexShrink = "0";
-            container.appendChild(dot);
-
-            // Create text label
-            const label = doc.createElement("span");
-            label.textContent = SyllabusManager.PRIORITY_LABELS[priorityEnum];
-            container.appendChild(label);
+          // Display priority if available (using default colors/labels - no collectionId)
+          if (priority) {
+            const priorityElements = SyllabusManager.createPriorityDisplay(
+              doc,
+              undefined, // No collectionId for backward compatibility
+              priority as SyllabusPriority,
+            );
+            for (const element of priorityElements) {
+              container.appendChild(element);
+            }
           }
 
           // Display class title at the end if available
@@ -979,7 +934,26 @@ export class SyllabusManager {
         }
       };
 
-    const priorityOptions = this.getPriorityOptions();
+    // Get the selected collection to use collection-specific priorities
+    const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+    const selectedCollection = zoteroPane?.getSelectedCollection();
+
+    // Get collection-specific priority options if a collection is selected
+    const priorityOptions = selectedCollection
+      ? (() => {
+        const customPriorities = this.getPrioritiesForCollection(
+          selectedCollection.id,
+        );
+        const options = customPriorities.map((p) => ({
+          value: p.id,
+          label: p.name,
+          color: p.color,
+        }));
+        // Add "(None)" option
+        options.push({ value: "", label: "(None)", color: "" });
+        return options;
+      })()
+      : this.getPriorityOptions();
 
     ztoolkit.Menu.register("item", {
       tag: "menu",
@@ -1037,22 +1011,11 @@ export class SyllabusManager {
       ];
     }
 
-    // Get all class numbers from collection items
-    const classNumbers = new Set<number>();
-    for (const item of selectedCollection.getChildItems()) {
-      if (item.isRegularItem()) {
-        for (const assignment of this.getAllClassAssignments(
-          item,
-          selectedCollection.id,
-        )) {
-          if (assignment.classNumber !== undefined) {
-            classNumbers.add(assignment.classNumber);
-          }
-        }
-      }
-    }
+    // Get full range of class numbers (same logic as SyllabusPage)
+    const sortedClassNumbers = this.getFullClassNumberRange(
+      selectedCollection.id,
+    );
 
-    const sortedClassNumbers = Array.from(classNumbers).sort((a, b) => a - b);
     const createClassHandler =
       (classNumber: number | undefined) => async () => {
         const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
@@ -1394,13 +1357,11 @@ export class SyllabusManager {
   }
 
   /**
-   * Get the min and max class number range for a collection
-   * Considers both items with class numbers and classes defined in metadata
+   * Get the full range of class numbers for a collection
+   * Returns all class numbers from 1 to max, plus any classes with items outside that range
+   * This is the same logic used in SyllabusPage and the contextual menu
    */
-  static getClassNumberRange(
-    collectionId: number | string,
-    syllabusMetadata?: SettingsSyllabusMetadata,
-  ): { min: number | null; max: number | null } {
+  static getFullClassNumberRange(collectionId: number | string): number[] {
     const classNumbers = new Set<number>();
 
     // Get class numbers from items in the collection
@@ -1429,7 +1390,7 @@ export class SyllabusManager {
     }
 
     // Get class numbers from metadata
-    const metadata = syllabusMetadata || this.getSyllabusMetadata(collectionId);
+    const metadata = this.getSyllabusMetadata(collectionId);
     if (metadata.classes) {
       for (const classNumStr of Object.keys(metadata.classes)) {
         const classNum = parseInt(classNumStr, 10);
@@ -1439,15 +1400,32 @@ export class SyllabusManager {
       }
     }
 
-    if (classNumbers.size === 0) {
-      return { min: null, max: null };
+    // Calculate min/max from collected class numbers
+    let max: number | null = null;
+    if (classNumbers.size > 0) {
+      const sortedNumbers = Array.from(classNumbers).sort((a, b) => a - b);
+      max = sortedNumbers[sortedNumbers.length - 1];
     }
 
-    const sortedNumbers = Array.from(classNumbers).sort((a, b) => a - b);
-    return {
-      min: sortedNumbers[0],
-      max: sortedNumbers[sortedNumbers.length - 1],
-    };
+    // Generate all class numbers from 1 to max (even if empty)
+    // Always start from 1, even if the minimum class number is greater than 1
+    const allClassNumbers: number[] = [];
+    if (max !== null) {
+      for (let i = 1; i <= max; i++) {
+        allClassNumbers.push(i);
+      }
+    }
+
+    // Merge: use allClassNumbers as base, but ensure we include any classes with items
+    const finalClassNumbers = new Set<number>();
+    for (const num of allClassNumbers) {
+      finalClassNumbers.add(num);
+    }
+    for (const num of classNumbers) {
+      finalClassNumbers.add(num);
+    }
+
+    return Array.from(finalClassNumbers).sort((a, b) => a - b);
   }
 
   /**
@@ -2121,6 +2099,32 @@ export class SyllabusManager {
     await SyllabusManager.setCollectionMetadata(allData, source);
   }
 
+  /**
+   * Set collection nomenclature for a specific collection
+   */
+  static async setNomenclature(
+    collectionId: number | string,
+    nomenclature: string,
+    source: "page",
+  ): Promise<void> {
+    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
+    set(allData, `${collectionId}.nomenclature`, nomenclature.trim().toLowerCase());
+    await SyllabusManager.setCollectionMetadata(allData, source);
+  }
+
+  /**
+   * Set collection priorities for a specific collection
+   */
+  static async setPriorities(
+    collectionId: number | string,
+    priorities: CustomPriority[],
+    source: "page",
+  ): Promise<void> {
+    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
+    set(allData, `${collectionId}.priorities`, priorities);
+    await SyllabusManager.setCollectionMetadata(allData, source);
+  }
+
   static getClassMetadata(collectionId: number | string, classNumber: number) {
     const metadata = SyllabusManager.getSyllabusMetadata(collectionId);
     return metadata.classes?.[classNumber] || {};
@@ -2287,58 +2291,6 @@ export class SyllabusManager {
     }
   }
 
-  /**
-   * Get collection settings from preferences
-   */
-  static getCollectionSettings(
-    collectionId: number | string,
-  ): CollectionSettings {
-    const prefKey = this.getPreferenceKey(
-      SyllabusSettingsKey.COLLECTION_SETTINGS,
-    );
-    const settingsStr = String(Zotero.Prefs.get(prefKey, true) || "");
-    if (!settingsStr) {
-      return {};
-    }
-    try {
-      const data = JSON.parse(settingsStr) as SettingsCollectionSettingsData;
-      const collectionIdStr = String(collectionId);
-      return data[collectionIdStr] || {};
-    } catch (e) {
-      ztoolkit.log("Error parsing collection settings:", e);
-      return {};
-    }
-  }
-
-  /**
-   * Set collection settings in preferences
-   */
-  static async setCollectionSettings(
-    collectionId: number | string,
-    settings: CollectionSettings,
-    source: "page",
-  ): Promise<void> {
-    const prefKey = this.getPreferenceKey(
-      SyllabusSettingsKey.COLLECTION_SETTINGS,
-    );
-    const settingsStr = String(Zotero.Prefs.get(prefKey, true) || "");
-    let data: SettingsCollectionSettingsData = {};
-    if (settingsStr) {
-      try {
-        data = JSON.parse(settingsStr) as SettingsCollectionSettingsData;
-      } catch (e) {
-        ztoolkit.log("Error parsing collection settings:", e);
-        data = {};
-      }
-    }
-
-    const collectionIdStr = String(collectionId);
-    data[collectionIdStr] = settings;
-
-    Zotero.Prefs.set(prefKey, JSON.stringify(data), true);
-    // Emit event for store listeners
-    this.emitCollectionMetadataChange();
-  }
 
   /**
    * Get default priorities (used when no custom priorities are set)
@@ -2378,10 +2330,10 @@ export class SyllabusManager {
   static getPrioritiesForCollection(
     collectionId: number | string,
   ): CustomPriority[] {
-    const settings = this.getCollectionSettings(collectionId);
-    if (settings.priorities && settings.priorities.length > 0) {
+    const metadata = this.getSyllabusMetadata(collectionId);
+    if (metadata.priorities && metadata.priorities.length > 0) {
       // Sort by order
-      return [...settings.priorities].sort((a, b) => a.order - b.order);
+      return [...metadata.priorities].sort((a, b) => a.order - b.order);
     }
     return this.getDefaultPriorities();
   }
@@ -2435,7 +2387,120 @@ export class SyllabusManager {
    * Get nomenclature for a collection (defaults to "class")
    */
   static getNomenclature(collectionId: number | string): string {
-    const settings = this.getCollectionSettings(collectionId);
-    return settings.nomenclature || "class";
+    const metadata = this.getSyllabusMetadata(collectionId);
+    return metadata.nomenclature || "class";
+  }
+
+  /**
+   * Get formatted nomenclature for a collection
+   */
+  static getNomenclatureFormatted(
+    collectionId: number | string,
+  ): {
+    singular: string;
+    plural: string;
+    singularCapitalized: string;
+    pluralCapitalized: string;
+  } {
+    const singular = this.getNomenclature(collectionId);
+    const plural = pluralize(singular);
+
+    return {
+      singular,
+      plural,
+      singularCapitalized:
+        singular.charAt(0).toUpperCase() + singular.slice(1),
+      pluralCapitalized: plural.charAt(0).toUpperCase() + plural.slice(1),
+    };
+  }
+
+  /**
+   * Get priority color and label for a collection
+   * Returns both in a single call to avoid duplicate lookups
+   */
+  static getPriorityDisplay(
+    collectionId: number | string | undefined,
+    priority: SyllabusPriority | "" | undefined,
+  ): { color: string; label: string } {
+    if (!priority) {
+      return { color: "#AAA", label: "" };
+    }
+
+    const priorityEnum = priority as SyllabusPriority;
+
+    if (collectionId !== undefined) {
+      return {
+        color: this.getPriorityColorForCollection(
+          collectionId,
+          priorityEnum,
+        ),
+        label: this.getPriorityLabelForCollection(
+          collectionId,
+          priorityEnum,
+        ),
+      };
+    }
+
+    return {
+      color: this.PRIORITY_COLORS[priorityEnum] || "#AAA",
+      label: this.PRIORITY_LABELS[priorityEnum] || "",
+    };
+  }
+
+  /**
+   * Render a priority dot element (for DOM manipulation contexts like column rendering)
+   */
+  static createPriorityDot(
+    doc: Document,
+    color: string,
+    size: number = 8,
+  ): HTMLElement {
+    const dot = doc.createElement("span");
+    dot.style.width = `${size}px`;
+    dot.style.height = `${size}px`;
+    dot.style.borderRadius = "50%";
+    dot.style.backgroundColor = color;
+    dot.style.flexShrink = "0";
+    return dot;
+  }
+
+  /**
+   * Render a priority label element (for DOM manipulation contexts like column rendering)
+   */
+  static createPriorityLabel(
+    doc: Document,
+    label: string,
+  ): HTMLElement {
+    const labelElement = doc.createElement("span");
+    labelElement.textContent = label;
+    return labelElement;
+  }
+
+  /**
+   * Render a complete priority display (dot + label) for DOM manipulation contexts
+   */
+  static createPriorityDisplay(
+    doc: Document,
+    collectionId: number | string | undefined,
+    priority: SyllabusPriority | "" | undefined,
+    options?: {
+      dotSize?: number;
+      showDot?: boolean;
+    },
+  ): HTMLElement[] {
+    const { color, label } = this.getPriorityDisplay(collectionId, priority);
+    if (!label) {
+      return [];
+    }
+
+    const elements: HTMLElement[] = [];
+    const { dotSize = 8, showDot = true } = options || {};
+
+    if (showDot) {
+      elements.push(this.createPriorityDot(doc, color, dotSize));
+    }
+    elements.push(this.createPriorityLabel(doc, label));
+
+    return elements;
   }
 }

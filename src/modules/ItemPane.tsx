@@ -296,15 +296,13 @@ function AssignmentEditor({
       ? SyllabusManager.getClassTitle(collectionId, assignment.classNumber)
       : "";
 
-  const nomenclature = SyllabusManager.getNomenclature(collectionId);
-  const nomenclatureCapitalized =
-    nomenclature.charAt(0).toUpperCase() + nomenclature.slice(1);
+  const { singularCapitalized } = SyllabusManager.getNomenclatureFormatted(collectionId);
 
   let legendText = "Syllabus item";
   if (assignment.classNumber !== undefined) {
     legendText = classTitle
-      ? `${nomenclatureCapitalized} ${assignment.classNumber}: ${classTitle}`
-      : `${nomenclatureCapitalized} ${assignment.classNumber}`;
+      ? `${singularCapitalized} ${assignment.classNumber}: ${classTitle}`
+      : `${singularCapitalized} ${assignment.classNumber}`;
   }
 
   return (
@@ -350,7 +348,7 @@ function AssignmentEditor({
               color: "var(--fill-secondary)",
             }}
           >
-            {nomenclatureCapitalized} Number
+            {singularCapitalized} Number
           </label>
           <input
             type="number"
@@ -399,37 +397,70 @@ function AssignmentEditor({
           >
             Priority
           </label>
-          <select
-            disabled={!editable || isSaving}
-            value={assignment.priority || ""}
-            onChange={(e) => {
-              const target = e.target as HTMLSelectElement;
-              onPriorityChange(assignment.id!, target.value as any);
-            }}
-            style={{
-              padding: "5px",
-              fontSize: "13px",
-              width: "100%",
-              margin: "0",
-            }}
-          >
-            {priorityOptions.map((opt) => (
-              <option
-                key={opt.value}
-                value={opt.value}
-                style={
-                  opt.color
-                    ? {
-                      color: opt.color,
-                      fontWeight: "500",
-                    }
-                    : undefined
-                }
-              >
-                {opt.label}
-              </option>
-            ))}
-          </select>
+          <div style={{ position: "relative", width: "100%" }}>
+            <select
+              disabled={!editable || isSaving}
+              value={assignment.priority || ""}
+              onChange={(e) => {
+                const target = e.target as HTMLSelectElement;
+                onPriorityChange(assignment.id!, target.value as any);
+              }}
+              style={{
+                padding: "5px 5px 5px 24px",
+                fontSize: "13px",
+                width: "100%",
+                margin: "0",
+                appearance: "none",
+                WebkitAppearance: "none",
+                MozAppearance: "none",
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "right 8px center",
+                paddingRight: "28px",
+              }}
+            >
+              {priorityOptions.map((opt) => (
+                <option
+                  key={opt.value}
+                  value={opt.value}
+                  style={
+                    opt.color
+                      ? {
+                        color: opt.color,
+                        fontWeight: "500",
+                      }
+                      : undefined
+                  }
+                >
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            {/* Color indicator dot */}
+            {(() => {
+              const selectedOption = priorityOptions.find(
+                (opt) => opt.value === (assignment.priority || ""),
+              );
+              if (selectedOption?.color) {
+                return (
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: "8px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      width: "10px",
+                      height: "10px",
+                      borderRadius: "50%",
+                      backgroundColor: selectedOption.color,
+                      pointerEvents: "none",
+                    }}
+                  />
+                );
+              }
+              return null;
+            })()}
+          </div>
         </div>
 
         {/* Instructions */}

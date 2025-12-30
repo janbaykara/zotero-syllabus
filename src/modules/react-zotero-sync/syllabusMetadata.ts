@@ -1,6 +1,10 @@
 import { useCallback, useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
-import { SettingsSyllabusMetadata, SyllabusManager } from "../syllabus";
+import {
+  CustomPriority,
+  SettingsSyllabusMetadata,
+  SyllabusManager,
+} from "../syllabus";
 import SuperJSON from "superjson";
 
 export function useZoteroSyllabusMetadata(collectionId: number) {
@@ -49,11 +53,27 @@ export function useZoteroSyllabusMetadata(collectionId: number) {
     [collectionId],
   );
 
+  const setNomenclature = useCallback(
+    (nomenclature: string) => {
+      SyllabusManager.setNomenclature(collectionId, nomenclature, "page");
+    },
+    [collectionId],
+  );
+
+  const setPriorities = useCallback(
+    (priorities: CustomPriority[]) => {
+      SyllabusManager.setPriorities(collectionId, priorities, "page");
+    },
+    [collectionId],
+  );
+
   return [
     syllabusMetadata,
     setDescription,
     setClassDescription,
     setClassTitle,
+    setNomenclature,
+    setPriorities,
   ] as const;
 }
 

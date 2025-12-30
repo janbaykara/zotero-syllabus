@@ -43,8 +43,14 @@ interface SyllabusPageProps {
 export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   // Sync with external Zotero stores using hooks
   const [title, setTitle] = useZoteroCollectionTitle(collectionId);
-  const [syllabusMetadata, setDescription, setClassDescription, setClassTitle] =
-    useZoteroSyllabusMetadata(collectionId);
+  const [
+    syllabusMetadata,
+    setDescription,
+    setClassDescription,
+    setClassTitle,
+    _setNomenclature,
+    _setPriorities,
+  ] = useZoteroSyllabusMetadata(collectionId);
   const items = useZoteroCollectionItems(collectionId);
 
   // Track drag state for showing "Add to Class X" dropzone
@@ -178,21 +184,10 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       }
     }
 
-    // Get min/max class range from items and metadata
-    const range = SyllabusManager.getClassNumberRange(
+    // Get full range of class numbers (same logic as contextual menu)
+    const fullRangeClassNumbers = SyllabusManager.getFullClassNumberRange(
       collectionId,
-      syllabusMetadata,
     );
-
-    ztoolkit.log("Range:", range, syllabusMetadata);
-
-    // Generate all class numbers in the range (even if empty)
-    const allClassNumbers: (number | null)[] = [];
-    if (range.min !== null && range.max !== null) {
-      for (let i = range.min; i <= range.max; i++) {
-        allClassNumbers.push(i);
-      }
-    }
 
     // Add classes that have items but are outside the range (for null classNumber)
     const sortedClassNumbers = Array.from(itemsByClass.keys()).sort((a, b) => {
@@ -202,9 +197,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       return a - b;
     });
 
-    // Merge: use allClassNumbers as base, but ensure we include any classes with items
+    // Merge: use fullRangeClassNumbers as base, but ensure we include any classes with items (including null)
     const finalClassNumbers = new Set<number | null>();
-    for (const num of allClassNumbers) {
+    for (const num of fullRangeClassNumbers) {
       finalClassNumbers.add(num);
     }
     for (const num of sortedClassNumbers) {
@@ -618,16 +613,10 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   };
 
   const nextClassNumber = useMemo(() => {
-    const range = SyllabusManager.getClassNumberRange(
-      collectionId,
-      syllabusMetadata,
-    );
-
-    const nextClassNumber =
-      range.max !== null ? range.max + 1 : range.min !== null ? range.min : 1;
-
-    return nextClassNumber;
-  }, [collectionId, syllabusMetadata]);
+    const classNumbers = SyllabusManager.getFullClassNumberRange(collectionId);
+    const max = classNumbers.length > 0 ? Math.max(...classNumbers) : null;
+    return max !== null ? max + 1 : 1;
+  }, [collectionId]);
 
   const handlePrint = async () => {
     try {
@@ -847,9 +836,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
         <div className="container-padded">
           {(() => {
-            const nomenclature = SyllabusManager.getNomenclature(collectionId);
-            const nomenclatureCapitalized =
-              nomenclature.charAt(0).toUpperCase() + nomenclature.slice(1);
+            const { singularCapitalized } = SyllabusManager.getNomenclatureFormatted(collectionId);
 
             return (
               <>
@@ -857,7 +844,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                   <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
                     <div className="syllabus-class-header-container">
                       <div className="syllabus-class-header">
-                        Add to {nomenclatureCapitalized} {nextClassNumber}
+                        Add to {singularCapitalized} {nextClassNumber}
                       </div>
                     </div>
                     <div
@@ -867,7 +854,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                       onDragLeave={handleDragLeave}
                     >
                       <div className="syllabus-add-class-dropzone-placeholder bg-quinary rounded-md p-16 text-secondary border-2 border-dashed border-secondary">
-                        Drop item here to create {nomenclatureCapitalized}{" "}
+                        Drop item here to create {singularCapitalized}{" "}
                         {nextClassNumber}
                       </div>
                     </div>
@@ -878,9 +865,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                   <button
                     className="syllabus-create-class-button"
                     onClick={createAdditionalClass}
-                    title={`Add ${nomenclatureCapitalized} ${nextClassNumber}`}
+                    title={`Add ${singularCapitalized} ${nextClassNumber}`}
                   >
-                    Add {nomenclatureCapitalized} {nextClassNumber}
+                    Add {singularCapitalized} {nextClassNumber}
                   </button>
                 </div>
               </>
@@ -982,9 +969,7 @@ function ClassGroupComponent({
   onResetSortOrder,
 }: ClassGroupComponentProps) {
   // Get nomenclature for this collection
-  const nomenclature = SyllabusManager.getNomenclature(collectionId);
-  const nomenclatureCapitalized =
-    nomenclature.charAt(0).toUpperCase() + nomenclature.slice(1);
+  const { singularCapitalized } = SyllabusManager.getNomenclatureFormatted(collectionId);
 
   // Get class title and description from metadata
   const classTitle = classNumber
@@ -1048,7 +1033,7 @@ function ClassGroupComponent({
                     compactMode ? "text-sm" : "text-lg",
                   )}
                 >
-                  {nomenclatureCapitalized} {classNumber}
+                  {singularCapitalized} {classNumber}
                 </div>
                 <div
                   className={twMerge(
@@ -1079,8 +1064,8 @@ function ClassGroupComponent({
                   <button
                     className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-red-500/15 text-secondary hover:text-red-400 inline-flex flex-row items-center justify-center w-8 h-8"
                     onClick={handleDeleteClass}
-                    title={`Delete ${nomenclature}`}
-                    aria-label={`Delete ${nomenclature}`}
+                    title={`Delete ${SyllabusManager.getNomenclatureFormatted(collectionId).singular}`}
+                    aria-label={`Delete ${SyllabusManager.getNomenclatureFormatted(collectionId).singular}`}
                   >
                     <div className="text-2xl text-center">×</div>
                   </button>
@@ -1125,7 +1110,7 @@ function ClassGroupComponent({
                 compactMode ? "p-4" : "p-8",
               )}
             >
-              Drag items to {nomenclatureCapitalized} {classNumber}
+              Drag items to {singularCapitalized} {classNumber}
             </div>
           ) : (
             itemAssignments.map(({ item, assignment }) => {
@@ -1473,7 +1458,7 @@ function SyllabusItemCard({
   // Check if there's an assignment for this card
   const hasAssignment = !!assignment;
 
-  const priorityColor = SyllabusManager.getPriorityColorForCollection(
+  const { color: priorityColor } = SyllabusManager.getPriorityDisplay(
     collectionId,
     priority as SyllabusPriority,
   );
@@ -1843,18 +1828,10 @@ function PriorityIcon({
   if (!priority) return null;
 
   // Use collection-specific colors and labels if collectionId is provided
-  const priorityColor = collectionId
-    ? SyllabusManager.getPriorityColorForCollection(
-      collectionId,
-      priority as SyllabusPriority,
-    )
-    : SyllabusManager.PRIORITY_COLORS[priority as SyllabusPriority] || "#AAA";
-  const priorityLabel = collectionId
-    ? SyllabusManager.getPriorityLabelForCollection(
-      collectionId,
-      priority as SyllabusPriority,
-    )
-    : SyllabusManager.PRIORITY_LABELS[priority as SyllabusPriority] || "";
+  const { color: priorityColor, label: priorityLabel } = SyllabusManager.getPriorityDisplay(
+    collectionId,
+    priority as SyllabusPriority,
+  );
 
   if (!priorityLabel) return null;
 

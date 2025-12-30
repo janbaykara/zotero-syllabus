@@ -1,14 +1,14 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
 import { useState, useEffect, useCallback, useMemo } from "preact/hooks";
-import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
 import {
   SyllabusManager,
   CustomPriority,
-  CollectionSettings,
 } from "./syllabus";
 import pluralize from "pluralize";
+import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
+import { useDebouncedEffect } from "../utils/react/useDebouncedEffect";
 
 interface SettingsPageProps {
   collectionId: number;
@@ -16,68 +16,64 @@ interface SettingsPageProps {
 }
 
 export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
-  const [settings, setSettings] = useState<CollectionSettings>(() =>
-    SyllabusManager.getCollectionSettings(collectionId),
-  );
-  const [isSaving, setIsSaving] = useState(false);
+  const [
+    metadata,
+    _setDescription,
+    _setClassDescription,
+    _setClassTitle,
+    setNomenclature,
+    setPriorities,
+  ] = useZoteroSyllabusMetadata(collectionId);
 
-  // Initialize with defaults if empty
+  // Use local state for immediate UI feedback, but save immediately
+  const priorities = metadata.priorities || SyllabusManager.getDefaultPriorities();
+  const nomenclature = metadata.nomenclature || "class";
+
+  // Local state for nomenclature input (for immediate UI feedback)
+  const [localNomenclature, setLocalNomenclature] = useState(nomenclature);
+
+  // Update local state when metadata changes externally
   useEffect(() => {
-    if (!settings.nomenclature && !settings.priorities) {
-      const defaultPriorities = SyllabusManager.getDefaultPriorities();
-      setSettings({
-        nomenclature: "class",
-        priorities: defaultPriorities,
-      });
-    } else if (!settings.priorities) {
-      setSettings({
-        ...settings,
-        priorities: SyllabusManager.getDefaultPriorities(),
-      });
-    } else if (!settings.nomenclature) {
-      setSettings({
-        ...settings,
-        nomenclature: "class",
-      });
-    }
-  }, []);
+    setLocalNomenclature(metadata.nomenclature || "class");
+  }, [metadata.nomenclature]);
 
-  const handleSave = useCallback(async () => {
-    setIsSaving(true);
-    try {
-      await SyllabusManager.setCollectionSettings(collectionId, settings, "page");
-    } catch (err) {
-      ztoolkit.log("Error saving settings:", err);
-    } finally {
-      setIsSaving(false);
-    }
-  }, [collectionId, settings]);
+  // Debounced save for nomenclature
+  useDebouncedEffect(
+    () => {
+      // Don't update the global API too often
+      if (localNomenclature !== nomenclature) {
+        setNomenclature(localNomenclature.trim().toLowerCase());
+      }
+    },
+    [nomenclature, localNomenclature],
+    500,
+  );
 
   const handleNomenclatureChange = useCallback(
     (value: string) => {
-      setSettings({ ...settings, nomenclature: value.trim().toLowerCase() });
+      setLocalNomenclature(value);
     },
-    [settings],
+    [],
   );
 
   const handlePriorityChange = useCallback(
     (priorityId: string, updates: Partial<CustomPriority>) => {
-      if (!settings.priorities) return;
-      const updated = settings.priorities.map((p) =>
+      if (!priorities) return;
+      const updated = priorities.map((p) =>
         p.id === priorityId ? { ...p, ...updates } : p,
       );
-      setSettings({ ...settings, priorities: updated });
+      setPriorities(updated);
     },
-    [settings],
+    [priorities, setPriorities],
   );
 
   const handlePriorityOrderChange = useCallback(
     (priorityId: string, direction: "up" | "down") => {
-      if (!settings.priorities) return;
-      const index = settings.priorities.findIndex((p) => p.id === priorityId);
+      if (!priorities) return;
+      const index = priorities.findIndex((p) => p.id === priorityId);
       if (index === -1) return;
 
-      const newPriorities = [...settings.priorities];
+      const newPriorities = [...priorities];
       if (direction === "up" && index > 0) {
         [newPriorities[index - 1], newPriorities[index]] = [
           newPriorities[index],
@@ -95,42 +91,37 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
         newPriorities[index].order = index + 1;
         newPriorities[index + 1].order = index + 2;
       }
-      setSettings({ ...settings, priorities: newPriorities });
+      setPriorities(newPriorities);
     },
-    [settings],
+    [priorities, setPriorities],
   );
 
   const handleAddPriority = useCallback(() => {
-    if (!settings.priorities) return;
+    if (!priorities) return;
     const newPriority: CustomPriority = {
       id: `custom-${Date.now()}`,
       name: "New Priority",
       color: "#808080",
-      order: settings.priorities.length + 1,
+      order: priorities.length + 1,
     };
-    setSettings({
-      ...settings,
-      priorities: [...settings.priorities, newPriority],
-    });
-  }, [settings]);
+    setPriorities([...priorities, newPriority]);
+  }, [priorities, setPriorities]);
 
   const handleDeletePriority = useCallback(
     (priorityId: string) => {
-      if (!settings.priorities) return;
+      if (!priorities) return;
       // Don't allow deleting if only one priority remains
-      if (settings.priorities.length <= 1) return;
-      const updated = settings.priorities
+      if (priorities.length <= 1) return;
+      const updated = priorities
         .filter((p) => p.id !== priorityId)
         .map((p, index) => ({ ...p, order: index + 1 }));
-      setSettings({ ...settings, priorities: updated });
+      setPriorities(updated);
     },
-    [settings],
+    [priorities, setPriorities],
   );
-
-  const nomenclature = settings.nomenclature || "class";
   const pluralNomenclature = useMemo(
-    () => pluralize(nomenclature),
-    [nomenclature],
+    () => pluralize(localNomenclature),
+    [localNomenclature],
   );
 
   return (
@@ -142,28 +133,13 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
               <div className="flex-1 text-3xl font-semibold">
                 Syllabus Settings
               </div>
-              <div className="inline-flex items-center gap-2">
+              <div className="inline-flex items-center gap-2 shrink grow-0">
                 <button
                   onClick={onBack}
-                  className="grow-0 shrink-0 cursor-pointer flex items-center gap-2"
                   title="Back to syllabus view"
                   aria-label="Back to syllabus view"
                 >
-                  <span>← Back</span>
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className={twMerge(
-                    "grow-0 shrink-0 cursor-pointer flex items-center gap-2 px-4 py-2 rounded-md",
-                    isSaving
-                      ? "bg-secondary text-tertiary cursor-not-allowed"
-                      : "bg-accent-blue text-white hover:bg-accent-blue/90",
-                  )}
-                  title="Save settings"
-                  aria-label="Save settings"
-                >
-                  <span>{isSaving ? "Saving..." : "Save"}</span>
+                  ← Back
                 </button>
               </div>
             </div>
@@ -184,7 +160,7 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
               </label>
               <input
                 type="text"
-                value={nomenclature}
+                value={localNomenclature}
                 onChange={(e) =>
                   handleNomenclatureChange(e.currentTarget.value)
                 }
@@ -208,7 +184,6 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
               </div>
               <button
                 onClick={handleAddPriority}
-                className="px-4 py-2 bg-quinary text-primary rounded-md hover:bg-quaternary transition-colors"
                 title="Add new priority"
                 aria-label="Add new priority"
               >
@@ -217,14 +192,14 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
             </div>
 
             <div className="space-y-4">
-              {settings.priorities
+              {priorities
                 ?.sort((a, b) => a.order - b.order)
                 .map((priority, index) => (
                   <PriorityEditor
                     key={priority.id}
                     priority={priority}
                     isFirst={index === 0}
-                    isLast={index === settings.priorities!.length - 1}
+                    isLast={index === priorities.length - 1}
                     onUpdate={(updates) =>
                       handlePriorityChange(priority.id, updates)
                     }
@@ -232,7 +207,7 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
                       handlePriorityOrderChange(priority.id, direction)
                     }
                     onDelete={() => handleDeletePriority(priority.id)}
-                    canDelete={settings.priorities!.length > 1}
+                    canDelete={priorities.length > 1}
                   />
                 ))}
             </div>
@@ -298,7 +273,7 @@ function PriorityEditor({
         </div>
 
         {/* Color Picker */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-0! items-center gap-2">
           <input
             type="color"
             value={priority.color}
@@ -310,7 +285,7 @@ function PriorityEditor({
         </div>
 
         {/* Name Input */}
-        <div className="flex-1">
+        <div className='flex'>
           <label className="text-sm font-medium text-secondary block mb-1">
             Name
           </label>
@@ -318,7 +293,7 @@ function PriorityEditor({
             type="text"
             value={priority.name}
             onChange={(e) => onUpdate({ name: e.currentTarget.value })}
-            className="w-full px-3 py-2 border border-quinary rounded-md bg-background text-primary focus:outline-3 focus:outline-accent-blue focus:outline-offset-2"
+            className="m-0 px-3 py-2 border border-quinary rounded-md bg-background text-primary focus:outline-3 focus:outline-accent-blue focus:outline-offset-2"
             placeholder="Priority name"
           />
         </div>
@@ -327,7 +302,7 @@ function PriorityEditor({
         {canDelete && (
           <button
             onClick={onDelete}
-            className="px-4 py-2 text-red-400 hover:bg-red-500/15 rounded-md transition-colors"
+            className="text-red-500! justify-self-end"
             title="Delete priority"
             aria-label="Delete priority"
           >
