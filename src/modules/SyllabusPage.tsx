@@ -1463,10 +1463,12 @@ function SyllabusItemCard({
     priority as SyllabusPriority,
   );
 
-  const colors = {
-    backgroundColor: priorityColor + "15",
-    borderColor: priorityColor + "30",
-  };
+  const colors = priority
+    ? {
+      backgroundColor: priorityColor + "15",
+      borderColor: priorityColor + "30",
+    }
+    : {};
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
     e.preventDefault();
@@ -1742,7 +1744,7 @@ function SyllabusItemCard({
                 ⧉
               </span>
               <span className="syllabus-action-label">
-                Duplicate assignment
+                Duplicate
               </span>
             </button>
           </div>
@@ -1805,9 +1807,98 @@ function SyllabusItemCard({
               >
                 ×
               </span>
-              <span className="syllabus-action-label">Un-assign</span>
+              <span className="syllabus-action-label">Unassign</span>
             </button>
           </div>
+          &middot;
+          {(() => {
+            const priorityOptions = SyllabusManager.getPrioritiesForCollection(
+              collectionId,
+            );
+            return [
+              ...priorityOptions.map((priorityOption) => {
+                return (
+                  <div key={priorityOption.id} className="focus-states-target">
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          SyllabusManager.invalidateSyllabusDataCache(item);
+                          if (assignment?.id) {
+                            await SyllabusManager.updateClassAssignment(
+                              item,
+                              collectionId,
+                              assignment.id,
+                              { priority: priorityOption.id as SyllabusPriority },
+                              "page",
+                            );
+                          } else {
+                            await SyllabusManager.addClassAssignment(
+                              item,
+                              collectionId,
+                              assignment?.classNumber,
+                              { priority: priorityOption.id as SyllabusPriority },
+                              "page",
+                            );
+                          }
+                          await item.saveTx();
+                        } catch (err) {
+                          ztoolkit.log("Error setting priority:", err);
+                        }
+                      }}
+                      title={`Set priority to ${priorityOption.name}`}
+                      aria-label={`Set priority to ${priorityOption.name}`}
+                    >
+                      <span
+                        className="syllabus-action-icon inline-block mt-1 -mb-1 w-3 h-3 rounded-full"
+                        style={{
+                          backgroundColor: priorityOption.color,
+                        }}
+                      />
+                      {/* <span className="syllabus-action-label">
+                        {priorityOption.name}
+                      </span> */}
+                    </button>
+                  </div>
+                );
+              }),
+              <div key="none" className="focus-states-target">
+                <button
+                  // className="syllabus-action-button row inline-lex flex-row items-center justify-center gap-2"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      SyllabusManager.invalidateSyllabusDataCache(item);
+                      if (assignment?.id) {
+                        await SyllabusManager.updateClassAssignment(
+                          item,
+                          collectionId,
+                          assignment.id,
+                          { priority: undefined },
+                          "page",
+                        );
+                      } else {
+                        await SyllabusManager.addClassAssignment(
+                          item,
+                          collectionId,
+                          assignment?.classNumber,
+                          { priority: undefined },
+                          "page",
+                        );
+                      }
+                      await item.saveTx();
+                    } catch (err) {
+                      ztoolkit.log("Error clearing priority:", err);
+                    }
+                  }}
+                  title="Clear priority"
+                  aria-label="Clear priority"
+                >
+                  <span className="syllabus-action-label">(None)</span>
+                </button>
+              </div>,
+            ];
+          })()}
         </div>
       )}
     </div>
