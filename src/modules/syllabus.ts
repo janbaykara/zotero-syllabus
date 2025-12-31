@@ -14,7 +14,7 @@ import { h } from "preact";
 import { uuidv7 } from "uuidv7";
 import pluralize from "pluralize";
 import { getPref } from "../utils/prefs";
-import { HelloWorld } from "./HelloWorld";
+import { ReadingSchedule } from "./ReadingSchedule";
 import { parseXULTemplate } from "../utils/ui";
 import { TabManager } from "../utils/tabManager";
 
@@ -78,7 +78,7 @@ export interface SettingsClassMetadata {
   title?: string;
   description?: string;
   itemOrder?: string[]; // Manual ordering of assignment IDs within this class
-  readingDate?: number; // Unix timestamp for when readings are due
+  readingDate?: string; // ISO date string for when readings are due
 }
 
 /**
@@ -91,20 +91,20 @@ export interface CustomPriority {
   order: number; // Sort order (lower = higher priority)
 }
 
-const tabManager = new TabManager<{ buttonProp: string }>({
+const tabManager = new TabManager<Record<string, never>>({
   type: "reading-list",
-  title(params) { return `Reading Schedule ${params?.buttonProp}`; },
+  title: "Reading Schedule",
   rootElementIdFactory: () => "reading-list-tab-root",
   data: { icon: "book" },
-  componentFactory: (params) => params ? h(HelloWorld, params) : null,
-  getTabId: (params) => params ? `syllabus-reading-list-tab-${slugify(params.buttonProp, { strict: true })}` : `syllabus-reading-list-tab-${uuidv7()}`,
+  componentFactory: () => h(ReadingSchedule, {}),
+  getTabId: () => "syllabus-reading-list-tab",
 });
 
 export class SyllabusManager {
   static notifierID: string | null = null;
   static syllabusItemPaneSection: false | string | null = null;
   static readingsTabPanelID: string | null = null;
-  static helloWorldTab = tabManager
+  static readingScheduleTab = tabManager
 
   static settingsKeys = SyllabusSettingsKey;
   static priorityKeys = SyllabusPriority;
@@ -257,9 +257,9 @@ export class SyllabusManager {
     // Re-render reading list tab if it exists (for hot reload)
     // Use a small delay to ensure tabs are initialized
     Zotero.Promise.delay(100).then(() => {
-      if (this.helloWorldTab) {
-        ztoolkit.log("SyllabusManager.onMainWindowLoad: rerendering reading list tab");
-        this.helloWorldTab.renderAllTabs(win);
+      if (this.readingScheduleTab) {
+        ztoolkit.log("SyllabusManager.onMainWindowLoad: rerendering reading schedule tab");
+        this.readingScheduleTab.renderAllTabs(win);
       }
     });
   }
@@ -319,8 +319,8 @@ export class SyllabusManager {
     ztoolkit.log("SyllabusManager.onMainWindowUnload", win);
     this.setupUI();
     this.cleanupSyllabusViewTabListener();
-    if (this.helloWorldTab) {
-      this.helloWorldTab.cleanupAll();
+    if (this.readingScheduleTab) {
+      this.readingScheduleTab.cleanupAll();
     }
   }
 
@@ -2373,11 +2373,12 @@ export class SyllabusManager {
 
   /**
    * Get reading date for a specific collection and class number
+   * Returns ISO date string or undefined
    */
   static getClassReadingDate(
     collectionId: number | string,
     classNumber: number,
-  ): number | undefined {
+  ): string | undefined {
     const metadata = SyllabusManager.getClassMetadata(
       collectionId,
       classNumber,
@@ -2387,11 +2388,12 @@ export class SyllabusManager {
 
   /**
    * Set reading date for a specific collection and class number
+   * Accepts ISO date string or undefined
    */
   static async setClassReadingDate(
     collectionId: number | string,
     classNumber: number,
-    readingDate: number | undefined,
+    readingDate: string | undefined,
     source: "page" | "item-pane",
   ): Promise<void> {
     const allData = SyllabusManager.getSettingsCollectionDictionaryData();
@@ -2666,17 +2668,17 @@ export class SyllabusManager {
 
   /**
    * Get readings grouped by date, then by class
-   * Returns Map<dateTimestamp, Map<classNumber, Array<{item, assignment}>>>
+   * Returns Map<isoDateString, Map<classNumber, Array<{item, assignment}>>>
    * Only includes classes that have reading dates set
    */
   static getReadingsByDate(
     collectionId: number | string,
   ): Map<
-    number,
+    string,
     Map<number, Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }>>
   > {
     const result = new Map<
-      number,
+      string,
       Map<number, Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }>>
     >();
 
@@ -2744,8 +2746,8 @@ export class SyllabusManager {
    */
   static openReadingListTab() {
     const win = Zotero.getMainWindow();
-    if (this.helloWorldTab) {
-      this.helloWorldTab.open(win, { buttonProp: uuidv7() });
+    if (this.readingScheduleTab) {
+      this.readingScheduleTab.open(win);
     }
   }
 }

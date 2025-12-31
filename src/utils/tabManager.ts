@@ -43,7 +43,7 @@ export class TabManager<TParams = any> {
     }
 
     if (tabResult.tab.type !== this.config.type) {
-      ztoolkit.log("TabManager.getTab: tab is not of type", this.config.type, tabId, tabResult.tab.type);
+      // ztoolkit.log("TabManager.getTab: tab is not of type", this.config.type, tabId, tabResult.tab.type);
       return null;
     }
 
@@ -54,7 +54,7 @@ export class TabManager<TParams = any> {
     }) as HTMLElement;
 
     if (!tabPanel) {
-      ztoolkit.log("TabManager.getTab: tabPanel not found", tabId, tabPanels);
+      // ztoolkit.log("TabManager.getTab: tabPanel not found", tabId, tabPanels);
     }
 
     return {
@@ -211,10 +211,10 @@ export class TabManager<TParams = any> {
    */
   private renderTab(tabId: string, win: _ZoteroTypes.MainWindow): void {
     const tabData = this.getTabOfType(tabId);
-    ztoolkit.log("TabManager.renderTab: tabData", tabData);
+    // ztoolkit.log("TabManager.renderTab: tabData", tabData);
 
     if (!tabData || !tabData.rootElement) {
-      ztoolkit.log("TabManager.renderTab: tabData or rootElement not found, can't render", tabId, tabData);
+      // ztoolkit.log("TabManager.renderTab: tabData or rootElement not found, can't render", tabId, tabData);
       return;
     }
 
@@ -225,25 +225,25 @@ export class TabManager<TParams = any> {
     const component = tabData.config.componentFactory(tabData.params);
     renderComponent(win, rootElement, component, `tab-${tabId}`);
 
-    ztoolkit.log("TabManager.renderTab complete", tabId);
+    // ztoolkit.log("TabManager.renderTab complete", tabId);
   }
 
   /**
    * Re-render a tab (for hot reload support)
    */
   renderAllTabs(win: _ZoteroTypes.MainWindow, params?: TParams): void {
-    ztoolkit.log("TabManager.rerender: params", params);
+    // ztoolkit.log("TabManager.rerender: params", params);
     if (params === undefined) {
       // Re-render all tabs of this type
       const allTabs = this.getTabsOfType(win);
       for (const tab of allTabs) {
-        ztoolkit.log("TabManager.renderAllTabs on loop: tabId", tab.id);
+        // ztoolkit.log("TabManager.renderAllTabs on loop: tabId", tab.id);
         this.renderTab(tab.id, win);
       }
       return;
     } else {
       const tabId = this.config.getTabId(params);
-      ztoolkit.log("TabManager.rerender by param: tabId", tabId);
+      // ztoolkit.log("TabManager.rerender by param: tabId", tabId);
       this.renderTab(tabId, win);
     }
   }

@@ -56,7 +56,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   ] = useZoteroSyllabusMetadata(collectionId);
 
   const handleClassReadingDateSave = useCallback(
-    async (classNumber: number, readingDate: number | undefined) => {
+    async (classNumber: number, readingDate: string | undefined) => {
       await SyllabusManager.setClassReadingDate(
         collectionId,
         classNumber,
@@ -964,11 +964,11 @@ interface ClassGroupComponentProps {
   }>;
   collectionId: number;
   syllabusMetadata: {
-    classes?: { [key: string]: { title?: string; description?: string; readingDate?: number } };
+    classes?: { [key: string]: { title?: string; description?: string; readingDate?: string } };
   };
   onClassTitleSave: (classNumber: number, title: string) => void;
   onClassDescriptionSave: (classNumber: number, description: string) => void;
-  onClassReadingDateSave: (classNumber: number, readingDate: number | undefined) => void;
+  onClassReadingDateSave: (classNumber: number, readingDate: string | undefined) => void;
   onDrop: (
     e: JSX.TargetedDragEvent<HTMLElement>,
     classNumber: number | null,
@@ -1212,8 +1212,8 @@ function ClassGroupComponent({
   );
 }
 
-function formatReadingDate(timestamp: number): string {
-  const date = new Date(timestamp * 1000);
+function formatReadingDate(isoDate: string): string {
+  const date = new Date(isoDate);
   return date.toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
@@ -1226,17 +1226,17 @@ function ReadingDateInput({
   onSave,
   compactMode = false,
 }: {
-  initialValue?: number;
-  onSave: (date: number | undefined) => void | Promise<void>;
+  initialValue?: string; // ISO date string
+  onSave: (date: string | undefined) => void | Promise<void>;
   compactMode?: boolean;
 }) {
   const [value, setValue] = useState(
-    initialValue ? new Date(initialValue * 1000).toISOString().split("T")[0] : "",
+    initialValue ? new Date(initialValue).toISOString().split("T")[0] : "",
   );
 
   useEffect(() => {
     if (initialValue) {
-      setValue(new Date(initialValue * 1000).toISOString().split("T")[0]);
+      setValue(new Date(initialValue).toISOString().split("T")[0]);
     } else {
       setValue("");
     }
@@ -1247,9 +1247,9 @@ function ReadingDateInput({
       if (value) {
         const date = new Date(value);
         if (!isNaN(date.getTime())) {
-          const timestamp = Math.floor(date.getTime() / 1000);
-          if (timestamp !== initialValue) {
-            onSave(timestamp);
+          const isoString = date.toISOString();
+          if (isoString !== initialValue) {
+            onSave(isoString);
           }
         }
       } else if (initialValue !== undefined) {

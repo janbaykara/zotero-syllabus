@@ -45,7 +45,7 @@ export function useZoteroClassMetadata(collectionId: number) {
   );
 
   const setClassReadingDate = useCallback(
-    (classNumber: number, readingDate: number | undefined) => {
+    (classNumber: number, readingDate: string | undefined) => {
       SyllabusManager.setClassReadingDate(
         collectionId,
         classNumber,
