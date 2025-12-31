@@ -1,137 +1,41 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
 import { useMemo } from "preact/hooks";
-import { useSyncExternalStore } from "react-dom/src";
 import { twMerge } from "tailwind-merge";
 import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
 import { SyllabusItemCard } from "./SyllabusPage";
-import { setDefaultOptions, startOfWeek } from "date-fns";
+import { endOfWeek, startOfWeek } from "date-fns";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import { getAllCollections } from "../utils/zotero";
-
-setDefaultOptions({
-  weekStartsOn: 1,
-})
 
 interface ClassReading {
   collectionId: number;
   collectionName: string;
   classNumber: number;
   classTitle: string;
-  classDescription: string;
   readingDate: string; // ISO date string
   items: Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }>;
 }
 
 function formatReadingDate(isoDate: string): string {
   const date = new Date(isoDate);
-  // Format as "6th Feb" without i18n
-  const day = date.getDate();
-  const daySuffix = day === 1 || day === 21 || day === 31 ? 'st' :
-    day === 2 || day === 22 ? 'nd' :
-      day === 3 || day === 23 ? 'rd' : 'th';
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${day}${daySuffix} ${monthNames[date.getMonth()]}`;
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 }
 
 function formatWeekRange(weekStart: Date): string {
   const start = startOfWeek(weekStart);
-  // Format as "6th Feb" without i18n
-  const day = start.getDate();
-  const daySuffix = day === 1 || day === 21 || day === 31 ? 'st' :
-    day === 2 || day === 22 ? 'nd' :
-      day === 3 || day === 23 ? 'rd' : 'th';
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${day}${daySuffix} ${monthNames[start.getMonth()]}`;
+  const end = endOfWeek(weekStart);
+  return `${start.toLocaleDateString(undefined, { month: "short", day: "numeric" })} - ${end.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`;
 }
-
-// Store to track changes to syllabus data (class metadata, assignments, etc.)
-function createReadingScheduleStore() {
-  let version = 0;
-
-  function getSnapshot() {
-    // Return a version number that changes when data updates
-    return version;
-  }
-
-  function subscribe(onStoreChange: () => void) {
-    const prefKey = SyllabusManager.getPreferenceKey(
-      SyllabusManager.settingsKeys.COLLECTION_METADATA,
-    );
-
-    const observer = {
-      notify(
-        event: string,
-        type: string,
-        ids: (number | string)[],
-        extraData: any,
-      ) {
-        let shouldUpdate = false;
-
-        // Listen to setting events for collection metadata (reading dates, class titles, etc.)
-        if (type === "setting" && extraData?.pref === prefKey) {
-          shouldUpdate = true;
-        }
-
-        // Listen to item modify/delete events (assignments changed)
-        if (type === "item" && (event === "modify" || event === "delete")) {
-          shouldUpdate = true;
-        }
-
-        // Listen to collection-item events (items added/removed from collections)
-        if (type === "collection-item") {
-          shouldUpdate = true;
-        }
-
-        // Listen to collection modify/refresh events
-        if (type === "collection" && (event === "modify" || event === "refresh")) {
-          shouldUpdate = true;
-        }
-
-        if (shouldUpdate) {
-          version++;
-          onStoreChange();
-        }
-      },
-    };
-
-    const notifierId = Zotero.Notifier.registerObserver(observer, [
-      "setting",
-      "item",
-      "collection-item",
-      "collection",
-    ]);
-
-    // Also listen to the custom event emitter for collection metadata changes
-    const unsubscribeEmitter =
-      SyllabusManager.onCollectionMetadataChange(() => {
-        version++;
-        onStoreChange();
-      });
-
-    // Return an unsubscribe fn
-    return () => {
-      Zotero.Notifier.unregisterObserver(notifierId);
-      unsubscribeEmitter();
-    };
-  }
-
-  return { getSnapshot, subscribe };
-}
-
-const readingScheduleStore = createReadingScheduleStore();
 
 export function ReadingSchedule() {
   const [compactMode] = useZoteroCompactMode();
 
-  // Subscribe to changes in syllabus data to trigger re-renders
-  const dataVersion = useSyncExternalStore(
-    readingScheduleStore.subscribe,
-    readingScheduleStore.getSnapshot,
-  );
-
   // Get all readings across all collections
-  // Recompute when dataVersion changes (when class metadata or assignments change)
   const readingsByWeek = useMemo(() => {
     const result = new Map<
       string, // ISO date string of week start
@@ -204,17 +108,11 @@ export function ReadingSchedule() {
           classNumber,
         );
 
-        const classDescription = SyllabusManager.getClassDescription(
-          collectionId,
-          classNumber,
-        );
-
         const classReading: ClassReading = {
           collectionId,
           collectionName,
           classNumber,
           classTitle: classTitle || "",
-          classDescription: classDescription || "",
           readingDate,
           items: sortedItems,
         };
@@ -246,7 +144,7 @@ export function ReadingSchedule() {
     }
 
     return result;
-  }, [dataVersion]);
+  }, []);
 
   // Convert to sorted array for rendering, filtering out past weeks
   const sortedWeeks = useMemo(() => {
@@ -264,21 +162,8 @@ export function ReadingSchedule() {
 
   const handleCollectionClick = (collectionId: number) => {
     try {
-      const collection = Zotero.Collections.get(collectionId);
-      if (!collection) return;
-
-      // Try to select the collection via the tree view
-      const win = Zotero.getMainWindow();
-      const collectionTree = win.document.getElementById("zotero-collections-tree");
-      if (collectionTree) {
-        const treeView = (collectionTree as any).view;
-        if (treeView && treeView.selection) {
-          const row = treeView.getRowIndexByRef(collection);
-          if (row !== -1) {
-            treeView.selection.select(row);
-          }
-        }
-      }
+      const pane = ztoolkit.getGlobal("ZoteroPane");
+      pane.selectCollection(collectionId);
     } catch (err) {
       ztoolkit.log("Error selecting collection:", err);
     }
@@ -287,29 +172,9 @@ export function ReadingSchedule() {
   const handleItemClick = (item: Zotero.Item, collectionId: number) => {
     try {
       const pane = ztoolkit.getGlobal("ZoteroPane");
-      const collection = Zotero.Collections.get(collectionId);
-
-      // First, try to select the collection via the tree view
-      if (collection) {
-        const win = Zotero.getMainWindow();
-        const collectionTree = win.document.getElementById("zotero-collections-tree");
-        if (collectionTree) {
-          const treeView = (collectionTree as any).view;
-          if (treeView && treeView.selection) {
-            const row = treeView.getRowIndexByRef(collection);
-            if (row !== -1) {
-              treeView.selection.select(row);
-              // Wait a bit for the collection to be selected before selecting the item
-              Zotero.Promise.delay(100).then(() => {
-                pane.selectItem(item.id);
-              });
-              return;
-            }
-          }
-        }
-      }
-
-      // Fallback: just select the item (it will show in its collection context)
+      // First select the collection
+      pane.selectCollection(collectionId);
+      // Then select the item
       pane.selectItem(item.id);
     } catch (err) {
       ztoolkit.log("Error selecting item in collection:", err);
@@ -357,7 +222,8 @@ export function ReadingSchedule() {
 
         <div
           className={twMerge(
-            "flex flex-col gap-8 mt-8"
+            "flex flex-col",
+            compactMode ? "gap-8 mt-4" : "gap-12 mt-6",
           )}
         >
           {sortedWeeks.map((weekStartKey) => {
@@ -374,123 +240,109 @@ export function ReadingSchedule() {
                 <div className="container-padded">
                   <div
                     className={twMerge(
-                      "text-2xl sticky top-16 z-10 py-2 bg-background text-tertiary",
+                      "font-semibold text-2xl sticky top-16 py-3 z-10 bg-background",
                     )}
                   >
-                    Week starting <span className='text-secondary'>{formatWeekRange(weekStartDate)}</span>
+                    Week of {formatWeekRange(weekStartDate)}
                   </div>
 
-                  <div className='space-y-8 my-6'>
-                    {sortedDates.map((dateTimestamp) => {
-                      const classReadings = weekData.get(dateTimestamp)!;
+                  {sortedDates.map((dateTimestamp) => {
+                    const classReadings = weekData.get(dateTimestamp)!;
+                    // Get ISO date string from first class reading (all have same date)
+                    const isoDate = classReadings[0]?.readingDate || "";
 
-                      // Sort classes by collection name, then by class number
-                      const sortedClassReadings = [...classReadings].sort((a, b) => {
-                        // First sort by collection name
-                        const collectionCompare = a.collectionName.localeCompare(b.collectionName);
-                        if (collectionCompare !== 0) return collectionCompare;
-                        // Then sort by class number
-                        return a.classNumber - b.classNumber;
-                      });
+                    // Sort classes by collection name, then by class number
+                    const sortedClassReadings = [...classReadings].sort((a, b) => {
+                      // First sort by collection name
+                      const collectionCompare = a.collectionName.localeCompare(b.collectionName);
+                      if (collectionCompare !== 0) return collectionCompare;
+                      // Then sort by class number
+                      return a.classNumber - b.classNumber;
+                    });
 
-                      return (
-                        <div key={dateTimestamp}>
-                          {sortedClassReadings.map((classReading) => {
-                            const { singularCapitalized } =
-                              SyllabusManager.getNomenclatureFormatted(
-                                classReading.collectionId,
-                              );
+                    return (
+                      <div key={dateTimestamp} className="mb-6">
+                        <div
+                          className={twMerge(
+                            "mb-3 text-secondary text-xl",
+                          )}
+                        >
+                          {formatReadingDate(isoDate)}
+                        </div>
 
-                            return (
-                              <div
-                                key={`${classReading.collectionId}-${classReading.classNumber}`}
-                                className="mb-4"
-                              >
-                                <div className="flex flex-col gap-2 mb-2">
-                                  <div className="flex flex-row items-start justify-between gap-2">
-                                    <div
-                                      onClick={() =>
-                                        handleCollectionClick(
-                                          classReading.collectionId,
-                                        )
-                                      }
-                                      className="text-xl flex-1"
-                                    >
-                                      <span className='font-semibold'>{classReading.collectionName}</span>, <span className='text-secondary'>{singularCapitalized} {classReading.classNumber}</span>{classReading.classTitle && <>
-                                        <span>:&nbsp;</span>
-                                        <span className='font-semibold'>
-                                          {classReading.classTitle}
-                                        </span>
-                                      </>}
-                                    </div>
-                                    <div className="flex flex-row items-center gap-2 shrink-0">
-                                      <span className="text-secondary text-base">
-                                        {formatReadingDate(classReading.readingDate)}
-                                      </span>
-                                      <button
-                                        className="text-secondary hover:text-primary text-xl cursor-pointer"
-                                        title="Delete class"
-                                        aria-label="Delete class"
-                                        onClick={() => {
-                                          // TODO: Implement delete class functionality
-                                        }}
-                                      >
-                                        ×
-                                      </button>
-                                    </div>
-                                  </div>
-                                  {classReading.classDescription && (
-                                    <div className="text-base mb-1">
-                                      {classReading.classDescription}
-                                    </div>
-                                  )}
-                                </div>
+                        {sortedClassReadings.map((classReading) => {
+                          const { singularCapitalized } =
+                            SyllabusManager.getNomenclatureFormatted(
+                              classReading.collectionId,
+                            );
+
+                          return (
+                            <div
+                              key={`${classReading.collectionId}-${classReading.classNumber}`}
+                              className="mb-4"
+                            >
+                              <div className="flex items-center gap-2 mb-2">
                                 <div
-                                  className={twMerge(
-                                    "space-y-2",
-                                    compactMode ? "space-y-2" : "space-y-4",
-                                  )}
+                                  onClick={() =>
+                                    handleCollectionClick(
+                                      classReading.collectionId,
+                                    )
+                                  }
+                                  className="text-lg"
                                 >
-                                  {classReading.items.map(
-                                    ({ item, assignment }) => {
-                                      if (!assignment.id) return null;
-
-                                      const priority = assignment.priority || "";
-                                      const uniqueKey = `${item.id}-assignment-${assignment.id}`;
-
-                                      return (
-                                        <SyllabusItemCard
-                                          key={uniqueKey}
-                                          item={item}
-                                          collectionId={classReading.collectionId}
-                                          classNumber={classReading.classNumber}
-                                          assignment={assignment}
-                                          slim={
-                                            compactMode ||
-                                            !priority ||
-                                            priority ===
-                                            SyllabusManager.priorityKeys.OPTIONAL
-                                          }
-                                          compactMode={compactMode}
-                                          isLocked={true}
-                                          onClick={(item) =>
-                                            handleItemClick(
-                                              item,
-                                              classReading.collectionId,
-                                            )
-                                          }
-                                        />
-                                      );
-                                    },
-                                  )}
+                                  <span className='font-semibold'>{classReading.collectionName}</span>, <span className='text-secondary'>{singularCapitalized} {classReading.classNumber}</span>{classReading.classTitle && <>
+                                    <span>:&nbsp;</span>
+                                    <span className='font-semibold'>
+                                      {classReading.classTitle}
+                                    </span>
+                                  </>}
                                 </div>
                               </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })}
-                  </div>
+                              <div
+                                className={twMerge(
+                                  "space-y-2",
+                                  compactMode ? "space-y-2" : "space-y-4",
+                                )}
+                              >
+                                {classReading.items.map(
+                                  ({ item, assignment }) => {
+                                    if (!assignment.id) return null;
+
+                                    const priority = assignment.priority || "";
+                                    const uniqueKey = `${item.id}-assignment-${assignment.id}`;
+
+                                    return (
+                                      <SyllabusItemCard
+                                        key={uniqueKey}
+                                        item={item}
+                                        collectionId={classReading.collectionId}
+                                        classNumber={classReading.classNumber}
+                                        assignment={assignment}
+                                        slim={
+                                          compactMode ||
+                                          !priority ||
+                                          priority ===
+                                          SyllabusManager.priorityKeys.OPTIONAL
+                                        }
+                                        compactMode={compactMode}
+                                        isLocked={true}
+                                        onClick={(item) =>
+                                          handleItemClick(
+                                            item,
+                                            classReading.collectionId,
+                                          )
+                                        }
+                                      />
+                                    );
+                                  },
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );

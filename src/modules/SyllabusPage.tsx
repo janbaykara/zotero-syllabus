@@ -766,16 +766,6 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                   <span>{isLocked ? "Unlock" : "Lock"}</span>
                 </button>
                 <button
-                  onClick={() => {
-                    SyllabusManager.openReadingListTab()
-                  }}
-                  className="grow-0 shrink-0 cursor-pointer in-[.print]:hidden"
-                  title="View all readings"
-                  aria-label="View all readings"
-                >
-                  <span>View Readings</span>
-                </button>
-                <button
                   onClick={() => setShowSettings(true)}
                   className="grow-0 shrink-0 cursor-pointer in-[.print]:hidden"
                   title="Edit syllabus settings"

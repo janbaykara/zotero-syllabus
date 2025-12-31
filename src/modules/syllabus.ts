@@ -7,6 +7,7 @@ import { getLocaleID, getString } from "../utils/locale";
 import { ExtraFieldTool } from "zotero-plugin-toolkit";
 import { renderSyllabusPage } from "./SyllabusPage";
 import { getSelectedCollection } from "../utils/zotero";
+import { getCurrentTab } from "../utils/window";
 import { set } from "lodash-es";
 import { renderComponent } from "../utils/react";
 import { ItemPane } from "./ItemPane";
@@ -393,20 +394,35 @@ export class SyllabusManager {
   static setupSyllabusViewTabListener() {
     ztoolkit.log("SyllabusManager.setupSyllabusViewTabListener");
     let selectedCollectionId = getSelectedCollection()?.id.toString() || "";
+    let currentTabId = getCurrentTab()?.id || "";
     const interval = setInterval(async () => {
       const collection = getSelectedCollection();
       const currentCollectionId = collection?.id.toString() || "";
-      if (currentCollectionId !== selectedCollectionId) {
+      const tab = getCurrentTab();
+      const newTabId = tab?.id || "";
+
+      const collectionChanged = currentCollectionId !== selectedCollectionId;
+      const tabChanged = newTabId !== currentTabId;
+
+      if (collectionChanged) {
         ztoolkit.log(
           "Selected collection changed",
           collection?.id || "My Library",
         );
         selectedCollectionId = currentCollectionId;
+        currentTabId = newTabId; // Update tab ID when collection changes
         // setupUI() calls setupPage() which re-renders React component for new collection
         // Once mounted, React stores handle all data updates automatically
         SyllabusManager.setupUI();
+        // Update button visibility when collection changes
+        SyllabusManager.updateButtonVisibility();
         // Reload context menus for the new collection
         SyllabusManager.setupContextMenuSetPriority();
+      } else if (tabChanged) {
+        ztoolkit.log("Tab changed", newTabId);
+        currentTabId = newTabId;
+        // Update button visibility when tab changes
+        SyllabusManager.updateButtonVisibility();
       }
     }, 300);
     this.syllabusViewTabListener = interval;
@@ -504,6 +520,9 @@ export class SyllabusManager {
     let toggleButton = doc.getElementById(
       "syllabus-view-toggle",
     ) as unknown as XULButtonElement;
+    let readingScheduleButton = doc.getElementById(
+      "syllabus-reading-schedule-button",
+    ) as unknown as XULButtonElement;
     let spacer = doc.getElementById("syllabus-view-spacer") as Element | null;
 
     if (!toggleButton) {
@@ -522,6 +541,7 @@ export class SyllabusManager {
               const checked = !SyllabusManager.getSyllabusPageVisible();
               SyllabusManager.setSyllabusPageVisible(checked);
               SyllabusManager.updateButtonLabel(target);
+              SyllabusManager.updateButtonVisibility();
               SyllabusManager.setupPage();
             },
           },
@@ -530,6 +550,24 @@ export class SyllabusManager {
 
       // Set initial label
       SyllabusManager.updateButtonLabel(toggleButton);
+
+      // Create "Review your Reading Schedule" button
+      readingScheduleButton = ztoolkit.UI.createElement(doc, "toolbarbutton", {
+        id: "syllabus-reading-schedule-button",
+        classList: ["syllabus-view-toggle"],
+        properties: {
+          label: "Review your Reading Schedule",
+          tooltiptext: "Open Reading Schedule",
+        },
+        listeners: [
+          {
+            type: "click",
+            listener: () => {
+              SyllabusManager.openReadingListTab();
+            },
+          },
+        ],
+      });
 
       // Create spacer element if it doesn't exist
       if (!spacer) {
@@ -541,18 +579,53 @@ export class SyllabusManager {
         spacer.setAttribute("flex", "1");
       }
 
-      // Insert button and spacer before the search spinner, or append to toolbar if spinner not found
+      // Insert buttons and spacer before the search spinner, or append to toolbar if spinner not found
       if (searchSpinner && searchSpinner.parentNode) {
         searchSpinner.parentNode.insertBefore(toggleButton, searchSpinner);
+        searchSpinner.parentNode.insertBefore(readingScheduleButton, searchSpinner);
         searchSpinner.parentNode.insertBefore(spacer, searchSpinner);
       } else {
         itemsToolbar.appendChild(toggleButton);
+        itemsToolbar.appendChild(readingScheduleButton);
         itemsToolbar.appendChild(spacer);
       }
     } else {
+      // Ensure reading schedule button exists
+      if (!readingScheduleButton) {
+        readingScheduleButton = doc.getElementById(
+          "syllabus-reading-schedule-button",
+        ) as unknown as XULButtonElement;
+        if (!readingScheduleButton) {
+          readingScheduleButton = ztoolkit.UI.createElement(doc, "toolbarbutton", {
+            id: "syllabus-reading-schedule-button",
+            classList: ["syllabus-view-toggle"],
+            properties: {
+              label: "Review your Reading Schedule",
+              tooltiptext: "Open Reading Schedule",
+            },
+            listeners: [
+              {
+                type: "click",
+                listener: () => {
+                  SyllabusManager.openReadingListTab();
+                },
+              },
+            ],
+          });
+
+          // Insert before toggle button
+          if (toggleButton.parentNode) {
+            toggleButton.parentNode.insertBefore(readingScheduleButton, toggleButton);
+          }
+        }
+      }
+
       // Update button state and label
       SyllabusManager.updateButtonLabel(toggleButton);
     }
+
+    // Update visibility of both buttons
+    SyllabusManager.updateButtonVisibility();
   }
 
   // Function to update button label based on current state
@@ -571,6 +644,36 @@ export class SyllabusManager {
     (button as XUL.Button).tooltiptext = isEnabled
       ? "Switch to Collection View"
       : "Switch to Syllabus View";
+  }
+
+  // Function to update button visibility based on current state
+  static updateButtonVisibility() {
+    const w = Zotero.getMainWindow();
+    const doc = w.document;
+
+    const toggleButton = doc.getElementById(
+      "syllabus-view-toggle",
+    ) as XULButtonElement | null;
+    const readingScheduleButton = doc.getElementById(
+      "syllabus-reading-schedule-button",
+    ) as XULButtonElement | null;
+
+    if (!toggleButton || !readingScheduleButton) return;
+
+    const selectedCollection = getSelectedCollection();
+    const currentTab = getCurrentTab();
+
+    // Check if we're in Main Library and in a collection tab (not a custom tab)
+    // Collection tabs are the default tabs (type is undefined or not a custom type)
+    // Custom tabs have types like "syllabus" or "reading-list"
+    const isInMainLibrary = !selectedCollection;
+    const isCustomTab = currentTab?.type === "syllabus" || currentTab?.type === "reading-list";
+    const isInCollectionTab = !isCustomTab;
+    const shouldShowReadingSchedule = isInMainLibrary && isInCollectionTab;
+
+    // Hide/show buttons based on conditions
+    toggleButton.hidden = shouldShowReadingSchedule;
+    readingScheduleButton.hidden = !shouldShowReadingSchedule;
   }
 
   // Function to render a completely custom syllabus view
