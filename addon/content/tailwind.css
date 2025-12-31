@@ -3,14 +3,9 @@
 @layer theme, base, components, utilities;
 @layer theme {
   :root, :host {
-    --color-red-200: oklch(88.5% 0.062 18.334);
     --color-red-400: oklch(70.4% 0.191 22.216);
     --color-red-500: oklch(63.7% 0.237 25.331);
-    --color-red-600: oklch(57.7% 0.245 27.325);
-    --color-red-700: oklch(50.5% 0.213 27.518);
-    --color-blue-500: oklch(62.3% 0.214 259.815);
     --color-gray-500: oklch(55.1% 0.027 264.364);
-    --color-white: #fff;
     --spacing: 0.25rem;
     --container-4xl: 56rem;
     --text-sm: 0.875rem;
@@ -575,20 +570,11 @@
   .text-primary\! {
     color: var(--color-primary) !important;
   }
-  .text-red-200 {
-    color: var(--color-red-200);
-  }
   .text-red-500 {
     color: var(--color-red-500);
   }
   .text-red-500\! {
     color: var(--color-red-500) !important;
-  }
-  .text-red-600 {
-    color: var(--color-red-600);
-  }
-  .text-red-700 {
-    color: var(--color-red-700);
   }
   .text-secondary {
     color: var(--color-secondary);

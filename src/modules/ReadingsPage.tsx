@@ -9,9 +9,6 @@ import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import { SyllabusItemCard } from "./SyllabusPage";
 import { getLocaleID } from "../utils/locale";
 
-interface ReadingsPageProps {
-  collectionId: number;
-}
 
 function formatReadingDate(timestamp: number): string {
   const date = new Date(timestamp * 1000);
@@ -22,7 +19,7 @@ function formatReadingDate(timestamp: number): string {
   });
 }
 
-export function ReadingsPage({ collectionId }: ReadingsPageProps) {
+export function ReadingsPage() {
   const items = useZoteroCollectionItems(collectionId);
   const [syllabusMetadata] = useZoteroSyllabusMetadata(collectionId);
   const [compactMode] = useZoteroCompactMode();
@@ -95,10 +92,10 @@ export function ReadingsPage({ collectionId }: ReadingsPageProps) {
         <div className="container-padded py-12">
           <div className="text-center text-secondary">
             <div className={twMerge("font-semibold mb-2", compactMode ? "text-xl" : "text-2xl")}>
-              {Zotero.locale ? Zotero.locale.getString(getLocaleID("no-readings-scheduled")) : "No readings scheduled"}
+              {Zotero.locale ? Zotero.getString(getLocaleID("no-readings-scheduled")) : "No readings scheduled"}
             </div>
             <p className={twMerge(compactMode ? "text-base" : "text-lg")}>
-              {Zotero.locale ? Zotero.locale.getString(getLocaleID("no-readings-scheduled-description")) : "Add reading dates to classes to see them here."}
+              {Zotero.locale ? Zotero.getString(getLocaleID("no-readings-scheduled-description")) : "Add reading dates to classes to see them here."}
             </p>
           </div>
         </div>
@@ -112,7 +109,7 @@ export function ReadingsPage({ collectionId }: ReadingsPageProps) {
         <div className="sticky top-0 z-10 bg-background py-1 md:pt-8">
           <div className="container-padded bg-background">
             <div className={twMerge("font-semibold", compactMode ? "text-2xl" : "text-3xl")}>
-              {Zotero.locale ? Zotero.locale.getString(getLocaleID("readings-page-title")) : "All Readings"}
+              {Zotero.locale ? Zotero.getString(getLocaleID("readings-page-title")) : "All Readings"}
             </div>
           </div>
         </div>

@@ -1268,7 +1268,7 @@ function ReadingDateInput({
           compactMode ? "text-sm" : "text-base",
         )}
       >
-        {Zotero.locale ? Zotero.locale.getString(getLocaleID("reading-date-label")) : "Reading date"}:
+        {Zotero.locale ? Zotero.getString(getLocaleID("reading-date-label")) : "Reading date"}:
       </label>
       <input
         type="date"
