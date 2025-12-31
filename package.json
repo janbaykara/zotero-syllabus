@@ -34,6 +34,7 @@
   },
   "dependencies": {
     "concurrently": "^9.2.1",
+    "date-fns": "^4.1.0",
     "lodash-es": "^4.17.22",
     "pluralize": "^8.0.0",
     "preact": "^10.19.3",

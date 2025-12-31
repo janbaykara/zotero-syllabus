@@ -1,6 +1,12 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
-import { useState, useEffect, useMemo, useRef } from "preact/hooks";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+} from "preact/hooks";
 import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
 import {
@@ -28,6 +34,7 @@ import { useDebouncedEffect } from "../utils/react/useDebouncedEffect";
 import { useElementSize } from "../utils/react/useElementSize";
 import slugify from "slugify";
 import { SettingsPage } from "./SettingsPage";
+import { formatDate } from "date-fns";
 
 // Define priority type for use in this file
 // These values match SyllabusPriority enum in syllabus.ts
@@ -54,6 +61,18 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     setLocked,
   ] = useZoteroSyllabusMetadata(collectionId);
 
+  const handleClassReadingDateSave = useCallback(
+    async (classNumber: number, readingDate: string | undefined) => {
+      await SyllabusManager.setClassReadingDate(
+        collectionId,
+        classNumber,
+        readingDate,
+        "page",
+      );
+    },
+    [collectionId],
+  );
+
   const isLocked = syllabusMetadata.locked || false;
   const items = useZoteroCollectionItems(collectionId);
 
@@ -73,7 +92,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   const syllabusPageRef = useRef<HTMLDivElement>(null);
 
   const toggleCompactMode = () => {
-    const nextMode = !compactMode
+    const nextMode = !compactMode;
     ztoolkit.log("toggleCompactMode", { compactMode, nextMode });
     setCompactMode(nextMode);
   };
@@ -753,7 +772,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                 </button>
                 <button
                   onClick={() => setShowSettings(true)}
-                  className="grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden"
+                  className="grow-0 shrink-0 cursor-pointer in-[.print]:hidden"
                   title="Edit syllabus settings"
                   aria-label="Edit syllabus settings"
                 >
@@ -763,7 +782,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                 <button
                   onClick={toggleCompactMode}
                   className={twMerge(
-                    "grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden",
+                    "grow-0 shrink-0 cursor-pointer in-[.print]:hidden",
                   )}
                   title={
                     compactMode ? "Disable compact mode" : "Enable compact mode"
@@ -777,7 +796,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                 </button>
                 <button
                   onClick={handlePrint}
-                  className="grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden"
+                  className="grow-0 shrink-0 cursor-pointer in-[.print]:hidden"
                   title="Print the list in Syllabus view as a PDF"
                   aria-label="Print the list in Syllabus view as a PDF"
                 >
@@ -822,6 +841,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
               syllabusMetadata={syllabusMetadata}
               onClassTitleSave={setClassTitle}
               onClassDescriptionSave={setClassDescription}
+              onClassReadingDateSave={handleClassReadingDateSave}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -940,10 +960,20 @@ interface ClassGroupComponentProps {
   }>;
   collectionId: number;
   syllabusMetadata: {
-    classes?: { [key: string]: { title?: string; description?: string } };
+    classes?: {
+      [key: string]: {
+        title?: string;
+        description?: string;
+        readingDate?: string;
+      };
+    };
   };
   onClassTitleSave: (classNumber: number, title: string) => void;
   onClassDescriptionSave: (classNumber: number, description: string) => void;
+  onClassReadingDateSave: (
+    classNumber: number,
+    readingDate: string | undefined,
+  ) => void;
   onDrop: (
     e: JSX.TargetedDragEvent<HTMLElement>,
     classNumber: number | null,
@@ -964,6 +994,7 @@ function ClassGroupComponent({
   syllabusMetadata,
   onClassTitleSave,
   onClassDescriptionSave,
+  onClassReadingDateSave,
   onDrop,
   onDragOver,
   onDragLeave,
@@ -975,13 +1006,16 @@ function ClassGroupComponent({
   const { singularCapitalized } =
     SyllabusManager.getNomenclatureFormatted(collectionId);
 
-  // Get class title and description from metadata
+  // Get class title, description, and reading date from metadata
   const classTitle = classNumber
     ? syllabusMetadata.classes?.[classNumber]?.title || ""
     : "";
   const classDescription = classNumber
     ? syllabusMetadata.classes?.[classNumber]?.description || ""
     : "";
+  const readingDate = classNumber
+    ? syllabusMetadata.classes?.[classNumber]?.readingDate
+    : undefined;
 
   // Check if there's a manual order for this class
   const hasManualOrder =
@@ -1060,28 +1094,59 @@ function ClassGroupComponent({
                     readOnly={isLocked}
                   />
                 </div>
-                {!isLocked && (
-                  <div className="ml-auto! shrink-0 inline-flex flex-row items-baseline gap-1 in-[.print]:hidden">
-                    {hasManualOrder && (
-                      <button
-                        className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
-                        onClick={handleResetSortOrder}
-                        title="Reset sort order"
-                        aria-label="Reset sort order"
-                      >
-                        <div className="text-lg text-center">⇅</div>
-                      </button>
-                    )}
-                    <button
-                      className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-red-500/15 text-secondary hover:text-red-400 inline-flex flex-row items-center justify-center w-8 h-8"
-                      onClick={handleDeleteClass}
-                      title={`Delete ${SyllabusManager.getNomenclatureFormatted(collectionId).singular}`}
-                      aria-label={`Delete ${SyllabusManager.getNomenclatureFormatted(collectionId).singular}`}
+                <div className="ml-auto! shrink-0 inline-flex flex-row items-baseline gap-1 in-[.print]:hidden">
+                  {!isLocked && (
+                    <div
+                      className={twMerge(
+                        compactMode ? "text-sm mt-2" : "text-base mt-3",
+                      )}
                     >
-                      <div className="text-2xl text-center">×</div>
-                    </button>
-                  </div>
-                )}
+                      <ReadingDateInput
+                        initialValue={readingDate}
+                        onSave={(date) =>
+                          onClassReadingDateSave(classNumber, date)
+                        }
+                        compactMode={compactMode}
+                      />
+                    </div>
+                  )}
+                  {isLocked && readingDate && (
+                    <div
+                      className={twMerge(
+                        compactMode
+                          ? "text-sm mt-2 text-secondary"
+                          : "text-base mt-3 text-secondary",
+                      )}
+                    >
+                      <span className="text-tertiary">Target date: </span>
+                      <span className="text-secondary">
+                        {formatReadingDate(readingDate)}
+                      </span>
+                    </div>
+                  )}
+                  {!isLocked && (
+                    <>
+                      {hasManualOrder && (
+                        <button
+                          className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
+                          onClick={handleResetSortOrder}
+                          title="Reset sort order"
+                          aria-label="Reset sort order"
+                        >
+                          <div className="text-lg text-center">⇅</div>
+                        </button>
+                      )}
+                      <button
+                        className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-red-500/15 text-secondary hover:text-red-400 inline-flex flex-row items-center justify-center w-8 h-8"
+                        onClick={handleDeleteClass}
+                        title={`Delete ${SyllabusManager.getNomenclatureFormatted(collectionId).singular}`}
+                        aria-label={`Delete ${SyllabusManager.getNomenclatureFormatted(collectionId).singular}`}
+                      >
+                        <div className="text-2xl text-center">×</div>
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -1125,8 +1190,8 @@ function ClassGroupComponent({
             >
               Drag items to {singularCapitalized} {classNumber}
             </div>
-          ) : itemAssignments.length > 0
-            ? itemAssignments.map(({ item, assignment }) => {
+          ) : itemAssignments.length > 0 ? (
+            itemAssignments.map(({ item, assignment }) => {
               // Require assignment ID - if missing, skip this assignment
               if (!assignment.id) {
                 ztoolkit.log(
@@ -1162,9 +1227,90 @@ function ClassGroupComponent({
                 />
               );
             })
-            : null}
+          ) : null}
         </div>
       </div>
+    </div>
+  );
+}
+
+function formatReadingDate(isoDate: string): string {
+  const date = new Date(isoDate);
+  return formatDate(date, "iii do MMM");
+}
+
+function ReadingDateInput({
+  initialValue,
+  onSave,
+  compactMode = false,
+}: {
+  initialValue?: string; // ISO date string
+  onSave: (date: string | undefined) => void | Promise<void>;
+  compactMode?: boolean;
+}) {
+  const [value, setValue] = useState(
+    initialValue ? new Date(initialValue).toISOString().split("T")[0] : "",
+  );
+
+  useEffect(() => {
+    if (initialValue) {
+      setValue(new Date(initialValue).toISOString().split("T")[0]);
+    } else {
+      setValue("");
+    }
+  }, [initialValue]);
+
+  useDebouncedEffect(
+    () => {
+      if (value) {
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+          const isoString = date.toISOString();
+          if (isoString !== initialValue) {
+            onSave(isoString);
+          }
+        }
+      } else if (initialValue !== undefined) {
+        onSave(undefined);
+      }
+    },
+    [initialValue, value],
+    500,
+  );
+
+  return (
+    <div className="flex flex-row items-center gap-2">
+      <label
+        className={twMerge(
+          "text-tertiary shrink-0",
+          compactMode ? "text-sm" : "text-base",
+        )}
+      >
+        Target date
+      </label>
+      <input
+        type="date"
+        value={value}
+        onChange={(e) => setValue(e.currentTarget.value)}
+        className={twMerge(
+          "px-2 py-1 border border-quinary rounded-md bg-background text-secondary focus:outline-3 focus:outline-accent-blue focus:outline-offset-2",
+          compactMode ? "text-sm" : "text-base",
+        )}
+        placeholder="Select date"
+      />
+      {value && (
+        <button
+          onClick={() => {
+            setValue("");
+            onSave(undefined);
+          }}
+          className="text-secondary hover:text-primary text-sm"
+          title="Clear date"
+          aria-label="Clear date"
+        >
+          ×
+        </button>
+      )}
     </div>
   );
 }
@@ -1248,36 +1394,37 @@ function TextInput({
         disabled: readOnly,
         onChange: readOnly
           ? undefined
-          : (
-            e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>,
-          ) => setValue((e.target as HTMLInputElement).value),
+          : (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+              setValue((e.target as HTMLInputElement).value),
         onBlur: readOnly ? undefined : () => save(value),
         onKeyDown: readOnly
           ? undefined
           : (
-            e: JSX.TargetedKeyboardEvent<
-              HTMLInputElement | HTMLTextAreaElement
-            >,
-          ) => {
-            if (e.key === "Escape" || e.key === "Enter") {
-              e.preventDefault();
-              e.currentTarget.blur();
-              save(value);
-            }
-          },
+              e: JSX.TargetedKeyboardEvent<
+                HTMLInputElement | HTMLTextAreaElement
+              >,
+            ) => {
+              if (e.key === "Escape" || e.key === "Enter") {
+                e.preventDefault();
+                e.currentTarget.blur();
+                save(value);
+              }
+            },
         onSelect: readOnly
           ? (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            e.preventDefault();
-            e.currentTarget.setSelectionRange(0, 0);
-          }
+              e.preventDefault();
+              e.currentTarget.setSelectionRange(0, 0);
+            }
           : undefined,
         onClick: readOnly
-          ? (e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            e.preventDefault();
-            e.currentTarget.blur();
-          }
+          ? (
+              e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
+            ) => {
+              e.preventDefault();
+              e.currentTarget.blur();
+            }
           : undefined,
-        placeholder: readOnly ? undefined : (placeholder || "Click to edit"),
+        placeholder: readOnly ? undefined : placeholder || "Click to edit",
         className: twMerge(
           "bg-transparent border-none focus:outline-3 focus:outline-accent-blue focus:rounded-xs focus:outline-offset-2 field-sizing-content in-[.print]:hidden",
           readOnly && "cursor-default select-none",
@@ -1314,9 +1461,13 @@ interface SyllabusItemCardProps {
     insertBefore: boolean,
   ) => void;
   onDragOver?: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
+  onClick?: (
+    item: Zotero.Item,
+    e?: JSX.TargetedMouseEvent<HTMLElement>,
+  ) => void; // Optional custom click handler
 }
 
-function SyllabusItemCard({
+export function SyllabusItemCard({
   item,
   collectionId,
   classNumber,
@@ -1326,6 +1477,7 @@ function SyllabusItemCard({
   isLocked = false,
   onDrop,
   onDragOver,
+  onClick: customOnClick,
 }: SyllabusItemCardProps) {
   // Get the currently selected item ID
   const selectedItemId = useZoteroSelectedItemId();
@@ -1389,9 +1541,9 @@ function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-        item: Zotero.Item;
-        type: "pdf" | "snapshot" | "epub";
-      }>;
+      item: Zotero.Item;
+      type: "pdf" | "snapshot" | "epub";
+    }>;
   }, [item, slim]);
 
   const metadataParts = [
@@ -1509,9 +1661,9 @@ function SyllabusItemCard({
 
   const colors = priority
     ? {
-      backgroundColor: priorityColor + "15",
-      borderColor: priorityColor + "30",
-    }
+        backgroundColor: priorityColor + "15",
+        borderColor: priorityColor + "30",
+      }
     : {};
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
@@ -1559,7 +1711,13 @@ function SyllabusItemCard({
       )}
       data-item-id={item.id}
       draggable={!isLocked}
-      onClick={(e) => onClick(item, e)}
+      onClick={(e) => {
+        if (customOnClick) {
+          customOnClick(item, e);
+        } else {
+          onClick(item, e);
+        }
+      }}
       onDblClick={(e) => onDoubleClick(item, e)}
       onDragStart={isLocked ? undefined : handleDragStart}
       onDragEnd={isLocked ? undefined : handleDragEnd}

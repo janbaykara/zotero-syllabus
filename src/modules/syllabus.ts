@@ -1,11 +1,13 @@
+import slugify from "slugify";
 /**
  * Syllabus Manager - Core functionality for syllabus view and metadata
  */
 
-import { getLocaleID } from "../utils/locale";
+import { getLocaleID, getString } from "../utils/locale";
 import { ExtraFieldTool } from "zotero-plugin-toolkit";
 import { renderSyllabusPage } from "./SyllabusPage";
 import { getSelectedCollection } from "../utils/zotero";
+import { getCurrentTab } from "../utils/window";
 import { set } from "lodash-es";
 import { renderComponent } from "../utils/react";
 import { ItemPane } from "./ItemPane";
@@ -13,6 +15,9 @@ import { h } from "preact";
 import { uuidv7 } from "uuidv7";
 import pluralize from "pluralize";
 import { getPref } from "../utils/prefs";
+import { ReadingSchedule } from "./ReadingSchedule";
+import { parseXULTemplate } from "../utils/ui";
+import { TabManager } from "../utils/tabManager";
 
 export enum SyllabusPriority {
   COURSE_INFO = "course-info",
@@ -74,6 +79,7 @@ export interface SettingsClassMetadata {
   title?: string;
   description?: string;
   itemOrder?: string[]; // Manual ordering of assignment IDs within this class
+  readingDate?: string; // ISO date string for when readings are due
 }
 
 /**
@@ -86,9 +92,20 @@ export interface CustomPriority {
   order: number; // Sort order (lower = higher priority)
 }
 
+const tabManager = new TabManager<Record<string, never>>({
+  type: "reading-list",
+  title: "Reading Schedule",
+  rootElementIdFactory: () => "reading-list-tab-root",
+  data: { icon: "book" },
+  componentFactory: () => h(ReadingSchedule, {}),
+  getTabId: () => "syllabus-reading-list-tab",
+});
+
 export class SyllabusManager {
   static notifierID: string | null = null;
   static syllabusItemPaneSection: false | string | null = null;
+  static readingsTabPanelID: string | null = null;
+  static readingScheduleTab = tabManager;
 
   static settingsKeys = SyllabusSettingsKey;
   static priorityKeys = SyllabusPriority;
@@ -237,6 +254,17 @@ export class SyllabusManager {
     this.setupUI();
     this.setupSyllabusViewTabListener();
     this.setupSyllabusViewReloadListener();
+
+    // Re-render reading list tab if it exists (for hot reload)
+    // Use a small delay to ensure tabs are initialized
+    Zotero.Promise.delay(100).then(() => {
+      if (this.readingScheduleTab) {
+        ztoolkit.log(
+          "SyllabusManager.onMainWindowLoad: rerendering reading schedule tab",
+        );
+        this.readingScheduleTab.renderAllTabs(win);
+      }
+    });
   }
 
   static onNotify(
@@ -294,6 +322,9 @@ export class SyllabusManager {
     ztoolkit.log("SyllabusManager.onMainWindowUnload", win);
     this.setupUI();
     this.cleanupSyllabusViewTabListener();
+    if (this.readingScheduleTab) {
+      this.readingScheduleTab.cleanupAll();
+    }
   }
 
   static onShutdown() {
@@ -365,20 +396,35 @@ export class SyllabusManager {
   static setupSyllabusViewTabListener() {
     ztoolkit.log("SyllabusManager.setupSyllabusViewTabListener");
     let selectedCollectionId = getSelectedCollection()?.id.toString() || "";
+    let currentTabId = getCurrentTab()?.id || "";
     const interval = setInterval(async () => {
       const collection = getSelectedCollection();
       const currentCollectionId = collection?.id.toString() || "";
-      if (currentCollectionId !== selectedCollectionId) {
+      const tab = getCurrentTab();
+      const newTabId = tab?.id || "";
+
+      const collectionChanged = currentCollectionId !== selectedCollectionId;
+      const tabChanged = newTabId !== currentTabId;
+
+      if (collectionChanged) {
         ztoolkit.log(
           "Selected collection changed",
           collection?.id || "My Library",
         );
         selectedCollectionId = currentCollectionId;
+        currentTabId = newTabId; // Update tab ID when collection changes
         // setupUI() calls setupPage() which re-renders React component for new collection
         // Once mounted, React stores handle all data updates automatically
         SyllabusManager.setupUI();
+        // Update button visibility when collection changes
+        SyllabusManager.updateButtonVisibility();
         // Reload context menus for the new collection
         SyllabusManager.setupContextMenuSetPriority();
+      } else if (tabChanged) {
+        ztoolkit.log("Tab changed", newTabId);
+        currentTabId = newTabId;
+        // Update button visibility when tab changes
+        SyllabusManager.updateButtonVisibility();
       }
     }, 300);
     this.syllabusViewTabListener = interval;
@@ -476,6 +522,12 @@ export class SyllabusManager {
     let toggleButton = doc.getElementById(
       "syllabus-view-toggle",
     ) as unknown as XULButtonElement;
+    let readingScheduleButton = doc.getElementById(
+      "syllabus-reading-schedule-button",
+    ) as unknown as XULButtonElement;
+    let collectionReadingScheduleButton = doc.getElementById(
+      "syllabus-collection-reading-schedule-button",
+    ) as unknown as XULButtonElement;
     let spacer = doc.getElementById("syllabus-view-spacer") as Element | null;
 
     if (!toggleButton) {
@@ -494,6 +546,7 @@ export class SyllabusManager {
               const checked = !SyllabusManager.getSyllabusPageVisible();
               SyllabusManager.setSyllabusPageVisible(checked);
               SyllabusManager.updateButtonLabel(target);
+              SyllabusManager.updateButtonVisibility();
               SyllabusManager.setupPage();
             },
           },
@@ -502,6 +555,46 @@ export class SyllabusManager {
 
       // Set initial label
       SyllabusManager.updateButtonLabel(toggleButton);
+
+      // Create "Review your Reading Schedule" button (for Main Library)
+      readingScheduleButton = ztoolkit.UI.createElement(doc, "toolbarbutton", {
+        id: "syllabus-reading-schedule-button",
+        classList: ["syllabus-view-toggle"],
+        properties: {
+          label: "Review your Reading Schedule",
+          tooltiptext: "Open Reading Schedule",
+        },
+        listeners: [
+          {
+            type: "click",
+            listener: () => {
+              SyllabusManager.openReadingListTab();
+            },
+          },
+        ],
+      });
+
+      // Create "Reading Schedule" button (for collection pages)
+      collectionReadingScheduleButton = ztoolkit.UI.createElement(
+        doc,
+        "toolbarbutton",
+        {
+          id: "syllabus-collection-reading-schedule-button",
+          classList: ["syllabus-view-toggle"],
+          properties: {
+            label: "Reading Schedule",
+            tooltiptext: "Open Reading Schedule",
+          },
+          listeners: [
+            {
+              type: "click",
+              listener: () => {
+                SyllabusManager.openReadingListTab();
+              },
+            },
+          ],
+        },
+      );
 
       // Create spacer element if it doesn't exist
       if (!spacer) {
@@ -513,18 +606,104 @@ export class SyllabusManager {
         spacer.setAttribute("flex", "1");
       }
 
-      // Insert button and spacer before the search spinner, or append to toolbar if spinner not found
+      // Insert buttons and spacer before the search spinner, or append to toolbar if spinner not found
       if (searchSpinner && searchSpinner.parentNode) {
         searchSpinner.parentNode.insertBefore(toggleButton, searchSpinner);
+        searchSpinner.parentNode.insertBefore(
+          collectionReadingScheduleButton,
+          searchSpinner,
+        );
+        searchSpinner.parentNode.insertBefore(
+          readingScheduleButton,
+          searchSpinner,
+        );
         searchSpinner.parentNode.insertBefore(spacer, searchSpinner);
       } else {
         itemsToolbar.appendChild(toggleButton);
+        itemsToolbar.appendChild(collectionReadingScheduleButton);
+        itemsToolbar.appendChild(readingScheduleButton);
         itemsToolbar.appendChild(spacer);
       }
     } else {
+      // Ensure reading schedule buttons exist
+      if (!readingScheduleButton) {
+        readingScheduleButton = doc.getElementById(
+          "syllabus-reading-schedule-button",
+        ) as unknown as XULButtonElement;
+        if (!readingScheduleButton) {
+          readingScheduleButton = ztoolkit.UI.createElement(
+            doc,
+            "toolbarbutton",
+            {
+              id: "syllabus-reading-schedule-button",
+              classList: ["syllabus-view-toggle"],
+              properties: {
+                label: "Review your Reading Schedule",
+                tooltiptext: "Open Reading Schedule",
+              },
+              listeners: [
+                {
+                  type: "click",
+                  listener: () => {
+                    SyllabusManager.openReadingListTab();
+                  },
+                },
+              ],
+            },
+          );
+
+          // Insert after toggle button
+          if (toggleButton.parentNode) {
+            toggleButton.parentNode.insertBefore(
+              readingScheduleButton,
+              toggleButton.nextSibling,
+            );
+          }
+        }
+      }
+
+      if (!collectionReadingScheduleButton) {
+        collectionReadingScheduleButton = doc.getElementById(
+          "syllabus-collection-reading-schedule-button",
+        ) as unknown as XULButtonElement;
+        if (!collectionReadingScheduleButton) {
+          collectionReadingScheduleButton = ztoolkit.UI.createElement(
+            doc,
+            "toolbarbutton",
+            {
+              id: "syllabus-collection-reading-schedule-button",
+              classList: ["syllabus-view-toggle"],
+              properties: {
+                label: "Reading Schedule",
+                tooltiptext: "Open Reading Schedule",
+              },
+              listeners: [
+                {
+                  type: "click",
+                  listener: () => {
+                    SyllabusManager.openReadingListTab();
+                  },
+                },
+              ],
+            },
+          );
+
+          // Insert right after toggle button
+          if (toggleButton.parentNode) {
+            toggleButton.parentNode.insertBefore(
+              collectionReadingScheduleButton,
+              toggleButton.nextSibling,
+            );
+          }
+        }
+      }
+
       // Update button state and label
       SyllabusManager.updateButtonLabel(toggleButton);
     }
+
+    // Update visibility of both buttons
+    SyllabusManager.updateButtonVisibility();
   }
 
   // Function to update button label based on current state
@@ -543,6 +722,49 @@ export class SyllabusManager {
     (button as XUL.Button).tooltiptext = isEnabled
       ? "Switch to Collection View"
       : "Switch to Syllabus View";
+  }
+
+  // Function to update button visibility based on current state
+  static updateButtonVisibility() {
+    const w = Zotero.getMainWindow();
+    const doc = w.document;
+
+    const toggleButton = doc.getElementById(
+      "syllabus-view-toggle",
+    ) as XULButtonElement | null;
+    const readingScheduleButton = doc.getElementById(
+      "syllabus-reading-schedule-button",
+    ) as XULButtonElement | null;
+    const collectionReadingScheduleButton = doc.getElementById(
+      "syllabus-collection-reading-schedule-button",
+    ) as XULButtonElement | null;
+
+    if (
+      !toggleButton ||
+      !readingScheduleButton ||
+      !collectionReadingScheduleButton
+    )
+      return;
+
+    const selectedCollection = getSelectedCollection();
+    const currentTab = getCurrentTab();
+
+    // Check if we're in Main Library and in a collection tab (not a custom tab)
+    // Collection tabs are the default tabs (type is undefined or not a custom type)
+    // Custom tabs have types like "syllabus" or "reading-list"
+    const isInMainLibrary = !selectedCollection;
+    const isCustomTab =
+      currentTab?.type === "syllabus" || currentTab?.type === "reading-list";
+    const isInCollectionTab = !isCustomTab;
+    const shouldShowReadingSchedule = isInMainLibrary && isInCollectionTab;
+    const isInCollection = !!selectedCollection;
+
+    // Hide/show buttons based on conditions
+    toggleButton.hidden = shouldShowReadingSchedule;
+    readingScheduleButton.hidden = !shouldShowReadingSchedule;
+    // Show "Reading Schedule" button when viewing a collection, hide it in Main Library
+    collectionReadingScheduleButton.hidden =
+      !isInCollection || shouldShowReadingSchedule;
   }
 
   // Function to render a completely custom syllabus view
@@ -683,10 +905,10 @@ export class SyllabusManager {
             const classTitle =
               classNumber !== undefined
                 ? SyllabusManager.getClassTitle(
-                  selectedCollection.id,
-                  classNumber,
-                  false,
-                )
+                    selectedCollection.id,
+                    classNumber,
+                    false,
+                  )
                 : "";
             const priority = firstAssignment.priority || "";
             return `${sortKey}|${priority}|${classNumber ?? ""}|${classTitle}|${selectedCollection.id}`;
@@ -834,7 +1056,8 @@ export class SyllabusManager {
 
             if (collectionIdForRange) {
               try {
-                const fullRange = this.getFullClassNumberRange(collectionIdForRange);
+                const fullRange =
+                  this.getFullClassNumberRange(collectionIdForRange);
                 if (fullRange.length > 0) {
                   maxRange = Math.max(...fullRange);
                 }
@@ -845,9 +1068,8 @@ export class SyllabusManager {
 
             // Generate color using 360-degree rotation: class 1 starts at 0°, evenly distributed
             // Map class number to position in 360-degree color wheel
-            const hue = maxRange > 1
-              ? ((classNum - 1) * (360 / maxRange)) % 360
-              : 0;
+            const hue =
+              maxRange > 1 ? ((classNum - 1) * (360 / maxRange)) % 360 : 0;
             const saturation = 45; // Moderate saturation for subtlety
             const lightness = 65; // Light enough to be subtle
             const borderColor = `hsla(${hue}, ${saturation}%, ${lightness}%)`;
@@ -856,7 +1078,7 @@ export class SyllabusManager {
             container.style.paddingLeft = "6px";
             container.style.marginLeft = "-2px"; // Compensate for border width
 
-            container.style.background = `hsla(${hue}, ${saturation}%, ${lightness}%, 20%)`;;
+            container.style.background = `hsla(${hue}, ${saturation}%, ${lightness}%, 20%)`;
 
             // // Add top border to first item in each class group when sorted by this column
             // // isFirstInClassGroup is only true when sortKey is present (indicating sorting)
@@ -967,14 +1189,14 @@ export class SyllabusManager {
           body,
           selectedCollection
             ? h(ItemPane, {
-              item,
-              collectionId: selectedCollection.id,
-              editable,
-            })
+                item,
+                collectionId: selectedCollection.id,
+                editable,
+              })
             : h("div", {
-              innerText: "Select a collection to view syllabus assignments",
-              className: "text-center text-gray-500 p-4",
-            }),
+                innerText: "Select a collection to view syllabus assignments",
+                className: "text-center text-gray-500 p-4",
+              }),
           "syllabus-item-pane",
         );
       },
@@ -1037,18 +1259,18 @@ export class SyllabusManager {
     // Get collection-specific priority options if a collection is selected
     const priorityOptions = selectedCollection
       ? (() => {
-        const customPriorities = this.getPrioritiesForCollection(
-          selectedCollection.id,
-        );
-        const options = customPriorities.map((p) => ({
-          value: p.id,
-          label: p.name,
-          color: p.color,
-        }));
-        // Add "(None)" option
-        options.push({ value: "", label: "(None)", color: "" });
-        return options;
-      })()
+          const customPriorities = this.getPrioritiesForCollection(
+            selectedCollection.id,
+          );
+          const options = customPriorities.map((p) => ({
+            value: p.id,
+            label: p.name,
+            color: p.color,
+          }));
+          // Add "(None)" option
+          options.push({ value: "", label: "(None)", color: "" });
+          return options;
+        })()
       : this.getPriorityOptions();
 
     ztoolkit.Menu.register("item", {
@@ -1734,7 +1956,7 @@ export class SyllabusManager {
       // This ensures OPTIONAL ("optional") sorts before unprioritized ("zzzz")
       assignment.priority || "zzzz",
       assignment.classInstruction?.slice(0, 4).replace(/[^a-zA-Z0-9]/g, "_") ||
-      "",
+        "",
       assignment.id || "",
     );
 
@@ -2344,6 +2566,48 @@ export class SyllabusManager {
   }
 
   /**
+   * Get reading date for a specific collection and class number
+   * Returns ISO date string or undefined
+   */
+  static getClassReadingDate(
+    collectionId: number | string,
+    classNumber: number,
+  ): string | undefined {
+    const metadata = SyllabusManager.getClassMetadata(
+      collectionId,
+      classNumber,
+    );
+    return metadata.readingDate;
+  }
+
+  /**
+   * Set reading date for a specific collection and class number
+   * Accepts ISO date string or undefined
+   */
+  static async setClassReadingDate(
+    collectionId: number | string,
+    classNumber: number,
+    readingDate: string | undefined,
+    source: "page" | "item-pane",
+  ): Promise<void> {
+    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
+    if (readingDate !== undefined) {
+      set(
+        allData,
+        `${collectionId}.classes.${classNumber}.readingDate`,
+        readingDate,
+      );
+    } else {
+      // Remove reading date if undefined
+      const collectionIdStr = String(collectionId);
+      if (allData[collectionIdStr]?.classes?.[classNumber]) {
+        delete allData[collectionIdStr].classes![classNumber].readingDate;
+      }
+    }
+    await SyllabusManager.setCollectionMetadata(allData, source);
+  }
+
+  /**
    * Create an additional class (even if empty) to extend the range
    * This ensures the class appears in the rendered range
    */
@@ -2594,5 +2858,98 @@ export class SyllabusManager {
     elements.push(this.createPriorityLabel(doc, label));
 
     return elements;
+  }
+
+  /**
+   * Get readings grouped by date, then by class
+   * Returns Map<isoDateString, Map<classNumber, Array<{item, assignment}>>>
+   * Only includes classes that have reading dates set
+   */
+  static getReadingsByDate(
+    collectionId: number | string,
+  ): Map<
+    string,
+    Map<
+      number,
+      Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }>
+    >
+  > {
+    const result = new Map<
+      string,
+      Map<
+        number,
+        Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }>
+      >
+    >();
+
+    try {
+      const collection = Zotero.Collections.get(
+        typeof collectionId === "string"
+          ? parseInt(collectionId, 10)
+          : collectionId,
+      );
+      if (!collection) {
+        return result;
+      }
+
+      const items = collection.getChildItems();
+
+      for (const item of items) {
+        if (!item.isRegularItem()) continue;
+
+        const assignments = this.getAllClassAssignments(item, collectionId);
+
+        for (const assignment of assignments) {
+          if (assignment.classNumber === undefined) continue;
+
+          const readingDate = this.getClassReadingDate(
+            collectionId,
+            assignment.classNumber,
+          );
+
+          // Only include classes with reading dates
+          if (readingDate === undefined) continue;
+
+          if (!result.has(readingDate)) {
+            result.set(readingDate, new Map());
+          }
+
+          const classesForDate = result.get(readingDate)!;
+          if (!classesForDate.has(assignment.classNumber)) {
+            classesForDate.set(assignment.classNumber, []);
+          }
+
+          classesForDate
+            .get(assignment.classNumber)!
+            .push({ item, assignment });
+        }
+      }
+
+      // Sort items within each class
+      for (const [, classesForDate] of result) {
+        for (const [classNumber, itemAssignments] of classesForDate) {
+          const sorted = this.sortClassItems(
+            itemAssignments,
+            collectionId,
+            classNumber,
+          );
+          classesForDate.set(classNumber, sorted);
+        }
+      }
+    } catch (e) {
+      ztoolkit.log("Error getting readings by date:", e);
+    }
+
+    return result;
+  }
+
+  /**
+   * Open and render the reading list tab
+   */
+  static openReadingListTab() {
+    const win = Zotero.getMainWindow();
+    if (this.readingScheduleTab) {
+      this.readingScheduleTab.open(win);
+    }
   }
 }

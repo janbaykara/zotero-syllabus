@@ -25,7 +25,7 @@ export function useZoteroCompactMode() {
   );
 
   // @ts-expect-error - __compactMode is a string, but we want to compare it to a boolean
-  const compactMode = __compactMode === "true" || __compactMode === true
+  const compactMode = __compactMode === "true" || __compactMode === true;
 
   const setCompactMode = useCallback((value: boolean) => {
     setPref("compactMode", String(value) as any);
@@ -38,13 +38,13 @@ export function useZoteroCompactMode() {
 
 export function createCompactModeStore() {
   function getSnapshot() {
-    return String(getPref("compactMode"))
+    return String(getPref("compactMode"));
   }
 
   function subscribe(onStoreChange: () => void) {
     // Subscribe to custom event emitter instead of Zotero notifier
     const unsubscribe = registerCompactModeChangeListener(() => {
-      onStoreChange()
+      onStoreChange();
     });
 
     // Return an unsubscribe fn
@@ -53,4 +53,3 @@ export function createCompactModeStore() {
 
   return { getSnapshot, subscribe };
 }
-

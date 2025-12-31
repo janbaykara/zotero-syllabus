@@ -16,7 +16,7 @@ export function useZoteroClassMetadata(collectionId: number) {
 
   const setClassMetadata = useCallback(
     (classNumber: number, metadata: Partial<SettingsClassMetadata>) => {
-      if (metadata.title) {
+      if (metadata.title !== undefined) {
         SyllabusManager.setClassTitle(
           collectionId,
           classNumber,
@@ -24,7 +24,7 @@ export function useZoteroClassMetadata(collectionId: number) {
           "page",
         );
       }
-      if (metadata.description) {
+      if (metadata.description !== undefined) {
         SyllabusManager.setClassDescription(
           collectionId,
           classNumber,
@@ -32,11 +32,31 @@ export function useZoteroClassMetadata(collectionId: number) {
           "page",
         );
       }
+      if (metadata.readingDate !== undefined) {
+        SyllabusManager.setClassReadingDate(
+          collectionId,
+          classNumber,
+          metadata.readingDate,
+          "page",
+        );
+      }
     },
     [collectionId],
   );
 
-  return [metadataFromZotero, setClassMetadata] as const;
+  const setClassReadingDate = useCallback(
+    (classNumber: number, readingDate: string | undefined) => {
+      SyllabusManager.setClassReadingDate(
+        collectionId,
+        classNumber,
+        readingDate,
+        "page",
+      );
+    },
+    [collectionId],
+  );
+
+  return [metadataFromZotero, setClassMetadata, setClassReadingDate] as const;
 }
 
 export function createClassMetadataStore(collectionId: number) {
@@ -78,9 +98,15 @@ export function createClassMetadataStore(collectionId: number) {
       "collection",
     ]);
 
+    // Also listen to the custom event emitter for collection metadata changes
+    // (since preference changes aren't notifiable in Zotero)
+    const unsubscribeEmitter =
+      SyllabusManager.onCollectionMetadataChange(onStoreChange);
+
     // Return an unsubscribe fn
     return () => {
       Zotero.Notifier.unregisterObserver(notifierId);
+      unsubscribeEmitter();
     };
   }
 

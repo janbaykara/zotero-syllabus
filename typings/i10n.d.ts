@@ -6,6 +6,8 @@ export type FluentMessageId =
   | 'item-section-syllabus-head-text'
   | 'item-section-syllabus-sidenav-tooltip'
   | 'menu-toggle-bibliography'
+  | 'no-readings-scheduled'
+  | 'no-readings-scheduled-description'
   | 'panel-demo-header'
   | 'panel-demo-sidenav'
   | 'pref-compact-mode'
@@ -18,7 +20,11 @@ export type FluentMessageId =
   | 'prefs-table-detail'
   | 'prefs-table-title'
   | 'prefs-title'
+  | 'reading-date-label'
+  | 'readings-page-title'
+  | 'readings-tab-label'
   | 'startup-begin'
   | 'startup-finish'
   | 'tabpanel-lib-tab-label'
-  | 'tabpanel-reader-tab-label';
+  | 'tabpanel-reader-tab-label'
+  | 'view-readings-button';
