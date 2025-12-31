@@ -29,6 +29,7 @@ import { useElementSize } from "../utils/react/useElementSize";
 import { getLocaleID } from "../utils/locale";
 import slugify from "slugify";
 import { SettingsPage } from "./SettingsPage";
+import { formatDate } from "date-fns";
 
 // Define priority type for use in this file
 // These values match SyllabusPriority enum in syllabus.ts
@@ -1101,7 +1102,8 @@ function ClassGroupComponent({
                   )}
                   {isLocked && readingDate && (
                     <div className={twMerge(compactMode ? "text-sm mt-2 text-secondary" : "text-base mt-3 text-secondary")}>
-                      Target date: {formatReadingDate(readingDate)}
+                      <span className="text-tertiary">Target date: </span>
+                      <span className="text-secondary">{formatReadingDate(readingDate)}</span>
                     </div>
                   )}
                   {!isLocked && (
@@ -1216,11 +1218,7 @@ function ClassGroupComponent({
 
 function formatReadingDate(isoDate: string): string {
   const date = new Date(isoDate);
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return formatDate(date, "iii do MMM")
 }
 
 function ReadingDateInput({
@@ -1266,7 +1264,7 @@ function ReadingDateInput({
     <div className="flex flex-row items-center gap-2">
       <label
         className={twMerge(
-          "text-secondary shrink-0",
+          "text-tertiary shrink-0",
           compactMode ? "text-sm" : "text-base",
         )}
       >
@@ -1277,7 +1275,7 @@ function ReadingDateInput({
         value={value}
         onChange={(e) => setValue(e.currentTarget.value)}
         className={twMerge(
-          "px-2 py-1 border border-quinary rounded-md bg-background text-primary focus:outline-3 focus:outline-accent-blue focus:outline-offset-2",
+          "px-2 py-1 border border-quinary rounded-md bg-background text-secondary focus:outline-3 focus:outline-accent-blue focus:outline-offset-2",
           compactMode ? "text-sm" : "text-base",
         )}
         placeholder="Select date"
