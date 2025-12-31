@@ -6,16 +6,17 @@ A Zotero add-on / plugin that turns your collections into syllabi and course rea
 
 ![Syllabus view](doc/images/demo.gif)
 
-## Installation
+## How to install
 
-1. Download the latest release from the [Releases](https://github.com/janbaykara/zotero-syllabus/releases) page.
-2. In Zotero, go to `Tools` → `Add-ons`
-3. Click the gear icon and select `Install Add-on From File...`
+1. [Download the extension file (.xpi)](https://github.com/janbaykara/zotero-syllabus/releases/latest/download/zotero-syllabus.xpi).
+2. In the Zotero menu bar, go to `Tools` → `Plugins` (or `Add-ons`)
+3. Click the gear icon in the top right corner and select `Install Plugin From File...`
 4. Select the downloaded `.xpi` file
-5. (Ensure auto-updating is enabled for this add-on too.)
+5. (Ensure auto-updating is enabled for this add-on too!)
+6. Restart Zotero!
 
 > [!NOTE]
-> Just an FYI: styling is applied most perfectly in [Zotero 8 (beta)](https://www.zotero.org/support/beta_builds). Zotero 7 (stable release) works fine; there are just some minor styling issues.
+> Just an FYI: for best results, use [Zotero 8 (beta)](https://www.zotero.org/support/beta_builds). Zotero 7 (stable release) works fine but has some minor styling issues.
 
 ## Discussion
 
