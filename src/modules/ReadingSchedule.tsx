@@ -313,6 +313,7 @@ export function ReadingSchedule() {
                                           SyllabusManager.priorityKeys.OPTIONAL
                                         }
                                         compactMode={compactMode}
+                                        isLocked={true}
                                       />
                                     );
                                   },
