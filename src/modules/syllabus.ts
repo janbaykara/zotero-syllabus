@@ -259,7 +259,7 @@ export class SyllabusManager {
     Zotero.Promise.delay(100).then(() => {
       if (this.helloWorldTab) {
         ztoolkit.log("SyllabusManager.onMainWindowLoad: rerendering reading list tab");
-        this.helloWorldTab.rerender(win);
+        this.helloWorldTab.renderAllTabs(win);
       }
     });
   }

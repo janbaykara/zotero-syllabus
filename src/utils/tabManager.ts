@@ -34,12 +34,17 @@ export class TabManager<TParams = any> {
   /**
    * Get a tab by ID
    */
-  private getTab(tabId: string) {
+  private getTabOfType(tabId: string) {
     const tabs = ztoolkit.getGlobal("Zotero_Tabs");
     const tabResult = tabs._getTab(tabId);
 
     if (!tabResult.tab) {
       return null
+    }
+
+    if (tabResult.tab.type !== this.config.type) {
+      ztoolkit.log("TabManager.getTab: tab is not of type", this.config.type, tabId, tabResult.tab.type);
+      return null;
     }
 
     const deck = tabs.deck;
@@ -62,13 +67,15 @@ export class TabManager<TParams = any> {
     }
   }
 
-  private getTabs(win: _ZoteroTypes.MainWindow) {
+  private getTabsOfType(win: _ZoteroTypes.MainWindow) {
     const tabs = ztoolkit.getGlobal("Zotero_Tabs");
     const tabIds = Array.from(win.document.querySelectorAll(`#tab-bar-container .tabs-wrapper .tab`)).map((tab: any) => tab.getAttribute("data-id"));
-    const allTabs = tabs.getState().map((tabInfo, index) => {
-      const id = tabIds[index];
-      return this.getTab(id)!;
-    }).filter(Boolean)
+    const allTabs = tabs.getState()
+      .map((_, index) => {
+        const id = tabIds[index];
+        return this.getTabOfType(id);
+      })
+      .filter(Boolean) as NonNullable<ReturnType<typeof this.getTabOfType>>[];
     return allTabs;
   }
 
@@ -87,7 +94,7 @@ export class TabManager<TParams = any> {
       const existingTab = tabs._getTab(tabId);
       if (existingTab) {
         // Tab already exists, return existing data
-        const existingData = this.getTab(tabId);
+        const existingData = this.getTabOfType(tabId);
         if (existingData) {
           return existingData;
         }
@@ -165,7 +172,7 @@ export class TabManager<TParams = any> {
     const tabId = this.config.getTabId(params);
 
     // First try to find existing tab
-    const existing = this.getTab(tabId);
+    const existing = this.getTabOfType(tabId);
     if (existing) {
       return existing;
     }
@@ -203,7 +210,7 @@ export class TabManager<TParams = any> {
    * Render component into a tab's root element
    */
   private renderTab(tabId: string, win: _ZoteroTypes.MainWindow): void {
-    const tabData = this.getTab(tabId);
+    const tabData = this.getTabOfType(tabId);
     ztoolkit.log("TabManager.renderTab: tabData", tabData);
 
     if (!tabData || !tabData.rootElement) {
@@ -224,25 +231,14 @@ export class TabManager<TParams = any> {
   /**
    * Re-render a tab (for hot reload support)
    */
-  rerender(win: _ZoteroTypes.MainWindow, params?: TParams): void {
+  renderAllTabs(win: _ZoteroTypes.MainWindow, params?: TParams): void {
     ztoolkit.log("TabManager.rerender: params", params);
     if (params === undefined) {
       // Re-render all tabs of this type
-      const allTabs = this.getTabs(win);
-      const seenTabIds = new Set<string>();
-
+      const allTabs = this.getTabsOfType(win);
       for (const tab of allTabs) {
-        if (tab.zotero.type === this.config.type) {
-          ztoolkit.log("TabManager.rerender on loop: tabId", tab.id);
-          const tabId = tab.id;
-
-          // Skip if we've already processed this tab ID
-          if (seenTabIds.has(tabId)) {
-            continue;
-          }
-          seenTabIds.add(tabId);
-          this.renderTab(tabId, win);
-        }
+        ztoolkit.log("TabManager.renderAllTabs on loop: tabId", tab.id);
+        this.renderTab(tab.id, win);
       }
       return;
     } else {
@@ -256,14 +252,11 @@ export class TabManager<TParams = any> {
    * Clean up a specific tab
    */
   cleanup(params?: TParams): void {
-    const tabId = this.config.getTabId(params);
-    // this.tabs.delete(tabId);
   }
 
   /**
    * Clean up all tabs (for window unload)
    */
   cleanupAll(): void {
-    // this.tabs.clear();
   }
 }
