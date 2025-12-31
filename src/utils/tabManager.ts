@@ -29,7 +29,7 @@ interface TabData<TParams = any> {
  * Each instance manages tabs of one type with typed parameters
  */
 export class TabManager<TParams = any> {
-  constructor(private readonly config: TabConfig<TParams>) { }
+  constructor(private readonly config: TabConfig<TParams>) {}
 
   /**
    * Get a tab by ID
@@ -39,7 +39,7 @@ export class TabManager<TParams = any> {
     const tabResult = tabs._getTab(tabId);
 
     if (!tabResult.tab) {
-      return null
+      return null;
     }
 
     if (tabResult.tab.type !== this.config.type) {
@@ -62,15 +62,18 @@ export class TabManager<TParams = any> {
       zotero: tabResult.tab,
       index: tabResult.tabIndex,
       rootElement: tabPanel.firstChild as HTMLElement,
-      params: tabResult.tab.data['params'],
-      config: this.config
-    }
+      params: tabResult.tab.data["params"],
+      config: this.config,
+    };
   }
 
   private getTabsOfType(win: _ZoteroTypes.MainWindow) {
     const tabs = ztoolkit.getGlobal("Zotero_Tabs");
-    const tabIds = Array.from(win.document.querySelectorAll(`#tab-bar-container .tabs-wrapper .tab`)).map((tab: any) => tab.getAttribute("data-id"));
-    const allTabs = tabs.getState()
+    const tabIds = Array.from(
+      win.document.querySelectorAll(`#tab-bar-container .tabs-wrapper .tab`),
+    ).map((tab: any) => tab.getAttribute("data-id"));
+    const allTabs = tabs
+      .getState()
       .map((_, index) => {
         const id = tabIds[index];
         return this.getTabOfType(id);
@@ -82,10 +85,7 @@ export class TabManager<TParams = any> {
   /**
    * Create a new tab
    */
-  private createTab(
-    win: _ZoteroTypes.MainWindow,
-    params?: TParams,
-  ) {
+  private createTab(win: _ZoteroTypes.MainWindow, params?: TParams) {
     const tabId = this.config.getTabId(params);
     const tabs = ztoolkit.getGlobal("Zotero_Tabs");
 
@@ -106,13 +106,15 @@ export class TabManager<TParams = any> {
 
     // Determine title
     const title =
-      typeof this.config.title === "function" ? this.config.title(params) : this.config.title;
+      typeof this.config.title === "function"
+        ? this.config.title(params)
+        : this.config.title;
 
     // Determine data
     const data = {
       ...this.config.data,
       params,
-    }
+    };
 
     // Create new tab with defined ID
     const tabResult = tabs.add({
@@ -165,10 +167,7 @@ export class TabManager<TParams = any> {
   /**
    * Find or create a tab
    */
-  private findOrCreateTab(
-    win: _ZoteroTypes.MainWindow,
-    params?: TParams,
-  ) {
+  private findOrCreateTab(win: _ZoteroTypes.MainWindow, params?: TParams) {
     const tabId = this.config.getTabId(params);
 
     // First try to find existing tab
@@ -251,12 +250,10 @@ export class TabManager<TParams = any> {
   /**
    * Clean up a specific tab
    */
-  cleanup(params?: TParams): void {
-  }
+  cleanup(params?: TParams): void {}
 
   /**
    * Clean up all tabs (for window unload)
    */
-  cleanupAll(): void {
-  }
+  cleanupAll(): void {}
 }

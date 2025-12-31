@@ -11,7 +11,7 @@ import { getAllCollections } from "../utils/zotero";
 
 setDefaultOptions({
   weekStartsOn: 1,
-})
+});
 
 interface ClassReading {
   collectionId: number;
@@ -27,10 +27,28 @@ function formatReadingDate(isoDate: string): string {
   const date = new Date(isoDate);
   // Format as "6th Feb" without i18n
   const day = date.getDate();
-  const daySuffix = day === 1 || day === 21 || day === 31 ? 'st' :
-    day === 2 || day === 22 ? 'nd' :
-      day === 3 || day === 23 ? 'rd' : 'th';
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const daySuffix =
+    day === 1 || day === 21 || day === 31
+      ? "st"
+      : day === 2 || day === 22
+        ? "nd"
+        : day === 3 || day === 23
+          ? "rd"
+          : "th";
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   return `${day}${daySuffix} ${monthNames[date.getMonth()]}`;
 }
 
@@ -38,10 +56,28 @@ function formatWeekRange(weekStart: Date): string {
   const start = startOfWeek(weekStart);
   // Format as "6th Feb" without i18n
   const day = start.getDate();
-  const daySuffix = day === 1 || day === 21 || day === 31 ? 'st' :
-    day === 2 || day === 22 ? 'nd' :
-      day === 3 || day === 23 ? 'rd' : 'th';
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const daySuffix =
+    day === 1 || day === 21 || day === 31
+      ? "st"
+      : day === 2 || day === 22
+        ? "nd"
+        : day === 3 || day === 23
+          ? "rd"
+          : "th";
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   return `${day}${daySuffix} ${monthNames[start.getMonth()]}`;
 }
 
@@ -84,7 +120,10 @@ function createReadingScheduleStore() {
         }
 
         // Listen to collection modify/refresh events
-        if (type === "collection" && (event === "modify" || event === "refresh")) {
+        if (
+          type === "collection" &&
+          (event === "modify" || event === "refresh")
+        ) {
           shouldUpdate = true;
         }
 
@@ -103,11 +142,12 @@ function createReadingScheduleStore() {
     ]);
 
     // Also listen to the custom event emitter for collection metadata changes
-    const unsubscribeEmitter =
-      SyllabusManager.onCollectionMetadataChange(() => {
+    const unsubscribeEmitter = SyllabusManager.onCollectionMetadataChange(
+      () => {
         version++;
         onStoreChange();
-      });
+      },
+    );
 
     // Return an unsubscribe fn
     return () => {
@@ -167,7 +207,7 @@ export function ReadingSchedule() {
 
         // Get week start and normalize to ISO string for consistent grouping
         const weekStartDate = startOfWeek(new Date(readingDate));
-        const weekStartKey = weekStartDate.toISOString().split('T')[0]; // Use date-only ISO string
+        const weekStartKey = weekStartDate.toISOString().split("T")[0]; // Use date-only ISO string
 
         // Get items for this class
         const classItems: Array<{
@@ -235,8 +275,8 @@ export function ReadingSchedule() {
 
     // Sort dates within each week
     for (const [weekStartKey, weekData] of result) {
-      const sortedDates = Array.from(weekData.keys()).sort((a, b) =>
-        new Date(a).getTime() - new Date(b).getTime()
+      const sortedDates = Array.from(weekData.keys()).sort(
+        (a, b) => new Date(a).getTime() - new Date(b).getTime(),
       );
       const sortedWeekData = new Map<string, ClassReading[]>();
       for (const date of sortedDates) {
@@ -257,9 +297,7 @@ export function ReadingSchedule() {
         // Only include weeks from the current week onwards
         return new Date(weekKey).getTime() >= currentWeekStart.getTime();
       })
-      .sort((a, b) =>
-        new Date(a).getTime() - new Date(b).getTime()
-      );
+      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
   }, [readingsByWeek]);
 
   const handleCollectionClick = (collectionId: number) => {
@@ -269,7 +307,9 @@ export function ReadingSchedule() {
 
       // Try to select the collection via the tree view
       const win = Zotero.getMainWindow();
-      const collectionTree = win.document.getElementById("zotero-collections-tree");
+      const collectionTree = win.document.getElementById(
+        "zotero-collections-tree",
+      );
       if (collectionTree) {
         const treeView = (collectionTree as any).view;
         if (treeView && treeView.selection) {
@@ -292,7 +332,9 @@ export function ReadingSchedule() {
       // First, try to select the collection via the tree view
       if (collection) {
         const win = Zotero.getMainWindow();
-        const collectionTree = win.document.getElementById("zotero-collections-tree");
+        const collectionTree = win.document.getElementById(
+          "zotero-collections-tree",
+        );
         if (collectionTree) {
           const treeView = (collectionTree as any).view;
           if (treeView && treeView.selection) {
@@ -343,9 +385,7 @@ export function ReadingSchedule() {
       <div className="pb-12">
         <div className="sticky top-0 z-20 bg-background py-1 md:pt-8">
           <div className="container-padded bg-background">
-            <div
-              className={twMerge("font-semibold text-3xl")}
-            >
+            <div className={twMerge("font-semibold text-3xl")}>
               Reading Schedule
             </div>
           </div>
@@ -355,15 +395,11 @@ export function ReadingSchedule() {
           Add reading dates to classes to see them here.
         </p>
 
-        <div
-          className={twMerge(
-            "flex flex-col gap-8 mt-8"
-          )}
-        >
+        <div className={twMerge("flex flex-col gap-8 mt-8")}>
           {sortedWeeks.map((weekStartKey) => {
             const weekData = readingsByWeek.get(weekStartKey)!;
-            const sortedDates = Array.from(weekData.keys()).sort((a, b) =>
-              new Date(a).getTime() - new Date(b).getTime()
+            const sortedDates = Array.from(weekData.keys()).sort(
+              (a, b) => new Date(a).getTime() - new Date(b).getTime(),
             );
 
             // Convert weekStartKey back to Date for formatting
@@ -377,30 +413,36 @@ export function ReadingSchedule() {
                       "text-2xl sticky top-16 z-10 py-2 bg-background text-tertiary",
                     )}
                   >
-                    Week starting <span className='text-secondary'>{formatWeekRange(weekStartDate)}</span>
+                    Week starting{" "}
+                    <span className="text-secondary">
+                      {formatWeekRange(weekStartDate)}
+                    </span>
                   </div>
 
-                  <div className='space-y-8 my-6'>
+                  <div className="space-y-8 my-6">
                     {sortedDates.map((dateTimestamp) => {
                       const classReadings = weekData.get(dateTimestamp)!;
 
                       // Sort classes by collection name, then by class number
-                      const sortedClassReadings = [...classReadings].sort((a, b) => {
-                        // First sort by collection name
-                        const collectionCompare = a.collectionName.localeCompare(b.collectionName);
-                        if (collectionCompare !== 0) return collectionCompare;
-                        // Then sort by class number
-                        return a.classNumber - b.classNumber;
-                      });
+                      const sortedClassReadings = [...classReadings].sort(
+                        (a, b) => {
+                          // First sort by collection name
+                          const collectionCompare =
+                            a.collectionName.localeCompare(b.collectionName);
+                          if (collectionCompare !== 0) return collectionCompare;
+                          // Then sort by class number
+                          return a.classNumber - b.classNumber;
+                        },
+                      );
 
-                      const isoDate = new Date(dateTimestamp).toISOString().split('T')[0];
+                      const isoDate = new Date(dateTimestamp)
+                        .toISOString()
+                        .split("T")[0];
 
                       return (
                         <div key={dateTimestamp}>
                           <div
-                            className={twMerge(
-                              "mb-3 text-secondary text-2xl",
-                            )}
+                            className={twMerge("mb-3 text-secondary text-2xl")}
                           >
                             {formatReadingDate(isoDate)}
                           </div>
@@ -426,12 +468,22 @@ export function ReadingSchedule() {
                                       }
                                       className="text-xl flex-1"
                                     >
-                                      <span className='font-semibold'>{classReading.collectionName}</span>, <span className='text-secondary'>{singularCapitalized} {classReading.classNumber}</span>{classReading.classTitle && <>
-                                        <span>:&nbsp;</span>
-                                        <span className='font-semibold'>
-                                          {classReading.classTitle}
-                                        </span>
-                                      </>}
+                                      <span className="font-semibold">
+                                        {classReading.collectionName}
+                                      </span>
+                                      ,{" "}
+                                      <span className="text-secondary">
+                                        {singularCapitalized}{" "}
+                                        {classReading.classNumber}
+                                      </span>
+                                      {classReading.classTitle && (
+                                        <>
+                                          <span>:&nbsp;</span>
+                                          <span className="font-semibold">
+                                            {classReading.classTitle}
+                                          </span>
+                                        </>
+                                      )}
                                     </div>
                                   </div>
                                   {classReading.classDescription && (
@@ -450,21 +502,25 @@ export function ReadingSchedule() {
                                     ({ item, assignment }) => {
                                       if (!assignment.id) return null;
 
-                                      const priority = assignment.priority || "";
+                                      const priority =
+                                        assignment.priority || "";
                                       const uniqueKey = `${item.id}-assignment-${assignment.id}`;
 
                                       return (
                                         <SyllabusItemCard
                                           key={uniqueKey}
                                           item={item}
-                                          collectionId={classReading.collectionId}
+                                          collectionId={
+                                            classReading.collectionId
+                                          }
                                           classNumber={classReading.classNumber}
                                           assignment={assignment}
                                           slim={
                                             compactMode ||
                                             !priority ||
                                             priority ===
-                                            SyllabusManager.priorityKeys.OPTIONAL
+                                              SyllabusManager.priorityKeys
+                                                .OPTIONAL
                                           }
                                           compactMode={compactMode}
                                           isLocked={true}
@@ -495,4 +551,3 @@ export function ReadingSchedule() {
     </div>
   );
 }
-

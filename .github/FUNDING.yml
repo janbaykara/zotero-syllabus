@@ -4,10 +4,10 @@ buy_me_a_coffee: janbaykara
 
 # These links support Gaza's universities, students, and academic life during reconstruction
 # See README.md for more information about these organizations
-custom: [
-  "https://taawon.org/en/isnad",
-  "https://www.gofundme.com/f/brismes-fund-for-higher-education-in-gaza",
-  "https://fobzu.org",
-  "https://buildpalestine.com"
-]
-
+custom:
+  [
+    "https://taawon.org/en/isnad",
+    "https://www.gofundme.com/f/brismes-fund-for-higher-education-in-gaza",
+    "https://fobzu.org",
+    "https://buildpalestine.com",
+  ]

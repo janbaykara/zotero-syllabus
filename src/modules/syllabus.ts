@@ -1,4 +1,4 @@
-import slugify from 'slugify';
+import slugify from "slugify";
 /**
  * Syllabus Manager - Core functionality for syllabus view and metadata
  */
@@ -105,7 +105,7 @@ export class SyllabusManager {
   static notifierID: string | null = null;
   static syllabusItemPaneSection: false | string | null = null;
   static readingsTabPanelID: string | null = null;
-  static readingScheduleTab = tabManager
+  static readingScheduleTab = tabManager;
 
   static settingsKeys = SyllabusSettingsKey;
   static priorityKeys = SyllabusPriority;
@@ -259,7 +259,9 @@ export class SyllabusManager {
     // Use a small delay to ensure tabs are initialized
     Zotero.Promise.delay(100).then(() => {
       if (this.readingScheduleTab) {
-        ztoolkit.log("SyllabusManager.onMainWindowLoad: rerendering reading schedule tab");
+        ztoolkit.log(
+          "SyllabusManager.onMainWindowLoad: rerendering reading schedule tab",
+        );
         this.readingScheduleTab.renderAllTabs(win);
       }
     });
@@ -573,22 +575,26 @@ export class SyllabusManager {
       });
 
       // Create "Reading Schedule" button (for collection pages)
-      collectionReadingScheduleButton = ztoolkit.UI.createElement(doc, "toolbarbutton", {
-        id: "syllabus-collection-reading-schedule-button",
-        classList: ["syllabus-view-toggle"],
-        properties: {
-          label: "Reading Schedule",
-          tooltiptext: "Open Reading Schedule",
-        },
-        listeners: [
-          {
-            type: "click",
-            listener: () => {
-              SyllabusManager.openReadingListTab();
-            },
+      collectionReadingScheduleButton = ztoolkit.UI.createElement(
+        doc,
+        "toolbarbutton",
+        {
+          id: "syllabus-collection-reading-schedule-button",
+          classList: ["syllabus-view-toggle"],
+          properties: {
+            label: "Reading Schedule",
+            tooltiptext: "Open Reading Schedule",
           },
-        ],
-      });
+          listeners: [
+            {
+              type: "click",
+              listener: () => {
+                SyllabusManager.openReadingListTab();
+              },
+            },
+          ],
+        },
+      );
 
       // Create spacer element if it doesn't exist
       if (!spacer) {
@@ -603,8 +609,14 @@ export class SyllabusManager {
       // Insert buttons and spacer before the search spinner, or append to toolbar if spinner not found
       if (searchSpinner && searchSpinner.parentNode) {
         searchSpinner.parentNode.insertBefore(toggleButton, searchSpinner);
-        searchSpinner.parentNode.insertBefore(collectionReadingScheduleButton, searchSpinner);
-        searchSpinner.parentNode.insertBefore(readingScheduleButton, searchSpinner);
+        searchSpinner.parentNode.insertBefore(
+          collectionReadingScheduleButton,
+          searchSpinner,
+        );
+        searchSpinner.parentNode.insertBefore(
+          readingScheduleButton,
+          searchSpinner,
+        );
         searchSpinner.parentNode.insertBefore(spacer, searchSpinner);
       } else {
         itemsToolbar.appendChild(toggleButton);
@@ -619,26 +631,33 @@ export class SyllabusManager {
           "syllabus-reading-schedule-button",
         ) as unknown as XULButtonElement;
         if (!readingScheduleButton) {
-          readingScheduleButton = ztoolkit.UI.createElement(doc, "toolbarbutton", {
-            id: "syllabus-reading-schedule-button",
-            classList: ["syllabus-view-toggle"],
-            properties: {
-              label: "Review your Reading Schedule",
-              tooltiptext: "Open Reading Schedule",
-            },
-            listeners: [
-              {
-                type: "click",
-                listener: () => {
-                  SyllabusManager.openReadingListTab();
-                },
+          readingScheduleButton = ztoolkit.UI.createElement(
+            doc,
+            "toolbarbutton",
+            {
+              id: "syllabus-reading-schedule-button",
+              classList: ["syllabus-view-toggle"],
+              properties: {
+                label: "Review your Reading Schedule",
+                tooltiptext: "Open Reading Schedule",
               },
-            ],
-          });
+              listeners: [
+                {
+                  type: "click",
+                  listener: () => {
+                    SyllabusManager.openReadingListTab();
+                  },
+                },
+              ],
+            },
+          );
 
           // Insert after toggle button
           if (toggleButton.parentNode) {
-            toggleButton.parentNode.insertBefore(readingScheduleButton, toggleButton.nextSibling);
+            toggleButton.parentNode.insertBefore(
+              readingScheduleButton,
+              toggleButton.nextSibling,
+            );
           }
         }
       }
@@ -648,26 +667,33 @@ export class SyllabusManager {
           "syllabus-collection-reading-schedule-button",
         ) as unknown as XULButtonElement;
         if (!collectionReadingScheduleButton) {
-          collectionReadingScheduleButton = ztoolkit.UI.createElement(doc, "toolbarbutton", {
-            id: "syllabus-collection-reading-schedule-button",
-            classList: ["syllabus-view-toggle"],
-            properties: {
-              label: "Reading Schedule",
-              tooltiptext: "Open Reading Schedule",
-            },
-            listeners: [
-              {
-                type: "click",
-                listener: () => {
-                  SyllabusManager.openReadingListTab();
-                },
+          collectionReadingScheduleButton = ztoolkit.UI.createElement(
+            doc,
+            "toolbarbutton",
+            {
+              id: "syllabus-collection-reading-schedule-button",
+              classList: ["syllabus-view-toggle"],
+              properties: {
+                label: "Reading Schedule",
+                tooltiptext: "Open Reading Schedule",
               },
-            ],
-          });
+              listeners: [
+                {
+                  type: "click",
+                  listener: () => {
+                    SyllabusManager.openReadingListTab();
+                  },
+                },
+              ],
+            },
+          );
 
           // Insert right after toggle button
           if (toggleButton.parentNode) {
-            toggleButton.parentNode.insertBefore(collectionReadingScheduleButton, toggleButton.nextSibling);
+            toggleButton.parentNode.insertBefore(
+              collectionReadingScheduleButton,
+              toggleButton.nextSibling,
+            );
           }
         }
       }
@@ -713,7 +739,12 @@ export class SyllabusManager {
       "syllabus-collection-reading-schedule-button",
     ) as XULButtonElement | null;
 
-    if (!toggleButton || !readingScheduleButton || !collectionReadingScheduleButton) return;
+    if (
+      !toggleButton ||
+      !readingScheduleButton ||
+      !collectionReadingScheduleButton
+    )
+      return;
 
     const selectedCollection = getSelectedCollection();
     const currentTab = getCurrentTab();
@@ -722,7 +753,8 @@ export class SyllabusManager {
     // Collection tabs are the default tabs (type is undefined or not a custom type)
     // Custom tabs have types like "syllabus" or "reading-list"
     const isInMainLibrary = !selectedCollection;
-    const isCustomTab = currentTab?.type === "syllabus" || currentTab?.type === "reading-list";
+    const isCustomTab =
+      currentTab?.type === "syllabus" || currentTab?.type === "reading-list";
     const isInCollectionTab = !isCustomTab;
     const shouldShowReadingSchedule = isInMainLibrary && isInCollectionTab;
     const isInCollection = !!selectedCollection;
@@ -731,7 +763,8 @@ export class SyllabusManager {
     toggleButton.hidden = shouldShowReadingSchedule;
     readingScheduleButton.hidden = !shouldShowReadingSchedule;
     // Show "Reading Schedule" button when viewing a collection, hide it in Main Library
-    collectionReadingScheduleButton.hidden = !isInCollection || shouldShowReadingSchedule;
+    collectionReadingScheduleButton.hidden =
+      !isInCollection || shouldShowReadingSchedule;
   }
 
   // Function to render a completely custom syllabus view
@@ -872,10 +905,10 @@ export class SyllabusManager {
             const classTitle =
               classNumber !== undefined
                 ? SyllabusManager.getClassTitle(
-                  selectedCollection.id,
-                  classNumber,
-                  false,
-                )
+                    selectedCollection.id,
+                    classNumber,
+                    false,
+                  )
                 : "";
             const priority = firstAssignment.priority || "";
             return `${sortKey}|${priority}|${classNumber ?? ""}|${classTitle}|${selectedCollection.id}`;
@@ -1023,7 +1056,8 @@ export class SyllabusManager {
 
             if (collectionIdForRange) {
               try {
-                const fullRange = this.getFullClassNumberRange(collectionIdForRange);
+                const fullRange =
+                  this.getFullClassNumberRange(collectionIdForRange);
                 if (fullRange.length > 0) {
                   maxRange = Math.max(...fullRange);
                 }
@@ -1034,9 +1068,8 @@ export class SyllabusManager {
 
             // Generate color using 360-degree rotation: class 1 starts at 0°, evenly distributed
             // Map class number to position in 360-degree color wheel
-            const hue = maxRange > 1
-              ? ((classNum - 1) * (360 / maxRange)) % 360
-              : 0;
+            const hue =
+              maxRange > 1 ? ((classNum - 1) * (360 / maxRange)) % 360 : 0;
             const saturation = 45; // Moderate saturation for subtlety
             const lightness = 65; // Light enough to be subtle
             const borderColor = `hsla(${hue}, ${saturation}%, ${lightness}%)`;
@@ -1045,7 +1078,7 @@ export class SyllabusManager {
             container.style.paddingLeft = "6px";
             container.style.marginLeft = "-2px"; // Compensate for border width
 
-            container.style.background = `hsla(${hue}, ${saturation}%, ${lightness}%, 20%)`;;
+            container.style.background = `hsla(${hue}, ${saturation}%, ${lightness}%, 20%)`;
 
             // // Add top border to first item in each class group when sorted by this column
             // // isFirstInClassGroup is only true when sortKey is present (indicating sorting)
@@ -1156,14 +1189,14 @@ export class SyllabusManager {
           body,
           selectedCollection
             ? h(ItemPane, {
-              item,
-              collectionId: selectedCollection.id,
-              editable,
-            })
+                item,
+                collectionId: selectedCollection.id,
+                editable,
+              })
             : h("div", {
-              innerText: "Select a collection to view syllabus assignments",
-              className: "text-center text-gray-500 p-4",
-            }),
+                innerText: "Select a collection to view syllabus assignments",
+                className: "text-center text-gray-500 p-4",
+              }),
           "syllabus-item-pane",
         );
       },
@@ -1226,18 +1259,18 @@ export class SyllabusManager {
     // Get collection-specific priority options if a collection is selected
     const priorityOptions = selectedCollection
       ? (() => {
-        const customPriorities = this.getPrioritiesForCollection(
-          selectedCollection.id,
-        );
-        const options = customPriorities.map((p) => ({
-          value: p.id,
-          label: p.name,
-          color: p.color,
-        }));
-        // Add "(None)" option
-        options.push({ value: "", label: "(None)", color: "" });
-        return options;
-      })()
+          const customPriorities = this.getPrioritiesForCollection(
+            selectedCollection.id,
+          );
+          const options = customPriorities.map((p) => ({
+            value: p.id,
+            label: p.name,
+            color: p.color,
+          }));
+          // Add "(None)" option
+          options.push({ value: "", label: "(None)", color: "" });
+          return options;
+        })()
       : this.getPriorityOptions();
 
     ztoolkit.Menu.register("item", {
@@ -1923,7 +1956,7 @@ export class SyllabusManager {
       // This ensures OPTIONAL ("optional") sorts before unprioritized ("zzzz")
       assignment.priority || "zzzz",
       assignment.classInstruction?.slice(0, 4).replace(/[^a-zA-Z0-9]/g, "_") ||
-      "",
+        "",
       assignment.id || "",
     );
 
@@ -2836,11 +2869,17 @@ export class SyllabusManager {
     collectionId: number | string,
   ): Map<
     string,
-    Map<number, Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }>>
+    Map<
+      number,
+      Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }>
+    >
   > {
     const result = new Map<
       string,
-      Map<number, Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }>>
+      Map<
+        number,
+        Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }>
+      >
     >();
 
     try {
@@ -2880,7 +2919,9 @@ export class SyllabusManager {
             classesForDate.set(assignment.classNumber, []);
           }
 
-          classesForDate.get(assignment.classNumber)!.push({ item, assignment });
+          classesForDate
+            .get(assignment.classNumber)!
+            .push({ item, assignment });
         }
       }
 

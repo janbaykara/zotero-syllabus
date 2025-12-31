@@ -1,6 +1,12 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
-import { useState, useEffect, useMemo, useRef, useCallback } from "preact/hooks";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+} from "preact/hooks";
 import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
 import {
@@ -26,7 +32,6 @@ import {
 } from "../zotero-reading-list/compat";
 import { useDebouncedEffect } from "../utils/react/useDebouncedEffect";
 import { useElementSize } from "../utils/react/useElementSize";
-import { getLocaleID } from "../utils/locale";
 import slugify from "slugify";
 import { SettingsPage } from "./SettingsPage";
 import { formatDate } from "date-fns";
@@ -87,7 +92,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   const syllabusPageRef = useRef<HTMLDivElement>(null);
 
   const toggleCompactMode = () => {
-    const nextMode = !compactMode
+    const nextMode = !compactMode;
     ztoolkit.log("toggleCompactMode", { compactMode, nextMode });
     setCompactMode(nextMode);
   };
@@ -955,11 +960,20 @@ interface ClassGroupComponentProps {
   }>;
   collectionId: number;
   syllabusMetadata: {
-    classes?: { [key: string]: { title?: string; description?: string; readingDate?: string } };
+    classes?: {
+      [key: string]: {
+        title?: string;
+        description?: string;
+        readingDate?: string;
+      };
+    };
   };
   onClassTitleSave: (classNumber: number, title: string) => void;
   onClassDescriptionSave: (classNumber: number, description: string) => void;
-  onClassReadingDateSave: (classNumber: number, readingDate: string | undefined) => void;
+  onClassReadingDateSave: (
+    classNumber: number,
+    readingDate: string | undefined,
+  ) => void;
   onDrop: (
     e: JSX.TargetedDragEvent<HTMLElement>,
     classNumber: number | null,
@@ -1082,18 +1096,32 @@ function ClassGroupComponent({
                 </div>
                 <div className="ml-auto! shrink-0 inline-flex flex-row items-baseline gap-1 in-[.print]:hidden">
                   {!isLocked && (
-                    <div className={twMerge(compactMode ? "text-sm mt-2" : "text-base mt-3")}>
+                    <div
+                      className={twMerge(
+                        compactMode ? "text-sm mt-2" : "text-base mt-3",
+                      )}
+                    >
                       <ReadingDateInput
                         initialValue={readingDate}
-                        onSave={(date) => onClassReadingDateSave(classNumber, date)}
+                        onSave={(date) =>
+                          onClassReadingDateSave(classNumber, date)
+                        }
                         compactMode={compactMode}
                       />
                     </div>
                   )}
                   {isLocked && readingDate && (
-                    <div className={twMerge(compactMode ? "text-sm mt-2 text-secondary" : "text-base mt-3 text-secondary")}>
+                    <div
+                      className={twMerge(
+                        compactMode
+                          ? "text-sm mt-2 text-secondary"
+                          : "text-base mt-3 text-secondary",
+                      )}
+                    >
                       <span className="text-tertiary">Target date: </span>
-                      <span className="text-secondary">{formatReadingDate(readingDate)}</span>
+                      <span className="text-secondary">
+                        {formatReadingDate(readingDate)}
+                      </span>
                     </div>
                   )}
                   {!isLocked && (
@@ -1162,8 +1190,8 @@ function ClassGroupComponent({
             >
               Drag items to {singularCapitalized} {classNumber}
             </div>
-          ) : itemAssignments.length > 0
-            ? itemAssignments.map(({ item, assignment }) => {
+          ) : itemAssignments.length > 0 ? (
+            itemAssignments.map(({ item, assignment }) => {
               // Require assignment ID - if missing, skip this assignment
               if (!assignment.id) {
                 ztoolkit.log(
@@ -1199,7 +1227,7 @@ function ClassGroupComponent({
                 />
               );
             })
-            : null}
+          ) : null}
         </div>
       </div>
     </div>
@@ -1208,7 +1236,7 @@ function ClassGroupComponent({
 
 function formatReadingDate(isoDate: string): string {
   const date = new Date(isoDate);
-  return formatDate(date, "iii do MMM")
+  return formatDate(date, "iii do MMM");
 }
 
 function ReadingDateInput({
@@ -1366,36 +1394,37 @@ function TextInput({
         disabled: readOnly,
         onChange: readOnly
           ? undefined
-          : (
-            e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>,
-          ) => setValue((e.target as HTMLInputElement).value),
+          : (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+              setValue((e.target as HTMLInputElement).value),
         onBlur: readOnly ? undefined : () => save(value),
         onKeyDown: readOnly
           ? undefined
           : (
-            e: JSX.TargetedKeyboardEvent<
-              HTMLInputElement | HTMLTextAreaElement
-            >,
-          ) => {
-            if (e.key === "Escape" || e.key === "Enter") {
-              e.preventDefault();
-              e.currentTarget.blur();
-              save(value);
-            }
-          },
+              e: JSX.TargetedKeyboardEvent<
+                HTMLInputElement | HTMLTextAreaElement
+              >,
+            ) => {
+              if (e.key === "Escape" || e.key === "Enter") {
+                e.preventDefault();
+                e.currentTarget.blur();
+                save(value);
+              }
+            },
         onSelect: readOnly
           ? (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            e.preventDefault();
-            e.currentTarget.setSelectionRange(0, 0);
-          }
+              e.preventDefault();
+              e.currentTarget.setSelectionRange(0, 0);
+            }
           : undefined,
         onClick: readOnly
-          ? (e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            e.preventDefault();
-            e.currentTarget.blur();
-          }
+          ? (
+              e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
+            ) => {
+              e.preventDefault();
+              e.currentTarget.blur();
+            }
           : undefined,
-        placeholder: readOnly ? undefined : (placeholder || "Click to edit"),
+        placeholder: readOnly ? undefined : placeholder || "Click to edit",
         className: twMerge(
           "bg-transparent border-none focus:outline-3 focus:outline-accent-blue focus:rounded-xs focus:outline-offset-2 field-sizing-content in-[.print]:hidden",
           readOnly && "cursor-default select-none",
@@ -1432,7 +1461,10 @@ interface SyllabusItemCardProps {
     insertBefore: boolean,
   ) => void;
   onDragOver?: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
-  onClick?: (item: Zotero.Item, e?: JSX.TargetedMouseEvent<HTMLElement>) => void; // Optional custom click handler
+  onClick?: (
+    item: Zotero.Item,
+    e?: JSX.TargetedMouseEvent<HTMLElement>,
+  ) => void; // Optional custom click handler
 }
 
 export function SyllabusItemCard({
@@ -1509,9 +1541,9 @@ export function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-        item: Zotero.Item;
-        type: "pdf" | "snapshot" | "epub";
-      }>;
+      item: Zotero.Item;
+      type: "pdf" | "snapshot" | "epub";
+    }>;
   }, [item, slim]);
 
   const metadataParts = [
@@ -1629,9 +1661,9 @@ export function SyllabusItemCard({
 
   const colors = priority
     ? {
-      backgroundColor: priorityColor + "15",
-      borderColor: priorityColor + "30",
-    }
+        backgroundColor: priorityColor + "15",
+        borderColor: priorityColor + "30",
+      }
     : {};
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {

@@ -4,6 +4,6 @@ export function getSelectedCollection() {
 }
 
 export function getAllCollections() {
-  const libraryId = Zotero.Libraries.getAll()[0].id
+  const libraryId = Zotero.Libraries.getAll()[0].id;
   return Zotero.Collections.getByLibrary(libraryId);
 }
