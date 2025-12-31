@@ -523,6 +523,9 @@ export class SyllabusManager {
     let readingScheduleButton = doc.getElementById(
       "syllabus-reading-schedule-button",
     ) as unknown as XULButtonElement;
+    let collectionReadingScheduleButton = doc.getElementById(
+      "syllabus-collection-reading-schedule-button",
+    ) as unknown as XULButtonElement;
     let spacer = doc.getElementById("syllabus-view-spacer") as Element | null;
 
     if (!toggleButton) {
@@ -551,12 +554,30 @@ export class SyllabusManager {
       // Set initial label
       SyllabusManager.updateButtonLabel(toggleButton);
 
-      // Create "Review your Reading Schedule" button
+      // Create "Review your Reading Schedule" button (for Main Library)
       readingScheduleButton = ztoolkit.UI.createElement(doc, "toolbarbutton", {
         id: "syllabus-reading-schedule-button",
         classList: ["syllabus-view-toggle"],
         properties: {
           label: "Review your Reading Schedule",
+          tooltiptext: "Open Reading Schedule",
+        },
+        listeners: [
+          {
+            type: "click",
+            listener: () => {
+              SyllabusManager.openReadingListTab();
+            },
+          },
+        ],
+      });
+
+      // Create "Reading Schedule" button (for collection pages)
+      collectionReadingScheduleButton = ztoolkit.UI.createElement(doc, "toolbarbutton", {
+        id: "syllabus-collection-reading-schedule-button",
+        classList: ["syllabus-view-toggle"],
+        properties: {
+          label: "Reading Schedule",
           tooltiptext: "Open Reading Schedule",
         },
         listeners: [
@@ -582,15 +603,17 @@ export class SyllabusManager {
       // Insert buttons and spacer before the search spinner, or append to toolbar if spinner not found
       if (searchSpinner && searchSpinner.parentNode) {
         searchSpinner.parentNode.insertBefore(toggleButton, searchSpinner);
+        searchSpinner.parentNode.insertBefore(collectionReadingScheduleButton, searchSpinner);
         searchSpinner.parentNode.insertBefore(readingScheduleButton, searchSpinner);
         searchSpinner.parentNode.insertBefore(spacer, searchSpinner);
       } else {
         itemsToolbar.appendChild(toggleButton);
+        itemsToolbar.appendChild(collectionReadingScheduleButton);
         itemsToolbar.appendChild(readingScheduleButton);
         itemsToolbar.appendChild(spacer);
       }
     } else {
-      // Ensure reading schedule button exists
+      // Ensure reading schedule buttons exist
       if (!readingScheduleButton) {
         readingScheduleButton = doc.getElementById(
           "syllabus-reading-schedule-button",
@@ -613,9 +636,38 @@ export class SyllabusManager {
             ],
           });
 
-          // Insert before toggle button
+          // Insert after toggle button
           if (toggleButton.parentNode) {
-            toggleButton.parentNode.insertBefore(readingScheduleButton, toggleButton);
+            toggleButton.parentNode.insertBefore(readingScheduleButton, toggleButton.nextSibling);
+          }
+        }
+      }
+
+      if (!collectionReadingScheduleButton) {
+        collectionReadingScheduleButton = doc.getElementById(
+          "syllabus-collection-reading-schedule-button",
+        ) as unknown as XULButtonElement;
+        if (!collectionReadingScheduleButton) {
+          collectionReadingScheduleButton = ztoolkit.UI.createElement(doc, "toolbarbutton", {
+            id: "syllabus-collection-reading-schedule-button",
+            classList: ["syllabus-view-toggle"],
+            properties: {
+              label: "Reading Schedule",
+              tooltiptext: "Open Reading Schedule",
+            },
+            listeners: [
+              {
+                type: "click",
+                listener: () => {
+                  SyllabusManager.openReadingListTab();
+                },
+              },
+            ],
+          });
+
+          // Insert right after toggle button
+          if (toggleButton.parentNode) {
+            toggleButton.parentNode.insertBefore(collectionReadingScheduleButton, toggleButton.nextSibling);
           }
         }
       }
@@ -657,8 +709,11 @@ export class SyllabusManager {
     const readingScheduleButton = doc.getElementById(
       "syllabus-reading-schedule-button",
     ) as XULButtonElement | null;
+    const collectionReadingScheduleButton = doc.getElementById(
+      "syllabus-collection-reading-schedule-button",
+    ) as XULButtonElement | null;
 
-    if (!toggleButton || !readingScheduleButton) return;
+    if (!toggleButton || !readingScheduleButton || !collectionReadingScheduleButton) return;
 
     const selectedCollection = getSelectedCollection();
     const currentTab = getCurrentTab();
@@ -670,10 +725,13 @@ export class SyllabusManager {
     const isCustomTab = currentTab?.type === "syllabus" || currentTab?.type === "reading-list";
     const isInCollectionTab = !isCustomTab;
     const shouldShowReadingSchedule = isInMainLibrary && isInCollectionTab;
+    const isInCollection = !!selectedCollection;
 
     // Hide/show buttons based on conditions
     toggleButton.hidden = shouldShowReadingSchedule;
     readingScheduleButton.hidden = !shouldShowReadingSchedule;
+    // Show "Reading Schedule" button when viewing a collection, hide it in Main Library
+    collectionReadingScheduleButton.hidden = !isInCollection || shouldShowReadingSchedule;
   }
 
   // Function to render a completely custom syllabus view
