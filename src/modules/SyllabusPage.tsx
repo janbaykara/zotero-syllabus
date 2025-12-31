@@ -1442,6 +1442,7 @@ interface SyllabusItemCardProps {
     insertBefore: boolean,
   ) => void;
   onDragOver?: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
+  onClick?: (item: Zotero.Item, e?: JSX.TargetedMouseEvent<HTMLElement>) => void; // Optional custom click handler
 }
 
 export function SyllabusItemCard({
@@ -1454,6 +1455,7 @@ export function SyllabusItemCard({
   isLocked = false,
   onDrop,
   onDragOver,
+  onClick: customOnClick,
 }: SyllabusItemCardProps) {
   // Get the currently selected item ID
   const selectedItemId = useZoteroSelectedItemId();
@@ -1687,7 +1689,13 @@ export function SyllabusItemCard({
       )}
       data-item-id={item.id}
       draggable={!isLocked}
-      onClick={(e) => onClick(item, e)}
+      onClick={(e) => {
+        if (customOnClick) {
+          customOnClick(item, e);
+        } else {
+          onClick(item, e);
+        }
+      }}
       onDblClick={(e) => onDoubleClick(item, e)}
       onDragStart={isLocked ? undefined : handleDragStart}
       onDragEnd={isLocked ? undefined : handleDragEnd}

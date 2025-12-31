@@ -4,7 +4,7 @@ import { useMemo } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
 import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
 import { SyllabusItemCard } from "./SyllabusPage";
-import { endOfWeek, startOfWeek } from "date-fns";
+import { endOfWeek, formatDate, startOfWeek } from "date-fns";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import { getAllCollections } from "../utils/zotero";
 
@@ -19,17 +19,15 @@ interface ClassReading {
 
 function formatReadingDate(isoDate: string): string {
   const date = new Date(isoDate);
-  return date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  // Tuesday 6th Feb
+  return formatDate(date, "iiii do")
 }
 
 function formatWeekRange(weekStart: Date): string {
   const start = startOfWeek(weekStart);
-  const end = endOfWeek(weekStart);
-  return `${start.toLocaleDateString(undefined, { month: "short", day: "numeric" })} - ${end.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`;
+  return start.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  // const end = endOfWeek(weekStart);
+  // return `${start.toLocaleDateString(undefined, { month: "short", day: "numeric" })} - ${end.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`;
 }
 
 export function ReadingSchedule() {
@@ -160,13 +158,58 @@ export function ReadingSchedule() {
       );
   }, [readingsByWeek]);
 
-  const handleCollectionClick = (_collectionId: number) => {
-    // const win = Zotero.getMainWindow();
-    // const pane = win.ZoteroPane;
-    // if (pane) {
-    //   pane.selec
-    // }
-    // TODO: implement syllabus tab for collectionId
+  const handleCollectionClick = (collectionId: number) => {
+    try {
+      const collection = Zotero.Collections.get(collectionId);
+      if (!collection) return;
+
+      // Try to select the collection via the tree view
+      const win = Zotero.getMainWindow();
+      const collectionTree = win.document.getElementById("zotero-collections-tree");
+      if (collectionTree) {
+        const treeView = (collectionTree as any).view;
+        if (treeView && treeView.selection) {
+          const row = treeView.getRowIndexByRef(collection);
+          if (row !== -1) {
+            treeView.selection.select(row);
+          }
+        }
+      }
+    } catch (err) {
+      ztoolkit.log("Error selecting collection:", err);
+    }
+  };
+
+  const handleItemClick = (item: Zotero.Item, collectionId: number) => {
+    try {
+      const pane = ztoolkit.getGlobal("ZoteroPane");
+      const collection = Zotero.Collections.get(collectionId);
+
+      // First, try to select the collection via the tree view
+      if (collection) {
+        const win = Zotero.getMainWindow();
+        const collectionTree = win.document.getElementById("zotero-collections-tree");
+        if (collectionTree) {
+          const treeView = (collectionTree as any).view;
+          if (treeView && treeView.selection) {
+            const row = treeView.getRowIndexByRef(collection);
+            if (row !== -1) {
+              treeView.selection.select(row);
+              // Wait a bit for the collection to be selected before selecting the item
+              Zotero.Promise.delay(100).then(() => {
+                pane.selectItem(item.id);
+              });
+              return;
+            }
+          }
+        }
+      }
+
+      // Fallback: just select the item (it will show in its collection context)
+      pane.selectItem(item.id);
+    } catch (err) {
+      ztoolkit.log("Error selecting item in collection:", err);
+    }
   };
 
   if (sortedWeeks.length === 0) {
@@ -210,8 +253,7 @@ export function ReadingSchedule() {
 
         <div
           className={twMerge(
-            "flex flex-col",
-            compactMode ? "gap-8 mt-4" : "gap-12 mt-6",
+            "flex flex-col gap-14 mt-14"
           )}
         >
           {sortedWeeks.map((weekStartKey) => {
@@ -228,7 +270,7 @@ export function ReadingSchedule() {
                 <div className="container-padded">
                   <div
                     className={twMerge(
-                      "font-semibold text-2xl sticky top-16 py-3 z-10 bg-background",
+                      "text-2xl sticky top-16 py-3 z-10 bg-background",
                     )}
                   >
                     Week of {formatWeekRange(weekStartDate)}
@@ -276,7 +318,7 @@ export function ReadingSchedule() {
                                       classReading.collectionId,
                                     )
                                   }
-                                  className="text-lg"
+                                  className="text-xl"
                                 >
                                   <span className='font-semibold'>{classReading.collectionName}</span>, <span className='text-secondary'>{singularCapitalized} {classReading.classNumber}</span>{classReading.classTitle && <>
                                     <span>:&nbsp;</span>
@@ -314,6 +356,12 @@ export function ReadingSchedule() {
                                         }
                                         compactMode={compactMode}
                                         isLocked={true}
+                                        onClick={(item) =>
+                                          handleItemClick(
+                                            item,
+                                            classReading.collectionId,
+                                          )
+                                        }
                                       />
                                     );
                                   },
