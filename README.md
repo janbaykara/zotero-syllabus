@@ -6,6 +6,8 @@ A Zotero add-on / plugin that turns your collections into syllabi and course rea
 
 ![Syllabus view](doc/images/demo.gif)
 
+![Reading schedule view](doc/images/reading.png)
+
 ## How to install
 
 1. [Download the extension file (.xpi)](https://github.com/janbaykara/zotero-syllabus/releases/latest/download/zotero-syllabus.xpi).
@@ -90,6 +92,14 @@ Use the item pane to edit class number, instruction, and priority for an item.
 Right-click an item to re-assign class number or priority.
 
 ![Context menu showing syllabus operations](doc/images/right-click.png)
+
+#### Set a target date for a class
+
+![Reading schedule view with target date](doc/images/scheduling.png)
+
+#### Review your reading schedule across all classes
+
+![Reading schedule](doc/images/reading.png)
 
 ### Other features
 

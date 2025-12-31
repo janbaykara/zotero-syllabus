@@ -1395,34 +1395,34 @@ function TextInput({
         onChange: readOnly
           ? undefined
           : (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-              setValue((e.target as HTMLInputElement).value),
+            setValue((e.target as HTMLInputElement).value),
         onBlur: readOnly ? undefined : () => save(value),
         onKeyDown: readOnly
           ? undefined
           : (
-              e: JSX.TargetedKeyboardEvent<
-                HTMLInputElement | HTMLTextAreaElement
-              >,
-            ) => {
-              if (e.key === "Escape" || e.key === "Enter") {
-                e.preventDefault();
-                e.currentTarget.blur();
-                save(value);
-              }
-            },
+            e: JSX.TargetedKeyboardEvent<
+              HTMLInputElement | HTMLTextAreaElement
+            >,
+          ) => {
+            if (e.key === "Escape" || e.key === "Enter") {
+              e.preventDefault();
+              e.currentTarget.blur();
+              save(value);
+            }
+          },
         onSelect: readOnly
           ? (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-              e.preventDefault();
-              e.currentTarget.setSelectionRange(0, 0);
-            }
+            e.preventDefault();
+            e.currentTarget.setSelectionRange(0, 0);
+          }
           : undefined,
         onClick: readOnly
           ? (
-              e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
-            ) => {
-              e.preventDefault();
-              e.currentTarget.blur();
-            }
+            e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
+          ) => {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
           : undefined,
         placeholder: readOnly ? undefined : placeholder || "Click to edit",
         className: twMerge(
@@ -1541,9 +1541,9 @@ export function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-      item: Zotero.Item;
-      type: "pdf" | "snapshot" | "epub";
-    }>;
+        item: Zotero.Item;
+        type: "pdf" | "snapshot" | "epub";
+      }>;
   }, [item, slim]);
 
   const metadataParts = [
@@ -1661,9 +1661,9 @@ export function SyllabusItemCard({
 
   const colors = priority
     ? {
-        backgroundColor: priorityColor + "15",
-        borderColor: priorityColor + "30",
-      }
+      backgroundColor: priorityColor + "15",
+      borderColor: priorityColor + "30",
+    }
     : {};
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
@@ -1837,67 +1837,65 @@ export function SyllabusItemCard({
           </>
         )}
       </div>
-      {!compactMode && (
-        <div
-          className="syllabus-item-actions shrink-0 inline-flex flex-col gap-1 in-[.print]:hidden"
-          draggable={false}
-        >
-          {/* Delete assignment button - only show if there's an assignment */}
-          {viewableAttachments.map((viewableAttachment) => {
-            const attachmentLabel =
-              viewableAttachment?.type === "pdf"
-                ? "PDF"
-                : viewableAttachment?.type === "snapshot"
-                  ? "Snapshot"
-                  : viewableAttachment?.type === "epub"
-                    ? "EPUB"
-                    : "View";
+      <div
+        className="syllabus-item-actions shrink-0 inline-flex flex-col gap-1 in-[.print]:hidden"
+        draggable={false}
+      >
+        {/* Delete assignment button - only show if there's an assignment */}
+        {viewableAttachments.map((viewableAttachment) => {
+          const attachmentLabel =
+            viewableAttachment?.type === "pdf"
+              ? "PDF"
+              : viewableAttachment?.type === "snapshot"
+                ? "Snapshot"
+                : viewableAttachment?.type === "epub"
+                  ? "EPUB"
+                  : "View";
 
-            return (
-              <div className="focus-states-target in-[.print]:hidden">
-                <button
-                  className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
-                  onClick={() => handleAttachmentClick(viewableAttachment)}
-                  title={`Open ${attachmentLabel}`}
-                  aria-label={`Open ${attachmentLabel}`}
-                >
-                  <span
-                    className="syllabus-action-icon icon icon-css icon-attachment-type"
-                    data-item-type={
-                      viewableAttachment.type === "pdf"
-                        ? "attachmentPDF"
-                        : viewableAttachment.type === "epub"
-                          ? "attachmentEPUB"
-                          : "attachmentSnapshot"
-                    }
-                    aria-label={`Open ${attachmentLabel}`}
-                  />
-                  <span className="syllabus-action-label">
-                    {attachmentLabel}
-                  </span>
-                </button>
-              </div>
-            );
-          })}
-          {url && (
-            <div className="focus-states-target print:hidden">
+          return (
+            <div className="focus-states-target in-[.print]:hidden">
               <button
                 className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
-                onClick={handleUrlClick}
-                title="Open URL"
-                aria-label="Open URL"
+                onClick={() => handleAttachmentClick(viewableAttachment)}
+                title={`Open ${attachmentLabel}`}
+                aria-label={`Open ${attachmentLabel}`}
               >
                 <span
                   className="syllabus-action-icon icon icon-css icon-attachment-type"
-                  data-item-type="attachmentLink"
-                  aria-label="Open URL"
+                  data-item-type={
+                    viewableAttachment.type === "pdf"
+                      ? "attachmentPDF"
+                      : viewableAttachment.type === "epub"
+                        ? "attachmentEPUB"
+                        : "attachmentSnapshot"
+                  }
+                  aria-label={`Open ${attachmentLabel}`}
                 />
-                <span className="syllabus-action-label">Link</span>
+                <span className="syllabus-action-label">
+                  {attachmentLabel}
+                </span>
               </button>
             </div>
-          )}
-        </div>
-      )}
+          );
+        })}
+        {url && (
+          <div className="focus-states-target print:hidden">
+            <button
+              className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
+              onClick={handleUrlClick}
+              title="Open URL"
+              aria-label="Open URL"
+            >
+              <span
+                className="syllabus-action-icon icon icon-css icon-attachment-type"
+                data-item-type="attachmentLink"
+                aria-label="Open URL"
+              />
+              <span className="syllabus-action-label">Link</span>
+            </button>
+          </div>
+        )}
+      </div>
       {hasAssignment && !isLocked && (
         <div
           className={twMerge(
