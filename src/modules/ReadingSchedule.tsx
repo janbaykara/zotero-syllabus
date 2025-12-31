@@ -38,9 +38,9 @@ export function ReadingSchedule() {
   // Get all readings across all collections
   const readingsByWeek = useMemo(() => {
     const result = new Map<
-      Date,
+      string, // ISO date string of week start
       Map<string, ClassReading[]>
-    >(); // weekStart -> ISO date string -> ClassReading[]
+    >(); // weekStart ISO string -> ISO date string -> ClassReading[]
 
     // Get all collections
     const allCollections = getAllCollections();
@@ -69,8 +69,9 @@ export function ReadingSchedule() {
         const readingDate = classMetadata.readingDate;
         if (!readingDate) continue;
 
-        // Get week start
-        const weekStart = startOfWeek(new Date(readingDate));
+        // Get week start and normalize to ISO string for consistent grouping
+        const weekStartDate = startOfWeek(new Date(readingDate));
+        const weekStartKey = weekStartDate.toISOString().split('T')[0]; // Use date-only ISO string
 
         // Get items for this class
         const classItems: Array<{
@@ -117,10 +118,10 @@ export function ReadingSchedule() {
         };
 
         // Add to result
-        if (!result.has(weekStart)) {
-          result.set(weekStart, new Map());
+        if (!result.has(weekStartKey)) {
+          result.set(weekStartKey, new Map());
         }
-        const weekData = result.get(weekStart)!;
+        const weekData = result.get(weekStartKey)!;
 
         // Use ISO date string as key
         if (!weekData.has(readingDate)) {
@@ -131,7 +132,7 @@ export function ReadingSchedule() {
     }
 
     // Sort dates within each week
-    for (const [weekStart, weekData] of result) {
+    for (const [weekStartKey, weekData] of result) {
       const sortedDates = Array.from(weekData.keys()).sort((a, b) =>
         new Date(a).getTime() - new Date(b).getTime()
       );
@@ -139,7 +140,7 @@ export function ReadingSchedule() {
       for (const date of sortedDates) {
         sortedWeekData.set(date, weekData.get(date)!);
       }
-      result.set(weekStart, sortedWeekData);
+      result.set(weekStartKey, sortedWeekData);
     }
 
     return result;
@@ -148,7 +149,7 @@ export function ReadingSchedule() {
   // Convert to sorted array for rendering
   const sortedWeeks = useMemo(() => {
     return Array.from(readingsByWeek.keys()).sort((a, b) =>
-      a.getTime() - b.getTime()
+      new Date(a).getTime() - new Date(b).getTime()
     );
   }, [readingsByWeek]);
 
@@ -184,12 +185,12 @@ export function ReadingSchedule() {
   }
 
   return (
-    <div className="syllabus-page overflow-y-auto overflow-x-hidden h-full">
+    <div className="syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background">
       <div className="pb-12">
-        <div className="sticky top-0 z-10 bg-background py-1 md:pt-8">
+        <div className="sticky top-0 z-20 bg-background py-1 md:pt-8">
           <div className="container-padded bg-background">
             <div
-              className={twMerge("font-semibold", compactMode ? "text-2xl" : "text-3xl")}
+              className={twMerge("font-semibold text-3xl")}
             >
               Reading Schedule
             </div>
@@ -202,22 +203,24 @@ export function ReadingSchedule() {
             compactMode ? "gap-8 mt-4" : "gap-12 mt-6",
           )}
         >
-          {sortedWeeks.map((weekStart) => {
-            const weekData = readingsByWeek.get(weekStart)!;
+          {sortedWeeks.map((weekStartKey) => {
+            const weekData = readingsByWeek.get(weekStartKey)!;
             const sortedDates = Array.from(weekData.keys()).sort((a, b) =>
               new Date(a).getTime() - new Date(b).getTime()
             );
 
+            // Convert weekStartKey back to Date for formatting
+            const weekStartDate = new Date(weekStartKey);
+
             return (
-              <div key={weekStart} className="syllabus-class-group">
+              <div key={weekStartKey} className="syllabus-class-group">
                 <div className="container-padded">
                   <div
                     className={twMerge(
-                      "font-semibold mb-4",
-                      compactMode ? "text-xl" : "text-2xl",
+                      "font-semibold text-2xl sticky top-16 py-3 z-10 bg-background",
                     )}
                   >
-                    Week of {formatWeekRange(weekStart)}
+                    Week of {formatWeekRange(weekStartDate)}
                   </div>
 
                   {sortedDates.map((dateTimestamp) => {
@@ -238,8 +241,7 @@ export function ReadingSchedule() {
                       <div key={dateTimestamp} className="mb-6">
                         <div
                           className={twMerge(
-                            "font-semibold mb-3",
-                            compactMode ? "text-lg" : "text-xl",
+                            "mb-3 text-secondary text-xl",
                           )}
                         >
                           {formatReadingDate(isoDate)}
@@ -258,27 +260,20 @@ export function ReadingSchedule() {
                             >
                               <div className="flex items-center gap-2 mb-2">
                                 <div
-                                  className={twMerge(
-                                    "font-semibold",
-                                    compactMode ? "text-base" : "text-lg",
-                                  )}
+                                  onClick={() =>
+                                    handleCollectionClick(
+                                      classReading.collectionId,
+                                    )
+                                  }
+                                  className="text-lg"
                                 >
-                                  {singularCapitalized} {classReading.classNumber}
-                                  {classReading.classTitle &&
-                                    `: ${classReading.classTitle}`}
+                                  <span className='font-semibold'>{classReading.collectionName}</span>, <span className='text-secondary'>{singularCapitalized} {classReading.classNumber}</span>{classReading.classTitle && <>
+                                    <span>:&nbsp;</span>
+                                    <span className='font-semibold'>
+                                      {classReading.classTitle}
+                                    </span>
+                                  </>}
                                 </div>
-                                <span className="text-secondary text-sm">
-                                  from{" "}
-                                  <button
-                                    onClick={() =>
-                                      handleCollectionClick(
-                                        classReading.collectionId,
-                                      )
-                                    }
-                                  >
-                                    {classReading.collectionName}
-                                  </button>
-                                </span>
                               </div>
                               <div
                                 className={twMerge(
