@@ -146,11 +146,18 @@ export function ReadingSchedule() {
     return result;
   }, []);
 
-  // Convert to sorted array for rendering
+  // Convert to sorted array for rendering, filtering out past weeks
   const sortedWeeks = useMemo(() => {
-    return Array.from(readingsByWeek.keys()).sort((a, b) =>
-      new Date(a).getTime() - new Date(b).getTime()
-    );
+    const currentWeekStart = startOfWeek(new Date());
+
+    return Array.from(readingsByWeek.keys())
+      .filter((weekKey) => {
+        // Only include weeks from the current week onwards
+        return new Date(weekKey).getTime() >= currentWeekStart.getTime();
+      })
+      .sort((a, b) =>
+        new Date(a).getTime() - new Date(b).getTime()
+      );
   }, [readingsByWeek]);
 
   const handleCollectionClick = (_collectionId: number) => {
@@ -196,6 +203,10 @@ export function ReadingSchedule() {
             </div>
           </div>
         </div>
+
+        <p className="container-padded text-secondary text-lg">
+          Add reading dates to classes to see them here.
+        </p>
 
         <div
           className={twMerge(
