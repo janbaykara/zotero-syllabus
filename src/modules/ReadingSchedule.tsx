@@ -399,7 +399,7 @@ export function ReadingSchedule() {
                         <div key={dateTimestamp}>
                           <div
                             className={twMerge(
-                              "mb-3 text-secondary text-xl",
+                              "mb-3 text-secondary text-2xl",
                             )}
                           >
                             {formatReadingDate(isoDate)}
