@@ -2,7 +2,7 @@
  * Syllabus Manager - Core functionality for syllabus view and metadata
  */
 
-import { getLocaleID } from "../utils/locale";
+import { getLocaleID, getString } from "../utils/locale";
 import { ExtraFieldTool } from "zotero-plugin-toolkit";
 import { renderSyllabusPage } from "./SyllabusPage";
 import { getSelectedCollection } from "../utils/zotero";
@@ -13,6 +13,8 @@ import { h } from "preact";
 import { uuidv7 } from "uuidv7";
 import pluralize from "pluralize";
 import { getPref } from "../utils/prefs";
+import { HelloWorld } from "./HelloWorld";
+import { parseXULTemplate } from "../utils/ui";
 
 export enum SyllabusPriority {
   COURSE_INFO = "course-info",
@@ -74,6 +76,7 @@ export interface SettingsClassMetadata {
   title?: string;
   description?: string;
   itemOrder?: string[]; // Manual ordering of assignment IDs within this class
+  readingDate?: number; // Unix timestamp for when readings are due
 }
 
 /**
@@ -89,6 +92,8 @@ export interface CustomPriority {
 export class SyllabusManager {
   static notifierID: string | null = null;
   static syllabusItemPaneSection: false | string | null = null;
+  static readingsTabPanelID: string | null = null;
+  static readingListTab: { tab: any; rootElement: HTMLElement } | null = null;
 
   static settingsKeys = SyllabusSettingsKey;
   static priorityKeys = SyllabusPriority;
@@ -237,6 +242,11 @@ export class SyllabusManager {
     this.setupUI();
     this.setupSyllabusViewTabListener();
     this.setupSyllabusViewReloadListener();
+    // Re-render reading list tab if it exists (for hot reload)
+    // Use a small delay to ensure tabs are initialized
+    Zotero.Promise.delay(100).then(() => {
+      this.rerenderReadingListTab(win);
+    });
   }
 
   static onNotify(
@@ -2344,6 +2354,46 @@ export class SyllabusManager {
   }
 
   /**
+   * Get reading date for a specific collection and class number
+   */
+  static getClassReadingDate(
+    collectionId: number | string,
+    classNumber: number,
+  ): number | undefined {
+    const metadata = SyllabusManager.getClassMetadata(
+      collectionId,
+      classNumber,
+    );
+    return metadata.readingDate;
+  }
+
+  /**
+   * Set reading date for a specific collection and class number
+   */
+  static async setClassReadingDate(
+    collectionId: number | string,
+    classNumber: number,
+    readingDate: number | undefined,
+    source: "page" | "item-pane",
+  ): Promise<void> {
+    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
+    if (readingDate !== undefined) {
+      set(
+        allData,
+        `${collectionId}.classes.${classNumber}.readingDate`,
+        readingDate,
+      );
+    } else {
+      // Remove reading date if undefined
+      const collectionIdStr = String(collectionId);
+      if (allData[collectionIdStr]?.classes?.[classNumber]) {
+        delete allData[collectionIdStr].classes![classNumber].readingDate;
+      }
+    }
+    await SyllabusManager.setCollectionMetadata(allData, source);
+  }
+
+  /**
    * Create an additional class (even if empty) to extend the range
    * This ensures the class appears in the rendered range
    */
@@ -2594,5 +2644,210 @@ export class SyllabusManager {
     elements.push(this.createPriorityLabel(doc, label));
 
     return elements;
+  }
+
+  /**
+   * Get readings grouped by date, then by class
+   * Returns Map<dateTimestamp, Map<classNumber, Array<{item, assignment}>>>
+   * Only includes classes that have reading dates set
+   */
+  static getReadingsByDate(
+    collectionId: number | string,
+  ): Map<
+    number,
+    Map<number, Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }>>
+  > {
+    const result = new Map<
+      number,
+      Map<number, Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }>>
+    >();
+
+    try {
+      const collection = Zotero.Collections.get(
+        typeof collectionId === "string"
+          ? parseInt(collectionId, 10)
+          : collectionId,
+      );
+      if (!collection) {
+        return result;
+      }
+
+      const items = collection.getChildItems();
+
+      for (const item of items) {
+        if (!item.isRegularItem()) continue;
+
+        const assignments = this.getAllClassAssignments(item, collectionId);
+
+        for (const assignment of assignments) {
+          if (assignment.classNumber === undefined) continue;
+
+          const readingDate = this.getClassReadingDate(
+            collectionId,
+            assignment.classNumber,
+          );
+
+          // Only include classes with reading dates
+          if (readingDate === undefined) continue;
+
+          if (!result.has(readingDate)) {
+            result.set(readingDate, new Map());
+          }
+
+          const classesForDate = result.get(readingDate)!;
+          if (!classesForDate.has(assignment.classNumber)) {
+            classesForDate.set(assignment.classNumber, []);
+          }
+
+          classesForDate.get(assignment.classNumber)!.push({ item, assignment });
+        }
+      }
+
+      // Sort items within each class
+      for (const [, classesForDate] of result) {
+        for (const [classNumber, itemAssignments] of classesForDate) {
+          const sorted = this.sortClassItems(
+            itemAssignments,
+            collectionId,
+            classNumber,
+          );
+          classesForDate.set(classNumber, sorted);
+        }
+      }
+    } catch (e) {
+      ztoolkit.log("Error getting readings by date:", e);
+    }
+
+    return result;
+  }
+
+  /**
+   * Register the readings tab panel
+   */
+  static openReadingListTab() {
+    const win = Zotero.getMainWindow();
+    const tabs = ztoolkit.getGlobal("Zotero_Tabs");
+
+    // Check if tab already exists (either in our reference or in the tabs system)
+    let existingTab = this.readingListTab?.tab;
+    if (!existingTab) {
+      const allTabs = tabs.getState();
+      existingTab = allTabs.find((t: any) => t.type === "reading-list");
+      if (existingTab) {
+        // Found existing tab, set up reference
+        let rootElement = win.document.getElementById("reading-list-tab-root") as HTMLElement;
+        if (!rootElement) {
+          rootElement = win.document.createElement("div");
+          rootElement.id = "reading-list-tab-root";
+          // Try to find the tab's container by getting the tab from tabs system
+          const tabResult = tabs._getTab(existingTab.id);
+          if (tabResult) {
+            // Find the container element in the deck
+            const deck = tabs.deck;
+            const tabPanels = deck.querySelectorAll("tabpanel");
+            const tabPanel = Array.from(tabPanels).find((panel: any) => {
+              return panel.getAttribute("id") === `zotero-view-tab-${existingTab.id}` ||
+                panel.getAttribute("data-tab-id") === existingTab.id;
+            }) as HTMLElement;
+            if (tabPanel) {
+              tabPanel.appendChild(rootElement);
+            } else {
+              // Fallback: append to deck
+              deck.appendChild(rootElement);
+            }
+          }
+        }
+        this.readingListTab = { tab: existingTab, rootElement };
+      }
+    }
+
+    if (existingTab) {
+      // Tab exists, just select it and re-render (for hot reload)
+      win.Zotero_Tabs.select(existingTab.id, true);
+      this.rerenderReadingListTab(win);
+      return;
+    }
+
+    // Create new tab
+    const tabResult = tabs.add({
+      type: "reading-list",
+      title: "Reading Schedule",
+      data: {
+        icon: "book"
+      }
+    });
+
+    win.Zotero_Tabs.select(tabResult.id, true);
+
+    // Create root element for React component
+    const rootElement = win.document.createElement("div");
+    rootElement.id = "reading-list-tab-root";
+    // Use the container from the tab result
+    tabResult.container.appendChild(rootElement);
+
+    // Store tab reference for hot reload (store the tab instance from getState)
+    const allTabs = tabs.getState();
+    const tabInstance = allTabs.find((t: any) => t.id === tabResult.id);
+    if (tabInstance) {
+      this.readingListTab = { tab: tabInstance, rootElement };
+    }
+
+    // Render component
+    this.rerenderReadingListTab(win);
+  }
+
+  /**
+   * Re-render the reading list tab content (for hot reload support)
+   */
+  static rerenderReadingListTab(win: _ZoteroTypes.MainWindow) {
+    // Try to find existing tab if we don't have a reference (e.g., after hot reload)
+    if (!this.readingListTab?.tab || !this.readingListTab?.rootElement) {
+      const tabs = ztoolkit.getGlobal("Zotero_Tabs");
+      const allTabs = tabs.getState();
+      const existingTab = allTabs.find((t: any) => t.type === "reading-list");
+
+      if (existingTab) {
+        // Find or create root element
+        let rootElement = win.document.getElementById("reading-list-tab-root") as HTMLElement;
+        if (!rootElement) {
+          rootElement = win.document.createElement("div");
+          rootElement.id = "reading-list-tab-root";
+          // Try to find the tab's container by getting the tab from tabs system
+          const tabs = ztoolkit.getGlobal("Zotero_Tabs");
+          const tabResult = tabs._getTab(existingTab.id);
+          if (tabResult) {
+            // Find the container element in the deck
+            const deck = tabs.deck;
+            const tabPanels = deck.querySelectorAll("tabpanel");
+            const tabPanel = Array.from(tabPanels).find((panel: any) => {
+              return panel.getAttribute("id") === `zotero-view-tab-${existingTab.id}` ||
+                panel.getAttribute("data-tab-id") === existingTab.id;
+            }) as HTMLElement;
+            if (tabPanel) {
+              tabPanel.appendChild(rootElement);
+            } else {
+              // Fallback: append to deck
+              deck.appendChild(rootElement);
+            }
+          }
+        }
+        this.readingListTab = { tab: existingTab, rootElement };
+      } else {
+        // Tab doesn't exist, nothing to render
+        return;
+      }
+    }
+
+    // Clear existing content
+    const rootElement = this.readingListTab.rootElement;
+    rootElement.textContent = "";
+
+    // Re-render the component
+    renderComponent(
+      win,
+      rootElement,
+      h(HelloWorld, {}),
+      "reading-list-tab",
+    );
   }
 }

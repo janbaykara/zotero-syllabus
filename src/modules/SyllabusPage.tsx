@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
-import { useState, useEffect, useMemo, useRef } from "preact/hooks";
+import { useState, useEffect, useMemo, useRef, useCallback } from "preact/hooks";
 import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
 import {
@@ -26,6 +26,7 @@ import {
 } from "../zotero-reading-list/compat";
 import { useDebouncedEffect } from "../utils/react/useDebouncedEffect";
 import { useElementSize } from "../utils/react/useElementSize";
+import { getLocaleID } from "../utils/locale";
 import slugify from "slugify";
 import { SettingsPage } from "./SettingsPage";
 
@@ -53,6 +54,18 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     _setPriorities,
     setLocked,
   ] = useZoteroSyllabusMetadata(collectionId);
+
+  const handleClassReadingDateSave = useCallback(
+    async (classNumber: number, readingDate: number | undefined) => {
+      await SyllabusManager.setClassReadingDate(
+        collectionId,
+        classNumber,
+        readingDate,
+        "page",
+      );
+    },
+    [collectionId],
+  );
 
   const isLocked = syllabusMetadata.locked || false;
   const items = useZoteroCollectionItems(collectionId);
@@ -752,6 +765,16 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                   <span>{isLocked ? "Unlock" : "Lock"}</span>
                 </button>
                 <button
+                  onClick={() => {
+                    SyllabusManager.openReadingListTab()
+                  }}
+                  className="grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden"
+                  title="View all readings"
+                  aria-label="View all readings"
+                >
+                  <span>View Readings</span>
+                </button>
+                <button
                   onClick={() => setShowSettings(true)}
                   className="grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden"
                   title="Edit syllabus settings"
@@ -822,6 +845,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
               syllabusMetadata={syllabusMetadata}
               onClassTitleSave={setClassTitle}
               onClassDescriptionSave={setClassDescription}
+              onClassReadingDateSave={handleClassReadingDateSave}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -940,10 +964,11 @@ interface ClassGroupComponentProps {
   }>;
   collectionId: number;
   syllabusMetadata: {
-    classes?: { [key: string]: { title?: string; description?: string } };
+    classes?: { [key: string]: { title?: string; description?: string; readingDate?: number } };
   };
   onClassTitleSave: (classNumber: number, title: string) => void;
   onClassDescriptionSave: (classNumber: number, description: string) => void;
+  onClassReadingDateSave: (classNumber: number, readingDate: number | undefined) => void;
   onDrop: (
     e: JSX.TargetedDragEvent<HTMLElement>,
     classNumber: number | null,
@@ -964,6 +989,7 @@ function ClassGroupComponent({
   syllabusMetadata,
   onClassTitleSave,
   onClassDescriptionSave,
+  onClassReadingDateSave,
   onDrop,
   onDragOver,
   onDragLeave,
@@ -975,13 +1001,16 @@ function ClassGroupComponent({
   const { singularCapitalized } =
     SyllabusManager.getNomenclatureFormatted(collectionId);
 
-  // Get class title and description from metadata
+  // Get class title, description, and reading date from metadata
   const classTitle = classNumber
     ? syllabusMetadata.classes?.[classNumber]?.title || ""
     : "";
   const classDescription = classNumber
     ? syllabusMetadata.classes?.[classNumber]?.description || ""
     : "";
+  const readingDate = classNumber
+    ? syllabusMetadata.classes?.[classNumber]?.readingDate
+    : undefined;
 
   // Check if there's a manual order for this class
   const hasManualOrder =
@@ -1100,6 +1129,20 @@ function ClassGroupComponent({
                 readOnly={isLocked}
               />
             </div>
+            {!isLocked && (
+              <div className={twMerge(compactMode ? "text-sm mt-2" : "text-base mt-3")}>
+                <ReadingDateInput
+                  initialValue={readingDate}
+                  onSave={(date) => onClassReadingDateSave(classNumber, date)}
+                  compactMode={compactMode}
+                />
+              </div>
+            )}
+            {isLocked && readingDate && (
+              <div className={twMerge(compactMode ? "text-sm mt-2 text-secondary" : "text-base mt-3 text-secondary")}>
+                Due: {formatReadingDate(readingDate)}
+              </div>
+            )}
           </div>
         </>
       )}
@@ -1165,6 +1208,91 @@ function ClassGroupComponent({
             : null}
         </div>
       </div>
+    </div>
+  );
+}
+
+function formatReadingDate(timestamp: number): string {
+  const date = new Date(timestamp * 1000);
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function ReadingDateInput({
+  initialValue,
+  onSave,
+  compactMode = false,
+}: {
+  initialValue?: number;
+  onSave: (date: number | undefined) => void | Promise<void>;
+  compactMode?: boolean;
+}) {
+  const [value, setValue] = useState(
+    initialValue ? new Date(initialValue * 1000).toISOString().split("T")[0] : "",
+  );
+
+  useEffect(() => {
+    if (initialValue) {
+      setValue(new Date(initialValue * 1000).toISOString().split("T")[0]);
+    } else {
+      setValue("");
+    }
+  }, [initialValue]);
+
+  useDebouncedEffect(
+    () => {
+      if (value) {
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+          const timestamp = Math.floor(date.getTime() / 1000);
+          if (timestamp !== initialValue) {
+            onSave(timestamp);
+          }
+        }
+      } else if (initialValue !== undefined) {
+        onSave(undefined);
+      }
+    },
+    [initialValue, value],
+    500,
+  );
+
+  return (
+    <div className="flex flex-row items-center gap-2">
+      <label
+        className={twMerge(
+          "text-secondary shrink-0",
+          compactMode ? "text-sm" : "text-base",
+        )}
+      >
+        {Zotero.locale ? Zotero.locale.getString(getLocaleID("reading-date-label")) : "Reading date"}:
+      </label>
+      <input
+        type="date"
+        value={value}
+        onChange={(e) => setValue(e.currentTarget.value)}
+        className={twMerge(
+          "px-2 py-1 border border-quinary rounded-md bg-background text-primary focus:outline-3 focus:outline-accent-blue focus:outline-offset-2",
+          compactMode ? "text-sm" : "text-base",
+        )}
+        placeholder="Select date"
+      />
+      {value && (
+        <button
+          onClick={() => {
+            setValue("");
+            onSave(undefined);
+          }}
+          className="text-secondary hover:text-primary text-sm"
+          title="Clear date"
+          aria-label="Clear date"
+        >
+          ×
+        </button>
+      )}
     </div>
   );
 }
@@ -1316,7 +1444,7 @@ interface SyllabusItemCardProps {
   onDragOver?: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
 }
 
-function SyllabusItemCard({
+export function SyllabusItemCard({
   item,
   collectionId,
   classNumber,
