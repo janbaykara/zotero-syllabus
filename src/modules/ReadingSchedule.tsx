@@ -5,7 +5,7 @@ import { useSyncExternalStore } from "react-dom/src";
 import { twMerge } from "tailwind-merge";
 import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
 import { SyllabusItemCard } from "./SyllabusPage";
-import { formatDate, setDefaultOptions, startOfWeek } from "date-fns";
+import { setDefaultOptions, startOfWeek } from "date-fns";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import { getAllCollections } from "../utils/zotero";
 
@@ -25,16 +25,24 @@ interface ClassReading {
 
 function formatReadingDate(isoDate: string): string {
   const date = new Date(isoDate);
-  // Tuesday 6th Feb
-  return formatDate(date, "iiii do")
+  // Format as "6th Feb" without i18n
+  const day = date.getDate();
+  const daySuffix = day === 1 || day === 21 || day === 31 ? 'st' :
+    day === 2 || day === 22 ? 'nd' :
+      day === 3 || day === 23 ? 'rd' : 'th';
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${day}${daySuffix} ${monthNames[date.getMonth()]}`;
 }
 
 function formatWeekRange(weekStart: Date): string {
   const start = startOfWeek(weekStart);
-  // return start.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  return formatDate(start, "do MMM")
-  // const end = endOfWeek(weekStart);
-  // return `${start.toLocaleDateString(undefined, { month: "short", day: "numeric" })} - ${end.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`;
+  // Format as "6th Feb" without i18n
+  const day = start.getDate();
+  const daySuffix = day === 1 || day === 21 || day === 31 ? 'st' :
+    day === 2 || day === 22 ? 'nd' :
+      day === 3 || day === 23 ? 'rd' : 'th';
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${day}${daySuffix} ${monthNames[start.getMonth()]}`;
 }
 
 // Store to track changes to syllabus data (class metadata, assignments, etc.)
@@ -375,8 +383,6 @@ export function ReadingSchedule() {
                   <div className='space-y-8 my-6'>
                     {sortedDates.map((dateTimestamp) => {
                       const classReadings = weekData.get(dateTimestamp)!;
-                      // Get ISO date string from first class reading (all have same date)
-                      const isoDate = classReadings[0]?.readingDate || "";
 
                       // Sort classes by collection name, then by class number
                       const sortedClassReadings = [...classReadings].sort((a, b) => {
@@ -389,14 +395,6 @@ export function ReadingSchedule() {
 
                       return (
                         <div key={dateTimestamp}>
-                          <div
-                            className={twMerge(
-                              "mb-3 text-secondary text-2xl",
-                            )}
-                          >
-                            {formatReadingDate(isoDate)}
-                          </div>
-
                           {sortedClassReadings.map((classReading) => {
                             const { singularCapitalized } =
                               SyllabusManager.getNomenclatureFormatted(
@@ -409,20 +407,37 @@ export function ReadingSchedule() {
                                 className="mb-4"
                               >
                                 <div className="flex flex-col gap-2 mb-2">
-                                  <div
-                                    onClick={() =>
-                                      handleCollectionClick(
-                                        classReading.collectionId,
-                                      )
-                                    }
-                                    className="text-xl"
-                                  >
-                                    <span className='font-semibold'>{classReading.collectionName}</span>, <span className='text-secondary'>{singularCapitalized} {classReading.classNumber}</span>{classReading.classTitle && <>
-                                      <span>:&nbsp;</span>
-                                      <span className='font-semibold'>
-                                        {classReading.classTitle}
+                                  <div className="flex flex-row items-start justify-between gap-2">
+                                    <div
+                                      onClick={() =>
+                                        handleCollectionClick(
+                                          classReading.collectionId,
+                                        )
+                                      }
+                                      className="text-xl flex-1"
+                                    >
+                                      <span className='font-semibold'>{classReading.collectionName}</span>, <span className='text-secondary'>{singularCapitalized} {classReading.classNumber}</span>{classReading.classTitle && <>
+                                        <span>:&nbsp;</span>
+                                        <span className='font-semibold'>
+                                          {classReading.classTitle}
+                                        </span>
+                                      </>}
+                                    </div>
+                                    <div className="flex flex-row items-center gap-2 shrink-0">
+                                      <span className="text-secondary text-base">
+                                        {formatReadingDate(classReading.readingDate)}
                                       </span>
-                                    </>}
+                                      <button
+                                        className="text-secondary hover:text-primary text-xl cursor-pointer"
+                                        title="Delete class"
+                                        aria-label="Delete class"
+                                        onClick={() => {
+                                          // TODO: Implement delete class functionality
+                                        }}
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
                                   </div>
                                   {classReading.classDescription && (
                                     <div className="text-base mb-1">

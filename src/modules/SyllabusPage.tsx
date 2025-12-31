@@ -1089,28 +1089,44 @@ function ClassGroupComponent({
                     readOnly={isLocked}
                   />
                 </div>
-                {!isLocked && (
-                  <div className="ml-auto! shrink-0 inline-flex flex-row items-baseline gap-1 in-[.print]:hidden">
-                    {hasManualOrder && (
+                <div className="ml-auto! shrink-0 inline-flex flex-row items-baseline gap-1 in-[.print]:hidden">
+                  {!isLocked && (
+                    <div className={twMerge(compactMode ? "text-sm mt-2" : "text-base mt-3")}>
+                      <ReadingDateInput
+                        initialValue={readingDate}
+                        onSave={(date) => onClassReadingDateSave(classNumber, date)}
+                        compactMode={compactMode}
+                      />
+                    </div>
+                  )}
+                  {isLocked && readingDate && (
+                    <div className={twMerge(compactMode ? "text-sm mt-2 text-secondary" : "text-base mt-3 text-secondary")}>
+                      Target date: {formatReadingDate(readingDate)}
+                    </div>
+                  )}
+                  {!isLocked && (
+                    <>
+                      {hasManualOrder && (
+                        <button
+                          className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
+                          onClick={handleResetSortOrder}
+                          title="Reset sort order"
+                          aria-label="Reset sort order"
+                        >
+                          <div className="text-lg text-center">⇅</div>
+                        </button>
+                      )}
                       <button
-                        className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
-                        onClick={handleResetSortOrder}
-                        title="Reset sort order"
-                        aria-label="Reset sort order"
+                        className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-red-500/15 text-secondary hover:text-red-400 inline-flex flex-row items-center justify-center w-8 h-8"
+                        onClick={handleDeleteClass}
+                        title={`Delete ${SyllabusManager.getNomenclatureFormatted(collectionId).singular}`}
+                        aria-label={`Delete ${SyllabusManager.getNomenclatureFormatted(collectionId).singular}`}
                       >
-                        <div className="text-lg text-center">⇅</div>
+                        <div className="text-2xl text-center">×</div>
                       </button>
-                    )}
-                    <button
-                      className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-red-500/15 text-secondary hover:text-red-400 inline-flex flex-row items-center justify-center w-8 h-8"
-                      onClick={handleDeleteClass}
-                      title={`Delete ${SyllabusManager.getNomenclatureFormatted(collectionId).singular}`}
-                      aria-label={`Delete ${SyllabusManager.getNomenclatureFormatted(collectionId).singular}`}
-                    >
-                      <div className="text-2xl text-center">×</div>
-                    </button>
-                  </div>
-                )}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -1129,20 +1145,6 @@ function ClassGroupComponent({
                 readOnly={isLocked}
               />
             </div>
-            {!isLocked && (
-              <div className={twMerge(compactMode ? "text-sm mt-2" : "text-base mt-3")}>
-                <ReadingDateInput
-                  initialValue={readingDate}
-                  onSave={(date) => onClassReadingDateSave(classNumber, date)}
-                  compactMode={compactMode}
-                />
-              </div>
-            )}
-            {isLocked && readingDate && (
-              <div className={twMerge(compactMode ? "text-sm mt-2 text-secondary" : "text-base mt-3 text-secondary")}>
-                Due: {formatReadingDate(readingDate)}
-              </div>
-            )}
           </div>
         </>
       )}
@@ -1268,7 +1270,7 @@ function ReadingDateInput({
           compactMode ? "text-sm" : "text-base",
         )}
       >
-        {Zotero.locale ? Zotero.getString(getLocaleID("reading-date-label")) : "Reading date"}:
+        Target date
       </label>
       <input
         type="date"
