@@ -15,6 +15,7 @@ import pluralize from "pluralize";
 import { getPref } from "../utils/prefs";
 import { HelloWorld } from "./HelloWorld";
 import { parseXULTemplate } from "../utils/ui";
+import { TabManager } from "../utils/tabManager";
 
 export enum SyllabusPriority {
   COURSE_INFO = "course-info",
@@ -93,8 +94,8 @@ export class SyllabusManager {
   static notifierID: string | null = null;
   static syllabusItemPaneSection: false | string | null = null;
   static readingsTabPanelID: string | null = null;
-  static readingListTab: { id: string; tab: _ZoteroTypes.TabInstance; rootElement: HTMLElement } | null = null;
   static readonly READING_LIST_TAB_ID = "syllabus-reading-list-tab";
+  static readonly READING_LIST_TAB_ROOT_ID = "reading-list-tab-root";
 
   static settingsKeys = SyllabusSettingsKey;
   static priorityKeys = SyllabusPriority;
@@ -243,10 +244,22 @@ export class SyllabusManager {
     this.setupUI();
     this.setupSyllabusViewTabListener();
     this.setupSyllabusViewReloadListener();
+
+    // Register reading list tab with TabManager
+    TabManager.getInstance().registerTabType({
+      type: "reading-list",
+      title: "Reading Schedule",
+      rootElementIdFactory: () => this.READING_LIST_TAB_ROOT_ID,
+      data: { icon: "book" },
+      componentFactory: (_params) => h(HelloWorld, {}),
+      // Always use the same tab
+      getTabId: () => this.READING_LIST_TAB_ID,
+    });
+
     // Re-render reading list tab if it exists (for hot reload)
     // Use a small delay to ensure tabs are initialized
     Zotero.Promise.delay(100).then(() => {
-      this.rerenderReadingListTab(win);
+      TabManager.getInstance().rerenderTab("reading-list", win);
     });
   }
 
@@ -305,7 +318,7 @@ export class SyllabusManager {
     ztoolkit.log("SyllabusManager.onMainWindowUnload", win);
     this.setupUI();
     this.cleanupSyllabusViewTabListener();
-    this.cleanupReadingListTab();
+    TabManager.getInstance().cleanupAll();
   }
 
   static onShutdown() {
@@ -2723,196 +2736,11 @@ export class SyllabusManager {
     return result;
   }
 
-
-  static READING_LIST_TAB_ROOT_ID = "reading-list-tab-root";
-
-  /**
-   * Find existing reading list tab by ID
-   */
-  static findReadingListTab(win: _ZoteroTypes.MainWindow): { id: string; tab: _ZoteroTypes.TabInstance; rootElement: HTMLElement } | null {
-    const tabs = ztoolkit.getGlobal("Zotero_Tabs");
-
-    // Try to find tab by ID
-    let tabInstance: _ZoteroTypes.TabInstance
-    try {
-      tabInstance = tabs._getTab(this.READING_LIST_TAB_ID)?.tab
-    } catch {
-      // Tab doesn't exist
-      return null;
-    }
-
-    if (!tabInstance) {
-      return null;
-    }
-
-    // Find or create root element
-    let rootElement = win.document.getElementById("reading-list-tab-root") as HTMLElement;
-    if (!rootElement) {
-      rootElement = win.document.createElement("div");
-      rootElement.id = this.READING_LIST_TAB_ROOT_ID;
-      rootElement.style.width = "100%";
-      rootElement.style.height = "100%";
-
-      // Find the tabpanel and append root element
-      const deck = tabs.deck;
-      const tabPanels = deck.querySelectorAll("tabpanel");
-      const tabPanel = Array.from(tabPanels).find((panel: any) => {
-        return panel.getAttribute("id") === `zotero-view-tab-${this.READING_LIST_TAB_ID}` ||
-          panel.getAttribute("data-tab-id") === this.READING_LIST_TAB_ID;
-      }) as HTMLElement;
-      if (tabPanel) {
-        tabPanel.appendChild(rootElement);
-      } else {
-        deck.appendChild(rootElement);
-      }
-    }
-
-    return { id: tabInstance.id, tab: tabInstance, rootElement };
-  }
-
-  /**
-   * Create a new reading list tab
-   */
-  static createReadingListTab(win: _ZoteroTypes.MainWindow): { id: string; tab: _ZoteroTypes.TabInstance; rootElement: HTMLElement } | null {
-    const tabs = ztoolkit.getGlobal("Zotero_Tabs");
-
-    // Create new tab with defined ID
-    const tabResult = tabs.add({
-      id: this.READING_LIST_TAB_ID,
-      type: "reading-list",
-      title: "Reading Schedule",
-      data: { icon: "book" },
-      onClose: () => {
-        // Clean up reference when tab is closed
-        this.readingListTab = null;
-      },
-    });
-
-    // Create root element
-    const rootElement = win.document.createElement("div");
-    rootElement.id = this.READING_LIST_TAB_ROOT_ID;
-    rootElement.style.width = "100%";
-    rootElement.style.height = "100%";
-    tabResult.container.appendChild(rootElement);
-
-    // Get tab instance from state
-    const tabInstance = tabs._getTab(tabResult.id).tab
-
-    if (!tabInstance) {
-      return null;
-    }
-
-    return { id: tabInstance.id, tab: tabInstance, rootElement };
-  }
-
-  /**
-   * Find or create the reading list tab
-   */
-  static findOrCreateReadingListTab(win: _ZoteroTypes.MainWindow): { id: string; tab: _ZoteroTypes.TabInstance; rootElement: HTMLElement } | null {
-    // First try to find existing tab
-    const existing = this.findReadingListTab(win);
-    if (existing) {
-      this.readingListTab = existing;
-      return existing;
-    }
-
-    // Create new tab
-    const created = this.createReadingListTab(win);
-    if (created) {
-      this.readingListTab = created;
-      return created;
-    }
-
-    return null;
-  }
-
-  /**
-   * Select the reading list tab
-   */
-  static selectReadingListTab(win: _ZoteroTypes.MainWindow) {
-    try {
-      win.Zotero_Tabs.select(this.READING_LIST_TAB_ID, true);
-    } catch {
-      // Tab doesn't exist, nothing to select
-    }
-  }
-
-  /**
-   * Render the reading list tab content
-   */
-  static renderReadingListTab(win: _ZoteroTypes.MainWindow) {
-    // Ensure we have tab reference
-    if (!this.readingListTab) {
-      this.findOrCreateReadingListTab(win);
-    }
-
-    if (!this.readingListTab?.rootElement) {
-      return;
-    }
-
-    const rootElement = this.readingListTab.rootElement;
-
-    // Ensure root element is attached to DOM
-    if (!rootElement.isConnected) {
-      const tabs = ztoolkit.getGlobal("Zotero_Tabs");
-      try {
-        const tabResult = tabs._getTab(this.READING_LIST_TAB_ID);
-        if (tabResult) {
-          const deck = tabs.deck;
-          const tabPanels = deck.querySelectorAll("tabpanel");
-          const tabPanel = Array.from(tabPanels).find((panel: any) => {
-            return panel.getAttribute("id") === `zotero-view-tab-${this.READING_LIST_TAB_ID}` ||
-              panel.getAttribute("data-tab-id") === this.READING_LIST_TAB_ID;
-          }) as HTMLElement;
-          if (tabPanel) {
-            tabPanel.appendChild(rootElement);
-          } else {
-            deck.appendChild(rootElement);
-          }
-        }
-      } catch {
-        // Tab doesn't exist, can't render
-        return;
-      }
-    }
-
-    // Clear and render
-    rootElement.textContent = "";
-    renderComponent(
-      win,
-      rootElement,
-      h(HelloWorld, {}),
-      "reading-list-tab",
-    );
-  }
-
   /**
    * Open and render the reading list tab
    */
   static openReadingListTab() {
     const win = Zotero.getMainWindow();
-    const tabData = this.findOrCreateReadingListTab(win);
-
-    ztoolkit.log("openReadingListTab", "tabData", tabData);
-    if (tabData) {
-      // Zotero.Promise.delay(1000).then(() => {
-      this.selectReadingListTab(win);
-      this.renderReadingListTab(win);
-      // });
-    }
-  }
-
-  /**
-   * Re-render the reading list tab content (for hot reload support)
-   */
-  static rerenderReadingListTab(win: _ZoteroTypes.MainWindow) {
-    this.renderReadingListTab(win);
-  }
-
-  /**
-   * Clean up reading list tab reference (called on window unload or tab close)
-   */
-  static cleanupReadingListTab() {
-    this.readingListTab = null;
+    TabManager.getInstance().openTab("reading-list", win);
   }
 }
