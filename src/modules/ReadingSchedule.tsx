@@ -1,10 +1,11 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
 import { useMemo } from "preact/hooks";
+import { useSyncExternalStore } from "react-dom/src";
 import { twMerge } from "tailwind-merge";
 import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
 import { SyllabusItemCard } from "./SyllabusPage";
-import { endOfWeek, formatDate, startOfWeek } from "date-fns";
+import { formatDate, startOfWeek } from "date-fns";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import { getAllCollections } from "../utils/zotero";
 
@@ -30,10 +31,93 @@ function formatWeekRange(weekStart: Date): string {
   // return `${start.toLocaleDateString(undefined, { month: "short", day: "numeric" })} - ${end.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`;
 }
 
+// Store to track changes to syllabus data (class metadata, assignments, etc.)
+function createReadingScheduleStore() {
+  let version = 0;
+
+  function getSnapshot() {
+    // Return a version number that changes when data updates
+    return version;
+  }
+
+  function subscribe(onStoreChange: () => void) {
+    const prefKey = SyllabusManager.getPreferenceKey(
+      SyllabusManager.settingsKeys.COLLECTION_METADATA,
+    );
+
+    const observer = {
+      notify(
+        event: string,
+        type: string,
+        ids: (number | string)[],
+        extraData: any,
+      ) {
+        let shouldUpdate = false;
+
+        // Listen to setting events for collection metadata (reading dates, class titles, etc.)
+        if (type === "setting" && extraData?.pref === prefKey) {
+          shouldUpdate = true;
+        }
+
+        // Listen to item modify/delete events (assignments changed)
+        if (type === "item" && (event === "modify" || event === "delete")) {
+          shouldUpdate = true;
+        }
+
+        // Listen to collection-item events (items added/removed from collections)
+        if (type === "collection-item") {
+          shouldUpdate = true;
+        }
+
+        // Listen to collection modify/refresh events
+        if (type === "collection" && (event === "modify" || event === "refresh")) {
+          shouldUpdate = true;
+        }
+
+        if (shouldUpdate) {
+          version++;
+          onStoreChange();
+        }
+      },
+    };
+
+    const notifierId = Zotero.Notifier.registerObserver(observer, [
+      "setting",
+      "item",
+      "collection-item",
+      "collection",
+    ]);
+
+    // Also listen to the custom event emitter for collection metadata changes
+    const unsubscribeEmitter =
+      SyllabusManager.onCollectionMetadataChange(() => {
+        version++;
+        onStoreChange();
+      });
+
+    // Return an unsubscribe fn
+    return () => {
+      Zotero.Notifier.unregisterObserver(notifierId);
+      unsubscribeEmitter();
+    };
+  }
+
+  return { getSnapshot, subscribe };
+}
+
+const readingScheduleStore = createReadingScheduleStore();
+
 export function ReadingSchedule() {
   const [compactMode] = useZoteroCompactMode();
 
+  // Subscribe to changes in syllabus data to trigger re-renders
+  const dataVersion = useSyncExternalStore(
+    readingScheduleStore.subscribe,
+    readingScheduleStore.getSnapshot,
+  );
+
   // Get all readings across all collections
+  // Recompute when dataVersion changes (when class metadata or assignments change)
   const readingsByWeek = useMemo(() => {
     const result = new Map<
       string, // ISO date string of week start
@@ -142,7 +226,7 @@ export function ReadingSchedule() {
     }
 
     return result;
-  }, []);
+  }, [dataVersion]);
 
   // Convert to sorted array for rendering, filtering out past weeks
   const sortedWeeks = useMemo(() => {
