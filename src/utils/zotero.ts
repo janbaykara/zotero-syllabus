@@ -4,10 +4,8 @@ export function getSelectedCollection() {
 }
 
 export function getAllCollections() {
-  const libraries = Array.from(Zotero.Libraries.getAll())
-  const library = libraries.find(
-    (library) => library.name === "My Library",
-  )
+  const libraries = Array.from(Zotero.Libraries.getAll());
+  const library = libraries.find((library) => library.name === "My Library");
   if (!library) {
     return [];
   }
