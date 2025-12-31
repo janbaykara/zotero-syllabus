@@ -768,7 +768,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                   onClick={() => {
                     SyllabusManager.openReadingListTab()
                   }}
-                  className="grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden"
+                  className="grow-0 shrink-0 cursor-pointer in-[.print]:hidden"
                   title="View all readings"
                   aria-label="View all readings"
                 >
@@ -776,7 +776,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                 </button>
                 <button
                   onClick={() => setShowSettings(true)}
-                  className="grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden"
+                  className="grow-0 shrink-0 cursor-pointer in-[.print]:hidden"
                   title="Edit syllabus settings"
                   aria-label="Edit syllabus settings"
                 >
@@ -786,7 +786,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                 <button
                   onClick={toggleCompactMode}
                   className={twMerge(
-                    "grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden",
+                    "grow-0 shrink-0 cursor-pointer in-[.print]:hidden",
                   )}
                   title={
                     compactMode ? "Disable compact mode" : "Enable compact mode"
@@ -800,7 +800,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                 </button>
                 <button
                   onClick={handlePrint}
-                  className="grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden"
+                  className="grow-0 shrink-0 cursor-pointer in-[.print]:hidden"
                   title="Print the list in Syllabus view as a PDF"
                   aria-label="Print the list in Syllabus view as a PDF"
                 >

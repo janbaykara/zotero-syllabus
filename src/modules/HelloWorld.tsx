@@ -1,10 +1,12 @@
 import { h } from "preact";
 
-export function HelloWorld() {
+export function HelloWorld({ buttonProp }: { buttonProp: string }) {
   return (
-    <div>
-      <h1 className='pb-12 text-red-500'>Hello World!</h1>
-      <button>Click me</button>
+    <div className="container-padding">
+      <header>
+        <h1 className="text-4xl font-bold">Reading Schedule</h1>
+      </header>
+      <button>{buttonProp}</button>
     </div>
   )
 }

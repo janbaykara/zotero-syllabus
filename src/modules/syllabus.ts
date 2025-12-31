@@ -1,3 +1,4 @@
+import slugify from 'slugify';
 /**
  * Syllabus Manager - Core functionality for syllabus view and metadata
  */
@@ -90,12 +91,20 @@ export interface CustomPriority {
   order: number; // Sort order (lower = higher priority)
 }
 
+const tabManager = new TabManager<{ buttonProp: string }>({
+  type: "reading-list",
+  title(params) { return `Reading Schedule ${params?.buttonProp}`; },
+  rootElementIdFactory: () => "reading-list-tab-root",
+  data: { icon: "book" },
+  componentFactory: (params) => params ? h(HelloWorld, params) : null,
+  getTabId: (params) => params ? `syllabus-reading-list-tab-${slugify(params.buttonProp, { strict: true })}` : `syllabus-reading-list-tab-${uuidv7()}`,
+});
+
 export class SyllabusManager {
   static notifierID: string | null = null;
   static syllabusItemPaneSection: false | string | null = null;
   static readingsTabPanelID: string | null = null;
-  static readonly READING_LIST_TAB_ID = "syllabus-reading-list-tab";
-  static readonly READING_LIST_TAB_ROOT_ID = "reading-list-tab-root";
+  static helloWorldTab = tabManager
 
   static settingsKeys = SyllabusSettingsKey;
   static priorityKeys = SyllabusPriority;
@@ -245,21 +254,13 @@ export class SyllabusManager {
     this.setupSyllabusViewTabListener();
     this.setupSyllabusViewReloadListener();
 
-    // Register reading list tab with TabManager
-    TabManager.getInstance().registerTabType({
-      type: "reading-list",
-      title: "Reading Schedule",
-      rootElementIdFactory: () => this.READING_LIST_TAB_ROOT_ID,
-      data: { icon: "book" },
-      componentFactory: (_params) => h(HelloWorld, {}),
-      // Always use the same tab
-      getTabId: () => this.READING_LIST_TAB_ID,
-    });
-
     // Re-render reading list tab if it exists (for hot reload)
     // Use a small delay to ensure tabs are initialized
     Zotero.Promise.delay(100).then(() => {
-      TabManager.getInstance().rerenderTab("reading-list", win);
+      if (this.helloWorldTab) {
+        ztoolkit.log("SyllabusManager.onMainWindowLoad: rerendering reading list tab");
+        this.helloWorldTab.rerender(win);
+      }
     });
   }
 
@@ -318,7 +319,9 @@ export class SyllabusManager {
     ztoolkit.log("SyllabusManager.onMainWindowUnload", win);
     this.setupUI();
     this.cleanupSyllabusViewTabListener();
-    TabManager.getInstance().cleanupAll();
+    if (this.helloWorldTab) {
+      this.helloWorldTab.cleanupAll();
+    }
   }
 
   static onShutdown() {
@@ -2741,6 +2744,8 @@ export class SyllabusManager {
    */
   static openReadingListTab() {
     const win = Zotero.getMainWindow();
-    TabManager.getInstance().openTab("reading-list", win);
+    if (this.helloWorldTab) {
+      this.helloWorldTab.open(win, { buttonProp: uuidv7() });
+    }
   }
 }
