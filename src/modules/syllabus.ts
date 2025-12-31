@@ -4,7 +4,7 @@ import slugify from "slugify";
  */
 
 import { getLocaleID, getString } from "../utils/locale";
-import { ExtraFieldTool } from "zotero-plugin-toolkit";
+import { ExtraFieldTool, ZoteroToolkit } from "zotero-plugin-toolkit";
 import { renderSyllabusPage } from "./SyllabusPage";
 import { getSelectedCollection } from "../utils/zotero";
 import { getCurrentTab } from "../utils/window";
@@ -18,6 +18,7 @@ import { getPref } from "../utils/prefs";
 import { ReadingSchedule } from "./ReadingSchedule";
 import { parseXULTemplate } from "../utils/ui";
 import { TabManager } from "../utils/tabManager";
+import { FEATURE_FLAG } from "./featureFlags";
 
 export enum SyllabusPriority {
   COURSE_INFO = "course-info",
@@ -92,19 +93,22 @@ export interface CustomPriority {
   order: number; // Sort order (lower = higher priority)
 }
 
-const tabManager = new TabManager<Record<string, never>>({
-  type: "reading-list",
-  title: "Reading Schedule",
-  rootElementIdFactory: () => "reading-list-tab-root",
-  data: { icon: "book" },
-  componentFactory: () => h(ReadingSchedule, {}),
-  getTabId: () => "syllabus-reading-list-tab",
-});
+const tabManager = FEATURE_FLAG.READING_SCHEDULE
+  ? new TabManager<Record<string, never>>({
+      type: "reading-list",
+      title: "Reading Schedule",
+      rootElementIdFactory: () => "reading-list-tab-root",
+      data: { icon: "book" },
+      componentFactory: () => h(ReadingSchedule, {}),
+      getTabId: () => "syllabus-reading-list-tab",
+    })
+  : null;
 
 export class SyllabusManager {
   static notifierID: string | null = null;
   static syllabusItemPaneSection: false | string | null = null;
   static readingsTabPanelID: string | null = null;
+
   static readingScheduleTab = tabManager;
 
   static settingsKeys = SyllabusSettingsKey;
@@ -557,44 +561,50 @@ export class SyllabusManager {
       SyllabusManager.updateButtonLabel(toggleButton);
 
       // Create "Review your Reading Schedule" button (for Main Library)
-      readingScheduleButton = ztoolkit.UI.createElement(doc, "toolbarbutton", {
-        id: "syllabus-reading-schedule-button",
-        classList: ["syllabus-view-toggle"],
-        properties: {
-          label: "Review your Reading Schedule",
-          tooltiptext: "Open Reading Schedule",
-        },
-        listeners: [
+      if (FEATURE_FLAG.READING_SCHEDULE) {
+        readingScheduleButton = ztoolkit.UI.createElement(
+          doc,
+          "toolbarbutton",
           {
-            type: "click",
-            listener: () => {
-              SyllabusManager.openReadingListTab();
+            id: "syllabus-reading-schedule-button",
+            classList: ["syllabus-view-toggle"],
+            properties: {
+              label: "Review your Reading Schedule",
+              tooltiptext: "Open Reading Schedule",
             },
-          },
-        ],
-      });
-
-      // Create "Reading Schedule" button (for collection pages)
-      collectionReadingScheduleButton = ztoolkit.UI.createElement(
-        doc,
-        "toolbarbutton",
-        {
-          id: "syllabus-collection-reading-schedule-button",
-          classList: ["syllabus-view-toggle"],
-          properties: {
-            label: "Reading Schedule",
-            tooltiptext: "Open Reading Schedule",
-          },
-          listeners: [
-            {
-              type: "click",
-              listener: () => {
-                SyllabusManager.openReadingListTab();
+            listeners: [
+              {
+                type: "click",
+                listener: () => {
+                  SyllabusManager.openReadingListTab();
+                },
               },
+            ],
+          },
+        );
+
+        // Create "Reading Schedule" button (for collection pages)
+        collectionReadingScheduleButton = ztoolkit.UI.createElement(
+          doc,
+          "toolbarbutton",
+          {
+            id: "syllabus-collection-reading-schedule-button",
+            classList: ["syllabus-view-toggle"],
+            properties: {
+              label: "Reading Schedule",
+              tooltiptext: "Open Reading Schedule",
             },
-          ],
-        },
-      );
+            listeners: [
+              {
+                type: "click",
+                listener: () => {
+                  SyllabusManager.openReadingListTab();
+                },
+              },
+            ],
+          },
+        );
+      }
 
       // Create spacer element if it doesn't exist
       if (!spacer) {
@@ -609,91 +619,101 @@ export class SyllabusManager {
       // Insert buttons and spacer before the search spinner, or append to toolbar if spinner not found
       if (searchSpinner && searchSpinner.parentNode) {
         searchSpinner.parentNode.insertBefore(toggleButton, searchSpinner);
-        searchSpinner.parentNode.insertBefore(
-          collectionReadingScheduleButton,
-          searchSpinner,
-        );
-        searchSpinner.parentNode.insertBefore(
-          readingScheduleButton,
-          searchSpinner,
-        );
+        if (FEATURE_FLAG.READING_SCHEDULE && collectionReadingScheduleButton) {
+          searchSpinner.parentNode.insertBefore(
+            collectionReadingScheduleButton,
+            searchSpinner,
+          );
+        }
+        if (FEATURE_FLAG.READING_SCHEDULE && readingScheduleButton) {
+          searchSpinner.parentNode.insertBefore(
+            readingScheduleButton,
+            searchSpinner,
+          );
+        }
         searchSpinner.parentNode.insertBefore(spacer, searchSpinner);
       } else {
         itemsToolbar.appendChild(toggleButton);
-        itemsToolbar.appendChild(collectionReadingScheduleButton);
-        itemsToolbar.appendChild(readingScheduleButton);
+        if (FEATURE_FLAG.READING_SCHEDULE && collectionReadingScheduleButton) {
+          itemsToolbar.appendChild(collectionReadingScheduleButton);
+        }
+        if (FEATURE_FLAG.READING_SCHEDULE && readingScheduleButton) {
+          itemsToolbar.appendChild(readingScheduleButton);
+        }
         itemsToolbar.appendChild(spacer);
       }
     } else {
-      // Ensure reading schedule buttons exist
-      if (!readingScheduleButton) {
-        readingScheduleButton = doc.getElementById(
-          "syllabus-reading-schedule-button",
-        ) as unknown as XULButtonElement;
+      // Ensure reading schedule buttons exist (only if feature is enabled)
+      if (FEATURE_FLAG.READING_SCHEDULE) {
         if (!readingScheduleButton) {
-          readingScheduleButton = ztoolkit.UI.createElement(
-            doc,
-            "toolbarbutton",
-            {
-              id: "syllabus-reading-schedule-button",
-              classList: ["syllabus-view-toggle"],
-              properties: {
-                label: "Review your Reading Schedule",
-                tooltiptext: "Open Reading Schedule",
-              },
-              listeners: [
-                {
-                  type: "click",
-                  listener: () => {
-                    SyllabusManager.openReadingListTab();
-                  },
+          readingScheduleButton = doc.getElementById(
+            "syllabus-reading-schedule-button",
+          ) as unknown as XULButtonElement;
+          if (!readingScheduleButton) {
+            readingScheduleButton = ztoolkit.UI.createElement(
+              doc,
+              "toolbarbutton",
+              {
+                id: "syllabus-reading-schedule-button",
+                classList: ["syllabus-view-toggle"],
+                properties: {
+                  label: "Review your Reading Schedule",
+                  tooltiptext: "Open Reading Schedule",
                 },
-              ],
-            },
-          );
-
-          // Insert after toggle button
-          if (toggleButton.parentNode) {
-            toggleButton.parentNode.insertBefore(
-              readingScheduleButton,
-              toggleButton.nextSibling,
+                listeners: [
+                  {
+                    type: "click",
+                    listener: () => {
+                      SyllabusManager.openReadingListTab();
+                    },
+                  },
+                ],
+              },
             );
+
+            // Insert after toggle button
+            if (toggleButton.parentNode) {
+              toggleButton.parentNode.insertBefore(
+                readingScheduleButton,
+                toggleButton.nextSibling,
+              );
+            }
           }
         }
-      }
 
-      if (!collectionReadingScheduleButton) {
-        collectionReadingScheduleButton = doc.getElementById(
-          "syllabus-collection-reading-schedule-button",
-        ) as unknown as XULButtonElement;
         if (!collectionReadingScheduleButton) {
-          collectionReadingScheduleButton = ztoolkit.UI.createElement(
-            doc,
-            "toolbarbutton",
-            {
-              id: "syllabus-collection-reading-schedule-button",
-              classList: ["syllabus-view-toggle"],
-              properties: {
-                label: "Reading Schedule",
-                tooltiptext: "Open Reading Schedule",
-              },
-              listeners: [
-                {
-                  type: "click",
-                  listener: () => {
-                    SyllabusManager.openReadingListTab();
-                  },
+          collectionReadingScheduleButton = doc.getElementById(
+            "syllabus-collection-reading-schedule-button",
+          ) as unknown as XULButtonElement;
+          if (!collectionReadingScheduleButton) {
+            collectionReadingScheduleButton = ztoolkit.UI.createElement(
+              doc,
+              "toolbarbutton",
+              {
+                id: "syllabus-collection-reading-schedule-button",
+                classList: ["syllabus-view-toggle"],
+                properties: {
+                  label: "Reading Schedule",
+                  tooltiptext: "Open Reading Schedule",
                 },
-              ],
-            },
-          );
-
-          // Insert right after toggle button
-          if (toggleButton.parentNode) {
-            toggleButton.parentNode.insertBefore(
-              collectionReadingScheduleButton,
-              toggleButton.nextSibling,
+                listeners: [
+                  {
+                    type: "click",
+                    listener: () => {
+                      SyllabusManager.openReadingListTab();
+                    },
+                  },
+                ],
+              },
             );
+
+            // Insert right after toggle button
+            if (toggleButton.parentNode) {
+              toggleButton.parentNode.insertBefore(
+                collectionReadingScheduleButton,
+                toggleButton.nextSibling,
+              );
+            }
           }
         }
       }
@@ -739,12 +759,17 @@ export class SyllabusManager {
       "syllabus-collection-reading-schedule-button",
     ) as XULButtonElement | null;
 
-    if (
-      !toggleButton ||
-      !readingScheduleButton ||
-      !collectionReadingScheduleButton
-    )
+    if (!toggleButton) return;
+
+    // If reading schedule feature is disabled, hide all reading schedule buttons
+    if (!FEATURE_FLAG.READING_SCHEDULE) {
+      if (readingScheduleButton) readingScheduleButton.hidden = true;
+      if (collectionReadingScheduleButton)
+        collectionReadingScheduleButton.hidden = true;
       return;
+    }
+
+    if (!readingScheduleButton || !collectionReadingScheduleButton) return;
 
     const selectedCollection = getSelectedCollection();
     const currentTab = getCurrentTab();

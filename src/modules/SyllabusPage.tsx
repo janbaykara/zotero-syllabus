@@ -26,6 +26,7 @@ import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata"
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
 import { useZoteroSelectedItemId } from "./react-zotero-sync/selectedItem";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
+import { FEATURE_FLAG } from "./featureFlags";
 import {
   getItemReadStatusName,
   getReadStatusMetadata,
@@ -1095,7 +1096,7 @@ function ClassGroupComponent({
                   />
                 </div>
                 <div className="ml-auto! shrink-0 inline-flex flex-row items-baseline gap-1 in-[.print]:hidden">
-                  {!isLocked && (
+                  {FEATURE_FLAG.READING_SCHEDULE && !isLocked && (
                     <div
                       className={twMerge(
                         compactMode ? "text-sm mt-2" : "text-base mt-3",
@@ -1110,7 +1111,7 @@ function ClassGroupComponent({
                       />
                     </div>
                   )}
-                  {isLocked && readingDate && (
+                  {FEATURE_FLAG.READING_SCHEDULE && isLocked && readingDate && (
                     <div
                       className={twMerge(
                         compactMode

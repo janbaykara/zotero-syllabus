@@ -4,8 +4,12 @@ export function getSelectedCollection() {
 }
 
 export function getAllCollections() {
-  const libraryId = Zotero.Libraries.getAll().find(
+  const libraries = Array.from(Zotero.Libraries.getAll())
+  const library = libraries.find(
     (library) => library.name === "My Library",
-  )!.id;
-  return Zotero.Collections.getByLibrary(libraryId);
+  )
+  if (!library) {
+    return [];
+  }
+  return Zotero.Collections.getByLibrary(library.id);
 }
