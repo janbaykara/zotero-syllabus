@@ -250,6 +250,7 @@ export class SyllabusManager {
     this.registerNotifier();
     this.registerSyllabusInfoColumn();
     this.registerSyllabusClassInstructionColumn();
+    this.registerSyllabusStatusColumn();
     this.reloadItemPane();
   }
 
@@ -259,8 +260,7 @@ export class SyllabusManager {
     // if (collectionId) {
     //   this.cleanupItemMetadata(collectionId);
     // }
-    this.setupContextMenuSetPriority();
-    this.setupContextMenuSetClassNumber();
+    this.registerContextualMenus();
     this.setupUI();
     this.setupSyllabusViewTabListener();
     this.setupSyllabusViewReloadListener();
@@ -275,6 +275,12 @@ export class SyllabusManager {
         this.readingScheduleTab.renderAllTabs(win);
       }
     });
+  }
+
+  static registerContextualMenus() {
+    this.setupContextMenuSetPriority();
+    this.setupContextMenuSetClassNumber();
+    this.setupContextMenuSetStatus();
   }
 
   static onNotify(
@@ -308,7 +314,7 @@ export class SyllabusManager {
 
   static onClassListUpdate() {
     ztoolkit.log("SyllabusManager.onClassListUpdate");
-    this.setupContextMenuSetClassNumber();
+    this.registerContextualMenus();
   }
 
   /**
@@ -429,7 +435,7 @@ export class SyllabusManager {
         // Update button visibility when collection changes
         SyllabusManager.updateButtonVisibility();
         // Reload context menus for the new collection
-        SyllabusManager.setupContextMenuSetPriority();
+        SyllabusManager.registerContextualMenus();
       } else if (tabChanged) {
         ztoolkit.log("Tab changed", newTabId);
         currentTabId = newTabId;
@@ -899,6 +905,52 @@ export class SyllabusManager {
         }
 
         return "";
+      },
+    });
+  }
+
+  static async registerSyllabusStatusColumn() {
+    const field = "syllabus-status";
+    await Zotero.ItemTreeManager.registerColumns({
+      pluginID: addon.data.config.addonID,
+      dataKey: field,
+      label: "Status",
+      // iconLabel: "chrome://zotero/skin/16/universal/checkmark.svg",
+      iconPath: "chrome://zotero/skin/16/universal/tick.svg",
+      width: "100px",
+      fixedWidth: true,
+      dataProvider: (item: Zotero.Item, dataKey: string) => {
+        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+        const selectedCollection = zoteroPane.getSelectedCollection();
+
+        if (selectedCollection) {
+          const firstAssignment = SyllabusManager.getFirstAssignment(
+            item,
+            selectedCollection.id,
+          );
+          // Return "done" or "" for sorting (empty string sorts first)
+          return firstAssignment?.status === "done" ? "done" : "";
+        }
+
+        return "";
+      },
+      renderCell: (index, data, column, isFirstColumn, doc) => {
+        const container = doc.createElement("span");
+        container.className = `cell ${column.className}`;
+        container.style.display = "flex";
+        container.style.alignItems = "center";
+        container.style.justifyContent = "center";
+
+        if (data === "done") {
+          const checkmark = doc.createElement("span");
+          checkmark.textContent = "✓";
+          checkmark.style.color = "var(--zotero-color-accent-green)";
+          checkmark.style.fontWeight = "bold";
+          checkmark.style.fontSize = "14px";
+          container.appendChild(checkmark);
+        }
+
+        return container;
       },
     });
   }
@@ -1408,6 +1460,46 @@ export class SyllabusManager {
     });
 
     return children;
+  }
+
+  static setupContextMenuSetStatus() {
+    ztoolkit.Menu.unregister("syllabus-set-status-menu");
+    const createStatusHandler = (status: "done" | null) => async () => {
+      const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+      const selectedCollection = zoteroPane.getSelectedCollection();
+      if (!selectedCollection) return;
+      const items = zoteroPane.getSelectedItems();
+      for (const item of items) {
+        if (item.isRegularItem()) {
+          await this.applyToFirstAssignment(item, selectedCollection.id, {
+            status: status || undefined,
+          });
+          await item.saveTx();
+        }
+      }
+      if (zoteroPane.itemPane) {
+        zoteroPane.itemPane.render();
+      }
+    };
+
+    ztoolkit.Menu.register("item", {
+      tag: "menu",
+      id: "syllabus-set-status-menu",
+      label: "Set Reading Status",
+      icon: "chrome://zotero/skin/16/universal/book.svg",
+      children: [
+        {
+          tag: "menuitem" as const,
+          label: "Done",
+          commandListener: createStatusHandler("done"),
+        },
+        {
+          tag: "menuitem" as const,
+          label: "Not Done",
+          commandListener: createStatusHandler(null),
+        },
+      ],
+    });
   }
 
   static setCollectionTitle(
