@@ -1119,7 +1119,7 @@ function ClassGroupComponent({
                           : "text-base mt-3 text-secondary",
                       )}
                     >
-                      <span className="text-tertiary">Target date: </span>
+                      <span className="text-tertiary">Due date: </span>
                       <span className="text-secondary">
                         {formatReadingDate(readingDate)}
                       </span>
@@ -1287,7 +1287,7 @@ function ReadingDateInput({
           compactMode ? "text-sm" : "text-base",
         )}
       >
-        Target date
+        Due date
       </label>
       <input
         type="date"

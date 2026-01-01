@@ -5,7 +5,7 @@ import { useSyncExternalStore } from "react-dom/src";
 import { twMerge } from "tailwind-merge";
 import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
 import { SyllabusItemCard } from "./SyllabusPage";
-import { setDefaultOptions, startOfWeek } from "date-fns";
+import { formatDate, setDefaultOptions, startOfWeek } from "date-fns";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import { getAllCollections } from "../utils/zotero";
 
@@ -25,31 +25,7 @@ interface ClassReading {
 
 function formatReadingDate(isoDate: string): string {
   const date = new Date(isoDate);
-  // Format as "6th Feb" without i18n
-  const day = date.getDate();
-  const daySuffix =
-    day === 1 || day === 21 || day === 31
-      ? "st"
-      : day === 2 || day === 22
-        ? "nd"
-        : day === 3 || day === 23
-          ? "rd"
-          : "th";
-  const monthNames = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
-  return `${day}${daySuffix} ${monthNames[date.getMonth()]}`;
+  return formatDate(date, "iiii do");
 }
 
 function formatWeekRange(weekStart: Date): string {
@@ -435,16 +411,12 @@ export function ReadingSchedule() {
                         },
                       );
 
-                      const isoDate = new Date(dateTimestamp)
-                        .toISOString()
-                        .split("T")[0];
-
                       return (
                         <div key={dateTimestamp}>
                           <div
                             className={twMerge("mb-3 text-secondary text-2xl")}
                           >
-                            {formatReadingDate(isoDate)}
+                            {formatReadingDate(dateTimestamp)}
                           </div>
 
                           {sortedClassReadings.map((classReading) => {

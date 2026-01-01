@@ -93,9 +93,9 @@ Right-click an item to re-assign class number or priority.
 
 ![Context menu showing syllabus operations](doc/images/right-click.png)
 
-#### Set a target date for a class
+#### Set a due date for a class
 
-![Reading schedule view with target date](doc/images/scheduling.png)
+![Reading schedule view with due date](doc/images/scheduling.png)
 
 #### Review your reading schedule across all classes
 
