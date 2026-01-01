@@ -2359,7 +2359,23 @@ export class SyllabusManager {
       return {};
     }
     try {
-      return JSON.parse(metadataStr) as SettingsCollectionDictionaryData;
+      const metadata = JSON.parse(
+        metadataStr,
+      ) as SettingsCollectionDictionaryData;
+      // Remove null classes from .classes array
+      for (const [_id, collectionMetadata] of Object.entries(metadata)) {
+        if (collectionMetadata.classes) {
+          for (const [classNumber, classMetadata] of Object.entries(
+            collectionMetadata.classes,
+          )) {
+            if (!classMetadata?.readingDate) {
+              delete collectionMetadata.classes[classNumber];
+            }
+          }
+        }
+      }
+      ztoolkit.log("Metadata:", metadata);
+      return metadata;
     } catch (e) {
       ztoolkit.log("Error parsing collection metadata:", e);
       return {};
@@ -2508,7 +2524,7 @@ export class SyllabusManager {
         )) {
           const classNum = parseInt(classNumStr, 10);
           if (!isNaN(classNum) && classData.title) {
-            classMap.set(classNum, classData.title);
+            classMap.set(classNum, classData.title || `Class ${classNum}`);
           }
         }
       }

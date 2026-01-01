@@ -20,5 +20,9 @@ export function getAllCollections(recursive = true) {
       });
     }
   }
-  return collections;
+  const collectionMap = new Map<string, Zotero.Collection>();
+  for (const collection of collections) {
+    collectionMap.set(collection.key, collection);
+  }
+  return Array.from(collectionMap.values());
 }

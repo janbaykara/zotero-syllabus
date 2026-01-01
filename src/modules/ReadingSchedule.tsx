@@ -177,6 +177,7 @@ export function ReadingSchedule() {
       for (const [classNumStr, classMetadata] of Object.entries(
         collectionData.classes,
       )) {
+        if (!classMetadata?.readingDate) continue;
         const classNumber = parseInt(classNumStr, 10);
         if (isNaN(classNumber)) continue;
 
@@ -508,8 +509,8 @@ export function ReadingSchedule() {
                                             compactMode ||
                                             !priority ||
                                             priority ===
-                                            SyllabusManager.priorityKeys
-                                              .OPTIONAL
+                                              SyllabusManager.priorityKeys
+                                                .OPTIONAL
                                           }
                                           compactMode={compactMode}
                                           isLocked={true}
