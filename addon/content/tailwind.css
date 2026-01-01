@@ -249,6 +249,9 @@
   .w-full {
     width: 100%;
   }
+  .w-full\! {
+    width: 100% !important;
+  }
   .flex-0\! {
     flex: 0 !important;
   }
@@ -555,6 +558,9 @@
   }
   .text-center {
     text-align: center;
+  }
+  .text-left\! {
+    text-align: left !important;
   }
   .text-right {
     text-align: right;
