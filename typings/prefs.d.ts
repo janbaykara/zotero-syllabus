@@ -11,6 +11,7 @@ declare namespace _ZoteroTypes {
       "showBibliography": boolean;
       "compactMode": boolean;
       "shouldColourSyllabusRows": boolean;
+      "debugMode": boolean;
     };
   }
 }

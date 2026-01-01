@@ -8,6 +8,7 @@ import { SyllabusItemCard } from "./SyllabusPage";
 import { formatDate, setDefaultOptions, startOfWeek } from "date-fns";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import { getAllCollections } from "../utils/zotero";
+import { getPref } from "../utils/prefs";
 
 setDefaultOptions({
   weekStartsOn: 1,
@@ -146,6 +147,8 @@ export function ReadingSchedule() {
     readingScheduleStore.getSnapshot,
   );
 
+  const allCollections = useMemo(() => getAllCollections(), [dataVersion]);
+
   // Get all readings across all collections
   // Recompute when dataVersion changes (when class metadata or assignments change)
   const readingsByWeek = useMemo(() => {
@@ -155,7 +158,6 @@ export function ReadingSchedule() {
     >(); // weekStart ISO string -> ISO date string -> ClassReading[]
 
     // Get all collections
-    const allCollections = getAllCollections();
     const allData = SyllabusManager.getSettingsCollectionDictionaryData();
 
     for (const collection of allCollections) {
@@ -262,7 +264,7 @@ export function ReadingSchedule() {
     }
 
     return result;
-  }, [dataVersion]);
+  }, [dataVersion, allCollections]);
 
   // Convert to sorted array for rendering, filtering out past weeks
   const sortedWeeks = useMemo(() => {
@@ -334,7 +336,7 @@ export function ReadingSchedule() {
     }
   };
 
-  if (sortedWeeks.length === 0) {
+  if (true) {
     return (
       <div className="syllabus-page overflow-y-auto overflow-x-hidden h-full">
         <div className="container-padded py-12">
@@ -350,6 +352,21 @@ export function ReadingSchedule() {
             <p className={twMerge(compactMode ? "text-base" : "text-lg")}>
               Add reading dates to classes to see them here.
             </p>
+            {getPref("debugMode") && (
+              <div className="text-secondary text-sm text-left! w-full!">
+                <h3 className="text-2xl mt-4">Debug information</h3>
+                <pre>
+                  {JSON.stringify(
+                    {
+                      sortedWeeks,
+                      allCollections,
+                    },
+                    null,
+                    2,
+                  )}
+                </pre>
+              </div>
+            )}
           </div>
         </div>
       </div>

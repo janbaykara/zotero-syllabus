@@ -9,3 +9,5 @@ pref-compact-mode =
     .label = Use compact layout
 pref-input = Input
 pref-help = { $name } Build { $version } { $time }
+pref-debug-mode =
+    .label = Enable debug mode

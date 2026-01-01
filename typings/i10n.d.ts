@@ -11,6 +11,7 @@ export type FluentMessageId =
   | 'panel-demo-header'
   | 'panel-demo-sidenav'
   | 'pref-compact-mode'
+  | 'pref-debug-mode'
   | 'pref-enable'
   | 'pref-help'
   | 'pref-input'
