@@ -336,7 +336,7 @@ export function ReadingSchedule() {
     }
   };
 
-  if (true) {
+  if (sortedWeeks.length === 0) {
     return (
       <div className="syllabus-page overflow-y-auto overflow-x-hidden h-full">
         <div className="container-padded py-12">
@@ -508,8 +508,8 @@ export function ReadingSchedule() {
                                             compactMode ||
                                             !priority ||
                                             priority ===
-                                              SyllabusManager.priorityKeys
-                                                .OPTIONAL
+                                            SyllabusManager.priorityKeys
+                                              .OPTIONAL
                                           }
                                           compactMode={compactMode}
                                           isLocked={true}
