@@ -32,11 +32,14 @@ enum SyllabusSettingsKey {
   COLLECTION_VIEW_MODES = "collectionViewModes",
 }
 
+export type AssignmentStatus = "done" | null;
+
 export interface ItemSyllabusAssignment {
   id: string; // Unique ID for React rendering (auto-generated if not present)
   classNumber?: number;
   priority?: SyllabusPriority;
   classInstruction?: string;
+  status?: AssignmentStatus;
 }
 
 export interface ItemSyllabusAssignmentWithParentData extends ItemSyllabusAssignment {
@@ -76,11 +79,14 @@ export interface SettingsSyllabusMetadata {
   locked?: boolean;
 }
 
+export type ClassStatus = "done" | null;
+
 export interface SettingsClassMetadata {
   title?: string;
   description?: string;
   itemOrder?: string[]; // Manual ordering of assignment IDs within this class
   readingDate?: string; // ISO date string for when readings are due
+  status?: ClassStatus;
 }
 
 /**
@@ -95,13 +101,13 @@ export interface CustomPriority {
 
 const tabManager = FEATURE_FLAG.READING_SCHEDULE
   ? new TabManager<Record<string, never>>({
-      type: "reading-list",
-      title: "Reading Schedule",
-      rootElementIdFactory: () => "reading-list-tab-root",
-      data: { icon: "book" },
-      componentFactory: () => h(ReadingSchedule, {}),
-      getTabId: () => "syllabus-reading-list-tab",
-    })
+    type: "reading-list",
+    title: "Reading Schedule",
+    rootElementIdFactory: () => "reading-list-tab-root",
+    data: { icon: "book" },
+    componentFactory: () => h(ReadingSchedule, {}),
+    getTabId: () => "syllabus-reading-list-tab",
+  })
   : null;
 
 export class SyllabusManager {
@@ -930,10 +936,10 @@ export class SyllabusManager {
             const classTitle =
               classNumber !== undefined
                 ? SyllabusManager.getClassTitle(
-                    selectedCollection.id,
-                    classNumber,
-                    false,
-                  )
+                  selectedCollection.id,
+                  classNumber,
+                  false,
+                )
                 : "";
             const priority = firstAssignment.priority || "";
             return `${sortKey}|${priority}|${classNumber ?? ""}|${classTitle}|${selectedCollection.id}`;
@@ -1214,14 +1220,14 @@ export class SyllabusManager {
           body,
           selectedCollection
             ? h(ItemPane, {
-                item,
-                collectionId: selectedCollection.id,
-                editable,
-              })
+              item,
+              collectionId: selectedCollection.id,
+              editable,
+            })
             : h("div", {
-                innerText: "Select a collection to view syllabus assignments",
-                className: "text-center text-gray-500 p-4",
-              }),
+              innerText: "Select a collection to view syllabus assignments",
+              className: "text-center text-gray-500 p-4",
+            }),
           "syllabus-item-pane",
         );
       },
@@ -1284,18 +1290,18 @@ export class SyllabusManager {
     // Get collection-specific priority options if a collection is selected
     const priorityOptions = selectedCollection
       ? (() => {
-          const customPriorities = this.getPrioritiesForCollection(
-            selectedCollection.id,
-          );
-          const options = customPriorities.map((p) => ({
-            value: p.id,
-            label: p.name,
-            color: p.color,
-          }));
-          // Add "(None)" option
-          options.push({ value: "", label: "(None)", color: "" });
-          return options;
-        })()
+        const customPriorities = this.getPrioritiesForCollection(
+          selectedCollection.id,
+        );
+        const options = customPriorities.map((p) => ({
+          value: p.id,
+          label: p.name,
+          color: p.color,
+        }));
+        // Add "(None)" option
+        options.push({ value: "", label: "(None)", color: "" });
+        return options;
+      })()
       : this.getPriorityOptions();
 
     ztoolkit.Menu.register("item", {
@@ -1981,7 +1987,7 @@ export class SyllabusManager {
       // This ensures OPTIONAL ("optional") sorts before unprioritized ("zzzz")
       assignment.priority || "zzzz",
       assignment.classInstruction?.slice(0, 4).replace(/[^a-zA-Z0-9]/g, "_") ||
-        "",
+      "",
       assignment.id || "",
     );
 
@@ -2643,6 +2649,42 @@ export class SyllabusManager {
       const collectionIdStr = String(collectionId);
       if (allData[collectionIdStr]?.classes?.[classNumber]) {
         delete allData[collectionIdStr].classes![classNumber].readingDate;
+      }
+    }
+    await SyllabusManager.setCollectionMetadata(allData, source);
+  }
+
+  /**
+   * Get class status for a specific collection and class number
+   */
+  static getClassStatus(
+    collectionId: number | string,
+    classNumber: number,
+  ): ClassStatus {
+    const metadata = SyllabusManager.getClassMetadata(
+      collectionId,
+      classNumber,
+    );
+    return metadata.status || null;
+  }
+
+  /**
+   * Set class status for a specific collection and class number
+   */
+  static async setClassStatus(
+    collectionId: number | string,
+    classNumber: number,
+    status: ClassStatus,
+    source: "page" | "item-pane",
+  ): Promise<void> {
+    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
+    if (status !== null) {
+      set(allData, `${collectionId}.classes.${classNumber}.status`, status);
+    } else {
+      // Remove status if null
+      const collectionIdStr = String(collectionId);
+      if (allData[collectionIdStr]?.classes?.[classNumber]) {
+        delete allData[collectionIdStr].classes![classNumber].status;
       }
     }
     await SyllabusManager.setCollectionMetadata(allData, source);

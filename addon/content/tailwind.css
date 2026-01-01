@@ -30,6 +30,7 @@
     --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     --color-background: light-dark(#fff, #1e1e1e);
     --color-accent-blue: #4072e5;
+    --color-accent-green: #39bf68;
     --color-primary: light-dark(
     rgba(0, 0, 0, 0.8509803922),
     rgba(255, 255, 255, 0.8980392157)
@@ -70,26 +71,20 @@
   .top-0 {
     top: calc(var(--spacing) * 0);
   }
-  .top-10 {
-    top: calc(var(--spacing) * 10);
-  }
   .top-16 {
     top: calc(var(--spacing) * 16);
   }
   .top-18 {
     top: calc(var(--spacing) * 18);
   }
-  .top-20 {
-    top: calc(var(--spacing) * 20);
-  }
   .top-full {
     top: 100%;
   }
+  .right-full {
+    right: 100%;
+  }
   .left-1\/2 {
     left: calc(1/2 * 100%);
-  }
-  .z-5 {
-    z-index: 5;
   }
   .z-10 {
     z-index: 10;
@@ -164,6 +159,9 @@
   .mt-12 {
     margin-top: calc(var(--spacing) * 12);
   }
+  .mr-1 {
+    margin-right: calc(var(--spacing) * 1);
+  }
   .-mb-1 {
     margin-bottom: calc(var(--spacing) * -1);
   }
@@ -230,6 +228,9 @@
   .h-3 {
     height: calc(var(--spacing) * 3);
   }
+  .h-4 {
+    height: calc(var(--spacing) * 4);
+  }
   .h-8 {
     height: calc(var(--spacing) * 8);
   }
@@ -241,6 +242,9 @@
   }
   .w-3 {
     width: calc(var(--spacing) * 3);
+  }
+  .w-4 {
+    width: calc(var(--spacing) * 4);
   }
   .w-8 {
     width: calc(var(--spacing) * 8);
@@ -600,8 +604,17 @@
   .uppercase {
     text-transform: uppercase;
   }
+  .line-through {
+    text-decoration-line: line-through;
+  }
+  .accent-accent-green\! {
+    accent-color: var(--color-accent-green) !important;
+  }
   .scheme-dark {
     color-scheme: dark;
+  }
+  .opacity-40 {
+    opacity: 40%;
   }
   .outline-2\! {
     outline-style: var(--tw-outline-style) !important;
@@ -738,6 +751,11 @@
   .data-\[dropzone-active\=\'true\'\]\:outline-accent-blue\! {
     &[data-dropzone-active='true'] {
       outline-color: var(--color-accent-blue) !important;
+    }
+  }
+  .md\:mr-2\! {
+    @media (width >= 48rem) {
+      margin-right: calc(var(--spacing) * 2) !important;
     }
   }
   .md\:pt-8 {

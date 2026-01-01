@@ -26,6 +26,7 @@ import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata"
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
 import { useZoteroSelectedItemId } from "./react-zotero-sync/selectedItem";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
+import { useZoteroReaderMode } from "./react-zotero-sync/readerMode";
 import { FEATURE_FLAG } from "./featureFlags";
 import {
   getItemReadStatusName,
@@ -86,6 +87,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   // Compact mode state - reactive to preference changes
   const [compactMode, setCompactMode] = useZoteroCompactMode();
 
+  // Reader mode state - reactive to preference changes
+  const [readerMode, setReaderMode] = useZoteroReaderMode();
+
   // Settings view state
   const [showSettings, setShowSettings] = useState(false);
 
@@ -96,6 +100,12 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     const nextMode = !compactMode;
     ztoolkit.log("toggleCompactMode", { compactMode, nextMode });
     setCompactMode(nextMode);
+  };
+
+  const toggleReaderMode = () => {
+    const nextMode = !readerMode;
+    ztoolkit.log("toggleReaderMode", { readerMode, nextMode });
+    setReaderMode(nextMode);
   };
 
   // Set up global drag event listeners
@@ -796,6 +806,21 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                   <span>{compactMode ? "Spacious" : "Compact"}</span>
                 </button>
                 <button
+                  onClick={toggleReaderMode}
+                  className={twMerge(
+                    "grow-0 shrink-0 cursor-pointer in-[.print]:hidden",
+                  )}
+                  title={
+                    readerMode ? "Disable reader mode" : "Enable reader mode"
+                  }
+                  aria-label={
+                    readerMode ? "Disable reader mode" : "Enable reader mode"
+                  }
+                >
+                  {/* <span aria-hidden="true">📖</span> */}
+                  <span>{readerMode ? "Reader Mode" : "Reader Mode"}</span>
+                </button>
+                <button
                   onClick={handlePrint}
                   className="grow-0 shrink-0 cursor-pointer in-[.print]:hidden"
                   title="Print the list in Syllabus view as a PDF"
@@ -847,6 +872,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               compactMode={compactMode}
+              readerMode={readerMode}
               isLocked={isLocked}
               onResetSortOrder={() => setItemOrderVersion((v) => v + 1)}
             />
@@ -925,6 +951,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                     classNumber={undefined}
                     slim={true}
                     compactMode={compactMode}
+                    readerMode={readerMode}
                   />
                 ))}
               </div>
@@ -984,6 +1011,7 @@ interface ClassGroupComponentProps {
   onDragOver: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
   onDragLeave: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
   compactMode?: boolean;
+  readerMode?: boolean;
   isLocked?: boolean;
   onResetSortOrder?: () => void;
 }
@@ -1000,6 +1028,7 @@ function ClassGroupComponent({
   onDragOver,
   onDragLeave,
   compactMode = false,
+  readerMode = false,
   isLocked = false,
   onResetSortOrder,
 }: ClassGroupComponentProps) {
@@ -1007,7 +1036,7 @@ function ClassGroupComponent({
   const { singularCapitalized } =
     SyllabusManager.getNomenclatureFormatted(collectionId);
 
-  // Get class title, description, and reading date from metadata
+  // Get class title, description, reading date, and status from metadata
   const classTitle = classNumber
     ? syllabusMetadata.classes?.[classNumber]?.title || ""
     : "";
@@ -1017,6 +1046,9 @@ function ClassGroupComponent({
   const readingDate = classNumber
     ? syllabusMetadata.classes?.[classNumber]?.readingDate
     : undefined;
+  const classStatus = classNumber
+    ? SyllabusManager.getClassStatus(collectionId, classNumber)
+    : null;
 
   // Check if there's a manual order for this class
   const hasManualOrder =
@@ -1054,8 +1086,27 @@ function ClassGroupComponent({
     }
   };
 
+  const handleClassStatusToggle = async () => {
+    if (classNumber !== null && classNumber !== undefined) {
+      try {
+        const newStatus = classStatus === "done" ? null : "done";
+        await SyllabusManager.setClassStatus(
+          collectionId,
+          classNumber,
+          newStatus,
+          "page",
+        );
+      } catch (err) {
+        ztoolkit.log("Error toggling class status:", err);
+      }
+    }
+  };
+
   return (
-    <div className="syllabus-class-group in-[.print]:scheme-light">
+    <div className={twMerge(
+      "syllabus-class-group in-[.print]:scheme-light",
+      readerMode && classStatus === "done" ? "opacity-40" : "",
+    )}>
       {classNumber && (
         <>
           <div
@@ -1069,7 +1120,17 @@ function ClassGroupComponent({
                 // compactMode ? "py-0.5" : "py-1",
               )}
             >
-              <div className="flex gap-2 items-baseline justify-start w-full">
+              <div className="flex gap-2 items-baseline justify-start w-full relative">
+                {readerMode && (
+                  <input
+                    type="checkbox"
+                    checked={classStatus === "done"}
+                    onChange={handleClassStatusToggle}
+                    className="absolute right-full mr-1 md:mr-2! w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden"
+                    title={classStatus === "done" ? "Mark as not done" : "Mark as done"}
+                    aria-label={classStatus === "done" ? "Mark as not done" : "Mark as done"}
+                  />
+                )}
                 <div
                   className={twMerge(
                     "syllabus-class-header shrink-0 uppercase text-secondary font-semibold",
@@ -1219,6 +1280,7 @@ function ClassGroupComponent({
                     priority === SyllabusManager.priorityKeys.OPTIONAL
                   }
                   compactMode={compactMode}
+                  readerMode={readerMode}
                   isLocked={isLocked}
                   onDrop={(e, insertBefore) =>
                     onDrop(e, classNumber ?? null, item.id, insertBefore)
@@ -1455,6 +1517,7 @@ interface SyllabusItemCardProps {
   assignment?: ItemSyllabusAssignment; // Specific assignment for this rendering (to differentiate multiple assignments)
   slim?: boolean;
   compactMode?: boolean;
+  readerMode?: boolean;
   isLocked?: boolean;
   onDrop?: (
     e: JSX.TargetedDragEvent<HTMLElement>,
@@ -1474,6 +1537,7 @@ export function SyllabusItemCard({
   assignment,
   slim = false,
   compactMode = false,
+  readerMode = false,
   isLocked = false,
   onDrop,
   onDragOver,
@@ -1659,6 +1723,8 @@ export function SyllabusItemCard({
     priority as SyllabusPriority,
   );
 
+  const assignmentStatus = assignment?.status || null;
+
   const colors = priority
     ? {
       backgroundColor: priorityColor + "15",
@@ -1692,6 +1758,25 @@ export function SyllabusItemCard({
     onDrop(e, insertBefore);
   };
 
+  const handleAssignmentStatusToggle = async (e: JSX.TargetedEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    if (!assignment?.id) return;
+
+    try {
+      const newStatus = assignmentStatus === "done" ? null : "done";
+      await SyllabusManager.updateClassAssignment(
+        item,
+        collectionId,
+        assignment.id,
+        { status: newStatus },
+        "page",
+      );
+      await item.saveTx();
+    } catch (err) {
+      ztoolkit.log("Error toggling assignment status:", err);
+    }
+  };
+
   return (
     <div
       style={colors}
@@ -1699,6 +1784,7 @@ export function SyllabusItemCard({
         "in-[.print]:scheme-light",
         "rounded-lg flex flex-row items-start justify-between shrink-0",
         "bg-quinary border-none text-primary",
+        "relative",
         isLocked ? "cursor-default" : "cursor-grab",
         // For hovering contextual btns
         "group relative",
@@ -1708,6 +1794,7 @@ export function SyllabusItemCard({
             ? "px-4 py-2.5 gap-4"
             : "px-4 py-4 gap-4",
         isSelected && "bg-accent-blue! scheme-dark",
+        // assignmentStatus === "done" ? "opacity-40" : "",
       )}
       data-item-id={item.id}
       draggable={!isLocked}
@@ -1724,6 +1811,17 @@ export function SyllabusItemCard({
       onDragOver={isLocked ? undefined : handleItemDragOver}
       onDrop={isLocked ? undefined : handleItemDrop}
     >
+      {readerMode && (
+        <input
+          type="checkbox"
+          checked={assignmentStatus === "done"}
+          onChange={handleAssignmentStatusToggle}
+          className="absolute right-full mr-1 md:mr-2! w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden"
+          title={assignmentStatus === "done" ? "Mark as not done" : "Mark as done"}
+          aria-label={assignmentStatus === "done" ? "Mark as not done" : "Mark as done"}
+          onClick={(e) => e.stopPropagation()}
+        />
+      )}
       <div
         className={twMerge(
           "syllabus-item-thumbnail grow-0 shrink-0 in-[.print]:hidden",
@@ -1759,7 +1857,10 @@ export function SyllabusItemCard({
         {compactMode ? (
           <>
             <div className="syllabus-item-title-row flex flex-row gap-2 items-baseline justify-between">
-              <div className="text-base font-medium grow wrap-break-word">
+              <div className={twMerge(
+                "text-base font-medium grow wrap-break-word",
+                readerMode && assignmentStatus === "done" ? "line-through" : ""
+              )}>
                 {title}
               </div>
               {!!priority && (
@@ -1814,6 +1915,7 @@ export function SyllabusItemCard({
               <div
                 className={twMerge(
                   !slim ? "text-xl font-medium" : "text-lg font-medium",
+                  readerMode && assignmentStatus === "done" ? "line-through" : ""
                 )}
               >
                 {title}

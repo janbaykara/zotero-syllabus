@@ -443,20 +443,55 @@ export function ReadingSchedule() {
                                 classReading.collectionId,
                               );
 
+                            const classStatus = SyllabusManager.getClassStatus(
+                              classReading.collectionId,
+                              classReading.classNumber,
+                            );
+
+                            const handleClassStatusToggle = async () => {
+                              try {
+                                const newStatus = classStatus === "done" ? null : "done";
+                                await SyllabusManager.setClassStatus(
+                                  classReading.collectionId,
+                                  classReading.classNumber,
+                                  newStatus,
+                                  "page",
+                                );
+                              } catch (err) {
+                                ztoolkit.log("Error toggling class status:", err);
+                              }
+                            };
+
                             return (
                               <div
                                 key={`${classReading.collectionId}-${classReading.classNumber}`}
-                                className="mb-4"
+                                className={twMerge(
+                                  "mb-4 relative",
+                                  classStatus === "done" ? "opacity-40" : "",
+                                )}
                               >
                                 <div className="flex flex-col gap-2 mb-2">
                                   <div className="flex flex-row items-start justify-between gap-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={classStatus === "done"}
+                                      onChange={handleClassStatusToggle}
+                                      className={twMerge(
+                                        "absolute right-full mr-1 md:mr-2! w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden accent-accent-green!",
+                                      )}
+                                      title={classStatus === "done" ? "Mark as not done" : "Mark as done"}
+                                      aria-label={classStatus === "done" ? "Mark as not done" : "Mark as done"}
+                                    />
                                     <div
                                       onClick={() =>
                                         handleCollectionClick(
                                           classReading.collectionId,
                                         )
                                       }
-                                      className="text-xl flex-1"
+                                      className={twMerge(
+                                        "text-xl flex-1",
+                                        classStatus === "done" ? "line-through" : "",
+                                      )}
                                     >
                                       <span className="font-semibold">
                                         {classReading.collectionName}
@@ -509,8 +544,8 @@ export function ReadingSchedule() {
                                             compactMode ||
                                             !priority ||
                                             priority ===
-                                              SyllabusManager.priorityKeys
-                                                .OPTIONAL
+                                            SyllabusManager.priorityKeys
+                                              .OPTIONAL
                                           }
                                           compactMode={compactMode}
                                           isLocked={true}
@@ -520,6 +555,7 @@ export function ReadingSchedule() {
                                               classReading.collectionId,
                                             )
                                           }
+                                          readerMode
                                         />
                                       );
                                     },
