@@ -450,7 +450,8 @@ export function ReadingSchedule() {
 
                             const handleClassStatusToggle = async () => {
                               try {
-                                const newStatus = classStatus === "done" ? null : "done";
+                                const newStatus =
+                                  classStatus === "done" ? null : "done";
                                 await SyllabusManager.setClassStatus(
                                   classReading.collectionId,
                                   classReading.classNumber,
@@ -458,7 +459,10 @@ export function ReadingSchedule() {
                                   "page",
                                 );
                               } catch (err) {
-                                ztoolkit.log("Error toggling class status:", err);
+                                ztoolkit.log(
+                                  "Error toggling class status:",
+                                  err,
+                                );
                               }
                             };
 
@@ -479,8 +483,16 @@ export function ReadingSchedule() {
                                       className={twMerge(
                                         "absolute right-full mr-1 md:mr-2! w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden accent-accent-green!",
                                       )}
-                                      title={classStatus === "done" ? "Mark as not done" : "Mark as done"}
-                                      aria-label={classStatus === "done" ? "Mark as not done" : "Mark as done"}
+                                      title={
+                                        classStatus === "done"
+                                          ? "Mark as not done"
+                                          : "Mark as done"
+                                      }
+                                      aria-label={
+                                        classStatus === "done"
+                                          ? "Mark as not done"
+                                          : "Mark as done"
+                                      }
                                     />
                                     <div
                                       onClick={() =>
@@ -490,7 +502,9 @@ export function ReadingSchedule() {
                                       }
                                       className={twMerge(
                                         "text-xl flex-1",
-                                        classStatus === "done" ? "line-through" : "",
+                                        classStatus === "done"
+                                          ? "line-through"
+                                          : "",
                                       )}
                                     >
                                       <span className="font-semibold">
@@ -544,8 +558,8 @@ export function ReadingSchedule() {
                                             compactMode ||
                                             !priority ||
                                             priority ===
-                                            SyllabusManager.priorityKeys
-                                              .OPTIONAL
+                                              SyllabusManager.priorityKeys
+                                                .OPTIONAL
                                           }
                                           compactMode={compactMode}
                                           isLocked={true}

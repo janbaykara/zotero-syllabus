@@ -19,10 +19,7 @@ export function useZoteroReaderMode() {
   // Create the store once
   const store = useMemo(() => createReaderModeStore(), []);
 
-  const __readerMode = useSyncExternalStore(
-    store.subscribe,
-    store.getSnapshot,
-  );
+  const __readerMode = useSyncExternalStore(store.subscribe, store.getSnapshot);
 
   // @ts-expect-error - __readerMode is a string, but we want to compare it to a boolean
   const readerMode = __readerMode === "true" || __readerMode === true;

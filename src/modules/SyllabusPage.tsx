@@ -802,8 +802,12 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                 </div>
                 <div
                   className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                  title={compactMode ? "Disable compact mode" : "Enable compact mode"}
-                  aria-label={compactMode ? "Disable compact mode" : "Enable compact mode"}
+                  title={
+                    compactMode ? "Disable compact mode" : "Enable compact mode"
+                  }
+                  aria-label={
+                    compactMode ? "Disable compact mode" : "Enable compact mode"
+                  }
                   onClick={toggleCompactMode}
                 >
                   {compactMode ? (
@@ -820,8 +824,12 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                 </div>
                 <div
                   className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                  title={readerMode ? "Disable reader mode" : "Enable reader mode"}
-                  aria-label={readerMode ? "Disable reader mode" : "Enable reader mode"}
+                  title={
+                    readerMode ? "Disable reader mode" : "Enable reader mode"
+                  }
+                  aria-label={
+                    readerMode ? "Disable reader mode" : "Enable reader mode"
+                  }
                   onClick={toggleReaderMode}
                 >
                   {readerMode ? (
@@ -1134,10 +1142,12 @@ function ClassGroupComponent({
   };
 
   return (
-    <div className={twMerge(
-      "syllabus-class-group in-[.print]:scheme-light",
-      readerMode && classStatus === "done" ? "opacity-40" : "",
-    )}>
+    <div
+      className={twMerge(
+        "syllabus-class-group in-[.print]:scheme-light",
+        readerMode && classStatus === "done" ? "opacity-40" : "",
+      )}
+    >
       {classNumber && (
         <>
           <div
@@ -1158,8 +1168,16 @@ function ClassGroupComponent({
                     checked={classStatus === "done"}
                     onChange={handleClassStatusToggle}
                     className="absolute right-full mr-1 md:mr-2! w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden"
-                    title={classStatus === "done" ? "Mark as not done" : "Mark as done"}
-                    aria-label={classStatus === "done" ? "Mark as not done" : "Mark as done"}
+                    title={
+                      classStatus === "done"
+                        ? "Mark as not done"
+                        : "Mark as done"
+                    }
+                    aria-label={
+                      classStatus === "done"
+                        ? "Mark as not done"
+                        : "Mark as done"
+                    }
                   />
                 )}
                 <div
@@ -1488,34 +1506,34 @@ function TextInput({
         onChange: readOnly
           ? undefined
           : (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-            setValue((e.target as HTMLInputElement).value),
+              setValue((e.target as HTMLInputElement).value),
         onBlur: readOnly ? undefined : () => save(value),
         onKeyDown: readOnly
           ? undefined
           : (
-            e: JSX.TargetedKeyboardEvent<
-              HTMLInputElement | HTMLTextAreaElement
-            >,
-          ) => {
-            if (e.key === "Escape" || e.key === "Enter") {
-              e.preventDefault();
-              e.currentTarget.blur();
-              save(value);
-            }
-          },
+              e: JSX.TargetedKeyboardEvent<
+                HTMLInputElement | HTMLTextAreaElement
+              >,
+            ) => {
+              if (e.key === "Escape" || e.key === "Enter") {
+                e.preventDefault();
+                e.currentTarget.blur();
+                save(value);
+              }
+            },
         onSelect: readOnly
           ? (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            e.preventDefault();
-            e.currentTarget.setSelectionRange(0, 0);
-          }
+              e.preventDefault();
+              e.currentTarget.setSelectionRange(0, 0);
+            }
           : undefined,
         onClick: readOnly
           ? (
-            e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
-          ) => {
-            e.preventDefault();
-            e.currentTarget.blur();
-          }
+              e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
+            ) => {
+              e.preventDefault();
+              e.currentTarget.blur();
+            }
           : undefined,
         placeholder: readOnly ? undefined : placeholder || "Click to edit",
         className: twMerge(
@@ -1636,9 +1654,9 @@ export function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-        item: Zotero.Item;
-        type: "pdf" | "snapshot" | "epub";
-      }>;
+      item: Zotero.Item;
+      type: "pdf" | "snapshot" | "epub";
+    }>;
   }, [item, slim]);
 
   const metadataParts = [
@@ -1758,9 +1776,9 @@ export function SyllabusItemCard({
 
   const colors = priority
     ? {
-      backgroundColor: priorityColor + "15",
-      borderColor: priorityColor + "30",
-    }
+        backgroundColor: priorityColor + "15",
+        borderColor: priorityColor + "30",
+      }
     : {};
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
@@ -1789,7 +1807,9 @@ export function SyllabusItemCard({
     onDrop(e, insertBefore);
   };
 
-  const handleAssignmentStatusToggle = async (e: JSX.TargetedEvent<HTMLInputElement>) => {
+  const handleAssignmentStatusToggle = async (
+    e: JSX.TargetedEvent<HTMLInputElement>,
+  ) => {
     e.stopPropagation();
     if (!assignment?.id) return;
 
@@ -1848,8 +1868,12 @@ export function SyllabusItemCard({
           checked={assignmentStatus === "done"}
           onChange={handleAssignmentStatusToggle}
           className="absolute right-full mr-1 md:mr-2! w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden"
-          title={assignmentStatus === "done" ? "Mark as not done" : "Mark as done"}
-          aria-label={assignmentStatus === "done" ? "Mark as not done" : "Mark as done"}
+          title={
+            assignmentStatus === "done" ? "Mark as not done" : "Mark as done"
+          }
+          aria-label={
+            assignmentStatus === "done" ? "Mark as not done" : "Mark as done"
+          }
           onClick={(e) => e.stopPropagation()}
         />
       )}
@@ -1888,10 +1912,14 @@ export function SyllabusItemCard({
         {compactMode ? (
           <>
             <div className="syllabus-item-title-row flex flex-row gap-2 items-baseline justify-between">
-              <div className={twMerge(
-                "text-base font-medium grow wrap-break-word",
-                readerMode && assignmentStatus === "done" ? "line-through" : ""
-              )}>
+              <div
+                className={twMerge(
+                  "text-base font-medium grow wrap-break-word",
+                  readerMode && assignmentStatus === "done"
+                    ? "line-through"
+                    : "",
+                )}
+              >
                 {title}
               </div>
               {!!priority && (
@@ -1946,7 +1974,9 @@ export function SyllabusItemCard({
               <div
                 className={twMerge(
                   !slim ? "text-xl font-medium" : "text-lg font-medium",
-                  readerMode && assignmentStatus === "done" ? "line-through" : ""
+                  readerMode && assignmentStatus === "done"
+                    ? "line-through"
+                    : "",
                 )}
               >
                 {title}
