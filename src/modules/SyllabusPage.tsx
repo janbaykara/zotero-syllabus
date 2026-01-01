@@ -37,6 +37,16 @@ import { useElementSize } from "../utils/react/useElementSize";
 import slugify from "slugify";
 import { SettingsPage } from "./SettingsPage";
 import { formatDate } from "date-fns";
+import {
+  Printer,
+  Settings,
+  Lock,
+  Unlock,
+  Maximize2,
+  Minimize2,
+  ListChecks,
+  List,
+} from "lucide-preact";
 
 // Define priority type for use in this file
 // These values match SyllabusPriority enum in syllabus.ts
@@ -772,63 +782,84 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                 />
               </div>
               <div className="inline-flex items-center gap-2 shrink grow-0">
-                <button
-                  onClick={() => setLocked(!isLocked)}
-                  className="grow-0 shrink-0 cursor-pointer flex items-center gap-2 in-[.print]:hidden"
+                <div
+                  className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
                   title={isLocked ? "Unlock syllabus" : "Lock syllabus"}
                   aria-label={isLocked ? "Unlock syllabus" : "Lock syllabus"}
+                  onClick={() => setLocked(!isLocked)}
                 >
-                  {/* <span aria-hidden="true">{isLocked ? "🔓" : "🔒"}</span> */}
-                  <span>{isLocked ? "Unlock" : "Lock"}</span>
-                </button>
-                <button
-                  onClick={() => setShowSettings(true)}
-                  className="grow-0 shrink-0 cursor-pointer in-[.print]:hidden"
-                  title="Edit syllabus settings"
-                  aria-label="Edit syllabus settings"
-                >
-                  {/* <span aria-hidden="true">⚙️</span> */}
-                  <span>Settings</span>
-                </button>
-                <button
+                  {isLocked ? (
+                    <Unlock
+                      size={20}
+                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                    />
+                  ) : (
+                    <Lock
+                      size={20}
+                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                    />
+                  )}
+                </div>
+                <div
+                  className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
+                  title={compactMode ? "Disable compact mode" : "Enable compact mode"}
+                  aria-label={compactMode ? "Disable compact mode" : "Enable compact mode"}
                   onClick={toggleCompactMode}
-                  className={twMerge(
-                    "grow-0 shrink-0 cursor-pointer in-[.print]:hidden",
-                  )}
-                  title={
-                    compactMode ? "Disable compact mode" : "Enable compact mode"
-                  }
-                  aria-label={
-                    compactMode ? "Disable compact mode" : "Enable compact mode"
-                  }
                 >
-                  {/* <span aria-hidden="true">📐</span> */}
-                  <span>{compactMode ? "Spacious" : "Compact"}</span>
-                </button>
-                <button
+                  {compactMode ? (
+                    <Maximize2
+                      size={20}
+                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                    />
+                  ) : (
+                    <Minimize2
+                      size={20}
+                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                    />
+                  )}
+                </div>
+                <div
+                  className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
+                  title={readerMode ? "Disable reader mode" : "Enable reader mode"}
+                  aria-label={readerMode ? "Disable reader mode" : "Enable reader mode"}
                   onClick={toggleReaderMode}
-                  className={twMerge(
-                    "grow-0 shrink-0 cursor-pointer in-[.print]:hidden",
+                >
+                  {readerMode ? (
+                    <List
+                      size={20}
+                      className="text-primary hover:text-primary hover:bg-quinary rounded p-1"
+                    />
+                  ) : (
+                    <ListChecks
+                      size={20}
+                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                    />
                   )}
-                  title={
-                    readerMode ? "Disable reader mode" : "Enable reader mode"
-                  }
-                  aria-label={
-                    readerMode ? "Disable reader mode" : "Enable reader mode"
-                  }
-                >
-                  {/* <span aria-hidden="true">📖</span> */}
-                  <span>{readerMode ? "Reader Mode" : "Reader Mode"}</span>
-                </button>
-                <button
-                  onClick={handlePrint}
-                  className="grow-0 shrink-0 cursor-pointer in-[.print]:hidden"
-                  title="Print the list in Syllabus view as a PDF"
-                  aria-label="Print the list in Syllabus view as a PDF"
-                >
-                  {/* <span aria-hidden="true">🖨️</span> */}
-                  <span>Print</span>
-                </button>
+                </div>
+                <div className="ml-auto flex items-center gap-1 in-[.print]:hidden">
+                  <div
+                    className="cursor-pointer"
+                    title="Edit syllabus settings"
+                    aria-label="Edit syllabus settings"
+                    onClick={() => setShowSettings(true)}
+                  >
+                    <Settings
+                      size={20}
+                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                    />
+                  </div>
+                  <div
+                    className="cursor-pointer"
+                    title="Print the list in Syllabus view as a PDF"
+                    aria-label="Print the list in Syllabus view as a PDF"
+                    onClick={handlePrint}
+                  >
+                    <Printer
+                      size={20}
+                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
