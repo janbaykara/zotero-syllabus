@@ -101,6 +101,10 @@ Right-click an item to re-assign class number or priority.
 
 ![Reading schedule](doc/images/reading.png)
 
+#### And keep track of what you've read already
+
+![Reading schedule view with reading status](doc/images/checkboxes.png)
+
 ### Other features
 
 - **Assign an item multiple times** within a syllabus. Useful for breaking down larger readings into smaller chunks.
