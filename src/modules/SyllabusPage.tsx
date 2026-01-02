@@ -1009,6 +1009,21 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
             </div>
           )}
 
+          {getPref("debugMode") && (
+            <div className="text-secondary text-sm">
+              <h3>Debug info</h3>
+              <pre>
+                {JSON.stringify(
+                  {
+                    syllabusMetadata,
+                  },
+                  null,
+                  2,
+                )}
+              </pre>
+            </div>
+          )}
+
           <Bibliography items={items} compactMode={compactMode} />
         </div>
       </div>

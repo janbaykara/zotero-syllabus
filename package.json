@@ -43,6 +43,8 @@
     "superjson": "^2.2.6",
     "tailwind-merge": "^3.4.0",
     "uuidv7": "^1.1.0",
+    "verzod": "^0.4.0",
+    "zod": "^3.25.76",
     "zotero-plugin-toolkit": "^5.1.0-beta.13"
   },
   "devDependencies": {

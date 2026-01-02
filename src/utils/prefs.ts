@@ -2,6 +2,15 @@ import { config } from "../../package.json";
 
 type PluginPrefsMap = _ZoteroTypes.Prefs["PluginPrefsMap"];
 
+export const PREFS_KEYS: (keyof PluginPrefsMap)[] = [
+  "enable",
+  "showBibliography",
+  "compactMode",
+  "readerMode",
+  "shouldColourSyllabusRows",
+  "debugMode",
+];
+
 const PREFS_PREFIX = config.prefsPrefix;
 
 /**

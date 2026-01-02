@@ -1,4 +1,5 @@
 import { config } from "../../package.json";
+import { getPref, PREFS_KEYS } from "../utils/prefs";
 
 export async function registerPrefsScripts(_window: Window) {
   // This function is called when the prefs window is opened
@@ -26,25 +27,16 @@ async function updatePrefsUI() {
 }
 
 function bindPrefEvents() {
-  addon.data
-    .prefs!.window.document?.querySelector(
-      `#zotero-prefpane-${config.addonRef}-enable`,
-    )
-    ?.addEventListener("command", (e: Event) => {
-      ztoolkit.log(e);
-      addon.data.prefs!.window.alert(
-        `Successfully changed to ${(e.target as XUL.Checkbox).checked}!`,
-      );
-    });
-
-  addon.data
-    .prefs!.window.document?.querySelector(
-      `#zotero-prefpane-${config.addonRef}-input`,
-    )
-    ?.addEventListener("change", (e: Event) => {
-      ztoolkit.log(e);
-      addon.data.prefs!.window.alert(
-        `Successfully changed to ${(e.target as HTMLInputElement).value}!`,
-      );
-    });
+  for (const pref of PREFS_KEYS) {
+    // addon.data
+    //   .prefs!.window.document?.querySelector(
+    //     `#zotero-prefpane-${config.addonRef}-${pref}`,
+    //   )
+    //   ?.addEventListener("command", (e: Event) => {
+    //     ztoolkit.log(e);
+    //     addon.data.prefs!.window.alert(
+    //       `Successfully changed to ${(e.target as XUL.Checkbox).checked}!`,
+    //     );
+    //   });
+  }
 }

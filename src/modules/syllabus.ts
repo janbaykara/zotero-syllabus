@@ -19,96 +19,58 @@ import { ReadingSchedule } from "./ReadingSchedule";
 import { parseXULTemplate } from "../utils/ui";
 import { TabManager } from "../utils/tabManager";
 import { FEATURE_FLAG } from "./featureFlags";
+import {
+  ItemSyllabusDataEntity,
+  ItemSyllabusAssignmentEntity,
+  SettingsCollectionDictionaryDataSchema,
+} from "../utils/schemas";
 
-export enum SyllabusPriority {
-  COURSE_INFO = "course-info",
-  ESSENTIAL = "essential",
-  RECOMMENDED = "recommended",
-  OPTIONAL = "optional",
-}
+// Enums are now defined in utils/schemas.ts
+import { SyllabusPriority } from "../utils/schemas";
+
+// Re-export for backward compatibility
+export { SyllabusPriority };
 
 enum SyllabusSettingsKey {
   COLLECTION_METADATA = "collectionMetadata",
   COLLECTION_VIEW_MODES = "collectionViewModes",
 }
 
-export type AssignmentStatus = "done" | null;
+// Types are now inferred from Zod schemas in utils/schemas.ts
+import type {
+  ItemSyllabusAssignment,
+  ItemSyllabusData,
+  AssignmentStatus,
+  ClassStatus,
+  CustomPriority,
+  SettingsCollectionDictionaryData,
+  SettingsSyllabusMetadata,
+  SettingsClassMetadata,
+} from "../utils/schemas";
 
-export interface ItemSyllabusAssignment {
-  id: string; // Unique ID for React rendering (auto-generated if not present)
-  classNumber?: number;
-  priority?: SyllabusPriority;
-  classInstruction?: string;
-  status?: AssignmentStatus;
-}
+// Re-export for backward compatibility with other modules
+export type {
+  ItemSyllabusAssignment,
+  ItemSyllabusData,
+  AssignmentStatus,
+  ClassStatus,
+  CustomPriority,
+  SettingsCollectionDictionaryData,
+  SettingsSyllabusMetadata,
+  SettingsClassMetadata,
+};
 
-export interface ItemSyllabusAssignmentWithParentData extends ItemSyllabusAssignment {
-  item: Zotero.Item;
-  collectionId: number;
-}
-
-export interface ItemSyllabusData {
-  [collectionId: string]: ItemSyllabusAssignment[];
-}
-
-/**
- * @deprecated SettingsClassItemOrder is no longer used.
- * Item order is now stored in SettingsClassMetadata.itemOrder within COLLECTION_METADATA.
- * This interface is kept for potential migration purposes only.
- */
-export interface SettingsClassItemOrder {
-  [collectionId: string]: {
-    [classNumber: string]: string[]; // ordered assignmentIds (or itemIds for backward compatibility)
-  };
-}
-
-/**
- * Collection metadata stored in preferences
- */
-export interface SettingsCollectionDictionaryData {
-  [collectionId: string]: SettingsSyllabusMetadata;
-}
-
-export interface SettingsSyllabusMetadata {
-  description?: string;
-  classes?: {
-    [classNumber: string]: SettingsClassMetadata;
-  };
-  nomenclature?: string;
-  priorities?: CustomPriority[];
-  locked?: boolean;
-  links?: string[];
-}
-
-export type ClassStatus = "done" | null;
-
-export interface SettingsClassMetadata {
-  title?: string;
-  description?: string;
-  itemOrder?: string[]; // Manual ordering of assignment IDs within this class
-  readingDate?: string; // ISO date string for when readings are due
-  status?: ClassStatus;
-}
-
-/**
- * Custom priority configuration for a collection
- */
-export interface CustomPriority {
-  id: string; // Unique ID for the priority (e.g., "essential", "recommended")
-  name: string; // Display name (e.g., "Essential", "Recommended")
-  color: string; // Hex color code (e.g., "#8B5CF6")
-  order: number; // Sort order (lower = higher priority)
-}
+// All types are now inferred from Zod schemas in utils/schemas.ts
 
 const tabManager = FEATURE_FLAG.READING_SCHEDULE
   ? new TabManager<Record<string, never>>({
-      type: "reading-list",
-      title: "Reading Schedule",
-      rootElementIdFactory: () => "reading-list-tab-root",
-      data: { icon: "book" },
-      componentFactory: () => h(ReadingSchedule, {}),
-      getTabId: () => "syllabus-reading-list-tab",
-    })
+    type: "reading-list",
+    title: "Reading Schedule",
+    rootElementIdFactory: () => "reading-list-tab-root",
+    data: { icon: "book" },
+    componentFactory: () => h(ReadingSchedule, {}),
+    getTabId: () => "syllabus-reading-list-tab",
+  })
   : null;
 
 export class SyllabusManager {
@@ -257,10 +219,6 @@ export class SyllabusManager {
 
   static onMainWindowLoad(win: _ZoteroTypes.MainWindow) {
     ztoolkit.log("SyllabusManager.onMainWindowLoad", win);
-    // const collectionId = win.getSelectedCollection()?.id;
-    // if (collectionId) {
-    //   this.cleanupItemMetadata(collectionId);
-    // }
     this.registerContextualMenus();
     this.setupUI();
     this.setupSyllabusViewTabListener();
@@ -989,10 +947,10 @@ export class SyllabusManager {
             const classTitle =
               classNumber !== undefined
                 ? SyllabusManager.getClassTitle(
-                    selectedCollection.id,
-                    classNumber,
-                    false,
-                  )
+                  selectedCollection.id,
+                  classNumber,
+                  false,
+                )
                 : "";
             const priority = firstAssignment.priority || "";
             return `${sortKey}|${priority}|${classNumber ?? ""}|${classTitle}|${selectedCollection.id}`;
@@ -1273,14 +1231,14 @@ export class SyllabusManager {
           body,
           selectedCollection
             ? h(ItemPane, {
-                item,
-                collectionId: selectedCollection.id,
-                editable,
-              })
+              item,
+              collectionId: selectedCollection.id,
+              editable,
+            })
             : h("div", {
-                innerText: "Select a collection to view syllabus assignments",
-                className: "text-center text-gray-500 p-4",
-              }),
+              innerText: "Select a collection to view syllabus assignments",
+              className: "text-center text-gray-500 p-4",
+            }),
           "syllabus-item-pane",
         );
       },
@@ -1343,18 +1301,18 @@ export class SyllabusManager {
     // Get collection-specific priority options if a collection is selected
     const priorityOptions = selectedCollection
       ? (() => {
-          const customPriorities = this.getPrioritiesForCollection(
-            selectedCollection.id,
-          );
-          const options = customPriorities.map((p) => ({
-            value: p.id,
-            label: p.name,
-            color: p.color,
-          }));
-          // Add "(None)" option
-          options.push({ value: "", label: "(None)", color: "" });
-          return options;
-        })()
+        const customPriorities = this.getPrioritiesForCollection(
+          selectedCollection.id,
+        );
+        const options = customPriorities.map((p) => ({
+          value: p.id,
+          label: p.name,
+          color: p.color,
+        }));
+        // Add "(None)" option
+        options.push({ value: "", label: "(None)", color: "" });
+        return options;
+      })()
       : this.getPriorityOptions();
 
     ztoolkit.Menu.register("item", {
@@ -1520,6 +1478,7 @@ export class SyllabusManager {
    * Get syllabus data from an item's extra field
    * Uses caching to avoid repeated JSON parsing for the same item
    * Handles migration from old format (single object) to new format (array)
+   * Now uses Zod validation with verzod for versioning
    */
   static getItemSyllabusData(item: Zotero.Item): ItemSyllabusData {
     // Check cache first
@@ -1537,10 +1496,39 @@ export class SyllabusManager {
     if (jsonStr) {
       try {
         const parsed = JSON.parse(jsonStr);
-        // Migrate from old format (single object) to new format (array)
-        data = this.migrateItemExtraFieldsToArray(parsed);
+        // Use Zod schema with verzod for parsing and migration
+        const result = ItemSyllabusDataEntity.safeParse(parsed);
+        ztoolkit.log("getItemSyllabusData", result, parsed);
+        if (result.type === "ok") {
+          data = result.value;
+
+          // Save the result back to the extra field if it was upgraded
+          if (!ItemSyllabusDataEntity.isLatest(parsed)) {
+            ztoolkit.log(
+              "Upgrading item syllabus data to latest version",
+              parsed,
+              result.value,
+            );
+            // Invalidate cache before saving to avoid stale data
+            this.invalidateSyllabusDataCache(item);
+            // Save without triggering item update to avoid recursion
+            // Use fire-and-forget to avoid making this method async
+            const jsonStr = JSON.stringify(result.value);
+            this.extraFieldTool
+              .setExtraField(item, this.SYLLABUS_DATA_KEY, jsonStr)
+              .catch((e) => {
+                ztoolkit.log("Error saving upgraded syllabus data:", e);
+              });
+          }
+        } else {
+          ztoolkit.log("Error parsing syllabus data - after JSON.parse:", {
+            result,
+            parsed,
+          });
+          data = {};
+        }
       } catch (e) {
-        ztoolkit.log("Error parsing syllabus data:", e);
+        ztoolkit.log("Error parsing syllabus data:", e, jsonStr);
         data = {};
       }
     }
@@ -1557,70 +1545,6 @@ export class SyllabusManager {
     return `assignment-${uuidv7()}`;
   }
 
-  /**
-   * Ensure all entries have unique IDs
-   */
-  private static ensureAssignmentIds(
-    entries: ItemSyllabusAssignment[],
-  ): ItemSyllabusAssignment[] {
-    return entries.map((entry, index) => {
-      if (!entry.id) {
-        return { ...entry, id: this.generateAssignmentId() };
-      }
-      return entry;
-    });
-  }
-
-  /**
-   * Ensure items are usable by the plugin for the current view.
-   */
-  private static cleanupItemMetadata(collectionId: string | number) {
-    // get all items in the collection, then run them through migrateItemExtraFieldsToArray
-    const items = Zotero.Collections.get(Number(collectionId)).getChildItems();
-    for (const item of items) {
-      this.migrateItemExtraFieldsToArray(this.getItemSyllabusData(item));
-    }
-  }
-
-  /**
-   * Migrate item extra field data from old format (single object) to new format (array)
-   * Old format: { [collectionId]: { priority?, classInstruction?, classNumber? } }
-   * New format: { [collectionId]: Array<{ id?, priority?, classInstruction?, classNumber? }> }
-   */
-  private static migrateItemExtraFieldsToArray(parsed: any): ItemSyllabusData {
-    if (!parsed || typeof parsed !== "object") {
-      return {};
-    }
-
-    const migrated: ItemSyllabusData = {};
-
-    for (const [collectionId, value] of Object.entries(parsed)) {
-      if (Array.isArray(value)) {
-        // Already in new format, ensure IDs
-        migrated[collectionId] = this.ensureAssignmentIds(
-          value as ItemSyllabusAssignment[],
-        );
-      } else if (value && typeof value === "object") {
-        // Old format: single object, convert to array
-        const entry = value as ItemSyllabusAssignment;
-        // Only migrate if it has actual data
-        if (
-          entry.priority ||
-          entry.classInstruction ||
-          entry.classNumber !== undefined
-        ) {
-          const entries = this.ensureAssignmentIds([entry]);
-          migrated[collectionId] = entries;
-        } else {
-          migrated[collectionId] = [];
-        }
-      } else {
-        migrated[collectionId] = [];
-      }
-    }
-
-    return migrated;
-  }
 
   /**
    * Invalidate cached syllabus data for an item
@@ -1632,19 +1556,50 @@ export class SyllabusManager {
 
   /**
    * Set syllabus data in an item's extra field
+   * Validates with Zod before saving to ensure 100% type safety
    */
   static async setSyllabusData(
     item: Zotero.Item,
     data: ItemSyllabusData,
     source: "page" | "item-pane" | "context-menu",
   ): Promise<void> {
-    // Ensure all entries have IDs before saving
-    const dataWithIds: ItemSyllabusData = {};
-    for (const [collectionId, entries] of Object.entries(data)) {
-      dataWithIds[collectionId] = this.ensureAssignmentIds(entries);
+    // Validate input data with Zod before saving
+    const inputResult = ItemSyllabusDataEntity.safeParse(data);
+    if (inputResult.type !== "ok") {
+      ztoolkit.log(
+        "[Zotero Syllabus] Error validating syllabus data input before saving:",
+        inputResult.error,
+        "Input data:",
+        data,
+      );
+      return;
+    }
+    const validatedData = inputResult.value;
+
+    // Double-check: validate the stringified JSON will parse correctly
+    const jsonStr = JSON.stringify(validatedData);
+    try {
+      const parsed = JSON.parse(jsonStr);
+      const revalidationResult = ItemSyllabusDataEntity.safeParse(parsed);
+      if (revalidationResult.type !== "ok") {
+        ztoolkit.log(
+          "[Zotero Syllabus] Error: Validated data failed revalidation after JSON.stringify:",
+          revalidationResult.error,
+          "Validated data:",
+          validatedData,
+        );
+        return;
+      }
+    } catch (e) {
+      ztoolkit.log(
+        "[Zotero Syllabus] Error: Failed to parse JSON string:",
+        e,
+        "JSON string:",
+        jsonStr,
+      );
+      return;
     }
 
-    const jsonStr = JSON.stringify(dataWithIds);
     await this.extraFieldTool.setExtraField(
       item,
       this.SYLLABUS_DATA_KEY,
@@ -1942,9 +1897,8 @@ export class SyllabusManager {
   ): ItemSyllabusAssignment[] {
     const data = this.getItemSyllabusData(item);
     const collectionIdStr = String(collectionId);
-    const entries = data[collectionIdStr] || [];
-    // Ensure all assignments have IDs for React keying
-    return this.ensureAssignmentIds(entries);
+    // Data from getItemSyllabusData is already validated and has IDs via Zod
+    return data[collectionIdStr] || [];
   }
 
   /**
@@ -2080,7 +2034,7 @@ export class SyllabusManager {
       // This ensures OPTIONAL ("optional") sorts before unprioritized ("zzzz")
       assignment.priority || "zzzz",
       assignment.classInstruction?.slice(0, 4).replace(/[^a-zA-Z0-9]/g, "_") ||
-        "",
+      "",
       assignment.id || "",
     );
 
@@ -2190,8 +2144,8 @@ export class SyllabusManager {
     };
     assignments.push(newEntry);
 
-    // Ensure all entries have IDs before saving
-    data[collectionIdStr] = this.ensureAssignmentIds(assignments);
+    // New entry already has ID, existing entries validated via getItemSyllabusData
+    data[collectionIdStr] = assignments;
     await this.setSyllabusData(item, data, source);
   }
 
@@ -2298,13 +2252,11 @@ export class SyllabusManager {
       ztoolkit.log("Warning: Assignment not found by ID:", assignmentId);
     }
 
-    // Ensure all entries have IDs
-    const entriesWithIds = this.ensureAssignmentIds(entries);
-
-    if (entriesWithIds.length === 0) {
+    // Entries from getItemSyllabusData are already validated and have IDs via Zod
+    if (entries.length === 0) {
       delete data[collectionIdStr];
     } else {
-      data[collectionIdStr] = entriesWithIds;
+      data[collectionIdStr] = entries;
     }
 
     await this.setSyllabusData(item, data, source);
@@ -2458,23 +2410,15 @@ export class SyllabusManager {
       return {};
     }
     try {
-      const metadata = JSON.parse(
-        metadataStr,
-      ) as SettingsCollectionDictionaryData;
-      // Remove null classes from .classes array
-      for (const [_id, collectionMetadata] of Object.entries(metadata)) {
-        if (collectionMetadata.classes) {
-          for (const [classNumber, classMetadata] of Object.entries(
-            collectionMetadata.classes,
-          )) {
-            if (!classMetadata) {
-              delete collectionMetadata.classes[classNumber];
-            }
-          }
-        }
+      const parsed = JSON.parse(metadataStr);
+      // Use Zod schema for validation
+      const result = SettingsCollectionDictionaryDataSchema.safeParse(parsed);
+      if (result.success) {
+        return result.data;
+      } else {
+        ztoolkit.log("Error validating collection metadata:", result.error);
+        return {};
       }
-      ztoolkit.log("Metadata:", metadata);
-      return metadata;
     } catch (e) {
       ztoolkit.log("Error parsing collection metadata:", e);
       return {};
@@ -2494,6 +2438,7 @@ export class SyllabusManager {
 
   /**
    * Set collection metadata in preferences
+   * Validates with Zod before saving to ensure 100% type safety
    * Note: This method is called with the full dictionary (SettingsCollectionDictionaryData)
    * even though it's typed as SettingsSyllabusMetadata for backward compatibility
    */
@@ -2501,14 +2446,50 @@ export class SyllabusManager {
     metadata: SettingsSyllabusMetadata | SettingsCollectionDictionaryData,
     source: "page" | "item-pane",
   ): Promise<void> {
-    ztoolkit.log("Setting collection metadata:", metadata);
-
     const prefKey = SyllabusManager.getPreferenceKey(
       SyllabusSettingsKey.COLLECTION_METADATA,
     );
     // All callers pass the full dictionary, so we can safely cast
     const dataToSave = metadata as SettingsCollectionDictionaryData;
-    Zotero.Prefs.set(prefKey, JSON.stringify(dataToSave), true);
+
+    // Validate input data with Zod before saving
+    const inputResult = SettingsCollectionDictionaryDataSchema.safeParse(dataToSave);
+    if (!inputResult.success) {
+      ztoolkit.log(
+        "[Zotero Syllabus] Error validating collection metadata input before saving:",
+        inputResult.error,
+        "Input data:",
+        dataToSave,
+      );
+      return;
+    }
+    const validatedData = inputResult.data;
+
+    // Double-check: validate the stringified JSON will parse correctly
+    const jsonStr = JSON.stringify(validatedData);
+    try {
+      const parsed = JSON.parse(jsonStr);
+      const revalidationResult = SettingsCollectionDictionaryDataSchema.safeParse(parsed);
+      if (!revalidationResult.success) {
+        ztoolkit.log(
+          "[Zotero Syllabus] Error: Validated metadata failed revalidation after JSON.stringify:",
+          revalidationResult.error,
+          "Validated data:",
+          validatedData,
+        );
+        return;
+      }
+    } catch (e) {
+      ztoolkit.log(
+        "[Zotero Syllabus] Error: Failed to parse JSON string:",
+        e,
+        "JSON string:",
+        jsonStr,
+      );
+      return;
+    }
+
+    Zotero.Prefs.set(prefKey, jsonStr, true);
     // Invalidate class title cache when metadata changes
     // Note: We need to get the collectionId from context, but since this is called
     // from methods that have collectionId, we'll invalidate all to be safe
