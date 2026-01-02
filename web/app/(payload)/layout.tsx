@@ -3,7 +3,6 @@
 import type { ServerFunctionClient } from "payload";
 import config from "@payload-config";
 import { handleServerFunctions, RootLayout } from "@payloadcms/next/layouts";
-import React from "react";
 
 import "./custom.scss";
 import { importMap } from "./admin/[[...segments]]/importMap";
@@ -23,7 +22,7 @@ const serverFunction: ServerFunctionClient = async function (args) {
 
 const Layout = ({ children }: Args) => (
   <RootLayout config={config} importMap={importMap} serverFunction={serverFunction}>
-    {children}
+    {children as React.ReactNode}
   </RootLayout>
 );
 
