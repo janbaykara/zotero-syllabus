@@ -77,6 +77,7 @@ export interface SettingsSyllabusMetadata {
   nomenclature?: string;
   priorities?: CustomPriority[];
   locked?: boolean;
+  links?: string[];
 }
 
 export type ClassStatus = "done" | null;
@@ -2554,6 +2555,27 @@ export class SyllabusManager {
       `${collectionId}.nomenclature`,
       nomenclature.trim().toLowerCase(),
     );
+    await SyllabusManager.setCollectionMetadata(allData, source);
+  }
+
+  /**
+   * Get collection links for a specific collection
+   */
+  static getCollectionLinks(collectionId: number | string): string[] {
+    const metadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    return metadata.links || [];
+  }
+
+  /**
+   * Set collection links for a specific collection
+   */
+  static async setCollectionLinks(
+    collectionId: number | string,
+    links: string[],
+    source: "page",
+  ): Promise<void> {
+    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
+    set(allData, `${collectionId}.links`, links);
     await SyllabusManager.setCollectionMetadata(allData, source);
   }
 
