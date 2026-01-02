@@ -257,7 +257,6 @@ export const SettingsSyllabusMetadataSchema = z.object({
   nomenclature: z.string().optional(),
   priorities: z.array(CustomPrioritySchema).optional(),
   locked: z.boolean().optional(),
-  links: z.array(z.string()).optional(),
 });
 
 /**

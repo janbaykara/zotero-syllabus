@@ -46,10 +46,6 @@ import {
   Minimize2,
   ListChecks,
   List,
-  Pencil,
-  Plus,
-  ExternalLink,
-  Trash2,
 } from "lucide-preact";
 
 // Define priority type for use in this file
@@ -75,7 +71,6 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     _setNomenclature,
     _setPriorities,
     setLocked,
-    setLinks,
   ] = useZoteroSyllabusMetadata(collectionId);
 
   const handleClassReadingDateSave = useCallback(
@@ -895,13 +890,6 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
             />
           </div>
         </div>
-
-        <LinksSection
-          links={syllabusMetadata.links || []}
-          setLinks={setLinks}
-          isLocked={isLocked}
-          compactMode={compactMode}
-        />
 
         <div
           className={twMerge(
@@ -2379,171 +2367,6 @@ export function Bibliography({
         {bibliographicReference.split("\n").map((line) => (
           <div key={line}>{line}</div>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function LinksSection({
-  links,
-  setLinks,
-  isLocked,
-  compactMode,
-}: {
-  links: string[];
-  setLinks: (links: string[]) => void;
-  isLocked: boolean;
-  compactMode: boolean;
-}) {
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [editingValues, setEditingValues] = useState<{ [key: number]: string }>(
-    {},
-  );
-
-  const handleAddLink = () => {
-    setLinks([...links, ""]);
-    setEditingIndex(links.length);
-    setEditingValues({ [links.length]: "" });
-  };
-
-  const handleSaveLink = (index: number, value: string) => {
-    const newLinks = [...links];
-    newLinks[index] = value.trim();
-    // Remove empty links
-    const filteredLinks = newLinks.filter((link) => link.length > 0);
-    setLinks(filteredLinks);
-  };
-
-  const handleDeleteLink = (index: number) => {
-    const newLinks = links.filter((_, i) => i !== index);
-    setLinks(newLinks);
-    setEditingIndex(null);
-    setEditingValues({});
-  };
-
-  const handleLinkClick = (url: string) => {
-    if (editingIndex === null) {
-      Zotero.launchURL(url);
-    }
-  };
-
-  const handleEditClick = (
-    index: number,
-    e: JSX.TargetedMouseEvent<Element>,
-  ) => {
-    e.stopPropagation();
-    setEditingIndex(index);
-    setEditingValues({ [index]: links[index] || "" });
-  };
-
-  // Autofocus input when entering edit mode
-  useEffect(() => {
-    if (editingIndex !== null) {
-      // Small delay to ensure the input is rendered
-      setTimeout(() => {
-        // Find the input element within the container
-        const container = document.querySelector(
-          `[data-link-index="${editingIndex}"]`,
-        );
-        const input = container?.querySelector("input") as HTMLInputElement;
-        if (input) {
-          input.focus();
-          input.select();
-        }
-      }, 0);
-    }
-  }, [editingIndex]);
-
-  if (isLocked && links.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="container-padded">
-      <div className={twMerge("py-2", compactMode ? "text-base" : "text-lg")}>
-        <div className="flex flex-col gap-2">
-          {links.map((link, index) => (
-            <div
-              key={index}
-              className="flex flex-row items-center gap-2 group w-full"
-              data-link-index={index}
-            >
-              {editingIndex === index ? (
-                <>
-                  <TextInput
-                    initialValue={editingValues[index] || link}
-                    onSave={(value) => handleSaveLink(index, value)}
-                    placeholder="Enter URL..."
-                    className="flex-1 w-full"
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape" || e.key === "Enter") {
-                        setEditingIndex(null);
-                        setEditingValues({});
-                      }
-                    }}
-                  />
-                  <Trash2
-                    size={16}
-                    className="text-secondary hover:text-red-400 cursor-pointer shrink-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteLink(index);
-                    }}
-                    title="Delete link"
-                    aria-label="Delete link"
-                  />
-                </>
-              ) : (
-                <>
-                  <div
-                    className="flex-1 flex items-center gap-2 cursor-pointer hover:text-accent-blue"
-                    onClick={() => handleLinkClick(link)}
-                  >
-                    <ExternalLink
-                      size={16}
-                      className="text-secondary shrink-0"
-                    />
-                    <span className="text-primary break-all underline">
-                      {link}
-                    </span>
-                  </div>
-                  {!isLocked && (
-                    <>
-                      <Pencil
-                        size={16}
-                        className="text-secondary hover:text-primary cursor-pointer shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => handleEditClick(index, e)}
-                        title="Edit link"
-                        aria-label="Edit link"
-                      />
-                      <Trash2
-                        size={16}
-                        className="text-secondary hover:text-red-400 cursor-pointer shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteLink(index);
-                        }}
-                        title="Delete link"
-                        aria-label="Delete link"
-                      />
-                    </>
-                  )}
-                </>
-              )}
-            </div>
-          ))}
-          {!isLocked && (
-            <button
-              onClick={handleAddLink}
-              className="flex items-center gap-2 text-secondary hover:text-primary cursor-pointer self-start"
-              title="Add link"
-              aria-label="Add link"
-            >
-              <Plus size={16} />
-              <span>Add link</span>
-            </button>
-          )}
-        </div>
       </div>
     </div>
   );
