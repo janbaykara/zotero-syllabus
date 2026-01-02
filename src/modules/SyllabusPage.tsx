@@ -1179,7 +1179,7 @@ function ClassGroupComponent({
                     type="checkbox"
                     checked={classStatus === "done"}
                     onChange={handleClassStatusToggle}
-                    className="absolute right-full mr-1 md:mr-2! w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden"
+                    className="mt-1! absolute right-full mr-1 md:mr-2! w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden"
                     title={
                       classStatus === "done"
                         ? "Mark as not done"
@@ -1218,27 +1218,17 @@ function ClassGroupComponent({
                 </div>
                 <div className="ml-auto! shrink-0 inline-flex flex-row items-baseline gap-1 in-[.print]:hidden">
                   {FEATURE_FLAG.READING_SCHEDULE && !isLocked && (
-                    <div
-                      className={twMerge(
-                        compactMode ? "text-sm mt-2" : "text-base mt-3",
-                      )}
-                    >
-                      <ReadingDateInput
-                        initialValue={readingDate}
-                        onSave={(date) =>
-                          onClassReadingDateSave(classNumber, date)
-                        }
-                        compactMode={compactMode}
-                      />
-                    </div>
+                    <ReadingDateInput
+                      initialValue={readingDate}
+                      onSave={(date) =>
+                        onClassReadingDateSave(classNumber, date)
+                      }
+                      compactMode={compactMode}
+                    />
                   )}
                   {FEATURE_FLAG.READING_SCHEDULE && isLocked && readingDate && (
                     <div
-                      className={twMerge(
-                        compactMode
-                          ? "text-sm mt-2 text-secondary"
-                          : "text-base mt-3 text-secondary",
-                      )}
+                      className={twMerge("text-secondary")}
                     >
                       <span className="text-tertiary">Due date: </span>
                       <span className="text-secondary">
@@ -1401,6 +1391,11 @@ function ReadingDateInput({
     500,
   );
 
+  function clear() {
+    setValue("");
+    onSave(undefined);
+  }
+
   return (
     <div className="flex flex-row items-center gap-2">
       <label
@@ -1409,7 +1404,7 @@ function ReadingDateInput({
           compactMode ? "text-sm" : "text-base",
         )}
       >
-        Due date
+        {value ? <span onClick={clear} className='underline text-secondary cursor-pointer'>Clear due date</span> : <span>Add a due date</span>}
       </label>
       <input
         type="date"
@@ -1421,19 +1416,6 @@ function ReadingDateInput({
         )}
         placeholder="Select date"
       />
-      {value && (
-        <button
-          onClick={() => {
-            setValue("");
-            onSave(undefined);
-          }}
-          className="text-secondary hover:text-primary text-sm"
-          title="Clear date"
-          aria-label="Clear date"
-        >
-          ×
-        </button>
-      )}
     </div>
   );
 }
