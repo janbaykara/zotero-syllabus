@@ -401,18 +401,17 @@ export function ReadingSchedule() {
 
             return (
               <div key={weekStartKey} className="syllabus-class-group">
-                <div className="container-padded">
-                  <div
-                    className={twMerge(
-                      "text-2xl sticky top-16 z-10 py-2 bg-background text-tertiary",
-                    )}
-                  >
-                    Week starting{" "}
-                    <span className="text-secondary">
-                      {formatWeekRange(weekStartDate)}
-                    </span>
-                  </div>
+                <div className={twMerge("container-padded",
+                  "text-2xl sticky top-16 z-10 py-2 bg-background text-tertiary",
+                )}
+                >
+                  Week starting{" "}
+                  <span className="text-secondary">
+                    {formatWeekRange(weekStartDate)}
+                  </span>
+                </div>
 
+                <div className="container-padded">
                   <div className="space-y-8 my-6">
                     {sortedDates.map((dateTimestamp) => {
                       const classReadings = weekData.get(dateTimestamp)!;
@@ -438,7 +437,7 @@ export function ReadingSchedule() {
                           </div>
 
                           {sortedClassReadings.map((classReading) => {
-                            const { singularCapitalized } =
+                            const { singularCapitalized, singular } =
                               SyllabusManager.getNomenclatureFormatted(
                                 classReading.collectionId,
                               );
@@ -507,22 +506,22 @@ export function ReadingSchedule() {
                                           : "",
                                       )}
                                     >
-                                      <span className="font-semibold">
-                                        {classReading.collectionName}
-                                      </span>
-                                      ,{" "}
-                                      <span className="text-secondary">
-                                        {singularCapitalized}{" "}
-                                        {classReading.classNumber}
-                                      </span>
-                                      {classReading.classTitle && (
+                                      {classReading.classTitle ? (
                                         <>
-                                          <span>:&nbsp;</span>
                                           <span className="font-semibold">
                                             {classReading.classTitle}
                                           </span>
+                                          <span className="text-secondary">,{" "}</span>
                                         </>
-                                      )}
+                                      ) : null}
+                                      <span className="text-secondary">
+                                        {classReading.classTitle ? singular : singularCapitalized}{" "}
+                                        {classReading.classNumber}
+                                      </span>
+                                      <span className="text-secondary"> of </span>
+                                      <span className="font-semibold">
+                                        {classReading.collectionName}
+                                      </span>
                                     </div>
                                   </div>
                                   {classReading.classDescription && (
@@ -558,8 +557,8 @@ export function ReadingSchedule() {
                                             compactMode ||
                                             !priority ||
                                             priority ===
-                                              SyllabusManager.priorityKeys
-                                                .OPTIONAL
+                                            SyllabusManager.priorityKeys
+                                              .OPTIONAL
                                           }
                                           compactMode={compactMode}
                                           isLocked={true}
