@@ -1,3 +1,7 @@
+packages:
+  - "."
+  - "web"
+
 onlyBuiltDependencies:
   - "@swc/core"
   - es5-ext
