@@ -1096,7 +1096,7 @@ function ClassGroupComponent({
   const readingDate = classNumber
     ? syllabusMetadata.classes?.[classNumber]?.readingDate
     : undefined;
-  const classStatus = classNumber
+  const classIsDone = classNumber
     ? SyllabusManager.getClassStatus(collectionId, classNumber) === "done"
     : false;
 
@@ -1139,7 +1139,7 @@ function ClassGroupComponent({
   const handleClassStatusToggle = async () => {
     if (classNumber !== null && classNumber !== undefined) {
       try {
-        const newStatus = classStatus ? null : "done";
+        const newStatus = classIsDone ? null : "done";
         await SyllabusManager.setClassStatus(
           collectionId,
           classNumber,
@@ -1156,7 +1156,7 @@ function ClassGroupComponent({
     <div
       className={twMerge(
         "syllabus-class-group in-[.print]:scheme-light",
-        readerMode && classStatus === "done" ? "opacity-40" : "",
+        readerMode && classIsDone ? "opacity-40" : "",
       )}
     >
       {classNumber && (
@@ -1176,12 +1176,12 @@ function ClassGroupComponent({
                 {readerMode && (
                   <input
                     type="checkbox"
-                    checked={classStatus}
+                    checked={classIsDone}
                     onChange={handleClassStatusToggle}
                     className="mt-1! absolute right-full mr-1 md:mr-2! w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden"
-                    title={classStatus ? "Mark as not done" : "Mark as done"}
+                    title={classIsDone ? "Mark as not done" : "Mark as done"}
                     aria-label={
-                      classStatus ? "Mark as not done" : "Mark as done"
+                      classIsDone ? "Mark as not done" : "Mark as done"
                     }
                   />
                 )}
