@@ -29,9 +29,10 @@ import {
   ExportSyllabusMetadataSchema,
 } from "../utils/schemas";
 import * as z from "zod";
+import { getRDFStringForCollection, importRDF } from "../utils/rdf";
 
 // Enums are now defined in utils/schemas.ts
-import { SyllabusPriority } from "../utils/schemas";
+import { SyllabusPriority } from '../utils/schemas';
 
 // Re-export for backward compatibility
 export { SyllabusPriority };
@@ -3175,18 +3176,37 @@ export class SyllabusManager {
   /**
    * Prepare export data for a collection
    * Returns validated export JSON object ready for stringification
+   * Includes RDF data if available
    */
-  static prepareExportData(
+  static async prepareExportData(
     collectionId: number | GetByLibraryAndKeyArgs,
     collectionTitle: string,
-  ): z.infer<typeof ExportSyllabusMetadataSchema> {
+  ): Promise<z.infer<typeof ExportSyllabusMetadataSchema>> {
     // Get current collection's metadata
     const metadata = this.getSyllabusMetadata(collectionId);
+
+    // Get collection object for RDF export
+    const collection = this.getCollectionFromIdentifier(collectionId);
+    let rdfString: string | undefined;
+
+    // Try to export RDF, but don't fail if it doesn't work
+    if (collection) {
+      try {
+        const rdfResult = await getRDFStringForCollection(collection);
+        if (typeof rdfResult === "string") {
+          rdfString = rdfResult;
+        }
+      } catch (error) {
+        ztoolkit.log("Error exporting RDF:", error);
+        // Continue without RDF - export will work without it
+      }
+    }
 
     // Create export object with collection title - schema handles all transformations
     const exportData = {
       collectionTitle: collectionTitle || "",
       ...metadata,
+      ...(rdfString ? { rdf: rdfString } : {}),
     };
 
     // Validate and transform export data using the export schema
@@ -3194,10 +3214,12 @@ export class SyllabusManager {
     return ExportSyllabusMetadataSchema.parse(exportData);
   }
 
+
   /**
    * Import syllabus metadata from a JSON string (export format)
    * Validates against ExportSyllabusMetadataSchema, updates collection title if provided,
    * merges metadata with existing, and saves everything
+   * If RDF data is present, imports items into the current collection
    * Throws errors for invalid JSON or schema validation failures
    */
   static async importSyllabusMetadata(
@@ -3211,7 +3233,7 @@ export class SyllabusManager {
       parsedData = JSON.parse(importedJsonString);
     } catch (parseError) {
       throw new Error(
-        `The file is not valid JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+        `importSyllabusMetadata: The file is not valid JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
       );
     }
 
@@ -3219,20 +3241,116 @@ export class SyllabusManager {
     const validationResult = ExportSyllabusMetadataSchema.safeParse(parsedData);
     if (!validationResult.success) {
       throw new Error(
-        `The file does not match the expected syllabus metadata format: ${validationResult.error.message}`,
+        `importSyllabusMetadata: The file does not match the expected syllabus metadata format: ${validationResult.error.message}`,
       );
     }
 
     const exportData = validationResult.data;
 
-    // Extract metadata (without collectionTitle) for merging
-    const { collectionTitle, ...metadataData } = exportData;
+    // Extract metadata (without collectionTitle and rdf) for merging
+    const { collectionTitle, rdf, ...metadataData } = exportData;
+
+    // Get target collection for RDF import and title update
+    const targetCollection = this.getCollectionFromIdentifier(collectionId);
+    if (!targetCollection) {
+      throw new Error("importSyllabusMetadata: Target collection not found");
+    }
 
     // Update collection title if provided
     if (collectionTitle) {
-      const collection = this.getCollectionFromIdentifier(collectionId);
-      if (collection) {
-        this.setCollectionTitle(collection.id, collectionTitle, source);
+      this.setCollectionTitle(targetCollection.id, collectionTitle, source);
+    }
+
+    // Import RDF items if present
+    if (rdf) {
+      try {
+        const importedItems = await importRDF(rdf);
+        ztoolkit.log("importSyllabusMetadata: Imported RDF items:", importedItems);
+
+        if (importedItems.length > 0) {
+          // Ensure all items have IDs (they should already be saved by the import process)
+          const itemIDs = importedItems
+            .map((item) => item.id)
+            .filter((id): id is number => id !== undefined);
+
+          if (itemIDs.length === 0) {
+            ztoolkit.log(
+              "importSyllabusMetadata: No valid item IDs found in imported items",
+            );
+          } else {
+            ztoolkit.log(
+              `importSyllabusMetadata: Adding ${itemIDs.length} items to collection`,
+            );
+
+            // Add items to the target collectio
+            ztoolkit.log("importSyllabusMetadata: Adding items to collection:", targetCollection, importedItems);
+            for (const item of importedItems) {
+              item.addToCollection(targetCollection.id);
+              await item.saveTx();
+            }
+
+            // Wait a moment for the collection to update
+            await Zotero.Promise.delay(200);
+
+            // Verify items are in the collection
+            const collectionItemIDs = targetCollection.getChildItems()
+              .filter((item) => item.isRegularItem())
+              .map((item) => item.id);
+
+            const itemsInCollection = itemIDs.filter((id: number) =>
+              collectionItemIDs.includes(id)
+            );
+
+            if (itemsInCollection.length !== itemIDs.length) {
+              ztoolkit.log(
+                `importSyllabusMetadata: Warning: Only ${itemsInCollection.length} of ${itemIDs.length} items were added to collection`,
+              );
+              ztoolkit.log(
+                `importSyllabusMetadata: Expected IDs: ${itemIDs.join(", ")}`,
+              );
+              ztoolkit.log(
+                `importSyllabusMetadata: Collection IDs: ${collectionItemIDs.join(", ")}`,
+              );
+            }
+
+            ztoolkit.log(
+              `importSyllabusMetadata: Added ${itemsInCollection.length} items to collection`,
+            );
+          }
+
+          // Patch the assignment config to point to this collection.
+          for (const item of importedItems) {
+            const assignments = this.getItemSyllabusData(item);
+
+            const newAssignments = ItemSyllabusDataEntity.latestSchema.parse({});
+            if (assignments && Object.keys(assignments).length > 0) {
+              const firstKey = Object.keys(assignments)[0];
+              newAssignments[
+                this.getCollectionReferenceString(
+                  targetCollection.libraryID,
+                  targetCollection.key,
+                )
+              ] = assignments[firstKey];
+
+              // (Also remove read statuses)
+              for (const [collectionId, assignments] of Object.entries(newAssignments)) {
+                for (const [index, assignment] of assignments.entries()) {
+                  newAssignments[collectionId][index].status = null;
+                }
+              }
+
+              // Save
+              this.setItemData(item, newAssignments, source);
+            }
+          }
+        }
+      } catch (error) {
+        // Log error but don't fail the entire import
+        // Metadata import should still proceed
+        ztoolkit.log(
+          "importSyllabusMetadata: Error importing RDF items (continuing with metadata import):",
+          error,
+        );
       }
     }
 
@@ -3242,7 +3360,7 @@ export class SyllabusManager {
       SettingsSyllabusMetadataSchema.safeParse(metadataData);
     if (!metadataValidation.success) {
       throw new Error(
-        `The metadata in the file is invalid: ${metadataValidation.error.message}`,
+        `importSyllabusMetadata: The metadata in the file is invalid: ${metadataValidation.error.message}`,
       );
     }
 

@@ -355,6 +355,7 @@ export const ExportSyllabusMetadataSchema = SettingsSyllabusMetadataSchema.omit(
 ).extend({
   collectionTitle: z.string(),
   classes: transformClasses(ExportClassMetadataSchema),
+  rdf: z.string().optional(), // RDF serialized as XML string
 });
 
 /**
