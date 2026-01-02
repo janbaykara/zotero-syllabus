@@ -41,16 +41,20 @@ const ItemSyllabusAssignmentV1Schema = z.object({
   classInstruction: z.string().optional(),
 });
 
+function generateAssignmentId(): string {
+  return `assignment-${uuidv7()}`;
+}
+
 /**
  * ItemSyllabusAssignment schema
  * Version 2: Ensures id is always present
  */
 const ItemSyllabusAssignmentV2Schema = z.object({
-  id: z.string(),
+  id: z.string().default(generateAssignmentId),
   classNumber: z.number().optional(),
   priority: SyllabusPrioritySchema.optional(),
   classInstruction: z.string().optional(),
-  status: AssignmentStatusSchema.optional()
+  status: AssignmentStatusSchema.optional(),
 });
 
 /**
@@ -85,10 +89,10 @@ export const ItemSyllabusAssignmentEntity = createVersionedEntity({
       initial: false,
       up: (old: z.infer<typeof ItemSyllabusAssignmentV1Schema>) => {
         // Generate ID if missing using uuidv7
-        const id = old.id || `assignment-${uuidv7()}`;
+        const id = old.id || generateAssignmentId();
         return {
           ...old,
-          id
+          id,
         };
       },
     }),
@@ -182,7 +186,10 @@ export const ItemSyllabusDataEntity = createVersionedEntity({
         if (validationResult.success) {
           return validationResult.data;
         } else {
-          ztoolkit.log("Error validating migrated ItemSyllabusData:", validationResult.error);
+          ztoolkit.log(
+            "Error validating migrated ItemSyllabusData:",
+            validationResult.error,
+          );
           // Return the migrated data anyway - it should be valid, but if not, log it
           return migrated;
         }
@@ -220,26 +227,32 @@ export const SettingsClassMetadataSchema = z.object({
 
 /**
  * Settings Syllabus Metadata schema
- * Automatically filters out null classes during parsing
+ * Automatically filters out null classes, empty itemOrder arrays, and empty class entries during parsing
  */
 export const SettingsSyllabusMetadataSchema = z.object({
   description: z.string().optional(),
   classes: z
-    .record(z.string(), SettingsClassMetadataSchema.nullable())
-    .optional()
+    .record(z.string(), SettingsClassMetadataSchema)
+    .default(() => ({}))
     .transform((classes) => {
-      if (!classes) return undefined;
-      // Filter out null classes
+      if (!classes) return {};
       const filtered: Record<
         string,
         z.infer<typeof SettingsClassMetadataSchema>
       > = {};
       for (const [key, value] of Object.entries(classes)) {
-        if (value !== null) {
-          filtered[key] = value;
+        if (!value) {
+          // Skip null classes
+          continue;
         }
+        // Remove empty itemOrder arrays
+        const cleanedValue = { ...value };
+        if (cleanedValue.itemOrder && cleanedValue.itemOrder.length === 0) {
+          delete cleanedValue.itemOrder;
+        }
+        filtered[key] = cleanedValue;
       }
-      return Object.keys(filtered).length > 0 ? filtered : undefined;
+      return Object.keys(filtered).length > 0 ? filtered : {};
     }),
   nomenclature: z.string().optional(),
   priorities: z.array(CustomPrioritySchema).optional(),

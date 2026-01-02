@@ -23,6 +23,8 @@ import {
   ItemSyllabusDataEntity,
   ItemSyllabusAssignmentEntity,
   SettingsCollectionDictionaryDataSchema,
+  SettingsClassMetadataSchema,
+  SettingsSyllabusMetadataSchema,
 } from "../utils/schemas";
 
 // Enums are now defined in utils/schemas.ts
@@ -948,8 +950,7 @@ export class SyllabusManager {
               classNumber !== undefined
                 ? SyllabusManager.getClassTitle(
                   selectedCollection.id,
-                  classNumber,
-                  false,
+                  classNumber
                 )
                 : "";
             const priority = firstAssignment.priority || "";
@@ -1498,7 +1499,6 @@ export class SyllabusManager {
         const parsed = JSON.parse(jsonStr);
         // Use Zod schema with verzod for parsing and migration
         const result = ItemSyllabusDataEntity.safeParse(parsed);
-        ztoolkit.log("getItemSyllabusData", result, parsed);
         if (result.type === "ok") {
           data = result.value;
 
@@ -1539,14 +1539,6 @@ export class SyllabusManager {
   }
 
   /**
-   * Generate a unique ID for an assignment entry
-   */
-  private static generateAssignmentId(): string {
-    return `assignment-${uuidv7()}`;
-  }
-
-
-  /**
    * Invalidate cached syllabus data for an item
    * Call this when an item's extra fields are modified
    */
@@ -1558,7 +1550,7 @@ export class SyllabusManager {
    * Set syllabus data in an item's extra field
    * Validates with Zod before saving to ensure 100% type safety
    */
-  static async setSyllabusData(
+  static async setItemData(
     item: Zotero.Item,
     data: ItemSyllabusData,
     source: "page" | "item-pane" | "context-menu",
@@ -1641,117 +1633,117 @@ export class SyllabusManager {
    *
    * Note: For new code, prefer using updateClassAssignment with assignmentId
    */
-  static async setSyllabusPriority(
-    item: Zotero.Item,
-    collectionId: number | string,
-    priority: SyllabusPriority | "",
-    source: "page" | "item-pane" | "context-menu",
-    classNumber?: number,
-    assignmentId?: string,
-  ): Promise<void> {
-    // If assignmentId is provided, use updateClassAssignment (preferred)
-    if (assignmentId) {
-      await this.updateClassAssignment(
-        item,
-        collectionId,
-        assignmentId,
-        { priority: priority || undefined },
-        source,
-      );
-      return;
-    }
+  // static async setSyllabusPriority(
+  //   item: Zotero.Item,
+  //   collectionId: number | string,
+  //   priority: SyllabusPriority | "",
+  //   source: "page" | "item-pane" | "context-menu",
+  //   classNumber?: number,
+  //   assignmentId?: string,
+  // ): Promise<void> {
+  //   // If assignmentId is provided, use updateClassAssignment (preferred)
+  //   if (assignmentId) {
+  //     await this.updateClassAssignment(
+  //       item,
+  //       collectionId,
+  //       assignmentId,
+  //       { priority: priority || undefined },
+  //       source,
+  //     );
+  //     return;
+  //   }
 
-    // Fallback to legacy behavior for context menus
-    const data = this.getItemSyllabusData(item);
-    const collectionIdStr = String(collectionId);
-    let entries = data[collectionIdStr] || [];
+  //   // Fallback to legacy behavior for context menus
+  //   const data = this.getItemSyllabusData(item);
+  //   const collectionIdStr = String(collectionId);
+  //   let entries = data[collectionIdStr] || [];
 
-    if (classNumber !== undefined) {
-      // Find or create entry for specific class
-      let entryIndex = entries.findIndex((e) => e.classNumber === classNumber);
-      if (entryIndex === -1) {
-        entries.push({ classNumber, id: this.generateAssignmentId() });
-        entryIndex = entries.length - 1;
-      }
+  //   if (classNumber !== undefined) {
+  //     // Find or create entry for specific class
+  //     let entryIndex = entries.findIndex((e) => e.classNumber === classNumber);
+  //     if (entryIndex === -1) {
+  //       entries.push({ classNumber, id: this.generateAssignmentId() });
+  //       entryIndex = entries.length - 1;
+  //     }
 
-      if (priority) {
-        entries[entryIndex].priority = priority;
-      } else {
-        delete entries[entryIndex].priority;
-        // Remove entry if all fields are empty
-        if (
-          !entries[entryIndex].classInstruction &&
-          entries[entryIndex].classNumber === undefined
-        ) {
-          entries.splice(entryIndex, 1);
-        }
-      }
-    } else {
-      // Update first entry or create one
-      if (entries.length === 0) {
-        entries.push({ id: this.generateAssignmentId() });
-      }
+  //     if (priority) {
+  //       entries[entryIndex].priority = priority;
+  //     } else {
+  //       delete entries[entryIndex].priority;
+  //       // Remove entry if all fields are empty
+  //       if (
+  //         !entries[entryIndex].classInstruction &&
+  //         entries[entryIndex].classNumber === undefined
+  //       ) {
+  //         entries.splice(entryIndex, 1);
+  //       }
+  //     }
+  //   } else {
+  //     // Update first entry or create one
+  //     if (entries.length === 0) {
+  //       entries.push({ id: this.generateAssignmentId() });
+  //     }
 
-      if (priority) {
-        entries[0].priority = priority;
-      } else {
-        delete entries[0].priority;
-        // Remove entry if all fields are empty
-        if (
-          !entries[0].classInstruction &&
-          entries[0].classNumber === undefined
-        ) {
-          entries = [];
-        }
-      }
-    }
+  //     if (priority) {
+  //       entries[0].priority = priority;
+  //     } else {
+  //       delete entries[0].priority;
+  //       // Remove entry if all fields are empty
+  //       if (
+  //         !entries[0].classInstruction &&
+  //         entries[0].classNumber === undefined
+  //       ) {
+  //         entries = [];
+  //       }
+  //     }
+  //   }
 
-    if (entries.length === 0) {
-      delete data[collectionIdStr];
-    } else {
-      data[collectionIdStr] = entries;
-    }
+  //   if (entries.length === 0) {
+  //     delete data[collectionIdStr];
+  //   } else {
+  //     data[collectionIdStr] = entries;
+  //   }
 
-    await this.setSyllabusData(item, data, source);
-  }
+  //   await this.setItemData(item, data, source);
+  // }
 
   /**
    * Get class instruction for a specific collection and class
    * If classNumber is provided, returns instruction for that class
    * Otherwise, returns instruction from first entry
    */
-  static getSyllabusClassInstruction(
-    item: Zotero.Item,
-    collectionId: number | string,
-    classNumber?: number,
-  ): string {
-    const data = this.getItemSyllabusData(item);
-    const collectionIdStr = String(collectionId);
-    const entries = data[collectionIdStr] || [];
+  // static getSyllabusClassInstruction(
+  //   item: Zotero.Item,
+  //   collectionId: number | string,
+  //   classNumber?: number,
+  // ): string {
+  //   const data = this.getItemSyllabusData(item);
+  //   const collectionIdStr = String(collectionId);
+  //   const entries = data[collectionIdStr] || [];
 
-    if (classNumber !== undefined) {
-      const entry = entries.find((e) => e.classNumber === classNumber);
-      return entry?.classInstruction || "";
-    }
+  //   if (classNumber !== undefined) {
+  //     const entry = entries.find((e) => e.classNumber === classNumber);
+  //     return entry?.classInstruction || "";
+  //   }
 
-    // Return first entry's instruction if no classNumber specified
-    return entries[0]?.classInstruction || "";
-  }
+  //   // Return first entry's instruction if no classNumber specified
+  //   return entries[0]?.classInstruction || "";
+  // }
 
   /**
    * Get syllabus class number for a specific collection
    * Returns the first class number found, or undefined if none
    * For multiple class assignments, use getAllClassAssignments()
    */
-  static getSyllabusClassNumber(
-    item: Zotero.Item,
-    collectionId: number | string,
-  ): number | undefined {
-    const data = this.getItemSyllabusData(item);
-    const collectionIdStr = String(collectionId);
-    const entries = data[collectionIdStr] || [];
-    return entries[0]?.classNumber;
-  }
+  // static getSyllabusClassNumber(
+  //   item: Zotero.Item,
+  //   collectionId: number | string,
+  // ): number | undefined {
+  //   const data = this.getItemSyllabusData(item);
+  //   const collectionIdStr = String(collectionId);
+  //   const entries = data[collectionIdStr] || [];
+  //   return entries[0]?.classNumber;
+  // }
 
   /**
    * Get the full range of class numbers for a collection
@@ -1885,7 +1877,7 @@ export class SyllabusManager {
       data[collectionIdStr] = assignments;
     }
 
-    await this.setSyllabusData(item, data, source);
+    await this.setItemData(item, data, source);
   }
 
   /**
@@ -2137,16 +2129,19 @@ export class SyllabusManager {
     const assignments = data[collectionIdStr] || [];
 
     // Add new entry with ID
-    const newEntry: ItemSyllabusAssignment = {
+    const newEntry = ItemSyllabusAssignmentEntity.safeParse({
       classNumber,
       ...metadata,
-      id: this.generateAssignmentId(),
-    };
-    assignments.push(newEntry);
+    });
+    if (newEntry.type !== "ok") {
+      ztoolkit.log("Error adding new assignment:", newEntry.error);
+      return;
+    }
+    assignments.push(newEntry.value);
 
     // New entry already has ID, existing entries validated via getItemSyllabusData
     data[collectionIdStr] = assignments;
-    await this.setSyllabusData(item, data, source);
+    await this.setItemData(item, data, source);
   }
 
   /**
@@ -2171,7 +2166,7 @@ export class SyllabusManager {
       data[collectionIdStr] = entries;
     }
 
-    await this.setSyllabusData(item, data, source);
+    await this.setItemData(item, data, source);
   }
 
   /**
@@ -2195,7 +2190,7 @@ export class SyllabusManager {
       data[collectionIdStr] = entries;
     }
 
-    await this.setSyllabusData(item, data, source);
+    await this.setItemData(item, data, source);
   }
 
   /**
@@ -2209,7 +2204,7 @@ export class SyllabusManager {
     const data = this.getItemSyllabusData(item);
     const collectionIdStr = String(collectionId);
     delete data[collectionIdStr];
-    await this.setSyllabusData(item, data, source);
+    await this.setItemData(item, data, source);
   }
 
   /**
@@ -2259,7 +2254,7 @@ export class SyllabusManager {
       data[collectionIdStr] = entries;
     }
 
-    await this.setSyllabusData(item, data, source);
+    await this.setItemData(item, data, source);
   }
 
   /**
@@ -2283,123 +2278,96 @@ export class SyllabusManager {
    */
   static async setClassItemOrder(
     collectionId: number | string,
-    classNumber: number | null,
+    classNumber: number,
     itemIds: string[],
     source: "page" | "item-pane" = "page",
   ): Promise<void> {
-    const allData = this.getSettingsCollectionDictionaryData();
-    const collectionIdStr = String(collectionId);
+    const classMetadata = SyllabusManager.getClassMetadata(collectionId, classNumber);
     const classKey = classNumber === null ? "null" : String(classNumber);
-
-    if (!allData[collectionIdStr]) {
-      allData[collectionIdStr] = {};
-    }
-    if (!allData[collectionIdStr].classes) {
-      allData[collectionIdStr].classes = {};
-    }
-    if (!allData[collectionIdStr].classes[classKey]) {
-      allData[collectionIdStr].classes[classKey] = {};
-    }
-
-    if (itemIds.length === 0) {
-      // Remove ordering if empty
-      if (allData[collectionIdStr].classes[classKey]) {
-        delete allData[collectionIdStr].classes[classKey].itemOrder;
-        // Clean up empty class entry if no other fields
-        if (
-          !allData[collectionIdStr].classes[classKey].title &&
-          !allData[collectionIdStr].classes[classKey].description
-        ) {
-          delete allData[collectionIdStr].classes[classKey];
-        }
-      }
-    } else {
-      allData[collectionIdStr].classes[classKey].itemOrder = itemIds;
-    }
-
-    await this.setCollectionMetadata(allData, source);
+    classMetadata.itemOrder = itemIds;
+    await this.setClassMetadata(collectionId, classNumber, classMetadata, source);
   }
 
   /**
    * Reorder items within a class
    */
-  static async reorderClassItems(
-    collectionId: number | string,
-    classNumber: number | null,
-    itemIds: string[],
-    source: "page" | "item-pane" = "page",
-  ): Promise<void> {
-    await this.setClassItemOrder(collectionId, classNumber, itemIds, source);
-  }
+  // static async reorderClassItems(
+  //   collectionId: number | string,
+  //   classNumber: number,
+  //   itemIds: string[],
+  //   source: "page" | "item-pane" = "page",
+  // ): Promise<void> {
+  //   await this.setClassItemOrder(collectionId, classNumber, itemIds, source);
+  // }
 
   /**
    * Validate ordering preferences and clean up orphaned assignmentIds
    * Now validates itemOrder in metadata instead of separate preference
    */
-  static async validateOrderingPrefs(
-    collectionId: number | string,
-  ): Promise<void> {
-    const metadata = this.getSyllabusMetadata(collectionId);
-    if (!metadata.classes) {
-      return;
-    }
+  // static async validateOrderingPrefs(
+  //   collectionId: number | string,
+  // ): Promise<void> {
+  //   const metadata = this.getSyllabusMetadata(collectionId);
+  //   if (!metadata.classes) {
+  //     return;
+  //   }
 
-    // Get all valid assignment IDs in the collection
-    try {
-      const collection = Zotero.Collections.get(
-        typeof collectionId === "string"
-          ? parseInt(collectionId, 10)
-          : collectionId,
-      );
-      if (!collection) {
-        return;
-      }
+  //   // Get all valid assignment IDs in the collection
+  //   try {
+  //     const collection = Zotero.Collections.get(
+  //       typeof collectionId === "string"
+  //         ? parseInt(collectionId, 10)
+  //         : collectionId,
+  //     );
+  //     if (!collection) {
+  //       return;
+  //     }
 
-      const items = collection.getChildItems();
-      const validAssignmentIds = new Set<string>();
-      for (const item of items) {
-        if (item.isRegularItem()) {
-          const assignments = this.getAllClassAssignments(item, collectionId);
-          for (const assignment of assignments) {
-            if (assignment.id) {
-              validAssignmentIds.add(assignment.id);
-            }
-          }
-        }
-      }
+  //     const items = collection.getChildItems();
+  //     const validAssignmentIds = new Set<string>();
+  //     for (const item of items) {
+  //       if (item.isRegularItem()) {
+  //         const assignments = this.getAllClassAssignments(item, collectionId);
+  //         for (const assignment of assignments) {
+  //           if (assignment.id) {
+  //             validAssignmentIds.add(assignment.id);
+  //           }
+  //         }
+  //       }
+  //     }
 
-      // Clean up orphaned assignmentIds in itemOrder
-      const allData = this.getSettingsCollectionDictionaryData();
-      const collectionIdStr = String(collectionId);
-      let hasChanges = false;
+  //     // Clean up orphaned assignmentIds in itemOrder
+  //     const allData = this.getSettingsCollectionDictionaryData();
+  //     const collectionIdStr = String(collectionId);
+  //     let hasChanges = false;
 
-      if (allData[collectionIdStr]?.classes) {
-        for (const [classKey, classMetadata] of Object.entries(
-          allData[collectionIdStr].classes!,
-        )) {
-          if (classMetadata.itemOrder) {
-            const filtered = classMetadata.itemOrder.filter((id) =>
-              validAssignmentIds.has(id),
-            );
-            if (filtered.length !== classMetadata.itemOrder.length) {
-              if (filtered.length === 0) {
-                delete classMetadata.itemOrder;
-              } else {
-                classMetadata.itemOrder = filtered;
-              }
-              hasChanges = true;
-            }
-          }
-        }
-      }
+  //     if (allData[collectionIdStr]?.classes) {
+  //       for (const [classKey, classMetadata] of Object.entries(
+  //         allData[collectionIdStr].classes,
+  //       )) {
+  //         if (classMetadata.itemOrder) {
+  //           const filtered = classMetadata.itemOrder.filter((id) =>
+  //             validAssignmentIds.has(id),
+  //           );
+  //           if (filtered.length !== classMetadata.itemOrder.length) {
+  //             if (filtered.length === 0) {
+  //               delete classMetadata.itemOrder;
+  //             } else {
+  //               classMetadata.itemOrder = filtered;
+  //             }
+  //             hasChanges = true;
+  //           }
+  //         }
+  //       }
+  //     }
 
-      if (hasChanges) {
-        await this.setCollectionMetadata(allData, "page");
-      }
-    } catch (e) {
-      ztoolkit.log("Error validating ordering prefs:", e);
-    }
-  }
+  //     if (hasChanges) {
+  //       await this.setCollectionMetadata(allData, "page");
+  //     }
+  //   } catch (e) {
+  //     ztoolkit.log("Error validating ordering prefs:", e);
+  //   }
+  // }
 
   static getSettingsCollectionDictionaryData(): SettingsCollectionDictionaryData {
     const prefKey = SyllabusManager.getPreferenceKey(
@@ -2425,6 +2393,25 @@ export class SyllabusManager {
     }
   }
 
+  static setSettingsCollectionDictionaryData(metadata: SettingsCollectionDictionaryData, source: "page" | "item-pane", emitChange: boolean = true) {
+    const inputResult = SettingsCollectionDictionaryDataSchema.safeParse(metadata);
+    if (!inputResult.success) {
+      ztoolkit.log("Error validating collection metadata:", inputResult.error);
+      return;
+    }
+    const prefKey = SyllabusManager.getPreferenceKey(
+      SyllabusSettingsKey.COLLECTION_METADATA,
+    );
+    Zotero.Prefs.set(prefKey, JSON.stringify(inputResult.data), true);
+    if (emitChange) {
+      ztoolkit.log("Emitting collection metadata change for source");
+      this.emitCollectionMetadataChange();
+      if (source !== "item-pane") this.reloadItemPane();
+      if (source !== "page") this.setupPage();
+      this.onClassListUpdate();
+    }
+  }
+
   /**
    * Get collection metadata from preferences
    */
@@ -2433,7 +2420,10 @@ export class SyllabusManager {
   ): SettingsSyllabusMetadata {
     const data = this.getSettingsCollectionDictionaryData();
     const collectionIdStr = String(collectionId);
-    return data[collectionIdStr] || {};
+    if (!data[collectionIdStr]) {
+      data[collectionIdStr] = SettingsSyllabusMetadataSchema.parse({});
+    }
+    return data[collectionIdStr];
   }
 
   /**
@@ -2443,62 +2433,13 @@ export class SyllabusManager {
    * even though it's typed as SettingsSyllabusMetadata for backward compatibility
    */
   static async setCollectionMetadata(
-    metadata: SettingsSyllabusMetadata | SettingsCollectionDictionaryData,
+    collectionId: number | string,
+    metadata: SettingsSyllabusMetadata,
     source: "page" | "item-pane",
   ): Promise<void> {
-    const prefKey = SyllabusManager.getPreferenceKey(
-      SyllabusSettingsKey.COLLECTION_METADATA,
-    );
-    // All callers pass the full dictionary, so we can safely cast
-    const dataToSave = metadata as SettingsCollectionDictionaryData;
-
-    // Validate input data with Zod before saving
-    const inputResult = SettingsCollectionDictionaryDataSchema.safeParse(dataToSave);
-    if (!inputResult.success) {
-      ztoolkit.log(
-        "[Zotero Syllabus] Error validating collection metadata input before saving:",
-        inputResult.error,
-        "Input data:",
-        dataToSave,
-      );
-      return;
-    }
-    const validatedData = inputResult.data;
-
-    // Double-check: validate the stringified JSON will parse correctly
-    const jsonStr = JSON.stringify(validatedData);
-    try {
-      const parsed = JSON.parse(jsonStr);
-      const revalidationResult = SettingsCollectionDictionaryDataSchema.safeParse(parsed);
-      if (!revalidationResult.success) {
-        ztoolkit.log(
-          "[Zotero Syllabus] Error: Validated metadata failed revalidation after JSON.stringify:",
-          revalidationResult.error,
-          "Validated data:",
-          validatedData,
-        );
-        return;
-      }
-    } catch (e) {
-      ztoolkit.log(
-        "[Zotero Syllabus] Error: Failed to parse JSON string:",
-        e,
-        "JSON string:",
-        jsonStr,
-      );
-      return;
-    }
-
-    Zotero.Prefs.set(prefKey, jsonStr, true);
-    // Invalidate class title cache when metadata changes
-    // Note: We need to get the collectionId from context, but since this is called
-    // from methods that have collectionId, we'll invalidate all to be safe
-    this.invalidateClassTitleCache();
-    // Emit event for store listeners (preference changes aren't notifiable in Zotero)
-    this.emitCollectionMetadataChange();
-    // No need to call setupPage() - React stores will trigger re-render automatically
-    if (source !== "item-pane") this.reloadItemPane();
-    this.onClassListUpdate();
+    const allData = this.getSettingsCollectionDictionaryData();
+    allData[collectionId] = metadata;
+    this.setSettingsCollectionDictionaryData(allData, source);
   }
 
   /**
@@ -2517,9 +2458,9 @@ export class SyllabusManager {
     description: string,
     source: "page",
   ): Promise<void> {
-    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
-    set(allData, `${collectionId}.description`, description.trim());
-    await SyllabusManager.setCollectionMetadata(allData, source);
+    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    syllabusMetadata.description = description.trim();
+    await SyllabusManager.setCollectionMetadata(collectionId, syllabusMetadata, source);
   }
 
   /**
@@ -2530,13 +2471,9 @@ export class SyllabusManager {
     nomenclature: string,
     source: "page",
   ): Promise<void> {
-    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
-    set(
-      allData,
-      `${collectionId}.nomenclature`,
-      nomenclature.trim().toLowerCase(),
-    );
-    await SyllabusManager.setCollectionMetadata(allData, source);
+    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    syllabusMetadata.nomenclature = nomenclature.trim().toLowerCase();
+    await SyllabusManager.setCollectionMetadata(collectionId, syllabusMetadata, source);
   }
 
   /**
@@ -2555,9 +2492,9 @@ export class SyllabusManager {
     links: string[],
     source: "page",
   ): Promise<void> {
-    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
-    set(allData, `${collectionId}.links`, links);
-    await SyllabusManager.setCollectionMetadata(allData, source);
+    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    syllabusMetadata.links = links;
+    await SyllabusManager.setCollectionMetadata(collectionId, syllabusMetadata, source);
   }
 
   /**
@@ -2568,9 +2505,9 @@ export class SyllabusManager {
     priorities: CustomPriority[],
     source: "page",
   ): Promise<void> {
-    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
-    set(allData, `${collectionId}.priorities`, priorities);
-    await SyllabusManager.setCollectionMetadata(allData, source);
+    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    syllabusMetadata.priorities = priorities;
+    await SyllabusManager.setCollectionMetadata(collectionId, syllabusMetadata, source);
   }
 
   /**
@@ -2589,14 +2526,14 @@ export class SyllabusManager {
     locked: boolean,
     source: "page",
   ): Promise<void> {
-    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
-    set(allData, `${collectionId}.locked`, locked);
-    await SyllabusManager.setCollectionMetadata(allData, source);
+    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    syllabusMetadata.locked = locked;
+    await SyllabusManager.setCollectionMetadata(collectionId, syllabusMetadata, source);
   }
 
   static getClassMetadata(collectionId: number | string, classNumber: number) {
-    const metadata = SyllabusManager.getSyllabusMetadata(collectionId);
-    return metadata.classes?.[classNumber] || {};
+    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    return syllabusMetadata.classes?.[classNumber] || {};
   }
 
   /**
@@ -2608,37 +2545,11 @@ export class SyllabusManager {
     classNumber: number,
     includeClassNumber: boolean = false,
   ): string {
-    const collectionIdStr = String(collectionId);
-
-    // Check if we need to rebuild the cache
-    if (
-      this.classTitleCacheCollectionId !== collectionIdStr ||
-      !this.classTitleCache.has(collectionIdStr)
-    ) {
-      // Rebuild cache for this collection
-      const metadata = this.getSyllabusMetadata(collectionId);
-      const classMap = new Map<number, string>();
-
-      if (metadata.classes) {
-        for (const [classNumStr, classData] of Object.entries(
-          metadata.classes,
-        )) {
-          const classNum = parseInt(classNumStr, 10);
-          if (!isNaN(classNum) && classData.title) {
-            classMap.set(classNum, classData.title || `Class ${classNum}`);
-          }
-        }
-      }
-
-      this.classTitleCache.set(collectionIdStr, classMap);
-      this.classTitleCacheCollectionId = collectionIdStr;
-    }
-
-    const classMap = this.classTitleCache.get(collectionIdStr)!;
-    const title = classMap.get(classNumber) || "";
-
+    const classMetadata = SyllabusManager.getClassMetadata(collectionId, classNumber);
+    const title = classMetadata.title || "";
     if (includeClassNumber) {
-      return `#${classNumber}: ${title}`;
+      const singularCapitalized = SyllabusManager.getNomenclatureFormatted(collectionId).singularCapitalized;
+      return `${singularCapitalized} ${classNumber}${title ? `: ${title}` : ""}`;
     }
     return title;
   }
@@ -2661,6 +2572,18 @@ export class SyllabusManager {
     }
   }
 
+  static setClassMetadata(collectionId: number | string, classNumber: number, metadata: Partial<SettingsClassMetadata>, source: "page" | "item-pane") {
+    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    if (!syllabusMetadata.classes[classNumber]) {
+      syllabusMetadata.classes[classNumber] = SettingsClassMetadataSchema.parse({});
+    }
+    syllabusMetadata.classes[classNumber] = {
+      ...syllabusMetadata.classes[classNumber],
+      ...metadata
+    };
+    return SyllabusManager.setCollectionMetadata(collectionId, syllabusMetadata, source);
+  }
+
   /**
    * Set class title for a specific collection and class number
    */
@@ -2670,9 +2593,9 @@ export class SyllabusManager {
     title: string,
     source: "page" | "item-pane",
   ): Promise<void> {
-    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
-    set(allData, `${collectionId}.classes.${classNumber}.title`, title);
-    await SyllabusManager.setCollectionMetadata(allData, source);
+    const classMetadata = SyllabusManager.getClassMetadata(collectionId, classNumber);
+    classMetadata.title = title;
+    await SyllabusManager.setClassMetadata(collectionId, classNumber, classMetadata, source);
   }
 
   /**
@@ -2698,13 +2621,9 @@ export class SyllabusManager {
     description: string,
     source: "page",
   ): Promise<void> {
-    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
-    set(
-      allData,
-      `${collectionId}.classes.${classNumber}.description`,
-      description,
-    );
-    await SyllabusManager.setCollectionMetadata(allData, source);
+    const classMetadata = SyllabusManager.getClassMetadata(collectionId, classNumber);
+    classMetadata.description = description;
+    await SyllabusManager.setClassMetadata(collectionId, classNumber, classMetadata, source);
   }
 
   /**
@@ -2732,21 +2651,14 @@ export class SyllabusManager {
     readingDate: string | undefined,
     source: "page" | "item-pane",
   ): Promise<void> {
-    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
-    if (readingDate !== undefined) {
-      set(
-        allData,
-        `${collectionId}.classes.${classNumber}.readingDate`,
-        readingDate,
-      );
+    const classMetadata = SyllabusManager.getClassMetadata(collectionId, classNumber);
+    if (readingDate) {
+      classMetadata.readingDate = readingDate;
     } else {
       // Remove reading date if undefined
-      const collectionIdStr = String(collectionId);
-      if (allData[collectionIdStr]?.classes?.[classNumber]) {
-        delete allData[collectionIdStr].classes![classNumber].readingDate;
-      }
+      delete classMetadata.readingDate
     }
-    await SyllabusManager.setCollectionMetadata(allData, source);
+    await SyllabusManager.setClassMetadata(collectionId, classNumber, classMetadata, source);
   }
 
   /**
@@ -2772,49 +2684,28 @@ export class SyllabusManager {
     status: ClassStatus,
     source: "page" | "item-pane",
   ): Promise<void> {
-    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
+    const classMetadata = SyllabusManager.getClassMetadata(collectionId, classNumber);
     if (status !== null) {
-      set(allData, `${collectionId}.classes.${classNumber}.status`, status);
+      classMetadata.status = status;
     } else {
       // Remove status if null
-      const collectionIdStr = String(collectionId);
-      if (allData[collectionIdStr]?.classes?.[classNumber]) {
-        delete allData[collectionIdStr].classes![classNumber].status;
-      }
+      delete classMetadata.status;
     }
-    await SyllabusManager.setCollectionMetadata(allData, source);
+    await SyllabusManager.setClassMetadata(collectionId, classNumber, classMetadata, source);
   }
 
   /**
    * Create an additional class (even if empty) to extend the range
    * This ensures the class appears in the rendered range
    */
-  static async createAdditionalClass(
+  static async addClass(
     collectionId: number | string,
     classNumber: number,
     source: "page",
   ): Promise<void> {
-    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
-    const collectionIdStr = String(collectionId);
-
-    // Ensure the classes object exists
-    if (!allData[collectionIdStr]) {
-      allData[collectionIdStr] = {};
-    }
-    if (!allData[collectionIdStr].classes) {
-      allData[collectionIdStr].classes = {};
-    }
-
-    // Create the class entry if it doesn't exist
-    if (!allData[collectionIdStr].classes![classNumber]) {
-      allData[collectionIdStr].classes![classNumber] = {};
-    }
-
-    ztoolkit.log("Creating additional class:", allData);
-
-    // Save using setCollectionMetadata to ensure proper store updates
-    // Following the same pattern as setClassTitle - pass the full dictionary
-    await SyllabusManager.setCollectionMetadata(allData as any, source);
+    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    syllabusMetadata.classes[classNumber] = SettingsClassMetadataSchema.parse({});
+    await SyllabusManager.setCollectionMetadata(collectionId, syllabusMetadata, source);
   }
 
   /**
@@ -2825,16 +2716,10 @@ export class SyllabusManager {
     classNumber: number,
     source: "page",
   ): Promise<void> {
-    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
-    const collectionIdStr = String(collectionId);
-
-    if (allData[collectionIdStr]?.classes?.[classNumber]) {
-      delete allData[collectionIdStr].classes![classNumber];
-      // Clean up empty classes object if needed
-      if (Object.keys(allData[collectionIdStr].classes || {}).length === 0) {
-        delete allData[collectionIdStr].classes;
-      }
-      await SyllabusManager.setCollectionMetadata(allData as any, source);
+    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    if (syllabusMetadata.classes[classNumber]) {
+      delete syllabusMetadata.classes[classNumber];
+      await SyllabusManager.setCollectionMetadata(collectionId, syllabusMetadata, source);
     }
   }
 

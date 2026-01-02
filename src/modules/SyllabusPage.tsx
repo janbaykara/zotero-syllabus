@@ -440,7 +440,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         const metadata = SyllabusManager.getSyllabusMetadata(collectionId);
         if (!metadata.classes || !metadata.classes[targetClassNumberValue]) {
           // Auto-create the class metadata entry
-          await SyllabusManager.createAdditionalClass(
+          await SyllabusManager.addClass(
             collectionId,
             targetClassNumberValue,
             "page",
@@ -962,7 +962,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                   <div className="syllabus-create-class-control in-[.print]:hidden">
                     <button
                       className="syllabus-create-class-button"
-                      onClick={createAdditionalClass}
+                      onClick={addClass}
                       title={`Add ${singularCapitalized} ${nextClassNumber}`}
                     >
                       Add {singularCapitalized} {nextClassNumber}
@@ -1030,13 +1030,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     </div>
   );
 
-  async function createAdditionalClass() {
+  async function addClass() {
     try {
-      await SyllabusManager.createAdditionalClass(
-        collectionId,
-        nextClassNumber,
-        "page",
-      );
+      await SyllabusManager.addClass(collectionId, nextClassNumber, "page");
       // The store should update automatically via the Zotero notifier
       // when the preference changes. The useSyncExternalStore hook will
       // re-render when the store's getSnapshot returns new data.
