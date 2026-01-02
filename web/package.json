@@ -9,6 +9,7 @@
     "lint": "eslint",
     "generate:types": "payload generate:types"
   },
+  "packageManager": "pnpm@10.25.0",
   "dependencies": {
     "@floating-ui/react": "^0.27.16",
     "@payloadcms/db-mongodb": "^3.69.0",
