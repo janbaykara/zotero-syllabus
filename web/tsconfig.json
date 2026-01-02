@@ -1,4 +1,5 @@
 {
+  "extends": "zotero-types/entries/sandbox/",
   "compilerOptions": {
     "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext"],

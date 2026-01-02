@@ -2137,7 +2137,7 @@ export class SyllabusManager {
     );
     Zotero.Prefs.set(prefKey, JSON.stringify(inputResult.data), true);
     if (emitChange) {
-      ztoolkit.log("Emitting collection metadata change for source");
+      ztoolkit.log("Emitting collection metadata change for source", prefKey);
       this.emitCollectionMetadataChange();
       if (source !== "item-pane") this.reloadItemPane();
       if (source !== "page") this.setupPage();
