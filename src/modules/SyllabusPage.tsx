@@ -2412,8 +2412,6 @@ function LinksSection({
     // Remove empty links
     const filteredLinks = newLinks.filter((link) => link.length > 0);
     setLinks(filteredLinks);
-    setEditingIndex(null);
-    setEditingValues({});
   };
 
   const handleDeleteLink = (index: number) => {
@@ -2478,7 +2476,7 @@ function LinksSection({
                     placeholder="Enter URL..."
                     className="flex-1 w-full"
                     onKeyDown={(e) => {
-                      if (e.key === "Escape") {
+                      if (e.key === "Escape" || e.key === "Enter") {
                         setEditingIndex(null);
                         setEditingValues({});
                       }
