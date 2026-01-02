@@ -15,15 +15,15 @@ export function getRDFStringForCollection(collection: Zotero.Collection) {
 
     translation.setHandler("done", (obj: { string: string }, success: any) => {
       if (success) {
-        const rdfXml: string = obj.string;  // <- your RDF/XML string
+        const rdfXml: string = obj.string; // <- your RDF/XML string
         // do something with rdfXml (upload, parse, etc.)
-        return resolve(rdfXml)
+        return resolve(rdfXml);
       }
-      reject(success)
+      reject(success);
     });
 
     translation.translate();
-  })
+  });
 }
 
 /**
@@ -50,7 +50,7 @@ export function importRDF(rdfString: string): Promise<Zotero.Item[]> {
           if (newItems.length > 0) {
             // Filter to only valid items
             const validItems = newItems.filter(
-              (item: Zotero.Item) => item && item.id
+              (item: Zotero.Item) => item && item.id,
             );
 
             if (validItems.length > 0) {

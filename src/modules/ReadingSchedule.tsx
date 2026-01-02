@@ -426,8 +426,8 @@ export function ReadingSchedule() {
                                             compactMode ||
                                             !priority ||
                                             priority ===
-                                            SyllabusManager.priorityKeys
-                                              .OPTIONAL
+                                              SyllabusManager.priorityKeys
+                                                .OPTIONAL
                                           }
                                           compactMode={compactMode}
                                           isLocked={true}

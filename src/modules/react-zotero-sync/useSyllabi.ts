@@ -37,9 +37,7 @@ export function useSyllabi(): SyllabusData[] {
   );
 
   const syllabi = useMemo(() => {
-    const snapshot = SuperJSON.parse(
-      __syllabiSnapshot,
-    ) as SyllabiSnapshot;
+    const snapshot = SuperJSON.parse(__syllabiSnapshot) as SyllabiSnapshot;
 
     return snapshot.syllabi
       .map((syllabusData) => {
@@ -55,10 +53,11 @@ export function useSyllabi(): SyllabusData[] {
               if (!item || !item.isRegularItem()) {
                 return null;
               }
-              const assignments = SyllabusManager.getItemSyllabusDataForCollection(
-                item,
-                syllabusData.collectionId,
-              );
+              const assignments =
+                SyllabusManager.getItemSyllabusDataForCollection(
+                  item,
+                  syllabusData.collectionId,
+                );
               return {
                 zoteroItem: item,
                 assignments,
@@ -68,9 +67,9 @@ export function useSyllabi(): SyllabusData[] {
             }
           })
           .filter(Boolean) as Array<{
-            zoteroItem: Zotero.Item;
-            assignments: ItemSyllabusAssignment[];
-          }>;
+          zoteroItem: Zotero.Item;
+          assignments: ItemSyllabusAssignment[];
+        }>;
 
         return {
           collection,

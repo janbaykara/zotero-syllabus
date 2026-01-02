@@ -32,7 +32,7 @@ import * as z from "zod";
 import { getRDFStringForCollection, importRDF } from "../utils/rdf";
 
 // Enums are now defined in utils/schemas.ts
-import { SyllabusPriority } from '../utils/schemas';
+import { SyllabusPriority } from "../utils/schemas";
 
 // Re-export for backward compatibility
 export { SyllabusPriority };
@@ -3214,7 +3214,6 @@ export class SyllabusManager {
     return ExportSyllabusMetadataSchema.parse(exportData);
   }
 
-
   /**
    * Import syllabus metadata from a JSON string (export format)
    * Validates against ExportSyllabusMetadataSchema, updates collection title if provided,
@@ -3265,7 +3264,10 @@ export class SyllabusManager {
     if (rdf) {
       try {
         const importedItems = await importRDF(rdf);
-        ztoolkit.log("importSyllabusMetadata: Imported RDF items:", importedItems);
+        ztoolkit.log(
+          "importSyllabusMetadata: Imported RDF items:",
+          importedItems,
+        );
 
         if (importedItems.length > 0) {
           // Ensure all items have IDs (they should already be saved by the import process)
@@ -3283,7 +3285,11 @@ export class SyllabusManager {
             );
 
             // Add items to the target collectio
-            ztoolkit.log("importSyllabusMetadata: Adding items to collection:", targetCollection, importedItems);
+            ztoolkit.log(
+              "importSyllabusMetadata: Adding items to collection:",
+              targetCollection,
+              importedItems,
+            );
             for (const item of importedItems) {
               item.addToCollection(targetCollection.id);
               await item.saveTx();
@@ -3293,12 +3299,13 @@ export class SyllabusManager {
             await Zotero.Promise.delay(200);
 
             // Verify items are in the collection
-            const collectionItemIDs = targetCollection.getChildItems()
+            const collectionItemIDs = targetCollection
+              .getChildItems()
               .filter((item) => item.isRegularItem())
               .map((item) => item.id);
 
             const itemsInCollection = itemIDs.filter((id: number) =>
-              collectionItemIDs.includes(id)
+              collectionItemIDs.includes(id),
             );
 
             if (itemsInCollection.length !== itemIDs.length) {
@@ -3322,7 +3329,9 @@ export class SyllabusManager {
           for (const item of importedItems) {
             const assignments = this.getItemSyllabusData(item);
 
-            const newAssignments = ItemSyllabusDataEntity.latestSchema.parse({});
+            const newAssignments = ItemSyllabusDataEntity.latestSchema.parse(
+              {},
+            );
             if (assignments && Object.keys(assignments).length > 0) {
               const firstKey = Object.keys(assignments)[0];
               newAssignments[
@@ -3333,7 +3342,9 @@ export class SyllabusManager {
               ] = assignments[firstKey];
 
               // (Also remove read statuses)
-              for (const [collectionId, assignments] of Object.entries(newAssignments)) {
+              for (const [collectionId, assignments] of Object.entries(
+                newAssignments,
+              )) {
                 for (const [index, assignment] of assignments.entries()) {
                   newAssignments[collectionId][index].status = null;
                 }
