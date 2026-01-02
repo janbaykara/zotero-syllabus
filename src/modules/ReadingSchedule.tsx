@@ -5,7 +5,14 @@ import { useSyncExternalStore } from "react-dom/src";
 import { twMerge } from "tailwind-merge";
 import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
 import { SyllabusItemCard } from "./SyllabusPage";
-import { formatDate, setDefaultOptions, startOfWeek } from "date-fns";
+import {
+  addWeeks,
+  differenceInWeeks,
+  formatDate,
+  isThisWeek,
+  setDefaultOptions,
+  startOfWeek,
+} from "date-fns";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import { getAllCollections } from "../utils/zotero";
 import { getPref } from "../utils/prefs";
@@ -29,33 +36,20 @@ function formatReadingDate(isoDate: string): string {
   return formatDate(date, "iiii do");
 }
 
-function formatWeekRange(weekStart: Date): string {
-  const start = startOfWeek(weekStart);
-  // Format as "6th Feb" without i18n
-  const day = start.getDate();
-  const daySuffix =
-    day === 1 || day === 21 || day === 31
-      ? "st"
-      : day === 2 || day === 22
-        ? "nd"
-        : day === 3 || day === 23
-          ? "rd"
-          : "th";
-  const monthNames = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
-  return `${day}${daySuffix} ${monthNames[start.getMonth()]}`;
+function WeekHeader({ weekStartDate }: { weekStartDate: Date }) {
+  const start = startOfWeek(weekStartDate);
+  let str = "";
+  if (isThisWeek(start, { weekStartsOn: 1 })) {
+    str = "this week";
+  } else if (isThisWeek(addWeeks(start, 1), { weekStartsOn: 1 })) {
+    str = "next week";
+  } else {
+    const long = new Intl.RelativeTimeFormat("en-us", { style: "long" });
+    const diff = differenceInWeeks(start, new Date());
+    str = long.format(diff, "week");
+  }
+
+  return <span className="first-letter:capitalize">{str}</span>;
 }
 
 // Store to track changes to syllabus data (class metadata, assignments, etc.)
@@ -401,14 +395,13 @@ export function ReadingSchedule() {
 
             return (
               <div key={weekStartKey} className="syllabus-class-group">
-                <div className={twMerge("container-padded",
-                  "text-2xl sticky top-16 z-10 py-2 bg-background text-tertiary",
-                )}
+                <div
+                  className={twMerge(
+                    "container-padded",
+                    "text-3xl sticky top-16 z-10 py-2 bg-background text-tertiary",
+                  )}
                 >
-                  Week starting{" "}
-                  <span className="text-secondary">
-                    {formatWeekRange(weekStartDate)}
-                  </span>
+                  <WeekHeader weekStartDate={weekStartDate} />
                 </div>
 
                 <div className="container-padded">
@@ -511,14 +504,21 @@ export function ReadingSchedule() {
                                           <span className="font-semibold">
                                             {classReading.classTitle}
                                           </span>
-                                          <span className="text-secondary">,{" "}</span>
+                                          <span className="text-secondary">
+                                            ,{" "}
+                                          </span>
                                         </>
                                       ) : null}
                                       <span className="text-secondary">
-                                        {classReading.classTitle ? singular : singularCapitalized}{" "}
+                                        {classReading.classTitle
+                                          ? singular
+                                          : singularCapitalized}{" "}
                                         {classReading.classNumber}
                                       </span>
-                                      <span className="text-secondary"> of </span>
+                                      <span className="text-secondary">
+                                        {" "}
+                                        of{" "}
+                                      </span>
                                       <span className="font-semibold">
                                         {classReading.collectionName}
                                       </span>
@@ -557,8 +557,8 @@ export function ReadingSchedule() {
                                             compactMode ||
                                             !priority ||
                                             priority ===
-                                            SyllabusManager.priorityKeys
-                                              .OPTIONAL
+                                              SyllabusManager.priorityKeys
+                                                .OPTIONAL
                                           }
                                           compactMode={compactMode}
                                           isLocked={true}
