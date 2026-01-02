@@ -66,13 +66,13 @@ export type {
 
 const tabManager = FEATURE_FLAG.READING_SCHEDULE
   ? new TabManager<Record<string, never>>({
-    type: "reading-list",
-    title: "Reading Schedule",
-    rootElementIdFactory: () => "reading-list-tab-root",
-    data: { icon: "book" },
-    componentFactory: () => h(ReadingSchedule, {}),
-    getTabId: () => "syllabus-reading-list-tab",
-  })
+      type: "reading-list",
+      title: "Reading Schedule",
+      rootElementIdFactory: () => "reading-list-tab-root",
+      data: { icon: "book" },
+      componentFactory: () => h(ReadingSchedule, {}),
+      getTabId: () => "syllabus-reading-list-tab",
+    })
   : null;
 
 export class SyllabusManager {
@@ -912,9 +912,9 @@ export class SyllabusManager {
             const classTitle =
               classNumber !== undefined
                 ? SyllabusManager.getClassTitle(
-                  selectedCollection.id,
-                  classNumber
-                )
+                    selectedCollection.id,
+                    classNumber,
+                  )
                 : "";
             const priority = firstAssignment.priority || "";
             return `${sortKey}|${priority}|${classNumber ?? ""}|${classTitle}|${selectedCollection.id}`;
@@ -1147,21 +1147,20 @@ export class SyllabusManager {
         const root = body.ownerDocument?.createElement("div");
         body.appendChild(root);
 
-
         //   // Render Preact component
         renderComponent(
           win,
           body,
           selectedCollection
             ? h(ItemPane, {
-              item,
-              collectionId: selectedCollection.id,
-              editable,
-            })
+                item,
+                collectionId: selectedCollection.id,
+                editable,
+              })
             : h("div", {
-              innerText: "Select a collection to view syllabus assignments",
-              className: "text-center text-gray-500 p-4",
-            }),
+                innerText: "Select a collection to view syllabus assignments",
+                className: "text-center text-gray-500 p-4",
+              }),
           "syllabus-item-pane",
         );
       },
@@ -1224,18 +1223,18 @@ export class SyllabusManager {
     // Get collection-specific priority options if a collection is selected
     const priorityOptions = selectedCollection
       ? (() => {
-        const customPriorities = this.getPrioritiesForCollection(
-          selectedCollection.id,
-        );
-        const options = customPriorities.map((p) => ({
-          value: p.id,
-          label: p.name,
-          color: p.color,
-        }));
-        // Add "(None)" option
-        options.push({ value: "", label: "(None)", color: "" });
-        return options;
-      })()
+          const customPriorities = this.getPrioritiesForCollection(
+            selectedCollection.id,
+          );
+          const options = customPriorities.map((p) => ({
+            value: p.id,
+            label: p.name,
+            color: p.color,
+          }));
+          // Add "(None)" option
+          options.push({ value: "", label: "(None)", color: "" });
+          return options;
+        })()
       : this.getPriorityOptions();
 
     ztoolkit.Menu.register("item", {
@@ -1547,7 +1546,6 @@ export class SyllabusManager {
     return entries[0]?.priority || "";
   }
 
-
   /**
    * Get the full range of class numbers for a collection
    * Returns all class numbers from 1 to max, plus any classes with items outside that range
@@ -1829,7 +1827,7 @@ export class SyllabusManager {
       // This ensures OPTIONAL ("optional") sorts before unprioritized ("zzzz")
       assignment.priority || "zzzz",
       assignment.classInstruction?.slice(0, 4).replace(/[^a-zA-Z0-9]/g, "_") ||
-      "",
+        "",
       assignment.id || "",
     );
 
@@ -2085,12 +2083,19 @@ export class SyllabusManager {
     itemIds: string[],
     source: "page" | "item-pane" = "page",
   ): Promise<void> {
-    const classMetadata = SyllabusManager.getClassMetadata(collectionId, classNumber);
+    const classMetadata = SyllabusManager.getClassMetadata(
+      collectionId,
+      classNumber,
+    );
     const classKey = classNumber === null ? "null" : String(classNumber);
     classMetadata.itemOrder = itemIds;
-    await this.setClassMetadata(collectionId, classNumber, classMetadata, source);
+    await this.setClassMetadata(
+      collectionId,
+      classNumber,
+      classMetadata,
+      source,
+    );
   }
-
 
   static getSettingsCollectionDictionaryData(): SettingsCollectionDictionaryData {
     const prefKey = SyllabusManager.getPreferenceKey(
@@ -2116,8 +2121,13 @@ export class SyllabusManager {
     }
   }
 
-  static setSettingsCollectionDictionaryData(metadata: SettingsCollectionDictionaryData, source: "page" | "item-pane", emitChange: boolean = true) {
-    const inputResult = SettingsCollectionDictionaryDataSchema.safeParse(metadata);
+  static setSettingsCollectionDictionaryData(
+    metadata: SettingsCollectionDictionaryData,
+    source: "page" | "item-pane",
+    emitChange: boolean = true,
+  ) {
+    const inputResult =
+      SettingsCollectionDictionaryDataSchema.safeParse(metadata);
     if (!inputResult.success) {
       ztoolkit.log("Error validating collection metadata:", inputResult.error);
       return;
@@ -2183,7 +2193,11 @@ export class SyllabusManager {
   ): Promise<void> {
     const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
     syllabusMetadata.description = description.trim();
-    await SyllabusManager.setCollectionMetadata(collectionId, syllabusMetadata, source);
+    await SyllabusManager.setCollectionMetadata(
+      collectionId,
+      syllabusMetadata,
+      source,
+    );
   }
 
   /**
@@ -2196,7 +2210,11 @@ export class SyllabusManager {
   ): Promise<void> {
     const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
     syllabusMetadata.nomenclature = nomenclature.trim().toLowerCase();
-    await SyllabusManager.setCollectionMetadata(collectionId, syllabusMetadata, source);
+    await SyllabusManager.setCollectionMetadata(
+      collectionId,
+      syllabusMetadata,
+      source,
+    );
   }
 
   /**
@@ -2217,7 +2235,11 @@ export class SyllabusManager {
   ): Promise<void> {
     const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
     syllabusMetadata.links = links;
-    await SyllabusManager.setCollectionMetadata(collectionId, syllabusMetadata, source);
+    await SyllabusManager.setCollectionMetadata(
+      collectionId,
+      syllabusMetadata,
+      source,
+    );
   }
 
   /**
@@ -2230,7 +2252,11 @@ export class SyllabusManager {
   ): Promise<void> {
     const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
     syllabusMetadata.priorities = priorities;
-    await SyllabusManager.setCollectionMetadata(collectionId, syllabusMetadata, source);
+    await SyllabusManager.setCollectionMetadata(
+      collectionId,
+      syllabusMetadata,
+      source,
+    );
   }
 
   /**
@@ -2251,7 +2277,11 @@ export class SyllabusManager {
   ): Promise<void> {
     const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
     syllabusMetadata.locked = locked;
-    await SyllabusManager.setCollectionMetadata(collectionId, syllabusMetadata, source);
+    await SyllabusManager.setCollectionMetadata(
+      collectionId,
+      syllabusMetadata,
+      source,
+    );
   }
 
   static getClassMetadata(collectionId: number | string, classNumber: number) {
@@ -2268,10 +2298,16 @@ export class SyllabusManager {
     classNumber: number,
     includeClassNumber: boolean = false,
   ): string {
-    const classMetadata = SyllabusManager.getClassMetadata(collectionId, classNumber);
+    const classMetadata = SyllabusManager.getClassMetadata(
+      collectionId,
+      classNumber,
+    );
     const title = classMetadata.title || "";
     if (includeClassNumber) {
-      const singularCapitalized = SyllabusManager.getNomenclatureFormatted(collectionId).singularCapitalized;
+      const singularCapitalized =
+        SyllabusManager.getNomenclatureFormatted(
+          collectionId,
+        ).singularCapitalized;
       return `${singularCapitalized} ${classNumber}${title ? `: ${title}` : ""}`;
     }
     return title;
@@ -2295,16 +2331,27 @@ export class SyllabusManager {
     }
   }
 
-  static setClassMetadata(collectionId: number | string, classNumber: number, metadata: Partial<SettingsClassMetadata>, source: "page" | "item-pane") {
+  static setClassMetadata(
+    collectionId: number | string,
+    classNumber: number,
+    metadata: Partial<SettingsClassMetadata>,
+    source: "page" | "item-pane",
+  ) {
     const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
     if (!syllabusMetadata.classes[classNumber]) {
-      syllabusMetadata.classes[classNumber] = SettingsClassMetadataSchema.parse({});
+      syllabusMetadata.classes[classNumber] = SettingsClassMetadataSchema.parse(
+        {},
+      );
     }
     syllabusMetadata.classes[classNumber] = {
       ...syllabusMetadata.classes[classNumber],
-      ...metadata
+      ...metadata,
     };
-    return SyllabusManager.setCollectionMetadata(collectionId, syllabusMetadata, source);
+    return SyllabusManager.setCollectionMetadata(
+      collectionId,
+      syllabusMetadata,
+      source,
+    );
   }
 
   /**
@@ -2316,9 +2363,17 @@ export class SyllabusManager {
     title: string,
     source: "page" | "item-pane",
   ): Promise<void> {
-    const classMetadata = SyllabusManager.getClassMetadata(collectionId, classNumber);
+    const classMetadata = SyllabusManager.getClassMetadata(
+      collectionId,
+      classNumber,
+    );
     classMetadata.title = title;
-    await SyllabusManager.setClassMetadata(collectionId, classNumber, classMetadata, source);
+    await SyllabusManager.setClassMetadata(
+      collectionId,
+      classNumber,
+      classMetadata,
+      source,
+    );
   }
 
   /**
@@ -2344,9 +2399,17 @@ export class SyllabusManager {
     description: string,
     source: "page",
   ): Promise<void> {
-    const classMetadata = SyllabusManager.getClassMetadata(collectionId, classNumber);
+    const classMetadata = SyllabusManager.getClassMetadata(
+      collectionId,
+      classNumber,
+    );
     classMetadata.description = description;
-    await SyllabusManager.setClassMetadata(collectionId, classNumber, classMetadata, source);
+    await SyllabusManager.setClassMetadata(
+      collectionId,
+      classNumber,
+      classMetadata,
+      source,
+    );
   }
 
   /**
@@ -2374,14 +2437,22 @@ export class SyllabusManager {
     readingDate: string | undefined,
     source: "page" | "item-pane",
   ): Promise<void> {
-    const classMetadata = SyllabusManager.getClassMetadata(collectionId, classNumber);
+    const classMetadata = SyllabusManager.getClassMetadata(
+      collectionId,
+      classNumber,
+    );
     if (readingDate) {
       classMetadata.readingDate = readingDate;
     } else {
       // Remove reading date if undefined
-      delete classMetadata.readingDate
+      delete classMetadata.readingDate;
     }
-    await SyllabusManager.setClassMetadata(collectionId, classNumber, classMetadata, source);
+    await SyllabusManager.setClassMetadata(
+      collectionId,
+      classNumber,
+      classMetadata,
+      source,
+    );
   }
 
   /**
@@ -2407,14 +2478,22 @@ export class SyllabusManager {
     status: ClassStatus,
     source: "page" | "item-pane",
   ): Promise<void> {
-    const classMetadata = SyllabusManager.getClassMetadata(collectionId, classNumber);
+    const classMetadata = SyllabusManager.getClassMetadata(
+      collectionId,
+      classNumber,
+    );
     if (status !== null) {
       classMetadata.status = status;
     } else {
       // Remove status if null
       delete classMetadata.status;
     }
-    await SyllabusManager.setClassMetadata(collectionId, classNumber, classMetadata, source);
+    await SyllabusManager.setClassMetadata(
+      collectionId,
+      classNumber,
+      classMetadata,
+      source,
+    );
   }
 
   /**
@@ -2427,8 +2506,14 @@ export class SyllabusManager {
     source: "page",
   ): Promise<void> {
     const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
-    syllabusMetadata.classes[classNumber] = SettingsClassMetadataSchema.parse({});
-    await SyllabusManager.setCollectionMetadata(collectionId, syllabusMetadata, source);
+    syllabusMetadata.classes[classNumber] = SettingsClassMetadataSchema.parse(
+      {},
+    );
+    await SyllabusManager.setCollectionMetadata(
+      collectionId,
+      syllabusMetadata,
+      source,
+    );
   }
 
   /**
@@ -2442,7 +2527,11 @@ export class SyllabusManager {
     const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
     if (syllabusMetadata.classes[classNumber]) {
       delete syllabusMetadata.classes[classNumber];
-      await SyllabusManager.setCollectionMetadata(collectionId, syllabusMetadata, source);
+      await SyllabusManager.setCollectionMetadata(
+        collectionId,
+        syllabusMetadata,
+        source,
+      );
     }
   }
 
