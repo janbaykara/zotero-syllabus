@@ -1,9 +1,8 @@
-import type { CollectionConfig, Access } from "payload";
+import type { CollectionConfig, Access, Where } from "payload";
 
 // Access control: check if user is in authors array
-const isAuthor: Access = ({ req: { user }, data }) => {
+const isAuthor: Access = ({ req: { user } }) => {
   if (!user) return false;
-  // @ts-expect-error - role field
   if (user.role === "admin") return true;
 
   // For queries, we need to filter by author
@@ -24,7 +23,7 @@ const canRead: Access = ({ req: { user } }) => {
         { authors: { contains: user.id } },
         { createdBy: { equals: user.id } },
       ],
-    };
+    } as Where;
   }
   // Public can only see published syllabi
   return {
@@ -148,4 +147,3 @@ export const Syllabi: CollectionConfig = {
     ],
   },
 };
-

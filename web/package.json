@@ -10,6 +10,7 @@
     "generate:types": "payload generate:types"
   },
   "dependencies": {
+    "@floating-ui/react": "^0.27.16",
     "@payloadcms/db-mongodb": "^3.69.0",
     "@payloadcms/next": "^3.69.0",
     "@payloadcms/richtext-lexical": "^3.69.0",

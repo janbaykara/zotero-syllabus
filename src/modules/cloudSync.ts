@@ -1,9 +1,18 @@
 import { getPref, setPref } from "../utils/prefs";
-import { SyllabusManager, GetByLibraryAndKeyArgs } from "./syllabus";
+import { SyllabusManager, type GetByLibraryAndKeyArgs } from "./syllabus";
 
 // ztoolkit is available as a global
 declare const ztoolkit: ZToolkit;
 declare const Zotero: _ZoteroTypes.Zotero;
+
+interface AuthResponse {
+  apiKey: string;
+  userId: string;
+}
+
+interface PayloadFindResponse {
+  docs: Array<{ id: string; [key: string]: unknown }>;
+}
 
 /**
  * Cloud sync module for uploading syllabi to the public library
@@ -138,7 +147,8 @@ export class CloudSync {
     if (existingEmail) return existingEmail;
 
     // Use Zotero's prompt service
-    const prompts = Zotero.getMainWindow()?.Services?.prompt;
+    const mainWindow = Zotero.getMainWindow();
+    const prompts = mainWindow?.Services?.prompt;
     if (!prompts) {
       ztoolkit.log("CloudSync: Prompt service not available");
       return null;
@@ -146,11 +156,11 @@ export class CloudSync {
 
     const input = { value: "" };
     const result = prompts.prompt(
-      null,
+      mainWindow as unknown as mozIDOMWindowProxy,
       "Zotero Syllabus - Cloud Sync",
       "Enter your email address to enable cloud sync.\nThis will create an account on the Zotero Syllabus Public Library.",
       input,
-      null,
+      "",
       { value: false },
     );
 
@@ -221,7 +231,7 @@ export class CloudSync {
         throw new Error(`Registration failed: ${error}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as unknown as AuthResponse;
       const { apiKey, userId } = data;
 
       if (!apiKey) {
@@ -276,7 +286,7 @@ export class CloudSync {
 
       if (!response.ok) return false;
 
-      const data = await response.json();
+      const data = (await response.json()) as unknown as PayloadFindResponse;
       return data.docs && data.docs.length > 0;
     } catch {
       return false;
@@ -348,7 +358,7 @@ export class CloudSync {
             },
           },
         );
-        const findData = await findResponse.json();
+        const findData = (await findResponse.json()) as unknown as PayloadFindResponse;
         const existingId = findData.docs?.[0]?.id;
 
         if (!existingId) {
@@ -435,9 +445,3 @@ export class CloudSync {
     setPref("cloudEmail", "");
   }
 }
-
-// Re-export types
-export type GetByLibraryAndKeyArgs = Parameters<
-  typeof Zotero.Collections.getByLibraryAndKey
->;
-

@@ -30,7 +30,6 @@ export const Users: CollectionConfig = {
     // Only admins can delete
     delete: ({ req: { user } }) => {
       if (!user) return false;
-      // @ts-expect-error - role field
       return user.role === "admin";
     },
   },
@@ -56,11 +55,9 @@ export const Users: CollectionConfig = {
       access: {
         // Only admins can change roles
         update: ({ req: { user } }) => {
-          // @ts-expect-error - role field
           return user?.role === "admin";
         },
       },
     },
   ],
 };
-

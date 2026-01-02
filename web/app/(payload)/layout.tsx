@@ -2,7 +2,7 @@
 /* DO NOT MODIFY IT BECAUSE IT COULD BE REWRITTEN AT ANY TIME. */
 import type { ServerFunctionClient } from "payload";
 import config from "@payload-config";
-import { RootLayout } from "@payloadcms/next/layouts";
+import { handleServerFunctions, RootLayout } from "@payloadcms/next/layouts";
 import React from "react";
 
 import "./custom.scss";
@@ -14,8 +14,11 @@ type Args = {
 
 const serverFunction: ServerFunctionClient = async function (args) {
   "use server";
-  const { default: getPayload } = await import("@payloadcms/next/payload");
-  return getPayload({ config, args });
+  return handleServerFunctions({
+    ...args,
+    config,
+    importMap,
+  });
 };
 
 const Layout = ({ children }: Args) => (
@@ -25,4 +28,3 @@ const Layout = ({ children }: Args) => (
 );
 
 export default Layout;
-

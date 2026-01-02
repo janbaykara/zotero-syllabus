@@ -52,7 +52,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const syllabusData = syllabus.syllabusData as any;
+  const syllabusData = syllabus.syllabusData;
 
   return {
     title: `${syllabus.title} | Zotero Syllabus`,
@@ -73,7 +73,7 @@ export default async function SyllabusPage({ params }: PageProps) {
     notFound();
   }
 
-  const syllabusData = syllabus.syllabusData as any;
+  const syllabusData = syllabus.syllabusData;
   const remoteId = syllabus.remoteId;
   const exportUrl = `${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/syllabi/${encodeURIComponent(remoteId)}/export`;
 
