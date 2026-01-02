@@ -1227,9 +1227,7 @@ function ClassGroupComponent({
                     />
                   )}
                   {FEATURE_FLAG.READING_SCHEDULE && isLocked && readingDate && (
-                    <div
-                      className={twMerge("text-secondary")}
-                    >
+                    <div className={twMerge("text-secondary")}>
                       <span className="text-tertiary">Due date: </span>
                       <span className="text-secondary">
                         {formatReadingDate(readingDate)}
@@ -1404,7 +1402,16 @@ function ReadingDateInput({
           compactMode ? "text-sm" : "text-base",
         )}
       >
-        {value ? <span onClick={clear} className='underline text-secondary cursor-pointer'>Clear due date</span> : <span>Add a due date</span>}
+        {value ? (
+          <span
+            onClick={clear}
+            className="underline text-secondary cursor-pointer"
+          >
+            Clear due date
+          </span>
+        ) : (
+          <span>Add a due date</span>
+        )}
       </label>
       <input
         type="date"
@@ -1500,34 +1507,34 @@ function TextInput({
         onChange: readOnly
           ? undefined
           : (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-            setValue((e.target as HTMLInputElement).value),
+              setValue((e.target as HTMLInputElement).value),
         onBlur: readOnly ? undefined : () => save(value),
         onKeyDown: readOnly
           ? undefined
           : (
-            e: JSX.TargetedKeyboardEvent<
-              HTMLInputElement | HTMLTextAreaElement
-            >,
-          ) => {
-            if (e.key === "Escape" || e.key === "Enter") {
-              e.preventDefault();
-              e.currentTarget.blur();
-              save(value);
-            }
-          },
+              e: JSX.TargetedKeyboardEvent<
+                HTMLInputElement | HTMLTextAreaElement
+              >,
+            ) => {
+              if (e.key === "Escape" || e.key === "Enter") {
+                e.preventDefault();
+                e.currentTarget.blur();
+                save(value);
+              }
+            },
         onSelect: readOnly
           ? (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            e.preventDefault();
-            e.currentTarget.setSelectionRange(0, 0);
-          }
+              e.preventDefault();
+              e.currentTarget.setSelectionRange(0, 0);
+            }
           : undefined,
         onClick: readOnly
           ? (
-            e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
-          ) => {
-            e.preventDefault();
-            e.currentTarget.blur();
-          }
+              e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
+            ) => {
+              e.preventDefault();
+              e.currentTarget.blur();
+            }
           : undefined,
         placeholder: readOnly ? undefined : placeholder || "Click to edit",
         className: twMerge(
@@ -1648,9 +1655,9 @@ export function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-        item: Zotero.Item;
-        type: "pdf" | "snapshot" | "epub";
-      }>;
+      item: Zotero.Item;
+      type: "pdf" | "snapshot" | "epub";
+    }>;
   }, [item, slim]);
 
   const metadataParts = [
@@ -1770,9 +1777,9 @@ export function SyllabusItemCard({
 
   const colors = priority
     ? {
-      backgroundColor: priorityColor + "15",
-      borderColor: priorityColor + "30",
-    }
+        backgroundColor: priorityColor + "15",
+        borderColor: priorityColor + "30",
+      }
     : {};
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
@@ -2366,8 +2373,6 @@ export function Bibliography({
   );
 }
 
-
-
 function LinksSection({
   links,
   setLinks,
@@ -2413,7 +2418,10 @@ function LinksSection({
     }
   };
 
-  const handleEditClick = (index: number, e: JSX.TargetedMouseEvent<Element>) => {
+  const handleEditClick = (
+    index: number,
+    e: JSX.TargetedMouseEvent<Element>,
+  ) => {
     e.stopPropagation();
     setEditingIndex(index);
     setEditingValues({ [index]: links[index] || "" });
@@ -2486,7 +2494,9 @@ function LinksSection({
                       size={16}
                       className="text-secondary shrink-0"
                     />
-                    <span className="text-primary break-all underline">{link}</span>
+                    <span className="text-primary break-all underline">
+                      {link}
+                    </span>
                   </div>
                   {!isLocked && (
                     <>
