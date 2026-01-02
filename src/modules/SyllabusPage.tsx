@@ -1468,11 +1468,6 @@ function TextInput({
     500,
   );
 
-  // Hide the entire component when readOnly and no value
-  if (readOnly && !value && !initialValue) {
-    return null;
-  }
-
   const [setSizeRef, size] = useElementSize();
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
@@ -1494,6 +1489,11 @@ function TextInput({
       }
     }
   }, [value, fieldSizing, size, elementType]);
+
+  // Hide the entire component when readOnly and no value
+  if (readOnly && !value && !initialValue) {
+    return null;
+  }
 
   return (
     <div ref={setSizeRef} className="w-full">
