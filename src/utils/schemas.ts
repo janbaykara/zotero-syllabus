@@ -226,20 +226,23 @@ export const SettingsClassMetadataSchema = z.object({
 });
 
 /**
- * Settings Syllabus Metadata schema
- * Automatically filters out null classes, empty itemOrder arrays, and empty class entries during parsing
+ * Export Class Metadata schema (excludes status field)
  */
-export const SettingsSyllabusMetadataSchema = z.object({
-  description: z.string().optional(),
-  classes: z
-    .record(z.string(), SettingsClassMetadataSchema)
+export const ExportClassMetadataSchema = SettingsClassMetadataSchema.omit({
+  status: true,
+});
+
+/**
+ * Shared transform function for classes field
+ * Filters out null classes and empty itemOrder arrays
+ */
+const transformClasses = <T extends z.ZodTypeAny>(classSchema: T) => {
+  return z
+    .record(z.string(), classSchema)
     .default(() => ({}))
     .transform((classes) => {
       if (!classes) return {};
-      const filtered: Record<
-        string,
-        z.infer<typeof SettingsClassMetadataSchema>
-      > = {};
+      const filtered: Record<string, z.infer<typeof classSchema>> = {};
       for (const [key, value] of Object.entries(classes)) {
         if (!value) {
           // Skip null classes
@@ -253,10 +256,36 @@ export const SettingsSyllabusMetadataSchema = z.object({
         filtered[key] = cleanedValue;
       }
       return Object.keys(filtered).length > 0 ? filtered : {};
-    }),
+    });
+};
+
+/**
+ * Settings Syllabus Metadata schema
+ * Automatically filters out null classes, empty itemOrder arrays, and empty class entries during parsing
+ */
+export const SettingsSyllabusMetadataSchema = z.object({
+  description: z.string().optional(),
+  classes: transformClasses(SettingsClassMetadataSchema),
   nomenclature: z.string().optional(),
   priorities: z.array(CustomPrioritySchema).optional(),
   locked: z.boolean().optional(),
+});
+
+/**
+ * Export Syllabus Metadata schema
+ * Extends SettingsSyllabusMetadataSchema with:
+ * - collectionTitle field added
+ * - locked field excluded
+ * - classes use ExportClassMetadataSchema (excludes status)
+ * 
+ * Uses shared transform function to avoid duplication
+ */
+export const ExportSyllabusMetadataSchema = SettingsSyllabusMetadataSchema.omit({
+  classes: true,
+  locked: true,
+}).extend({
+  collectionTitle: z.string(),
+  classes: transformClasses(ExportClassMetadataSchema),
 });
 
 /**
@@ -277,8 +306,12 @@ export type ItemSyllabusAssignment = z.infer<
 export type ItemSyllabusData = z.infer<typeof ItemSyllabusDataSchema>;
 export type CustomPriority = z.infer<typeof CustomPrioritySchema>;
 export type SettingsClassMetadata = z.infer<typeof SettingsClassMetadataSchema>;
+export type ExportClassMetadata = z.infer<typeof ExportClassMetadataSchema>;
 export type SettingsSyllabusMetadata = z.infer<
   typeof SettingsSyllabusMetadataSchema
+>;
+export type ExportSyllabusMetadata = z.infer<
+  typeof ExportSyllabusMetadataSchema
 >;
 export type SettingsCollectionDictionaryData = z.infer<
   typeof SettingsCollectionDictionaryDataSchema

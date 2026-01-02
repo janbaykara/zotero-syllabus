@@ -46,7 +46,10 @@ import {
   Minimize2,
   ListChecks,
   List,
+  Download,
+  Upload,
 } from "lucide-preact";
+import type { SettingsSyllabusMetadata } from "../utils/schemas";
 
 // Define priority type for use in this file
 // These values match SyllabusPriority enum in syllabus.ts
@@ -646,6 +649,120 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     return max !== null ? max + 1 : 1;
   }, [collectionId, syllabusMetadata, items]);
 
+  const handleExport = async () => {
+    try {
+      // Prepare export data using SyllabusManager
+      const exportData = SyllabusManager.prepareExportData(collectionId, title || "");
+
+      // Create JSON string with pretty formatting
+      const jsonContent = JSON.stringify(exportData, null, 2);
+
+      // Generate filename: syllabus-{slugified-title}-{YYYY-MM-DD}.json
+      const dateStr = formatDate(new Date(), "yyyy-MM-dd");
+      const titleSlug = slugify(title || "syllabus", { lower: true, strict: true });
+      const filename = `syllabus-${titleSlug}-${dateStr}.json`;
+
+      // Create a temporary file and save it
+      const tempDir = Zotero.getTempDirectory();
+      const tempFile = tempDir.clone();
+      tempFile.append(filename);
+      // NORMAL_FILE_TYPE = 0
+      tempFile.createUnique(0, 0o666);
+
+      // Write content to file using Zotero.File
+      const fileObj = Zotero.File.pathToFile(tempFile.path);
+      await Zotero.File.putContentsAsync(fileObj, jsonContent, "utf-8");
+
+      // Open the file location so user can save it
+      fileObj.reveal();
+    } catch (err) {
+      ztoolkit.log("Error exporting syllabus metadata:", err);
+    }
+  };
+
+  const handleImport = async () => {
+    try {
+      // Open file picker for JSON files
+      const file = await new Promise<Zotero.File | null>((resolve) => {
+        const filePicker = Components.classes[
+          "@mozilla.org/filepicker;1"
+        ].createInstance(Components.interfaces.nsIFilePicker);
+        filePicker.init(
+          Zotero.getMainWindow(),
+          "Select Syllabus Metadata JSON File",
+          filePicker.modeOpen,
+        );
+        filePicker.appendFilter("JSON Files", "*.json");
+        filePicker.appendFilters(filePicker.filterAll);
+
+        filePicker.open((result: number) => {
+          if (result === filePicker.returnOK) {
+            const selectedFile = filePicker.file;
+            resolve(Zotero.File.pathToFile(selectedFile.path));
+          } else {
+            resolve(null);
+          }
+        });
+      });
+
+      if (!file) {
+        // User cancelled file selection
+        return;
+      }
+
+      // Read file contents
+      const fileContents = await Zotero.File.getContentsAsync(file);
+      if (!fileContents) {
+        Zotero.UI.alert(
+          Zotero.getMainWindow(),
+          "Import Error",
+          "Failed to read the selected file.",
+        );
+        return;
+      }
+
+      // Convert file contents to string if needed
+      const jsonString =
+        typeof fileContents === "string"
+          ? fileContents
+          : new TextDecoder("utf-8").decode(fileContents);
+
+      // Process imported data using SyllabusManager
+      // This handles JSON parsing, validation, and merging
+      let mergedMetadata: SettingsSyllabusMetadata;
+      try {
+        mergedMetadata = SyllabusManager.processImportedData(
+          collectionId,
+          jsonString,
+        );
+      } catch (error) {
+        Zotero.UI.alert(
+          Zotero.getMainWindow(),
+          "Import Error",
+          error instanceof Error ? error.message : String(error),
+        );
+        ztoolkit.log("Import processing error:", error);
+        return;
+      }
+
+      // Save merged metadata
+      await SyllabusManager.setCollectionMetadata(
+        collectionId,
+        mergedMetadata,
+        "page",
+      );
+
+      ztoolkit.log("Successfully imported and merged syllabus metadata");
+    } catch (err) {
+      ztoolkit.log("Error importing syllabus metadata:", err);
+      Zotero.UI.alert(
+        Zotero.getMainWindow(),
+        "Import Error",
+        `An error occurred while importing the file: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  };
+
   const handlePrint = async () => {
     try {
       // Get the syllabus page element
@@ -845,6 +962,28 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                   )}
                 </div>
                 <div className="ml-auto flex items-center gap-1 in-[.print]:hidden">
+                  <div
+                    className="cursor-pointer"
+                    title="Export syllabus metadata"
+                    aria-label="Export syllabus metadata"
+                    onClick={handleExport}
+                  >
+                    <Download
+                      size={20}
+                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                    />
+                  </div>
+                  <div
+                    className="cursor-pointer"
+                    title="Import syllabus metadata"
+                    aria-label="Import syllabus metadata"
+                    onClick={handleImport}
+                  >
+                    <Upload
+                      size={20}
+                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                    />
+                  </div>
                   <div
                     className="cursor-pointer"
                     title="Edit syllabus settings"
@@ -1500,34 +1639,34 @@ function TextInput({
         onChange: readOnly
           ? undefined
           : (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-              setValue((e.target as HTMLInputElement).value),
+            setValue((e.target as HTMLInputElement).value),
         onBlur: readOnly ? undefined : () => save(value),
         onKeyDown: readOnly
           ? undefined
           : (
-              e: JSX.TargetedKeyboardEvent<
-                HTMLInputElement | HTMLTextAreaElement
-              >,
-            ) => {
-              if (e.key === "Escape" || e.key === "Enter") {
-                e.preventDefault();
-                e.currentTarget.blur();
-                save(value);
-              }
-            },
+            e: JSX.TargetedKeyboardEvent<
+              HTMLInputElement | HTMLTextAreaElement
+            >,
+          ) => {
+            if (e.key === "Escape" || e.key === "Enter") {
+              e.preventDefault();
+              e.currentTarget.blur();
+              save(value);
+            }
+          },
         onSelect: readOnly
           ? (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-              e.preventDefault();
-              e.currentTarget.setSelectionRange(0, 0);
-            }
+            e.preventDefault();
+            e.currentTarget.setSelectionRange(0, 0);
+          }
           : undefined,
         onClick: readOnly
           ? (
-              e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
-            ) => {
-              e.preventDefault();
-              e.currentTarget.blur();
-            }
+            e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
+          ) => {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
           : undefined,
         placeholder: readOnly ? undefined : placeholder || "Click to edit",
         className: twMerge(
@@ -1648,9 +1787,9 @@ export function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-      item: Zotero.Item;
-      type: "pdf" | "snapshot" | "epub";
-    }>;
+        item: Zotero.Item;
+        type: "pdf" | "snapshot" | "epub";
+      }>;
   }, [item, slim]);
 
   const metadataParts = [
@@ -1770,9 +1909,9 @@ export function SyllabusItemCard({
 
   const colors = priority
     ? {
-        backgroundColor: priorityColor + "15",
-        borderColor: priorityColor + "30",
-      }
+      backgroundColor: priorityColor + "15",
+      borderColor: priorityColor + "30",
+    }
     : {};
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
