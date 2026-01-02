@@ -1097,8 +1097,8 @@ function ClassGroupComponent({
     ? syllabusMetadata.classes?.[classNumber]?.readingDate
     : undefined;
   const classStatus = classNumber
-    ? SyllabusManager.getClassStatus(collectionId, classNumber)
-    : null;
+    ? SyllabusManager.getClassStatus(collectionId, classNumber) === "done"
+    : false;
 
   // Check if there's a manual order for this class
   const hasManualOrder =
@@ -1139,7 +1139,7 @@ function ClassGroupComponent({
   const handleClassStatusToggle = async () => {
     if (classNumber !== null && classNumber !== undefined) {
       try {
-        const newStatus = classStatus === "done" ? null : "done";
+        const newStatus = classStatus ? null : "done";
         await SyllabusManager.setClassStatus(
           collectionId,
           classNumber,
@@ -1176,18 +1176,12 @@ function ClassGroupComponent({
                 {readerMode && (
                   <input
                     type="checkbox"
-                    checked={classStatus === "done"}
+                    checked={classStatus}
                     onChange={handleClassStatusToggle}
                     className="mt-1! absolute right-full mr-1 md:mr-2! w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden"
-                    title={
-                      classStatus === "done"
-                        ? "Mark as not done"
-                        : "Mark as done"
-                    }
+                    title={classStatus ? "Mark as not done" : "Mark as done"}
                     aria-label={
-                      classStatus === "done"
-                        ? "Mark as not done"
-                        : "Mark as done"
+                      classStatus ? "Mark as not done" : "Mark as done"
                     }
                   />
                 )}

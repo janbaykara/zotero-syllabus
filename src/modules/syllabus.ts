@@ -2457,12 +2457,7 @@ export class SyllabusManager {
       collectionId,
       classNumber,
     );
-    if (status !== null) {
-      classMetadata.status = status;
-    } else {
-      // Remove status if null
-      delete classMetadata.status;
-    }
+    classMetadata.status = status;
     await SyllabusManager.setClassMetadata(
       collectionId,
       classNumber,
