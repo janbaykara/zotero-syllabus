@@ -1,8 +1,10 @@
 import { useCallback, useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
-import { SyllabusManager } from "../syllabus";
+import { SyllabusManager, GetByLibraryAndKeyArgs } from "../syllabus";
 
-export function useZoteroCollectionTitle(collectionId: number) {
+export function useZoteroCollectionTitle(
+  collectionId: number | GetByLibraryAndKeyArgs,
+) {
   // Create the store once per ID
   const store = useMemo(
     () => createCollectionTitleStore(collectionId),
@@ -16,7 +18,11 @@ export function useZoteroCollectionTitle(collectionId: number) {
 
   const setTitle = useCallback(
     (title: string) => {
-      SyllabusManager.setCollectionTitle(collectionId, title, "page");
+      const collection =
+        SyllabusManager.getCollectionFromIdentifier(collectionId);
+      if (collection) {
+        SyllabusManager.setCollectionTitle(collection.id, title, "page");
+      }
     },
     [collectionId],
   );
@@ -24,10 +30,13 @@ export function useZoteroCollectionTitle(collectionId: number) {
   return [titleFromZotero, setTitle] as const;
 }
 
-export function createCollectionTitleStore(collectionId: number) {
+export function createCollectionTitleStore(
+  collectionId: number | GetByLibraryAndKeyArgs,
+) {
   function getSnapshot() {
     // Read directly from Zotero
-    const collection = Zotero.Collections.get(collectionId);
+    const collection =
+      SyllabusManager.getCollectionFromIdentifier(collectionId);
     return collection ? collection.name : "";
   }
 
@@ -40,9 +49,12 @@ export function createCollectionTitleStore(collectionId: number) {
         extraData: any,
       ) {
         // Only care about this collection, and events that can change the title
+        const collection =
+          SyllabusManager.getCollectionFromIdentifier(collectionId);
         if (
+          collection &&
           type === "collection" &&
-          ids.includes(collectionId) &&
+          ids.includes(collection.id) &&
           (event === "modify" || event === "refresh")
         ) {
           onStoreChange();

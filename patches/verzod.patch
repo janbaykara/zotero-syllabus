@@ -1,0 +1,18 @@
+diff --git a/dist/index.js b/dist/index.js
+index ef89179e2d946f045c15253cbab2776de354edd5..b59e0581d682ce1ef5666de842cf7095d4976719 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -28,7 +28,12 @@ var VersionedEntity = class {
+    * @returns Whether the given data is a valid entity of the latest version of the entity.
+    */
+   isLatest(data) {
+-    return this.versionMap[this.latestVersion].schema.safeParse(data).success;
++    const ver = this.getVersion(data);
++    if (ver === null) return false;
++    if (ver !== this.latestVersion) return false;
++    const verDef = this.versionMap[ver];
++    if (!verDef) return false;
++    return verDef.schema.safeParse(data).success;
+   }
+   /**
+    * Type guard that checks if data is valid for any version up to and including the specified version.
