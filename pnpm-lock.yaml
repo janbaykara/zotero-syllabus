@@ -38,6 +38,12 @@ importers:
       uuidv7:
         specifier: ^1.1.0
         version: 1.1.0
+      verzod:
+        specifier: ^0.4.0
+        version: 0.4.0(zod@3.25.76)
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
       zotero-plugin-toolkit:
         specifier: ^5.1.0-beta.13
         version: 5.1.0-beta.13
@@ -1626,6 +1632,12 @@ packages:
     resolution: {integrity: sha512-2VNnOC0+XQlwogChUDzy6pe8GQEys9QFZBGOh54l6qVfwoCUwwRvk7rDTgaIsRgsF5GFa5oiNg8LqXE3jofBBg==}
     hasBin: true
 
+  verzod@0.4.0:
+    resolution: {integrity: sha512-TYAukAYYC1sK4MWSGoi1a5FrqJnknP7fp6Z9oJNt7BJACUW9oj8Yt4JZhF6nxbuhHn69Ay44zrXsD+W8jlcK6A==}
+    engines: {node: '>=16'}
+    peerDependencies:
+      zod: ^3.22.0
+
   which@2.0.2:
     resolution: {integrity: sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==}
     engines: {node: '>= 8'}
@@ -1674,6 +1686,9 @@ packages:
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
+
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
   zotero-plugin-scaffold@0.8.2:
     resolution: {integrity: sha512-HtTGQ/Rz9bt1KgmFnmSNXNG2eH4sJ8VPLBwmDmV4hjv0lCgAwp2YWYtewdu5tVLzpVnTx0v++SjEW+k8Az0Qqw==}
@@ -3150,6 +3165,10 @@ snapshots:
 
   uuidv7@1.1.0: {}
 
+  verzod@0.4.0(zod@3.25.76):
+    dependencies:
+      zod: 3.25.76
+
   which@2.0.2:
     dependencies:
       isexe: 2.0.0
@@ -3196,6 +3215,8 @@ snapshots:
       yargs-parser: 21.1.1
 
   yocto-queue@0.1.0: {}
+
+  zod@3.25.76: {}
 
   zotero-plugin-scaffold@0.8.2:
     dependencies:
