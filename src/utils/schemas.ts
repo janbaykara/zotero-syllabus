@@ -336,6 +336,10 @@ export const SettingsSyllabusMetadataSchema = z.object({
   nomenclature: z.string().optional(),
   priorities: z.array(CustomPrioritySchema).optional(),
   locked: z.boolean().optional(),
+  // Cloud sync fields
+  remoteId: z.string().optional(), // Format: ${zoteroUserId}:${libraryId}:${collectionId}
+  institution: z.string().optional(),
+  moduleNumber: z.string().optional(),
 });
 
 /**
@@ -343,6 +347,7 @@ export const SettingsSyllabusMetadataSchema = z.object({
  * Extends SettingsSyllabusMetadataSchema with:
  * - collectionTitle field added
  * - locked field excluded
+ * - remoteId field excluded (not needed in exports)
  * - classes use ExportClassMetadataSchema (excludes status)
  *
  * Uses shared transform function to avoid duplication
@@ -351,6 +356,7 @@ export const ExportSyllabusMetadataSchema = SettingsSyllabusMetadataSchema.omit(
   {
     classes: true,
     locked: true,
+    remoteId: true, // Don't export remoteId
   },
 ).extend({
   collectionTitle: z.string(),

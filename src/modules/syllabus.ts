@@ -2574,6 +2574,57 @@ export class SyllabusManager {
     );
   }
 
+  /**
+   * Set the remote ID for cloud sync
+   */
+  static async setRemoteId(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    remoteId: string | undefined,
+    source: "page",
+  ): Promise<void> {
+    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    syllabusMetadata.remoteId = remoteId;
+    await SyllabusManager.setCollectionMetadata(
+      collectionId,
+      syllabusMetadata,
+      source,
+    );
+  }
+
+  /**
+   * Set the institution for a collection
+   */
+  static async setInstitution(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    institution: string | undefined,
+    source: "page",
+  ): Promise<void> {
+    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    syllabusMetadata.institution = institution;
+    await SyllabusManager.setCollectionMetadata(
+      collectionId,
+      syllabusMetadata,
+      source,
+    );
+  }
+
+  /**
+   * Set the module number for a collection
+   */
+  static async setModuleNumber(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    moduleNumber: string | undefined,
+    source: "page",
+  ): Promise<void> {
+    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    syllabusMetadata.moduleNumber = moduleNumber;
+    await SyllabusManager.setCollectionMetadata(
+      collectionId,
+      syllabusMetadata,
+      source,
+    );
+  }
+
   static getClassMetadata(
     collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,

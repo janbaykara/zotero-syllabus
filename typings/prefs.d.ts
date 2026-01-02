@@ -13,6 +13,11 @@ declare namespace _ZoteroTypes {
       "readerMode": boolean;
       "shouldColourSyllabusRows": boolean;
       "debugMode": boolean;
+      // Cloud sync preferences
+      "cloudApiToken": string;
+      "cloudUserId": string;
+      "cloudEmail": string;
+      "publicLibraryUrl": string;
     };
   }
 }

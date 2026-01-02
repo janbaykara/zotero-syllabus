@@ -48,7 +48,12 @@ import {
   List,
   Download,
   Upload,
+  Cloud,
+  CloudUpload,
+  ExternalLink,
+  Loader2,
 } from "lucide-preact";
+import { CloudSync } from "./cloudSync";
 
 // Define priority type for use in this file
 // These values match SyllabusPriority enum in syllabus.ts
@@ -110,6 +115,12 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
   // Settings view state
   const [showSettings, setShowSettings] = useState(false);
+
+  // Cloud sync state
+  const [isUploading, setIsUploading] = useState(false);
+  const [hasRemoteVersion, setHasRemoteVersion] = useState(() =>
+    CloudSync.hasRemoteVersion(collectionId),
+  );
 
   // Ref for the syllabus page container to access DOM for printing
   const syllabusPageRef = useRef<HTMLDivElement>(null);
@@ -848,6 +859,63 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     }
   };
 
+  // Update hasRemoteVersion when metadata changes
+  useEffect(() => {
+    setHasRemoteVersion(CloudSync.hasRemoteVersion(collectionId));
+  }, [collectionId, syllabusMetadata]);
+
+  const handleCloudUpload = async () => {
+    if (isUploading) return;
+
+    setIsUploading(true);
+    try {
+      const result = await CloudSync.uploadSyllabus(collectionId);
+
+      if (result.success) {
+        setHasRemoteVersion(true);
+        new ztoolkit.ProgressWindow("Cloud Sync", {
+          closeOnClick: true,
+          closeTime: 3000,
+        })
+          .createLine({
+            text: "Syllabus uploaded successfully!",
+            type: "success",
+          })
+          .show();
+      } else {
+        new ztoolkit.ProgressWindow("Cloud Sync Error", {
+          closeOnClick: true,
+          closeTime: 5000,
+        })
+          .createLine({
+            text: result.error || "Upload failed",
+            type: "fail",
+          })
+          .show();
+      }
+    } catch (err) {
+      ztoolkit.log("Error uploading syllabus:", err);
+      new ztoolkit.ProgressWindow("Cloud Sync Error", {
+        closeOnClick: true,
+        closeTime: 5000,
+      })
+        .createLine({
+          text: err instanceof Error ? err.message : "Upload failed",
+          type: "fail",
+        })
+        .show();
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleOpenPublicUrl = () => {
+    const url = CloudSync.getPublicUrl(collectionId);
+    if (url) {
+      Zotero.launchURL(url);
+    }
+  };
+
   const collection = useMemo(() => {
     return Zotero.Collections.get(collectionId);
   }, [collectionId]);
@@ -994,6 +1062,53 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                         className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
                       />
                     </div>
+                    <div
+                      className={twMerge(
+                        "cursor-pointer",
+                        isUploading && "cursor-wait",
+                      )}
+                      title={
+                        hasRemoteVersion
+                          ? "Update cloud version"
+                          : "Upload to Public Library"
+                      }
+                      aria-label={
+                        hasRemoteVersion
+                          ? "Update cloud version"
+                          : "Upload to Public Library"
+                      }
+                      onClick={handleCloudUpload}
+                    >
+                      {isUploading ? (
+                        <Loader2
+                          size={20}
+                          className="text-accent-blue animate-spin rounded p-1"
+                        />
+                      ) : (
+                        <CloudUpload
+                          size={20}
+                          className={twMerge(
+                            "hover:text-primary hover:bg-quinary rounded p-1",
+                            hasRemoteVersion
+                              ? "text-accent-green"
+                              : "text-secondary",
+                          )}
+                        />
+                      )}
+                    </div>
+                    {hasRemoteVersion && (
+                      <div
+                        className="cursor-pointer"
+                        title="Open in Public Library"
+                        aria-label="Open in Public Library"
+                        onClick={handleOpenPublicUrl}
+                      >
+                        <ExternalLink
+                          size={20}
+                          className="text-accent-blue hover:text-primary hover:bg-quinary rounded p-1"
+                        />
+                      </div>
+                    )}
                     <div
                       className="cursor-pointer"
                       title="Edit syllabus settings"

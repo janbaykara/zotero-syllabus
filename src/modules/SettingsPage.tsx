@@ -6,6 +6,8 @@ import { SyllabusManager, CustomPriority } from "./syllabus";
 import pluralize from "pluralize";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { useDebouncedEffect } from "../utils/react/useDebouncedEffect";
+import { CloudSync } from "./cloudSync";
+import { ExternalLink, Loader2 } from "lucide-preact";
 
 interface SettingsPageProps {
   collectionId: number;
@@ -30,10 +32,30 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
   // Local state for nomenclature input (for immediate UI feedback)
   const [localNomenclature, setLocalNomenclature] = useState(nomenclature);
 
+  // Institution and Module Number local state
+  const [localInstitution, setLocalInstitution] = useState(
+    metadata.institution || "",
+  );
+  const [localModuleNumber, setLocalModuleNumber] = useState(
+    metadata.moduleNumber || "",
+  );
+
+  // Import from URL state
+  const [importUrl, setImportUrl] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+
   // Update local state when metadata changes externally
   useEffect(() => {
     setLocalNomenclature(metadata.nomenclature || "class");
   }, [metadata.nomenclature]);
+
+  useEffect(() => {
+    setLocalInstitution(metadata.institution || "");
+  }, [metadata.institution]);
+
+  useEffect(() => {
+    setLocalModuleNumber(metadata.moduleNumber || "");
+  }, [metadata.moduleNumber]);
 
   // Debounced save for nomenclature
   useDebouncedEffect(
@@ -47,9 +69,86 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
     500,
   );
 
+  // Debounced save for institution
+  useDebouncedEffect(
+    () => {
+      if (localInstitution !== (metadata.institution || "")) {
+        SyllabusManager.setInstitution(
+          collectionId,
+          localInstitution.trim() || undefined,
+          "page",
+        );
+      }
+    },
+    [metadata.institution, localInstitution, collectionId],
+    500,
+  );
+
+  // Debounced save for module number
+  useDebouncedEffect(
+    () => {
+      if (localModuleNumber !== (metadata.moduleNumber || "")) {
+        SyllabusManager.setModuleNumber(
+          collectionId,
+          localModuleNumber.trim() || undefined,
+          "page",
+        );
+      }
+    },
+    [metadata.moduleNumber, localModuleNumber, collectionId],
+    500,
+  );
+
   const handleNomenclatureChange = useCallback((value: string) => {
     setLocalNomenclature(value);
   }, []);
+
+  const handleImportFromUrl = async () => {
+    if (!importUrl.trim() || isImporting) return;
+
+    setIsImporting(true);
+    try {
+      const result = await CloudSync.importFromUrl(collectionId, importUrl.trim());
+      if (result.success) {
+        setImportUrl("");
+        new ztoolkit.ProgressWindow("Import Success", {
+          closeOnClick: true,
+          closeTime: 3000,
+        })
+          .createLine({
+            text: "Successfully imported syllabus from URL",
+            type: "success",
+          })
+          .show();
+      } else {
+        new ztoolkit.ProgressWindow("Import Error", {
+          closeOnClick: true,
+          closeTime: 5000,
+        })
+          .createLine({
+            text: result.error || "Import failed",
+            type: "fail",
+          })
+          .show();
+      }
+    } catch (err) {
+      new ztoolkit.ProgressWindow("Import Error", {
+        closeOnClick: true,
+        closeTime: 5000,
+      })
+        .createLine({
+          text: err instanceof Error ? err.message : "Import failed",
+          type: "fail",
+        })
+        .show();
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const openPublicLibrary = () => {
+    Zotero.launchURL(CloudSync.getPublicLibraryUrl());
+  };
 
   const handlePriorityChange = useCallback(
     (priorityId: string, updates: Partial<CustomPriority>) => {
@@ -205,6 +304,135 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
                     canDelete={priorities.length > 1}
                   />
                 ))}
+            </div>
+          </section>
+
+          {/* Course Information Section */}
+          <section className="space-y-4">
+            <h2 className="text-2xl font-semibold">Course Information</h2>
+            <p className="text-secondary">
+              Add optional metadata about your course or module.
+            </p>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-secondary">
+                  Institution
+                </label>
+                <input
+                  type="text"
+                  value={localInstitution}
+                  onChange={(e) => setLocalInstitution(e.currentTarget.value)}
+                  placeholder="e.g., University of Oxford"
+                  className="px-4 py-2 border border-quinary rounded-md bg-background text-primary focus:outline-3 focus:outline-accent-blue focus:outline-offset-2"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-secondary">
+                  Module / Course Code
+                </label>
+                <input
+                  type="text"
+                  value={localModuleNumber}
+                  onChange={(e) => setLocalModuleNumber(e.currentTarget.value)}
+                  placeholder="e.g., SOC101, HIST-2020"
+                  className="px-4 py-2 border border-quinary rounded-md bg-background text-primary focus:outline-3 focus:outline-accent-blue focus:outline-offset-2"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Cloud Sync Section */}
+          <section className="space-y-4">
+            <h2 className="text-2xl font-semibold">Cloud Sync</h2>
+            <p className="text-secondary">
+              Share your syllabus on the Public Library or import syllabi from
+              others.
+            </p>
+
+            <div className="border border-quinary rounded-md p-4 bg-quinary/30 space-y-4">
+              {/* API Token Status */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Cloud Sync Status</p>
+                  <p className="text-sm text-secondary">
+                    {CloudSync.hasApiToken() ? (
+                      <span className="text-accent-green">
+                        ✓ Connected as {CloudSync.getCloudEmail()}
+                      </span>
+                    ) : (
+                      <span className="text-tertiary">
+                        Not connected. Upload a syllabus to register.
+                      </span>
+                    )}
+                  </p>
+                </div>
+                {CloudSync.hasApiToken() && (
+                  <button
+                    onClick={() => {
+                      CloudSync.clearCredentials();
+                      // Force re-render by updating a state
+                      setImportUrl("");
+                    }}
+                    className="text-sm text-secondary hover:text-accent-red"
+                  >
+                    Disconnect
+                  </button>
+                )}
+              </div>
+
+              {/* Public Library Link */}
+              <div className="flex items-center justify-between pt-4 border-t border-quinary">
+                <div>
+                  <p className="font-medium">Public Library</p>
+                  <p className="text-sm text-secondary">
+                    Browse and discover syllabi shared by others.
+                  </p>
+                </div>
+                <button
+                  onClick={openPublicLibrary}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-accent-blue text-white rounded-md hover:bg-accent-blue/80"
+                >
+                  <ExternalLink size={16} />
+                  Open Library
+                </button>
+              </div>
+
+              {/* Import from URL */}
+              <div className="pt-4 border-t border-quinary">
+                <p className="font-medium mb-2">Import from URL</p>
+                <p className="text-sm text-secondary mb-3">
+                  Paste an export URL from the Public Library to import a
+                  syllabus.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={importUrl}
+                    onChange={(e) => setImportUrl(e.currentTarget.value)}
+                    placeholder="https://syllabus.zotero.org/api/syllabi/.../export"
+                    className="flex-1 px-4 py-2 border border-quinary rounded-md bg-background text-primary focus:outline-3 focus:outline-accent-blue focus:outline-offset-2"
+                  />
+                  <button
+                    onClick={handleImportFromUrl}
+                    disabled={!importUrl.trim() || isImporting}
+                    className={twMerge(
+                      "px-4 py-2 rounded-md inline-flex items-center gap-2",
+                      importUrl.trim() && !isImporting
+                        ? "bg-accent-blue text-white hover:bg-accent-blue/80"
+                        : "bg-quaternary text-tertiary cursor-not-allowed",
+                    )}
+                  >
+                    {isImporting ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        Importing...
+                      </>
+                    ) : (
+                      "Import"
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           </section>
         </div>

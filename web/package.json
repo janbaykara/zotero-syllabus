@@ -1,19 +1,30 @@
 {
-  "name": "zotero-syllabus",
+  "name": "zotero-syllabus-web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "generate:types": "payload generate:types"
   },
   "dependencies": {
+    "@payloadcms/db-mongodb": "^3.69.0",
+    "@payloadcms/next": "^3.69.0",
+    "@payloadcms/richtext-lexical": "^3.69.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "graphql": "^16.12.0",
+    "lucide-react": "^0.562.0",
     "next": "16.1.1",
+    "payload": "^3.69.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "swr": "^2.3.8",
-    "zotero-api-client": "^0.47.0"
+    "sass": "^1.97.1",
+    "sharp": "^0.34.5",
+    "tailwind-merge": "^3.4.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -9,6 +9,11 @@ export const PREFS_KEYS: (keyof PluginPrefsMap)[] = [
   "readerMode",
   "shouldColourSyllabusRows",
   "debugMode",
+  // Cloud sync preferences
+  "cloudApiToken",
+  "cloudUserId",
+  "cloudEmail",
+  "publicLibraryUrl",
 ];
 
 const PREFS_PREFIX = config.prefsPrefix;
