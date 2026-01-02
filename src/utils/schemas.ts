@@ -277,13 +277,15 @@ export const SettingsSyllabusMetadataSchema = z.object({
  * - collectionTitle field added
  * - locked field excluded
  * - classes use ExportClassMetadataSchema (excludes status)
- * 
+ *
  * Uses shared transform function to avoid duplication
  */
-export const ExportSyllabusMetadataSchema = SettingsSyllabusMetadataSchema.omit({
-  classes: true,
-  locked: true,
-}).extend({
+export const ExportSyllabusMetadataSchema = SettingsSyllabusMetadataSchema.omit(
+  {
+    classes: true,
+    locked: true,
+  },
+).extend({
   collectionTitle: z.string(),
   classes: transformClasses(ExportClassMetadataSchema),
 });

@@ -49,7 +49,6 @@ import {
   Download,
   Upload,
 } from "lucide-preact";
-import type { SettingsSyllabusMetadata } from "../utils/schemas";
 
 // Define priority type for use in this file
 // These values match SyllabusPriority enum in syllabus.ts
@@ -108,6 +107,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
   // Ref for the syllabus page container to access DOM for printing
   const syllabusPageRef = useRef<HTMLDivElement>(null);
+
+  // Ref for hidden file input for import
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const toggleCompactMode = () => {
     const nextMode = !compactMode;
@@ -652,14 +654,20 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   const handleExport = async () => {
     try {
       // Prepare export data using SyllabusManager
-      const exportData = SyllabusManager.prepareExportData(collectionId, title || "");
+      const exportData = SyllabusManager.prepareExportData(
+        collectionId,
+        title || "",
+      );
 
       // Create JSON string with pretty formatting
       const jsonContent = JSON.stringify(exportData, null, 2);
 
       // Generate filename: syllabus-{slugified-title}-{YYYY-MM-DD}.json
       const dateStr = formatDate(new Date(), "yyyy-MM-dd");
-      const titleSlug = slugify(title || "syllabus", { lower: true, strict: true });
+      const titleSlug = slugify(title || "syllabus", {
+        lower: true,
+        strict: true,
+      });
       const filename = `syllabus-${titleSlug}-${dateStr}.json`;
 
       // Create a temporary file and save it
@@ -680,86 +688,74 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     }
   };
 
-  const handleImport = async () => {
-    try {
-      // Open file picker for JSON files
-      const file = await new Promise<Zotero.File | null>((resolve) => {
-        const filePicker = Components.classes[
-          "@mozilla.org/filepicker;1"
-        ].createInstance(Components.interfaces.nsIFilePicker);
-        filePicker.init(
-          Zotero.getMainWindow(),
-          "Select Syllabus Metadata JSON File",
-          filePicker.modeOpen,
-        );
-        filePicker.appendFilter("JSON Files", "*.json");
-        filePicker.appendFilters(filePicker.filterAll);
+  const handleImport = () => {
+    // Trigger the hidden file input
+    fileInputRef.current?.click();
+  };
 
-        filePicker.open((result: number) => {
-          if (result === filePicker.returnOK) {
-            const selectedFile = filePicker.file;
-            resolve(Zotero.File.pathToFile(selectedFile.path));
+  const handleFileInputChange = async (
+    e: JSX.TargetedEvent<HTMLInputElement>,
+  ) => {
+    const target = e.target as HTMLInputElement;
+    const selectedFile = target.files?.[0];
+
+    // Reset the input so the same file can be selected again
+    target.value = "";
+
+    if (!selectedFile) {
+      // User cancelled file selection
+      return;
+    }
+
+    try {
+      // Read file contents using FileReader
+      const fileContents = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const content = event.target?.result;
+          if (typeof content === "string") {
+            resolve(content);
+          } else if (content instanceof ArrayBuffer) {
+            resolve(new TextDecoder("utf-8").decode(content));
           } else {
-            resolve(null);
+            reject(new Error("Failed to read file contents"));
           }
-        });
+        };
+        reader.onerror = () => reject(new Error("Error reading file"));
+        reader.readAsText(selectedFile);
       });
 
-      if (!file) {
-        // User cancelled file selection
-        return;
-      }
-
-      // Read file contents
-      const fileContents = await Zotero.File.getContentsAsync(file);
-      if (!fileContents) {
-        Zotero.UI.alert(
-          Zotero.getMainWindow(),
-          "Import Error",
-          "Failed to read the selected file.",
-        );
-        return;
-      }
-
-      // Convert file contents to string if needed
-      const jsonString =
-        typeof fileContents === "string"
-          ? fileContents
-          : new TextDecoder("utf-8").decode(fileContents);
-
-      // Process imported data using SyllabusManager
-      // This handles JSON parsing, validation, and merging
-      let mergedMetadata: SettingsSyllabusMetadata;
-      try {
-        mergedMetadata = SyllabusManager.processImportedData(
-          collectionId,
-          jsonString,
-        );
-      } catch (error) {
-        Zotero.UI.alert(
-          Zotero.getMainWindow(),
-          "Import Error",
-          error instanceof Error ? error.message : String(error),
-        );
-        ztoolkit.log("Import processing error:", error);
-        return;
-      }
-
-      // Save merged metadata
-      await SyllabusManager.setCollectionMetadata(
+      // Import syllabus metadata using SyllabusManager
+      // This handles JSON parsing, validation, collection title update, merging, and saving
+      await SyllabusManager.importSyllabusMetadata(
         collectionId,
-        mergedMetadata,
+        fileContents,
         "page",
       );
 
       ztoolkit.log("Successfully imported and merged syllabus metadata");
-    } catch (err) {
-      ztoolkit.log("Error importing syllabus metadata:", err);
-      Zotero.UI.alert(
-        Zotero.getMainWindow(),
-        "Import Error",
-        `An error occurred while importing the file: ${err instanceof Error ? err.message : String(err)}`,
-      );
+
+      // Show success message
+      new ztoolkit.ProgressWindow("Import Success", {
+        closeOnClick: true,
+        closeTime: 3000,
+      })
+        .createLine({
+          text: "Successfully imported and merged syllabus metadata",
+          type: "success",
+        })
+        .show();
+    } catch (error) {
+      new ztoolkit.ProgressWindow("Import Error", {
+        closeOnClick: true,
+        closeTime: 5000,
+      })
+        .createLine({
+          text: error instanceof Error ? error.message : String(error),
+          type: "fail",
+        })
+        .show();
+      ztoolkit.log("Import processing error:", error);
     }
   };
 
@@ -873,288 +869,302 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   }
 
   return (
-    <div
-      ref={syllabusPageRef}
-      className={twMerge(
-        "syllabus-page overflow-y-auto overflow-x-hidden h-full in-[.print]:scheme-light",
-        compactMode && "compact-mode",
-      )}
-    >
-      <div className="pb-12">
-        <div
-          syllabus-view-title-container
-          className="sticky top-0 z-20 bg-background py-1 md:pt-8 in-[.print]:static"
-        >
-          <div className="container-padded bg-background">
-            <div className="flex flex-row items-center gap-4 justify-between">
-              <div className="flex-1 text-3xl font-semibold grow shrink-0">
-                <TextInput
-                  elementType="input"
-                  initialValue={title || ""}
-                  onSave={setTitle}
-                  emptyBehavior="reset"
-                  placeholder="Add a title..."
-                  className="w-full px-0! mx-0! text-primary! disabled:text-primary!"
-                  readOnly={isLocked}
-                />
-              </div>
-              <div className="inline-flex items-center gap-2 shrink grow-0">
-                <div
-                  className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                  title={isLocked ? "Unlock syllabus" : "Lock syllabus"}
-                  aria-label={isLocked ? "Unlock syllabus" : "Lock syllabus"}
-                  onClick={() => setLocked(!isLocked)}
-                >
-                  {isLocked ? (
-                    <Unlock
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  ) : (
-                    <Lock
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  )}
-                </div>
-                <div
-                  className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                  title={
-                    compactMode ? "Disable compact mode" : "Enable compact mode"
-                  }
-                  aria-label={
-                    compactMode ? "Disable compact mode" : "Enable compact mode"
-                  }
-                  onClick={toggleCompactMode}
-                >
-                  {compactMode ? (
-                    <Maximize2
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  ) : (
-                    <Minimize2
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  )}
-                </div>
-                <div
-                  className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                  title={
-                    readerMode ? "Disable reader mode" : "Enable reader mode"
-                  }
-                  aria-label={
-                    readerMode ? "Disable reader mode" : "Enable reader mode"
-                  }
-                  onClick={toggleReaderMode}
-                >
-                  {readerMode ? (
-                    <List
-                      size={20}
-                      className="text-primary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  ) : (
-                    <ListChecks
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  )}
-                </div>
-                <div className="ml-auto flex items-center gap-1 in-[.print]:hidden">
-                  <div
-                    className="cursor-pointer"
-                    title="Export syllabus metadata"
-                    aria-label="Export syllabus metadata"
-                    onClick={handleExport}
-                  >
-                    <Download
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  </div>
-                  <div
-                    className="cursor-pointer"
-                    title="Import syllabus metadata"
-                    aria-label="Import syllabus metadata"
-                    onClick={handleImport}
-                  >
-                    <Upload
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  </div>
-                  <div
-                    className="cursor-pointer"
-                    title="Edit syllabus settings"
-                    aria-label="Edit syllabus settings"
-                    onClick={() => setShowSettings(true)}
-                  >
-                    <Settings
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  </div>
-                  <div
-                    className="cursor-pointer"
-                    title="Print the list in Syllabus view as a PDF"
-                    aria-label="Print the list in Syllabus view as a PDF"
-                    onClick={handlePrint}
-                  >
-                    <Printer
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="container-padded">
+    <>
+      {/* Hidden file input for import */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json,application/json"
+        style={{ display: "none" }}
+        onChange={handleFileInputChange}
+      />
+      <div
+        ref={syllabusPageRef}
+        className={twMerge(
+          "syllabus-page overflow-y-auto overflow-x-hidden h-full in-[.print]:scheme-light",
+          compactMode && "compact-mode",
+        )}
+      >
+        <div className="pb-12">
           <div
-            className={twMerge("py-2", compactMode ? "text-base" : "text-lg")}
+            syllabus-view-title-container
+            className="sticky top-0 z-20 bg-background py-1 md:pt-8 in-[.print]:static"
           >
-            <TextInput
-              elementType="textarea"
-              initialValue={syllabusMetadata.description || ""}
-              onSave={setDescription}
-              syllabus-collection-description
-              className="w-full px-0! mx-0! text-primary"
-              placeholder="Add a description..."
-              emptyBehavior="delete"
-              fieldSizing="content"
-              readOnly={isLocked}
-            />
-          </div>
-        </div>
-
-        <div
-          className={twMerge(
-            "flex flex-col mb-12",
-            compactMode ? "gap-8 mt-4" : "gap-12 mt-6",
-          )}
-        >
-          {classGroups.map((group) => (
-            <ClassGroupComponent
-              key={group.classNumber ?? "null"}
-              classNumber={group.classNumber}
-              itemAssignments={group.itemAssignments}
-              collectionId={collectionId}
-              syllabusMetadata={syllabusMetadata}
-              onClassTitleSave={setClassTitle}
-              onClassDescriptionSave={setClassDescription}
-              onClassReadingDateSave={handleClassReadingDateSave}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              compactMode={compactMode}
-              readerMode={readerMode}
-              isLocked={isLocked}
-              onResetSortOrder={() => setItemOrderVersion((v) => v + 1)}
-            />
-          ))}
-        </div>
-
-        <div className="container-padded">
-          {(() => {
-            const { singularCapitalized } =
-              SyllabusManager.getNomenclatureFormatted(collectionId);
-
-            return (
-              <>
-                {!isLocked && isDragging && !compactMode && (
-                  <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
-                    <div className="syllabus-class-header-container">
-                      <div className="syllabus-class-header">
-                        Add to {singularCapitalized} {nextClassNumber}
-                      </div>
+            <div className="container-padded bg-background">
+              <div className="flex flex-row items-center gap-4 justify-between">
+                <div className="flex-1 text-3xl font-semibold grow shrink-0">
+                  <TextInput
+                    elementType="input"
+                    initialValue={title || ""}
+                    onSave={setTitle}
+                    emptyBehavior="reset"
+                    placeholder="Add a title..."
+                    className="w-full px-0! mx-0! text-primary! disabled:text-primary!"
+                    readOnly={isLocked}
+                  />
+                </div>
+                <div className="inline-flex items-center gap-2 shrink grow-0">
+                  <div
+                    className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
+                    title={isLocked ? "Unlock syllabus" : "Lock syllabus"}
+                    aria-label={isLocked ? "Unlock syllabus" : "Lock syllabus"}
+                    onClick={() => setLocked(!isLocked)}
+                  >
+                    {isLocked ? (
+                      <Unlock
+                        size={20}
+                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
+                    ) : (
+                      <Lock
+                        size={20}
+                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
+                    )}
+                  </div>
+                  <div
+                    className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
+                    title={
+                      compactMode
+                        ? "Disable compact mode"
+                        : "Enable compact mode"
+                    }
+                    aria-label={
+                      compactMode
+                        ? "Disable compact mode"
+                        : "Enable compact mode"
+                    }
+                    onClick={toggleCompactMode}
+                  >
+                    {compactMode ? (
+                      <Maximize2
+                        size={20}
+                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
+                    ) : (
+                      <Minimize2
+                        size={20}
+                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
+                    )}
+                  </div>
+                  <div
+                    className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
+                    title={
+                      readerMode ? "Disable reader mode" : "Enable reader mode"
+                    }
+                    aria-label={
+                      readerMode ? "Disable reader mode" : "Enable reader mode"
+                    }
+                    onClick={toggleReaderMode}
+                  >
+                    {readerMode ? (
+                      <List
+                        size={20}
+                        className="text-primary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
+                    ) : (
+                      <ListChecks
+                        size={20}
+                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
+                    )}
+                  </div>
+                  <div className="ml-auto flex items-center gap-1 in-[.print]:hidden">
+                    <div
+                      className="cursor-pointer"
+                      title="Export syllabus metadata"
+                      aria-label="Export syllabus metadata"
+                      onClick={handleExport}
+                    >
+                      <Download
+                        size={20}
+                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
                     </div>
                     <div
-                      className="syllabus-class-items syllabus-add-class-dropzone-items"
-                      onDrop={(e) => handleDrop(e, nextClassNumber)}
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
+                      className="cursor-pointer"
+                      title="Import syllabus metadata"
+                      aria-label="Import syllabus metadata"
+                      onClick={handleImport}
                     >
-                      <div className="syllabus-add-class-dropzone-placeholder bg-quinary rounded-md p-16 text-secondary border-2 border-dashed border-secondary">
-                        Drop item here to create {singularCapitalized}{" "}
-                        {nextClassNumber}
-                      </div>
+                      <Upload
+                        size={20}
+                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
+                    </div>
+                    <div
+                      className="cursor-pointer"
+                      title="Edit syllabus settings"
+                      aria-label="Edit syllabus settings"
+                      onClick={() => setShowSettings(true)}
+                    >
+                      <Settings
+                        size={20}
+                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
+                    </div>
+                    <div
+                      className="cursor-pointer"
+                      title="Print the list in Syllabus view as a PDF"
+                      aria-label="Print the list in Syllabus view as a PDF"
+                      onClick={handlePrint}
+                    >
+                      <Printer
+                        size={20}
+                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
                     </div>
                   </div>
-                )}
-
-                {!isLocked && (
-                  <div className="syllabus-create-class-control in-[.print]:hidden">
-                    <button
-                      className="syllabus-create-class-button"
-                      onClick={addClass}
-                      title={`Add ${singularCapitalized} ${nextClassNumber}`}
-                    >
-                      Add {singularCapitalized} {nextClassNumber}
-                    </button>
-                  </div>
-                )}
-              </>
-            );
-          })()}
-
-          {furtherReadingItems.length > 0 && (
-            <div className="syllabus-class-group in-[.print]:scheme-light">
-              <div
-                className={twMerge(
-                  "font-semibold",
-                  compactMode ? "text-xl mt-8 mb-2" : "text-2xl mt-12 mb-4",
-                )}
-              >
-                Further reading
+                </div>
               </div>
-              {!compactMode && (
-                <p className="text-secondary text-lg">
-                  Items in this section have not been assigned to any class.
-                </p>
-              )}
-              <div
-                className={compactMode ? "space-y-2" : "space-y-4"}
-                onDrop={(e) => handleDrop(e, null)}
+            </div>
+          </div>
+
+          <div className="container-padded">
+            <div
+              className={twMerge("py-2", compactMode ? "text-base" : "text-lg")}
+            >
+              <TextInput
+                elementType="textarea"
+                initialValue={syllabusMetadata.description || ""}
+                onSave={setDescription}
+                syllabus-collection-description
+                className="w-full px-0! mx-0! text-primary"
+                placeholder="Add a description..."
+                emptyBehavior="delete"
+                fieldSizing="content"
+                readOnly={isLocked}
+              />
+            </div>
+          </div>
+
+          <div
+            className={twMerge(
+              "flex flex-col mb-12",
+              compactMode ? "gap-8 mt-4" : "gap-12 mt-6",
+            )}
+          >
+            {classGroups.map((group) => (
+              <ClassGroupComponent
+                key={group.classNumber ?? "null"}
+                classNumber={group.classNumber}
+                itemAssignments={group.itemAssignments}
+                collectionId={collectionId}
+                syllabusMetadata={syllabusMetadata}
+                onClassTitleSave={setClassTitle}
+                onClassDescriptionSave={setClassDescription}
+                onClassReadingDateSave={handleClassReadingDateSave}
+                onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
-              >
-                {furtherReadingItems.map((item: Zotero.Item) => (
-                  <SyllabusItemCard
-                    key={item.id}
-                    item={item}
-                    collectionId={collectionId}
-                    classNumber={undefined}
-                    slim={true}
-                    compactMode={compactMode}
-                    readerMode={readerMode}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+                compactMode={compactMode}
+                readerMode={readerMode}
+                isLocked={isLocked}
+                onResetSortOrder={() => setItemOrderVersion((v) => v + 1)}
+              />
+            ))}
+          </div>
 
-          {getPref("debugMode") && (
-            <div className="text-secondary text-sm">
-              <h3>Debug info</h3>
-              <pre>
-                {JSON.stringify(
-                  {
-                    syllabusMetadata,
-                  },
-                  null,
-                  2,
+          <div className="container-padded">
+            {(() => {
+              const { singularCapitalized } =
+                SyllabusManager.getNomenclatureFormatted(collectionId);
+
+              return (
+                <>
+                  {!isLocked && isDragging && !compactMode && (
+                    <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
+                      <div className="syllabus-class-header-container">
+                        <div className="syllabus-class-header">
+                          Add to {singularCapitalized} {nextClassNumber}
+                        </div>
+                      </div>
+                      <div
+                        className="syllabus-class-items syllabus-add-class-dropzone-items"
+                        onDrop={(e) => handleDrop(e, nextClassNumber)}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                      >
+                        <div className="syllabus-add-class-dropzone-placeholder bg-quinary rounded-md p-16 text-secondary border-2 border-dashed border-secondary">
+                          Drop item here to create {singularCapitalized}{" "}
+                          {nextClassNumber}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {!isLocked && (
+                    <div className="syllabus-create-class-control in-[.print]:hidden">
+                      <button
+                        className="syllabus-create-class-button"
+                        onClick={addClass}
+                        title={`Add ${singularCapitalized} ${nextClassNumber}`}
+                      >
+                        Add {singularCapitalized} {nextClassNumber}
+                      </button>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+
+            {furtherReadingItems.length > 0 && (
+              <div className="syllabus-class-group in-[.print]:scheme-light">
+                <div
+                  className={twMerge(
+                    "font-semibold",
+                    compactMode ? "text-xl mt-8 mb-2" : "text-2xl mt-12 mb-4",
+                  )}
+                >
+                  Further reading
+                </div>
+                {!compactMode && (
+                  <p className="text-secondary text-lg">
+                    Items in this section have not been assigned to any class.
+                  </p>
                 )}
-              </pre>
-            </div>
-          )}
+                <div
+                  className={compactMode ? "space-y-2" : "space-y-4"}
+                  onDrop={(e) => handleDrop(e, null)}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                >
+                  {furtherReadingItems.map((item: Zotero.Item) => (
+                    <SyllabusItemCard
+                      key={item.id}
+                      item={item}
+                      collectionId={collectionId}
+                      classNumber={undefined}
+                      slim={true}
+                      compactMode={compactMode}
+                      readerMode={readerMode}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
-          <Bibliography items={items} compactMode={compactMode} />
+            {getPref("debugMode") && (
+              <div className="text-secondary text-sm">
+                <h3>Debug info</h3>
+                <pre>
+                  {JSON.stringify(
+                    {
+                      syllabusMetadata,
+                    },
+                    null,
+                    2,
+                  )}
+                </pre>
+              </div>
+            )}
+
+            <Bibliography items={items} compactMode={compactMode} />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 
   async function addClass() {
@@ -1639,34 +1649,34 @@ function TextInput({
         onChange: readOnly
           ? undefined
           : (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-            setValue((e.target as HTMLInputElement).value),
+              setValue((e.target as HTMLInputElement).value),
         onBlur: readOnly ? undefined : () => save(value),
         onKeyDown: readOnly
           ? undefined
           : (
-            e: JSX.TargetedKeyboardEvent<
-              HTMLInputElement | HTMLTextAreaElement
-            >,
-          ) => {
-            if (e.key === "Escape" || e.key === "Enter") {
-              e.preventDefault();
-              e.currentTarget.blur();
-              save(value);
-            }
-          },
+              e: JSX.TargetedKeyboardEvent<
+                HTMLInputElement | HTMLTextAreaElement
+              >,
+            ) => {
+              if (e.key === "Escape" || e.key === "Enter") {
+                e.preventDefault();
+                e.currentTarget.blur();
+                save(value);
+              }
+            },
         onSelect: readOnly
           ? (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            e.preventDefault();
-            e.currentTarget.setSelectionRange(0, 0);
-          }
+              e.preventDefault();
+              e.currentTarget.setSelectionRange(0, 0);
+            }
           : undefined,
         onClick: readOnly
           ? (
-            e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
-          ) => {
-            e.preventDefault();
-            e.currentTarget.blur();
-          }
+              e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
+            ) => {
+              e.preventDefault();
+              e.currentTarget.blur();
+            }
           : undefined,
         placeholder: readOnly ? undefined : placeholder || "Click to edit",
         className: twMerge(
@@ -1787,9 +1797,9 @@ export function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-        item: Zotero.Item;
-        type: "pdf" | "snapshot" | "epub";
-      }>;
+      item: Zotero.Item;
+      type: "pdf" | "snapshot" | "epub";
+    }>;
   }, [item, slim]);
 
   const metadataParts = [
@@ -1909,9 +1919,9 @@ export function SyllabusItemCard({
 
   const colors = priority
     ? {
-      backgroundColor: priorityColor + "15",
-      borderColor: priorityColor + "30",
-    }
+        backgroundColor: priorityColor + "15",
+        borderColor: priorityColor + "30",
+      }
     : {};
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {

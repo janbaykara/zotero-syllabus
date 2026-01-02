@@ -31,3 +31,12 @@ declare const Components: {
     isDeadWrapper: (obj: any) => boolean;
   };
 };
+
+// Services API for accessing system services
+declare const Services: {
+  wm?: {
+    getMostRecentWindow: (windowType: string) => Window | null;
+  };
+  scriptloader?: any;
+  io?: any;
+};

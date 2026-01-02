@@ -68,13 +68,13 @@ export type {
 
 const tabManager = FEATURE_FLAG.READING_SCHEDULE
   ? new TabManager<Record<string, never>>({
-    type: "reading-list",
-    title: "Reading Schedule",
-    rootElementIdFactory: () => "reading-list-tab-root",
-    data: { icon: "book" },
-    componentFactory: () => h(ReadingSchedule, {}),
-    getTabId: () => "syllabus-reading-list-tab",
-  })
+      type: "reading-list",
+      title: "Reading Schedule",
+      rootElementIdFactory: () => "reading-list-tab-root",
+      data: { icon: "book" },
+      componentFactory: () => h(ReadingSchedule, {}),
+      getTabId: () => "syllabus-reading-list-tab",
+    })
   : null;
 
 export class SyllabusManager {
@@ -914,9 +914,9 @@ export class SyllabusManager {
             const classTitle =
               classNumber !== undefined
                 ? SyllabusManager.getClassTitle(
-                  selectedCollection.id,
-                  classNumber,
-                )
+                    selectedCollection.id,
+                    classNumber,
+                  )
                 : "";
             const priority = firstAssignment.priority || "";
             return `${sortKey}|${priority}|${classNumber ?? ""}|${classTitle}|${selectedCollection.id}`;
@@ -1155,14 +1155,14 @@ export class SyllabusManager {
           body,
           selectedCollection
             ? h(ItemPane, {
-              item,
-              collectionId: selectedCollection.id,
-              editable,
-            })
+                item,
+                collectionId: selectedCollection.id,
+                editable,
+              })
             : h("div", {
-              innerText: "Select a collection to view syllabus assignments",
-              className: "text-center text-gray-500 p-4",
-            }),
+                innerText: "Select a collection to view syllabus assignments",
+                className: "text-center text-gray-500 p-4",
+              }),
           "syllabus-item-pane",
         );
       },
@@ -1225,18 +1225,18 @@ export class SyllabusManager {
     // Get collection-specific priority options if a collection is selected
     const priorityOptions = selectedCollection
       ? (() => {
-        const customPriorities = this.getPrioritiesForCollection(
-          selectedCollection.id,
-        );
-        const options = customPriorities.map((p) => ({
-          value: p.id,
-          label: p.name,
-          color: p.color,
-        }));
-        // Add "(None)" option
-        options.push({ value: "", label: "(None)", color: "" });
-        return options;
-      })()
+          const customPriorities = this.getPrioritiesForCollection(
+            selectedCollection.id,
+          );
+          const options = customPriorities.map((p) => ({
+            value: p.id,
+            label: p.name,
+            color: p.color,
+          }));
+          // Add "(None)" option
+          options.push({ value: "", label: "(None)", color: "" });
+          return options;
+        })()
       : this.getPriorityOptions();
 
     ztoolkit.Menu.register("item", {
@@ -1829,7 +1829,7 @@ export class SyllabusManager {
       // This ensures OPTIONAL ("optional") sorts before unprioritized ("zzzz")
       assignment.priority || "zzzz",
       assignment.classInstruction?.slice(0, 4).replace(/[^a-zA-Z0-9]/g, "_") ||
-      "",
+        "",
       assignment.id || "",
     );
 
@@ -2824,7 +2824,8 @@ export class SyllabusManager {
             ...(existing.classes?.[classKey] || {}),
             ...classData,
             // Merge itemOrder arrays (imported replaces existing)
-            itemOrder: classData.itemOrder || existing.classes?.[classKey]?.itemOrder,
+            itemOrder:
+              classData.itemOrder || existing.classes?.[classKey]?.itemOrder,
           };
         }
       }
@@ -2871,15 +2872,16 @@ export class SyllabusManager {
   }
 
   /**
-   * Process imported JSON string
-   * Validates the JSON and merges it with existing metadata
-   * Returns the merged metadata ready to be saved
+   * Import syllabus metadata from a JSON string (export format)
+   * Validates against ExportSyllabusMetadataSchema, updates collection title if provided,
+   * merges metadata with existing, and saves everything
    * Throws errors for invalid JSON or schema validation failures
    */
-  static processImportedData(
+  static async importSyllabusMetadata(
     collectionId: number | string,
     importedJsonString: string,
-  ): SettingsSyllabusMetadata {
+    source: "page" = "page",
+  ): Promise<void> {
     // Parse JSON
     let parsedData: unknown;
     try {
@@ -2890,17 +2892,42 @@ export class SyllabusManager {
       );
     }
 
-    // Validate using Zod schema (use SettingsSyllabusMetadataSchema for import)
-    // Note: Imported data may have collectionTitle, but we only use the metadata part
-    const validationResult = SettingsSyllabusMetadataSchema.safeParse(parsedData);
+    // Validate against ExportSyllabusMetadataSchema (includes collectionTitle)
+    const validationResult = ExportSyllabusMetadataSchema.safeParse(parsedData);
     if (!validationResult.success) {
       throw new Error(
         `The file does not match the expected syllabus metadata format: ${validationResult.error.message}`,
       );
     }
 
+    const exportData = validationResult.data;
+
+    // Extract metadata (without collectionTitle) for merging
+    const { collectionTitle, ...metadataData } = exportData;
+
+    // Update collection title if provided
+    if (collectionTitle) {
+      this.setCollectionTitle(Number(collectionId), collectionTitle, source);
+    }
+
+    // Validate the metadata part against SettingsSyllabusMetadataSchema
+    // (to ensure it's compatible with our internal format)
+    const metadataValidation =
+      SettingsSyllabusMetadataSchema.safeParse(metadataData);
+    if (!metadataValidation.success) {
+      throw new Error(
+        `The metadata in the file is invalid: ${metadataValidation.error.message}`,
+      );
+    }
+
     // Get current metadata and merge with imported data
     const existingMetadata = this.getSyllabusMetadata(collectionId);
-    return this.deepMergeMetadata(existingMetadata, validationResult.data);
+    const mergedMetadata = this.deepMergeMetadata(
+      existingMetadata,
+      metadataValidation.data,
+    );
+
+    // Save merged metadata
+    await this.setCollectionMetadata(collectionId, mergedMetadata, source);
   }
 }
