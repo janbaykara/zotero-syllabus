@@ -23,6 +23,7 @@ import {
   ItemSyllabusDataEntity,
   ItemSyllabusAssignmentEntity,
   SettingsCollectionDictionaryDataSchema,
+  SettingsCollectionDictionaryDataEntity,
   SettingsClassMetadataSchema,
   SettingsSyllabusMetadataSchema,
   ExportSyllabusMetadataSchema,
@@ -39,6 +40,10 @@ enum SyllabusSettingsKey {
   COLLECTION_METADATA = "collectionMetadata",
   COLLECTION_VIEW_MODES = "collectionViewModes",
 }
+
+type GetByLibraryAndKeyArgs = Parameters<
+  typeof Zotero.Collections.getByLibraryAndKey
+>;
 
 // Types are now inferred from Zod schemas in utils/schemas.ts
 import type {
@@ -64,17 +69,20 @@ export type {
   SettingsClassMetadata,
 };
 
+// Export GetByLibraryAndKeyArgs for use in other modules
+export type { GetByLibraryAndKeyArgs };
+
 // All types are now inferred from Zod schemas in utils/schemas.ts
 
 const tabManager = FEATURE_FLAG.READING_SCHEDULE
   ? new TabManager<Record<string, never>>({
-      type: "reading-list",
-      title: "Reading Schedule",
-      rootElementIdFactory: () => "reading-list-tab-root",
-      data: { icon: "book" },
-      componentFactory: () => h(ReadingSchedule, {}),
-      getTabId: () => "syllabus-reading-list-tab",
-    })
+    type: "reading-list",
+    title: "Reading Schedule",
+    rootElementIdFactory: () => "reading-list-tab-root",
+    data: { icon: "book" },
+    componentFactory: () => h(ReadingSchedule, {}),
+    getTabId: () => "syllabus-reading-list-tab",
+  })
   : null;
 
 export class SyllabusManager {
@@ -113,6 +121,61 @@ export class SyllabusManager {
   // Cache for class titles per collection to avoid repeated preference reads
   private static classTitleCache = new Map<string, Map<number, string>>();
   private static classTitleCacheCollectionId: string | null = null;
+
+  /**
+   * Normalize collection identifier to library ID and key
+   * Accepts either a numeric collection ID or GetByLibraryAndKeyArgs tuple
+   * Returns an object with libraryID and key, or null if collection not found
+   */
+  static normalizeCollectionIdentifier(
+    collectionId: number | GetByLibraryAndKeyArgs,
+  ): { libraryID: number; key: string } | null {
+    // If it's already a tuple [libraryID, key]
+    if (Array.isArray(collectionId) && collectionId.length === 2) {
+      const [libraryID, key] = collectionId;
+      return { libraryID, key };
+    }
+
+    // If it's a number, get the collection and extract libraryID and key
+    if (typeof collectionId === "number") {
+      const collection = Zotero.Collections.get(collectionId);
+      if (!collection) {
+        return null;
+      }
+      return {
+        libraryID: collection.libraryID,
+        key: collection.key,
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Get collection reference string in format `${libraryID}:${key}`
+   * Used as the key for storing collection metadata and item syllabus data
+   */
+  static getCollectionReferenceString(libraryID: number, key: string): string {
+    return `${libraryID}:${key}`;
+  }
+
+  /**
+   * Get collection object from identifier
+   * Accepts either a numeric collection ID or GetByLibraryAndKeyArgs tuple
+   */
+  static getCollectionFromIdentifier(
+    collectionId: number | GetByLibraryAndKeyArgs,
+  ): Zotero.Collection | null {
+    const normalized = this.normalizeCollectionIdentifier(collectionId);
+    if (!normalized) {
+      return null;
+    }
+    const collection = Zotero.Collections.getByLibraryAndKey(
+      normalized.libraryID,
+      normalized.key,
+    );
+    return collection || null;
+  }
 
   /**
    * Map Zotero item type to icon name
@@ -213,6 +276,7 @@ export class SyllabusManager {
 
   static onStartup() {
     ztoolkit.log("SyllabusManager.onStartup");
+    // this.migrateCollectionIdentifiers();
     this.registerPrefs();
     this.registerNotifier();
     this.registerSyllabusInfoColumn();
@@ -220,6 +284,84 @@ export class SyllabusManager {
     this.registerSyllabusStatusColumn();
     this.reloadItemPane();
   }
+
+  // /**
+  //  * Migrate collection identifiers from numeric IDs to libraryID:key format
+  //  * This is a one-time migration that runs on startup
+  //  */
+  // static async migrateCollectionIdentifiers() {
+  //   ztoolkit.log("SyllabusManager.migrateCollectionIdentifiers: Starting migration");
+
+  //   // Migrate collection metadata (preferences)
+  //   try {
+  //     const prefKey = SyllabusManager.getPreferenceKey(
+  //       SyllabusSettingsKey.COLLECTION_METADATA,
+  //     );
+  //     const metadataStr = String(Zotero.Prefs.get(prefKey, true) || "");
+  //     if (metadataStr) {
+  //       const parsed = JSON.parse(metadataStr);
+  //       const result = SettingsCollectionDictionaryDataEntity.safeParse(parsed);
+  //       if (result.type === "ok" && !SettingsCollectionDictionaryDataEntity.isLatest(parsed)) {
+  //         ztoolkit.log(
+  //           "SyllabusManager.migrateCollectionIdentifiers: Migrating collection metadata",
+  //         );
+  //         Zotero.Prefs.set(prefKey, JSON.stringify(result.value), true);
+  //       }
+  //     }
+  //   } catch (e) {
+  //     ztoolkit.log("Error migrating collection metadata:", e);
+  //   }
+
+  //   // Migrate item syllabus data (extra fields)
+  //   // This is done lazily when items are accessed, but we can trigger it for all items
+  //   try {
+  //     const libraries = Array.from(Zotero.Libraries.getAll());
+  //     let migratedCount = 0;
+  //     for (const library of libraries) {
+  //       const items = await Zotero.Items.getAll(library.id);
+  //       for (const item of items) {
+  //         if (item.isRegularItem()) {
+  //           const jsonStr = this.extraFieldTool.getExtraField(
+  //             item,
+  //             this.SYLLABUS_DATA_KEY,
+  //           );
+  //           if (jsonStr) {
+  //             try {
+  //               const parsed = JSON.parse(jsonStr);
+  //               const result = ItemSyllabusDataEntity.safeParse(parsed);
+  //               if (
+  //                 result.type === "ok" &&
+  //                 !ItemSyllabusDataEntity.isLatest(parsed)
+  //               ) {
+  //                 // Migrate and save back
+  //                 this.invalidateSyllabusDataCache(item);
+  //                 const migratedJsonStr = JSON.stringify(result.value);
+  //                 this.extraFieldTool
+  //                   .setExtraField(item, this.SYLLABUS_DATA_KEY, migratedJsonStr)
+  //                   .catch((e) => {
+  //                     ztoolkit.log("Error saving migrated item syllabus data:", e);
+  //                   });
+  //                 migratedCount++;
+  //               }
+  //             } catch (e) {
+  //               // Skip items with invalid data
+  //               ztoolkit.log("Error parsing item syllabus data during migration:", e);
+  //             }
+  //           }
+  //         }
+  //       }
+  //     }
+  //     if (migratedCount > 0) {
+  //       ztoolkit.log(
+  //         `SyllabusManager.migrateCollectionIdentifiers: Migrated ${migratedCount} items`,
+  //       );
+  //     }
+  //   } catch (e) {
+  //     ztoolkit.log("Error migrating item syllabus data:", e, item);
+  //   }
+
+  //   ztoolkit.log("SyllabusManager.migrateCollectionIdentifiers: Migration complete");
+  // }
 
   static onMainWindowLoad(win: _ZoteroTypes.MainWindow) {
     ztoolkit.log("SyllabusManager.onMainWindowLoad", win);
@@ -914,9 +1056,9 @@ export class SyllabusManager {
             const classTitle =
               classNumber !== undefined
                 ? SyllabusManager.getClassTitle(
-                    selectedCollection.id,
-                    classNumber,
-                  )
+                  selectedCollection.id,
+                  classNumber,
+                )
                 : "";
             const priority = firstAssignment.priority || "";
             return `${sortKey}|${priority}|${classNumber ?? ""}|${classTitle}|${selectedCollection.id}`;
@@ -1056,7 +1198,7 @@ export class SyllabusManager {
           if (!isNaN(classNum)) {
             // Get the max class number range to calculate position on color wheel
             let maxRange = 1;
-            let collectionIdForRange: number | string | undefined;
+            let collectionIdForRange: string | undefined;
 
             if (parts.length >= 5) {
               collectionIdForRange = parts[4];
@@ -1064,10 +1206,32 @@ export class SyllabusManager {
 
             if (collectionIdForRange) {
               try {
-                const fullRange =
-                  this.getFullClassNumberRange(collectionIdForRange);
-                if (fullRange.length > 0) {
-                  maxRange = Math.max(...fullRange);
+                // collectionIdForRange is a string in format "libraryID:key" or old numeric ID
+                // Try to parse as number first (old format), otherwise treat as libraryID:key
+                const collectionIdNum = parseInt(collectionIdForRange, 10);
+                if (
+                  !isNaN(collectionIdNum) &&
+                  !collectionIdForRange.includes(":")
+                ) {
+                  // Old numeric format
+                  const fullRange =
+                    this.getFullClassNumberRange(collectionIdNum);
+                  if (fullRange.length > 0) {
+                    maxRange = Math.max(...fullRange);
+                  }
+                } else if (collectionIdForRange.includes(":")) {
+                  // New libraryID:key format - parse it
+                  const [libraryIDStr, key] = collectionIdForRange.split(":");
+                  const libraryID = parseInt(libraryIDStr, 10);
+                  if (!isNaN(libraryID) && key) {
+                    const fullRange = this.getFullClassNumberRange([
+                      libraryID,
+                      key,
+                    ]);
+                    if (fullRange.length > 0) {
+                      maxRange = Math.max(...fullRange);
+                    }
+                  }
                 }
               } catch (e) {
                 ztoolkit.log("Error getting class range for color:", e);
@@ -1155,14 +1319,14 @@ export class SyllabusManager {
           body,
           selectedCollection
             ? h(ItemPane, {
-                item,
-                collectionId: selectedCollection.id,
-                editable,
-              })
+              item,
+              collectionId: selectedCollection.id,
+              editable,
+            })
             : h("div", {
-                innerText: "Select a collection to view syllabus assignments",
-                className: "text-center text-gray-500 p-4",
-              }),
+              innerText: "Select a collection to view syllabus assignments",
+              className: "text-center text-gray-500 p-4",
+            }),
           "syllabus-item-pane",
         );
       },
@@ -1174,7 +1338,7 @@ export class SyllabusManager {
    */
   static async applyToFirstAssignment(
     item: Zotero.Item,
-    collectionId: number,
+    collectionId: number | GetByLibraryAndKeyArgs,
     update: Partial<ItemSyllabusAssignment>,
   ): Promise<void> {
     const assignment = this.getFirstAssignment(item, collectionId);
@@ -1225,18 +1389,18 @@ export class SyllabusManager {
     // Get collection-specific priority options if a collection is selected
     const priorityOptions = selectedCollection
       ? (() => {
-          const customPriorities = this.getPrioritiesForCollection(
-            selectedCollection.id,
-          );
-          const options = customPriorities.map((p) => ({
-            value: p.id,
-            label: p.name,
-            color: p.color,
-          }));
-          // Add "(None)" option
-          options.push({ value: "", label: "(None)", color: "" });
-          return options;
-        })()
+        const customPriorities = this.getPrioritiesForCollection(
+          selectedCollection.id,
+        );
+        const options = customPriorities.map((p) => ({
+          value: p.id,
+          label: p.name,
+          color: p.color,
+        }));
+        // Add "(None)" option
+        options.push({ value: "", label: "(None)", color: "" });
+        return options;
+      })()
       : this.getPriorityOptions();
 
     ztoolkit.Menu.register("item", {
@@ -1392,8 +1556,14 @@ export class SyllabusManager {
   ) {
     const collection = Zotero.Collections.get(collectionId);
     if (collection) {
-      collection.name = title;
-      collection.saveTx();
+      try {
+        // Feeds may be read-only, so wrap in try-catch
+        collection.name = title;
+        collection.saveTx();
+      } catch (e) {
+        // If collection is read-only (e.g., a feed), log but don't throw
+        ztoolkit.log("Could not set collection title (may be read-only):", e);
+      }
     }
     this.onCollectionUpdated(collection, source, "setCollectionTitle");
   }
@@ -1404,7 +1574,7 @@ export class SyllabusManager {
    * Handles migration from old format (single object) to new format (array)
    * Now uses Zod validation with verzod for versioning
    */
-  static getItemSyllabusData(item: Zotero.Item): ItemSyllabusData {
+  static getItemSyllabusData(item: Zotero.Item): ItemSyllabusData | undefined {
     // Check cache first
     const cached = this.syllabusDataCache.get(item);
     if (cached !== undefined) {
@@ -1416,49 +1586,76 @@ export class SyllabusManager {
       this.SYLLABUS_DATA_KEY,
     );
 
-    let data: ItemSyllabusData = {};
     if (jsonStr) {
       try {
         const parsed = JSON.parse(jsonStr);
         // Use Zod schema with verzod for parsing and migration
         const result = ItemSyllabusDataEntity.safeParse(parsed);
         if (result.type === "ok") {
-          data = result.value;
+          (async () => {
+            const isLatest = ItemSyllabusDataEntity.isLatest(parsed);
+            // ztoolkit.log("item - considering migration save", { result, parsed, isLatest });
+            // Save the result back to the extra field if it was upgraded
+            if (!isLatest) {
+              // ztoolkit.log(
+              //   "Upgrading item syllabus data to latest version",
+              //   parsed,
+              //   result.value,
+              // );
+              // Invalidate cache before saving to avoid stale data
+              this.invalidateSyllabusDataCache(item);
+              // Save without triggering item update to avoid recursion
+              // Use fire-and-forget to avoid making this method async
+              const jsonStr = JSON.stringify(result.value);
+              this.extraFieldTool
+                .setExtraField(item, this.SYLLABUS_DATA_KEY, jsonStr)
+                .catch((e) => {
+                  ztoolkit.log("Error saving upgraded syllabus data:", e);
+                })
+                .finally(() => {
+                  ztoolkit.log(
+                    "item - migrated syllabus data saved",
+                    item.id,
+                    item.getDisplayTitle(),
+                    jsonStr,
+                  );
+                });
+            }
+          })();
 
-          // Save the result back to the extra field if it was upgraded
-          if (!ItemSyllabusDataEntity.isLatest(parsed)) {
-            ztoolkit.log(
-              "Upgrading item syllabus data to latest version",
-              parsed,
-              result.value,
-            );
-            // Invalidate cache before saving to avoid stale data
-            this.invalidateSyllabusDataCache(item);
-            // Save without triggering item update to avoid recursion
-            // Use fire-and-forget to avoid making this method async
-            const jsonStr = JSON.stringify(result.value);
-            this.extraFieldTool
-              .setExtraField(item, this.SYLLABUS_DATA_KEY, jsonStr)
-              .catch((e) => {
-                ztoolkit.log("Error saving upgraded syllabus data:", e);
-              });
-          }
+          return result.value;
         } else {
           ztoolkit.log("Error parsing syllabus data - after JSON.parse:", {
             result,
             parsed,
           });
-          data = {};
         }
       } catch (e) {
         ztoolkit.log("Error parsing syllabus data:", e, jsonStr);
-        data = {};
       }
     }
+  }
 
-    // Cache the parsed data
-    this.syllabusDataCache.set(item, data);
-    return data;
+  static getItemSyllabusDataForCollection(
+    item: Zotero.Item,
+    collectionId: number | GetByLibraryAndKeyArgs,
+  ): ItemSyllabusAssignment[] {
+    const normalized = this.normalizeCollectionIdentifier(collectionId);
+    if (!normalized) {
+      return [];
+    }
+    const data = this.getItemSyllabusData(item);
+    if (!data) {
+      return [];
+    }
+    const assignments =
+      data[
+      this.getCollectionReferenceString(normalized.libraryID, normalized.key)
+      ];
+    if (!assignments || !Array.isArray(assignments)) {
+      return [];
+    }
+    return assignments;
   }
 
   /**
@@ -1532,12 +1729,22 @@ export class SyllabusManager {
    */
   static getSyllabusPriority(
     item: Zotero.Item,
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     classNumber?: number,
   ): SyllabusPriority | "" {
+    const normalized = this.normalizeCollectionIdentifier(collectionId);
+    if (!normalized) {
+      return "";
+    }
     const data = this.getItemSyllabusData(item);
-    const collectionIdStr = String(collectionId);
-    const entries = data[collectionIdStr] || [];
+    if (!data) {
+      return "";
+    }
+    const collectionKeyStr = this.getCollectionReferenceString(
+      normalized.libraryID,
+      normalized.key,
+    );
+    const entries = data[collectionKeyStr] || [];
 
     if (classNumber !== undefined) {
       const entry = entries.find((e) => e.classNumber === classNumber);
@@ -1553,26 +1760,30 @@ export class SyllabusManager {
    * Returns all class numbers from 1 to max, plus any classes with items outside that range
    * This is the same logic used in SyllabusPage and the contextual menu
    */
-  static getFullClassNumberRange(collectionId: number | string): number[] {
+  static getFullClassNumberRange(
+    collectionId: number | GetByLibraryAndKeyArgs,
+  ): number[] {
+    const normalized = this.normalizeCollectionIdentifier(collectionId);
+    if (!normalized) {
+      return [];
+    }
+    const collection = this.getCollectionFromIdentifier(collectionId);
+    if (!collection) {
+      return [];
+    }
+
     const classNumbers = new Set<number>();
 
     // Get class numbers from items in the collection
     try {
-      const collection = Zotero.Collections.get(
-        typeof collectionId === "string"
-          ? parseInt(collectionId, 10)
-          : collectionId,
-      );
-      if (collection) {
-        const items = collection.getChildItems();
-        for (const item of items) {
-          if (item.isRegularItem()) {
-            // Get all class assignments for this item
-            const assignments = this.getAllClassAssignments(item, collectionId);
-            for (const assignment of assignments) {
-              if (assignment.classNumber !== undefined) {
-                classNumbers.add(assignment.classNumber);
-              }
+      const items = collection.getChildItems();
+      for (const item of items) {
+        if (item.isRegularItem()) {
+          // Get all class assignments for this item
+          const assignments = this.getAllClassAssignments(item, collectionId);
+          for (const assignment of assignments) {
+            if (assignment.classNumber !== undefined) {
+              classNumbers.add(assignment.classNumber);
             }
           }
         }
@@ -1627,13 +1838,20 @@ export class SyllabusManager {
    */
   static async setSyllabusClassNumber(
     item: Zotero.Item,
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number | undefined,
     source: "page" | "item-pane" | "context-menu",
   ) {
+    const normalized = this.normalizeCollectionIdentifier(collectionId);
+    if (!normalized) {
+      return;
+    }
     const data = this.getItemSyllabusData(item);
-    const collectionIdStr = String(collectionId);
-    let assignments = data[collectionIdStr] || [];
+    const collectionKeyStr = this.getCollectionReferenceString(
+      normalized.libraryID,
+      normalized.key,
+    );
+    let assignments = data?.[collectionKeyStr] || [];
 
     if (classNumber) {
       // Find or create assignment for this class number
@@ -1649,7 +1867,10 @@ export class SyllabusManager {
         );
         // Re-fetch data after adding
         const updatedData = this.getItemSyllabusData(item);
-        assignments = updatedData[collectionIdStr] || [];
+        if (!updatedData) {
+          return;
+        }
+        assignments = updatedData[collectionKeyStr] || [];
       } else {
         // Update existing assignment
         await this.updateClassAssignment(
@@ -1661,7 +1882,10 @@ export class SyllabusManager {
         );
         // Re-fetch data after updating
         const updatedData = this.getItemSyllabusData(item);
-        assignments = updatedData[collectionIdStr] || [];
+        if (!updatedData) {
+          return;
+        }
+        assignments = updatedData[collectionKeyStr] || [];
       }
     } else {
       // Remove classNumber from first assignment, or remove assignment if empty
@@ -1674,13 +1898,13 @@ export class SyllabusManager {
       }
     }
 
-    if (assignments.length === 0) {
-      delete data[collectionIdStr];
-    } else {
-      data[collectionIdStr] = assignments;
-    }
+    // if (!Array.isArray(assignments) || assignments.length === 0) {
+    //   delete data[collectionKeyStr];
+    // } else {
+    //   data[collectionKeyStr] = assignments;
+    // }
 
-    await this.setItemData(item, data, source);
+    // await this.setItemData(item, data, source);
   }
 
   /**
@@ -1688,12 +1912,26 @@ export class SyllabusManager {
    */
   static getAllClassAssignments(
     item: Zotero.Item,
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
   ): ItemSyllabusAssignment[] {
+    const normalized = this.normalizeCollectionIdentifier(collectionId);
+    if (!normalized) {
+      return [];
+    }
     const data = this.getItemSyllabusData(item);
-    const collectionIdStr = String(collectionId);
+    if (!data) {
+      return [];
+    }
+    const collectionKeyStr = this.getCollectionReferenceString(
+      normalized.libraryID,
+      normalized.key,
+    );
     // Data from getItemSyllabusData is already validated and has IDs via Zod
-    return data[collectionIdStr] || [];
+    const res = data[collectionKeyStr] || [];
+    if (!Array.isArray(res)) {
+      return [];
+    }
+    return res;
   }
 
   /**
@@ -1702,10 +1940,10 @@ export class SyllabusManager {
    */
   static getFirstAssignment(
     item: Zotero.Item,
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
   ): ItemSyllabusAssignment | undefined {
     const assignments = this.getAllClassAssignments(item, collectionId);
-    if (assignments.length === 0) {
+    if (!Array.isArray(assignments) || assignments.length === 0) {
       return undefined;
     }
     // Sort and return the first one
@@ -1761,7 +1999,7 @@ export class SyllabusManager {
   static getAssignmentSortKey(
     assignment: ItemSyllabusAssignment,
     item?: Zotero.Item,
-    collectionId?: number | string,
+    collectionId?: number | GetByLibraryAndKeyArgs,
   ): string {
     const hasPriority = !!assignment.priority;
     const hasClassNumber = assignment.classNumber !== undefined;
@@ -1829,7 +2067,7 @@ export class SyllabusManager {
       // This ensures OPTIONAL ("optional") sorts before unprioritized ("zzzz")
       assignment.priority || "zzzz",
       assignment.classInstruction?.slice(0, 4).replace(/[^a-zA-Z0-9]/g, "_") ||
-        "",
+      "",
       assignment.id || "",
     );
 
@@ -1849,7 +2087,7 @@ export class SyllabusManager {
     T extends { item: Zotero.Item; assignment: ItemSyllabusAssignment },
   >(
     items: T[],
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number | null,
   ): T[] {
     // Get manual ordering from preferences
@@ -1922,14 +2160,23 @@ export class SyllabusManager {
    */
   static async addClassAssignment(
     item: Zotero.Item,
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number | undefined,
     metadata: Partial<ItemSyllabusAssignment>,
     source: "page" | "item-pane" | "context-menu",
   ): Promise<void> {
-    const data = this.getItemSyllabusData(item);
-    const collectionIdStr = String(collectionId);
-    const assignments = data[collectionIdStr] || [];
+    const normalized = this.normalizeCollectionIdentifier(collectionId);
+    if (!normalized) {
+      return;
+    }
+    const data =
+      this.getItemSyllabusData(item) ||
+      ItemSyllabusDataEntity.latestSchema.parse({});
+    const collectionKeyStr = this.getCollectionReferenceString(
+      normalized.libraryID,
+      normalized.key,
+    );
+    const assignments = data[collectionKeyStr] || [];
 
     // Add new entry with ID
     const newEntry = ItemSyllabusAssignmentEntity.safeParse({
@@ -1943,7 +2190,7 @@ export class SyllabusManager {
     assignments.push(newEntry.value);
 
     // New entry already has ID, existing entries validated via getItemSyllabusData
-    data[collectionIdStr] = assignments;
+    data[collectionKeyStr] = assignments;
     await this.setItemData(item, data, source);
   }
 
@@ -1953,20 +2200,30 @@ export class SyllabusManager {
    */
   static async removeClassAssignment(
     item: Zotero.Item,
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
     source: "page" | "item-pane" | "context-menu",
   ): Promise<void> {
+    const normalized = this.normalizeCollectionIdentifier(collectionId);
+    if (!normalized) {
+      return;
+    }
     const data = this.getItemSyllabusData(item);
-    const collectionIdStr = String(collectionId);
-    let entries = data[collectionIdStr] || [];
+    if (!data) {
+      return;
+    }
+    const collectionKeyStr = this.getCollectionReferenceString(
+      normalized.libraryID,
+      normalized.key,
+    );
+    let entries = data[collectionKeyStr] || [];
 
     entries = entries.filter((e) => e.classNumber !== classNumber);
 
     if (entries.length === 0) {
-      delete data[collectionIdStr];
+      delete data[collectionKeyStr];
     } else {
-      data[collectionIdStr] = entries;
+      data[collectionKeyStr] = entries;
     }
 
     await this.setItemData(item, data, source);
@@ -1977,20 +2234,30 @@ export class SyllabusManager {
    */
   static async removeAssignmentById(
     item: Zotero.Item,
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     assignmentId: string,
     source: "page" | "item-pane" | "context-menu",
   ): Promise<void> {
+    const normalized = this.normalizeCollectionIdentifier(collectionId);
+    if (!normalized) {
+      return;
+    }
     const data = this.getItemSyllabusData(item);
-    const collectionIdStr = String(collectionId);
-    let entries = data[collectionIdStr] || [];
+    if (!data) {
+      return;
+    }
+    const collectionKeyStr = this.getCollectionReferenceString(
+      normalized.libraryID,
+      normalized.key,
+    );
+    let entries = data[collectionKeyStr] || [];
 
     entries = entries.filter((e) => e.id !== assignmentId);
 
     if (entries.length === 0) {
-      delete data[collectionIdStr];
+      delete data[collectionKeyStr];
     } else {
-      data[collectionIdStr] = entries;
+      data[collectionKeyStr] = entries;
     }
 
     await this.setItemData(item, data, source);
@@ -2001,12 +2268,22 @@ export class SyllabusManager {
    */
   static async removeAllAssignments(
     item: Zotero.Item,
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     source: "page" | "item-pane" | "context-menu",
   ): Promise<void> {
+    const normalized = this.normalizeCollectionIdentifier(collectionId);
+    if (!normalized) {
+      return;
+    }
     const data = this.getItemSyllabusData(item);
-    const collectionIdStr = String(collectionId);
-    delete data[collectionIdStr];
+    if (!data) {
+      return;
+    }
+    const collectionKeyStr = this.getCollectionReferenceString(
+      normalized.libraryID,
+      normalized.key,
+    );
+    delete data[collectionKeyStr];
     await this.setItemData(item, data, source);
   }
 
@@ -2016,14 +2293,25 @@ export class SyllabusManager {
    */
   static async updateClassAssignment(
     item: Zotero.Item,
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     assignmentId: string,
     metadata: Partial<ItemSyllabusAssignment>,
     source: "page" | "item-pane" | "context-menu",
   ): Promise<void> {
+    const normalized = this.normalizeCollectionIdentifier(collectionId);
+    if (!normalized) {
+      return;
+    }
     const data = this.getItemSyllabusData(item);
-    const collectionIdStr = String(collectionId);
-    const entries = data[collectionIdStr] || [];
+    if (!data) {
+      // Can't update an assignment that doesn't exist
+      return;
+    }
+    const collectionKeyStr = this.getCollectionReferenceString(
+      normalized.libraryID,
+      normalized.key,
+    );
+    const entries = data[collectionKeyStr] || [];
 
     // Find the entry by ID
     const entryIndex = entries.findIndex((e) => e.id === assignmentId);
@@ -2052,9 +2340,9 @@ export class SyllabusManager {
 
     // Entries from getItemSyllabusData are already validated and have IDs via Zod
     if (entries.length === 0) {
-      delete data[collectionIdStr];
+      delete data[collectionKeyStr];
     } else {
-      data[collectionIdStr] = entries;
+      data[collectionKeyStr] = entries;
     }
 
     await this.setItemData(item, data, source);
@@ -2065,7 +2353,7 @@ export class SyllabusManager {
    * Returns array of itemIds in display order, or empty array if no manual order
    */
   static getClassItemOrder(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number | null,
   ): string[] {
     const metadata = this.getSyllabusMetadata(collectionId);
@@ -2080,7 +2368,7 @@ export class SyllabusManager {
    * Set manual ordering of items for a specific class
    */
   static async setClassItemOrder(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
     itemIds: string[],
     source: "page" | "item-pane" = "page",
@@ -2109,10 +2397,17 @@ export class SyllabusManager {
     }
     try {
       const parsed = JSON.parse(metadataStr);
-      // Use Zod schema for validation
-      const result = SettingsCollectionDictionaryDataSchema.safeParse(parsed);
-      if (result.success) {
-        return result.data;
+      // Use verzod versioned entity for validation and migration
+      const result = SettingsCollectionDictionaryDataEntity.safeParse(parsed);
+      if (result.type === "ok") {
+        // If data was migrated, save it back
+        if (!SettingsCollectionDictionaryDataEntity.isLatest(parsed)) {
+          ztoolkit.log(
+            "Migrated collection metadata to latest version, saving back",
+          );
+          Zotero.Prefs.set(prefKey, JSON.stringify(result.value), true);
+        }
+        return result.value;
       } else {
         ztoolkit.log("Error validating collection metadata:", result.error);
         return {};
@@ -2151,14 +2446,21 @@ export class SyllabusManager {
    * Get collection metadata from preferences
    */
   static getSyllabusMetadata(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
   ): SettingsSyllabusMetadata {
-    const data = this.getSettingsCollectionDictionaryData();
-    const collectionIdStr = String(collectionId);
-    if (!data[collectionIdStr]) {
-      data[collectionIdStr] = SettingsSyllabusMetadataSchema.parse({});
+    const normalized = this.normalizeCollectionIdentifier(collectionId);
+    if (!normalized) {
+      return SettingsSyllabusMetadataSchema.parse({});
     }
-    return data[collectionIdStr];
+    const data = this.getSettingsCollectionDictionaryData();
+    const collectionKeyStr = this.getCollectionReferenceString(
+      normalized.libraryID,
+      normalized.key,
+    );
+    if (!data[collectionKeyStr]) {
+      data[collectionKeyStr] = SettingsSyllabusMetadataSchema.parse({});
+    }
+    return data[collectionKeyStr];
   }
 
   /**
@@ -2168,19 +2470,29 @@ export class SyllabusManager {
    * even though it's typed as SettingsSyllabusMetadata for backward compatibility
    */
   static async setCollectionMetadata(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     metadata: SettingsSyllabusMetadata,
     source: "page" | "item-pane",
   ): Promise<void> {
+    const normalized = this.normalizeCollectionIdentifier(collectionId);
+    if (!normalized) {
+      return;
+    }
     const allData = this.getSettingsCollectionDictionaryData();
-    allData[collectionId] = metadata;
+    const collectionKeyStr = this.getCollectionReferenceString(
+      normalized.libraryID,
+      normalized.key,
+    );
+    allData[collectionKeyStr] = metadata;
     this.setSettingsCollectionDictionaryData(allData, source);
   }
 
   /**
    * Get collection description for a specific collection
    */
-  static getCollectionDescription(collectionId: number | string): string {
+  static getCollectionDescription(
+    collectionId: number | GetByLibraryAndKeyArgs,
+  ): string {
     const metadata = SyllabusManager.getSyllabusMetadata(collectionId);
     return metadata.description || "";
   }
@@ -2189,7 +2501,7 @@ export class SyllabusManager {
    * Set collection description for a specific collection
    */
   static async setCollectionDescription(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     description: string,
     source: "page",
   ): Promise<void> {
@@ -2206,7 +2518,7 @@ export class SyllabusManager {
    * Set collection nomenclature for a specific collection
    */
   static async setNomenclature(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     nomenclature: string,
     source: "page",
   ): Promise<void> {
@@ -2223,7 +2535,7 @@ export class SyllabusManager {
    * Set collection priorities for a specific collection
    */
   static async setPriorities(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     priorities: CustomPriority[],
     source: "page",
   ): Promise<void> {
@@ -2239,7 +2551,7 @@ export class SyllabusManager {
   /**
    * Get locked state for a collection
    */
-  static getLocked(collectionId: number | string): boolean {
+  static getLocked(collectionId: number | GetByLibraryAndKeyArgs): boolean {
     const metadata = this.getSyllabusMetadata(collectionId);
     return metadata.locked || false;
   }
@@ -2248,7 +2560,7 @@ export class SyllabusManager {
    * Set locked state for a collection
    */
   static async setLocked(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     locked: boolean,
     source: "page",
   ): Promise<void> {
@@ -2261,7 +2573,10 @@ export class SyllabusManager {
     );
   }
 
-  static getClassMetadata(collectionId: number | string, classNumber: number) {
+  static getClassMetadata(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    classNumber: number,
+  ) {
     const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
     return syllabusMetadata.classes?.[classNumber] || {};
   }
@@ -2271,7 +2586,7 @@ export class SyllabusManager {
    * Uses caching to avoid repeated preference reads
    */
   static getClassTitle(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
     includeClassNumber: boolean = false,
   ): string {
@@ -2294,12 +2609,20 @@ export class SyllabusManager {
    * Invalidate class title cache
    * Call this when collection metadata is updated
    */
-  static invalidateClassTitleCache(collectionId?: number | string) {
+  static invalidateClassTitleCache(
+    collectionId?: number | GetByLibraryAndKeyArgs,
+  ) {
     if (collectionId !== undefined) {
-      const collectionIdStr = String(collectionId);
-      this.classTitleCache.delete(collectionIdStr);
-      if (this.classTitleCacheCollectionId === collectionIdStr) {
-        this.classTitleCacheCollectionId = null;
+      const normalized = this.normalizeCollectionIdentifier(collectionId);
+      if (normalized) {
+        const collectionKeyStr = this.getCollectionReferenceString(
+          normalized.libraryID,
+          normalized.key,
+        );
+        this.classTitleCache.delete(collectionKeyStr);
+        if (this.classTitleCacheCollectionId === collectionKeyStr) {
+          this.classTitleCacheCollectionId = null;
+        }
       }
     } else {
       // Invalidate all
@@ -2308,12 +2631,12 @@ export class SyllabusManager {
     }
   }
 
-  static setClassMetadata(
-    collectionId: number | string,
+  static async setClassMetadata(
+    collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
     metadata: Partial<SettingsClassMetadata>,
     source: "page" | "item-pane",
-  ) {
+  ): Promise<void> {
     const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
     if (!syllabusMetadata.classes[classNumber]) {
       syllabusMetadata.classes[classNumber] = SettingsClassMetadataSchema.parse(
@@ -2324,7 +2647,7 @@ export class SyllabusManager {
       ...syllabusMetadata.classes[classNumber],
       ...metadata,
     };
-    return SyllabusManager.setCollectionMetadata(
+    await SyllabusManager.setCollectionMetadata(
       collectionId,
       syllabusMetadata,
       source,
@@ -2335,7 +2658,7 @@ export class SyllabusManager {
    * Set class title for a specific collection and class number
    */
   static async setClassTitle(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
     title: string,
     source: "page" | "item-pane",
@@ -2357,7 +2680,7 @@ export class SyllabusManager {
    * Get class description for a specific collection and class number
    */
   static getClassDescription(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
   ): string {
     const metadata = SyllabusManager.getClassMetadata(
@@ -2371,7 +2694,7 @@ export class SyllabusManager {
    * Set class description for a specific collection and class number
    */
   static async setClassDescription(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
     description: string,
     source: "page",
@@ -2394,7 +2717,7 @@ export class SyllabusManager {
    * Returns ISO date string or undefined
    */
   static getClassReadingDate(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
   ): string | undefined {
     const metadata = SyllabusManager.getClassMetadata(
@@ -2409,7 +2732,7 @@ export class SyllabusManager {
    * Accepts ISO date string or undefined
    */
   static async setClassReadingDate(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
     readingDate: string | undefined,
     source: "page" | "item-pane",
@@ -2436,7 +2759,7 @@ export class SyllabusManager {
    * Get class status for a specific collection and class number
    */
   static getClassStatus(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
   ): ClassStatus {
     const metadata = SyllabusManager.getClassMetadata(
@@ -2450,7 +2773,7 @@ export class SyllabusManager {
    * Set class status for a specific collection and class number
    */
   static async setClassStatus(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
     status: ClassStatus,
     source: "page" | "item-pane",
@@ -2473,7 +2796,7 @@ export class SyllabusManager {
    * This ensures the class appears in the rendered range
    */
   static async addClass(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
     source: "page",
   ): Promise<void> {
@@ -2492,7 +2815,7 @@ export class SyllabusManager {
    * Delete a class from metadata
    */
   static async deleteClass(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
     source: "page",
   ): Promise<void> {
@@ -2543,7 +2866,7 @@ export class SyllabusManager {
    * Get priorities for a collection (custom or default)
    */
   static getPrioritiesForCollection(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
   ): CustomPriority[] {
     const metadata = this.getSyllabusMetadata(collectionId);
     if (metadata.priorities && metadata.priorities.length > 0) {
@@ -2557,7 +2880,7 @@ export class SyllabusManager {
    * Get priority order for a specific priority in a collection
    */
   static getPriorityOrderForCollection(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     priority: SyllabusPriority | "" | undefined,
   ): number {
     if (!priority) {
@@ -2572,7 +2895,7 @@ export class SyllabusManager {
    * Get priority color for a specific priority in a collection
    */
   static getPriorityColorForCollection(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     priority: SyllabusPriority | "" | undefined,
   ): string {
     if (!priority) {
@@ -2587,7 +2910,7 @@ export class SyllabusManager {
    * Get priority label for a specific priority in a collection
    */
   static getPriorityLabelForCollection(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     priority: SyllabusPriority | "" | undefined,
   ): string {
     if (!priority) {
@@ -2601,7 +2924,9 @@ export class SyllabusManager {
   /**
    * Get nomenclature for a collection (defaults to "class")
    */
-  static getNomenclature(collectionId: number | string): string {
+  static getNomenclature(
+    collectionId: number | GetByLibraryAndKeyArgs,
+  ): string {
     const metadata = this.getSyllabusMetadata(collectionId);
     return metadata.nomenclature || "class";
   }
@@ -2609,7 +2934,9 @@ export class SyllabusManager {
   /**
    * Get formatted nomenclature for a collection
    */
-  static getNomenclatureFormatted(collectionId: number | string): {
+  static getNomenclatureFormatted(
+    collectionId: number | GetByLibraryAndKeyArgs,
+  ): {
     singular: string;
     plural: string;
     singularCapitalized: string;
@@ -2631,7 +2958,7 @@ export class SyllabusManager {
    * Returns both in a single call to avoid duplicate lookups
    */
   static getPriorityDisplay(
-    collectionId: number | string | undefined,
+    collectionId: number | GetByLibraryAndKeyArgs | undefined,
     priority: SyllabusPriority | "" | undefined,
   ): { color: string; label: string } {
     if (!priority) {
@@ -2684,7 +3011,7 @@ export class SyllabusManager {
    */
   static createPriorityDisplay(
     doc: Document,
-    collectionId: number | string | undefined,
+    collectionId: number | GetByLibraryAndKeyArgs | undefined,
     priority: SyllabusPriority | "" | undefined,
     options?: {
       dotSize?: number;
@@ -2713,7 +3040,7 @@ export class SyllabusManager {
    * Only includes classes that have reading dates set
    */
   static getReadingsByDate(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
   ): Map<
     string,
     Map<
@@ -2730,11 +3057,7 @@ export class SyllabusManager {
     >();
 
     try {
-      const collection = Zotero.Collections.get(
-        typeof collectionId === "string"
-          ? parseInt(collectionId, 10)
-          : collectionId,
-      );
+      const collection = this.getCollectionFromIdentifier(collectionId);
       if (!collection) {
         return result;
       }
@@ -2854,7 +3177,7 @@ export class SyllabusManager {
    * Returns validated export JSON object ready for stringification
    */
   static prepareExportData(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     collectionTitle: string,
   ): z.infer<typeof ExportSyllabusMetadataSchema> {
     // Get current collection's metadata
@@ -2878,7 +3201,7 @@ export class SyllabusManager {
    * Throws errors for invalid JSON or schema validation failures
    */
   static async importSyllabusMetadata(
-    collectionId: number | string,
+    collectionId: number | GetByLibraryAndKeyArgs,
     importedJsonString: string,
     source: "page" = "page",
   ): Promise<void> {
@@ -2907,7 +3230,10 @@ export class SyllabusManager {
 
     // Update collection title if provided
     if (collectionTitle) {
-      this.setCollectionTitle(Number(collectionId), collectionTitle, source);
+      const collection = this.getCollectionFromIdentifier(collectionId);
+      if (collection) {
+        this.setCollectionTitle(collection.id, collectionTitle, source);
+      }
     }
 
     // Validate the metadata part against SettingsSyllabusMetadataSchema

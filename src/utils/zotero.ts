@@ -1,6 +1,19 @@
+// import { getCurrentTab } from './window';
 export function getSelectedCollection() {
   const pane = ztoolkit.getGlobal("ZoteroPane");
-  return pane?.getSelectedCollection() || null;
+  // const selectedGroup = pane?.getSelectedGroup()
+  // const selectedLibraryID = pane.getSelectedLibraryID()
+  // const library = Zotero.Libraries.get(selectedLibraryID)
+  // const tab = getCurrentTab()
+  const collection = pane?.getSelectedCollection();
+  // ztoolkit.log("current", {
+  //   selectedGroup,
+  //   selectedLibraryID,
+  //   library,
+  //   collection,
+  //   tab
+  // });
+  return collection || null;
 }
 
 export function getAllCollections(recursive = true) {

@@ -1,8 +1,14 @@
 import { useCallback, useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
-import { SettingsClassMetadata, SyllabusManager } from "../syllabus";
+import {
+  SettingsClassMetadata,
+  SyllabusManager,
+  GetByLibraryAndKeyArgs,
+} from "../syllabus";
 
-export function useZoteroClassMetadata(collectionId: number) {
+export function useZoteroClassMetadata(
+  collectionId: number | GetByLibraryAndKeyArgs,
+) {
   // Create the store once per ID
   const store = useMemo(
     () => createClassMetadataStore(collectionId),
@@ -59,7 +65,9 @@ export function useZoteroClassMetadata(collectionId: number) {
   return [metadataFromZotero, setClassMetadata, setClassReadingDate] as const;
 }
 
-export function createClassMetadataStore(collectionId: number) {
+export function createClassMetadataStore(
+  collectionId: number | GetByLibraryAndKeyArgs,
+) {
   const prefKey = SyllabusManager.getPreferenceKey(
     SyllabusManager.settingsKeys.COLLECTION_METADATA,
   );
@@ -83,9 +91,12 @@ export function createClassMetadataStore(collectionId: number) {
           onStoreChange();
         }
         // Also listen to collection modify/refresh events in case metadata is updated
+        const collection =
+          SyllabusManager.getCollectionFromIdentifier(collectionId);
         if (
+          collection &&
           type === "collection" &&
-          ids.includes(collectionId) &&
+          ids.includes(collection.id) &&
           (event === "modify" || event === "refresh")
         ) {
           onStoreChange();

@@ -88,7 +88,13 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   );
 
   const isLocked = syllabusMetadata.locked || false;
-  const items = useZoteroCollectionItems(collectionId);
+  const syllabusItems = useZoteroCollectionItems(collectionId);
+  const classAssignments = useMemo(() => {
+    return syllabusItems.map((item) => item.assignments).flat();
+  }, [syllabusItems]);
+  const items = useMemo(() => {
+    return syllabusItems.map((item) => item.zoteroItem);
+  }, [syllabusItems]);
 
   // Track drag state for showing "Add to Class X" dropzone
   const [isDragging, setIsDragging] = useState(false);
@@ -172,14 +178,10 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }>
     > = new Map();
 
-    for (const item of items) {
+    for (const __item of syllabusItems) {
+      const item = __item.zoteroItem;
       if (!item.isRegularItem()) continue;
-
-      // Get all class assignments for this item
-      const assignments = SyllabusManager.getAllClassAssignments(
-        item,
-        collectionId,
-      );
+      const assignments = __item.assignments;
 
       // If no assignments or all assignments are empty, add to further reading
       if (
@@ -269,7 +271,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       })),
       furtherReadingItems: furtherReading,
     };
-  }, [items, collectionId, syllabusMetadata, itemOrderVersion]);
+  }, [syllabusItems, collectionId, syllabusMetadata, itemOrderVersion]);
 
   const handleDrop = async (
     e: JSX.TargetedDragEvent<HTMLElement>,
@@ -336,40 +338,29 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
         // If no manual order exists, initialize it with current assignment order from the class
         if (currentOrder.length === 0) {
-          // Get all assignments in this class to initialize the order
-          const classAssignments: Array<{
-            item: Zotero.Item;
-            assignment: ItemSyllabusAssignment;
-          }> = [];
-          for (const item of items) {
-            if (!item.isRegularItem()) continue;
-            const assignments = SyllabusManager.getAllClassAssignments(
-              item,
-              collectionId,
-            );
-            for (const assignment of assignments) {
-              if (
-                assignment.classNumber === targetClassNumberValue &&
-                assignment.id
-              ) {
-                classAssignments.push({ item, assignment });
-              }
-            }
-          }
           // Sort by current display order (priority, then title)
           classAssignments.sort((a, b) => {
-            const diff = SyllabusManager.compareAssignments(
-              a.assignment,
-              b.assignment,
-            );
+            const diff = SyllabusManager.compareAssignments(a, b);
             if (diff !== 0) return diff;
-            const titleA = a.item.getField("title") || "";
-            const titleB = b.item.getField("title") || "";
-            return titleA.localeCompare(titleB);
+            // Find items by assignment ID
+            const assignmentA = syllabusItems.find((item) =>
+              item.assignments.find((assignment) => assignment.id === a.id),
+            );
+            const assignmentB = syllabusItems.find((item) =>
+              item.assignments.find((assignment) => assignment.id === b.id),
+            );
+            if (assignmentA && assignmentB) {
+              const itemA = assignmentA.zoteroItem;
+              const itemB = assignmentB.zoteroItem;
+              const titleA = itemA.getField("title") || "";
+              const titleB = itemB.getField("title") || "";
+              return titleA.localeCompare(titleB);
+            }
+            return 0;
           });
           // Initialize order with assignment IDs
           currentOrder = classAssignments
-            .map(({ assignment }) => assignment.id!)
+            .map((assignment) => assignment.id!)
             .filter(Boolean);
         }
 
@@ -379,17 +370,13 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         // Find target assignment ID - need to get it from the target item
         let targetAssignmentId: string | undefined;
         try {
-          const targetItem = Zotero.Items.get(targetItemId);
+          const targetItem = syllabusItems.find(
+            (item) => item.zoteroItem.id === targetItemId,
+          );
           if (targetItem) {
-            const targetAssignments = SyllabusManager.getAllClassAssignments(
-              targetItem,
-              collectionId,
-            );
-            // Find the assignment for this class - prefer the one being dropped on
-            const targetAssignment = targetAssignments.find(
+            targetAssignmentId = targetItem.assignments.find(
               (a) => a.classNumber === targetClassNumberValue && a.id,
-            );
-            targetAssignmentId = targetAssignment?.id;
+            )?.id;
           }
         } catch (err) {
           ztoolkit.log("Error finding target assignment:", err);
@@ -430,10 +417,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       }
 
       // Get all existing assignments
-      const assignments = SyllabusManager.getAllClassAssignments(
-        draggedItem,
-        collectionId,
-      );
+      const assignments = syllabusItems.map((item) => item.assignments).flat();
 
       // If dropping to a specific class number, ensure it exists in metadata
       if (targetClassNumberValue !== undefined) {
@@ -575,13 +559,19 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
           // After creating assignment, get its ID and add to manual order if it exists
           await draggedItem.saveTx();
-          const updatedAssignments = SyllabusManager.getAllClassAssignments(
-            draggedItem,
-            collectionId,
-          );
-          const newAssignment = updatedAssignments.find(
-            (a) => a.classNumber === targetClassNumberValue && a.id,
-          );
+          const newAssignment = classAssignments.find((a) => {
+            const item = syllabusItems.find((item) =>
+              item.assignments.some((assignment) => assignment.id === a.id),
+            );
+            if (!item) {
+              return false;
+            }
+            return (
+              item.zoteroItem.id === draggedItem.id &&
+              a.classNumber === targetClassNumberValue &&
+              a.id
+            );
+          });
           if (newAssignment?.id) {
             const targetOrder = SyllabusManager.getClassItemOrder(
               collectionId,
