@@ -4,10 +4,13 @@ import {
   CustomPriority,
   SettingsSyllabusMetadata,
   SyllabusManager,
+  GetByLibraryAndKeyArgs,
 } from "../syllabus";
 import SuperJSON from "superjson";
 
-export function useZoteroSyllabusMetadata(collectionId: number) {
+export function useZoteroSyllabusMetadata(
+  collectionId: number | GetByLibraryAndKeyArgs,
+) {
   // Create the store once per ID
   const store = useMemo(
     () => createSyllabusMetadataStore(collectionId),
@@ -85,7 +88,9 @@ export function useZoteroSyllabusMetadata(collectionId: number) {
   ] as const;
 }
 
-export function createSyllabusMetadataStore(collectionId: number) {
+export function createSyllabusMetadataStore(
+  collectionId: number | GetByLibraryAndKeyArgs,
+) {
   const prefKey = SyllabusManager.getPreferenceKey(
     SyllabusManager.settingsKeys.COLLECTION_METADATA,
   );
@@ -112,9 +117,12 @@ export function createSyllabusMetadataStore(collectionId: number) {
           onStoreChange();
         }
         // Also listen to collection modify/refresh events in case description is updated
+        const collection =
+          SyllabusManager.getCollectionFromIdentifier(collectionId);
         if (
+          collection &&
           type === "collection" &&
-          ids.includes(collectionId) &&
+          ids.includes(collection.id) &&
           (event === "modify" || event === "refresh")
         ) {
           onStoreChange();

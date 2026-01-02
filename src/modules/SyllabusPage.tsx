@@ -46,6 +46,8 @@ import {
   Minimize2,
   ListChecks,
   List,
+  Download,
+  Upload,
 } from "lucide-preact";
 
 // Define priority type for use in this file
@@ -86,7 +88,13 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   );
 
   const isLocked = syllabusMetadata.locked || false;
-  const items = useZoteroCollectionItems(collectionId);
+  const syllabusItems = useZoteroCollectionItems(collectionId);
+  const classAssignments = useMemo(() => {
+    return syllabusItems.map((item) => item.assignments).flat();
+  }, [syllabusItems]);
+  const items = useMemo(() => {
+    return syllabusItems.map((item) => item.zoteroItem);
+  }, [syllabusItems]);
 
   // Track drag state for showing "Add to Class X" dropzone
   const [isDragging, setIsDragging] = useState(false);
@@ -105,6 +113,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
   // Ref for the syllabus page container to access DOM for printing
   const syllabusPageRef = useRef<HTMLDivElement>(null);
+
+  // Ref for hidden file input for import
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const toggleCompactMode = () => {
     const nextMode = !compactMode;
@@ -167,14 +178,10 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }>
     > = new Map();
 
-    for (const item of items) {
+    for (const __item of syllabusItems) {
+      const item = __item.zoteroItem;
       if (!item.isRegularItem()) continue;
-
-      // Get all class assignments for this item
-      const assignments = SyllabusManager.getAllClassAssignments(
-        item,
-        collectionId,
-      );
+      const assignments = __item.assignments;
 
       // If no assignments or all assignments are empty, add to further reading
       if (
@@ -264,7 +271,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       })),
       furtherReadingItems: furtherReading,
     };
-  }, [items, collectionId, syllabusMetadata, itemOrderVersion]);
+  }, [syllabusItems, collectionId, syllabusMetadata, itemOrderVersion]);
 
   const handleDrop = async (
     e: JSX.TargetedDragEvent<HTMLElement>,
@@ -331,40 +338,29 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
         // If no manual order exists, initialize it with current assignment order from the class
         if (currentOrder.length === 0) {
-          // Get all assignments in this class to initialize the order
-          const classAssignments: Array<{
-            item: Zotero.Item;
-            assignment: ItemSyllabusAssignment;
-          }> = [];
-          for (const item of items) {
-            if (!item.isRegularItem()) continue;
-            const assignments = SyllabusManager.getAllClassAssignments(
-              item,
-              collectionId,
-            );
-            for (const assignment of assignments) {
-              if (
-                assignment.classNumber === targetClassNumberValue &&
-                assignment.id
-              ) {
-                classAssignments.push({ item, assignment });
-              }
-            }
-          }
           // Sort by current display order (priority, then title)
           classAssignments.sort((a, b) => {
-            const diff = SyllabusManager.compareAssignments(
-              a.assignment,
-              b.assignment,
-            );
+            const diff = SyllabusManager.compareAssignments(a, b);
             if (diff !== 0) return diff;
-            const titleA = a.item.getField("title") || "";
-            const titleB = b.item.getField("title") || "";
-            return titleA.localeCompare(titleB);
+            // Find items by assignment ID
+            const assignmentA = syllabusItems.find((item) =>
+              item.assignments.find((assignment) => assignment.id === a.id),
+            );
+            const assignmentB = syllabusItems.find((item) =>
+              item.assignments.find((assignment) => assignment.id === b.id),
+            );
+            if (assignmentA && assignmentB) {
+              const itemA = assignmentA.zoteroItem;
+              const itemB = assignmentB.zoteroItem;
+              const titleA = itemA.getField("title") || "";
+              const titleB = itemB.getField("title") || "";
+              return titleA.localeCompare(titleB);
+            }
+            return 0;
           });
           // Initialize order with assignment IDs
           currentOrder = classAssignments
-            .map(({ assignment }) => assignment.id!)
+            .map((assignment) => assignment.id!)
             .filter(Boolean);
         }
 
@@ -374,17 +370,13 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         // Find target assignment ID - need to get it from the target item
         let targetAssignmentId: string | undefined;
         try {
-          const targetItem = Zotero.Items.get(targetItemId);
+          const targetItem = syllabusItems.find(
+            (item) => item.zoteroItem.id === targetItemId,
+          );
           if (targetItem) {
-            const targetAssignments = SyllabusManager.getAllClassAssignments(
-              targetItem,
-              collectionId,
-            );
-            // Find the assignment for this class - prefer the one being dropped on
-            const targetAssignment = targetAssignments.find(
+            targetAssignmentId = targetItem.assignments.find(
               (a) => a.classNumber === targetClassNumberValue && a.id,
-            );
-            targetAssignmentId = targetAssignment?.id;
+            )?.id;
           }
         } catch (err) {
           ztoolkit.log("Error finding target assignment:", err);
@@ -425,10 +417,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       }
 
       // Get all existing assignments
-      const assignments = SyllabusManager.getAllClassAssignments(
-        draggedItem,
-        collectionId,
-      );
+      const assignments = syllabusItems.map((item) => item.assignments).flat();
 
       // If dropping to a specific class number, ensure it exists in metadata
       if (targetClassNumberValue !== undefined) {
@@ -570,13 +559,19 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
           // After creating assignment, get its ID and add to manual order if it exists
           await draggedItem.saveTx();
-          const updatedAssignments = SyllabusManager.getAllClassAssignments(
-            draggedItem,
-            collectionId,
-          );
-          const newAssignment = updatedAssignments.find(
-            (a) => a.classNumber === targetClassNumberValue && a.id,
-          );
+          const newAssignment = classAssignments.find((a) => {
+            const item = syllabusItems.find((item) =>
+              item.assignments.some((assignment) => assignment.id === a.id),
+            );
+            if (!item) {
+              return false;
+            }
+            return (
+              item.zoteroItem.id === draggedItem.id &&
+              a.classNumber === targetClassNumberValue &&
+              a.id
+            );
+          });
           if (newAssignment?.id) {
             const targetOrder = SyllabusManager.getClassItemOrder(
               collectionId,
@@ -645,6 +640,114 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     const max = classNumbers.length > 0 ? Math.max(...classNumbers) : null;
     return max !== null ? max + 1 : 1;
   }, [collectionId, syllabusMetadata, items]);
+
+  const handleExport = async () => {
+    try {
+      // Prepare export data using SyllabusManager (now async to include RDF)
+      const exportData = await SyllabusManager.prepareExportData(
+        collectionId,
+        title || "",
+      );
+
+      // Create JSON string with pretty formatting
+      const jsonContent = JSON.stringify(exportData, null, 2);
+
+      // Generate filename: syllabus-{slugified-title}-{YYYY-MM-DD}.json
+      const dateStr = formatDate(new Date(), "yyyy-MM-dd");
+      const titleSlug = slugify(title || "syllabus", {
+        lower: true,
+        strict: true,
+      });
+      const filename = `syllabus-${titleSlug}-${dateStr}.json`;
+
+      // Create a temporary file and save it
+      const tempDir = Zotero.getTempDirectory();
+      const tempFile = tempDir.clone();
+      tempFile.append(filename);
+      // NORMAL_FILE_TYPE = 0
+      tempFile.createUnique(0, 0o666);
+
+      // Write content to file using Zotero.File
+      const fileObj = Zotero.File.pathToFile(tempFile.path);
+      await Zotero.File.putContentsAsync(fileObj, jsonContent, "utf-8");
+
+      // Open the file location so user can save it
+      fileObj.reveal();
+    } catch (err) {
+      ztoolkit.log("Error exporting syllabus metadata:", err);
+    }
+  };
+
+  const handleImport = () => {
+    // Trigger the hidden file input
+    fileInputRef.current?.click();
+  };
+
+  const handleFileInputChange = async (
+    e: JSX.TargetedEvent<HTMLInputElement>,
+  ) => {
+    const target = e.target as HTMLInputElement;
+    const selectedFile = target.files?.[0];
+
+    // Reset the input so the same file can be selected again
+    target.value = "";
+
+    if (!selectedFile) {
+      // User cancelled file selection
+      return;
+    }
+
+    try {
+      // Read file contents using FileReader
+      const fileContents = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const content = event.target?.result;
+          if (typeof content === "string") {
+            resolve(content);
+          } else if (content instanceof ArrayBuffer) {
+            resolve(new TextDecoder("utf-8").decode(content));
+          } else {
+            reject(new Error("Failed to read file contents"));
+          }
+        };
+        reader.onerror = () => reject(new Error("Error reading file"));
+        reader.readAsText(selectedFile);
+      });
+
+      // Import syllabus metadata using SyllabusManager
+      // This handles JSON parsing, validation, collection title update, merging, and saving
+      await SyllabusManager.importSyllabusMetadata(
+        collectionId,
+        fileContents,
+        "page",
+      );
+
+      ztoolkit.log("Successfully imported and merged syllabus metadata");
+
+      // Show success message
+      new ztoolkit.ProgressWindow("Import Success", {
+        closeOnClick: true,
+        closeTime: 3000,
+      })
+        .createLine({
+          text: "Successfully imported and merged syllabus metadata",
+          type: "success",
+        })
+        .show();
+    } catch (error) {
+      new ztoolkit.ProgressWindow("Import Error", {
+        closeOnClick: true,
+        closeTime: 5000,
+      })
+        .createLine({
+          text: error instanceof Error ? error.message : String(error),
+          type: "fail",
+        })
+        .show();
+      ztoolkit.log("Import processing error:", error);
+    }
+  };
 
   const handlePrint = async () => {
     try {
@@ -745,6 +848,10 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     }
   };
 
+  const collection = useMemo(() => {
+    return Zotero.Collections.get(collectionId);
+  }, [collectionId]);
+
   // If settings view is active, show settings page
   if (showSettings) {
     return (
@@ -756,266 +863,309 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   }
 
   return (
-    <div
-      ref={syllabusPageRef}
-      className={twMerge(
-        "syllabus-page overflow-y-auto overflow-x-hidden h-full in-[.print]:scheme-light",
-        compactMode && "compact-mode",
-      )}
-    >
-      <div className="pb-12">
-        <div
-          syllabus-view-title-container
-          className="sticky top-0 z-20 bg-background py-1 md:pt-8 in-[.print]:static"
-        >
-          <div className="container-padded bg-background">
-            <div className="flex flex-row items-center gap-4 justify-between">
-              <div className="flex-1 text-3xl font-semibold grow shrink-0">
-                <TextInput
-                  elementType="input"
-                  initialValue={title || ""}
-                  onSave={setTitle}
-                  emptyBehavior="reset"
-                  placeholder="Add a title..."
-                  className="w-full px-0! mx-0! text-primary! disabled:text-primary!"
-                  readOnly={isLocked}
-                />
-              </div>
-              <div className="inline-flex items-center gap-2 shrink grow-0">
-                <div
-                  className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                  title={isLocked ? "Unlock syllabus" : "Lock syllabus"}
-                  aria-label={isLocked ? "Unlock syllabus" : "Lock syllabus"}
-                  onClick={() => setLocked(!isLocked)}
-                >
-                  {isLocked ? (
-                    <Unlock
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  ) : (
-                    <Lock
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  )}
-                </div>
-                <div
-                  className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                  title={
-                    compactMode ? "Disable compact mode" : "Enable compact mode"
-                  }
-                  aria-label={
-                    compactMode ? "Disable compact mode" : "Enable compact mode"
-                  }
-                  onClick={toggleCompactMode}
-                >
-                  {compactMode ? (
-                    <Maximize2
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  ) : (
-                    <Minimize2
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  )}
-                </div>
-                <div
-                  className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                  title={
-                    readerMode ? "Disable reader mode" : "Enable reader mode"
-                  }
-                  aria-label={
-                    readerMode ? "Disable reader mode" : "Enable reader mode"
-                  }
-                  onClick={toggleReaderMode}
-                >
-                  {readerMode ? (
-                    <List
-                      size={20}
-                      className="text-primary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  ) : (
-                    <ListChecks
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  )}
-                </div>
-                <div className="ml-auto flex items-center gap-1 in-[.print]:hidden">
-                  <div
-                    className="cursor-pointer"
-                    title="Edit syllabus settings"
-                    aria-label="Edit syllabus settings"
-                    onClick={() => setShowSettings(true)}
-                  >
-                    <Settings
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  </div>
-                  <div
-                    className="cursor-pointer"
-                    title="Print the list in Syllabus view as a PDF"
-                    aria-label="Print the list in Syllabus view as a PDF"
-                    onClick={handlePrint}
-                  >
-                    <Printer
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="container-padded">
+    <>
+      {/* Hidden file input for import */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json,application/json"
+        style={{ display: "none" }}
+        onChange={handleFileInputChange}
+      />
+      <div
+        ref={syllabusPageRef}
+        className={twMerge(
+          "syllabus-page overflow-y-auto overflow-x-hidden h-full in-[.print]:scheme-light",
+          compactMode && "compact-mode",
+        )}
+      >
+        <div className="pb-12">
           <div
-            className={twMerge("py-2", compactMode ? "text-base" : "text-lg")}
+            syllabus-view-title-container
+            className="sticky top-0 z-20 bg-background py-1 md:pt-8 in-[.print]:static"
           >
-            <TextInput
-              elementType="textarea"
-              initialValue={syllabusMetadata.description || ""}
-              onSave={setDescription}
-              syllabus-collection-description
-              className="w-full px-0! mx-0! text-primary"
-              placeholder="Add a description..."
-              emptyBehavior="delete"
-              fieldSizing="content"
-              readOnly={isLocked}
-            />
-          </div>
-        </div>
-
-        <div
-          className={twMerge(
-            "flex flex-col mb-12",
-            compactMode ? "gap-8 mt-4" : "gap-12 mt-6",
-          )}
-        >
-          {classGroups.map((group) => (
-            <ClassGroupComponent
-              key={group.classNumber ?? "null"}
-              classNumber={group.classNumber}
-              itemAssignments={group.itemAssignments}
-              collectionId={collectionId}
-              syllabusMetadata={syllabusMetadata}
-              onClassTitleSave={setClassTitle}
-              onClassDescriptionSave={setClassDescription}
-              onClassReadingDateSave={handleClassReadingDateSave}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              compactMode={compactMode}
-              readerMode={readerMode}
-              isLocked={isLocked}
-              onResetSortOrder={() => setItemOrderVersion((v) => v + 1)}
-            />
-          ))}
-        </div>
-
-        <div className="container-padded">
-          {(() => {
-            const { singularCapitalized } =
-              SyllabusManager.getNomenclatureFormatted(collectionId);
-
-            return (
-              <>
-                {!isLocked && isDragging && !compactMode && (
-                  <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
-                    <div className="syllabus-class-header-container">
-                      <div className="syllabus-class-header">
-                        Add to {singularCapitalized} {nextClassNumber}
-                      </div>
+            <div className="container-padded bg-background">
+              {getPref("debugMode") && (
+                <div className="text-sm text-secondary">
+                  <span className="font-bold">
+                    {collectionId} / {collection?.key}
+                  </span>
+                </div>
+              )}
+              <div className="flex flex-row items-center gap-4 justify-between">
+                <div className="flex-1 text-3xl font-semibold grow shrink-0">
+                  <TextInput
+                    elementType="input"
+                    initialValue={title || ""}
+                    onSave={setTitle}
+                    emptyBehavior="reset"
+                    placeholder="Add a title..."
+                    className="w-full px-0! mx-0! text-primary! disabled:text-primary!"
+                    readOnly={isLocked}
+                  />
+                </div>
+                <div className="inline-flex items-center gap-2 shrink grow-0">
+                  <div
+                    className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
+                    title={isLocked ? "Unlock syllabus" : "Lock syllabus"}
+                    aria-label={isLocked ? "Unlock syllabus" : "Lock syllabus"}
+                    onClick={() => setLocked(!isLocked)}
+                  >
+                    {isLocked ? (
+                      <Unlock
+                        size={20}
+                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
+                    ) : (
+                      <Lock
+                        size={20}
+                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
+                    )}
+                  </div>
+                  <div
+                    className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
+                    title={
+                      compactMode
+                        ? "Disable compact mode"
+                        : "Enable compact mode"
+                    }
+                    aria-label={
+                      compactMode
+                        ? "Disable compact mode"
+                        : "Enable compact mode"
+                    }
+                    onClick={toggleCompactMode}
+                  >
+                    {compactMode ? (
+                      <Maximize2
+                        size={20}
+                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
+                    ) : (
+                      <Minimize2
+                        size={20}
+                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
+                    )}
+                  </div>
+                  <div
+                    className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
+                    title={
+                      readerMode ? "Disable reader mode" : "Enable reader mode"
+                    }
+                    aria-label={
+                      readerMode ? "Disable reader mode" : "Enable reader mode"
+                    }
+                    onClick={toggleReaderMode}
+                  >
+                    {readerMode ? (
+                      <List
+                        size={20}
+                        className="text-primary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
+                    ) : (
+                      <ListChecks
+                        size={20}
+                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
+                    )}
+                  </div>
+                  <div className="ml-auto flex items-center gap-1 in-[.print]:hidden">
+                    <div
+                      className="cursor-pointer"
+                      title="Export syllabus metadata"
+                      aria-label="Export syllabus metadata"
+                      onClick={handleExport}
+                    >
+                      <Download
+                        size={20}
+                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
                     </div>
                     <div
-                      className="syllabus-class-items syllabus-add-class-dropzone-items"
-                      onDrop={(e) => handleDrop(e, nextClassNumber)}
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
+                      className="cursor-pointer"
+                      title="Import syllabus metadata"
+                      aria-label="Import syllabus metadata"
+                      onClick={handleImport}
                     >
-                      <div className="syllabus-add-class-dropzone-placeholder bg-quinary rounded-md p-16 text-secondary border-2 border-dashed border-secondary">
-                        Drop item here to create {singularCapitalized}{" "}
-                        {nextClassNumber}
-                      </div>
+                      <Upload
+                        size={20}
+                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
+                    </div>
+                    <div
+                      className="cursor-pointer"
+                      title="Edit syllabus settings"
+                      aria-label="Edit syllabus settings"
+                      onClick={() => setShowSettings(true)}
+                    >
+                      <Settings
+                        size={20}
+                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
+                    </div>
+                    <div
+                      className="cursor-pointer"
+                      title="Print the list in Syllabus view as a PDF"
+                      aria-label="Print the list in Syllabus view as a PDF"
+                      onClick={handlePrint}
+                    >
+                      <Printer
+                        size={20}
+                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
                     </div>
                   </div>
-                )}
-
-                {!isLocked && (
-                  <div className="syllabus-create-class-control in-[.print]:hidden">
-                    <button
-                      className="syllabus-create-class-button"
-                      onClick={addClass}
-                      title={`Add ${singularCapitalized} ${nextClassNumber}`}
-                    >
-                      Add {singularCapitalized} {nextClassNumber}
-                    </button>
-                  </div>
-                )}
-              </>
-            );
-          })()}
-
-          {furtherReadingItems.length > 0 && (
-            <div className="syllabus-class-group in-[.print]:scheme-light">
-              <div
-                className={twMerge(
-                  "font-semibold",
-                  compactMode ? "text-xl mt-8 mb-2" : "text-2xl mt-12 mb-4",
-                )}
-              >
-                Further reading
+                </div>
               </div>
-              {!compactMode && (
-                <p className="text-secondary text-lg">
-                  Items in this section have not been assigned to any class.
-                </p>
-              )}
-              <div
-                className={compactMode ? "space-y-2" : "space-y-4"}
-                onDrop={(e) => handleDrop(e, null)}
+            </div>
+          </div>
+
+          <div className="container-padded">
+            <div
+              className={twMerge("py-2", compactMode ? "text-base" : "text-lg")}
+            >
+              <TextInput
+                elementType="textarea"
+                initialValue={syllabusMetadata.description || ""}
+                onSave={setDescription}
+                syllabus-collection-description
+                className="w-full px-0! mx-0! text-primary"
+                placeholder="Add a description..."
+                emptyBehavior="delete"
+                fieldSizing="content"
+                readOnly={isLocked}
+              />
+            </div>
+          </div>
+
+          <div
+            className={twMerge(
+              "flex flex-col mb-12",
+              compactMode ? "gap-8 mt-4" : "gap-12 mt-6",
+            )}
+          >
+            {classGroups.map((group) => (
+              <ClassGroupComponent
+                key={group.classNumber ?? "null"}
+                classNumber={group.classNumber}
+                itemAssignments={group.itemAssignments}
+                collectionId={collectionId}
+                syllabusMetadata={syllabusMetadata}
+                onClassTitleSave={setClassTitle}
+                onClassDescriptionSave={setClassDescription}
+                onClassReadingDateSave={handleClassReadingDateSave}
+                onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
-              >
-                {furtherReadingItems.map((item: Zotero.Item) => (
-                  <SyllabusItemCard
-                    key={item.id}
-                    item={item}
-                    collectionId={collectionId}
-                    classNumber={undefined}
-                    slim={true}
-                    compactMode={compactMode}
-                    readerMode={readerMode}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+                compactMode={compactMode}
+                readerMode={readerMode}
+                isLocked={isLocked}
+                onResetSortOrder={() => setItemOrderVersion((v) => v + 1)}
+              />
+            ))}
+          </div>
 
-          {getPref("debugMode") && (
-            <div className="text-secondary text-sm">
-              <h3>Debug info</h3>
-              <pre>
-                {JSON.stringify(
-                  {
-                    syllabusMetadata,
-                  },
-                  null,
-                  2,
+          <div className="container-padded">
+            {(() => {
+              const { singularCapitalized } =
+                SyllabusManager.getNomenclatureFormatted(collectionId);
+
+              return (
+                <>
+                  {!isLocked && isDragging && !compactMode && (
+                    <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
+                      <div className="syllabus-class-header-container">
+                        <div className="syllabus-class-header">
+                          Add to {singularCapitalized} {nextClassNumber}
+                        </div>
+                      </div>
+                      <div
+                        className="syllabus-class-items syllabus-add-class-dropzone-items"
+                        onDrop={(e) => handleDrop(e, nextClassNumber)}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                      >
+                        <div className="syllabus-add-class-dropzone-placeholder bg-quinary rounded-md p-16 text-secondary border-2 border-dashed border-secondary">
+                          Drop item here to create {singularCapitalized}{" "}
+                          {nextClassNumber}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {!isLocked && (
+                    <div className="syllabus-create-class-control in-[.print]:hidden">
+                      <button
+                        className="syllabus-create-class-button"
+                        onClick={addClass}
+                        title={`Add ${singularCapitalized} ${nextClassNumber}`}
+                      >
+                        Add {singularCapitalized} {nextClassNumber}
+                      </button>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+
+            {furtherReadingItems.length > 0 && (
+              <div className="syllabus-class-group in-[.print]:scheme-light">
+                <div
+                  className={twMerge(
+                    "font-semibold",
+                    compactMode ? "text-xl mt-8 mb-2" : "text-2xl mt-12 mb-4",
+                  )}
+                >
+                  Further reading
+                </div>
+                {!compactMode && (
+                  <p className="text-secondary text-lg">
+                    Items in this section have not been assigned to any class.
+                  </p>
                 )}
-              </pre>
-            </div>
-          )}
+                <div
+                  className={compactMode ? "space-y-2" : "space-y-4"}
+                  onDrop={(e) => handleDrop(e, null)}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                >
+                  {furtherReadingItems.map((item: Zotero.Item) => (
+                    <SyllabusItemCard
+                      key={item.id}
+                      item={item}
+                      collectionId={collectionId}
+                      classNumber={undefined}
+                      slim={true}
+                      compactMode={compactMode}
+                      readerMode={readerMode}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
-          <Bibliography items={items} compactMode={compactMode} />
+            {getPref("debugMode") && (
+              <div className="text-secondary text-sm">
+                <h3>Debug info</h3>
+                <pre>
+                  {JSON.stringify(
+                    {
+                      syllabusMetadata,
+                    },
+                    null,
+                    2,
+                  )}
+                </pre>
+              </div>
+            )}
+
+            <Bibliography items={items} compactMode={compactMode} />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 
   async function addClass() {

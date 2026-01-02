@@ -226,3 +226,11 @@ addon/
 ├── content/              # UI content
 └── locale/               # Localization files
 ```
+
+### Technical references
+
+- `zotero-plugin-toolkit`
+  - README: https://github.com/windingwind/zotero-plugin-toolkit
+  - Docs: https://windingwind.github.io/zotero-plugin-toolkit/
+- Zotero 7 plugin development guide: https://gist.github.com/EwoutH/04c8df5a97963b5b46cec9f392ceb103#file-zotero_7_plugin_dev_guide-md
+- Zotero 7 plugin technical notes: https://www.zotero.org/support/dev/zotero_7_for_developers#plugin_changes

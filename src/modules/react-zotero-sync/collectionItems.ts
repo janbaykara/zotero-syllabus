@@ -1,7 +1,12 @@
 import { useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
 import SuperJSON from "superjson";
-import { SyllabusManager, ItemSyllabusData } from "../syllabus";
+import {
+  SyllabusManager,
+  ItemSyllabusData,
+  GetByLibraryAndKeyArgs,
+  ItemSyllabusAssignment,
+} from "../syllabus";
 
 export type ItemID = {
   [field in _ZoteroTypes.Item.ItemField]: string | unknown;
@@ -13,7 +18,9 @@ export type CollectionItemsSnapshot = {
   items: ItemID[];
 };
 
-export function useZoteroCollectionItems(collectionId: number) {
+export function useZoteroCollectionItems(
+  collectionId: number | GetByLibraryAndKeyArgs,
+) {
   // Create the store once per ID
   const store = useMemo(
     () => createCollectionItemsStore(collectionId),
@@ -29,16 +36,37 @@ export function useZoteroCollectionItems(collectionId: number) {
     const snapshot = SuperJSON.parse(
       __itemsFromZotero,
     ) as CollectionItemsSnapshot;
-    return snapshot.items.map((item) => Zotero.Items.get(item.id));
+    return snapshot.items
+      .map((itemJSON) => {
+        const zoteroItem = Zotero.Items.get(itemJSON.id);
+        if (!zoteroItem) {
+          return null;
+        }
+        const assignments = SyllabusManager.getItemSyllabusDataForCollection(
+          zoteroItem,
+          collectionId,
+        );
+        return {
+          zoteroItem,
+          assignments,
+        };
+      })
+      .filter(Boolean) as {
+      zoteroItem: Zotero.Item;
+      assignments: ItemSyllabusAssignment[];
+    }[];
   }, [__itemsFromZotero]);
 
   return parsedItems;
 }
 
-export function createCollectionItemsStore(collectionId: number) {
+export function createCollectionItemsStore(
+  collectionId: number | GetByLibraryAndKeyArgs,
+) {
   function getSnapshot() {
     // Read directly from Zotero
-    const collection = Zotero.Collections.get(collectionId);
+    const collection =
+      SyllabusManager.getCollectionFromIdentifier(collectionId);
     if (!collection) {
       return SuperJSON.stringify({ items: [] });
     }
@@ -46,7 +74,6 @@ export function createCollectionItemsStore(collectionId: number) {
       .getChildItems()
       .filter((item) => item.isRegularItem())
       .map((item) => {
-        const syllabusData = SyllabusManager.getItemSyllabusData(item);
         return {
           id: item.id,
           ...item.toJSON(),
@@ -81,7 +108,9 @@ export function createCollectionItemsStore(collectionId: number) {
               const item = Zotero.Items.get(itemId);
               if (item && item.isRegularItem()) {
                 const collections = item.getCollections();
-                if (collections.includes(collectionId)) {
+                const collection =
+                  SyllabusManager.getCollectionFromIdentifier(collectionId);
+                if (collection && collections.includes(collection.id)) {
                   shouldUpdate = true;
                   break;
                 }
@@ -96,10 +125,13 @@ export function createCollectionItemsStore(collectionId: number) {
         // Listen to collection modify/refresh events
         else if (
           type === "collection" &&
-          ids.includes(collectionId) &&
           (event === "modify" || event === "refresh")
         ) {
-          shouldUpdate = true;
+          const collection =
+            SyllabusManager.getCollectionFromIdentifier(collectionId);
+          if (collection && ids.includes(collection.id)) {
+            shouldUpdate = true;
+          }
         }
 
         if (shouldUpdate) {
