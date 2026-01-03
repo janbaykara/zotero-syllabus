@@ -1891,13 +1891,9 @@ export class SyllabusManager {
         assignments = updatedData[collectionKeyStr] || [];
       }
     } else {
-      // Remove classNumber from first assignment, or remove assignment if empty
+      // Remove classNumber from first assignment
       if (assignments.length > 0) {
         delete assignments[0].classNumber;
-        // Remove assignment if all fields are empty
-        if (!assignments[0].priority && !assignments[0].classInstruction) {
-          assignments = assignments.slice(1);
-        }
       }
     }
 
@@ -2322,20 +2318,6 @@ export class SyllabusManager {
     if (entryIndex >= 0) {
       // Update existing entry
       entries[entryIndex] = { ...entries[entryIndex], ...metadata };
-
-      // If classNumber is being changed to undefined/null, handle it
-      if (
-        metadata.classNumber === undefined &&
-        entries[entryIndex].classNumber === undefined
-      ) {
-        // Remove entry if all fields are empty
-        if (
-          !entries[entryIndex].priority &&
-          !entries[entryIndex].classInstruction
-        ) {
-          entries.splice(entryIndex, 1);
-        }
-      }
     } else {
       // Assignment not found by ID - this shouldn't happen, but log it
       ztoolkit.log("Warning: Assignment not found by ID:", assignmentId);
