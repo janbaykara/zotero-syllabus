@@ -245,10 +245,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   const processIdentifiers = useCallback(
     async (
       identifiers: string[],
-      processor: (
-        assignmentId: string,
-        item: Zotero.Item,
-      ) => Promise<void>,
+      processor: (assignmentId: string, item: Zotero.Item) => Promise<void>,
       itemProcessor: (item: Zotero.Item) => Promise<void>,
     ): Promise<Set<Zotero.Item>> => {
       const itemsToSave = new Set<Zotero.Item>();
@@ -261,7 +258,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
               (a) => a.id === assignmentId,
             );
             if (matchingAssignment) {
-              SyllabusManager.invalidateSyllabusDataCache(syllabusItem.zoteroItem);
+              SyllabusManager.invalidateSyllabusDataCache(
+                syllabusItem.zoteroItem,
+              );
               await processor(assignmentId, syllabusItem.zoteroItem);
               itemsToSave.add(syllabusItem.zoteroItem);
               break;
@@ -355,7 +354,11 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
           );
         },
         async (item) => {
-          await SyllabusManager.removeAllAssignments(item, collectionId, "page");
+          await SyllabusManager.removeAllAssignments(
+            item,
+            collectionId,
+            "page",
+          );
         },
       );
 
@@ -434,7 +437,13 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
       await saveItems(itemsToSave, "duplicating");
     },
-    [getIdentifiersToProcess, processIdentifiers, saveItems, syllabusItems, collectionId],
+    [
+      getIdentifiersToProcess,
+      processIdentifiers,
+      saveItems,
+      syllabusItems,
+      collectionId,
+    ],
   );
 
   // Update Zotero selection when selection changes
@@ -670,7 +679,10 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     if (multipleAssignmentIdsStr) {
       // Handle multiple assignments drag
       const assignmentIds = multipleAssignmentIdsStr.split(",").filter(Boolean);
-      const itemIds = itemIdStr.split(",").map((id) => parseInt(id, 10)).filter((id) => !isNaN(id));
+      const itemIds = itemIdStr
+        .split(",")
+        .map((id) => parseInt(id, 10))
+        .filter((id) => !isNaN(id));
 
       try {
         // Process each assignment
@@ -1649,13 +1661,22 @@ interface ClassGroupComponentProps {
     assignmentId: string | undefined,
     e?: JSX.TargetedMouseEvent<HTMLElement>,
   ) => void;
-  selectedForDrag?: { assignments: Array<{ itemId: number; assignmentId: string }>; itemIds: number[] };
+  selectedForDrag?: {
+    assignments: Array<{ itemId: number; assignmentId: string }>;
+    itemIds: number[];
+  };
   onPriorityChange?: (
     priority: SyllabusPriority | undefined,
     identifier: { assignmentId?: string; itemId?: number },
   ) => Promise<void>;
-  onDelete?: (identifier: { assignmentId?: string; itemId?: number }) => Promise<void>;
-  onDuplicate?: (identifier: { assignmentId?: string; itemId?: number }) => Promise<void>;
+  onDelete?: (identifier: {
+    assignmentId?: string;
+    itemId?: number;
+  }) => Promise<void>;
+  onDuplicate?: (identifier: {
+    assignmentId?: string;
+    itemId?: number;
+  }) => Promise<void>;
 }
 
 function ClassGroupComponent({
@@ -2104,34 +2125,34 @@ function TextInput({
         onChange: readOnly
           ? undefined
           : (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-            setValue((e.target as HTMLInputElement).value),
+              setValue((e.target as HTMLInputElement).value),
         onBlur: readOnly ? undefined : () => save(value),
         onKeyDown: readOnly
           ? undefined
           : (
-            e: JSX.TargetedKeyboardEvent<
-              HTMLInputElement | HTMLTextAreaElement
-            >,
-          ) => {
-            if (e.key === "Escape" || e.key === "Enter") {
-              e.preventDefault();
-              e.currentTarget.blur();
-              save(value);
-            }
-          },
+              e: JSX.TargetedKeyboardEvent<
+                HTMLInputElement | HTMLTextAreaElement
+              >,
+            ) => {
+              if (e.key === "Escape" || e.key === "Enter") {
+                e.preventDefault();
+                e.currentTarget.blur();
+                save(value);
+              }
+            },
         onSelect: readOnly
           ? (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            e.preventDefault();
-            e.currentTarget.setSelectionRange(0, 0);
-          }
+              e.preventDefault();
+              e.currentTarget.setSelectionRange(0, 0);
+            }
           : undefined,
         onClick: readOnly
           ? (
-            e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
-          ) => {
-            e.preventDefault();
-            e.currentTarget.blur();
-          }
+              e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
+            ) => {
+              e.preventDefault();
+              e.currentTarget.blur();
+            }
           : undefined,
         placeholder: readOnly ? undefined : placeholder || "Click to edit",
         className: twMerge(
@@ -2182,13 +2203,22 @@ interface SyllabusItemCardProps {
     assignmentId: string | undefined,
     e?: JSX.TargetedMouseEvent<HTMLElement>,
   ) => void;
-  selectedForDrag?: { assignments: Array<{ itemId: number; assignmentId: string }>; itemIds: number[] };
+  selectedForDrag?: {
+    assignments: Array<{ itemId: number; assignmentId: string }>;
+    itemIds: number[];
+  };
   onPriorityChange?: (
     priority: SyllabusPriority | undefined,
     identifier: { assignmentId?: string; itemId?: number },
   ) => Promise<void>;
-  onDelete?: (identifier: { assignmentId?: string; itemId?: number }) => Promise<void>;
-  onDuplicate?: (identifier: { assignmentId?: string; itemId?: number }) => Promise<void>;
+  onDelete?: (identifier: {
+    assignmentId?: string;
+    itemId?: number;
+  }) => Promise<void>;
+  onDuplicate?: (identifier: {
+    assignmentId?: string;
+    itemId?: number;
+  }) => Promise<void>;
 }
 
 export function SyllabusItemCard({
@@ -2215,7 +2245,9 @@ export function SyllabusItemCard({
   const isZoteroSelected = selectedItemIds?.includes(item.id) || false;
 
   // Check if this identifier is selected
-  const identifier = assignment?.id ? `assignment:${assignment.id}` : `item:${item.id}`;
+  const identifier = assignment?.id
+    ? `assignment:${assignment.id}`
+    : `item:${item.id}`;
   const isSelected = selectedIdentifiers.has(identifier);
 
   // Get priority and class instruction from the assignment (if found)
@@ -2276,9 +2308,9 @@ export function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-        item: Zotero.Item;
-        type: "pdf" | "snapshot" | "epub";
-      }>;
+      item: Zotero.Item;
+      type: "pdf" | "snapshot" | "epub";
+    }>;
   }, [item, slim]);
 
   const metadataParts = [
@@ -2296,7 +2328,10 @@ export function SyllabusItemCard({
       // Check if this identifier is selected, and if so, drag all selected
       const isThisSelected = selectedIdentifiers.has(identifier);
 
-      if (isThisSelected && (selectedForDrag.assignments.length + selectedForDrag.itemIds.length > 0)) {
+      if (
+        isThisSelected &&
+        selectedForDrag.assignments.length + selectedForDrag.itemIds.length > 0
+      ) {
         // Drag all selected assignments
         const assignmentIds = selectedForDrag.assignments
           .map((a) => a.assignmentId)
@@ -2419,8 +2454,8 @@ export function SyllabusItemCard({
 
   const colors = priority
     ? {
-      backgroundColor: priorityColor + "15"
-    }
+        backgroundColor: priorityColor + "15",
+      }
     : {};
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
@@ -2720,7 +2755,10 @@ export function SyllabusItemCard({
                     try {
                       // Always pass identifier - handler will check if it's in selection
                       if (onDuplicate) {
-                        const identifier = { assignmentId: assignment.id, itemId: undefined };
+                        const identifier = {
+                          assignmentId: assignment.id,
+                          itemId: undefined,
+                        };
                         await onDuplicate(identifier);
                       }
                     } catch (err) {
@@ -2750,7 +2788,10 @@ export function SyllabusItemCard({
                     try {
                       // Always pass identifier - handler will check if it's in selection
                       if (onDelete) {
-                        const identifier = { assignmentId: assignment.id, itemId: undefined };
+                        const identifier = {
+                          assignmentId: assignment.id,
+                          itemId: undefined,
+                        };
                         await onDelete(identifier);
                       }
                     } catch (err) {
@@ -2797,7 +2838,10 @@ export function SyllabusItemCard({
                         try {
                           // Always pass identifier - handler will check if it's in selection
                           if (onPriorityChange) {
-                            const identifier = { assignmentId: assignment?.id, itemId: assignment ? undefined : item.id };
+                            const identifier = {
+                              assignmentId: assignment?.id,
+                              itemId: assignment ? undefined : item.id,
+                            };
                             await onPriorityChange(
                               priorityOption.id as SyllabusPriority,
                               identifier,
@@ -2831,7 +2875,10 @@ export function SyllabusItemCard({
                     try {
                       // Always pass identifier - handler will check if it's in selection
                       if (onPriorityChange) {
-                        const identifier = { assignmentId: assignment?.id, itemId: assignment ? undefined : item.id };
+                        const identifier = {
+                          assignmentId: assignment?.id,
+                          itemId: assignment ? undefined : item.id,
+                        };
                         await onPriorityChange(undefined, identifier);
                       }
                     } catch (err) {
