@@ -111,6 +111,411 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   // Settings view state
   const [showSettings, setShowSettings] = useState(false);
 
+  // Selection state (separate from Zotero selection)
+  // Uses format: "assignment:${assignmentId}" or "item:${itemId}"
+  const [selectedIdentifiers, setSelectedIdentifiers] = useState<Set<string>>(
+    new Set(),
+  );
+
+  // Build array of selected assignments and items for drag operations
+  const selectedForDrag = useMemo(() => {
+    const assignments: Array<{ itemId: number; assignmentId: string }> = [];
+    const itemIds: number[] = [];
+
+    for (const identifier of selectedIdentifiers) {
+      if (identifier.startsWith("assignment:")) {
+        const assignmentId = identifier.replace("assignment:", "");
+        for (const syllabusItem of syllabusItems) {
+          const matchingAssignment = syllabusItem.assignments.find(
+            (a) => a.id === assignmentId,
+          );
+          if (matchingAssignment) {
+            assignments.push({
+              itemId: syllabusItem.zoteroItem.id,
+              assignmentId: assignmentId,
+            });
+            break;
+          }
+        }
+      } else if (identifier.startsWith("item:")) {
+        const itemId = parseInt(identifier.replace("item:", ""), 10);
+        if (!isNaN(itemId)) {
+          itemIds.push(itemId);
+        }
+      }
+    }
+
+    return { assignments, itemIds };
+  }, [selectedIdentifiers, syllabusItems]);
+
+  const selectedItemIds = useZoteroSelectedItemIds();
+
+  // Handler for selection (assignment or item)
+  const handleIdentifierClick = useCallback(
+    (
+      item: Zotero.Item,
+      assignmentId: string | undefined,
+      e?: JSX.TargetedMouseEvent<HTMLElement>,
+    ) => {
+      const identifier = assignmentId
+        ? `assignment:${assignmentId}`
+        : `item:${item.id}`;
+
+      // Handle selection
+      setSelectedIdentifiers((prev) => {
+        const newSet = new Set(prev);
+        if (e?.shiftKey) {
+          // Toggle selection
+          if (newSet.has(identifier)) {
+            newSet.delete(identifier);
+          } else {
+            newSet.add(identifier);
+          }
+        } else {
+          // Replace selection
+          if (prev.size > 1) {
+            // Replace selection
+            newSet.clear();
+            newSet.add(identifier);
+          } else {
+            newSet.clear();
+            if (!prev.has(identifier)) {
+              newSet.add(identifier);
+            }
+          }
+        }
+        return newSet;
+      });
+
+      // Zotero selection
+      try {
+        const pane = ztoolkit.getGlobal("ZoteroPane");
+        if (e?.shiftKey) {
+          const selectedItems = pane.getSelectedItems(true) as number[];
+          const itemId = item.id;
+          let newSelection: number[];
+          if (selectedItems.includes(itemId)) {
+            newSelection = selectedItems.filter((id) => id !== itemId);
+          } else {
+            newSelection = [...selectedItems, itemId];
+          }
+          if (newSelection.length > 0) {
+            pane.selectItems(newSelection);
+          } else {
+            pane.selectItem(itemId);
+          }
+        } else {
+          const isZoteroSelected = selectedItemIds?.includes(item.id) || false;
+          if (isZoteroSelected) {
+            ztoolkit.log("Deselect item", item.id);
+            pane.selectItem(-1);
+          } else {
+            pane.selectItem(item.id);
+          }
+        }
+      } catch (err) {
+        ztoolkit.log("Error selecting item:", err);
+      }
+    },
+    [selectedItemIds],
+  );
+
+  // Handler to apply priority - always receives identifier from item card
+  const handlePriorityChange = useCallback(
+    async (
+      priority: SyllabusPriority | undefined,
+      identifier: { assignmentId?: string; itemId?: number },
+    ) => {
+      // Convert identifier to string format
+      const identifierStr = identifier.assignmentId
+        ? `assignment:${identifier.assignmentId}`
+        : `item:${identifier.itemId}`;
+
+      // If identifier is in selection, apply to all selected; otherwise apply only to this identifier
+      const identifiersToProcess = selectedIdentifiers.has(identifierStr)
+        ? Array.from(selectedIdentifiers)
+        : [identifierStr];
+
+      if (identifiersToProcess.length === 0) {
+        return;
+      }
+
+      const itemsToSave = new Set<Zotero.Item>();
+
+      // Process all identifiers
+      for (const identifierStr of identifiersToProcess) {
+        if (identifierStr.startsWith("assignment:")) {
+          const assignmentId = identifierStr.replace("assignment:", "");
+          for (const syllabusItem of syllabusItems) {
+            const matchingAssignment = syllabusItem.assignments.find(
+              (a) => a.id === assignmentId,
+            );
+            if (matchingAssignment) {
+              SyllabusManager.invalidateSyllabusDataCache(
+                syllabusItem.zoteroItem,
+              );
+              await SyllabusManager.updateClassAssignment(
+                syllabusItem.zoteroItem,
+                collectionId,
+                assignmentId,
+                { priority },
+                "page",
+              );
+              itemsToSave.add(syllabusItem.zoteroItem);
+              break;
+            }
+          }
+        } else if (identifierStr.startsWith("item:")) {
+          const itemId = parseInt(identifierStr.replace("item:", ""), 10);
+          if (!isNaN(itemId)) {
+            try {
+              const item = Zotero.Items.get(itemId);
+              if (item && item.isRegularItem()) {
+                // For items without assignments, add a new assignment with priority
+                await SyllabusManager.addClassAssignment(
+                  item,
+                  collectionId,
+                  undefined,
+                  { priority },
+                  "page",
+                );
+                itemsToSave.add(item);
+              }
+            } catch (err) {
+              ztoolkit.log("Error getting item for priority change:", err);
+            }
+          }
+        }
+      }
+
+      // Save all items
+      for (const item of itemsToSave) {
+        try {
+          await item.saveTx();
+        } catch (err) {
+          ztoolkit.log("Error saving item after priority change:", err);
+        }
+      }
+    },
+    [selectedIdentifiers, syllabusItems, collectionId],
+  );
+
+  // Handler to delete assignments/items - always receives identifier from item card
+  const handleDelete = useCallback(
+    async (identifier: { assignmentId?: string; itemId?: number }) => {
+      // Convert identifier to string format
+      const identifierStr = identifier.assignmentId
+        ? `assignment:${identifier.assignmentId}`
+        : `item:${identifier.itemId}`;
+
+      // If identifier is in selection, apply to all selected; otherwise apply only to this identifier
+      const identifiersToProcess = selectedIdentifiers.has(identifierStr)
+        ? Array.from(selectedIdentifiers)
+        : [identifierStr];
+
+      if (identifiersToProcess.length === 0) {
+        return;
+      }
+
+      const itemsToSave = new Set<Zotero.Item>();
+
+      // Process all identifiers
+      for (const identifierStr of identifiersToProcess) {
+        if (identifierStr.startsWith("assignment:")) {
+          const assignmentId = identifierStr.replace("assignment:", "");
+          for (const syllabusItem of syllabusItems) {
+            const matchingAssignment = syllabusItem.assignments.find(
+              (a) => a.id === assignmentId,
+            );
+            if (matchingAssignment) {
+              SyllabusManager.invalidateSyllabusDataCache(syllabusItem.zoteroItem);
+              await SyllabusManager.removeAssignmentById(
+                syllabusItem.zoteroItem,
+                collectionId,
+                assignmentId,
+                "page",
+              );
+              itemsToSave.add(syllabusItem.zoteroItem);
+              break;
+            }
+          }
+        } else if (identifierStr.startsWith("item:")) {
+          const itemId = parseInt(identifierStr.replace("item:", ""), 10);
+          if (!isNaN(itemId)) {
+            try {
+              const item = Zotero.Items.get(itemId);
+              if (item && item.isRegularItem()) {
+                // Remove all assignments for this item
+                await SyllabusManager.removeAllAssignments(
+                  item,
+                  collectionId,
+                  "page",
+                );
+                itemsToSave.add(item);
+              }
+            } catch (err) {
+              ztoolkit.log("Error getting item for delete:", err);
+            }
+          }
+        }
+      }
+
+      // Save all items
+      for (const item of itemsToSave) {
+        try {
+          await item.saveTx();
+        } catch (err) {
+          ztoolkit.log("Error saving item after deleting:", err);
+        }
+      }
+
+      // Clear selection after deletion
+      setSelectedIdentifiers(new Set());
+    },
+    [selectedIdentifiers, syllabusItems, collectionId],
+  );
+
+  // Handler to duplicate assignments/items - always receives identifier from item card
+  const handleDuplicate = useCallback(
+    async (identifier: { assignmentId?: string; itemId?: number }) => {
+      // Convert identifier to string format
+      const identifierStr = identifier.assignmentId
+        ? `assignment:${identifier.assignmentId}`
+        : `item:${identifier.itemId}`;
+
+      // If identifier is in selection, apply to all selected; otherwise apply only to this identifier
+      const identifiersToProcess = selectedIdentifiers.has(identifierStr)
+        ? Array.from(selectedIdentifiers)
+        : [identifierStr];
+
+      if (identifiersToProcess.length === 0) {
+        return;
+      }
+
+      const itemsToSave = new Set<Zotero.Item>();
+
+      // Process all identifiers
+      for (const identifierStr of identifiersToProcess) {
+        if (identifierStr.startsWith("assignment:")) {
+          const assignmentId = identifierStr.replace("assignment:", "");
+          for (const syllabusItem of syllabusItems) {
+            const matchingAssignment = syllabusItem.assignments.find(
+              (a) => a.id === assignmentId,
+            );
+            if (matchingAssignment) {
+              SyllabusManager.invalidateSyllabusDataCache(syllabusItem.zoteroItem);
+              const duplicateMetadata: Partial<ItemSyllabusAssignment> = {
+                classNumber: matchingAssignment.classNumber,
+                priority: matchingAssignment.priority,
+                classInstruction: matchingAssignment.classInstruction,
+                status: matchingAssignment.status,
+              };
+              await SyllabusManager.addClassAssignment(
+                syllabusItem.zoteroItem,
+                collectionId,
+                duplicateMetadata.classNumber,
+                duplicateMetadata,
+                "page",
+              );
+              itemsToSave.add(syllabusItem.zoteroItem);
+              break;
+            }
+          }
+        } else if (identifierStr.startsWith("item:")) {
+          const itemId = parseInt(identifierStr.replace("item:", ""), 10);
+          if (!isNaN(itemId)) {
+            try {
+              const item = Zotero.Items.get(itemId);
+              if (item && item.isRegularItem()) {
+                // For items without assignments, duplicate means add to syllabus
+                // Get first assignment if exists, or create new one
+                const syllabusData = SyllabusManager.getItemSyllabusData(item);
+                const collectionKeyStr = SyllabusManager.getCollectionReferenceString(
+                  Zotero.Collections.get(collectionId).libraryID,
+                  Zotero.Collections.get(collectionId).key,
+                );
+                const assignments = syllabusData?.[collectionKeyStr] || [];
+                if (assignments.length > 0) {
+                  const firstAssignment = assignments[0];
+                  const duplicateMetadata: Partial<ItemSyllabusAssignment> = {
+                    classNumber: firstAssignment.classNumber,
+                    priority: firstAssignment.priority,
+                    classInstruction: firstAssignment.classInstruction,
+                    status: firstAssignment.status,
+                  };
+                  await SyllabusManager.addClassAssignment(
+                    item,
+                    collectionId,
+                    duplicateMetadata.classNumber,
+                    duplicateMetadata,
+                    "page",
+                  );
+                } else {
+                  // No assignment, just add a new one
+                  await SyllabusManager.addClassAssignment(
+                    item,
+                    collectionId,
+                    undefined,
+                    {},
+                    "page",
+                  );
+                }
+                itemsToSave.add(item);
+              }
+            } catch (err) {
+              ztoolkit.log("Error getting item for duplicate:", err);
+            }
+          }
+        }
+      }
+
+      // Save all items
+      for (const item of itemsToSave) {
+        try {
+          await item.saveTx();
+        } catch (err) {
+          ztoolkit.log("Error saving item after duplicating:", err);
+        }
+      }
+    },
+    [selectedIdentifiers, syllabusItems, collectionId],
+  );
+
+  // Update Zotero selection when selection changes
+  useEffect(() => {
+    if (selectedIdentifiers.size === 0) {
+      return;
+    }
+
+    // Get all items from selected identifiers
+    const itemIds = new Set<number>();
+    for (const identifier of selectedIdentifiers) {
+      if (identifier.startsWith("assignment:")) {
+        const assignmentId = identifier.replace("assignment:", "");
+        for (const syllabusItem of syllabusItems) {
+          const matchingAssignment = syllabusItem.assignments.find(
+            (a) => a.id === assignmentId,
+          );
+          if (matchingAssignment) {
+            itemIds.add(syllabusItem.zoteroItem.id);
+            break;
+          }
+        }
+      } else if (identifier.startsWith("item:")) {
+        const itemId = parseInt(identifier.replace("item:", ""), 10);
+        if (!isNaN(itemId)) {
+          itemIds.add(itemId);
+        }
+      }
+    }
+
+    // Update Zotero selection
+    if (itemIds.size > 0) {
+      const pane = ztoolkit.getGlobal("ZoteroPane");
+      pane.selectItems(Array.from(itemIds));
+    }
+  }, [selectedIdentifiers, syllabusItems]);
+
   // Ref for the syllabus page container to access DOM for printing
   const syllabusPageRef = useRef<HTMLDivElement>(null);
 
@@ -298,15 +703,73 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     const itemIdStr = e.dataTransfer.getData("text/plain");
     if (!itemIdStr) return;
 
+    const targetClassNumberValue =
+      targetClassNumber === null ? undefined : targetClassNumber;
+
+    // Check for multiple assignment IDs (multi-select drag)
+    const multipleAssignmentIdsStr = e.dataTransfer.getData(
+      "application/x-syllabus-assignment-ids",
+    );
+
+    if (multipleAssignmentIdsStr) {
+      // Handle multiple assignments drag
+      const assignmentIds = multipleAssignmentIdsStr.split(",").filter(Boolean);
+      const itemIds = itemIdStr.split(",").map((id) => parseInt(id, 10)).filter((id) => !isNaN(id));
+
+      try {
+        // Process each assignment
+        for (const assignmentId of assignmentIds) {
+          // Find the assignment and its item
+          let draggedItem: Zotero.Item | null = null;
+          for (const syllabusItem of syllabusItems) {
+            const matchingAssignment = syllabusItem.assignments.find(
+              (a) => a.id === assignmentId,
+            );
+            if (matchingAssignment) {
+              draggedItem = syllabusItem.zoteroItem;
+              break;
+            }
+          }
+
+          if (!draggedItem || !draggedItem.isRegularItem()) continue;
+
+          // Update assignment to target class
+          await SyllabusManager.updateClassAssignment(
+            draggedItem,
+            collectionId,
+            assignmentId,
+            { classNumber: targetClassNumberValue },
+            "page",
+          );
+        }
+
+        // Save all items
+        for (const itemId of itemIds) {
+          try {
+            const item = Zotero.Items.get(itemId);
+            if (item) {
+              await item.saveTx();
+            }
+          } catch (err) {
+            ztoolkit.log("Error saving item:", err);
+          }
+        }
+
+        setItemOrderVersion((v) => v + 1);
+        return;
+      } catch (err) {
+        ztoolkit.log("Error handling multi-assignment drag:", err);
+        return;
+      }
+    }
+
+    // Single assignment drag (original behavior)
     const itemId = parseInt(itemIdStr, 10);
     if (isNaN(itemId)) return;
 
     try {
       const draggedItem = Zotero.Items.get(itemId);
       if (!draggedItem || !draggedItem.isRegularItem()) return;
-
-      const targetClassNumberValue =
-        targetClassNumber === null ? undefined : targetClassNumber;
 
       // Get source assignment ID from drag data (if dragging from a class)
       const sourceAssignmentId = e.dataTransfer.getData(
@@ -1061,6 +1524,12 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                 readerMode={readerMode}
                 isLocked={isLocked}
                 onResetSortOrder={() => setItemOrderVersion((v) => v + 1)}
+                selectedIdentifiers={selectedIdentifiers}
+                onIdentifierClick={handleIdentifierClick}
+                selectedForDrag={selectedForDrag}
+                onPriorityChange={handlePriorityChange}
+                onDelete={handleDelete}
+                onDuplicate={handleDuplicate}
               />
             ))}
           </div>
@@ -1138,6 +1607,12 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                       slim={true}
                       compactMode={compactMode}
                       readerMode={readerMode}
+                      selectedIdentifiers={selectedIdentifiers}
+                      onIdentifierClick={handleIdentifierClick}
+                      selectedForDrag={selectedForDrag}
+                      onPriorityChange={handlePriorityChange}
+                      onDelete={handleDelete}
+                      onDuplicate={handleDuplicate}
                     />
                   ))}
                 </div>
@@ -1212,6 +1687,19 @@ interface ClassGroupComponentProps {
   readerMode?: boolean;
   isLocked?: boolean;
   onResetSortOrder?: () => void;
+  selectedIdentifiers?: Set<string>;
+  onIdentifierClick?: (
+    item: Zotero.Item,
+    assignmentId: string | undefined,
+    e?: JSX.TargetedMouseEvent<HTMLElement>,
+  ) => void;
+  selectedForDrag?: { assignments: Array<{ itemId: number; assignmentId: string }>; itemIds: number[] };
+  onPriorityChange?: (
+    priority: SyllabusPriority | undefined,
+    identifier: { assignmentId?: string; itemId?: number },
+  ) => Promise<void>;
+  onDelete?: (identifier: { assignmentId?: string; itemId?: number }) => Promise<void>;
+  onDuplicate?: (identifier: { assignmentId?: string; itemId?: number }) => Promise<void>;
 }
 
 function ClassGroupComponent({
@@ -1229,6 +1717,12 @@ function ClassGroupComponent({
   readerMode = false,
   isLocked = false,
   onResetSortOrder,
+  selectedIdentifiers = new Set(),
+  onIdentifierClick,
+  selectedForDrag = { assignments: [], itemIds: [] },
+  onPriorityChange,
+  onDelete,
+  onDuplicate,
 }: ClassGroupComponentProps) {
   // Get nomenclature for this collection
   const { singularCapitalized } =
@@ -1472,6 +1966,12 @@ function ClassGroupComponent({
                   compactMode={compactMode}
                   readerMode={readerMode}
                   isLocked={isLocked}
+                  selectedIdentifiers={selectedIdentifiers}
+                  onIdentifierClick={onIdentifierClick}
+                  selectedForDrag={selectedForDrag}
+                  onPriorityChange={onPriorityChange}
+                  onDelete={onDelete}
+                  onDuplicate={onDuplicate}
                   onDrop={(e, insertBefore) =>
                     onDrop(e, classNumber ?? null, item.id, insertBefore)
                   }
@@ -1648,34 +2148,34 @@ function TextInput({
         onChange: readOnly
           ? undefined
           : (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-              setValue((e.target as HTMLInputElement).value),
+            setValue((e.target as HTMLInputElement).value),
         onBlur: readOnly ? undefined : () => save(value),
         onKeyDown: readOnly
           ? undefined
           : (
-              e: JSX.TargetedKeyboardEvent<
-                HTMLInputElement | HTMLTextAreaElement
-              >,
-            ) => {
-              if (e.key === "Escape" || e.key === "Enter") {
-                e.preventDefault();
-                e.currentTarget.blur();
-                save(value);
-              }
-            },
+            e: JSX.TargetedKeyboardEvent<
+              HTMLInputElement | HTMLTextAreaElement
+            >,
+          ) => {
+            if (e.key === "Escape" || e.key === "Enter") {
+              e.preventDefault();
+              e.currentTarget.blur();
+              save(value);
+            }
+          },
         onSelect: readOnly
           ? (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-              e.preventDefault();
-              e.currentTarget.setSelectionRange(0, 0);
-            }
+            e.preventDefault();
+            e.currentTarget.setSelectionRange(0, 0);
+          }
           : undefined,
         onClick: readOnly
           ? (
-              e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
-            ) => {
-              e.preventDefault();
-              e.currentTarget.blur();
-            }
+            e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
+          ) => {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
           : undefined,
         placeholder: readOnly ? undefined : placeholder || "Click to edit",
         className: twMerge(
@@ -1719,6 +2219,20 @@ interface SyllabusItemCardProps {
     item: Zotero.Item,
     e?: JSX.TargetedMouseEvent<HTMLElement>,
   ) => void; // Optional custom click handler
+  // Selection props
+  selectedIdentifiers?: Set<string>;
+  onIdentifierClick?: (
+    item: Zotero.Item,
+    assignmentId: string | undefined,
+    e?: JSX.TargetedMouseEvent<HTMLElement>,
+  ) => void;
+  selectedForDrag?: { assignments: Array<{ itemId: number; assignmentId: string }>; itemIds: number[] };
+  onPriorityChange?: (
+    priority: SyllabusPriority | undefined,
+    identifier: { assignmentId?: string; itemId?: number },
+  ) => Promise<void>;
+  onDelete?: (identifier: { assignmentId?: string; itemId?: number }) => Promise<void>;
+  onDuplicate?: (identifier: { assignmentId?: string; itemId?: number }) => Promise<void>;
 }
 
 export function SyllabusItemCard({
@@ -1733,10 +2247,20 @@ export function SyllabusItemCard({
   onDrop,
   onDragOver,
   onClick: customOnClick,
+  selectedIdentifiers = new Set(),
+  onIdentifierClick,
+  selectedForDrag = { assignments: [], itemIds: [] },
+  onPriorityChange,
+  onDelete,
+  onDuplicate,
 }: SyllabusItemCardProps) {
-  // Get the currently selected item ID
+  // Get the currently selected item ID (Zotero selection)
   const selectedItemIds = useZoteroSelectedItemIds();
-  const isSelected = selectedItemIds?.includes(item.id) || false;
+  const isZoteroSelected = selectedItemIds?.includes(item.id) || false;
+
+  // Check if this identifier is selected
+  const identifier = assignment?.id ? `assignment:${assignment.id}` : `item:${item.id}`;
+  const isSelected = selectedIdentifiers.has(identifier);
 
   // Get priority and class instruction from the assignment (if found)
   // When assignmentId is provided, these MUST come from that specific assignment
@@ -1796,9 +2320,9 @@ export function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-      item: Zotero.Item;
-      type: "pdf" | "snapshot" | "epub";
-    }>;
+        item: Zotero.Item;
+        type: "pdf" | "snapshot" | "epub";
+      }>;
   }, [item, slim]);
 
   const metadataParts = [
@@ -1812,15 +2336,42 @@ export function SyllabusItemCard({
     e.stopPropagation();
     if (e.dataTransfer) {
       e.dataTransfer.effectAllowed = "move";
-      e.dataTransfer.setData("text/plain", String(item.id));
-      // Store the assignment ID so we can update the exact assignment instead of duplicating
-      // Use the specific assignment if available
-      if (assignment?.id) {
-        e.dataTransfer.setData(
-          "application/x-syllabus-assignment-id",
-          assignment.id,
-        );
+
+      // Check if this identifier is selected, and if so, drag all selected
+      const isThisSelected = selectedIdentifiers.has(identifier);
+
+      if (isThisSelected && (selectedForDrag.assignments.length + selectedForDrag.itemIds.length > 0)) {
+        // Drag all selected assignments
+        const assignmentIds = selectedForDrag.assignments
+          .map((a) => a.assignmentId)
+          .join(",");
+        if (assignmentIds) {
+          e.dataTransfer.setData(
+            "application/x-syllabus-assignment-ids",
+            assignmentIds,
+          );
+        }
+        // Store all item IDs (from both assignments and items)
+        const allItemIds = Array.from(
+          new Set([
+            ...selectedForDrag.assignments.map((a) => a.itemId),
+            ...selectedForDrag.itemIds,
+          ]),
+        )
+          .map(String)
+          .join(",");
+        e.dataTransfer.setData("text/plain", allItemIds);
+      } else {
+        // Single drag (original behavior)
+        e.dataTransfer.setData("text/plain", String(item.id));
+        if (assignment?.id) {
+          e.dataTransfer.setData(
+            "application/x-syllabus-assignment-id",
+            assignment.id,
+          );
+        }
       }
+
       // Store source class number for reordering within same class
       if (classNumber !== null && classNumber !== undefined) {
         e.dataTransfer.setData(
@@ -1842,45 +2393,11 @@ export function SyllabusItemCard({
   };
 
   function onClick(
-    item: Zotero.Item,
-    e?: JSX.TargetedMouseEvent<HTMLElement>,
+    _item: Zotero.Item,
+    _e?: JSX.TargetedMouseEvent<HTMLElement>,
   ) {
-    try {
-      const pane = ztoolkit.getGlobal("ZoteroPane");
-      
-      // Check if shift key is pressed for multi-select
-      if (e?.shiftKey) {
-        // Get currently selected items
-        const selectedItems = pane.getSelectedItems(true) as number[];
-        const itemId = item.id;
-        
-        // Toggle selection: add if not selected, remove if already selected
-        let newSelection: number[];
-        if (selectedItems.includes(itemId)) {
-          // Remove from selection
-          newSelection = selectedItems.filter((id) => id !== itemId);
-          ztoolkit.log("Item removed from selection:", itemId, newSelection);
-        } else {
-          // Add to selection
-          newSelection = [...selectedItems, itemId];
-          ztoolkit.log("Item added to selection:", itemId, newSelection);
-        }
-        
-        // Select all items in the new selection
-        if (newSelection.length > 0) {
-          pane.selectItems(newSelection);
-        } else {
-          // If nothing selected, just select this item
-          pane.selectItem(itemId);
-        }
-      } else {
-        // Normal click - replace selection
-        pane.selectItem(item.id);
-        ztoolkit.log("Item selected:", item.id);
-      }
-    } catch (err) {
-      ztoolkit.log("Error selecting item:", err);
-    }
+    // This is now handled by handleAssignmentClick
+    // Keep for backwards compatibility with custom onClick handlers
   }
 
   function onDoubleClick(
@@ -1936,7 +2453,6 @@ export function SyllabusItemCard({
   const readStatusName = useMemo(() => getItemReadStatusName(item), [item]);
 
   // Check if there's an assignment for this card
-  const hasAssignment = !!assignment;
 
   const { color: priorityColor } = SyllabusManager.getPriorityDisplay(
     collectionId,
@@ -1947,9 +2463,8 @@ export function SyllabusItemCard({
 
   const colors = priority
     ? {
-        backgroundColor: priorityColor + "15",
-        borderColor: priorityColor + "30",
-      }
+      backgroundColor: priorityColor + "15"
+    }
     : {};
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
@@ -2005,7 +2520,7 @@ export function SyllabusItemCard({
       className={twMerge(
         "in-[.print]:scheme-light",
         "rounded-lg flex flex-row items-start justify-between shrink-0",
-        "bg-quinary border-none text-primary",
+        "bg-quinary text-primary",
         "relative",
         isLocked ? "cursor-default" : "cursor-grab",
         // For hovering contextual btns
@@ -2015,6 +2530,7 @@ export function SyllabusItemCard({
           : slim
             ? "px-4 py-2.5 gap-4"
             : "px-4 py-4 gap-4",
+        isZoteroSelected && "outline-2! outline-accent-blue",
         isSelected && "bg-accent-blue! scheme-dark",
         // assignmentStatus === "done" ? "opacity-40" : "",
       )}
@@ -2023,6 +2539,8 @@ export function SyllabusItemCard({
       onClick={(e) => {
         if (customOnClick) {
           customOnClick(item, e);
+        } else if (onIdentifierClick) {
+          onIdentifierClick(item, assignment?.id, e);
         } else {
           onClick(item, e);
         }
@@ -2228,7 +2746,7 @@ export function SyllabusItemCard({
           </div>
         )}
       </div>
-      {hasAssignment && !isLocked && (
+      {!isLocked && (
         <div
           className={twMerge(
             "flex-row gap-2 hidden group-hover:flex absolute top-full left-1/2 -translate-x-1/2 p-2 pt-0 bg-quinary rounded-b-lg z-10 in-[.print]:hidden!",
@@ -2236,112 +2754,80 @@ export function SyllabusItemCard({
           )}
           style={colors}
         >
-          <div className="focus-states-target">
-            <button
-              className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
-              onClick={async (e) => {
-                e.stopPropagation();
-                try {
-                  // Use the specific assignment if available
-                  const assignmentToDuplicate = assignment;
-
-                  // Create duplicate with same metadata but new ID
-                  const duplicateMetadata: Partial<ItemSyllabusAssignment> = {
-                    classNumber: assignmentToDuplicate?.classNumber,
-                    priority: assignmentToDuplicate?.priority,
-                    classInstruction: assignmentToDuplicate?.classInstruction,
-                  };
-
-                  await SyllabusManager.addClassAssignment(
-                    item,
-                    collectionId,
-                    duplicateMetadata.classNumber,
-                    duplicateMetadata,
-                    "page",
-                  );
-                  await item.saveTx();
-                } catch (err) {
-                  ztoolkit.log("Error duplicating assignment:", err);
-                }
-              }}
-              title="Create duplicate assignment"
-              aria-label="Create duplicate assignment"
-            >
-              <span
-                className="syllabus-action-icon"
-                style={{
-                  fontSize: "16px",
-                  lineHeight: "1",
-                }}
-              >
-                ⧉
-              </span>
-              <span className="syllabus-action-label">Duplicate</span>
-            </button>
-          </div>
-          <div className="focus-states-target">
-            <button
-              className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
-              onClick={async (e) => {
-                e.stopPropagation();
-                try {
-                  // Use the specific assignment ID if available
-                  if (assignment?.id) {
-                    await SyllabusManager.removeAssignmentById(
-                      item,
-                      collectionId,
-                      assignment.id,
-                      "page",
-                    );
-                  } else if (
-                    classNumber !== null &&
-                    classNumber !== undefined
-                  ) {
-                    // Fallback to classNumber-based removal
-                    await SyllabusManager.removeClassAssignment(
-                      item,
-                      collectionId,
-                      classNumber,
-                      "page",
-                    );
-                  } else {
-                    // No classNumber - remove all assignments (item is in "further reading")
-                    await SyllabusManager.removeAllAssignments(
-                      item,
-                      collectionId,
-                      "page",
-                    );
+          {assignment?.id && (
+            <>
+              <div className="focus-states-target">
+                <button
+                  className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      // Always pass identifier - handler will check if it's in selection
+                      if (onDuplicate) {
+                        const identifier = { assignmentId: assignment.id, itemId: undefined };
+                        await onDuplicate(identifier);
+                      }
+                    } catch (err) {
+                      ztoolkit.log("Error duplicating assignment:", err);
+                    }
+                  }}
+                  title="Create duplicate assignment"
+                  aria-label="Create duplicate assignment"
+                >
+                  <span
+                    className="syllabus-action-icon"
+                    style={{
+                      fontSize: "16px",
+                      lineHeight: "1",
+                    }}
+                  >
+                    ⧉
+                  </span>
+                  <span className="syllabus-action-label">Duplicate</span>
+                </button>
+              </div>
+              <div className="focus-states-target">
+                <button
+                  className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      // Always pass identifier - handler will check if it's in selection
+                      if (onDelete) {
+                        const identifier = { assignmentId: assignment.id, itemId: undefined };
+                        await onDelete(identifier);
+                      }
+                    } catch (err) {
+                      ztoolkit.log("Error deleting assignment:", err);
+                    }
+                  }}
+                  title={
+                    classNumber !== null && classNumber !== undefined
+                      ? "Remove from class"
+                      : "Remove from syllabus"
                   }
-                  await item.saveTx();
-                } catch (err) {
-                  ztoolkit.log("Error deleting assignment:", err);
-                }
-              }}
-              title={
-                classNumber !== null && classNumber !== undefined
-                  ? "Remove from class"
-                  : "Remove from syllabus"
-              }
-              aria-label={
-                classNumber !== null && classNumber !== undefined
-                  ? "Remove from class"
-                  : "Remove from syllabus"
-              }
-            >
-              <span
-                className="syllabus-action-icon"
-                style={{
-                  fontSize: "18px",
-                  lineHeight: "1",
-                  fontWeight: "bold",
-                }}
-              >
-                ×
-              </span>
-              <span className="syllabus-action-label">Unassign</span>
-            </button>
-          </div>
-          &middot;
+                  aria-label={
+                    classNumber !== null && classNumber !== undefined
+                      ? "Remove from class"
+                      : "Remove from syllabus"
+                  }
+                >
+                  <span
+                    className="syllabus-action-icon"
+                    style={{
+                      fontSize: "18px",
+                      lineHeight: "1",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    ×
+                  </span>
+                  <span className="syllabus-action-label">Unassign</span>
+                </button>
+              </div>
+              &middot;
+            </>
+          )}
           {(() => {
             const priorityOptions =
               SyllabusManager.getPrioritiesForCollection(collectionId);
@@ -2353,29 +2839,14 @@ export function SyllabusItemCard({
                       onClick={async (e) => {
                         e.stopPropagation();
                         try {
-                          SyllabusManager.invalidateSyllabusDataCache(item);
-                          if (assignment?.id) {
-                            await SyllabusManager.updateClassAssignment(
-                              item,
-                              collectionId,
-                              assignment.id,
-                              {
-                                priority: priorityOption.id as SyllabusPriority,
-                              },
-                              "page",
-                            );
-                          } else {
-                            await SyllabusManager.addClassAssignment(
-                              item,
-                              collectionId,
-                              assignment?.classNumber,
-                              {
-                                priority: priorityOption.id as SyllabusPriority,
-                              },
-                              "page",
+                          // Always pass identifier - handler will check if it's in selection
+                          if (onPriorityChange) {
+                            const identifier = { assignmentId: assignment?.id, itemId: assignment ? undefined : item.id };
+                            await onPriorityChange(
+                              priorityOption.id as SyllabusPriority,
+                              identifier,
                             );
                           }
-                          await item.saveTx();
                         } catch (err) {
                           ztoolkit.log("Error setting priority:", err);
                         }
@@ -2402,25 +2873,11 @@ export function SyllabusItemCard({
                   onClick={async (e) => {
                     e.stopPropagation();
                     try {
-                      SyllabusManager.invalidateSyllabusDataCache(item);
-                      if (assignment?.id) {
-                        await SyllabusManager.updateClassAssignment(
-                          item,
-                          collectionId,
-                          assignment.id,
-                          { priority: undefined },
-                          "page",
-                        );
-                      } else {
-                        await SyllabusManager.addClassAssignment(
-                          item,
-                          collectionId,
-                          assignment?.classNumber,
-                          { priority: undefined },
-                          "page",
-                        );
+                      // Always pass identifier - handler will check if it's in selection
+                      if (onPriorityChange) {
+                        const identifier = { assignmentId: assignment?.id, itemId: assignment ? undefined : item.id };
+                        await onPriorityChange(undefined, identifier);
                       }
-                      await item.saveTx();
                     } catch (err) {
                       ztoolkit.log("Error clearing priority:", err);
                     }

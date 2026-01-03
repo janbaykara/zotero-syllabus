@@ -5,6 +5,8 @@
   :root, :host {
     --color-red-400: oklch(70.4% 0.191 22.216);
     --color-red-500: oklch(63.7% 0.237 25.331);
+    --color-blue-500: oklch(62.3% 0.214 259.815);
+    --color-blue-600: oklch(54.6% 0.245 262.881);
     --color-gray-500: oklch(55.1% 0.027 264.364);
     --spacing: 0.25rem;
     --container-4xl: 56rem;
@@ -754,6 +756,9 @@
   .outline-2\! {
     outline-style: var(--tw-outline-style) !important;
     outline-width: 2px !important;
+  }
+  .outline-accent-blue {
+    outline-color: var(--color-accent-blue);
   }
   .outline-transparent {
     outline-color: transparent;
