@@ -1484,7 +1484,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         <div className="pb-12">
           <div
             syllabus-view-title-container
-            className="sticky top-0 z-20 bg-background py-1 md:pt-8 in-[.print]:static"
+            className="sticky top-0 z-40 bg-background py-1 md:pt-8 in-[.print]:static"
           >
             <div className="container-padded bg-background">
               {getPref("debugMode") && (
@@ -1957,7 +1957,7 @@ function ClassGroupComponent({
         <>
           <div
             className={twMerge(
-              "sticky z-10 bg-background py-2 in-[.print]:static top-18",
+              "sticky z-35 bg-background py-1 in-[.print]:static top-18",
             )}
           >
             <div
