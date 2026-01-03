@@ -1632,6 +1632,91 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                   />
                 </div>
                 <div className="inline-flex items-center gap-2.5 shrink grow-0">
+                  {!isLocked && (
+                    <>
+                      <div
+                        className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
+                        title={
+                          compactMode
+                            ? "Disable compact mode"
+                            : "Enable compact mode"
+                        }
+                        aria-label={
+                          compactMode
+                            ? "Disable compact mode"
+                            : "Enable compact mode"
+                        }
+                        onClick={toggleCompactMode}
+                      >
+                        {compactMode ? (
+                          <Maximize2
+                            size={20}
+                            className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                          />
+                        ) : (
+                          <Minimize2
+                            size={20}
+                            className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                          />
+                        )}
+                      </div>
+                      <div
+                        className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
+                        title={
+                          readerMode ? "Disable reader mode" : "Enable reader mode"
+                        }
+                        aria-label={
+                          readerMode ? "Disable reader mode" : "Enable reader mode"
+                        }
+                        onClick={toggleReaderMode}
+                      >
+                        {readerMode ? (
+                          <List
+                            size={20}
+                            className="text-primary hover:text-primary hover:bg-quinary rounded p-1"
+                          />
+                        ) : (
+                          <ListChecks
+                            size={20}
+                            className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                          />
+                        )}
+                      </div>
+                      <div
+                        className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
+                        title="Export syllabus file"
+                        aria-label="Export syllabus file"
+                        onClick={handleExport}
+                      >
+                        <Upload
+                          size={20}
+                          className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                        />
+                      </div>
+                      <div
+                        className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
+                        title="Import syllabus file"
+                        aria-label="Import syllabus file"
+                        onClick={handleImport}
+                      >
+                        <Download
+                          size={20}
+                          className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                        />
+                      </div>
+                      <div
+                        className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
+                        title="Edit syllabus settings"
+                        aria-label="Edit syllabus settings"
+                        onClick={() => setShowSettings(true)}
+                      >
+                        <Settings
+                          size={20}
+                          className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                        />
+                      </div>
+                    </>
+                  )}
                   <div
                     className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
                     title={isLocked ? "Unlock syllabus" : "Lock syllabus"}
@@ -1652,92 +1737,11 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                   </div>
                   <div
                     className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                    title={
-                      compactMode
-                        ? "Disable compact mode"
-                        : "Enable compact mode"
-                    }
-                    aria-label={
-                      compactMode
-                        ? "Disable compact mode"
-                        : "Enable compact mode"
-                    }
-                    onClick={toggleCompactMode}
-                  >
-                    {compactMode ? (
-                      <Maximize2
-                        size={20}
-                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                      />
-                    ) : (
-                      <Minimize2
-                        size={20}
-                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                      />
-                    )}
-                  </div>
-                  <div
-                    className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                    title={
-                      readerMode ? "Disable reader mode" : "Enable reader mode"
-                    }
-                    aria-label={
-                      readerMode ? "Disable reader mode" : "Enable reader mode"
-                    }
-                    onClick={toggleReaderMode}
-                  >
-                    {readerMode ? (
-                      <List
-                        size={20}
-                        className="text-primary hover:text-primary hover:bg-quinary rounded p-1"
-                      />
-                    ) : (
-                      <ListChecks
-                        size={20}
-                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                      />
-                    )}
-                  </div>
-                  <div
-                    className="cursor-pointer"
-                    title="Export syllabus file"
-                    aria-label="Export syllabus file"
-                    onClick={handleExport}
-                  >
-                    <Upload
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  </div>
-                  <div
-                    className="cursor-pointer"
-                    title="Import syllabus file"
-                    aria-label="Import syllabus file"
-                    onClick={handleImport}
-                  >
-                    <Download
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  </div>
-                  <div
-                    className="cursor-pointer"
                     title="Print the list in Syllabus view as a PDF"
                     aria-label="Print the list in Syllabus view as a PDF"
                     onClick={handlePrint}
                   >
                     <Printer
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  </div>
-                  <div
-                    className="cursor-pointer"
-                    title="Edit syllabus settings"
-                    aria-label="Edit syllabus settings"
-                    onClick={() => setShowSettings(true)}
-                  >
-                    <Settings
                       size={20}
                       className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
                     />
