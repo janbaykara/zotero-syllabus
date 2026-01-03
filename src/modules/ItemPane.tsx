@@ -399,108 +399,94 @@ function ItemPaneContent({
     return options;
   }, []);
 
-  const totalAssignments = useMemo(() => {
-    return allAssignmentsByCollection.reduce(
-      (sum, group) => sum + group.assignments.length,
-      0,
-    );
-  }, [allAssignmentsByCollection]);
-
   return (
     <div className="flex flex-col gap-2 pb-2">
-      {totalAssignments === 0 ? (
-        <div className="bg-background/50 rounded-md p-3 m-0 flex flex-col opacity-100 transition-opacity duration-200 space-y-3 *:not-last:pb-3 z-10"
-        >
-          No assignments for this item in any collection.
-        </div>
-      ) : (
-        allAssignmentsByCollection.map((group) => {
-          const isCurrentCollection = group.collectionId === currentCollectionId;
-          return (
-            <div key={group.collectionId} className="flex flex-col gap-2">
-              {/* Collection Heading */}
-              <header className={twMerge(
-                "sticky top-0 bg-background-sidepane z-20 py-2",
-                !isCurrentCollection && "mt-2! border-t-2! border-quinary"
-              )}>
-                <span className="text-xs font-normal text-secondary uppercase tracking-wide">
-                  {isCurrentCollection ? "current view" : "also assigned to"}
-                </span>
-                <div
-                  className={twMerge(
-                    "text-primary flex items-center gap-2 hover:cursor-pointer hover:bg-quinary active:bg-quarternary rounded-md p-1 -m-1",
-                    isCurrentCollection ? "font-semibold" : "font-medium"
-                  )}
-                  onClick={() => {
-                    const ZoteroPane = ztoolkit.getGlobal("ZoteroPane");
-                    const collectionsView = ZoteroPane.collectionsView;
-                    if (collectionsView) {
-                      collectionsView.selectByID(group.collection.treeViewID);
-                      // Do not try to view deleted items in a collection.
-                      // They do not appear outside of trash, and selecting a deleted item
-                      // will re-open trash in collectionTree.
-                      if (!itemVersion.item.deleted) {
-                        ZoteroPane.selectItem(itemVersion.item.id);
-                      }
+      {allAssignmentsByCollection.map((group) => {
+        const isCurrentCollection = group.collectionId === currentCollectionId;
+        return (
+          <div key={group.collectionId} className="flex flex-col gap-2">
+            {/* Collection Heading */}
+            <header className={twMerge(
+              "sticky top-0 bg-background-sidepane z-20 py-2",
+              !isCurrentCollection && "mt-2! border-t-2! border-quinary"
+            )}>
+              <span className="text-xs font-normal text-secondary uppercase tracking-wide">
+                {isCurrentCollection ? "current view" : "also assigned to"}
+              </span>
+              <div
+                className={twMerge(
+                  "text-primary flex items-center gap-2 hover:cursor-pointer hover:bg-quinary active:bg-quarternary rounded-md p-1 -m-1",
+                  isCurrentCollection ? "font-semibold" : "font-medium"
+                )}
+                onClick={() => {
+                  const ZoteroPane = ztoolkit.getGlobal("ZoteroPane");
+                  const collectionsView = ZoteroPane.collectionsView;
+                  if (collectionsView) {
+                    collectionsView.selectByID(group.collection.treeViewID);
+                    // Do not try to view deleted items in a collection.
+                    // They do not appear outside of trash, and selecting a deleted item
+                    // will re-open trash in collectionTree.
+                    if (!itemVersion.item.deleted) {
+                      ZoteroPane.selectItem(itemVersion.item.id);
+                    }
+                  }
+                }}
+              >
+                <span className="icon icon-css icon-collection size-[16px]"></span>
+                <span>{group.collectionName}</span>
+              </div>
+            </header>
+
+            {/* Assignments for this collection */}
+            {group.assignments.map((assignment, index) => {
+              if (!assignment.id) {
+                return null;
+              }
+
+              return (
+                <AssignmentEditor
+                  key={assignment.id}
+                  assignment={assignment}
+                  assignmentIndex={index}
+                  collectionId={group.collectionId}
+                  editable={editable}
+                  isSaving={isSaving}
+                  priorityOptions={getPriorityOptions(group.collectionId)}
+                  onPriorityChange={handlePriorityChange}
+                  onClassNumberChange={handleClassNumberChange}
+                  onInstructionChange={handleInstructionChange}
+                  onStatusChange={handleStatusChange}
+                  onDelete={handleDeleteAssignment}
+                  onDuplicate={handleDuplicateAssignment}
+                />
+              );
+            })}
+
+            {/* Create New Assignment Button for this collection */}
+            {editable && (
+              <div>
+                <button
+                  onClick={() => handleCreateAssignment(itemVersion, group.collectionId)}
+                  disabled={isSaving}
+                  className="px-2 py-1 text-xs font-medium"
+                  onMouseEnter={(e) => {
+                    if (!isSaving) {
+                      (e.currentTarget as HTMLElement).style.backgroundColor =
+                        "var(--fill-quinary)";
                     }
                   }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.backgroundColor =
+                      "transparent";
+                  }}
                 >
-                  <span className="icon icon-css icon-collection size-[16px]"></span>
-                  <span>{group.collectionName}</span>
-                </div>
-              </header>
-
-              {/* Assignments for this collection */}
-              {group.assignments.map((assignment, index) => {
-                if (!assignment.id) {
-                  return null;
-                }
-
-                return (
-                  <AssignmentEditor
-                    key={assignment.id}
-                    assignment={assignment}
-                    assignmentIndex={index}
-                    collectionId={group.collectionId}
-                    editable={editable}
-                    isSaving={isSaving}
-                    priorityOptions={getPriorityOptions(group.collectionId)}
-                    onPriorityChange={handlePriorityChange}
-                    onClassNumberChange={handleClassNumberChange}
-                    onInstructionChange={handleInstructionChange}
-                    onStatusChange={handleStatusChange}
-                    onDelete={handleDeleteAssignment}
-                    onDuplicate={handleDuplicateAssignment}
-                  />
-                );
-              })}
-
-              {/* Create New Assignment Button for this collection */}
-              {editable && (
-                <div>
-                  <button
-                    onClick={() => handleCreateAssignment(itemVersion, group.collectionId)}
-                    disabled={isSaving}
-                    className="px-2 py-1 text-xs font-medium"
-                    onMouseEnter={(e) => {
-                      if (!isSaving) {
-                        (e.currentTarget as HTMLElement).style.backgroundColor =
-                          "var(--fill-quinary)";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.backgroundColor =
-                        "transparent";
-                    }}
-                  >
-                    + Create assignment
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })
-      )}
+                  + Create assignment
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
