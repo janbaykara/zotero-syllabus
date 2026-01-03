@@ -77,13 +77,13 @@ export type { GetByLibraryAndKeyArgs };
 
 const tabManager = FEATURE_FLAG.READING_SCHEDULE
   ? new TabManager<Record<string, never>>({
-      type: "reading-list",
-      title: "Reading Schedule",
-      rootElementIdFactory: () => "reading-list-tab-root",
-      data: { icon: "book" },
-      componentFactory: () => h(ReadingSchedule, {}),
-      getTabId: () => "syllabus-reading-list-tab",
-    })
+    type: "reading-list",
+    title: "Reading Schedule",
+    rootElementIdFactory: () => "reading-list-tab-root",
+    data: { icon: "book" },
+    componentFactory: () => h(ReadingSchedule, {}),
+    getTabId: () => "syllabus-reading-list-tab",
+  })
   : null;
 
 export class SyllabusManager {
@@ -542,6 +542,8 @@ export class SyllabusManager {
     // setupPage() renders the React component for the current collection
     // After initial render, React stores handle all updates automatically
     SyllabusManager.setupPage();
+    // Also reload ItemPane for hot reload support
+    SyllabusManager.reloadItemPane();
   }
 
   // Function to get/set syllabus view toggle state (per collection)
@@ -1057,9 +1059,9 @@ export class SyllabusManager {
             const classTitle =
               classNumber !== undefined
                 ? SyllabusManager.getClassTitle(
-                    selectedCollection.id,
-                    classNumber,
-                  )
+                  selectedCollection.id,
+                  classNumber,
+                )
                 : "";
             const priority = firstAssignment.priority || "";
             return `${sortKey}|${priority}|${classNumber ?? ""}|${classTitle}|${selectedCollection.id}`;
@@ -1273,7 +1275,7 @@ export class SyllabusManager {
     this.destroyItemPaneSection();
     setTimeout(() => {
       this.registerSyllabusItemPaneSection();
-    }, 100);
+    }, 1000);
   }
 
   static destroyItemPaneSection() {
@@ -1320,14 +1322,14 @@ export class SyllabusManager {
           body,
           selectedCollection
             ? h(ItemPane, {
-                item,
-                collectionId: selectedCollection.id,
-                editable,
-              })
+              item,
+              collectionId: selectedCollection.id,
+              editable,
+            })
             : h("div", {
-                innerText: "Select a collection to view syllabus assignments",
-                className: "text-center text-gray-500 p-4",
-              }),
+              innerText: "Select a collection to view syllabus assignments",
+              className: "text-center text-gray-500 p-4",
+            }),
           "syllabus-item-pane",
         );
       },
@@ -1390,18 +1392,18 @@ export class SyllabusManager {
     // Get collection-specific priority options if a collection is selected
     const priorityOptions = selectedCollection
       ? (() => {
-          const customPriorities = this.getPrioritiesForCollection(
-            selectedCollection.id,
-          );
-          const options = customPriorities.map((p) => ({
-            value: p.id,
-            label: p.name,
-            color: p.color,
-          }));
-          // Add "(None)" option
-          options.push({ value: "", label: "(None)", color: "" });
-          return options;
-        })()
+        const customPriorities = this.getPrioritiesForCollection(
+          selectedCollection.id,
+        );
+        const options = customPriorities.map((p) => ({
+          value: p.id,
+          label: p.name,
+          color: p.color,
+        }));
+        // Add "(None)" option
+        options.push({ value: "", label: "(None)", color: "" });
+        return options;
+      })()
       : this.getPriorityOptions();
 
     ztoolkit.Menu.register("item", {
@@ -1651,7 +1653,7 @@ export class SyllabusManager {
     }
     const assignments =
       data[
-        this.getCollectionReferenceString(normalized.libraryID, normalized.key)
+      this.getCollectionReferenceString(normalized.libraryID, normalized.key)
       ];
     if (!assignments || !Array.isArray(assignments)) {
       return [];
@@ -2068,7 +2070,7 @@ export class SyllabusManager {
       // This ensures OPTIONAL ("optional") sorts before unprioritized ("zzzz")
       assignment.priority || "zzzz",
       assignment.classInstruction?.slice(0, 4).replace(/[^a-zA-Z0-9]/g, "_") ||
-        "",
+      "",
       assignment.id || "",
     );
 

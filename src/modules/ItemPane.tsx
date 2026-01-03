@@ -7,6 +7,8 @@ import {
   ItemSyllabusAssignment,
 } from "./syllabus";
 import { useZoteroItemAssignments } from "./react-zotero-sync/itemAssignments";
+import { Square, SquareCheck } from "lucide-preact";
+import { twMerge } from 'tailwind-merge';
 
 interface ItemPaneProps {
   item: Zotero.Item;
@@ -16,6 +18,7 @@ interface ItemPaneProps {
 
 interface AssignmentEditorProps {
   assignment: ItemSyllabusAssignment;
+  assignmentIndex: number;
   collectionId: number;
   editable: boolean;
   isSaving: boolean;
@@ -251,7 +254,7 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
           No assignments for this item in this collection.
         </div>
       ) : (
-        assignments.map((assignment) => {
+        assignments.map((assignment, index) => {
           // REQUIRE assignment ID - if missing, skip this assignment
           if (!assignment.id) {
             ztoolkit.log(
@@ -265,6 +268,7 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
             <AssignmentEditor
               key={assignment.id}
               assignment={assignment}
+              assignmentIndex={index}
               collectionId={collectionId}
               editable={editable}
               isSaving={isSaving}
@@ -319,6 +323,7 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
 
 function AssignmentEditor({
   assignment,
+  assignmentIndex,
   collectionId,
   editable,
   isSaving,
@@ -346,47 +351,18 @@ function AssignmentEditor({
   const isDone = assignmentStatus === "done";
 
   return (
-    <div
-      style={{
-        border: "1px solid var(--fill-quinary)",
-        borderRadius: "6px",
-        padding: "16px",
-        margin: "0",
-        display: "flex",
-        flexDirection: "column",
-        opacity: isDone ? 0.6 : 1,
-        transition: "opacity 0.2s ease",
-      }}
-      className='bg-quinary/50'
+    <div className="border border-quinary rounded-md p-3 m-0 flex flex-col opacity-100 transition-opacity duration-200 bg-background divide-y-2 divide-quinary space-y-3 *:not-last:pb-3"
     >
       {/* Header with class info and status */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "12px",
-        }}
-      >
-        <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex-1 min-w-0">
           {assignment.classNumber !== undefined ? (
-            <div
-              style={{
-                fontSize: "13px",
-                fontWeight: "600",
-                color: "var(--fill-primary)",
-                marginBottom: "2px",
-              }}
-            >
-              {classTitle}
+            <div>
+              Assignment #{assignmentIndex + 1} {classTitle ? <span>for <span>{classTitle}</span></span> : null}
             </div>
           ) : (
             <div
-              style={{
-                fontSize: "13px",
-                fontWeight: "600",
-                color: "var(--fill-secondary)",
-              }}
+              className="text-sm font-medium text-secondary"
             >
               Unassigned
             </div>
@@ -399,22 +375,13 @@ function AssignmentEditor({
               onStatusChange(assignment.id!, isDone ? null : "done")
             }
             disabled={isSaving}
-            style={{
-              padding: "4px 8px",
-              fontSize: "12px",
-              fontWeight: "500",
-              color: isDone
-                ? "var(--fill-primary)"
-                : "var(--fill-secondary)",
-              backgroundColor: isDone
-                ? "var(--fill-quinary)"
-                : "transparent",
-              border: "none",
-              borderRadius: "4px",
-              cursor: isSaving ? "not-allowed" : "pointer",
-              opacity: isSaving ? 0.5 : 1,
-              transition: "all 0.15s ease",
-            }}
+            className={twMerge(
+              "px-2 py-1 text-xs font-medium",
+              isDone ? "bg-quinary" : "bg-transparent",
+              isDone ? "border-quinary" : "border-transparent",
+              isDone ? "text-primary" : "text-secondary",
+              isSaving ? "opacity-30 cursor-not-allowed" : "opacity-100 cursor-pointer",
+            )}
             onMouseEnter={(e) => {
               if (!isSaving) {
                 (e.currentTarget as HTMLElement).style.backgroundColor =
@@ -428,26 +395,17 @@ function AssignmentEditor({
             }}
             title={isDone ? "Mark as not done" : "Mark as done"}
           >
-            {isDone ? "✓ Done" : "Mark done"}
+            {isDone ? <span className="flex items-center gap-2">Done<SquareCheck className="w-5 h-5" /></span> : <span className="flex items-center gap-2">Mark done <Square className="w-5 h-5" /></span>}
           </button>
         )}
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "12px",
-        }}
-      >
-        {/* Class Number */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "2px",
-          }}
-        >
+      {/* Class Number */}
+      <div className="flex items-center gap-3 justify-between">
+        <label>
+          {singularCapitalized}
+        </label>
+        <div className="text-center text-2xl font-bold box-border ml-auto">
           <input
             type="number"
             min="1"
@@ -466,233 +424,7 @@ function AssignmentEditor({
               }
               onClassNumberChange(assignment.id!, classNum);
             }}
-            style={{
-              padding: "3px 8px 18px",
-              fontSize: "28px",
-              fontWeight: "600",
-              border: "1px solid transparent",
-              borderRadius: "4px",
-              backgroundColor: "var(--color-background)",
-              color: "var(--fill-primary)",
-              width: "36%",
-              textAlign: "center",
-              transition: "border-color 0.15s ease",
-              margin: "0 auto",
-              boxSizing: "border-box",
-            }}
-            onFocus={(e) => {
-              if (editable && !isSaving) {
-                (e.currentTarget as HTMLElement).style.borderColor =
-                  "var(--color-accent-blue)";
-              }
-            }}
-            onBlur={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor =
-                "transparent";
-            }}
-          />
-          <label
-            style={{
-              fontSize: "11px",
-              fontWeight: "500",
-              color: "var(--fill-secondary)",
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
-              textAlign: "center",
-              marginTop: "-20px",
-            }}
-          >
-            {singularCapitalized} Number
-          </label>
-        </div>
-
-        {/* Priority - Dropdown and Quick Buttons */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "4px",
-          }}
-        >
-          <label
-            style={{
-              fontSize: "11px",
-              fontWeight: "500",
-              color: "var(--fill-secondary)",
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
-            }}
-          >
-            Priority
-          </label>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "8px",
-            }}
-          >
-            {/* Quick Priority Buttons */}
-            {editable && (
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "6px",
-                }}
-              >
-                {priorityOptions
-                  .filter((opt) => opt.value !== "")
-                  .map((opt) => {
-                    const isSelected = opt.value === (assignment.priority || "");
-                    return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() =>
-                          onPriorityChange(
-                            assignment.id!,
-                            isSelected ? ("" as any) : (opt.value as any),
-                          )
-                        }
-                        disabled={isSaving}
-                        style={{
-                          padding: "4px 8px",
-                          fontSize: "11px",
-                          fontWeight: "500",
-                          color: isSelected
-                            ? opt.color || "var(--fill-primary)"
-                            : "var(--fill-secondary)",
-                          backgroundColor: isSelected
-                            ? opt.color
-                              ? `${opt.color}15`
-                              : "var(--fill-quinary)"
-                            : "transparent",
-                          border: isSelected
-                            ? `1px solid ${opt.color || "var(--fill-quinary)"}`
-                            : "1px solid transparent",
-                          borderRadius: "4px",
-                          cursor: isSaving ? "not-allowed" : "pointer",
-                          opacity: isSaving ? 0.5 : 1,
-                          transition: "all 0.15s ease",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isSaving && !isSelected) {
-                            (e.currentTarget as HTMLElement).style.backgroundColor =
-                              "var(--fill-quinary)";
-                            (e.currentTarget as HTMLElement).style.borderColor =
-                              "var(--fill-quinary)";
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isSelected) {
-                            (e.currentTarget as HTMLElement).style.backgroundColor =
-                              "transparent";
-                            (e.currentTarget as HTMLElement).style.borderColor =
-                              "transparent";
-                          }
-                        }}
-                        title={opt.label}
-                      >
-                        {opt.color && (
-                          <span
-                            style={{
-                              width: "8px",
-                              height: "8px",
-                              borderRadius: "50%",
-                              backgroundColor: opt.color,
-                              display: "inline-block",
-                            }}
-                          />
-                        )}
-                        {opt.label}
-                      </button>
-                    );
-                  })}
-                <button
-                  type="button"
-                  onClick={() => onPriorityChange(assignment.id!, "" as any)}
-                  disabled={isSaving || !assignment.priority}
-                  style={{
-                    padding: "4px 8px",
-                    fontSize: "11px",
-                    fontWeight: "500",
-                    color: "var(--fill-secondary)",
-                    backgroundColor: "transparent",
-                    border: "1px solid transparent",
-                    borderRadius: "4px",
-                    cursor: isSaving || !assignment.priority ? "not-allowed" : "pointer",
-                    opacity: isSaving || !assignment.priority ? 0.3 : 1,
-                    transition: "all 0.15s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isSaving && assignment.priority) {
-                      (e.currentTarget as HTMLElement).style.backgroundColor =
-                        "var(--fill-quinary)";
-                      (e.currentTarget as HTMLElement).style.borderColor =
-                        "var(--fill-quinary)";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.backgroundColor =
-                      "transparent";
-                    (e.currentTarget as HTMLElement).style.borderColor =
-                      "transparent";
-                  }}
-                  title="Clear priority"
-                >
-                  Clear
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Instructions */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "4px",
-          }}
-        >
-          <label
-            style={{
-              fontSize: "11px",
-              fontWeight: "500",
-              color: "var(--fill-secondary)",
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
-            }}
-          >
-            Instructions
-          </label>
-          <textarea
-            disabled={!editable || isSaving}
-            rows={3}
-            value={assignment.classInstruction || ""}
-            onChange={(e) => {
-              const target = e.target as HTMLTextAreaElement;
-              onInstructionChange(assignment.id!, target.value);
-            }}
-            placeholder="Add instructions for this assignment..."
-            style={{
-              padding: "6px 8px",
-              fontSize: "13px",
-              width: "100%",
-              border: "1px solid transparent",
-              boxSizing: "border-box",
-              borderRadius: "5px",
-              backgroundColor: "var(--color-background)",
-              color: "var(--fill-primary)",
-              resize: "vertical",
-              fontFamily: "inherit",
-              minHeight: "60px",
-              transition: "border-color 0.15s ease",
-            }}
+            className="border border-quinary rounded-md p-2 mr-0! w-auto"
             onFocus={(e) => {
               if (editable && !isSaving) {
                 (e.currentTarget as HTMLElement).style.borderColor =
@@ -705,89 +437,126 @@ function AssignmentEditor({
             }}
           />
         </div>
-
-        {/* Action Buttons */}
-        {editable && (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              paddingTop: "4px",
-              position: "relative",
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => onDuplicate(assignment.id!)}
-              disabled={isSaving}
-              style={{
-                padding: "6px 10px",
-                fontSize: "10px",
-                fontWeight: "500",
-                color: "var(--fill-primary)",
-                backgroundColor: "transparent",
-                border: "none",
-                borderRadius: "5px",
-                boxSizing: "border-box",
-                cursor: isSaving ? "not-allowed" : "pointer",
-                opacity: isSaving ? 0.5 : 1,
-                transition: "background-color 0.15s ease",
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-              }}
-              onMouseEnter={(e) => {
-                if (!isSaving) {
-                  (e.currentTarget as HTMLElement).style.backgroundColor =
-                    "var(--fill-quinary)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.backgroundColor =
-                  "transparent";
-              }}
-              title="Duplicate assignment"
-            >
-              <span style={{ fontSize: "18px", lineHeight: "1" }}>⧉</span>
-              <span style={{ fontSize: "12px" }}>Duplicate</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onDelete(assignment.id!)}
-              disabled={isSaving}
-              style={{
-                padding: "6px 10px",
-                fontSize: "16px",
-                fontWeight: "500",
-                color: "var(--fill-error)",
-                backgroundColor: "transparent",
-                border: "none",
-                borderRadius: "4px",
-                cursor: isSaving ? "not-allowed" : "pointer",
-                opacity: isSaving ? 0.5 : 1,
-                transition: "background-color 0.15s ease",
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-              }}
-              onMouseEnter={(e) => {
-                if (!isSaving) {
-                  (e.currentTarget as HTMLElement).style.backgroundColor =
-                    "var(--fill-error)15";
-                }
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.backgroundColor =
-                  "transparent";
-              }}
-              title="Delete assignment"
-            >
-              <span style={{ fontSize: "18px", lineHeight: "1" }}>×</span>
-              <span style={{ fontSize: "12px" }}>Delete</span>
-            </button>
-          </div>
-        )}
       </div>
+
+      {/* Priority - Dropdown and Quick Buttons */}
+      <div className="flex flex-col gap-3"
+      >
+        <label className="text-xs font-medium text-secondary uppercase tracking-wide">
+          Priority
+        </label>
+        <div className="flex flex-col gap-2">
+          {/* Quick Priority Buttons */}
+          {editable && (
+            <div className="flex flex-wrap gap-2">
+              {priorityOptions
+                .filter((opt) => opt.value !== "")
+                .map((opt) => {
+                  const isSelected = opt.value === (assignment.priority || "");
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() =>
+                        onPriorityChange(
+                          assignment.id!,
+                          isSelected ? ("" as any) : (opt.value as any),
+                        )
+                      }
+                      disabled={isSaving}
+                      className={twMerge(
+                        "px-2 py-1 text-xs font-medium inline-flex flex-row gap-2 items-center flex-nowrap",
+                        "hover:bg-quinary hover:border-quinary hover:text-primary rounded-md",
+                        isSelected ? "bg-quinary" : "bg-transparent",
+                        isSelected ? "border-quinary" : "border-transparent",
+                        isSelected ? "text-primary" : "text-secondary",
+                        isSaving ? "opacity-30 cursor-not-allowed" : "opacity-100 cursor-pointer",
+                      )}
+                      title={opt.label}
+                    >
+                      {opt.color && (
+                        <span
+                          className="w-2 h-2 rounded-full inline-block"
+                          style={{ backgroundColor: opt.color }}
+                        />
+                      )}
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              <button
+                type="button"
+                onClick={() => onPriorityChange(assignment.id!, "" as any)}
+                disabled={isSaving || !assignment.priority}
+                className={twMerge(
+                  "px-2 py-1 text-xs font-medium text-secondary bg-transparent border border-transparent rounded-md cursor-pointer transition-all duration-150 opacity-30 hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-50",
+                  isSaving || !assignment.priority ? "opacity-30 cursor-not-allowed" : "opacity-100 cursor-pointer",
+                )}
+                title="Clear priority"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Instructions */}
+      <div
+        className="flex flex-col gap-1"
+      >
+        <label
+          className="text-xs font-medium text-secondary uppercase tracking-wide"
+        >
+          Instructions
+        </label>
+        <textarea
+          disabled={!editable || isSaving}
+          rows={3}
+          value={assignment.classInstruction || ""}
+          onChange={(e) => {
+            const target = e.target as HTMLTextAreaElement;
+            onInstructionChange(assignment.id!, target.value);
+          }}
+          placeholder="Add instructions for this assignment..."
+          className="p-2 w-full border border-transparent rounded-md bg-background text-primary resize-vertical font-inherit min-h-15 transition-border-color duration-150"
+        />
+      </div>
+
+      {/* Action Buttons */}
+      {editable && (
+        <div
+          className="flex justify-between relative flex-0"
+        >
+          <button
+            type="button"
+            onClick={() => onDuplicate(assignment.id!)}
+            disabled={isSaving}
+            className={twMerge(
+              "px-2 py-1 text-xs font-medium",
+              "inline-flex flex-row gap-2 items-center flex-nowrap",
+            )}
+            title="Duplicate assignment"
+          >
+            <span className="text-2xl leading-none">⧉</span>
+            <span className="text-sm">Duplicate</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(assignment.id!)}
+            disabled={isSaving}
+            className={twMerge(
+              "px-2 py-1 text-xs font-medium transition-all duration-150 opacity-30 hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-50",
+              "inline-flex flex-row gap-2 items-center flex-nowrap",
+              isSaving ? "opacity-30 cursor-not-allowed" : "opacity-100 cursor-pointer",
+            )}
+            title="Delete assignment"
+          >
+            <span className="text-2xl leading-none">×</span>
+            <span className="text-sm">Delete</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
