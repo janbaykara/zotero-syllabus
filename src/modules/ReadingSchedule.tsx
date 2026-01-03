@@ -240,7 +240,7 @@ export function ReadingSchedule() {
   return (
     <div className="syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background">
       <div className="pb-12">
-        <div className="sticky top-0 z-20 bg-background py-1 md:pt-8">
+        <div className="sticky top-0 z-20 bg-background py-1 pt-4 md:pt-8">
           <div className="container-padded bg-background">
             <div className={twMerge("font-semibold text-3xl")}>
               Reading Schedule
@@ -267,7 +267,7 @@ export function ReadingSchedule() {
                 <div
                   className={twMerge(
                     "container-padded",
-                    "text-3xl sticky top-16 z-10 py-2 bg-background text-tertiary",
+                    "text-3xl sticky top-12 md:top-16 z-10 py-2 bg-background text-tertiary",
                   )}
                 >
                   <WeekHeader weekStartDate={weekStartDate} />
@@ -426,8 +426,8 @@ export function ReadingSchedule() {
                                             compactMode ||
                                             !priority ||
                                             priority ===
-                                              SyllabusManager.priorityKeys
-                                                .OPTIONAL
+                                            SyllabusManager.priorityKeys
+                                              .OPTIONAL
                                           }
                                           compactMode={compactMode}
                                           isLocked={true}

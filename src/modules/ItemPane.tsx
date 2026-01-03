@@ -615,7 +615,7 @@ function AssignmentEditor({
               // ztoolkit.log("Invalid class number:", value, inputRef.value);
             }
           }}
-          className="w-full border-0 hover:not-focus:bg-quinary hover:not-focus:cursor-pointer px-1.5! m-0! box-border text-2xl! font-bold! text-left! text-secondary -my-1.5!"
+          className="w-full border-0 hover:not-focus:bg-quinary hover:not-focus:cursor-pointer px-1.5! m-0! box-border text-2xl! font-medium! text-left! -my-1.5!"
         />
       </div>
 
@@ -697,7 +697,7 @@ function AssignmentEditor({
             onInstructionChange(assignment.id!, collectionId, target.value);
           }}
           placeholder="Add instructions for this assignment..."
-          className="-mt-2 p-2 w-full border border-transparent rounded-md bg-background text-primary resize-vertical font-inherit min-h-15 transition-border-color duration-150 box-border hover:not-focus:bg-quinary hover:not-focus:cursor-pointer"
+          className="-my-2 p-2 w-full border border-transparent rounded-md bg-background text-primary resize-vertical font-inherit min-h-15 transition-border-color duration-150 box-border hover:not-focus:bg-quinary hover:not-focus:cursor-pointer"
         />
       </div>
 

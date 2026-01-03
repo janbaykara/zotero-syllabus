@@ -2086,7 +2086,7 @@ function ClassGroupComponent({
         <>
           <div
             className={twMerge(
-              "sticky z-35 bg-background py-1 in-[.print]:static top-18",
+              "sticky z-35 bg-background py-1 in-[.print]:static top-10 md:top-18",
             )}
           >
             <div
@@ -2433,34 +2433,34 @@ function TextInput({
         onChange: readOnly
           ? undefined
           : (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-              setValue((e.target as HTMLInputElement).value),
+            setValue((e.target as HTMLInputElement).value),
         onBlur: readOnly ? undefined : () => save(value),
         onKeyDown: readOnly
           ? undefined
           : (
-              e: JSX.TargetedKeyboardEvent<
-                HTMLInputElement | HTMLTextAreaElement
-              >,
-            ) => {
-              if (e.key === "Escape" || e.key === "Enter") {
-                e.preventDefault();
-                e.currentTarget.blur();
-                save(value);
-              }
-            },
+            e: JSX.TargetedKeyboardEvent<
+              HTMLInputElement | HTMLTextAreaElement
+            >,
+          ) => {
+            if (e.key === "Escape" || e.key === "Enter") {
+              e.preventDefault();
+              e.currentTarget.blur();
+              save(value);
+            }
+          },
         onSelect: readOnly
           ? (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-              e.preventDefault();
-              e.currentTarget.setSelectionRange(0, 0);
-            }
+            e.preventDefault();
+            e.currentTarget.setSelectionRange(0, 0);
+          }
           : undefined,
         onClick: readOnly
           ? (
-              e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
-            ) => {
-              e.preventDefault();
-              e.currentTarget.blur();
-            }
+            e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
+          ) => {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
           : undefined,
         placeholder: readOnly ? undefined : placeholder || "Click to edit",
         className: twMerge(
@@ -2622,9 +2622,9 @@ export function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-      item: Zotero.Item;
-      type: "pdf" | "snapshot" | "epub";
-    }>;
+        item: Zotero.Item;
+        type: "pdf" | "snapshot" | "epub";
+      }>;
   }, [item, slim]);
 
   const metadataParts = [
@@ -2768,8 +2768,8 @@ export function SyllabusItemCard({
 
   const colors = priority
     ? {
-        backgroundColor: priorityColor + "15",
-      }
+      backgroundColor: priorityColor + "15",
+    }
     : {};
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
@@ -2836,8 +2836,8 @@ export function SyllabusItemCard({
             ? "px-4 py-2.5 gap-4"
             : "px-4 py-4 gap-4",
         isZoteroSelected &&
-          !isIdentifierSelected &&
-          "outline-2! outline-accent-blue",
+        !isIdentifierSelected &&
+        "outline-2! outline-accent-blue",
         isIdentifierSelected && "bg-accent-blue! scheme-dark",
         // isZoteroSelected && isIdentifierSelected && "outline-none!",
         // assignmentStatus === "done" ? "opacity-40" : "",
@@ -2997,63 +2997,65 @@ export function SyllabusItemCard({
           </>
         )}
       </div>
-      <div
-        className="syllabus-item-actions shrink-0 inline-flex flex-col gap-1 in-[.print]:hidden"
-        draggable={false}
-      >
-        {/* Delete assignment button - only show if there's an assignment */}
-        {viewableAttachments.map((viewableAttachment) => {
-          const attachmentLabel =
-            viewableAttachment?.type === "pdf"
-              ? "PDF"
-              : viewableAttachment?.type === "snapshot"
-                ? "Snapshot"
-                : viewableAttachment?.type === "epub"
-                  ? "EPUB"
-                  : "View";
+      {!!viewableAttachments?.length && (
+        <div
+          className="syllabus-item-actions shrink-0 inline-flex flex-col gap-1 in-[.print]:hidden"
+          draggable={false}
+        >
+          {/* Delete assignment button - only show if there's an assignment */}
+          {viewableAttachments.map((viewableAttachment) => {
+            const attachmentLabel =
+              viewableAttachment?.type === "pdf"
+                ? "PDF"
+                : viewableAttachment?.type === "snapshot"
+                  ? "Snapshot"
+                  : viewableAttachment?.type === "epub"
+                    ? "EPUB"
+                    : "View";
 
-          return (
-            <div className="focus-states-target in-[.print]:hidden">
+            return (
+              <div className="focus-states-target in-[.print]:hidden">
+                <button
+                  className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
+                  onClick={() => handleAttachmentClick(viewableAttachment)}
+                  title={`Open ${attachmentLabel}`}
+                  aria-label={`Open ${attachmentLabel}`}
+                >
+                  <span
+                    className="syllabus-action-icon icon icon-css icon-attachment-type"
+                    data-item-type={
+                      viewableAttachment.type === "pdf"
+                        ? "attachmentPDF"
+                        : viewableAttachment.type === "epub"
+                          ? "attachmentEPUB"
+                          : "attachmentSnapshot"
+                    }
+                    aria-label={`Open ${attachmentLabel}`}
+                  />
+                  <span className="syllabus-action-label">{attachmentLabel}</span>
+                </button>
+              </div>
+            );
+          })}
+          {url && (
+            <div className="focus-states-target print:hidden">
               <button
                 className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
-                onClick={() => handleAttachmentClick(viewableAttachment)}
-                title={`Open ${attachmentLabel}`}
-                aria-label={`Open ${attachmentLabel}`}
+                onClick={handleUrlClick}
+                title="Open URL"
+                aria-label="Open URL"
               >
                 <span
                   className="syllabus-action-icon icon icon-css icon-attachment-type"
-                  data-item-type={
-                    viewableAttachment.type === "pdf"
-                      ? "attachmentPDF"
-                      : viewableAttachment.type === "epub"
-                        ? "attachmentEPUB"
-                        : "attachmentSnapshot"
-                  }
-                  aria-label={`Open ${attachmentLabel}`}
+                  data-item-type="attachmentLink"
+                  aria-label="Open URL"
                 />
-                <span className="syllabus-action-label">{attachmentLabel}</span>
+                <span className="syllabus-action-label">Link</span>
               </button>
             </div>
-          );
-        })}
-        {url && (
-          <div className="focus-states-target print:hidden">
-            <button
-              className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
-              onClick={handleUrlClick}
-              title="Open URL"
-              aria-label="Open URL"
-            >
-              <span
-                className="syllabus-action-icon icon icon-css icon-attachment-type"
-                data-item-type="attachmentLink"
-                aria-label="Open URL"
-              />
-              <span className="syllabus-action-label">Link</span>
-            </button>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
       {!isLocked && (
         <div
           className={twMerge(
@@ -3065,17 +3067,17 @@ export function SyllabusItemCard({
             "after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full! after:bg-(--after-background-color) after:rounded-b-lg rounded-t-0! after:z-25! after:h-full!",
             // Overrides
             isZoteroSelected &&
-              !isIdentifierSelected &&
-              "border-accent-blue! border-3! border-t-0!",
+            !isIdentifierSelected &&
+            "border-accent-blue! border-3! border-t-0!",
             isIdentifierSelected && "after:bg-accent-blue!",
           )}
           style={
             !isIdentifierSelected
               ? {
-                  "--after-background-color": priority
-                    ? priorityColor + "15"
-                    : "var(--material-sidepane)",
-                }
+                "--after-background-color": priority
+                  ? priorityColor + "15"
+                  : "var(--material-sidepane)",
+              }
               : {}
           }
         >
