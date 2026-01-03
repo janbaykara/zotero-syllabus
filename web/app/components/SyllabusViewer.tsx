@@ -1,7 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-import { BookOpen, Building2, Hash, Calendar, Clock, FileText, ExternalLink } from "lucide-react";
+import { BookOpen, Building2, Hash, Calendar, FileText } from "lucide-react";
 
 interface ClassMetadata {
   title?: string;
@@ -52,9 +51,6 @@ export function SyllabusViewer({
     if (isNaN(numB)) return -1;
     return numA - numB;
   });
-
-  const capitalizeFirst = (str: string) =>
-    str.charAt(0).toUpperCase() + str.slice(1);
 
   return (
     <div className="space-y-8">

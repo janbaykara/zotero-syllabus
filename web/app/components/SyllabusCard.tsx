@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { BookOpen, Building2, Hash, Calendar, Users } from "lucide-react";
+import { BookOpen, Building2, Hash, Calendar } from "lucide-react";
 
 interface SyllabusCardProps {
-  id: string;
-  remoteId: string;
-  title: string;
+  id: string | number;
+  title?: string;
   description?: string;
   institution?: string;
   moduleNumber?: string;
@@ -19,7 +18,6 @@ interface SyllabusCardProps {
 }
 
 export function SyllabusCard({
-  remoteId,
   title,
   description,
   institution,
@@ -31,7 +29,8 @@ export function SyllabusCard({
   collectionId,
 }: SyllabusCardProps) {
   // Build the URL
-  const slug = title
+  const displayTitle = title || "Untitled Syllabus";
+  const slug = displayTitle
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
@@ -51,7 +50,7 @@ export function SyllabusCard({
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <h3 className="text-lg font-semibold text-primary group-hover:text-accent-blue transition-colors line-clamp-2">
-            {title}
+            {displayTitle}
           </h3>
           {classCount > 0 && (
             <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent-blue10 text-accent-blue text-sm font-medium">

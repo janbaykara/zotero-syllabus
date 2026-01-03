@@ -131,7 +131,7 @@ export default async function Home() {
           </div>
         </div>
 
-        <SyllabusGallery syllabi={syllabi as any[]} />
+        <SyllabusGallery syllabi={syllabi} />
       </section>
 
       {/* CTA Section */}

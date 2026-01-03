@@ -6,15 +6,15 @@ import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Syllabus {
-  id: string;
-  remoteId: string;
-  title: string;
+  id: string | number;
+  remoteId?: string;
+  title?: string;
   description?: string;
   institution?: string;
   moduleNumber?: string;
   syllabusData?: {
     classes?: Record<string, unknown>;
-  };
+  } | null;
   updatedAt?: string;
   zoteroUserId?: string;
   libraryId?: string;
@@ -89,8 +89,7 @@ export function SyllabusGallery({
             <SyllabusCard
               key={syllabus.id}
               id={syllabus.id}
-              remoteId={syllabus.remoteId}
-              title={syllabus.title}
+              title={syllabus.title || "Untitled Syllabus"}
               description={syllabus.description}
               institution={syllabus.institution}
               moduleNumber={syllabus.moduleNumber}

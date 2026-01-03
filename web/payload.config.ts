@@ -25,6 +25,6 @@ export default buildConfig({
   },
   db: mongooseAdapter({
     url: process.env.MONGODB_URI || "",
-  }),
+  })
 });
 

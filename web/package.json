@@ -17,6 +17,8 @@
     "@payloadcms/richtext-lexical": "^3.69.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "commander": "^14.0.2",
+    "dotenv": "^17.2.3",
     "graphql": "^16.12.0",
     "lucide-react": "^0.562.0",
     "next": "^15.4.10",
@@ -26,9 +28,11 @@
     "sass": "^1.97.1",
     "sharp": "^0.34.5",
     "tailwind-merge": "^3.4.0",
+    "tsx": "^4.21.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
