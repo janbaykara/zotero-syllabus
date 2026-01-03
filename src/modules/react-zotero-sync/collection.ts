@@ -81,4 +81,3 @@ export function createSelectedCollectionStore() {
 
   return { getSnapshot, subscribe };
 }
-

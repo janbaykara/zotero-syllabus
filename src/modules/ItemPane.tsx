@@ -1,11 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
-import {
-  useState,
-  useCallback,
-  useRef,
-  useMemo,
-} from "preact/hooks";
+import { useState, useCallback, useRef, useMemo } from "preact/hooks";
 import {
   SyllabusManager,
   SyllabusPriority,
@@ -57,9 +52,7 @@ interface AssignmentEditorProps {
   ) => void;
 }
 
-export function ItemPane({
-  editable,
-}: ItemPaneProps) {
+export function ItemPane({ editable }: ItemPaneProps) {
   const selectedItemIds = useZoteroSelectedItemIds();
 
   // If item doesn't exist or was deleted, don't render anything
@@ -76,12 +69,7 @@ export function ItemPane({
   }
 
   // Render assignments for each selected item
-  return (
-    <ItemPaneData
-      itemId={selectedItemIds[0]}
-      editable={editable}
-    />
-  );
+  return <ItemPaneData itemId={selectedItemIds[0]} editable={editable} />;
 }
 
 function ItemPaneData({
@@ -91,24 +79,30 @@ function ItemPaneData({
   itemId: number;
   editable: boolean;
 }) {
-
   const item = useZoteroItem(itemId);
 
-  if (!item || !item.item || item.version === undefined || item.version === null) {
+  if (
+    !item ||
+    !item.item ||
+    item.version === undefined ||
+    item.version === null
+  ) {
     return <div>Item not found</div>;
   }
 
-  return <ItemPaneContent
-    itemVersion={item as { item: Zotero.Item, version: number }}
-    editable={editable}
-  />;
+  return (
+    <ItemPaneContent
+      itemVersion={item as { item: Zotero.Item; version: number }}
+      editable={editable}
+    />
+  );
 }
 
 function ItemPaneContent({
   itemVersion,
   editable,
 }: {
-  itemVersion: { item: Zotero.Item, version: number };
+  itemVersion: { item: Zotero.Item; version: number };
   currentCollectionId?: number | null;
   editable: boolean;
 }) {
@@ -116,7 +110,9 @@ function ItemPaneContent({
 
   // Get all assignments across all collections
   const allAssignmentsByCollection = useMemo(() => {
-    const currentCollection = currentCollectionId ? Zotero.Collections.get(currentCollectionId) : null;
+    const currentCollection = currentCollectionId
+      ? Zotero.Collections.get(currentCollectionId)
+      : null;
 
     const collectionsWithAssignments: Array<{
       collection: Zotero.Collection;
@@ -372,19 +368,22 @@ function ItemPaneContent({
     [itemVersion, handleSave],
   );
 
-  const handleCreateAssignment = useCallback(async (
-    itemVersion: { item: Zotero.Item, version: number },
-    collectionId: number,
-  ) => {
-    await SyllabusManager.addClassAssignment(
-      itemVersion.item,
-      collectionId,
-      undefined,
-      {},
-      "item-pane",
-    );
-    await handleSave();
-  }, [handleSave]);
+  const handleCreateAssignment = useCallback(
+    async (
+      itemVersion: { item: Zotero.Item; version: number },
+      collectionId: number,
+    ) => {
+      await SyllabusManager.addClassAssignment(
+        itemVersion.item,
+        collectionId,
+        undefined,
+        {},
+        "item-pane",
+      );
+      await handleSave();
+    },
+    [handleSave],
+  );
 
   // Get priority options for a specific collection
   const getPriorityOptions = useCallback((collectionId: number) => {
@@ -407,17 +406,19 @@ function ItemPaneContent({
         return (
           <div key={group.collectionId} className="flex flex-col gap-2">
             {/* Collection Heading */}
-            <header className={twMerge(
-              "sticky top-0 bg-background-sidepane z-20 py-2",
-              !isCurrentCollection && "mt-2! border-t-2! border-quinary"
-            )}>
+            <header
+              className={twMerge(
+                "sticky top-0 bg-background-sidepane z-20 py-2",
+                !isCurrentCollection && "mt-2! border-t-2! border-quinary",
+              )}
+            >
               <span className="text-xs font-normal text-secondary uppercase tracking-wide">
                 {isCurrentCollection ? "current view" : "also assigned to"}
               </span>
               <div
                 className={twMerge(
                   "text-primary flex items-center gap-2 hover:cursor-pointer hover:bg-quinary active:bg-quarternary rounded-md p-1 -m-1",
-                  isCurrentCollection ? "font-semibold" : "font-medium"
+                  isCurrentCollection ? "font-semibold" : "font-medium",
                 )}
                 onClick={() => {
                   const ZoteroPane = ztoolkit.getGlobal("ZoteroPane");
@@ -467,7 +468,9 @@ function ItemPaneContent({
             {editable && (
               <div>
                 <button
-                  onClick={() => handleCreateAssignment(itemVersion, group.collectionId)}
+                  onClick={() =>
+                    handleCreateAssignment(itemVersion, group.collectionId)
+                  }
                   disabled={isSaving}
                   className="px-2 py-1 text-xs font-medium"
                   onMouseEnter={(e) => {
@@ -602,9 +605,13 @@ function AssignmentEditor({
             ztoolkit.log("Value:", value);
             if (!value || classNumberSchema.safeParse(Number(value)).success) {
               // ztoolkit.log("Valid class number:", value);
-              onClassNumberChange(assignment.id!, collectionId, value ? Number(value) : undefined);
+              onClassNumberChange(
+                assignment.id!,
+                collectionId,
+                value ? Number(value) : undefined,
+              );
             } else {
-              inputRef.value = assignment.classNumber?.toString() || ""
+              inputRef.value = assignment.classNumber?.toString() || "";
               // ztoolkit.log("Invalid class number:", value, inputRef.value);
             }
           }}
@@ -614,9 +621,7 @@ function AssignmentEditor({
 
       {/* Priority - Dropdown and Quick Buttons */}
       <div className="flex flex-row gap-2">
-        <label className='w-1/4 shrink-0 grow-0'>
-          Priority
-        </label>
+        <label className="w-1/4 shrink-0 grow-0">Priority</label>
         <div className="flex flex-col gap-1 -my-1">
           {/* Quick Priority Buttons */}
           {editable && (
@@ -682,9 +687,7 @@ function AssignmentEditor({
 
       {/* Instructions */}
       <div className="flex flex-row gap-2">
-        <label className="w-1/4 shrink-0 grow-0">
-          Instructions
-        </label>
+        <label className="w-1/4 shrink-0 grow-0">Instructions</label>
         <textarea
           disabled={!editable || isSaving}
           rows={3}

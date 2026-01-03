@@ -4,10 +4,7 @@ import { SyllabusManager } from "../syllabus";
 
 export function useZoteroItem(itemId: number | null) {
   // Create the store once per item ID
-  const store = useMemo(
-    () => createItemStore(itemId),
-    [itemId],
-  );
+  const store = useMemo(() => createItemStore(itemId), [itemId]);
 
   const version = useSyncExternalStore(store.subscribe, store.getSnapshot);
 
@@ -24,7 +21,7 @@ export function useZoteroItem(itemId: number | null) {
   }, [itemId, version]);
 
   // We return the number because the extra field isn't gettable, by default, so we need a concrete indication of change or invalidation.
-  return { item, version } as { item: Zotero.Item | null, version: number };
+  return { item, version } as { item: Zotero.Item | null; version: number };
 }
 
 export function createItemStore(itemId: number | null) {
@@ -34,13 +31,16 @@ export function createItemStore(itemId: number | null) {
   let notifierID: string | null = null;
 
   function getSnapshot() {
-    ztoolkit.log("useZoteroItem.createItemStore.getSnapshot", { itemId, version });
+    ztoolkit.log("useZoteroItem.createItemStore.getSnapshot", {
+      itemId,
+      version,
+    });
     return version;
   }
 
   function subscribe(onStoreChange: () => void) {
     if (!itemId) {
-      return () => { }; // No-op unsubscribe
+      return () => {}; // No-op unsubscribe
     }
 
     listeners.add(onStoreChange);
@@ -52,7 +52,12 @@ export function createItemStore(itemId: number | null) {
         ids: (number | string)[],
         _extraData: any,
       ) {
-        ztoolkit.log("useZoteroItem.subscriber.notify", { event, type, ids, version });
+        ztoolkit.log("useZoteroItem.subscriber.notify", {
+          event,
+          type,
+          ids,
+          version,
+        });
         // Listen to item modify/delete events for this specific item
         if (type === "item" && ids.includes(itemId)) {
           version++;
@@ -89,4 +94,3 @@ export function createItemStore(itemId: number | null) {
 
   return { getSnapshot, subscribe };
 }
-
