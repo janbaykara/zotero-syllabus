@@ -99,6 +99,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   // Track drag state for showing "Add to Class X" dropzone
   const [isDragging, setIsDragging] = useState(false);
 
+  // Track file drag state for file upload
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+
   // Track item order changes to trigger re-computation
   const [itemOrderVersion, setItemOrderVersion] = useState(0);
 
@@ -530,6 +533,19 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     };
   }, []);
 
+  // Reset file drag state when drag ends (e.g., when file is dragged back to its window)
+  useEffect(() => {
+    const handleFileDragEnd = () => {
+      setIsDraggingFile(false);
+    };
+
+    document.addEventListener("dragend", handleFileDragEnd);
+
+    return () => {
+      document.removeEventListener("dragend", handleFileDragEnd);
+    };
+  }, []);
+
   // Listen to metadata changes for item order (now part of metadata)
   // The useZoteroSyllabusMetadata hook will trigger re-renders when metadata changes
   // We use itemOrderVersion to force re-computation of class groups when order changes
@@ -764,11 +780,13 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
             if (item && item.isRegularItem()) {
               // Check if item has any assignments for this collection
               const syllabusData = SyllabusManager.getItemSyllabusData(item);
-              const collectionKeyStr = SyllabusManager.getCollectionReferenceString(
-                Zotero.Collections.get(collectionId).libraryID,
-                Zotero.Collections.get(collectionId).key,
-              );
-              const existingAssignments = syllabusData?.[collectionKeyStr] || [];
+              const collectionKeyStr =
+                SyllabusManager.getCollectionReferenceString(
+                  Zotero.Collections.get(collectionId).libraryID,
+                  Zotero.Collections.get(collectionId).key,
+                );
+              const existingAssignments =
+                syllabusData?.[collectionKeyStr] || [];
 
               // If item has no assignments at all, it's an unassigned item
               if (existingAssignments.length === 0) {
@@ -783,8 +801,10 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                 processedItemIds.push(itemId);
 
                 // Get the newly created assignment ID
-                const updatedSyllabusData = SyllabusManager.getItemSyllabusData(item);
-                const updatedAssignments = updatedSyllabusData?.[collectionKeyStr] || [];
+                const updatedSyllabusData =
+                  SyllabusManager.getItemSyllabusData(item);
+                const updatedAssignments =
+                  updatedSyllabusData?.[collectionKeyStr] || [];
                 const newAssignment = updatedAssignments.find(
                   (a) => a.classNumber === targetClassNumberValue && a.id,
                 );
@@ -1285,20 +1305,8 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     fileInputRef.current?.click();
   };
 
-  const handleFileInputChange = async (
-    e: JSX.TargetedEvent<HTMLInputElement>,
-  ) => {
-    const target = e.target as HTMLInputElement;
-    const selectedFile = target.files?.[0];
-
-    // Reset the input so the same file can be selected again
-    target.value = "";
-
-    if (!selectedFile) {
-      // User cancelled file selection
-      return;
-    }
-
+  // Process a file for import (reusable for both file input and drag-drop)
+  const processFile = async (file: File) => {
     try {
       // Read file contents using FileReader
       const fileContents = await new Promise<string>((resolve, reject) => {
@@ -1314,7 +1322,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
           }
         };
         reader.onerror = () => reject(new Error("Error reading file"));
-        reader.readAsText(selectedFile);
+        reader.readAsText(file);
       });
 
       // Import syllabus metadata using SyllabusManager
@@ -1348,6 +1356,105 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         })
         .show();
       ztoolkit.log("Import processing error:", error);
+    }
+  };
+
+  const handleFileInputChange = async (
+    e: JSX.TargetedEvent<HTMLInputElement>,
+  ) => {
+    const target = e.target as HTMLInputElement;
+    const selectedFile = target.files?.[0];
+
+    // Reset the input so the same file can be selected again
+    target.value = "";
+
+    if (!selectedFile) {
+      // User cancelled file selection
+      return;
+    }
+
+    await processFile(selectedFile);
+  };
+
+  // Drag and drop handlers for file upload
+  const handleFileDragEnter = (e: JSX.TargetedDragEvent<HTMLDivElement>) => {
+    // Only handle file drags, not item drags
+    // Check if this is a file drag (has "Files" type) and not an item drag
+    const isFileDrag = e.dataTransfer?.types.includes("Files");
+    const isItemDrag = e.dataTransfer?.types.includes("text/plain");
+
+    if (isFileDrag && !isItemDrag) {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDraggingFile(true);
+    }
+  };
+
+  const handleFileDragOver = (e: JSX.TargetedDragEvent<HTMLDivElement>) => {
+    // Only handle file drags, not item drags
+    const isFileDrag = e.dataTransfer?.types.includes("Files");
+    const isItemDrag = e.dataTransfer?.types.includes("text/plain");
+
+    if (isFileDrag && !isItemDrag) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = "copy";
+      }
+    }
+  };
+
+  const handleFileDragLeave = (e: JSX.TargetedDragEvent<HTMLDivElement>) => {
+    // Only handle file drags, not item drags
+    const isFileDrag = e.dataTransfer?.types.includes("Files");
+    const isItemDrag = e.dataTransfer?.types.includes("text/plain");
+
+    if (isFileDrag && !isItemDrag) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Check if we're actually leaving the container (not just moving to a child)
+      // relatedTarget is the element we're entering, or null if leaving the document
+      const relatedTarget = e.relatedTarget as HTMLElement | null;
+      const currentTarget = e.currentTarget;
+
+      // If relatedTarget is null, we're leaving the document entirely
+      // If relatedTarget is not a child of currentTarget, we're leaving the container
+      if (!relatedTarget || !currentTarget.contains(relatedTarget)) {
+        setIsDraggingFile(false);
+      }
+    }
+  };
+
+  const handleFileDrop = async (e: JSX.TargetedDragEvent<HTMLDivElement>) => {
+    // Only handle file drags, not item drags
+    const isFileDrag = e.dataTransfer?.types.includes("Files");
+    const isItemDrag = e.dataTransfer?.types.includes("text/plain");
+
+    if (isFileDrag && !isItemDrag) {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDraggingFile(false);
+
+      const files = Array.from(e.dataTransfer?.files || []);
+      const syllabusFile = files.find((file) =>
+        file.name.endsWith(".syllabus"),
+      );
+
+      if (syllabusFile) {
+        await processFile(syllabusFile);
+      } else if (files.length > 0) {
+        // Show error if file doesn't have .syllabus extension
+        new ztoolkit.ProgressWindow("Import Error", {
+          closeOnClick: true,
+          closeTime: 5000,
+        })
+          .createLine({
+            text: "Please drop a .syllabus file",
+            type: "fail",
+          })
+          .show();
+      }
     }
   };
 
@@ -1477,10 +1584,28 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       <div
         ref={syllabusPageRef}
         className={twMerge(
-          "syllabus-page overflow-y-auto overflow-x-hidden h-full in-[.print]:scheme-light",
+          "syllabus-page overflow-y-auto overflow-x-hidden h-full in-[.print]:scheme-light relative",
           compactMode && "compact-mode",
+          isDraggingFile && "file-drag-over",
         )}
+        onDragEnter={handleFileDragEnter}
+        onDragOver={handleFileDragOver}
+        onDragLeave={handleFileDragLeave}
+        onDrop={handleFileDrop}
       >
+        {/* File drag overlay */}
+        {isDraggingFile && (
+          <div className="sticky h-full inset-0 z-50 bg-accent-blue/10 backdrop-blur-sm flex items-center justify-center pointer-events-none in-[.print]:hidden">
+            <div className="bg-background border-4 border-dashed border-accent-blue rounded-lg p-8 shadow-lg">
+              <div className="flex flex-col items-center gap-4">
+                <Upload size={48} className="text-accent-blue" />
+                <div className="text-xl font-semibold text-accent-blue">
+                  Drop .syllabus file to import
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="pb-12">
           <div
             syllabus-view-title-container
@@ -1643,7 +1768,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
           <div
             className={twMerge(
               "flex flex-col mb-12",
-              compactMode ? "gap-8 mt-4" : "gap-12 mt-6",
+              compactMode ? "gap-10 mt-4" : "gap-12 mt-6",
             )}
           >
             {classGroups.map((group) => (
@@ -1752,8 +1877,12 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                       onPriorityChange={handlePriorityChange}
                       onDelete={handleDelete}
                       onDuplicate={handleDuplicate}
-                      isZoteroSelected={selectedItemIds?.includes(item.id) || false}
-                      isIdentifierSelected={selectedIdentifiers.has(`item:${item.id}`)}
+                      isZoteroSelected={
+                        selectedItemIds?.includes(item.id) || false
+                      }
+                      isIdentifierSelected={selectedIdentifiers.has(
+                        `item:${item.id}`,
+                      )}
                     />
                   ))}
                 </div>
@@ -2129,7 +2258,9 @@ function ClassGroupComponent({
                   }
                   onDragOver={onDragOver}
                   isZoteroSelected={selectedItemIds?.includes(item.id) || false}
-                  isIdentifierSelected={selectedIdentifiers.has(`assignment:${assignment.id}`)}
+                  isIdentifierSelected={selectedIdentifiers.has(
+                    `assignment:${assignment.id}`,
+                  )}
                 />
               );
             })
@@ -2302,34 +2433,34 @@ function TextInput({
         onChange: readOnly
           ? undefined
           : (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-            setValue((e.target as HTMLInputElement).value),
+              setValue((e.target as HTMLInputElement).value),
         onBlur: readOnly ? undefined : () => save(value),
         onKeyDown: readOnly
           ? undefined
           : (
-            e: JSX.TargetedKeyboardEvent<
-              HTMLInputElement | HTMLTextAreaElement
-            >,
-          ) => {
-            if (e.key === "Escape" || e.key === "Enter") {
-              e.preventDefault();
-              e.currentTarget.blur();
-              save(value);
-            }
-          },
+              e: JSX.TargetedKeyboardEvent<
+                HTMLInputElement | HTMLTextAreaElement
+              >,
+            ) => {
+              if (e.key === "Escape" || e.key === "Enter") {
+                e.preventDefault();
+                e.currentTarget.blur();
+                save(value);
+              }
+            },
         onSelect: readOnly
           ? (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            e.preventDefault();
-            e.currentTarget.setSelectionRange(0, 0);
-          }
+              e.preventDefault();
+              e.currentTarget.setSelectionRange(0, 0);
+            }
           : undefined,
         onClick: readOnly
           ? (
-            e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
-          ) => {
-            e.preventDefault();
-            e.currentTarget.blur();
-          }
+              e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
+            ) => {
+              e.preventDefault();
+              e.currentTarget.blur();
+            }
           : undefined,
         placeholder: readOnly ? undefined : placeholder || "Click to edit",
         className: twMerge(
@@ -2491,9 +2622,9 @@ export function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-        item: Zotero.Item;
-        type: "pdf" | "snapshot" | "epub";
-      }>;
+      item: Zotero.Item;
+      type: "pdf" | "snapshot" | "epub";
+    }>;
   }, [item, slim]);
 
   const metadataParts = [
@@ -2637,8 +2768,8 @@ export function SyllabusItemCard({
 
   const colors = priority
     ? {
-      backgroundColor: priorityColor + "15",
-    }
+        backgroundColor: priorityColor + "15",
+      }
     : {};
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
@@ -2704,8 +2835,11 @@ export function SyllabusItemCard({
           : slim
             ? "px-4 py-2.5 gap-4"
             : "px-4 py-4 gap-4",
-        isZoteroSelected && "outline-2! outline-accent-blue",
+        isZoteroSelected &&
+          !isIdentifierSelected &&
+          "outline-2! outline-accent-blue",
         isIdentifierSelected && "bg-accent-blue! scheme-dark",
+        // isZoteroSelected && isIdentifierSelected && "outline-none!",
         // assignmentStatus === "done" ? "opacity-40" : "",
       )}
       data-item-id={item.id}
@@ -2924,23 +3058,33 @@ export function SyllabusItemCard({
         <div
           className={twMerge(
             "hidden group-hover:flex absolute top-full left-1/2 -translate-x-1/2 p-2 pt-0 z-20 in-[.print]:hidden! w-auto",
-            "border-background border-4 border-t-0 rounded-b-xl rounded-t-0!",
+            "border-background border-6 border-t-0 rounded-b-2xl rounded-t-0!",
             // Background solid colour, so that priority colours can be cast atop with some opacity, without revealing spillover content from other items
             "before:content-[''] before:absolute before:top-0 before:left-0 before:w-full! before:bg-background before:rounded-b-lg rounded-t-0! before:z-20! before:h-full!",
             // Apply the priority colour to the after element, with some opacity
             "after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full! after:bg-(--after-background-color) after:rounded-b-lg rounded-t-0! after:z-25! after:h-full!",
             // Overrides
-            isZoteroSelected && "border-accent-blue! border-3! border-t-0!",
-            isZoteroSelected && isIdentifierSelected && "border-none!",
+            isZoteroSelected &&
+              !isIdentifierSelected &&
+              "border-accent-blue! border-3! border-t-0!",
             isIdentifierSelected && "after:bg-accent-blue!",
           )}
-          style={!isIdentifierSelected ? {
-            "--after-background-color": priority ? priorityColor + "15" : "var(--material-sidepane)"
-          } : {}}
+          style={
+            !isIdentifierSelected
+              ? {
+                  "--after-background-color": priority
+                    ? priorityColor + "15"
+                    : "var(--material-sidepane)",
+                }
+              : {}
+          }
         >
-          <div className='relative z-30 flex-row gap-2' style={{
-            display: "inherit"
-          }}>
+          <div
+            className="relative z-30 flex-row gap-2"
+            style={{
+              display: "inherit",
+            }}
+          >
             {!!assignment?.id && (
               <>
                 <div className="focus-states-target">
@@ -3027,7 +3171,10 @@ export function SyllabusItemCard({
               return [
                 ...priorityOptions.map((priorityOption) => {
                   return (
-                    <div key={priorityOption.id} className="focus-states-target">
+                    <div
+                      key={priorityOption.id}
+                      className="focus-states-target"
+                    >
                       <button
                         onClick={async (e) => {
                           e.stopPropagation();
