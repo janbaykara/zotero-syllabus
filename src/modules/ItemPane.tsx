@@ -29,6 +29,7 @@ interface AssignmentEditorProps {
     classNumber: number | undefined,
   ) => void;
   onInstructionChange: (assignmentId: string, instruction: string) => void;
+  onStatusChange: (assignmentId: string, status: "done" | null) => void;
   onDelete: (assignmentId: string) => void;
   onDuplicate: (assignmentId: string) => void;
 }
@@ -183,6 +184,25 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
     [item, collectionId, assignments, handleSave],
   );
 
+  const handleStatusChange = useCallback(
+    async (assignmentId: string, status: "done" | null) => {
+      if (!assignmentId) {
+        ztoolkit.log("Error: Assignment ID missing");
+        return;
+      }
+
+      await SyllabusManager.updateClassAssignment(
+        item,
+        collectionId,
+        assignmentId,
+        { status },
+        "item-pane",
+      );
+      await handleSave();
+    },
+    [item, collectionId, handleSave],
+  );
+
   const handleCreateAssignment = useCallback(async () => {
     await SyllabusManager.addClassAssignment(
       item,
@@ -209,13 +229,23 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
   }, [collectionId]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "12px",
+        padding: "8px 0",
+      }}
+    >
       {assignments.length === 0 ? (
         <div
           style={{
-            padding: "10px",
+            padding: "16px",
             color: "var(--fill-secondary)",
             fontSize: "13px",
+            textAlign: "center",
+            borderRadius: "4px",
+            backgroundColor: "var(--fill-quinary)",
           }}
         >
           No assignments for this item in this collection.
@@ -242,6 +272,7 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
               onPriorityChange={handlePriorityChange}
               onClassNumberChange={handleClassNumberChange}
               onInstructionChange={handleInstructionChange}
+              onStatusChange={handleStatusChange}
               onDelete={handleDeleteAssignment}
               onDuplicate={handleDuplicateAssignment}
             />
@@ -255,16 +286,28 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
           onClick={handleCreateAssignment}
           disabled={isSaving}
           style={{
-            padding: "8px 16px",
+            padding: "8px 12px",
             minHeight: "32px",
             fontSize: "13px",
             color: "var(--fill-primary)",
             backgroundColor: "transparent",
-            border: "1px solid var(--fill-primary)",
+            border: "none",
             borderRadius: "4px",
             cursor: isSaving ? "not-allowed" : "pointer",
             fontWeight: "500",
             opacity: isSaving ? 0.5 : 1,
+            textAlign: "left",
+            transition: "background-color 0.15s ease",
+          }}
+          onMouseEnter={(e) => {
+            if (!isSaving) {
+              (e.currentTarget as HTMLElement).style.backgroundColor =
+                "var(--fill-quinary)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.backgroundColor =
+              "transparent";
           }}
         >
           + Create New Assignment
@@ -283,6 +326,7 @@ function AssignmentEditor({
   onPriorityChange,
   onClassNumberChange,
   onInstructionChange,
+  onStatusChange,
   onDelete,
   onDuplicate,
 }: AssignmentEditorProps) {
@@ -298,58 +342,112 @@ function AssignmentEditor({
   const { singularCapitalized } =
     SyllabusManager.getNomenclatureFormatted(collectionId);
 
-  let legendText = "Syllabus item";
-  if (assignment.classNumber !== undefined) {
-    legendText = classTitle
-      ? `${singularCapitalized} ${assignment.classNumber}: ${classTitle}`
-      : `${singularCapitalized} ${assignment.classNumber}`;
-  }
+  const assignmentStatus = assignment.status || null;
+  const isDone = assignmentStatus === "done";
 
   return (
-    <fieldset
+    <div
       style={{
         border: "1px solid var(--fill-quinary)",
-        borderRadius: "4px",
-        padding: "12px",
+        borderRadius: "6px",
+        padding: "16px",
         margin: "0",
+        display: "flex",
+        flexDirection: "column",
+        opacity: isDone ? 0.6 : 1,
+        transition: "opacity 0.2s ease",
       }}
+      className='bg-quinary/50'
     >
-      <legend
+      {/* Header with class info and status */}
+      <div
         style={{
-          padding: "0 8px",
-          fontSize: "13px",
-          fontWeight: "500",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "12px",
         }}
       >
-        {legendText}
-      </legend>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {assignment.classNumber !== undefined ? (
+            <div
+              style={{
+                fontSize: "13px",
+                fontWeight: "600",
+                color: "var(--fill-primary)",
+                marginBottom: "2px",
+              }}
+            >
+              {classTitle}
+            </div>
+          ) : (
+            <div
+              style={{
+                fontSize: "13px",
+                fontWeight: "600",
+                color: "var(--fill-secondary)",
+              }}
+            >
+              Unassigned
+            </div>
+          )}
+        </div>
+        {editable && (
+          <button
+            type="button"
+            onClick={() =>
+              onStatusChange(assignment.id!, isDone ? null : "done")
+            }
+            disabled={isSaving}
+            style={{
+              padding: "4px 8px",
+              fontSize: "12px",
+              fontWeight: "500",
+              color: isDone
+                ? "var(--fill-primary)"
+                : "var(--fill-secondary)",
+              backgroundColor: isDone
+                ? "var(--fill-quinary)"
+                : "transparent",
+              border: "none",
+              borderRadius: "4px",
+              cursor: isSaving ? "not-allowed" : "pointer",
+              opacity: isSaving ? 0.5 : 1,
+              transition: "all 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              if (!isSaving) {
+                (e.currentTarget as HTMLElement).style.backgroundColor =
+                  "var(--fill-quinary)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = isDone
+                ? "var(--fill-quinary)"
+                : "transparent";
+            }}
+            title={isDone ? "Mark as not done" : "Mark as done"}
+          >
+            {isDone ? "✓ Done" : "Mark done"}
+          </button>
+        )}
+      </div>
 
       <div
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: "10px",
+          gap: "12px",
         }}
       >
         {/* Class Number */}
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "max-content 1fr",
-            columnGap: "18px",
-            rowGap: "10px",
-            alignItems: "center",
+            display: "flex",
+            flexDirection: "column",
+            gap: "2px",
           }}
         >
-          <label
-            style={{
-              fontWeight: "normal",
-              textAlign: "end",
-              color: "var(--fill-secondary)",
-            }}
-          >
-            {singularCapitalized} Number
-          </label>
           <input
             type="number"
             min="1"
@@ -369,181 +467,327 @@ function AssignmentEditor({
               onClassNumberChange(assignment.id!, classNum);
             }}
             style={{
-              textAlign: "start",
-              border: "none",
-              fontSize: "13px",
-              width: "100%",
-              margin: "0",
+              padding: "3px 8px 18px",
+              fontSize: "28px",
+              fontWeight: "600",
+              border: "1px solid transparent",
+              borderRadius: "4px",
+              backgroundColor: "var(--color-background)",
+              color: "var(--fill-primary)",
+              width: "36%",
+              textAlign: "center",
+              transition: "border-color 0.15s ease",
+              margin: "0 auto",
+              boxSizing: "border-box",
+            }}
+            onFocus={(e) => {
+              if (editable && !isSaving) {
+                (e.currentTarget as HTMLElement).style.borderColor =
+                  "var(--color-accent-blue)";
+              }
+            }}
+            onBlur={(e) => {
+              (e.currentTarget as HTMLElement).style.borderColor =
+                "transparent";
             }}
           />
+          <label
+            style={{
+              fontSize: "11px",
+              fontWeight: "500",
+              color: "var(--fill-secondary)",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+              textAlign: "center",
+              marginTop: "-20px",
+            }}
+          >
+            {singularCapitalized} Number
+          </label>
         </div>
 
-        {/* Priority */}
+        {/* Priority - Dropdown and Quick Buttons */}
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "max-content 1fr",
-            columnGap: "18px",
-            rowGap: "10px",
-            alignItems: "center",
+            display: "flex",
+            flexDirection: "column",
+            gap: "4px",
           }}
         >
           <label
             style={{
-              fontWeight: "normal",
-              textAlign: "end",
+              fontSize: "11px",
+              fontWeight: "500",
               color: "var(--fill-secondary)",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
             }}
           >
             Priority
           </label>
-          <div style={{ position: "relative", width: "100%" }}>
-            <select
-              disabled={!editable || isSaving}
-              value={assignment.priority || ""}
-              onChange={(e) => {
-                const target = e.target as HTMLSelectElement;
-                onPriorityChange(assignment.id!, target.value as any);
-              }}
-              style={{
-                padding: "5px 5px 5px 24px",
-                fontSize: "13px",
-                width: "100%",
-                margin: "0",
-                appearance: "none",
-                WebkitAppearance: "none",
-                MozAppearance: "none",
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
-                backgroundRepeat: "no-repeat",
-                backgroundPosition: "right 8px center",
-                paddingRight: "28px",
-              }}
-            >
-              {priorityOptions.map((opt) => (
-                <option
-                  key={opt.value}
-                  value={opt.value}
-                  style={
-                    opt.color
-                      ? {
-                          color: opt.color,
-                          fontWeight: "500",
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "8px",
+            }}
+          >
+            {/* Quick Priority Buttons */}
+            {editable && (
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "6px",
+                }}
+              >
+                {priorityOptions
+                  .filter((opt) => opt.value !== "")
+                  .map((opt) => {
+                    const isSelected = opt.value === (assignment.priority || "");
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() =>
+                          onPriorityChange(
+                            assignment.id!,
+                            isSelected ? ("" as any) : (opt.value as any),
+                          )
                         }
-                      : undefined
-                  }
+                        disabled={isSaving}
+                        style={{
+                          padding: "4px 8px",
+                          fontSize: "11px",
+                          fontWeight: "500",
+                          color: isSelected
+                            ? opt.color || "var(--fill-primary)"
+                            : "var(--fill-secondary)",
+                          backgroundColor: isSelected
+                            ? opt.color
+                              ? `${opt.color}15`
+                              : "var(--fill-quinary)"
+                            : "transparent",
+                          border: isSelected
+                            ? `1px solid ${opt.color || "var(--fill-quinary)"}`
+                            : "1px solid transparent",
+                          borderRadius: "4px",
+                          cursor: isSaving ? "not-allowed" : "pointer",
+                          opacity: isSaving ? 0.5 : 1,
+                          transition: "all 0.15s ease",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSaving && !isSelected) {
+                            (e.currentTarget as HTMLElement).style.backgroundColor =
+                              "var(--fill-quinary)";
+                            (e.currentTarget as HTMLElement).style.borderColor =
+                              "var(--fill-quinary)";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) {
+                            (e.currentTarget as HTMLElement).style.backgroundColor =
+                              "transparent";
+                            (e.currentTarget as HTMLElement).style.borderColor =
+                              "transparent";
+                          }
+                        }}
+                        title={opt.label}
+                      >
+                        {opt.color && (
+                          <span
+                            style={{
+                              width: "8px",
+                              height: "8px",
+                              borderRadius: "50%",
+                              backgroundColor: opt.color,
+                              display: "inline-block",
+                            }}
+                          />
+                        )}
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                <button
+                  type="button"
+                  onClick={() => onPriorityChange(assignment.id!, "" as any)}
+                  disabled={isSaving || !assignment.priority}
+                  style={{
+                    padding: "4px 8px",
+                    fontSize: "11px",
+                    fontWeight: "500",
+                    color: "var(--fill-secondary)",
+                    backgroundColor: "transparent",
+                    border: "1px solid transparent",
+                    borderRadius: "4px",
+                    cursor: isSaving || !assignment.priority ? "not-allowed" : "pointer",
+                    opacity: isSaving || !assignment.priority ? 0.3 : 1,
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSaving && assignment.priority) {
+                      (e.currentTarget as HTMLElement).style.backgroundColor =
+                        "var(--fill-quinary)";
+                      (e.currentTarget as HTMLElement).style.borderColor =
+                        "var(--fill-quinary)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.backgroundColor =
+                      "transparent";
+                    (e.currentTarget as HTMLElement).style.borderColor =
+                      "transparent";
+                  }}
+                  title="Clear priority"
                 >
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            {/* Color indicator dot */}
-            {(() => {
-              const selectedOption = priorityOptions.find(
-                (opt) => opt.value === (assignment.priority || ""),
-              );
-              if (selectedOption?.color) {
-                return (
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: "8px",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      width: "10px",
-                      height: "10px",
-                      borderRadius: "50%",
-                      backgroundColor: selectedOption.color,
-                      pointerEvents: "none",
-                    }}
-                  />
-                );
-              }
-              return null;
-            })()}
+                  Clear
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Instructions */}
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "max-content 1fr",
-            columnGap: "18px",
-            rowGap: "10px",
-            alignItems: "center",
+            display: "flex",
+            flexDirection: "column",
+            gap: "4px",
           }}
         >
           <label
             style={{
-              fontWeight: "normal",
-              textAlign: "end",
+              fontSize: "11px",
+              fontWeight: "500",
               color: "var(--fill-secondary)",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
             }}
           >
             Instructions
           </label>
           <textarea
             disabled={!editable || isSaving}
-            rows={4}
+            rows={3}
             value={assignment.classInstruction || ""}
             onChange={(e) => {
               const target = e.target as HTMLTextAreaElement;
               onInstructionChange(assignment.id!, target.value);
             }}
+            placeholder="Add instructions for this assignment..."
             style={{
-              padding: "0",
-              margin: "0",
-              border: "none",
+              padding: "6px 8px",
               fontSize: "13px",
               width: "100%",
+              border: "1px solid transparent",
+              boxSizing: "border-box",
+              borderRadius: "5px",
+              backgroundColor: "var(--color-background)",
+              color: "var(--fill-primary)",
               resize: "vertical",
               fontFamily: "inherit",
+              minHeight: "60px",
+              transition: "border-color 0.15s ease",
+            }}
+            onFocus={(e) => {
+              if (editable && !isSaving) {
+                (e.currentTarget as HTMLElement).style.borderColor =
+                  "var(--color-accent-blue)";
+              }
+            }}
+            onBlur={(e) => {
+              (e.currentTarget as HTMLElement).style.borderColor =
+                "transparent";
             }}
           />
         </div>
 
         {/* Action Buttons */}
         {editable && (
-          <div style={{ display: "flex", gap: "8px", alignSelf: "flex-start" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              paddingTop: "4px",
+              position: "relative",
+            }}
+          >
             <button
+              type="button"
               onClick={() => onDuplicate(assignment.id!)}
               disabled={isSaving}
               style={{
-                padding: "6px 12px",
-                minHeight: 32,
-                fontSize: "12px",
+                padding: "6px 10px",
+                fontSize: "10px",
+                fontWeight: "500",
                 color: "var(--fill-primary)",
                 backgroundColor: "transparent",
-                border: "1px solid var(--fill-primary)",
-                borderRadius: "4px",
+                border: "none",
+                borderRadius: "5px",
+                boxSizing: "border-box",
                 cursor: isSaving ? "not-allowed" : "pointer",
                 opacity: isSaving ? 0.5 : 1,
+                transition: "background-color 0.15s ease",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
               }}
-              title="Duplicate"
+              onMouseEnter={(e) => {
+                if (!isSaving) {
+                  (e.currentTarget as HTMLElement).style.backgroundColor =
+                    "var(--fill-quinary)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.backgroundColor =
+                  "transparent";
+              }}
+              title="Duplicate assignment"
             >
-              Duplicate
+              <span style={{ fontSize: "18px", lineHeight: "1" }}>⧉</span>
+              <span style={{ fontSize: "12px" }}>Duplicate</span>
             </button>
             <button
+              type="button"
               onClick={() => onDelete(assignment.id!)}
               disabled={isSaving}
               style={{
-                padding: "6px 12px",
-                minHeight: 32,
-                fontSize: "12px",
+                padding: "6px 10px",
+                fontSize: "16px",
+                fontWeight: "500",
                 color: "var(--fill-error)",
                 backgroundColor: "transparent",
-                border: "1px solid var(--fill-error)",
+                border: "none",
                 borderRadius: "4px",
                 cursor: isSaving ? "not-allowed" : "pointer",
                 opacity: isSaving ? 0.5 : 1,
+                transition: "background-color 0.15s ease",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
               }}
-              title="Delete"
+              onMouseEnter={(e) => {
+                if (!isSaving) {
+                  (e.currentTarget as HTMLElement).style.backgroundColor =
+                    "var(--fill-error)15";
+                }
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.backgroundColor =
+                  "transparent";
+              }}
+              title="Delete assignment"
             >
-              Delete
+              <span style={{ fontSize: "18px", lineHeight: "1" }}>×</span>
+              <span style={{ fontSize: "12px" }}>Delete</span>
             </button>
           </div>
         )}
       </div>
-    </fieldset>
+    </div>
   );
 }
