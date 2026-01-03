@@ -1843,12 +1843,41 @@ export function SyllabusItemCard({
 
   function onClick(
     item: Zotero.Item,
-    __e?: JSX.TargetedMouseEvent<HTMLElement>,
+    e?: JSX.TargetedMouseEvent<HTMLElement>,
   ) {
     try {
       const pane = ztoolkit.getGlobal("ZoteroPane");
-      pane.selectItem(item.id);
-      ztoolkit.log("Item selected:", item.id);
+      
+      // Check if shift key is pressed for multi-select
+      if (e?.shiftKey) {
+        // Get currently selected items
+        const selectedItems = pane.getSelectedItems(true) as number[];
+        const itemId = item.id;
+        
+        // Toggle selection: add if not selected, remove if already selected
+        let newSelection: number[];
+        if (selectedItems.includes(itemId)) {
+          // Remove from selection
+          newSelection = selectedItems.filter((id) => id !== itemId);
+          ztoolkit.log("Item removed from selection:", itemId, newSelection);
+        } else {
+          // Add to selection
+          newSelection = [...selectedItems, itemId];
+          ztoolkit.log("Item added to selection:", itemId, newSelection);
+        }
+        
+        // Select all items in the new selection
+        if (newSelection.length > 0) {
+          pane.selectItems(newSelection);
+        } else {
+          // If nothing selected, just select this item
+          pane.selectItem(itemId);
+        }
+      } else {
+        // Normal click - replace selection
+        pane.selectItem(item.id);
+        ztoolkit.log("Item selected:", item.id);
+      }
     } catch (err) {
       ztoolkit.log("Error selecting item:", err);
     }
