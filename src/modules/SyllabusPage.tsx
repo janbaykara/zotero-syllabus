@@ -676,16 +676,38 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       "application/x-syllabus-assignment-ids",
     );
 
-    if (multipleAssignmentIdsStr) {
-      // Handle multiple assignments drag
-      const assignmentIds = multipleAssignmentIdsStr.split(",").filter(Boolean);
+    // Check if we have multiple items (could be assignments or unassigned items)
+    const hasMultipleItems = itemIdStr.includes(",");
+
+    if (multipleAssignmentIdsStr || hasMultipleItems) {
+      // Handle multiple assignments drag (or multiple items including unassigned)
+      const assignmentIds = multipleAssignmentIdsStr
+        ? multipleAssignmentIdsStr.split(",").filter(Boolean)
+        : [];
       const itemIds = itemIdStr
         .split(",")
         .map((id) => parseInt(id, 10))
         .filter((id) => !isNaN(id));
 
       try {
+        // Get source class number for reordering
+        const sourceClassNumberStr = e.dataTransfer.getData(
+          "application/x-syllabus-source-class",
+        );
+        const sourceClassNumber =
+          sourceClassNumberStr !== ""
+            ? parseInt(sourceClassNumberStr, 10)
+            : undefined;
+
+        // Check if this is a reorder within the same class
+        const isReorder =
+          sourceClassNumber !== undefined &&
+          targetClassNumberValue !== undefined &&
+          sourceClassNumber === targetClassNumberValue &&
+          targetItemId !== undefined;
+
         // Process each assignment
+        const processedAssignmentIds: string[] = [];
         for (const assignmentId of assignmentIds) {
           // Find the assignment and its item
           let draggedItem: Zotero.Item | null = null;
@@ -707,6 +729,155 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
             collectionId,
             assignmentId,
             { classNumber: targetClassNumberValue },
+            "page",
+          );
+          processedAssignmentIds.push(assignmentId);
+        }
+
+        // Process unassigned items (items without assignments)
+        // First, collect all item IDs that have processed assignments
+        const itemsWithProcessedAssignments = new Set<number>();
+        for (const assignmentId of processedAssignmentIds) {
+          for (const syllabusItem of syllabusItems) {
+            const matchingAssignment = syllabusItem.assignments.find(
+              (a) => a.id === assignmentId,
+            );
+            if (matchingAssignment) {
+              itemsWithProcessedAssignments.add(syllabusItem.zoteroItem.id);
+              break;
+            }
+          }
+        }
+
+        // Now process items that don't have processed assignments
+        const processedItemIds: number[] = [];
+        const newlyCreatedAssignmentIds: string[] = [];
+        for (const itemId of itemIds) {
+          // Skip if this item already has a processed assignment
+          if (itemsWithProcessedAssignments.has(itemId)) {
+            continue;
+          }
+
+          // This item is either unassigned or has assignments in a different class
+          try {
+            const item = Zotero.Items.get(itemId);
+            if (item && item.isRegularItem()) {
+              // Check if item has any assignments for this collection
+              const syllabusData = SyllabusManager.getItemSyllabusData(item);
+              const collectionKeyStr = SyllabusManager.getCollectionReferenceString(
+                Zotero.Collections.get(collectionId).libraryID,
+                Zotero.Collections.get(collectionId).key,
+              );
+              const existingAssignments = syllabusData?.[collectionKeyStr] || [];
+
+              // If item has no assignments at all, it's an unassigned item
+              if (existingAssignments.length === 0) {
+                // Add assignment to target class for unassigned items
+                await SyllabusManager.addClassAssignment(
+                  item,
+                  collectionId,
+                  targetClassNumberValue,
+                  {},
+                  "page",
+                );
+                processedItemIds.push(itemId);
+
+                // Get the newly created assignment ID
+                const updatedSyllabusData = SyllabusManager.getItemSyllabusData(item);
+                const updatedAssignments = updatedSyllabusData?.[collectionKeyStr] || [];
+                const newAssignment = updatedAssignments.find(
+                  (a) => a.classNumber === targetClassNumberValue && a.id,
+                );
+                if (newAssignment?.id) {
+                  newlyCreatedAssignmentIds.push(newAssignment.id);
+                }
+              }
+            }
+          } catch (err) {
+            ztoolkit.log("Error processing unassigned item:", err);
+          }
+        }
+
+        // Handle manual ordering for multiple selections if reordering within same class
+        if (isReorder && targetClassNumberValue !== undefined) {
+          // Combine all assignment IDs (existing and newly created)
+          const allDraggedAssignmentIds = [
+            ...processedAssignmentIds,
+            ...newlyCreatedAssignmentIds,
+          ];
+
+          let currentOrder = SyllabusManager.getClassItemOrder(
+            collectionId,
+            targetClassNumberValue,
+          );
+
+          // If no manual order exists, initialize it
+          if (currentOrder.length === 0) {
+            classAssignments.sort((a, b) => {
+              const diff = SyllabusManager.compareAssignments(a, b);
+              if (diff !== 0) return diff;
+              const assignmentA = syllabusItems.find((item) =>
+                item.assignments.find((assignment) => assignment.id === a.id),
+              );
+              const assignmentB = syllabusItems.find((item) =>
+                item.assignments.find((assignment) => assignment.id === b.id),
+              );
+              if (assignmentA && assignmentB) {
+                const itemA = assignmentA.zoteroItem;
+                const itemB = assignmentB.zoteroItem;
+                const titleA = itemA.getField("title") || "";
+                const titleB = itemB.getField("title") || "";
+                return titleA.localeCompare(titleB);
+              }
+              return 0;
+            });
+            currentOrder = classAssignments
+              .map((assignment) => assignment.id!)
+              .filter(Boolean);
+          }
+
+          // Remove all dragged assignments from current order (including newly created ones)
+          const newOrder = currentOrder.filter(
+            (id) => !allDraggedAssignmentIds.includes(id),
+          );
+
+          // Find target assignment ID
+          let targetAssignmentId: string | undefined;
+          try {
+            const targetItem = syllabusItems.find(
+              (item) => item.zoteroItem.id === targetItemId,
+            );
+            if (targetItem) {
+              targetAssignmentId = targetItem.assignments.find(
+                (a) => a.classNumber === targetClassNumberValue && a.id,
+              )?.id;
+            }
+          } catch (err) {
+            ztoolkit.log("Error finding target assignment:", err);
+          }
+
+          // Find target position
+          const targetIndex = targetAssignmentId
+            ? newOrder.findIndex((id) => id === targetAssignmentId)
+            : -1;
+
+          // Insert all dragged assignments at target position (maintaining relative order)
+          if (targetIndex !== -1) {
+            if (insertBefore) {
+              newOrder.splice(targetIndex, 0, ...allDraggedAssignmentIds);
+            } else {
+              newOrder.splice(targetIndex + 1, 0, ...allDraggedAssignmentIds);
+            }
+          } else {
+            // Target not found, append to end
+            newOrder.push(...allDraggedAssignmentIds);
+          }
+
+          // Update manual order
+          await SyllabusManager.setClassItemOrder(
+            collectionId,
+            targetClassNumberValue,
+            newOrder,
             "page",
           );
         }
