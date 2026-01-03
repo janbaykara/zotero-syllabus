@@ -658,7 +658,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         lower: true,
         strict: true,
       });
-      const filename = `syllabus-${titleSlug}-${dateStr}.json`;
+      const filename = `${titleSlug}-${dateStr}.syllabus`;
 
       // Create a temporary file and save it
       const tempDir = Zotero.getTempDirectory();
@@ -868,7 +868,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".json,application/json"
+        accept=".syllabus"
         style={{ display: "none" }}
         onChange={handleFileInputChange}
       />
@@ -892,7 +892,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                   </span>
                 </div>
               )}
-              <div className="flex flex-row items-center gap-4 justify-between">
+              <div className="flex flex-row items-center gap-2 justify-between">
                 <div className="flex-1 text-3xl font-semibold grow shrink-0">
                   <TextInput
                     elementType="input"
@@ -904,7 +904,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                     readOnly={isLocked}
                   />
                 </div>
-                <div className="inline-flex items-center gap-2 shrink grow-0">
+                <div className="inline-flex items-center gap-2.5 shrink grow-0">
                   <div
                     className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
                     title={isLocked ? "Unlock syllabus" : "Lock syllabus"}
@@ -971,51 +971,49 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                       />
                     )}
                   </div>
-                  <div className="ml-auto flex items-center gap-1 in-[.print]:hidden">
-                    <div
-                      className="cursor-pointer"
-                      title="Export syllabus metadata"
-                      aria-label="Export syllabus metadata"
-                      onClick={handleExport}
-                    >
-                      <Download
-                        size={20}
-                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                      />
-                    </div>
-                    <div
-                      className="cursor-pointer"
-                      title="Import syllabus metadata"
-                      aria-label="Import syllabus metadata"
-                      onClick={handleImport}
-                    >
-                      <Upload
-                        size={20}
-                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                      />
-                    </div>
-                    <div
-                      className="cursor-pointer"
-                      title="Edit syllabus settings"
-                      aria-label="Edit syllabus settings"
-                      onClick={() => setShowSettings(true)}
-                    >
-                      <Settings
-                        size={20}
-                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                      />
-                    </div>
-                    <div
-                      className="cursor-pointer"
-                      title="Print the list in Syllabus view as a PDF"
-                      aria-label="Print the list in Syllabus view as a PDF"
-                      onClick={handlePrint}
-                    >
-                      <Printer
-                        size={20}
-                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                      />
-                    </div>
+                  <div
+                    className="cursor-pointer"
+                    title="Export syllabus file"
+                    aria-label="Export syllabus file"
+                    onClick={handleExport}
+                  >
+                    <Upload
+                      size={20}
+                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                    />
+                  </div>
+                  <div
+                    className="cursor-pointer"
+                    title="Import syllabus file"
+                    aria-label="Import syllabus file"
+                    onClick={handleImport}
+                  >
+                    <Download
+                      size={20}
+                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                    />
+                  </div>
+                  <div
+                    className="cursor-pointer"
+                    title="Print the list in Syllabus view as a PDF"
+                    aria-label="Print the list in Syllabus view as a PDF"
+                    onClick={handlePrint}
+                  >
+                    <Printer
+                      size={20}
+                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                    />
+                  </div>
+                  <div
+                    className="cursor-pointer"
+                    title="Edit syllabus settings"
+                    aria-label="Edit syllabus settings"
+                    onClick={() => setShowSettings(true)}
+                  >
+                    <Settings
+                      size={20}
+                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                    />
                   </div>
                 </div>
               </div>
