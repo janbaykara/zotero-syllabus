@@ -15,6 +15,7 @@ import {
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import { useSyllabi } from "./react-zotero-sync/useSyllabi";
 import { getPref } from "../utils/prefs";
+import { TabManager } from "../utils/tabManager";
 
 setDefaultOptions({
   weekStartsOn: 1,
@@ -143,22 +144,15 @@ export function ReadingSchedule() {
 
   const handleCollectionClick = (collectionId: number) => {
     try {
+      const ZoteroPane = ztoolkit.getGlobal("ZoteroPane");
       const collection = Zotero.Collections.get(collectionId);
       if (!collection) return;
 
-      // Try to select the collection via the tree view
-      const win = Zotero.getMainWindow();
-      const collectionTree = win.document.getElementById(
-        "zotero-collections-tree",
-      );
-      if (collectionTree) {
-        const treeView = (collectionTree as any).view;
-        if (treeView && treeView.selection) {
-          const row = treeView.getRowIndexByRef(collection);
-          if (row !== -1) {
-            treeView.selection.select(row);
-          }
-        }
+      const collectionsView = ZoteroPane.collectionsView;
+      if (collectionsView) {
+        collectionsView.selectByID(collection.treeViewID);
+        // switch to the collection tab
+        TabManager.selectLibraryTab();
       }
     } catch (err) {
       ztoolkit.log("Error selecting collection:", err);
@@ -167,33 +161,24 @@ export function ReadingSchedule() {
 
   const handleItemClick = (item: Zotero.Item, collectionId: number) => {
     try {
-      const pane = ztoolkit.getGlobal("ZoteroPane");
+      const ZoteroPane = ztoolkit.getGlobal("ZoteroPane");
       const collection = Zotero.Collections.get(collectionId);
 
-      // First, try to select the collection via the tree view
       if (collection) {
-        const win = Zotero.getMainWindow();
-        const collectionTree = win.document.getElementById(
-          "zotero-collections-tree",
-        );
-        if (collectionTree) {
-          const treeView = (collectionTree as any).view;
-          if (treeView && treeView.selection) {
-            const row = treeView.getRowIndexByRef(collection);
-            if (row !== -1) {
-              treeView.selection.select(row);
-              // Wait a bit for the collection to be selected before selecting the item
-              Zotero.Promise.delay(100).then(() => {
-                pane.selectItem(item.id);
-              });
-              return;
-            }
+        const collectionsView = ZoteroPane.collectionsView;
+        if (collectionsView) {
+          collectionsView.selectByID(collection.treeViewID);
+          // Do not try to view deleted items in a collection.
+          // They do not appear outside of trash, and selecting a deleted item
+          // will re-open trash in collectionTree.
+          if (!item.deleted) {
+            ZoteroPane.selectItem(item.id);
           }
         }
+      } else {
+        // Fallback: just select the item (it will show in its collection context)
+        ZoteroPane.selectItem(item.id);
       }
-
-      // Fallback: just select the item (it will show in its collection context)
-      pane.selectItem(item.id);
     } catch (err) {
       ztoolkit.log("Error selecting item in collection:", err);
     }
@@ -336,7 +321,7 @@ export function ReadingSchedule() {
                                 )}
                               >
                                 <div className="flex flex-col gap-2 mb-2">
-                                  <div className="flex flex-row items-start justify-between gap-2">
+                                  <div>
                                     <input
                                       type="checkbox"
                                       checked={classStatus === "done"}
@@ -356,17 +341,18 @@ export function ReadingSchedule() {
                                       }
                                     />
                                     <div
-                                      onClick={() =>
-                                        handleCollectionClick(
-                                          classReading.collectionId,
-                                        )
-                                      }
                                       className={twMerge(
                                         "text-xl flex-1",
                                         classStatus === "done"
                                           ? "line-through"
                                           : "",
+                                        "hover:cursor-pointer hover:bg-quinary active:bg-quarternary rounded-md px-1 -mx-1 inline-block",
                                       )}
+                                      onClick={() =>
+                                        handleCollectionClick(
+                                          classReading.collectionId,
+                                        )
+                                      }
                                     >
                                       {classReading.classTitle ? (
                                         <>
@@ -388,7 +374,9 @@ export function ReadingSchedule() {
                                         {" "}
                                         of{" "}
                                       </span>
-                                      <span className="font-semibold">
+                                      <span
+                                        className={twMerge("font-semibold")}
+                                      >
                                         {classReading.collectionName}
                                       </span>
                                     </div>
@@ -426,8 +414,8 @@ export function ReadingSchedule() {
                                             compactMode ||
                                             !priority ||
                                             priority ===
-                                            SyllabusManager.priorityKeys
-                                              .OPTIONAL
+                                              SyllabusManager.priorityKeys
+                                                .OPTIONAL
                                           }
                                           compactMode={compactMode}
                                           isLocked={true}
@@ -438,6 +426,7 @@ export function ReadingSchedule() {
                                             )
                                           }
                                           readerMode
+                                          className="cursor-pointer"
                                         />
                                       );
                                     },

@@ -1663,10 +1663,14 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                       <div
                         className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
                         title={
-                          readerMode ? "Disable reader mode" : "Enable reader mode"
+                          readerMode
+                            ? "Disable reader mode"
+                            : "Enable reader mode"
                         }
                         aria-label={
-                          readerMode ? "Disable reader mode" : "Enable reader mode"
+                          readerMode
+                            ? "Disable reader mode"
+                            : "Enable reader mode"
                         }
                         onClick={toggleReaderMode}
                       >
@@ -2437,34 +2441,34 @@ function TextInput({
         onChange: readOnly
           ? undefined
           : (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-            setValue((e.target as HTMLInputElement).value),
+              setValue((e.target as HTMLInputElement).value),
         onBlur: readOnly ? undefined : () => save(value),
         onKeyDown: readOnly
           ? undefined
           : (
-            e: JSX.TargetedKeyboardEvent<
-              HTMLInputElement | HTMLTextAreaElement
-            >,
-          ) => {
-            if (e.key === "Escape" || e.key === "Enter") {
-              e.preventDefault();
-              e.currentTarget.blur();
-              save(value);
-            }
-          },
+              e: JSX.TargetedKeyboardEvent<
+                HTMLInputElement | HTMLTextAreaElement
+              >,
+            ) => {
+              if (e.key === "Escape" || e.key === "Enter") {
+                e.preventDefault();
+                e.currentTarget.blur();
+                save(value);
+              }
+            },
         onSelect: readOnly
           ? (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            e.preventDefault();
-            e.currentTarget.setSelectionRange(0, 0);
-          }
+              e.preventDefault();
+              e.currentTarget.setSelectionRange(0, 0);
+            }
           : undefined,
         onClick: readOnly
           ? (
-            e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
-          ) => {
-            e.preventDefault();
-            e.currentTarget.blur();
-          }
+              e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
+            ) => {
+              e.preventDefault();
+              e.currentTarget.blur();
+            }
           : undefined,
         placeholder: readOnly ? undefined : placeholder || "Click to edit",
         className: twMerge(
@@ -2490,7 +2494,29 @@ function TextInput({
   );
 }
 
-interface SyllabusItemCardProps {
+export function SyllabusItemCard({
+  className,
+  item,
+  collectionId,
+  classNumber,
+  assignment,
+  slim = false,
+  compactMode = false,
+  readerMode = false,
+  isLocked = false,
+  onDrop,
+  onDragOver,
+  onClick: customOnClick,
+  selectedIdentifiers = new Set(),
+  onIdentifierClick,
+  selectedForDrag = { assignments: [], itemIds: [] },
+  onPriorityChange,
+  onDelete,
+  onDuplicate,
+  isZoteroSelected,
+  isIdentifierSelected,
+}: {
+  className?: string;
   item: Zotero.Item;
   collectionId: number;
   classNumber?: number | null; // Specific class number for this rendering
@@ -2533,29 +2559,7 @@ interface SyllabusItemCardProps {
     assignmentId?: string;
     itemId?: number;
   }) => Promise<void>;
-}
-
-export function SyllabusItemCard({
-  item,
-  collectionId,
-  classNumber,
-  assignment,
-  slim = false,
-  compactMode = false,
-  readerMode = false,
-  isLocked = false,
-  onDrop,
-  onDragOver,
-  onClick: customOnClick,
-  selectedIdentifiers = new Set(),
-  onIdentifierClick,
-  selectedForDrag = { assignments: [], itemIds: [] },
-  onPriorityChange,
-  onDelete,
-  onDuplicate,
-  isZoteroSelected,
-  isIdentifierSelected,
-}: SyllabusItemCardProps) {
+}) {
   // Get the currently selected item ID (Zotero selection)
   // const selectedItemIds = useZoteroSelectedItemIds();
   // const isZoteroSelected = selectedItemIds?.includes(item.id) || false;
@@ -2626,9 +2630,9 @@ export function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-        item: Zotero.Item;
-        type: "pdf" | "snapshot" | "epub";
-      }>;
+      item: Zotero.Item;
+      type: "pdf" | "snapshot" | "epub";
+    }>;
   }, [item, slim]);
 
   const metadataParts = [
@@ -2772,8 +2776,8 @@ export function SyllabusItemCard({
 
   const colors = priority
     ? {
-      backgroundColor: priorityColor + "15",
-    }
+        backgroundColor: priorityColor + "15",
+      }
     : {};
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
@@ -2840,11 +2844,12 @@ export function SyllabusItemCard({
             ? "px-4 py-2.5 gap-4"
             : "px-4 py-4 gap-4",
         isZoteroSelected &&
-        !isIdentifierSelected &&
-        "outline-2! outline-accent-blue",
+          !isIdentifierSelected &&
+          "outline-2! outline-accent-blue",
         isIdentifierSelected && "bg-accent-blue! scheme-dark",
         // isZoteroSelected && isIdentifierSelected && "outline-none!",
         // assignmentStatus === "done" ? "opacity-40" : "",
+        className,
       )}
       data-item-id={item.id}
       draggable={!isLocked}
@@ -3036,7 +3041,9 @@ export function SyllabusItemCard({
                     }
                     aria-label={`Open ${attachmentLabel}`}
                   />
-                  <span className="syllabus-action-label">{attachmentLabel}</span>
+                  <span className="syllabus-action-label">
+                    {attachmentLabel}
+                  </span>
                 </button>
               </div>
             );
@@ -3071,17 +3078,17 @@ export function SyllabusItemCard({
             "after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full! after:bg-(--after-background-color) after:rounded-b-lg rounded-t-0! after:z-25! after:h-full!",
             // Overrides
             isZoteroSelected &&
-            !isIdentifierSelected &&
-            "border-accent-blue! border-3! border-t-0!",
+              !isIdentifierSelected &&
+              "border-accent-blue! border-3! border-t-0!",
             isIdentifierSelected && "after:bg-accent-blue!",
           )}
           style={
             !isIdentifierSelected
               ? {
-                "--after-background-color": priority
-                  ? priorityColor + "15"
-                  : "var(--material-sidepane)",
-              }
+                  "--after-background-color": priority
+                    ? priorityColor + "15"
+                    : "var(--material-sidepane)",
+                }
               : {}
           }
         >
