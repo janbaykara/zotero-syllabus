@@ -49,9 +49,11 @@ function generateAssignmentId(): string {
  * ItemSyllabusAssignment schema
  * Version 2: Ensures id is always present
  */
+export const classNumberSchema = z.number().int().min(1).optional();
+
 const ItemSyllabusAssignmentV2Schema = z.object({
   id: z.string().default(generateAssignmentId),
-  classNumber: z.number().min(1).optional(),
+  classNumber: classNumberSchema,
   priority: SyllabusPrioritySchema.optional(),
   classInstruction: z.string().optional(),
   status: AssignmentStatusSchema.optional(),

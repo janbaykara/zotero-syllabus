@@ -16,6 +16,7 @@ import { twMerge } from "tailwind-merge";
 import { useZoteroItem } from "./react-zotero-sync/item";
 import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
 import { useSelectedCollectionId } from "./react-zotero-sync/collection";
+import { classNumberSchema } from "../utils/schemas";
 
 interface ItemPaneProps {
   editable: boolean;
@@ -524,7 +525,7 @@ function AssignmentEditor({
     <div className="border border-quinary rounded-md m-0 flex flex-col opacity-100 transition-opacity duration-200 bg-background divide-y divide-quarternary space-y-2.5 *:not-last:pb-2.5 p-2.5 z-10">
       {/* Header with class info and status */}
       <header className="flex items-center justify-between gap-3">
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 font-medium">
           {assignment.classNumber !== undefined ? (
             <div>
               Assignment #{assignmentIndex + 1}{" "}
@@ -594,17 +595,18 @@ function AssignmentEditor({
           step="1"
           disabled={!editable || isSaving}
           placeholder="e.g., 1, 2, 3..."
-          value={assignment.classNumber?.toString() || ""}
+          value={assignment.classNumber}
           onChange={(e) => {
-            const target = e.target as HTMLInputElement;
-            const value = target.value.trim();
-            const classNum = value ? parseInt(value, 10) : undefined;
-            if (value && (isNaN(classNum!) || classNum! < 1)) {
-              // Invalid input, reset to current value
-              target.value = assignment.classNumber?.toString() || "";
-              return;
+            const inputRef = e.target as HTMLInputElement;
+            const value = inputRef.value.trim();
+            ztoolkit.log("Value:", value);
+            if (!value || classNumberSchema.safeParse(Number(value)).success) {
+              // ztoolkit.log("Valid class number:", value);
+              onClassNumberChange(assignment.id!, collectionId, value ? Number(value) : undefined);
+            } else {
+              inputRef.value = assignment.classNumber?.toString() || ""
+              // ztoolkit.log("Invalid class number:", value, inputRef.value);
             }
-            onClassNumberChange(assignment.id!, collectionId, classNum);
           }}
           className="w-full border-0 hover:not-focus:bg-quinary hover:not-focus:cursor-pointer px-1.5! m-0! box-border text-2xl! font-bold! text-left! text-secondary -my-1.5!"
         />
