@@ -24,7 +24,7 @@ import { renderComponent } from "../utils/react";
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
-import { useZoteroSelectedItemId } from "./react-zotero-sync/selectedItem";
+import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import { useZoteroReaderMode } from "./react-zotero-sync/readerMode";
 import { FEATURE_FLAG } from "./featureFlags";
@@ -1648,34 +1648,34 @@ function TextInput({
         onChange: readOnly
           ? undefined
           : (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-              setValue((e.target as HTMLInputElement).value),
+            setValue((e.target as HTMLInputElement).value),
         onBlur: readOnly ? undefined : () => save(value),
         onKeyDown: readOnly
           ? undefined
           : (
-              e: JSX.TargetedKeyboardEvent<
-                HTMLInputElement | HTMLTextAreaElement
-              >,
-            ) => {
-              if (e.key === "Escape" || e.key === "Enter") {
-                e.preventDefault();
-                e.currentTarget.blur();
-                save(value);
-              }
-            },
+            e: JSX.TargetedKeyboardEvent<
+              HTMLInputElement | HTMLTextAreaElement
+            >,
+          ) => {
+            if (e.key === "Escape" || e.key === "Enter") {
+              e.preventDefault();
+              e.currentTarget.blur();
+              save(value);
+            }
+          },
         onSelect: readOnly
           ? (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-              e.preventDefault();
-              e.currentTarget.setSelectionRange(0, 0);
-            }
+            e.preventDefault();
+            e.currentTarget.setSelectionRange(0, 0);
+          }
           : undefined,
         onClick: readOnly
           ? (
-              e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
-            ) => {
-              e.preventDefault();
-              e.currentTarget.blur();
-            }
+            e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
+          ) => {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
           : undefined,
         placeholder: readOnly ? undefined : placeholder || "Click to edit",
         className: twMerge(
@@ -1735,8 +1735,8 @@ export function SyllabusItemCard({
   onClick: customOnClick,
 }: SyllabusItemCardProps) {
   // Get the currently selected item ID
-  const selectedItemId = useZoteroSelectedItemId();
-  const isSelected = selectedItemId === item.id;
+  const selectedItemIds = useZoteroSelectedItemIds();
+  const isSelected = selectedItemIds?.includes(item.id) || false;
 
   // Get priority and class instruction from the assignment (if found)
   // When assignmentId is provided, these MUST come from that specific assignment
@@ -1796,9 +1796,9 @@ export function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-      item: Zotero.Item;
-      type: "pdf" | "snapshot" | "epub";
-    }>;
+        item: Zotero.Item;
+        type: "pdf" | "snapshot" | "epub";
+      }>;
   }, [item, slim]);
 
   const metadataParts = [
@@ -1918,9 +1918,9 @@ export function SyllabusItemCard({
 
   const colors = priority
     ? {
-        backgroundColor: priorityColor + "15",
-        borderColor: priorityColor + "30",
-      }
+      backgroundColor: priorityColor + "15",
+      borderColor: priorityColor + "30",
+    }
     : {};
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {

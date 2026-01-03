@@ -1,49 +1,208 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
-import { useState, useCallback, useRef, useMemo } from "preact/hooks";
+import {
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+} from "preact/hooks";
 import {
   SyllabusManager,
   SyllabusPriority,
   ItemSyllabusAssignment,
 } from "./syllabus";
-import { useZoteroItemAssignments } from "./react-zotero-sync/itemAssignments";
 import { Square, SquareCheck } from "lucide-preact";
-import { twMerge } from 'tailwind-merge';
+import { twMerge } from "tailwind-merge";
+import { useZoteroItem } from "./react-zotero-sync/item";
+import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
+import { useSelectedCollectionId } from "./react-zotero-sync/collection";
 
 interface ItemPaneProps {
-  item: Zotero.Item;
-  collectionId: number;
   editable: boolean;
 }
 
 interface AssignmentEditorProps {
   assignment: ItemSyllabusAssignment;
-  assignmentIndex: number;
   collectionId: number;
+  assignmentIndex: number;
   editable: boolean;
   isSaving: boolean;
   priorityOptions: Array<{ value: string; label: string; color?: string }>;
   onPriorityChange: (
     assignmentId: string,
+    collectionId: number,
     priority: SyllabusPriority | "",
   ) => void;
   onClassNumberChange: (
     assignmentId: string,
+    collectionId: number,
     classNumber: number | undefined,
   ) => void;
-  onInstructionChange: (assignmentId: string, instruction: string) => void;
-  onStatusChange: (assignmentId: string, status: "done" | null) => void;
-  onDelete: (assignmentId: string) => void;
-  onDuplicate: (assignmentId: string) => void;
+  onInstructionChange: (
+    assignmentId: string,
+    collectionId: number,
+    instruction: string,
+  ) => void;
+  onStatusChange: (
+    assignmentId: string,
+    collectionId: number,
+    status: "done" | null,
+  ) => void;
+  onDelete: (assignmentId: string, collectionId: number) => void;
+  onDuplicate: (
+    assignmentId: string,
+    collectionId: number,
+    assignment: ItemSyllabusAssignment,
+  ) => void;
 }
 
-export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
-  const assignmentsRaw = useZoteroItemAssignments(item.id, collectionId);
+export function ItemPane({
+  editable,
+}: ItemPaneProps) {
+  const selectedItemIds = useZoteroSelectedItemIds();
 
-  // Sort assignments by class number, then priority
-  const assignments = useMemo(() => {
-    return [...assignmentsRaw].sort(SyllabusManager.compareAssignments);
-  }, [assignmentsRaw]);
+  // If item doesn't exist or was deleted, don't render anything
+  if (!selectedItemIds) {
+    return <div>Item not found</div>;
+  }
+
+  if (selectedItemIds.length === 0) {
+    return <div>No items selected</div>;
+  }
+
+  if (selectedItemIds.length > 1) {
+    return <div>{selectedItemIds.length} items selected</div>;
+  }
+
+  // Render assignments for each selected item
+  return (
+    <ItemPaneData
+      itemId={selectedItemIds[0]}
+      editable={editable}
+    />
+  );
+}
+
+function ItemPaneData({
+  itemId,
+  editable,
+}: {
+  itemId: number;
+  editable: boolean;
+}) {
+
+  const item = useZoteroItem(itemId);
+
+  if (!item || !item.item || item.version === undefined || item.version === null) {
+    return <div>Item not found</div>;
+  }
+
+  return <ItemPaneContent
+    itemVersion={item as { item: Zotero.Item, version: number }}
+    editable={editable}
+  />;
+}
+
+function ItemPaneContent({
+  itemVersion,
+  editable,
+}: {
+  itemVersion: { item: Zotero.Item, version: number };
+  currentCollectionId?: number | null;
+  editable: boolean;
+}) {
+  const currentCollectionId = useSelectedCollectionId();
+
+  // Get all assignments across all collections
+  const allAssignmentsByCollection = useMemo(() => {
+    const currentCollection = currentCollectionId ? Zotero.Collections.get(currentCollectionId) : null;
+
+    const collectionsWithAssignments: Array<{
+      collection: Zotero.Collection;
+      collectionId: number;
+      collectionName: string;
+      assignments: ItemSyllabusAssignment[];
+    }> = [];
+
+    const syllabusData = SyllabusManager.getItemSyllabusData(itemVersion.item);
+
+    if (syllabusData) {
+      // Iterate through all collection keys in the syllabus data
+      for (const collectionKeyStr of Object.keys(syllabusData)) {
+        const assignments = syllabusData[collectionKeyStr];
+        if (!Array.isArray(assignments) || assignments.length === 0) {
+          continue;
+        }
+
+        // Parse collection key string to get libraryID and key
+        // Format: "libraryID:collectionKey"
+        const parts = collectionKeyStr.split(":");
+        if (parts.length < 2) {
+          continue;
+        }
+
+        const libraryID = parseInt(parts[0], 10);
+        const collectionKey = parts.slice(1).join(":"); // In case key contains colons
+
+        if (isNaN(libraryID) || !collectionKey) {
+          continue;
+        }
+
+        // Get collection from libraryID and key
+        try {
+          const collection = Zotero.Collections.getByLibraryAndKey(
+            libraryID,
+            collectionKey,
+          );
+          if (!collection) {
+            continue;
+          }
+
+          // Filter out assignments without IDs
+          const validAssignments = assignments.filter((a) => a.id);
+
+          if (validAssignments.length > 0) {
+            collectionsWithAssignments.push({
+              collection,
+              collectionId: collection.id,
+              collectionName: collection.name,
+              assignments: validAssignments.sort(
+                SyllabusManager.compareAssignments,
+              ),
+            });
+          }
+        } catch (e) {
+          ztoolkit.log("Error getting collection:", e);
+          continue;
+        }
+      }
+
+      if (
+        !!currentCollection &&
+        // not already in the list
+        !collectionsWithAssignments.some(
+          (c) => c.collectionId === currentCollection!.id,
+        )
+      ) {
+        // Display this collection so assignments can be added to it
+        collectionsWithAssignments.push({
+          collection: currentCollection!,
+          collectionId: currentCollection.id,
+          collectionName: currentCollection.name,
+          assignments: [],
+        });
+      }
+    }
+
+    // Sort so current collection is first, then alphabetically by name
+    collectionsWithAssignments.sort((a, b) => {
+      if (a.collectionId === currentCollectionId) return -1;
+      if (b.collectionId === currentCollectionId) return 1;
+      return a.collectionName.localeCompare(b.collectionName);
+    });
+
+    return collectionsWithAssignments;
+  }, [itemVersion, currentCollectionId]);
 
   const [isSaving, setIsSaving] = useState(false);
 
@@ -51,24 +210,27 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
     setIsSaving(true);
     try {
       // Invalidate cache before saving
-      SyllabusManager.invalidateSyllabusDataCache(item);
-      await item.saveTx();
-      // Trigger a notifier event to update stores
-      // The store will pick this up via item modify events
+      SyllabusManager.invalidateSyllabusDataCache(itemVersion.item);
+      await itemVersion.item.saveTx();
+      // The useSelectedItem hook will automatically refresh when the item is modified
     } finally {
       setIsSaving(false);
     }
-  }, [item]);
+  }, [itemVersion]);
 
   const handlePriorityChange = useCallback(
-    async (assignmentId: string, priority: SyllabusPriority | "") => {
+    async (
+      assignmentId: string,
+      collectionId: number,
+      priority: SyllabusPriority | "",
+    ) => {
       if (!assignmentId) {
         ztoolkit.log("Error: Assignment ID missing");
         return;
       }
 
       await SyllabusManager.updateClassAssignment(
-        item,
+        itemVersion.item,
         collectionId,
         assignmentId,
         { priority: priority || undefined },
@@ -76,18 +238,22 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
       );
       await handleSave();
     },
-    [item, collectionId, handleSave],
+    [itemVersion, handleSave],
   );
 
   const handleClassNumberChange = useCallback(
-    async (assignmentId: string, classNumber: number | undefined) => {
+    async (
+      assignmentId: string,
+      collectionId: number,
+      classNumber: number | undefined,
+    ) => {
       if (!assignmentId) {
         ztoolkit.log("Error: Assignment ID missing");
         return;
       }
 
       await SyllabusManager.updateClassAssignment(
-        item,
+        itemVersion.item,
         collectionId,
         assignmentId,
         { classNumber },
@@ -95,7 +261,7 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
       );
       await handleSave();
     },
-    [item, collectionId, handleSave],
+    [itemVersion, handleSave],
   );
 
   // Store debounce timeouts per assignment ID
@@ -104,7 +270,7 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
   >(new Map());
 
   const handleInstructionChange = useCallback(
-    (assignmentId: string, instruction: string) => {
+    (assignmentId: string, collectionId: number, instruction: string) => {
       if (!assignmentId) {
         ztoolkit.log("Error: Assignment ID missing");
         return;
@@ -119,7 +285,7 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
       // Set new timeout
       const timeout = setTimeout(async () => {
         await SyllabusManager.updateClassAssignment(
-          item,
+          itemVersion.item,
           collectionId,
           assignmentId,
           { classInstruction: instruction },
@@ -131,40 +297,35 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
 
       instructionTimeouts.current.set(assignmentId, timeout);
     },
-    [item, collectionId, handleSave],
+    [itemVersion, handleSave],
   );
 
   const handleDeleteAssignment = useCallback(
-    async (assignmentId: string) => {
+    async (assignmentId: string, collectionId: number) => {
       if (!assignmentId) {
         ztoolkit.log("Error: Assignment ID missing");
         return;
       }
 
       await SyllabusManager.removeAssignmentById(
-        item,
+        itemVersion.item,
         collectionId,
         assignmentId,
         "item-pane",
       );
       await handleSave();
     },
-    [item, collectionId, handleSave],
+    [itemVersion, handleSave],
   );
 
   const handleDuplicateAssignment = useCallback(
-    async (assignmentId: string) => {
+    async (
+      assignmentId: string,
+      collectionId: number,
+      assignmentToDuplicate: ItemSyllabusAssignment,
+    ) => {
       if (!assignmentId) {
         ztoolkit.log("Error: Assignment ID missing");
-        return;
-      }
-
-      // Find the assignment to duplicate
-      const assignmentToDuplicate = assignments.find(
-        (a) => a.id === assignmentId,
-      );
-      if (!assignmentToDuplicate) {
-        ztoolkit.log("Error: Assignment not found for duplication");
         return;
       }
 
@@ -176,7 +337,7 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
       };
 
       await SyllabusManager.addClassAssignment(
-        item,
+        itemVersion.item,
         collectionId,
         duplicateMetadata.classNumber,
         duplicateMetadata,
@@ -184,18 +345,22 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
       );
       await handleSave();
     },
-    [item, collectionId, assignments, handleSave],
+    [itemVersion, handleSave],
   );
 
   const handleStatusChange = useCallback(
-    async (assignmentId: string, status: "done" | null) => {
+    async (
+      assignmentId: string,
+      collectionId: number,
+      status: "done" | null,
+    ) => {
       if (!assignmentId) {
         ztoolkit.log("Error: Assignment ID missing");
         return;
       }
 
       await SyllabusManager.updateClassAssignment(
-        item,
+        itemVersion.item,
         collectionId,
         assignmentId,
         { status },
@@ -203,22 +368,25 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
       );
       await handleSave();
     },
-    [item, collectionId, handleSave],
+    [itemVersion, handleSave],
   );
 
-  const handleCreateAssignment = useCallback(async () => {
+  const handleCreateAssignment = useCallback(async (
+    itemVersion: { item: Zotero.Item, version: number },
+    collectionId: number,
+  ) => {
     await SyllabusManager.addClassAssignment(
-      item,
+      itemVersion.item,
       collectionId,
       undefined,
       {},
       "item-pane",
     );
     await handleSave();
-  }, [item, collectionId, handleSave]);
+  }, [handleSave]);
 
-  // Get collection-specific priority options
-  const priorityOptions = useMemo(() => {
+  // Get priority options for a specific collection
+  const getPriorityOptions = useCallback((collectionId: number) => {
     const customPriorities =
       SyllabusManager.getPrioritiesForCollection(collectionId);
     const options = customPriorities.map((p) => ({
@@ -229,93 +397,109 @@ export function ItemPane({ item, collectionId, editable }: ItemPaneProps) {
     // Add "(None)" option
     options.push({ value: "", label: "(None)", color: "" });
     return options;
-  }, [collectionId]);
+  }, []);
+
+  const totalAssignments = useMemo(() => {
+    return allAssignmentsByCollection.reduce(
+      (sum, group) => sum + group.assignments.length,
+      0,
+    );
+  }, [allAssignmentsByCollection]);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "12px",
-        padding: "8px 0",
-      }}
-    >
-      {assignments.length === 0 ? (
-        <div
-          style={{
-            padding: "16px",
-            color: "var(--fill-secondary)",
-            fontSize: "13px",
-            textAlign: "center",
-            borderRadius: "4px",
-            backgroundColor: "var(--fill-quinary)",
-          }}
+    <div className="flex flex-col gap-2 pb-2">
+      {totalAssignments === 0 ? (
+        <div className="bg-background/50 rounded-md p-3 m-0 flex flex-col opacity-100 transition-opacity duration-200 space-y-3 *:not-last:pb-3 z-10"
         >
-          No assignments for this item in this collection.
+          No assignments for this item in any collection.
         </div>
       ) : (
-        assignments.map((assignment, index) => {
-          // REQUIRE assignment ID - if missing, skip this assignment
-          if (!assignment.id) {
-            ztoolkit.log(
-              "Warning: Assignment missing ID, skipping render",
-              assignment,
-            );
-            return null;
-          }
-
+        allAssignmentsByCollection.map((group) => {
+          const isCurrentCollection = group.collectionId === currentCollectionId;
           return (
-            <AssignmentEditor
-              key={assignment.id}
-              assignment={assignment}
-              assignmentIndex={index}
-              collectionId={collectionId}
-              editable={editable}
-              isSaving={isSaving}
-              priorityOptions={priorityOptions}
-              onPriorityChange={handlePriorityChange}
-              onClassNumberChange={handleClassNumberChange}
-              onInstructionChange={handleInstructionChange}
-              onStatusChange={handleStatusChange}
-              onDelete={handleDeleteAssignment}
-              onDuplicate={handleDuplicateAssignment}
-            />
+            <div key={group.collectionId} className="flex flex-col gap-2">
+              {/* Collection Heading */}
+              <header className={twMerge(
+                "sticky top-0 bg-background-sidepane z-20 py-2",
+                !isCurrentCollection && "mt-2! border-t-2! border-quinary"
+              )}>
+                <span className="text-xs font-normal text-secondary uppercase tracking-wide">
+                  {isCurrentCollection ? "current view" : "also assigned to"}
+                </span>
+                <div
+                  className={twMerge(
+                    "text-primary flex items-center gap-2 hover:cursor-pointer hover:bg-quinary active:bg-quarternary rounded-md p-1 -m-1",
+                    isCurrentCollection ? "font-semibold" : "font-medium"
+                  )}
+                  onClick={() => {
+                    const ZoteroPane = ztoolkit.getGlobal("ZoteroPane");
+                    const collectionsView = ZoteroPane.collectionsView;
+                    if (collectionsView) {
+                      collectionsView.selectByID(group.collection.treeViewID);
+                      // Do not try to view deleted items in a collection.
+                      // They do not appear outside of trash, and selecting a deleted item
+                      // will re-open trash in collectionTree.
+                      if (!itemVersion.item.deleted) {
+                        ZoteroPane.selectItem(itemVersion.item.id);
+                      }
+                    }
+                  }}
+                >
+                  <span className="icon icon-css icon-collection size-[16px]"></span>
+                  <span>{group.collectionName}</span>
+                </div>
+              </header>
+
+              {/* Assignments for this collection */}
+              {group.assignments.map((assignment, index) => {
+                if (!assignment.id) {
+                  return null;
+                }
+
+                return (
+                  <AssignmentEditor
+                    key={assignment.id}
+                    assignment={assignment}
+                    assignmentIndex={index}
+                    collectionId={group.collectionId}
+                    editable={editable}
+                    isSaving={isSaving}
+                    priorityOptions={getPriorityOptions(group.collectionId)}
+                    onPriorityChange={handlePriorityChange}
+                    onClassNumberChange={handleClassNumberChange}
+                    onInstructionChange={handleInstructionChange}
+                    onStatusChange={handleStatusChange}
+                    onDelete={handleDeleteAssignment}
+                    onDuplicate={handleDuplicateAssignment}
+                  />
+                );
+              })}
+
+              {/* Create New Assignment Button for this collection */}
+              {editable && (
+                <div>
+                  <button
+                    onClick={() => handleCreateAssignment(itemVersion, group.collectionId)}
+                    disabled={isSaving}
+                    className="px-2 py-1 text-xs font-medium"
+                    onMouseEnter={(e) => {
+                      if (!isSaving) {
+                        (e.currentTarget as HTMLElement).style.backgroundColor =
+                          "var(--fill-quinary)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.backgroundColor =
+                        "transparent";
+                    }}
+                  >
+                    + Create assignment
+                  </button>
+                </div>
+              )}
+            </div>
           );
         })
-      )}
-
-      {/* Create New Assignment Button */}
-      {editable && (
-        <button
-          onClick={handleCreateAssignment}
-          disabled={isSaving}
-          style={{
-            padding: "8px 12px",
-            minHeight: "32px",
-            fontSize: "13px",
-            color: "var(--fill-primary)",
-            backgroundColor: "transparent",
-            border: "none",
-            borderRadius: "4px",
-            cursor: isSaving ? "not-allowed" : "pointer",
-            fontWeight: "500",
-            opacity: isSaving ? 0.5 : 1,
-            textAlign: "left",
-            transition: "background-color 0.15s ease",
-          }}
-          onMouseEnter={(e) => {
-            if (!isSaving) {
-              (e.currentTarget as HTMLElement).style.backgroundColor =
-                "var(--fill-quinary)";
-            }
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.backgroundColor =
-              "transparent";
-          }}
-        >
-          + Create New Assignment
-        </button>
       )}
     </div>
   );
@@ -351,28 +535,32 @@ function AssignmentEditor({
   const isDone = assignmentStatus === "done";
 
   return (
-    <div className="border border-quinary rounded-md p-3 m-0 flex flex-col opacity-100 transition-opacity duration-200 bg-background divide-y-2 divide-quinary space-y-3 *:not-last:pb-3"
-    >
+    <div className="border border-quinary rounded-md m-0 flex flex-col opacity-100 transition-opacity duration-200 bg-background divide-y divide-quarternary space-y-2.5 *:not-last:pb-2.5 p-2.5 z-10">
       {/* Header with class info and status */}
-      <div className="flex items-center justify-between gap-3">
+      <header className="flex items-center justify-between gap-3">
         <div className="flex-1 min-w-0">
           {assignment.classNumber !== undefined ? (
             <div>
-              Assignment #{assignmentIndex + 1} {classTitle ? <span>for <span>{classTitle}</span></span> : null}
+              Assignment #{assignmentIndex + 1}{" "}
+              {classTitle ? (
+                <span>
+                  for <span>{classTitle}</span>
+                </span>
+              ) : null}
             </div>
           ) : (
-            <div
-              className="text-sm font-medium text-secondary"
-            >
-              Unassigned
-            </div>
+            <div>Reference material</div>
           )}
         </div>
         {editable && (
           <button
             type="button"
             onClick={() =>
-              onStatusChange(assignment.id!, isDone ? null : "done")
+              onStatusChange(
+                assignment.id!,
+                collectionId,
+                isDone ? null : "done",
+              )
             }
             disabled={isSaving}
             className={twMerge(
@@ -380,7 +568,9 @@ function AssignmentEditor({
               isDone ? "bg-quinary" : "bg-transparent",
               isDone ? "border-quinary" : "border-transparent",
               isDone ? "text-primary" : "text-secondary",
-              isSaving ? "opacity-30 cursor-not-allowed" : "opacity-100 cursor-pointer",
+              isSaving
+                ? "opacity-30 cursor-not-allowed"
+                : "opacity-100 cursor-pointer",
             )}
             onMouseEnter={(e) => {
               if (!isSaving) {
@@ -395,60 +585,54 @@ function AssignmentEditor({
             }}
             title={isDone ? "Mark as not done" : "Mark as done"}
           >
-            {isDone ? <span className="flex items-center gap-2">Done<SquareCheck className="w-5 h-5" /></span> : <span className="flex items-center gap-2">Mark done <Square className="w-5 h-5" /></span>}
+            {isDone ? (
+              <span className="flex items-center gap-2">
+                Done
+                <SquareCheck className="w-5 h-5" />
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
+                Mark done <Square className="w-5 h-5" />
+              </span>
+            )}
           </button>
         )}
-      </div>
+      </header>
 
       {/* Class Number */}
-      <div className="flex items-center gap-3 justify-between">
-        <label>
-          {singularCapitalized}
-        </label>
-        <div className="text-center text-2xl font-bold box-border ml-auto">
-          <input
-            type="number"
-            min="1"
-            step="1"
-            disabled={!editable || isSaving}
-            placeholder="e.g., 1, 2, 3..."
-            value={assignment.classNumber?.toString() || ""}
-            onChange={(e) => {
-              const target = e.target as HTMLInputElement;
-              const value = target.value.trim();
-              const classNum = value ? parseInt(value, 10) : undefined;
-              if (value && (isNaN(classNum!) || classNum! < 1)) {
-                // Invalid input, reset to current value
-                target.value = assignment.classNumber?.toString() || "";
-                return;
-              }
-              onClassNumberChange(assignment.id!, classNum);
-            }}
-            className="border border-quinary rounded-md p-2 mr-0! w-auto"
-            onFocus={(e) => {
-              if (editable && !isSaving) {
-                (e.currentTarget as HTMLElement).style.borderColor =
-                  "var(--color-accent-blue)";
-              }
-            }}
-            onBlur={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor =
-                "transparent";
-            }}
-          />
-        </div>
+      <div className="flex items-center gap-2 justify-between">
+        <label className="w-1/4 shrink-0 grow-0">{singularCapitalized}</label>
+        <input
+          type="number"
+          min="1"
+          step="1"
+          disabled={!editable || isSaving}
+          placeholder="e.g., 1, 2, 3..."
+          value={assignment.classNumber?.toString() || ""}
+          onChange={(e) => {
+            const target = e.target as HTMLInputElement;
+            const value = target.value.trim();
+            const classNum = value ? parseInt(value, 10) : undefined;
+            if (value && (isNaN(classNum!) || classNum! < 1)) {
+              // Invalid input, reset to current value
+              target.value = assignment.classNumber?.toString() || "";
+              return;
+            }
+            onClassNumberChange(assignment.id!, collectionId, classNum);
+          }}
+          className="w-full border-0 hover:not-focus:bg-quinary hover:not-focus:cursor-pointer px-1.5! m-0! box-border text-2xl! font-bold! text-left! text-secondary -my-1.5!"
+        />
       </div>
 
       {/* Priority - Dropdown and Quick Buttons */}
-      <div className="flex flex-col gap-3"
-      >
-        <label className="text-xs font-medium text-secondary uppercase tracking-wide">
+      <div className="flex flex-row gap-2">
+        <label className='w-1/4 shrink-0 grow-0'>
           Priority
         </label>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1 -my-1">
           {/* Quick Priority Buttons */}
           {editable && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap">
               {priorityOptions
                 .filter((opt) => opt.value !== "")
                 .map((opt) => {
@@ -460,17 +644,20 @@ function AssignmentEditor({
                       onClick={() =>
                         onPriorityChange(
                           assignment.id!,
+                          collectionId,
                           isSelected ? ("" as any) : (opt.value as any),
                         )
                       }
                       disabled={isSaving}
                       className={twMerge(
                         "px-2 py-1 text-xs font-medium inline-flex flex-row gap-2 items-center flex-nowrap",
-                        "hover:bg-quinary hover:border-quinary hover:text-primary rounded-md",
+                        "hover:bg-quinary active:bg-quarternary hover:border-quinary hover:text-primary rounded-md",
                         isSelected ? "bg-quinary" : "bg-transparent",
                         isSelected ? "border-quinary" : "border-transparent",
                         isSelected ? "text-primary" : "text-secondary",
-                        isSaving ? "opacity-30 cursor-not-allowed" : "opacity-100 cursor-pointer",
+                        isSaving
+                          ? "opacity-30 cursor-not-allowed"
+                          : "opacity-100 cursor-pointer",
                       )}
                       title={opt.label}
                     >
@@ -486,11 +673,15 @@ function AssignmentEditor({
                 })}
               <button
                 type="button"
-                onClick={() => onPriorityChange(assignment.id!, "" as any)}
+                onClick={() =>
+                  onPriorityChange(assignment.id!, collectionId, "" as any)
+                }
                 disabled={isSaving || !assignment.priority}
                 className={twMerge(
-                  "px-2 py-1 text-xs font-medium text-secondary bg-transparent border border-transparent rounded-md cursor-pointer transition-all duration-150 opacity-30 hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-50",
-                  isSaving || !assignment.priority ? "opacity-30 cursor-not-allowed" : "opacity-100 cursor-pointer",
+                  "px-2 py-0.5 text-xs font-medium text-secondary bg-transparent border border-transparent rounded-md cursor-pointer transition-all duration-150 opacity-30 hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-50",
+                  isSaving || !assignment.priority
+                    ? "opacity-30 cursor-not-allowed"
+                    : "opacity-100 cursor-pointer",
                 )}
                 title="Clear priority"
               >
@@ -502,12 +693,8 @@ function AssignmentEditor({
       </div>
 
       {/* Instructions */}
-      <div
-        className="flex flex-col gap-1"
-      >
-        <label
-          className="text-xs font-medium text-secondary uppercase tracking-wide"
-        >
+      <div className="flex flex-row gap-2">
+        <label className="w-1/4 shrink-0 grow-0">
           Instructions
         </label>
         <textarea
@@ -516,21 +703,21 @@ function AssignmentEditor({
           value={assignment.classInstruction || ""}
           onChange={(e) => {
             const target = e.target as HTMLTextAreaElement;
-            onInstructionChange(assignment.id!, target.value);
+            onInstructionChange(assignment.id!, collectionId, target.value);
           }}
           placeholder="Add instructions for this assignment..."
-          className="p-2 w-full border border-transparent rounded-md bg-background text-primary resize-vertical font-inherit min-h-15 transition-border-color duration-150"
+          className="-mt-2 p-2 w-full border border-transparent rounded-md bg-background text-primary resize-vertical font-inherit min-h-15 transition-border-color duration-150 box-border hover:not-focus:bg-quinary hover:not-focus:cursor-pointer"
         />
       </div>
 
       {/* Action Buttons */}
       {editable && (
-        <div
-          className="flex justify-between relative flex-0"
-        >
+        <div className="flex justify-between relative flex-0">
           <button
             type="button"
-            onClick={() => onDuplicate(assignment.id!)}
+            onClick={() =>
+              onDuplicate(assignment.id!, collectionId, assignment)
+            }
             disabled={isSaving}
             className={twMerge(
               "px-2 py-1 text-xs font-medium",
@@ -543,12 +730,14 @@ function AssignmentEditor({
           </button>
           <button
             type="button"
-            onClick={() => onDelete(assignment.id!)}
+            onClick={() => onDelete(assignment.id!, collectionId)}
             disabled={isSaving}
             className={twMerge(
               "px-2 py-1 text-xs font-medium transition-all duration-150 opacity-30 hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-50",
               "inline-flex flex-row gap-2 items-center flex-nowrap",
-              isSaving ? "opacity-30 cursor-not-allowed" : "opacity-100 cursor-pointer",
+              isSaving
+                ? "opacity-30 cursor-not-allowed"
+                : "opacity-100 cursor-pointer",
             )}
             title="Delete assignment"
           >

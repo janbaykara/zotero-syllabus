@@ -1,21 +1,42 @@
 import { useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
+import { SyllabusManager } from "../syllabus";
 
-export function useZoteroSelectedItemId(): number | null {
+export function useZoteroSelectedItemIds(): number[] | null {
   // Create the store once
   const store = useMemo(() => createSelectedItemStore(), []);
 
-  return useSyncExternalStore(store.subscribe, store.getSnapshot);
+  const itemIds = useSyncExternalStore(store.subscribe, store.getSnapshot);
+
+  // Return the first item ID for backwards compatibility
+  return !!itemIds && itemIds.length > 0 ? itemIds : null;
 }
 
 export function createSelectedItemStore() {
-  let selectedItemId: number | null = null;
+  let selectedItemIds: number[] = [];
   const listeners = new Set<() => void>();
   let notifierID: string | null = null;
   let intervalID: NodeJS.Timeout | null = null;
 
   function getSnapshot() {
-    return selectedItemId;
+    return selectedItemIds;
+  }
+
+  function updateSelectedItems() {
+    const pane = ztoolkit.getGlobal("ZoteroPane");
+    const selectedItems = pane?.getSelectedItems() || [];
+    const newSelectedItemIds = selectedItems
+      .filter((item) => item.isRegularItem())
+      .map((item) => item.id);
+
+    // Check if items actually changed
+    if (
+      newSelectedItemIds.length !== selectedItemIds.length ||
+      !newSelectedItemIds.every((id, idx) => id === selectedItemIds[idx])
+    ) {
+      selectedItemIds = newSelectedItemIds;
+      listeners.forEach((l) => l());
+    }
   }
 
   function subscribe(onStoreChange: () => void) {
@@ -26,18 +47,45 @@ export function createSelectedItemStore() {
         event: string,
         type: string,
         ids: number[] | string[],
-        extraData: { [key: string]: any },
+        _extraData: { [key: string]: any },
       ) => {
-        // Listen to item selection changes
-        if (type === "item" || type === "tab") {
-          const pane = ztoolkit.getGlobal("ZoteroPane");
-          const selectedItems = pane?.getSelectedItems() || [];
-          const newSelectedItemId =
-            selectedItems.length > 0 ? selectedItems[0].id : null;
-          if (newSelectedItemId !== selectedItemId) {
-            selectedItemId = newSelectedItemId;
-            listeners.forEach((l) => l());
+        if (type === "item") {
+          // Check if this is a modify/delete event for any currently selected item
+          const itemIdsArray = ids as number[];
+          const hasSelectedItem = selectedItemIds.some((id) =>
+            itemIdsArray.includes(id),
+          );
+
+          if (hasSelectedItem && (event === "modify" || event === "delete")) {
+            if (event === "modify") {
+              // Items were modified, invalidate cache for affected items
+              for (const itemId of selectedItemIds) {
+                if (itemIdsArray.includes(itemId)) {
+                  try {
+                    const item = Zotero.Items.get(itemId);
+                    if (item) {
+                      SyllabusManager.invalidateSyllabusDataCache(item);
+                    }
+                  } catch (e) {
+                    // Item might not exist anymore
+                  }
+                }
+              }
+              listeners.forEach((l) => l());
+            } else if (event === "delete") {
+              // Remove deleted items from selection
+              selectedItemIds = selectedItemIds.filter(
+                (id) => !itemIdsArray.includes(id),
+              );
+              listeners.forEach((l) => l());
+            }
+          } else {
+            // Selection change or other item event - update selected items
+            updateSelectedItems();
           }
+        } else if (type === "tab") {
+          // Tab change - update selected items
+          updateSelectedItems();
         }
       },
     };
@@ -49,20 +97,11 @@ export function createSelectedItemStore() {
 
     // Also poll for changes as a fallback (Zotero doesn't always fire selection events reliably)
     intervalID = setInterval(() => {
-      const pane = ztoolkit.getGlobal("ZoteroPane");
-      const selectedItems = pane?.getSelectedItems() || [];
-      const newSelectedItemId =
-        selectedItems.length > 0 ? selectedItems[0].id : null;
-      if (newSelectedItemId !== selectedItemId) {
-        selectedItemId = newSelectedItemId;
-        listeners.forEach((l) => l());
-      }
+      updateSelectedItems();
     }, 200);
 
     // Initial load
-    const pane = ztoolkit.getGlobal("ZoteroPane");
-    const selectedItems = pane?.getSelectedItems() || [];
-    selectedItemId = selectedItems.length > 0 ? selectedItems[0].id : null;
+    updateSelectedItems();
 
     // Return an unsubscribe fn
     return () => {

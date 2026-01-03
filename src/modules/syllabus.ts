@@ -283,7 +283,7 @@ export class SyllabusManager {
     this.registerSyllabusInfoColumn();
     this.registerSyllabusClassInstructionColumn();
     this.registerSyllabusStatusColumn();
-    this.reloadItemPane();
+    this.registerSyllabusItemPaneSection();
   }
 
   // /**
@@ -404,7 +404,7 @@ export class SyllabusManager {
   ) {
     ztoolkit.log("SyllabusManager.onItemUpdate", source, item.id);
     // No need to call setupPage() - React stores will trigger re-render automatically
-    if (source !== "item-pane") this.reloadItemPane();
+    // if (source !== "item-pane") this.reloadItemPane();
     // Class numbers are stored in the items, so we need to update the context menu
     this.onClassListUpdate();
   }
@@ -1272,10 +1272,11 @@ export class SyllabusManager {
 
   static reloadItemPane() {
     ztoolkit.log("SyllabusManager.reloadItemPane");
+    // Actually, don't. Let React handle the updates via subscribers.
     this.destroyItemPaneSection();
     setTimeout(() => {
       this.registerSyllabusItemPaneSection();
-    }, 1000);
+    }, 500);
   }
 
   static destroyItemPaneSection() {
@@ -1322,8 +1323,7 @@ export class SyllabusManager {
           body,
           selectedCollection
             ? h(ItemPane, {
-              item,
-              collectionId: selectedCollection.id,
+              currentCollectionId: selectedCollection.id,
               editable,
             })
             : h("div", {
@@ -2439,7 +2439,7 @@ export class SyllabusManager {
     if (emitChange) {
       ztoolkit.log("Emitting collection metadata change for source");
       this.emitCollectionMetadataChange();
-      if (source !== "item-pane") this.reloadItemPane();
+      // if (source !== "item-pane") this.reloadItemPane();
       if (source !== "page") this.setupPage();
       this.onClassListUpdate();
     }

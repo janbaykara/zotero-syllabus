@@ -12,15 +12,8 @@
   /* 13px - base / 12px sm */
 
   /** Colors **/
-  --color-background: light-dark(#fff, #1e1e1e);
-  --color-background-50: light-dark(
-    rgba(255, 255, 255, 0.5019607843),
-    rgba(30, 30, 30, 0.5019607843)
-  );
-  --color-background-70: light-dark(
-    rgba(255, 255, 255, 0.6980392157),
-    rgba(30, 30, 30, 0.6980392157)
-  );
+  --color-background: var(--material-background);
+  --color-background-sidepane: var(--material-sidepane);
 
   --color-accent-azure: #66adff;
   --color-accent-blue: #4072e5;

@@ -1,5 +1,5 @@
 item-section-syllabus-head-text =
-    .label = Syllabus
+    .label = Reading assignments
 item-section-syllabus-sidenav-tooltip =
     .tooltiptext = Syllabus settings for this item
 
