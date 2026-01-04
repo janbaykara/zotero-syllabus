@@ -287,11 +287,11 @@ export const CustomPrioritySchema = z.object({
  * Settings Class Metadata schema
  */
 export const SettingsClassMetadataSchema = z.object({
-  title: z.string().optional(),
-  description: z.string().optional(),
+  title: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
   itemOrder: z.array(z.string()).optional(),
-  readingDate: z.string().optional(), // ISO date string
-  status: ClassStatusSchema.optional(),
+  readingDate: z.string().optional().nullable(), // ISO date string
+  status: ClassStatusSchema.optional().nullable(),
 });
 
 /**
@@ -337,7 +337,7 @@ export const SettingsSyllabusMetadataSchema = z.object({
   classes: transformClasses(SettingsClassMetadataSchema),
   nomenclature: z.string().optional(),
   priorities: z.array(CustomPrioritySchema).optional(),
-  locked: z.boolean().optional(),
+  locked: z.boolean().optional().nullable(),
 });
 
 /**

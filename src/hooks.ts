@@ -4,7 +4,7 @@ import { registerPrefsScripts } from "./modules/preferenceScript";
 import { createZToolkit } from "./utils/ztoolkit";
 import { getCSSUrl } from "./utils/css";
 import { getSelectedCollection } from "./utils/zotero";
-import { ExportSyllabusMetadataSchema } from "./utils/schemas";
+import { ExportSyllabusMetadataSchema, SettingsSyllabusMetadata } from "./utils/schemas";
 
 async function onStartup() {
   await Promise.all([
@@ -105,11 +105,16 @@ function registerTalisMetadataEndpoint() {
         ztoolkit.log("Setting Talis syllabus metadata for collection", collectionId, metadata);
 
         try {
-          await SyllabusManager.importSyllabusMetadata(
+          const { collectionAndLibraryKey, syllabusData } = await SyllabusManager.importSyllabusMetadata(
             collectionId,
             JSON.stringify(validatedMetadataFileContents.data),
             "background",
           );
+
+          return [200, "application/json", JSON.stringify({
+            collectionAndLibraryKey: collectionAndLibraryKey as string,
+            syllabusData: syllabusData as SettingsSyllabusMetadata
+          })];
         } catch (error) {
           ztoolkit.log("Error setting Talis syllabus metadata:", error);
           return [
@@ -118,8 +123,6 @@ function registerTalisMetadataEndpoint() {
             JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
           ];
         }
-
-        return [200, "application/json", JSON.stringify({ success: true })];
       } catch (error) {
         ztoolkit.log("Error setting Talis syllabus metadata:", error);
         return [

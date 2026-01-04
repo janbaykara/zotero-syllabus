@@ -2709,7 +2709,7 @@ export class SyllabusManager {
   static getClassReadingDate(
     collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
-  ): string | undefined {
+  ): SettingsClassMetadata['readingDate'] {
     const metadata = SyllabusManager.getClassMetadata(
       collectionId,
       classNumber,
@@ -3068,7 +3068,7 @@ export class SyllabusManager {
           );
 
           // Only include classes with reading dates
-          if (readingDate === undefined) continue;
+          if (!readingDate) continue;
 
           if (!result.has(readingDate)) {
             result.set(readingDate, new Map());
@@ -3214,7 +3214,10 @@ export class SyllabusManager {
     collectionId: number | GetByLibraryAndKeyArgs,
     importedJsonString: string,
     source: "page" | "background" = "page",
-  ): Promise<void> {
+  ): Promise<{
+    collectionAndLibraryKey: string;
+    syllabusData: SettingsSyllabusMetadata;
+  }> {
     // Parse JSON
     let parsedData: unknown;
     try {
@@ -3373,5 +3376,13 @@ export class SyllabusManager {
 
     // Save merged metadata
     await this.setCollectionMetadata(collectionId, mergedMetadata, source);
+
+    return {
+      collectionAndLibraryKey: this.getCollectionReferenceString(
+        targetCollection.libraryID,
+        targetCollection.key,
+      ),
+      syllabusData: mergedMetadata,
+    }
   }
 }
