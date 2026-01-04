@@ -301,43 +301,89 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
         metadata.priorities = priorities;
       }
 
-      // Build classes object from sections
-      if (talisSyllabusData.included) {
+      // Build classes object from top-level sections only
+      // Helper function to recursively collect all items from a section and its children
+      function collectItemsFromSection(sectionId, included) {
+        var itemOrder = [];
+        var section = null;
+
+        // Find the section in included array
+        for (var i = 0; i < included.length; i++) {
+          if (included[i].type === "sections" && included[i].id === sectionId) {
+            section = included[i];
+            break;
+          }
+        }
+
+        if (!section || !section.relationships || !section.relationships.all_children) {
+          return itemOrder;
+        }
+
+        // Recursively collect items from all_children
+        var children = section.relationships.all_children.data || [];
+        for (var j = 0; j < children.length; j++) {
+          var child = children[j];
+          if (child.type === "items") {
+            // Direct item - add to list
+            itemOrder.push(child.id);
+          } else if (child.type === "sections") {
+            // Nested section - recursively collect its items
+            var nestedItems = collectItemsFromSection(child.id, included);
+            itemOrder = itemOrder.concat(nestedItems);
+          }
+        }
+
+        return itemOrder;
+      }
+
+      // Get top-level sections from data.relationships.sections
+      if (talisSyllabusData.data && talisSyllabusData.data.relationships &&
+        talisSyllabusData.data.relationships.sections &&
+        talisSyllabusData.data.relationships.sections.data &&
+        talisSyllabusData.included) {
         var classes = {};
+        var topLevelSections = talisSyllabusData.data.relationships.sections.data;
+
+        // Create a map of section ID to section data for quick lookup
+        var sectionMap = {};
         for (var i = 0; i < talisSyllabusData.included.length; i++) {
           var inc = talisSyllabusData.included[i];
-          if (inc.type === "sections" && inc.attributes) {
-            var sectionId = i;
-            var sectionTitle = inc.attributes.title || "";
-            var sectionDescription = inc.attributes.description || null;
+          if (inc.type === "sections") {
+            sectionMap[inc.id] = inc;
+          }
+        }
 
-            // Extract item IDs from all_children relationships
-            var itemOrder = [];
-            if (inc.relationships && inc.relationships.all_children && inc.relationships.all_children.data) {
-              for (var j = 0; j < inc.relationships.all_children.data.length; j++) {
-                var child = inc.relationships.all_children.data[j];
-                // Only include items, not subsections
-                if (child.type === "items") {
-                  itemOrder.push(child.id);
-                }
+        // Process each top-level section
+        for (var k = 0; k < topLevelSections.length; k++) {
+          var topSectionRef = topLevelSections[k];
+          if (topSectionRef.type === "sections") {
+            var topSectionId = topSectionRef.id;
+            var topSection = sectionMap[topSectionId];
+
+            if (topSection && topSection.attributes) {
+              var sectionTitle = topSection.attributes.title || "";
+              var sectionDescription = topSection.attributes.description || null;
+
+              // Recursively collect all items from this section and its nested children
+              var itemOrder = collectItemsFromSection(topSectionId, talisSyllabusData.included);
+
+              // Build class object (ExportClassMetadataSchema: title, description, itemOrder, readingDate)
+              var classObj = {};
+              if (sectionTitle) {
+                classObj.title = sectionTitle;
               }
-            }
+              if (sectionDescription) {
+                classObj.description = sectionDescription;
+              }
+              if (itemOrder.length > 0) {
+                classObj.itemOrder = itemOrder;
+              }
 
-            // Build class object (ExportClassMetadataSchema: title, description, itemOrder, readingDate)
-            var classObj = {};
-            if (sectionTitle) {
-              classObj.title = sectionTitle;
-            }
-            if (sectionDescription) {
-              classObj.description = sectionDescription;
-            }
-            // if (itemOrder.length > 0) {
-            //   classObj.itemOrder = itemOrder;
-            // }
-
-            // Only add class if it has at least a title or itemOrder
-            if (classObj.title || (classObj.itemOrder && classObj.itemOrder.length > 0)) {
-              classes[sectionId] = classObj;
+              // Only add class if it has at least a title or itemOrder
+              if (classObj.title || (classObj.itemOrder && classObj.itemOrder.length > 0)) {
+                // Use section index + 1 as key to start at 1 (not 0)
+                classes[(k + 1).toString()] = classObj;
+              }
             }
           }
         }
