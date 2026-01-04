@@ -60,7 +60,6 @@ function detectWeb(doc, url) {
   if (url.includes("/lists/")) {
     return "multiple";
   }
-  if (url.includes("/lists/") && getSearchResults(doc, true)) return "multiple";
 
   if (url.includes("/items/")) {
     var type = ZU.xpathText(doc, '//dd/span[@class="label"]');
@@ -72,6 +71,23 @@ function detectWeb(doc, url) {
 
   return false;
 }
+
+/**
+ * Mapping of Talis Aspire list URLs to objects mapping item UUIDs to their priority.
+ * 
+ * @typedef {Object} ItemPriorities
+ * @property {Object.<string, Object.<string, string>>} [url] - The URL of the Talis Aspire reading list.
+ * @property {Object.<string, string>} [uuid] - The UUID of an item within the list, mapped to its priority string.
+ * 
+ * Example:
+ * {
+ *   "https://lists.example.com/lists/abcd1234": {
+ *     "uuid-1": "importance1",
+ *     "uuid-2": "importance2"
+ *   }
+ * }
+ */
+var itemPriorities = {}
 
 /**
  * Return a dictionary of item UUIDs and titles from the search results.
@@ -124,6 +140,14 @@ function getSearchResults(doc, url, callback) {
               item.relationships.resource.data &&
               item.relationships.resource.data.id;
 
+            // item.relationships.importance.data.id
+            if (item.relationships && item.relationships.importance && item.relationships.importance.data && item.relationships.importance.data.id) {
+              if (!itemPriorities[url]) {
+                itemPriorities[url] = {};
+              }
+              itemPriorities[url][itemId] = item.relationships.importance.data.id;
+            }
+
             if (resourceId && allResourceTitles[resourceId]) {
               allItems[itemId] = allResourceTitles[resourceId];
             } else {
@@ -171,6 +195,7 @@ function doWeb(doc, url) {
   }
 }
 
+// E.g. https://ucl.rl.talis.com/items/7DEB9EE7-8AE7-01D8-11E1-8708053A12F9.ris
 function getRISURL(url, uuid) {
   let siteID = url.match(/\/\d+\/([^/]+)/);
   if (!siteID) siteID = url.match(/([^.]+)\.rl\.talis\.com/);
@@ -178,56 +203,66 @@ function getRISURL(url, uuid) {
   return `https://${siteID}.rl.talis.com/items/${uuid}.ris`;
 }
 
+// E.g. https://ucl.rl.talis.com/items/7DEB9EE7-8AE7-01D8-11E1-8708053A12F9.ris
+function getUUIDFromRISURL(url) {
+  safeLog("TALIS-ASPIRE-CUSTOM: getUUIDFromRISURL", url);
+  // use a standard regex to get the UUID from the RIS URL
+  var UNIVERSAL_UUID_REGEX = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+  var matches = url.match(UNIVERSAL_UUID_REGEX);
+  safeLog("TALIS-ASPIRE-CUSTOM: getUUIDFromRISURL matches", matches);
+  if (!matches || !matches.length) {
+    return null;
+  }
+  var uuid = matches[0];
+  safeLog("TALIS-ASPIRE-CUSTOM: getUUIDFromRISURL uuid", uuid);
+  return uuid;
+}
+
 var RIS_TRANSLATOR_ID = "32d59d2d-b65a-4da4-b0a3-bdd3cfb979e7";
 /**
  * Extracts RIS data from the URL and scrapes it using the RIS translator.
  */
-function scrape(url, selectedUUIDs) {
-  var translator = Zotero.loadTranslator("import");
-  translator.setTranslator(RIS_TRANSLATOR_ID);
+function scrape(syllabusURL, selectedUUIDs) {
   safeLog("TALIS-ASPIRE-CUSTOM: scraping ", selectedUUIDs.length, " items");
-  constructExportSyllabusMetadataFromTalisAPI(url).then(metadata => {
+  constructExportSyllabusMetadataFromTalisAPI(syllabusURL).then(metadata => {
     setTalisSyllabusMetadata(metadata).then((syllabusResponse) => {
-      // TODO: Could attempt to dedupe items and assign multiple times.
-      try {
-        safeLog("TALIS-ASPIRE-CUSTOM: syllabus save successful");
-        if (typeof syllabusResponse === "string") {
-          syllabusResponse = JSON.parse(syllabusResponse);
-        }
-        var classes = syllabusResponse.syllabusData.classes;
-        safeLog("TALIS-ASPIRE-CUSTOM: classes:", typeof classes, Object.keys(classes));
-        for (var classNumber in classes) {
-          // safeLog("TALIS-ASPIRE-CUSTOM: importing items for classNumber:", classNumber);
-          // var classURLs = classes[classNumber].itemOrder.map((uuid) => getRISURL(url, uuid));
-          // safeLog("TALIS-ASPIRE-CUSTOM: classURLs:", classURLs);
-          for (var uuid of classes[classNumber].itemOrder) {
-            if (!selectedUUIDs.includes(uuid)) {
-              continue;
+      syllabusResponse = JSON.parse(syllabusResponse);
+      var translator = Zotero.loadTranslator("import");
+      translator.setTranslator(RIS_TRANSLATOR_ID);
+      ZU.doGet(
+        selectedUUIDs.map(uuid => getRISURL(syllabusURL, uuid)),
+        function (ris, res, url) {
+          try {
+            var uuid = getUUIDFromRISURL(url);
+            if (!uuid) {
+              return;
             }
-            safeLog("TALIS-ASPIRE-CUSTOM: importing item:", classNumber, uuid);
-            var classURL = getRISURL(url, uuid);
-            ZU.doGet(classURL, function (text) {
-              safeLog("TALIS-ASPIRE-CUSTOM: got RIS data for item:", classNumber, uuid);
-              try {
-                // Set reading assignment.
-                // (M1 is the RIS code that Zotero expects for the `extra` field: https://github.com/zotero/translators/blob/9937224d4a24ccb98ca92a3d8a3683ad3e331199/RIS.js#L476C2-L476C4)
-                // TODO: add priorities, by referencing the UUID against the Item API
-                // var priority = undefined
-                var extraField = createAssignmentObject(syllabusResponse.collectionAndLibraryKey, uuid, { classNumber });
-                text = addRowToRIS(text, 'M1', `syllabus:${JSON.stringify(extraField)}`);
+            // Pull data via assignmentID
+            var classEntry = Object.entries(syllabusResponse.syllabusData.classes)
+              .find(([classNumber, classData]) => {
+                return classData.itemOrder.includes(uuidToAssignmentID(uuid))
+              })
+            var classNumber = classEntry ? classEntry[0] : undefined
+            var priority = itemPriorities[syllabusURL] ? itemPriorities[syllabusURL][uuid] : undefined
+            // Set reading assignment.
+            // (M1 is the RIS code that Zotero expects for the `extra` field: https://github.com/zotero/translators/blob/9937224d4a24ccb98ca92a3d8a3683ad3e331199/RIS.js#L476C2-L476C4)
+            var extraField = createAssignmentObject(
+              syllabusResponse.collectionAndLibraryKey,
+              uuid,
+              { classNumber, priority }
+            );
+            ris = addRowToRIS(ris, 'M1', `syllabus:${JSON.stringify(extraField)}`);
+            safeLog("TALIS-ASPIRE-CUSTOM: got extraField for item:", uuid, extraField);
 
-                // Import to Zotero
-                translator.setString(text);
-                translator.translate();
-              } catch (e) {
-                safeLog("TALIS-ASPIRE-CUSTOM: Error importing item:", classNumber, uuid, e);
-              }
-            });
+            // Import to Zotero
+            translator.setString(ris);
+            translator.translate();
+          } catch (e) {
+            safeLog("TALIS-ASPIRE-CUSTOM: Error importing item:", e);
+            safeLog("TALIS-ASPIRE-CUSTOM: Error additional vars", url, res, ris);
           }
         }
-      } catch (e) {
-        safeLog("TALIS-ASPIRE-CUSTOM: Error importing items by class", e);
-      }
+      )
     })
   })
 }
@@ -235,10 +270,24 @@ function scrape(url, selectedUUIDs) {
 function createAssignmentObject(collectionAndLibraryKey, uuid, args) {
   return {
     [collectionAndLibraryKey]: {
-      id: `assignment-${uuid}`,
+      id: uuidToAssignmentID(uuid),
       ...args
     }
   }
+}
+
+function uuidToAssignmentID(uuid) {
+  if (!uuid) {
+    return null;
+  }
+  if (uuid.includes("assignment-")) {
+    return uuid;
+  }
+  return `assignment-${uuid}`;
+}
+
+function assignmentIDToUUID(assignmentID) {
+  return assignmentID.replace("assignment-", "");
 }
 
 function addRowToRIS(text, code, value) {
@@ -356,7 +405,7 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
           var child = children[j];
           if (child.type === "items") {
             // Direct item - add to list
-            itemOrder.push(child.id);
+            itemOrder.push(uuidToAssignmentID(child.id));
           } else if (child.type === "sections") {
             // Nested section - recursively collect its items
             var nestedItems = collectItemsFromSection(child.id, included);
@@ -773,63 +822,20 @@ function getTalisCollectionAPIUrl(url) {
 // TAILS gets all item data (including UUID and RIS-compatible data, including DOIs and ISBNs) via the API: {}/lists/99449747-A091-3F6D-E08A-965F4A5C3149/items?include=content,importance,resource.part_of&page%5Blimit%5D=400 
 
 Note the default_online_resource (crucial for translators to work) and the relationships.importance.data (crucial for syllabus metadata).
-
 {
     "meta": {
-        "total": 223,
-        "item_count": 223
+        "total": 83,
+        "item_count": 83
     },
     "links": {
-        "self": "https://rl.talis.com/3/ucl/lists/99449747-A091-3F6D-E08A-965F4A5C3149/items?include=content%2Cimportance%2Cresource.part_of&page%5Boffset%5D=0&page%5Blimit%5D=200",
-        "first": "https://rl.talis.com/3/ucl/lists/99449747-A091-3F6D-E08A-965F4A5C3149/items?include=content%2Cimportance%2Cresource.part_of&page%5Boffset%5D=0&page%5Blimit%5D=200",
-        "last": "https://rl.talis.com/3/ucl/lists/99449747-A091-3F6D-E08A-965F4A5C3149/items?include=content%2Cimportance%2Cresource.part_of&page%5Boffset%5D=200&page%5Blimit%5D=200",
-        "next": "https://rl.talis.com/3/ucl/lists/99449747-A091-3F6D-E08A-965F4A5C3149/items?include=content%2Cimportance%2Cresource.part_of&page%5Boffset%5D=200&page%5Blimit%5D=200"
+        "self": "https://rl.talis.com/3/ucl/lists/8F845A31-CB5B-9752-7827-39F9DE0D4796/items?include=content%2Cimportance%2Cresource.part_of&page%5Boffset%5D=0&page%5Blimit%5D=200",
+        "first": "https://rl.talis.com/3/ucl/lists/8F845A31-CB5B-9752-7827-39F9DE0D4796/items?include=content%2Cimportance%2Cresource.part_of&page%5Boffset%5D=0&page%5Blimit%5D=200",
+        "last": "https://rl.talis.com/3/ucl/lists/8F845A31-CB5B-9752-7827-39F9DE0D4796/items?include=content%2Cimportance%2Cresource.part_of&page%5Boffset%5D=0&page%5Blimit%5D=200"
     },
     "data": [
         {
             "type": "items",
-            "id": "C0597536-F8BD-8217-C6D5-75AEA0099EFE",
-            "attributes": {
-                "student_note": "On the linked webpage, please scroll down and click 'Bloomsbury Cultural History' to access this chapter."
-            },
-            "relationships": {
-                "content": {
-                    "data": null
-                },
-                "importance": {
-                    "data": null
-                },
-                "resource": {
-                    "data": {
-                        "type": "resources",
-                        "id": "2B65DE10-3C7A-62DC-E4DB-87B8D39734FF"
-                    }
-                },
-                "rolled_over_from": {
-                    "data": {
-                        "type": "items",
-                        "id": "638943A0-6346-F307-BB73-A04C8E168334"
-                    }
-                }
-            },
-            "links": {
-                "self": "https://rl.talis.com/3/ucl/items/C0597536-F8BD-8217-C6D5-75AEA0099EFE"
-            },
-            "meta": {
-                "default_online_resource": {
-                    "external_url": "/link?url=http%3A%2F%2Flibproxy.ucl.ac.uk%2Flogin%3Fqurl%3Dhttps%253A%252F%252Fdoi.org%252F10.5040%252F9781350035218.ch-005&sig=a4ff41f6c937ba353372657e7a75b7d16c604f349e7deb2474262bf5b66d50b1",
-                    "original_property": "10.5040/9781350035218.ch-005",
-                    "original_url": "https://doi.org/10.5040/9781350035218.ch-005",
-                    "proxied_url": "http://libproxy.ucl.ac.uk/login?qurl=https%3A%2F%2Fdoi.org%2F10.5040%2F9781350035218.ch-005",
-                    "type": "doi"
-                },
-                "created_datetime": "2022-09-29T12:25:26+00:00",
-                "has_file_upload": false
-            }
-        },
-        {
-            "type": "items",
-            "id": "27B7B3B2-5D9A-7D6A-8565-3849A55C3B34",
+            "id": "40451D6E-AA89-36AB-FE5B-AE7C90D44B9E",
             "attributes": {
                 "student_note": ""
             },
@@ -838,33 +844,122 @@ Note the default_online_resource (crucial for translators to work) and the relat
                     "data": null
                 },
                 "importance": {
-                    "data": null
+                    "data": {
+                        "type": "importances",
+                        "id": "importance3"
+                    }
                 },
                 "resource": {
                     "data": {
                         "type": "resources",
-                        "id": "73A83323-8EAB-8B53-DDD8-91C13876D619"
+                        "id": "EE4A73E3-5B9A-BB5C-E142-DAEB36740A7D"
                     }
                 },
                 "rolled_over_from": {
                     "data": {
                         "type": "items",
-                        "id": "2A4038B8-9C8B-C0E8-84E5-29BC74B5B00B"
+                        "id": "DE813C40-FB27-902C-1E0C-7C5AFFB8B085"
                     }
                 }
             },
             "links": {
-                "self": "https://rl.talis.com/3/ucl/items/27B7B3B2-5D9A-7D6A-8565-3849A55C3B34"
+                "self": "https://rl.talis.com/3/ucl/items/40451D6E-AA89-36AB-FE5B-AE7C90D44B9E"
             },
             "meta": {
                 "default_online_resource": {
-                    "external_url": "/link?url=http%3A%2F%2Flibproxy.ucl.ac.uk%2Flogin%3Fqurl%3Dhttps%253A%252F%252Fdoi.org%252F10.4324%252F9780203828854&sig=1f3327a83cdd2b7acbd8692cdf02e9db271c846cb61afee3430141de2f4602ab",
-                    "original_property": "10.4324/9780203828854",
-                    "original_url": "https://doi.org/10.4324/9780203828854",
-                    "proxied_url": "http://libproxy.ucl.ac.uk/login?qurl=https%3A%2F%2Fdoi.org%2F10.4324%2F9780203828854",
-                    "type": "doi"
+                    "isbns": [
+                        "9780415520751",
+                        "9780415520768"
+                    ],
+                    "type": "google_books"
                 },
-                "created_datetime": "2020-09-25T12:55:09+00:00",
+                "created_datetime": "2017-06-20T14:41:51+01:00",
+                "has_file_upload": false
+            }
+        },
+        {
+            "type": "items",
+            "id": "64CFB241-B239-A77B-5710-2FC0703F61B4",
+            "attributes": {
+                "student_note": ""
+            },
+            "relationships": {
+                "content": {
+                    "data": null
+                },
+                "importance": {
+                    "data": {
+                        "type": "importances",
+                        "id": "importance3"
+                    }
+                },
+                "resource": {
+                    "data": {
+                        "type": "resources",
+                        "id": "36F11F53-0A7C-C14F-F881-9B4A95708138"
+                    }
+                },
+                "rolled_over_from": {
+                    "data": {
+                        "type": "items",
+                        "id": "EA288EB3-F2B4-20D8-FACA-89A7AE5BB277"
+                    }
+                }
+            },
+            "links": {
+                "self": "https://rl.talis.com/3/ucl/items/64CFB241-B239-A77B-5710-2FC0703F61B4"
+            },
+            "meta": {
+                "default_online_resource": {
+                    "external_url": "/link?url=https%3A%2F%2Febookcentral.proquest.com%2Flib%2FUCL%2Fdetail.action%3FdocID%3D743672&sig=814725945ae3c5572651764e9c571bd3a539e556be226b8de5a0105ec8a084e4",
+                    "original_url": "https://ebookcentral.proquest.com/lib/UCL/detail.action?docID=743672",
+                    "proxied_url": "https://ebookcentral.proquest.com/lib/UCL/detail.action?docID=743672",
+                    "type": "ebook"
+                },
+                "created_datetime": "2017-06-20T14:44:00+01:00",
+                "has_file_upload": false
+            }
+        },
+        {
+            "type": "items",
+            "id": "EA8FACBB-C349-01CF-D580-22EC762E9C68",
+            "attributes": {
+                "student_note": ""
+            },
+            "relationships": {
+                "content": {
+                    "data": null
+                },
+                "importance": {
+                    "data": {
+                        "type": "importances",
+                        "id": "importance3"
+                    }
+                },
+                "resource": {
+                    "data": {
+                        "type": "resources",
+                        "id": "27D7E038-CE8A-199A-E761-2ED0DC8FF9A2"
+                    }
+                },
+                "rolled_over_from": {
+                    "data": {
+                        "type": "items",
+                        "id": "849DAE7D-E9FF-E92B-76CD-5D172532B6FA"
+                    }
+                }
+            },
+            "links": {
+                "self": "https://rl.talis.com/3/ucl/items/EA8FACBB-C349-01CF-D580-22EC762E9C68"
+            },
+            "meta": {
+                "default_online_resource": {
+                    "external_url": "/link?url=https%3A%2F%2Febookcentral.proquest.com%2Flib%2Fucl%2Fdetail.action%3FdocID%3D1766846&sig=c7b242628d23dd1d61605544d775efe8678c5eb8626d177d517d917f77058718",
+                    "original_url": "https://ebookcentral.proquest.com/lib/ucl/detail.action?docID=1766846",
+                    "proxied_url": "https://ebookcentral.proquest.com/lib/ucl/detail.action?docID=1766846",
+                    "type": "ebook"
+                },
+                "created_datetime": "2017-06-20T14:45:23+01:00",
                 "has_file_upload": false
             }
         },
