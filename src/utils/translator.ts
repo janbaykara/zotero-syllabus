@@ -14,11 +14,14 @@ export async function installTalisAspireTranslator(): Promise<void> {
       translatorID: translatorID,
       label: "Talis Aspire for Zotero Syllabus",
       creator: "Jan Baykara",
-      target:
-        "^https?://([^/]+\\.)?(((my)?reading|resource|lib|cyprus|)lists|aspire\\.surrey|rl\\.talis)\\..+/(lists|items)/",
-      minVersion: "3.0",
+      // target:
+      // "^https?://([^/]+\\.)?(((my)?reading|resource|lib|cyprus|)lists|aspire\\.surrey|rl\\.talis)\\..+/(lists|items)/",
+      // https://rl.talis.com/3/ucl/lists/99449747-A091-3F6D-E08A-965F4A5C3149.html?lang=en-GB
+      // target: "^https?://([^/]+\\.)?rl\\.talis\\..+/(lists|items)/",
+      target: "",
+      minVersion: "7.0",
       maxVersion: "",
-      priority: 100,
+      priority: 320,
       inRepository: false,
       translatorType: 4,
       browserSupport: "gcsibv",

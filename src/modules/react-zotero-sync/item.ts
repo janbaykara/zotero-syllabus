@@ -9,7 +9,7 @@ export function useZoteroItem(itemId: number | null) {
   const version = useSyncExternalStore(store.subscribe, store.getSnapshot);
 
   const item = useMemo(() => {
-    ztoolkit.log("useZoteroItem.useMemo", { itemId, version });
+    // ztoolkit.log("useZoteroItem.useMemo", { itemId, version });
     if (!itemId) {
       return null;
     }
@@ -26,21 +26,21 @@ export function useZoteroItem(itemId: number | null) {
 
 export function createItemStore(itemId: number | null) {
   let version = 0;
-  ztoolkit.log("useZoteroItem.createItemStore", { itemId, version });
+  // ztoolkit.log("useZoteroItem.createItemStore", { itemId, version });
   const listeners = new Set<() => void>();
   let notifierID: string | null = null;
 
   function getSnapshot() {
-    ztoolkit.log("useZoteroItem.createItemStore.getSnapshot", {
-      itemId,
-      version,
-    });
+    // ztoolkit.log("useZoteroItem.createItemStore.getSnapshot", {
+    //   itemId,
+    //   version,
+    // });
     return version;
   }
 
   function subscribe(onStoreChange: () => void) {
     if (!itemId) {
-      return () => {}; // No-op unsubscribe
+      return () => { }; // No-op unsubscribe
     }
 
     listeners.add(onStoreChange);
@@ -52,12 +52,12 @@ export function createItemStore(itemId: number | null) {
         ids: (number | string)[],
         _extraData: any,
       ) {
-        ztoolkit.log("useZoteroItem.subscriber.notify", {
-          event,
-          type,
-          ids,
-          version,
-        });
+        // ztoolkit.log("useZoteroItem.subscriber.notify", {
+        //     event,
+        //       type,
+        //       ids,
+        //       version,
+        // });
         // Listen to item modify/delete events for this specific item
         if (type === "item" && ids.includes(itemId)) {
           version++;

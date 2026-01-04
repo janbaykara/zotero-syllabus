@@ -23,7 +23,50 @@
   ***** END LICENSE BLOCK *****
 */
 
+/**
+ * Plan will be to:
+ * 1. Get all the class titles and associated item UUIDs
+ * 2. Get the full CSV data via the API
+ * 3. Parse the CSV data and append the class titles via the UUIDs
+ * 4. Import the items. If an item has ISBNs or other codes from the CSVs, pull the full item data via the relevant translators.
+ * 5. Import the classes to syllabus metadata for the current collection.
+ * 6. Assign the items to the classes, updating their extra fields appropriately.
+ * 7. Finally, save a snapshot of the website itself as an item.
+ */
+
+// Safe logging helper - ztoolkit is only available in plugin context, not in translator sandbox
+function safeLog(...args) {
+  if (typeof ztoolkit !== "undefined") {
+    ztoolkit.log(...args);
+  } else if (typeof Zotero !== "undefined" && Zotero.debug) {
+    Zotero.debug(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' '));
+  } else if (typeof console !== "undefined") {
+    console.log(...args);
+  }
+}
+
 function detectWeb(doc, url) {
+  safeLog("TALIS-ASPIRE-CUSTOM: detectWeb", doc, url);
+
+  // Yes
+  const hostRegexes = [
+    "lists.library.lincoln.ac.uk",
+    "aspire.surrey.ac.uk",
+    "myreading.surrey.ac.uk",
+    "resource.surrey.ac.uk",
+    "lib.surrey.ac.uk",
+    "cypruslists.surrey.ac.uk",
+    "lists.surrey.ac.uk",
+    "items.surrey.ac.uk",
+    "rl.talis.com",
+  ]
+  if (!hostRegexes.some(regex => url.includes(regex))) {
+    return false;
+  }
+
+  if (url.includes("/lists/")) {
+    return "multiple";
+  }
   if (url.includes("/lists/") && getSearchResults(doc, true)) return "multiple";
 
   if (url.includes("/items/")) {
@@ -38,6 +81,7 @@ function detectWeb(doc, url) {
 }
 
 function getSearchResults(doc, checkOnly) {
+  safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults", doc, checkOnly);
   var items = {},
     found = false;
   var bibData = doc.querySelectorAll("article[id]");
@@ -54,7 +98,7 @@ function getSearchResults(doc, checkOnly) {
 }
 
 function doWeb(doc, url) {
-  ztoolkit.log("doWeb", doc, url);
+  safeLog("TALIS-ASPIRE-CUSTOM: doWeb", doc, url);
   if (detectWeb(doc, url) == "multiple") {
     Zotero.selectItems(getSearchResults(doc), function (items) {
       if (!items) return;
@@ -66,6 +110,7 @@ function doWeb(doc, url) {
 }
 
 function scrape(url, slugs) {
+  safeLog("TALIS-ASPIRE-CUSTOM: scrape", url, slugs);
   let siteID = url.match(/\/\d+\/([^/]+)/);
   if (!siteID) siteID = url.match(/([^.]+)\.rl\.talis\.com/);
   siteID = siteID[1];
@@ -81,9 +126,228 @@ function scrape(url, slugs) {
 }
 
 function extractSlug(url) {
+  safeLog("TALIS-ASPIRE-CUSTOM: extractSlug", url);
   return (url.match(/([^/]+\/[^/]+)\.html/) || [])[1];
 }
 
 /** BEGIN TEST CASES **/
-var testCases = [];
+var testCases = [
+  {
+    "type": "web",
+    "url": "https://rl.talis.com/3/lincoln/items/FEB50B30-652C-55B2-08F8-F2D399BF308A.html",
+    "defer": true,
+    "items": [
+      {
+        "itemType": "book",
+        "title": "American cultural studies: an introduction to American culture",
+        "creators": [
+          {
+            "lastName": "Campbell",
+            "firstName": "Neil",
+            "creatorType": "author"
+          },
+          {
+            "lastName": "Kean",
+            "firstName": "Alasdair",
+            "creatorType": "author"
+          }
+        ],
+        "date": "2006",
+        "ISBN": "9780415346665",
+        "edition": "2nd ed",
+        "libraryCatalog": "Talis Aspire",
+        "place": "London",
+        "publisher": "Routledge",
+        "shortTitle": "American cultural studies",
+        "attachments": [],
+        "tags": [],
+        "notes": [
+          {
+            "note": "<p>Ebook version of first edition also available</p>"
+          }
+        ],
+        "seeAlso": []
+      }
+    ]
+  },
+  {
+    "type": "web",
+    "url": "http://lists.library.lincoln.ac.uk/lists/625177C4-A268-8971-E3C9-ACEA91A83585.html",
+    "defer": true,
+    "items": "multiple"
+  },
+  {
+    "type": "web",
+    "url": "https://rl.talis.com/3/qmul/items/66C2A847-80C3-8259-46AB-0DB8C0779068.html",
+    "defer": true,
+    "items": [
+      {
+        "itemType": "journalArticle",
+        "title": "The Struggle against Sweatshops: Moving toward Responsible Global Business",
+        "creators": [
+          {
+            "lastName": "Tara J. Radin and Martin Calkins",
+            "creatorType": "author",
+            "fieldMode": 1
+          }
+        ],
+        "date": "Jul., 2006",
+        "ISSN": "01674544",
+        "issue": "No. 2",
+        "libraryCatalog": "Talis Aspire",
+        "pages": "261-272",
+        "publicationTitle": "Journal of Business Ethics",
+        "shortTitle": "The Struggle against Sweatshops",
+        "url": "http://www.jstor.org/stable/25123831",
+        "volume": "Vol. 66",
+        "attachments": [],
+        "tags": [],
+        "notes": [],
+        "seeAlso": []
+      }
+    ]
+  },
+  {
+    "type": "web",
+    "url": "https://rl.talis.com/3/bournemouth/items/AF2E5676-6A86-DCDC-FC7B-8CC554EFD9BF.html",
+    "defer": true,
+    "items": [
+      {
+        "itemType": "book",
+        "title": "The Unified Modeling Language reference manual",
+        "creators": [
+          {
+            "lastName": "Rumbaugh",
+            "firstName": "James",
+            "creatorType": "author"
+          },
+          {
+            "lastName": "Jacobson",
+            "firstName": "Ivar",
+            "creatorType": "author"
+          },
+          {
+            "lastName": "Booch",
+            "firstName": "Grady",
+            "creatorType": "author"
+          }
+        ],
+        "date": "0000 c",
+        "ISBN": "9780201309980",
+        "libraryCatalog": "Talis Aspire",
+        "place": "Harlow",
+        "publisher": "Addison Wesley",
+        "volume": "The Addison-Wesley object technology series",
+        "attachments": [],
+        "tags": [],
+        "notes": [],
+        "seeAlso": []
+      }
+    ]
+  },
+  {
+    "type": "web",
+    "url": "https://rl.talis.com/3/coventry/items/1CC2D394-7EDE-8DE5-4FF0-868C1C6E6BE5.html",
+    "defer": true,
+    "items": [
+      {
+        "itemType": "book",
+        "title": "Decision making in midwifery practice",
+        "creators": [
+          {
+            "lastName": "Marshall",
+            "firstName": "Jayne E",
+            "creatorType": "author"
+          },
+          {
+            "lastName": "Raynor",
+            "firstName": "Maureen D",
+            "creatorType": "author"
+          },
+          {
+            "lastName": "Sullivan",
+            "firstName": "Amanda",
+            "creatorType": "author"
+          }
+        ],
+        "date": "2005",
+        "ISBN": "9780443073847",
+        "libraryCatalog": "Talis Aspire",
+        "place": "Edinburgh",
+        "publisher": "Elsevier/Churchill Livingstone",
+        "attachments": [],
+        "tags": [],
+        "notes": [],
+        "seeAlso": []
+      }
+    ]
+  },
+  {
+    "type": "web",
+    "url": "https://rl.talis.com/3/cyprus_uclan/items/57E6E313-82BF-0AF6-C0E5-940A3760507C.html",
+    "defer": true,
+    "items": [
+      {
+        "itemType": "book",
+        "title": "Neocleous's introduction to Cyprus law",
+        "creators": [
+          {
+            "lastName": "Neocleous",
+            "firstName": "Andreas",
+            "creatorType": "author"
+          },
+          {
+            "lastName": "Andreas Neocleous & Co",
+            "creatorType": "author",
+            "fieldMode": 1
+          }
+        ],
+        "date": "2010",
+        "ISBN": "9789963935918",
+        "edition": "3rd ed",
+        "libraryCatalog": "Talis Aspire",
+        "place": "Limassol, Cyprus",
+        "publisher": "A. Neocleous & Co. LLC",
+        "attachments": [],
+        "tags": [],
+        "notes": [],
+        "seeAlso": []
+      }
+    ]
+  },
+  {
+    "type": "web",
+    "url": "https://rl.talis.com/3/derby/items/F9F66F67-142C-B05D-7401-22037C676876.html",
+    "defer": true,
+    "items": [
+      {
+        "itemType": "book",
+        "title": "Preparing to teach in the lifelong learning sector: the new award",
+        "creators": [
+          {
+            "lastName": "Gravells",
+            "firstName": "Ann",
+            "creatorType": "author"
+          }
+        ],
+        "date": "2012",
+        "ISBN": "9780857257734",
+        "edition": "5th ed",
+        "libraryCatalog": "Talis Aspire",
+        "place": "London",
+        "publisher": "Learning Matters",
+        "shortTitle": "Preparing to teach in the lifelong learning sector",
+        "attachments": [],
+        "tags": [],
+        "notes": [
+          {
+            "note": "<p>Earlier editions are available in the Library.</p>"
+          }
+        ],
+        "seeAlso": []
+      }
+    ]
+  }
+]
 /** END TEST CASES **/
+
