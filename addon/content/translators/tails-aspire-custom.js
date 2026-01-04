@@ -231,31 +231,40 @@ function scrape(syllabusURL, selectedUUIDs) {
         selectedUUIDs.map(uuid => getRISURL(syllabusURL, uuid)),
         function (ris, res, url) {
           try {
-            var uuid = getUUIDFromRISURL(url);
-            if (!uuid) {
-              return;
-            }
             // Pull data via assignmentID
-            var classEntry = Object.entries(syllabusResponse.syllabusData.classes)
-              .find(([classNumber, classData]) => {
-                return classData.itemOrder.includes(uuidToAssignmentID(uuid))
-              })
-            var classNumber = classEntry ? classEntry[0] : undefined
-            var priority = itemPriorities[syllabusURL] ? itemPriorities[syllabusURL][uuid] : undefined
-            // Set reading assignment.
-            // (M1 is the RIS code that Zotero expects for the `extra` field: https://github.com/zotero/translators/blob/9937224d4a24ccb98ca92a3d8a3683ad3e331199/RIS.js#L476C2-L476C4)
-            var extraField = createAssignmentObject(
-              syllabusResponse.collectionAndLibraryKey,
-              uuid,
-              { classNumber, priority }
-            );
-            ris = addRowToRIS(ris, 'M1', `syllabus:${JSON.stringify(extraField)}`);
-            safeLog("TALIS-ASPIRE-CUSTOM: got extraField for item:", uuid, extraField);
+            var uuid = getUUIDFromRISURL(url);
+            if (uuid) {
+              var classEntry = Object.entries(syllabusResponse.syllabusData.classes)
+                .find(([classNumber, classData]) => {
+                  return classData.itemOrder.includes(uuidToAssignmentID(uuid))
+                })
+              var classNumber = classEntry ? classEntry[0] : undefined
+              var priority = itemPriorities[syllabusURL] ? itemPriorities[syllabusURL][uuid] : undefined
+              safeLog("TALIS-ASPIRE-CUSTOM: got classNumber and priority for item:", { uuid, classNumber, priority });
+              if (classNumber) {
+                safeLog("TALIS-ASPIRE-CUSTOM: got classNumber for item:", uuid, classNumber);
+                // Set reading assignment.
+                var extraField = createAssignmentObject(
+                  syllabusResponse.collectionAndLibraryKey,
+                  uuid,
+                  { classNumber, priority }
+                );
+                // (M2 is the RIS code that Zotero expects for the `extra` field: https://github.com/zotero/translators/blob/9937224d4a24ccb98ca92a3d8a3683ad3e331199/RIS.js#L476C2-L476C4)
+                ris = addRowToRIS(ris, 'M2', `syllabus:${JSON.stringify(extraField)}`);
+                safeLog("TALIS-ASPIRE-CUSTOM: got extraField for item:", uuid, extraField);
+              }
+            }
 
             // Import to Zotero
             var translator = Zotero.loadTranslator("import");
             translator.setTranslator(RIS_TRANSLATOR_ID);
             translator.setString(ris);
+
+            // Set handler to add items to collection after they're saved
+            translator.setHandler("itemDone", function (...args) {
+              safeLog("TALIS-ASPIRE-CUSTOM: itemDone", args);
+            });
+
             translator.translate();
           } catch (e) {
             safeLog("TALIS-ASPIRE-CUSTOM: Error importing item:", e);
