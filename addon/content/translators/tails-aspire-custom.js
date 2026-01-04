@@ -45,6 +45,65 @@ function safeLog(...args) {
   }
 }
 
+// ============================================================================
+// PLAN IMPLEMENTATION - Talis Aspire Reading List Import
+// ============================================================================
+
+var inMemoryData = {
+  classes: []
+}
+
+/**
+ * Step 1: Get all the class titles and associated item UUIDs from the DOM
+ * @param {Document} doc - The page document
+ * @returns {Array<{classTitle: string, itemUUIDs: string[]}>}
+ */
+function getClassesAndItemUUIDs(doc) {
+  safeLog("TALIS-ASPIRE-CUSTOM: getClassesAndItemUUIDs");
+  var syllabusData = { classes: [] }
+  var itemsForUserSelection = {} // Record<uuid: string, title: string>
+  var classHeaders = doc.querySelectorAll("h2.qa-section-title")
+  for (let header of Array.from(classHeaders)) {
+    // safeLog("TALIS-ASPIRE-CUSTOM: Found class header:", header);
+    if (!header || !header.textContent || !header.textContent.trim()) continue;
+    var classTitle = header.textContent.trim();
+    if (!classTitle) continue;
+    // safeLog("TALIS-ASPIRE-CUSTOM: Found class title:", classTitle);
+    var classContainer = header.closest("rl-view-container-node");
+    if (!classContainer) continue;
+    var cls = {
+      classTitle: classTitle,
+      items: []
+    }
+    // safeLog("TALIS-ASPIRE-CUSTOM: Found class container:", classContainer);
+    for (let item of Array.from(classContainer.querySelectorAll("rl-view-item > article.c-list-item"))) {
+      if (!item || !item.textContent) continue;
+      // get dom id of the item
+      var itemId = item.getAttribute("id");
+      var title = item.querySelector(".c-resource__field--title")?.textContent?.trim();
+      if (!itemId || !title) continue;
+      cls.items.push({
+        uuid: itemId.split("_")[1].trim(),
+        title: title
+      });
+    }
+    safeLog(`TALIS-ASPIRE-CUSTOM: Found items in class ${classTitle}:`, JSON.stringify(cls, null, 2));
+    // For internal use - later
+    syllabusData.classes.push(cls);
+  }
+
+  safeLog("TALIS-ASPIRE-CUSTOM: Found data:", JSON.stringify(syllabusData, null, 2));
+  return syllabusData;
+}
+
+function getItemDictionaryFromSyllabusData(syllabusData) {
+  return Object.fromEntries(syllabusData.classes.flatMap(cls => cls.items.map(item => [item.uuid, item.title])));
+}
+
+// ============================================================================
+// ORIGINAL TRANSLATOR FUNCTIONS
+// ============================================================================
+
 function detectWeb(doc, url) {
   safeLog("TALIS-ASPIRE-CUSTOM: detectWeb", doc, url);
 
@@ -82,19 +141,10 @@ function detectWeb(doc, url) {
 
 function getSearchResults(doc, checkOnly) {
   safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults", doc, checkOnly);
-  var items = {},
-    found = false;
-  var bibData = doc.querySelectorAll("article[id]");
-  for (let article of bibData) {
-    let title = text(article, "cite");
-    let slug = "items/" + article.id.split("_")[1];
-    if (!title || !slug) continue;
-    if (checkOnly) return true;
-    found = true;
-    items[slug] = ZU.trimInternal(title);
-  }
-
-  return found ? items : false;
+  var syllabusData = getClassesAndItemUUIDs(doc);
+  var items = getItemDictionaryFromSyllabusData(syllabusData);
+  if (Object.keys(items).length > 0) return items;
+  return false;
 }
 
 function doWeb(doc, url) {
@@ -115,6 +165,7 @@ function scrape(url, slugs) {
   if (!siteID) siteID = url.match(/([^.]+)\.rl\.talis\.com/);
   siteID = siteID[1];
   let urls = slugs.map((slug) => `https://${siteID}.rl.talis.com/${slug}.ris`);
+  safeLog("TALIS-ASPIRE-CUSTOM: Scrape URLs:", urls);
 
   ZU.doGet(urls, function (text) {
     var translator = Zotero.loadTranslator("import");
@@ -123,6 +174,13 @@ function scrape(url, slugs) {
     translator.setString(text);
     translator.translate();
   });
+
+  // TODO: Export class data too
+  generateClassData(inMemoryData.classes);
+}
+
+function generateClassData(classes) {
+  safeLog("TALIS-ASPIRE-CUSTOM: TODO: Generate class data", classes);
 }
 
 function extractSlug(url) {
