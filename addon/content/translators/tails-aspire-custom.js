@@ -164,6 +164,7 @@ function doWeb(doc, url) {
       Zotero.selectItems(items, function (items) {
         if (!items) return;
         scrape(url, Object.keys(items));
+        scrapeSyllabusMetadata(url);
       });
     });
   } else {
@@ -171,6 +172,10 @@ function doWeb(doc, url) {
   }
 }
 
+var RIS_TRANSLATOR_ID = "32d59d2d-b65a-4da4-b0a3-bdd3cfb979e7";
+/**
+ * Extracts RIS data from the URL and scrapes it using the RIS translator.
+ */
 function scrape(url, slugs) {
   safeLog("TALIS-ASPIRE-CUSTOM: scrape", url, slugs);
   let siteID = url.match(/\/\d+\/([^/]+)/);
@@ -181,52 +186,69 @@ function scrape(url, slugs) {
 
   ZU.doGet(urls, function (text) {
     var translator = Zotero.loadTranslator("import");
-    // RIS
-    translator.setTranslator("32d59d2d-b65a-4da4-b0a3-bdd3cfb979e7");
+    translator.setTranslator(RIS_TRANSLATOR_ID);
     translator.setString(text);
-
-    // Set up handler to get collection ID after import
-    translator.setHandler("done", function (obj, success) {
-      safeLog("TALIS-ASPIRE-CUSTOM: Import done", obj, success);
-      loadTalisSyllabusMetadata(url).then(function (metadata) {
-        // safeLog("TALIS-ASPIRE-CUSTOM: Metadata", metadata);
-        var collection = getSelectedCollection();
-        safeLog("TALIS-ASPIRE-CUSTOM: Collection promise created", collection);
-        collection.then(function (collection) {
-          safeLog("TALIS-ASPIRE-CUSTOM: Collection loaded", collection);
-          setTalisSyllabusMetadata(collection.id, metadata);
-        })
-      });
+    translator.setHandler("done", function () {
+      scrapeSyllabusMetadata(url);
     });
-
     translator.translate();
   });
 }
 
-async function getSelectedCollection() {
-  // safeLog("TALIS-ASPIRE-CUSTOM: Getting selected collection");
-  return Zotero.Connector.callMethod("getSelectedCollection", {})
+function callMethod(method, data) {
+  return new Promise((resolve, reject) => {
+    safeLog("TALIS-ASPIRE-CUSTOM.callMethod", method, data);
+    var baseUrl = "http://127.0.0.1:23124";
+    var url = `${baseUrl}${method}`;
+
+    // If data provided, add as query parameter
+    if (data) {
+      var encodedData = encodeURIComponent(JSON.stringify(data));
+      url += "?metadata=" + encodedData;
+    }
+
+    safeLog("TALIS-ASPIRE-CUSTOM.callMethod.url", url);
+    ZU.doGet(url, function (text, xhr) {
+      safeLog("TALIS-ASPIRE-CUSTOM.callMethod.response", text, xhr ? xhr.status : "unknown");
+      resolve(text);
+    }, function (error) {
+      safeLog("TALIS-ASPIRE-CUSTOM.callMethod.error", error);
+      reject(error);
+    });
+  });
 }
 
-function setTalisSyllabusMetadata(collectionId, metadata) {
-  safeLog("TALIS-ASPIRE-CUSTOM: Setting syllabus metadata", collectionId, metadata);
-  // Call the global hook if available
+async function scrapeSyllabusMetadata(url) {
+  safeLog("TALIS-ASPIRE-CUSTOM: scrapeSyllabusMetadata", url);
+  loadTalisSyllabusMetadata(url).then(metadata => {
+    setTalisSyllabusMetadata(metadata);
+  });
+}
+
+function setTalisSyllabusMetadata(metadata) {
+  safeLog("TALIS-ASPIRE-CUSTOM.setTalisSyllabusMetadata", metadata);
+  // Use callMethod to send metadata via GET request
+  callMethod("/syllabus/setTalisMetadata", metadata);
+}
+
+function tryGlobalHook(collectionId, metadata) {
+  // Fallback: try global hook if HTTP endpoint failed
   if (typeof globalThis !== "undefined" && globalThis.ZoteroSyllabus) {
-    safeLog("TALIS-ASPIRE-CUSTOM: Calling ZoteroSyllabus.setTalisSyllabusMetadata");
+    safeLog("TALIS-ASPIRE-CUSTOM: Trying globalThis.ZoteroSyllabus.setTalisSyllabusMetadata");
     globalThis.ZoteroSyllabus.setTalisSyllabusMetadata(collectionId, metadata).then(function () {
-      safeLog("TALIS-ASPIRE-CUSTOM: Syllabus metadata set successfully");
+      safeLog("TALIS-ASPIRE-CUSTOM: Syllabus metadata set successfully via global hook");
     }).catch(function (error) {
-      safeLog("TALIS-ASPIRE-CUSTOM: Error setting syllabus metadata", error);
+      safeLog("TALIS-ASPIRE-CUSTOM: Error setting syllabus metadata via global hook", error);
     });
   } else if (typeof window !== "undefined" && window.ZoteroSyllabus) {
-    safeLog("TALIS-ASPIRE-CUSTOM: Calling window.ZoteroSyllabus.setTalisSyllabusMetadata");
+    safeLog("TALIS-ASPIRE-CUSTOM: Trying window.ZoteroSyllabus.setTalisSyllabusMetadata");
     window.ZoteroSyllabus.setTalisSyllabusMetadata(collectionId, metadata).then(function () {
-      safeLog("TALIS-ASPIRE-CUSTOM: Syllabus metadata set successfully");
+      safeLog("TALIS-ASPIRE-CUSTOM: Syllabus metadata set successfully via global hook");
     }).catch(function (error) {
-      safeLog("TALIS-ASPIRE-CUSTOM: Error setting syllabus metadata", error);
+      safeLog("TALIS-ASPIRE-CUSTOM: Error setting syllabus metadata via global hook", error);
     });
   } else {
-    safeLog("TALIS-ASPIRE-CUSTOM: ZoteroSyllabus hook not available");
+    safeLog("TALIS-ASPIRE-CUSTOM: Neither HTTP endpoint nor global hook available");
   }
 }
 
@@ -250,7 +272,6 @@ async function loadTalisSyllabusMetadata(url) {
         collectionTitle: null,
         description: null,
         priorities: [],
-        nomenclature: null
       };
 
       // Get description from list attributes

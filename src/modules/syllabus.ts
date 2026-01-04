@@ -405,7 +405,7 @@ export class SyllabusManager {
 
   static onItemUpdate(
     item: Zotero.Item,
-    source: "page" | "item-pane" | "context-menu",
+    source: "page" | "item-pane" | "context-menu" | "background",
   ) {
     ztoolkit.log("SyllabusManager.onItemUpdate", source, item.id);
     // No need to call setupPage() - React stores will trigger re-render automatically
@@ -433,7 +433,7 @@ export class SyllabusManager {
    */
   static onCollectionUpdated(
     collection: Zotero.Collection,
-    source: "page",
+    source: "page" | "background",
     reason: string,
   ) {
     ztoolkit.log(
@@ -1560,7 +1560,7 @@ export class SyllabusManager {
   static setCollectionTitle(
     collectionId: number,
     title: string,
-    source: "page",
+    source: "page" | "background",
   ) {
     const collection = Zotero.Collections.get(collectionId);
     if (collection) {
@@ -1681,7 +1681,7 @@ export class SyllabusManager {
   static async setItemData(
     item: Zotero.Item,
     data: ItemSyllabusData,
-    source: "page" | "item-pane" | "context-menu",
+    source: "page" | "item-pane" | "context-menu" | "background",
   ): Promise<void> {
     // Validate input data with Zod before saving
     const inputResult = ItemSyllabusDataEntity.safeParse(data);
@@ -2410,7 +2410,7 @@ export class SyllabusManager {
 
   static setSettingsCollectionDictionaryData(
     metadata: SettingsCollectionDictionaryData,
-    source: "page" | "item-pane",
+    source: "page" | "item-pane" | "background",
     emitChange: boolean = true,
   ) {
     const inputResult =
@@ -2462,7 +2462,7 @@ export class SyllabusManager {
   static async setCollectionMetadata(
     collectionId: number | GetByLibraryAndKeyArgs,
     metadata: SettingsSyllabusMetadata,
-    source: "page" | "item-pane",
+    source: "page" | "item-pane" | "background",
   ): Promise<void> {
     const normalized = this.normalizeCollectionIdentifier(collectionId);
     if (!normalized) {
@@ -2493,7 +2493,7 @@ export class SyllabusManager {
   static async setCollectionDescription(
     collectionId: number | GetByLibraryAndKeyArgs,
     description: string,
-    source: "page",
+    source: "page" | "background",
   ): Promise<void> {
     const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
     syllabusMetadata.description = description.trim();
@@ -2527,7 +2527,7 @@ export class SyllabusManager {
   static async setPriorities(
     collectionId: number | GetByLibraryAndKeyArgs,
     priorities: CustomPriority[],
-    source: "page",
+    source: "page" | "background",
   ): Promise<void> {
     const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
     syllabusMetadata.priorities = priorities;
@@ -3213,7 +3213,7 @@ export class SyllabusManager {
   static async importSyllabusMetadata(
     collectionId: number | GetByLibraryAndKeyArgs,
     importedJsonString: string,
-    source: "page" = "page",
+    source: "page" | "background" = "page",
   ): Promise<void> {
     // Parse JSON
     let parsedData: unknown;
