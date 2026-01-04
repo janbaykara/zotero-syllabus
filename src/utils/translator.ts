@@ -5,9 +5,21 @@
 
 export async function installTalisAspireTranslator(): Promise<void> {
   try {
-    const code = await getFileByPath(
+    let code = await getFileByPath(
       `content/translators/tails-aspire-custom.js`,
     );
+
+    if (!code || typeof code !== "string") {
+      ztoolkit.log("Error getting translator code");
+      return;
+    }
+
+    const PROD_PORT = 23119 // default
+    const DEV_PORT = 23124
+    // If dev mode, replace 23119
+    if (process.env.NODE_ENV === "development") {
+      code = code.replace(String(PROD_PORT), String(DEV_PORT))
+    }
 
     const translatorID = "f16931f0-372e-4197-8927-05d2ba7599d8";
     const metadata = {
