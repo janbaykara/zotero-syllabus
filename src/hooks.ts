@@ -13,6 +13,7 @@ async function onStartup() {
 
   initLocale();
 
+  // Install Talis Aspire translator
   SyllabusManager.onStartup();
 
   await Promise.all(

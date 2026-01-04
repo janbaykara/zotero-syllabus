@@ -57,6 +57,7 @@ import type {
   SettingsSyllabusMetadata,
   SettingsClassMetadata,
 } from "../utils/schemas";
+import { installTalisAspireTranslator } from "../utils/translator";
 
 // Re-export for backward compatibility with other modules
 export type {
@@ -284,6 +285,10 @@ export class SyllabusManager {
     this.registerSyllabusClassInstructionColumn();
     this.registerSyllabusStatusColumn();
     this.registerSyllabusItemPaneSection();
+
+    Zotero.Promise.delay(10000).then(() => {
+      installTalisAspireTranslator();
+    });
   }
 
   // /**
