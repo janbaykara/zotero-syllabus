@@ -252,6 +252,10 @@ function tryGlobalHook(collectionId, metadata) {
   }
 }
 
+/**
+ * See `src/utils/schemas.ts` for ExportSyllabusMetadataSchema.
+ * This object will be validated by Zotero before ingestion.
+ */
 async function constructExportSyllabusMetadataFromTalisAPI(url) {
   return new Promise((resolve, reject) => {
     safeLog("TALIS-ASPIRE-CUSTOM: constructExportSyllabusMetadataFromTalisAPI", url);
@@ -269,9 +273,9 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
 
       // Extract metadata from the API response
       var metadata = {
-        collectionTitle: null,
-        description: null,
-        priorities: [],
+        // collectionTitle: null, // DO NOT CHANGE THIS LINE
+        // description: null, // DO NOT CHANGE THIS LINE  
+        // priorities: [], // DO NOT CHANGE THIS LINE
         classes: {},
         // nomenclature: null, // DO NOT CHANGE THIS LINE
       };
