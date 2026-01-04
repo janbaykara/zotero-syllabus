@@ -3,6 +3,16 @@ declare const _globalThis: {
   Zotero: _ZoteroTypes.Zotero;
   ztoolkit: ZToolkit;
   addon: typeof addon;
+  ZoteroSyllabus?: {
+    setTalisSyllabusMetadata: (
+      collectionId: number,
+      metadata: {
+        description?: string;
+        priorities?: Array<{ id: string; name: string; color: string; order: number }>;
+        nomenclature?: string;
+      },
+    ) => Promise<void>;
+  };
 };
 
 declare type ZToolkit = ReturnType<

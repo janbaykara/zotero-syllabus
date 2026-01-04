@@ -92,7 +92,7 @@ function getSearchResults(doc, url, callback) {
 
     safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults fetching page", offset);
     ZU.doGet(apiUrl, function (text) {
-      safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults response", text);
+      safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults response");
 
       try {
         var json = JSON.parse(text);
@@ -184,17 +184,127 @@ function scrape(url, slugs) {
     // RIS
     translator.setTranslator("32d59d2d-b65a-4da4-b0a3-bdd3cfb979e7");
     translator.setString(text);
+
+    // Set up handler to get collection ID after import
+    translator.setHandler("done", function (obj, success) {
+      safeLog("TALIS-ASPIRE-CUSTOM: Import done", obj, success);
+      loadTalisSyllabusMetadata(url).then(function (metadata) {
+        // safeLog("TALIS-ASPIRE-CUSTOM: Metadata", metadata);
+        var collection = getSelectedCollection();
+        safeLog("TALIS-ASPIRE-CUSTOM: Collection promise created", collection);
+        collection.then(function (collection) {
+          safeLog("TALIS-ASPIRE-CUSTOM: Collection loaded", collection);
+          setTalisSyllabusMetadata(collection.id, metadata);
+        })
+      });
+    });
+
     translator.translate();
   });
-
-  // TODO: Export class data too
-  generateClassData(url);
 }
 
-function generateClassData(classes) {
-  safeLog("TALIS-ASPIRE-CUSTOM: TODO: Generate class data", classes);
-  // TODO: Get the class data from the API — only top level classes
-  // TODO: For each class, get ALLLLLL items in the tree
+async function getSelectedCollection() {
+  // safeLog("TALIS-ASPIRE-CUSTOM: Getting selected collection");
+  return Zotero.Connector.callMethod("getSelectedCollection", {})
+}
+
+function setTalisSyllabusMetadata(collectionId, metadata) {
+  safeLog("TALIS-ASPIRE-CUSTOM: Setting syllabus metadata", collectionId, metadata);
+  // Call the global hook if available
+  if (typeof globalThis !== "undefined" && globalThis.ZoteroSyllabus) {
+    safeLog("TALIS-ASPIRE-CUSTOM: Calling ZoteroSyllabus.setTalisSyllabusMetadata");
+    globalThis.ZoteroSyllabus.setTalisSyllabusMetadata(collectionId, metadata).then(function () {
+      safeLog("TALIS-ASPIRE-CUSTOM: Syllabus metadata set successfully");
+    }).catch(function (error) {
+      safeLog("TALIS-ASPIRE-CUSTOM: Error setting syllabus metadata", error);
+    });
+  } else if (typeof window !== "undefined" && window.ZoteroSyllabus) {
+    safeLog("TALIS-ASPIRE-CUSTOM: Calling window.ZoteroSyllabus.setTalisSyllabusMetadata");
+    window.ZoteroSyllabus.setTalisSyllabusMetadata(collectionId, metadata).then(function () {
+      safeLog("TALIS-ASPIRE-CUSTOM: Syllabus metadata set successfully");
+    }).catch(function (error) {
+      safeLog("TALIS-ASPIRE-CUSTOM: Error setting syllabus metadata", error);
+    });
+  } else {
+    safeLog("TALIS-ASPIRE-CUSTOM: ZoteroSyllabus hook not available");
+  }
+}
+
+async function loadTalisSyllabusMetadata(url) {
+  return new Promise((resolve, reject) => {
+    safeLog("TALIS-ASPIRE-CUSTOM: loadTalisSyllabusMetadata", url);
+
+    // Get the collection API URL
+    var apiUrl = getTalisCollectionAPIUrl(url);
+    // Try to get document from current window for authentication
+    var doc = typeof window !== "undefined" && window.document ? window.document : null;
+    var headers = getAuthenticationHeaders(doc, url);
+
+    ZU.doGet(apiUrl, function (text) {
+      // safeLog("TALIS-ASPIRE-CUSTOM: Collection API response", text);
+      var json = JSON.parse(text);
+      // safeLog("TALIS-ASPIRE-CUSTOM: Collection API response - parsed", json);
+
+      // Extract metadata from the API response
+      var metadata = {
+        collectionTitle: null,
+        description: null,
+        priorities: [],
+        nomenclature: null
+      };
+
+      // Get description from list attributes
+      if (json.data && json.data.attributes) {
+        metadata.collectionTitle = json.data.attributes.title;
+        metadata.description = json.data.attributes.description;
+      }
+
+      // Get priorities from included importances
+      if (json.included) {
+        var priorities = [];
+        for (var i = 0; i < json.included.length; i++) {
+          var inc = json.included[i];
+          if (inc.type === "importances" && inc.attributes && inc.attributes.is_active) {
+            // Map Talis importance IDs to Zotero Syllabus priorities
+            priorities.push({
+              id: inc.id,
+              name: inc.attributes.description || inc.id,
+              color: getPriorityColor(inc.id),
+              order: getPriorityOrder(inc.id),
+            });
+          }
+        }
+        // Sort by order
+        metadata.priorities = priorities;
+      }
+
+      safeLog("TALIS-ASPIRE-CUSTOM: Got Metadata", metadata);
+
+      resolve(metadata);
+    }, undefined, undefined, headers);
+  })
+}
+
+function getPriorityColor(priorityId) {
+  // Default colors for priorities
+  var colors = {
+    "importance1": "#4A90E2",
+    "importance2": "#E74C3C",
+    "importance3": "#F39C12",
+    "importance4": "#95A5A6"
+  };
+  return colors[priorityId] || "#FFF";
+}
+
+function getPriorityOrder(importanceId) {
+  // Order based on importance ID
+  var order = {
+    "importance1": 1,
+    "importance2": 2,
+    "importance3": 3,
+    "importance4": 4
+  };
+  return order[importanceId] || 999;
 }
 
 function extractSlug(url) {
@@ -424,18 +534,24 @@ var testCases = [
 /** END TEST CASES **/
 
 
+var apiToken = {}
 /**
  * Extract the anonymous access token from the page.
  * First tries window.shipshape, then falls back to regex extraction from script tags.
  * @param {Document} doc - The document
  * @returns {string|null} - The token or null if not found
  */
-function getAnonymousAccessToken(doc) {
+function getAnonymousAccessToken(doc, url) {
+  if (apiToken[url]) {
+    return apiToken[url];
+  }
+
   // Try to get from window.shipshape first
   if (doc && doc.defaultView && doc.defaultView.shipshape) {
     var token = doc.defaultView.shipshape.config?.tenant?.anonymousAccessToken;
     if (token) {
       safeLog("TALIS-ASPIRE-CUSTOM: Token found via defaultView.shipshape");
+      apiToken[url] = token;
       return token;
     }
   }
@@ -451,6 +567,7 @@ function getAnonymousAccessToken(doc) {
       if (tokenMatch && tokenMatch[1]) {
         var token = tokenMatch[1];
         safeLog("TALIS-ASPIRE-CUSTOM: Token found via regex extraction", token);
+        apiToken[url] = token;
         return token;
       }
     }
@@ -461,7 +578,7 @@ function getAnonymousAccessToken(doc) {
 }
 
 function getAuthenticationHeaders(doc, url) {
-  var token = getAnonymousAccessToken(doc);
+  var token = getAnonymousAccessToken(doc, url);
   if (!token) {
     safeLog("TALIS-ASPIRE-CUSTOM: WARNING - No auth token found, API calls may fail");
     return {};
