@@ -220,7 +220,7 @@ function callMethod(method, data) {
 
 async function scrapeSyllabusMetadata(url) {
   safeLog("TALIS-ASPIRE-CUSTOM: scrapeSyllabusMetadata", url);
-  loadTalisSyllabusMetadata(url).then(metadata => {
+  constructExportSyllabusMetadataFromTalisAPI(url).then(metadata => {
     setTalisSyllabusMetadata(metadata);
   });
 }
@@ -252,9 +252,9 @@ function tryGlobalHook(collectionId, metadata) {
   }
 }
 
-async function loadTalisSyllabusMetadata(url) {
+async function constructExportSyllabusMetadataFromTalisAPI(url) {
   return new Promise((resolve, reject) => {
-    safeLog("TALIS-ASPIRE-CUSTOM: loadTalisSyllabusMetadata", url);
+    safeLog("TALIS-ASPIRE-CUSTOM: constructExportSyllabusMetadataFromTalisAPI", url);
 
     // Get the collection API URL
     var apiUrl = getTalisCollectionAPIUrl(url);
@@ -264,7 +264,7 @@ async function loadTalisSyllabusMetadata(url) {
 
     ZU.doGet(apiUrl, function (text) {
       // safeLog("TALIS-ASPIRE-CUSTOM: Collection API response", text);
-      var json = JSON.parse(text);
+      var talisSyllabusData = JSON.parse(text);
       // safeLog("TALIS-ASPIRE-CUSTOM: Collection API response - parsed", json);
 
       // Extract metadata from the API response
@@ -272,19 +272,21 @@ async function loadTalisSyllabusMetadata(url) {
         collectionTitle: null,
         description: null,
         priorities: [],
+        classes: {},
+        // nomenclature: null, // DO NOT CHANGE THIS LINE
       };
 
       // Get description from list attributes
-      if (json.data && json.data.attributes) {
-        metadata.collectionTitle = json.data.attributes.title;
-        metadata.description = json.data.attributes.description;
+      if (talisSyllabusData.data && talisSyllabusData.data.attributes) {
+        metadata.collectionTitle = talisSyllabusData.data.attributes.title;
+        metadata.description = talisSyllabusData.data.attributes.description;
       }
 
       // Get priorities from included importances
-      if (json.included) {
+      if (talisSyllabusData.included) {
         var priorities = [];
-        for (var i = 0; i < json.included.length; i++) {
-          var inc = json.included[i];
+        for (var i = 0; i < talisSyllabusData.included.length; i++) {
+          var inc = talisSyllabusData.included[i];
           if (inc.type === "importances" && inc.attributes && inc.attributes.is_active) {
             // Map Talis importance IDs to Zotero Syllabus priorities
             priorities.push({
@@ -297,6 +299,49 @@ async function loadTalisSyllabusMetadata(url) {
         }
         // Sort by order
         metadata.priorities = priorities;
+      }
+
+      // Build classes object from sections
+      if (talisSyllabusData.included) {
+        var classes = {};
+        for (var i = 0; i < talisSyllabusData.included.length; i++) {
+          var inc = talisSyllabusData.included[i];
+          if (inc.type === "sections" && inc.attributes) {
+            var sectionId = i;
+            var sectionTitle = inc.attributes.title || "";
+            var sectionDescription = inc.attributes.description || null;
+
+            // Extract item IDs from all_children relationships
+            var itemOrder = [];
+            if (inc.relationships && inc.relationships.all_children && inc.relationships.all_children.data) {
+              for (var j = 0; j < inc.relationships.all_children.data.length; j++) {
+                var child = inc.relationships.all_children.data[j];
+                // Only include items, not subsections
+                if (child.type === "items") {
+                  itemOrder.push(child.id);
+                }
+              }
+            }
+
+            // Build class object (ExportClassMetadataSchema: title, description, itemOrder, readingDate)
+            var classObj = {};
+            if (sectionTitle) {
+              classObj.title = sectionTitle;
+            }
+            if (sectionDescription) {
+              classObj.description = sectionDescription;
+            }
+            // if (itemOrder.length > 0) {
+            //   classObj.itemOrder = itemOrder;
+            // }
+
+            // Only add class if it has at least a title or itemOrder
+            if (classObj.title || (classObj.itemOrder && classObj.itemOrder.length > 0)) {
+              classes[sectionId] = classObj;
+            }
+          }
+        }
+        metadata.classes = classes;
       }
 
       safeLog("TALIS-ASPIRE-CUSTOM: Got Metadata", metadata);
