@@ -205,16 +205,16 @@ function getRISURL(url, uuid) {
 
 // E.g. https://ucl.rl.talis.com/items/7DEB9EE7-8AE7-01D8-11E1-8708053A12F9.ris
 function getUUIDFromRISURL(url) {
-  safeLog("TALIS-ASPIRE-CUSTOM: getUUIDFromRISURL", url);
+  // safeLog("TALIS-ASPIRE-CUSTOM: getUUIDFromRISURL", url);
   // use a standard regex to get the UUID from the RIS URL
   var UNIVERSAL_UUID_REGEX = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
   var matches = url.match(UNIVERSAL_UUID_REGEX);
-  safeLog("TALIS-ASPIRE-CUSTOM: getUUIDFromRISURL matches", matches);
+  // safeLog("TALIS-ASPIRE-CUSTOM: getUUIDFromRISURL matches", matches);
   if (!matches || !matches.length) {
     return null;
   }
   var uuid = matches[0];
-  safeLog("TALIS-ASPIRE-CUSTOM: getUUIDFromRISURL uuid", uuid);
+  // safeLog("TALIS-ASPIRE-CUSTOM: getUUIDFromRISURL uuid", uuid);
   return uuid;
 }
 
@@ -227,8 +227,6 @@ function scrape(syllabusURL, selectedUUIDs) {
   constructExportSyllabusMetadataFromTalisAPI(syllabusURL).then(metadata => {
     setTalisSyllabusMetadata(metadata).then((syllabusResponse) => {
       syllabusResponse = JSON.parse(syllabusResponse);
-      var translator = Zotero.loadTranslator("import");
-      translator.setTranslator(RIS_TRANSLATOR_ID);
       ZU.doGet(
         selectedUUIDs.map(uuid => getRISURL(syllabusURL, uuid)),
         function (ris, res, url) {
@@ -255,6 +253,8 @@ function scrape(syllabusURL, selectedUUIDs) {
             safeLog("TALIS-ASPIRE-CUSTOM: got extraField for item:", uuid, extraField);
 
             // Import to Zotero
+            var translator = Zotero.loadTranslator("import");
+            translator.setTranslator(RIS_TRANSLATOR_ID);
             translator.setString(ris);
             translator.translate();
           } catch (e) {
