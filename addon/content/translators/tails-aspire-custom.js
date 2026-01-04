@@ -81,58 +81,80 @@ function detectWeb(doc, url) {
  * @returns {Record<string, string>} - The dictionary of item UUIDs and titles, or false if the search results are empty.
  */
 function getSearchResults(doc, url, callback) {
-  // call the item API
-  var method = "GET";
-  var apiUrl = getTalisItemAPIUrl(url);
-  var headers = getAuthenticationHeaders(doc, url);
-  ZU.doGet(apiUrl, cb, undefined, undefined, headers)
+  // Accumulate all items and included resources across all pages
+  var allItems = {};
+  var allResourceTitles = {};
+  var limit = 200;
 
-  function cb(text) {
-    safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults response", text);
+  function fetchPage(offset) {
+    var apiUrl = getTalisItemAPIUrl(url, offset, limit);
+    var headers = getAuthenticationHeaders(doc, url);
 
-    var items = {};
-    try {
-      var json = JSON.parse(text);
+    safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults fetching page", offset);
+    ZU.doGet(apiUrl, function (text) {
+      safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults response", text);
 
-      // Build a lookup of resource ID -> title from the included array
-      // Resources are included via the "resource" include parameter
-      var resourceTitles = {};
-      if (json.included) {
-        for (var i = 0; i < json.included.length; i++) {
-          var inc = json.included[i];
-          if (inc.type === "resources" && inc.attributes && inc.attributes.title) {
-            resourceTitles[inc.id] = inc.attributes.title;
+      try {
+        var json = JSON.parse(text);
+
+        // Accumulate resource titles from included array
+        if (json.included) {
+          for (var i = 0; i < json.included.length; i++) {
+            var inc = json.included[i];
+            if (inc.type === "resources" && inc.attributes && inc.attributes.title) {
+              // Only update if we don't already have it (later pages might have duplicates)
+              if (!allResourceTitles[inc.id]) {
+                allResourceTitles[inc.id] = inc.attributes.title;
+              }
+            }
           }
         }
-      }
 
-      // Map each item UUID to its resource title
-      if (json.data) {
-        for (var i = 0; i < json.data.length; i++) {
-          var item = json.data[i];
-          var itemId = item.id;
+        // Map each item UUID to its resource title
+        var itemsInThisPage = 0;
+        if (json.data && json.data.length > 0) {
+          itemsInThisPage = json.data.length;
+          for (var i = 0; i < json.data.length; i++) {
+            var item = json.data[i];
+            var itemId = item.id;
 
-          // Get the resource ID from the relationship
-          var resourceId = item.relationships &&
-            item.relationships.resource &&
-            item.relationships.resource.data &&
-            item.relationships.resource.data.id;
+            // Get the resource ID from the relationship
+            var resourceId = item.relationships &&
+              item.relationships.resource &&
+              item.relationships.resource.data &&
+              item.relationships.resource.data.id;
 
-          if (resourceId && resourceTitles[resourceId]) {
-            items[itemId] = resourceTitles[resourceId];
-          } else {
-            // Fallback: use a placeholder if no resource title found
-            safeLog("TALIS-ASPIRE-CUSTOM: No title found for item", itemId);
+            if (resourceId && allResourceTitles[resourceId]) {
+              allItems[itemId] = allResourceTitles[resourceId];
+            } else {
+              // Fallback: use a placeholder if no resource title found
+              safeLog("TALIS-ASPIRE-CUSTOM: No title found for item", itemId);
+            }
           }
         }
-      }
 
-      safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults found", Object.keys(items).length, "items");
-    } catch (e) {
-      safeLog("TALIS-ASPIRE-CUSTOM: Error parsing items JSON", e);
-    }
-    callback(items);
+        // Check if there's a next page
+        var nextUrl = json.links && json.links.next;
+        if (nextUrl && itemsInThisPage > 0) {
+          // Calculate next offset based on current offset and items received
+          var nextOffset = offset + itemsInThisPage;
+          safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults found next page, offset", nextOffset);
+          fetchPage(nextOffset);
+        } else {
+          // No more pages, call callback with all accumulated items
+          safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults completed, found", Object.keys(allItems).length, "items");
+          callback(allItems);
+        }
+      } catch (e) {
+        safeLog("TALIS-ASPIRE-CUSTOM: Error parsing items JSON", e);
+        // Call callback even on error with whatever we've collected so far
+        callback(allItems);
+      }
+    }, undefined, undefined, headers);
   }
+
+  // Start fetching from the first page
+  fetchPage(0);
 }
 
 function doWeb(doc, url) {
@@ -459,19 +481,19 @@ function getTalisBaseAPIUrl(url) {
 }
 
 /* E.g. https://rl.talis.com/3/ucl/lists/99449747-A091-3F6D-E08A-965F4A5C3149/items?include=content,importance,resource.part_of&page%5Blimit%5D=400 */
-function getTalisItemAPIUrl(url, page = null, limit = 200) {
+function getTalisItemAPIUrl(url, offset = null, limit = 200) {
   var baseUrl = new URL(getTalisBaseAPIUrl(url));
   baseUrl.pathname = `${baseUrl.pathname}/items`;
   // ?include=content,importance,resource,resource.part_of&page%5Blimit%5D=200 
   // Note: 'resource' is needed to get titles from the included resources
   baseUrl.searchParams.set("include", "content,importance,resource.part_of");
-  baseUrl.searchParams.set("page[limit]", "200");
+  baseUrl.searchParams.set("page[limit]", String(limit));
+  if (offset !== null) {
+    baseUrl.searchParams.set("page[offset]", String(offset));
+  }
   safeLog("TALIS-ASPIRE-CUSTOM: getTalisItemAPIUrl", baseUrl.toString());
   return baseUrl.toString();
 }
-
-// TODO: handle pagination
-// https://rl.talis.com/3/ucl/lists/99449747-A091-3F6D-E08A-965F4A5C3149/items?include=content,importance,resource.part_of&page%5Blimit%5D=200&page%5Boffset%5D=200
 
 /* E.g. https://rl.talis.com/3/ucl/lists/99449747-A091-3F6D-E08A-965F4A5C3149?include=license,nodes,owners,period,rolled_over_from,rolled_over_to,sections_recursively,tenant.bookstores,tenant.citation_styles,tenant.importances,tenant.licenses,tenant.periods,tenant.reports,tenant.tags */
 function getTalisCollectionAPIUrl(url) {
