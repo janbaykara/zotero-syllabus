@@ -197,23 +197,24 @@ function scrape(url, slugs) {
 
 function callMethod(method, data) {
   return new Promise((resolve, reject) => {
-    safeLog("TALIS-ASPIRE-CUSTOM.callMethod", method, data);
+    safeLog("TALIS-ASPIRE-CUSTOM.callMethod", method);
     var baseUrl = "http://127.0.0.1:23124";
     var url = `${baseUrl}${method}`;
 
-    // If data provided, add as query parameter
-    if (data) {
-      var encodedData = encodeURIComponent(JSON.stringify(data));
-      url += "?metadata=" + encodedData;
-    }
-
     safeLog("TALIS-ASPIRE-CUSTOM.callMethod.url", url);
-    ZU.doGet(url, function (text, xhr) {
+
+    // Use POST with data in request body
+    var payload = data ? JSON.stringify({ metadata: data }) : null;
+    // TODO: Replace this with Zotero.Connector().callMethod(endpoint, data)
+    ZU.doPost(url, payload, function (text, xhr) {
       safeLog("TALIS-ASPIRE-CUSTOM.callMethod.response", text, xhr ? xhr.status : "unknown");
       resolve(text);
-    }, function (error) {
-      safeLog("TALIS-ASPIRE-CUSTOM.callMethod.error", error);
-      reject(error);
+    }, {
+      // https://github.com/zotero/zotero/blob/47e6a0f7abaae0ad90c9f39c385fe24efd7071bf/chrome/content/zotero/xpcom/server/server.js#L411-L423
+      // https://github.com/zotero/zotero-connectors/blob/3a020fe77a275cc4c1ecf50df77f59ba665c012d/src/common/connector.js#L141-L145
+      "X-Zotero-Version": Zotero.version,
+      "X-Zotero-Connector-API-Version": 3,
+      "Content-Type": "application/json",
     });
   });
 }
@@ -226,8 +227,8 @@ async function scrapeSyllabusMetadata(url) {
 }
 
 function setTalisSyllabusMetadata(metadata) {
-  safeLog("TALIS-ASPIRE-CUSTOM.setTalisSyllabusMetadata", metadata);
-  // Use callMethod to send metadata via GET request
+  safeLog("TALIS-ASPIRE-CUSTOM.setTalisSyllabusMetadata");
+  // Use callMethod to send metadata via POST request
   callMethod("/syllabus/setTalisMetadata", metadata);
 }
 

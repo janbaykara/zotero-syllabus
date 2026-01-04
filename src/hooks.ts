@@ -65,29 +65,29 @@ function registerTalisMetadataEndpoint() {
 
   const SetTalisMetadata = function () { };
   SetTalisMetadata.prototype = {
-    supportedMethods: ["GET"],
-    supportedDataTypes: ["application/json"],
+    supportedMethods: ["POST"],
+    supportedDataTypes: ["application/x-www-form-urlencoded", "application/json"],
     permitBookmarklet: true,
 
     init: async function (req: any) {
-      const queryParams = req.searchParams as URLSearchParams;
+      ztoolkit.log("syllabus/setTalisMetadata endpoint called", req);
       try {
-        // Get metadata from query parameter
-        let metadata;
-        let metadataStr: string | null = null;
-
-        // Try different locations for the query parameter
-        if (queryParams.get("metadata")) {
-          metadataStr = queryParams.get("metadata")!;
+        // Get metadata from request body
+        if (!req.data) {
+          ztoolkit.log("No data in request body");
+          return [400, "application/json", JSON.stringify({ error: "data required in request body" })];
         }
 
-        if (!metadataStr) {
-          return [400, "application/json", JSON.stringify({ error: "metadata parameter required" })];
+        const { metadata } = req.data
+
+        if (!metadata) {
+          ztoolkit.log("No metadata in request body");
+          return [400, "application/json", JSON.stringify({ error: "metadata required in request body" })];
         }
 
-        const obj = JSON.parse(metadataStr);
-        const validatedMetadataFileContents = ExportSyllabusMetadataSchema.safeParse(obj);
+        const validatedMetadataFileContents = ExportSyllabusMetadataSchema.safeParse(metadata);
         if (!validatedMetadataFileContents.success) {
+          ztoolkit.log("Invalid metadata JSON", validatedMetadataFileContents, validatedMetadataFileContents);
           return [400, "application/json", JSON.stringify({ error: "Invalid metadata JSON", details: validatedMetadataFileContents })];
         }
 
@@ -98,6 +98,7 @@ function registerTalisMetadataEndpoint() {
         const collectionId = collection?.id
 
         if (!collectionId) {
+          ztoolkit.log("No collection selected");
           return [400, "application/json", JSON.stringify({ error: "No collection selected" })];
         }
 
@@ -106,7 +107,7 @@ function registerTalisMetadataEndpoint() {
         try {
           await SyllabusManager.importSyllabusMetadata(
             collectionId,
-            metadataStr,
+            JSON.stringify(validatedMetadataFileContents.data),
             "background",
           );
         } catch (error) {

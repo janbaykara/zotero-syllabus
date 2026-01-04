@@ -333,7 +333,7 @@ const transformClasses = <T extends z.ZodTypeAny>(classSchema: T) => {
  * Automatically filters out null classes, empty itemOrder arrays, and empty class entries during parsing
  */
 export const SettingsSyllabusMetadataSchema = z.object({
-  description: z.string().optional(),
+  description: z.string().optional().nullable(),
   classes: transformClasses(SettingsClassMetadataSchema),
   nomenclature: z.string().optional(),
   priorities: z.array(CustomPrioritySchema).optional(),
@@ -355,7 +355,7 @@ export const ExportSyllabusMetadataSchema = SettingsSyllabusMetadataSchema.omit(
     locked: true,
   },
 ).extend({
-  collectionTitle: z.string(),
+  collectionTitle: z.string().optional().nullable(),
   classes: transformClasses(ExportClassMetadataSchema),
   rdf: z.string().optional(), // RDF serialized as XML string
 });
