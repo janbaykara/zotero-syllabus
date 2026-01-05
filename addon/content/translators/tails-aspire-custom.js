@@ -239,15 +239,6 @@ async function scrape(syllabusURL, selectedUUIDs) {
       var { body: ris } = await ZU.request(url, { responseType: "text" });
       var classInstruction = getValueFromRIS(ris, "N1") || undefined
 
-      // Enhance classInstruction with nested section titles
-      if (itemSectionTitles[uuid] && itemSectionTitles[uuid].length > 0) {
-        var sectionTitles = itemSectionTitles[uuid].join(" > ");
-        if (classInstruction) {
-          classInstruction = classInstruction + "\n\n" + sectionTitles;
-        } else {
-          classInstruction = sectionTitles;
-        }
-      }
       // Import to Zotero
       var translator = Zotero.loadTranslator("import");
       translator.setTranslator(RIS_TRANSLATOR_ID);
@@ -261,6 +252,31 @@ async function scrape(syllabusURL, selectedUUIDs) {
           })
         var classNumber = classEntry ? Number(classEntry[0]) : undefined
         var priority = itemPriorities[syllabusURL] ? itemPriorities[syllabusURL][uuid] : undefined
+
+        // Enhance classInstruction with nested section titles, excluding the top-level (class) title
+        var finalClassInstruction = classInstruction;
+        if (itemSectionTitles[uuid] && itemSectionTitles[uuid].length > 0) {
+          var sectionPath = itemSectionTitles[uuid].slice(); // Copy array
+
+          // Remove the top-level section title if it matches the class title
+          if (classNumber && classEntry && classEntry[1] && classEntry[1].title) {
+            var classTitle = classEntry[1].title;
+            if (sectionPath.length > 0 && sectionPath[0] === classTitle) {
+              sectionPath = sectionPath.slice(1); // Remove first element
+            }
+          }
+
+          // Only add section titles if there are any left after removing the top-level
+          if (sectionPath.length > 0) {
+            var sectionTitles = sectionPath.join(" > ");
+            if (finalClassInstruction) {
+              finalClassInstruction = finalClassInstruction + "\n\n" + sectionTitles;
+            } else {
+              finalClassInstruction = sectionTitles;
+            }
+          }
+        }
+
         // safeLog("TALIS-ASPIRE-CUSTOM: got classNumber and priority for item:", { uuid: uuid, classNumber, priority });
         if (classNumber) {
           // safeLog("TALIS-ASPIRE-CUSTOM: got classNumber for item:", uuid, classNumber);
@@ -272,7 +288,7 @@ async function scrape(syllabusURL, selectedUUIDs) {
                 id: uuidToAssignmentID(uuid),
                 classNumber,
                 priority,
-                classInstruction,
+                classInstruction: finalClassInstruction,
               }
             ]
           }
@@ -552,7 +568,7 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
       for (var j = 0; j < children.length; j++) {
         var child = children[j];
         if (child.type === "items") {
-          // Store the path for this item (filter out empty titles)
+          // Store the full path for this item (filter out empty titles)
           itemSectionTitles[child.id] = currentPath.filter(function (title) { return title; });
         } else if (child.type === "sections") {
           // Recursively process nested sections
