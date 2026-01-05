@@ -1,6 +1,7 @@
 import { useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
 import { SyllabusManager } from "../syllabus";
+import { getCachedItem } from "../../utils/cache";
 
 export function useZoteroItem(itemId: number | null) {
   // Create the store once per item ID
@@ -13,11 +14,7 @@ export function useZoteroItem(itemId: number | null) {
     if (!itemId) {
       return null;
     }
-    try {
-      return Zotero.Items.get(itemId);
-    } catch (e) {
-      return null;
-    }
+    return getCachedItem(itemId);
   }, [itemId, version]);
 
   // We return the number because the extra field isn't gettable, by default, so we need a concrete indication of change or invalidation.

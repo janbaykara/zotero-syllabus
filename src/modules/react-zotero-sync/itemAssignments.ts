@@ -2,6 +2,7 @@ import { useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
 import SuperJSON from "superjson";
 import { SyllabusManager, ItemSyllabusAssignment, SettingsSyllabusMetadata } from "../syllabus";
+import { getCachedItem } from "../../utils/cache";
 
 export type ItemAssignmentsSnapshot = {
   assignments: ItemSyllabusAssignment[];
@@ -42,21 +43,16 @@ export function createItemAssignmentsStore(
       return SuperJSON.stringify({ assignments: [] });
     }
 
-    try {
-      const item = Zotero.Items.get(itemId);
-      if (!item || !item.isRegularItem()) {
-        return SuperJSON.stringify({ assignments: [] });
-      }
-
-      const assignments = SyllabusManager.getAllClassAssignments(
-        item,
-        collectionId,
-      );
-      return SuperJSON.stringify({ assignments });
-    } catch (e) {
-      ztoolkit.log("Error getting item assignments:", e);
+    const item = getCachedItem(itemId);
+    if (!item || !item.isRegularItem()) {
       return SuperJSON.stringify({ assignments: [] });
     }
+
+    const assignments = SyllabusManager.getAllClassAssignments(
+      item,
+      collectionId,
+    );
+    return SuperJSON.stringify({ assignments });
   }
 
   function subscribe(onStoreChange: () => void) {
