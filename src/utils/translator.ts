@@ -3,14 +3,14 @@
  * This allows the translator to be used via Zotero.Translators.get() like any other translator.
  */
 
-export async function installTalisAspireTranslator(rootURI: string): Promise<void> {
+export async function installTalisAspireTranslator(
+  rootURI: string,
+): Promise<void> {
   ztoolkit.log("installTalisAspireTranslator", { rootURI });
-  let path = `${rootURI}/content/translators/tails-aspire-custom.js`
-  if (rootURI.startsWith("jar:")) {
-    path = `${rootURI}content/translators/tails-aspire-custom.js`
-  }
   try {
-    let code = await getFileByPath(path);
+    // Use chrome:// path instead of rootURI
+    const relativePath = "translators/tails-aspire-custom.js";
+    let code = await getPluginFileContent({ relativePath });
 
     if (!code || typeof code !== "string") {
       ztoolkit.log("Error getting translator code");
@@ -70,7 +70,7 @@ export async function installTalisAspireTranslator(rootURI: string): Promise<voi
         type: "fail",
       })
       .createLine({
-        text: `Tried loading from ${path}`,
+        text: `Tried loading from chrome://${addon.data.config.addonRef}/content/translators/tails-aspire-custom.js`,
         type: "fail",
       })
       .createLine({
@@ -83,24 +83,41 @@ export async function installTalisAspireTranslator(rootURI: string): Promise<voi
   }
 }
 
-async function getFileByPath(path: string) {
-  // Convert rootURI to a file path using Services.io
-  const sourceURI = (Services.io as any).newURI(path)
-  const fileHandler = (Services.io as any)
-    .getProtocolHandler("file")
-    .QueryInterface((Components.interfaces as any).nsIFileProtocolHandler);
-  const sourceFile = fileHandler.getFileFromURLSpec(sourceURI.spec);
+/**
+ * Read a file from the plugin's content directory using chrome:// URI
+ * @param options - Options object with relativePath and optional encoding
+ * @returns Promise resolving to the file contents as a string
+ */
+async function getPluginFileContent(options: {
+  relativePath: string;
+  encoding?: string;
+}): Promise<string> {
+  const { relativePath } = options;
 
-  if (!sourceFile.exists()) {
-    ztoolkit.log(
-      `Talis Aspire translator source file not found at: ${sourceFile.path}`,
-    );
-    return;
-  }
+  // Build chrome:// URL for the file
+  const chromeUrl = `chrome://${addon.data.config.addonRef}/content/${relativePath}`;
+  ztoolkit.log("getPluginFileContent", { chromeUrl, relativePath });
 
-  // Read file contents using Zotero.File API
-  const fileObj = Zotero.File.pathToFile(sourceFile.path);
-  const code = await Zotero.File.getContentsAsync(fileObj, "utf-8");
-
-  return code;
+  // Use XMLHttpRequest to read chrome:// URIs (simpler and works reliably)
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", chromeUrl, true);
+    xhr.onload = () => {
+      if (xhr.status === 200 || xhr.status === 0) {
+        resolve(xhr.responseText);
+      } else {
+        const error = new Error(
+          `Failed to load file from ${chromeUrl}: HTTP ${xhr.status}`,
+        );
+        ztoolkit.log(`Failed to load file from ${chromeUrl}:`, xhr.status);
+        reject(error);
+      }
+    };
+    xhr.onerror = () => {
+      const error = new Error(`Error loading file from ${chromeUrl}`);
+      ztoolkit.log(`Error loading file from ${chromeUrl}`);
+      reject(error);
+    };
+    xhr.send();
+  });
 }
