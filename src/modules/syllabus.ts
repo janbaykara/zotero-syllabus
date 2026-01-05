@@ -1302,9 +1302,6 @@ export class SyllabusManager {
           await item.saveTx();
         }
       }
-      if (zoteroPane.itemPane) {
-        zoteroPane.itemPane.render();
-      }
     };
 
     // Get the selected collection to use collection-specific priorities
@@ -1400,9 +1397,6 @@ export class SyllabusManager {
             await item.saveTx();
           }
         }
-        if (zoteroPane.itemPane) {
-          zoteroPane.itemPane.render();
-        }
       };
 
     const children: any[] = sortedClassNumbers.map((classNumber) => {
@@ -1445,9 +1439,6 @@ export class SyllabusManager {
           });
           await item.saveTx();
         }
-      }
-      if (zoteroPane.itemPane) {
-        zoteroPane.itemPane.render();
       }
     };
 
