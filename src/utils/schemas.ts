@@ -270,7 +270,7 @@ export const PrioritySchema = z.object({
   id: z.string(),
   name: z.string(),
   color: z.string().optional().nullable(), // Hex color, nullable
-  order: z.number().int()
+  order: z.number().int(),
 });
 
 /**

@@ -74,13 +74,13 @@ export type { GetByLibraryAndKeyArgs };
 
 const tabManager = FEATURE_FLAG.READING_SCHEDULE
   ? new TabManager<Record<string, never>>({
-    type: "reading-list",
-    title: "Reading Schedule",
-    rootElementIdFactory: () => "reading-list-tab-root",
-    data: { icon: "book" },
-    componentFactory: () => h(ReadingSchedule, {}),
-    getTabId: () => "syllabus-reading-list-tab",
-  })
+      type: "reading-list",
+      title: "Reading Schedule",
+      rootElementIdFactory: () => "reading-list-tab-root",
+      data: { icon: "book" },
+      componentFactory: () => h(ReadingSchedule, {}),
+      getTabId: () => "syllabus-reading-list-tab",
+    })
   : null;
 
 export class SyllabusManager {
@@ -1005,9 +1005,9 @@ export class SyllabusManager {
             const classTitle =
               classNumber !== undefined
                 ? SyllabusManager.getClassTitle(
-                  selectedCollection.id,
-                  classNumber,
-                )
+                    selectedCollection.id,
+                    classNumber,
+                  )
                 : "";
             const priority = firstAssignment.priority || "";
             return `${sortKey}|${priority}|${classNumber ?? ""}|${classTitle}|${selectedCollection.id}`;
@@ -1269,13 +1269,13 @@ export class SyllabusManager {
           body,
           selectedCollection
             ? h(ItemPane, {
-              currentCollectionId: selectedCollection.id,
-              editable,
-            })
+                currentCollectionId: selectedCollection.id,
+                editable,
+              })
             : h("div", {
-              innerText: "Select a collection to view syllabus assignments",
-              className: "text-center text-gray-500 p-4",
-            }),
+                innerText: "Select a collection to view syllabus assignments",
+                className: "text-center text-gray-500 p-4",
+              }),
           "syllabus-item-pane",
         );
       },
@@ -1312,24 +1312,23 @@ export class SyllabusManager {
 
   static setupContextMenuSetPriority() {
     ztoolkit.Menu.unregister("syllabus-set-priority-menu");
-    const createPriorityHandler =
-      (priority: string) => async () => {
-        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-        const selectedCollection = zoteroPane.getSelectedCollection();
-        if (!selectedCollection) return;
-        const items = zoteroPane.getSelectedItems();
-        for (const item of items) {
-          if (item.isRegularItem()) {
-            await this.applyToFirstAssignment(item, selectedCollection.id, {
-              priority: priority || undefined,
-            });
-            await item.saveTx();
-          }
+    const createPriorityHandler = (priority: string) => async () => {
+      const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+      const selectedCollection = zoteroPane.getSelectedCollection();
+      if (!selectedCollection) return;
+      const items = zoteroPane.getSelectedItems();
+      for (const item of items) {
+        if (item.isRegularItem()) {
+          await this.applyToFirstAssignment(item, selectedCollection.id, {
+            priority: priority || undefined,
+          });
+          await item.saveTx();
         }
-        if (zoteroPane.itemPane) {
-          zoteroPane.itemPane.render();
-        }
-      };
+      }
+      if (zoteroPane.itemPane) {
+        zoteroPane.itemPane.render();
+      }
+    };
 
     // Get the selected collection to use collection-specific priorities
     const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
@@ -1340,7 +1339,7 @@ export class SyllabusManager {
     const priorityOptions = (() => {
       const priorities = selectedCollection
         ? this.getPrioritiesForCollection(selectedCollection.id)
-        : []
+        : [];
       const options = priorities.map((p) => ({
         value: p.id,
         label: p.name,
@@ -1596,7 +1595,7 @@ export class SyllabusManager {
     }
     const assignments =
       data[
-      this.getCollectionReferenceString(normalized.libraryID, normalized.key)
+        this.getCollectionReferenceString(normalized.libraryID, normalized.key)
       ];
     if (!assignments || !Array.isArray(assignments)) {
       return [];
@@ -1982,16 +1981,17 @@ export class SyllabusManager {
 
     // Then priority order, etc.
     // Use collection-specific priorities if collectionId is provided, otherwise use default
-    const priorityOrder: number = collectionId !== undefined
-      ? this.getPriorityOrderForCollection(collectionId, assignment.priority)
-      : 9999
+    const priorityOrder: number =
+      collectionId !== undefined
+        ? this.getPriorityOrderForCollection(collectionId, assignment.priority)
+        : 9999;
     sortKeyParts.push(
       String(priorityOrder).padStart(4, "0"),
       // For priority value: use the priority string, or "zzzz" for unprioritized
       // This ensures OPTIONAL ("optional") sorts before unprioritized ("zzzz")
       assignment.priority || "zzzz",
       assignment.classInstruction?.slice(0, 4).replace(/[^a-zA-Z0-9]/g, "_") ||
-      "",
+        "",
       assignment.id || "",
     );
 
@@ -2427,9 +2427,7 @@ export class SyllabusManager {
   /**
    * Get collection institution for a specific collection
    */
-  static getInstitution(
-    collectionId: number | GetByLibraryAndKeyArgs,
-  ): string {
+  static getInstitution(collectionId: number | GetByLibraryAndKeyArgs): string {
     const metadata = SyllabusManager.getSyllabusMetadata(collectionId);
     return metadata.institution || "";
   }
@@ -2454,9 +2452,7 @@ export class SyllabusManager {
   /**
    * Get collection course code for a specific collection
    */
-  static getCourseCode(
-    collectionId: number | GetByLibraryAndKeyArgs,
-  ): string {
+  static getCourseCode(collectionId: number | GetByLibraryAndKeyArgs): string {
     const metadata = SyllabusManager.getSyllabusMetadata(collectionId);
     return metadata.courseCode || "";
   }
@@ -2683,7 +2679,7 @@ export class SyllabusManager {
   static getClassReadingDate(
     collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
-  ): SettingsClassMetadata['readingDate'] {
+  ): SettingsClassMetadata["readingDate"] {
     const metadata = SyllabusManager.getClassMetadata(
       collectionId,
       classNumber,
@@ -2899,7 +2895,7 @@ export class SyllabusManager {
   static getPriorityDisplay(
     collectionId: number | GetByLibraryAndKeyArgs | undefined,
     id: string | undefined,
-  ): { color: string; label: string, value: string } {
+  ): { color: string; label: string; value: string } {
     if (!id) {
       return { color: "#AAA", label: "", value: "" };
     }
@@ -2913,7 +2909,7 @@ export class SyllabusManager {
     }
 
     // Fall back to default priorities when no collection is provided
-    const defaultPriority = DEFAULT_PRIORITIES.find(p => p.id === id);
+    const defaultPriority = DEFAULT_PRIORITIES.find((p) => p.id === id);
     return {
       color: defaultPriority?.color ?? "#AAA",
       label: defaultPriority?.name ?? "",
@@ -3073,7 +3069,14 @@ export class SyllabusManager {
     imported: SettingsSyllabusMetadata,
   ): SettingsSyllabusMetadata {
     const merged: SettingsSyllabusMetadata = { ...existing };
-    const { description, classes, nomenclature, priorities, locked, ...restOfImported } = imported;
+    const {
+      description,
+      classes,
+      nomenclature,
+      priorities,
+      locked,
+      ...restOfImported
+    } = imported;
 
     // Merge description (imported takes precedence if provided)
     if (imported.description !== undefined) {
@@ -3326,12 +3329,17 @@ export class SyllabusManager {
 
     // Get current metadata and merge with imported data
     const existingMetadata = this.getSyllabusMetadata(collectionId);
-    ztoolkit.log("importSyllabusMetadata: metadata before merge:", { metadataData, existingMetadata });
+    ztoolkit.log("importSyllabusMetadata: metadata before merge:", {
+      metadataData,
+      existingMetadata,
+    });
     const mergedMetadata = this.deepMergeMetadata(
       existingMetadata,
       metadataValidation.data,
     );
-    ztoolkit.log("importSyllabusMetadata: metadata after merge:", { mergedMetadata });
+    ztoolkit.log("importSyllabusMetadata: metadata after merge:", {
+      mergedMetadata,
+    });
 
     // Save merged metadata
     await this.setCollectionMetadata(collectionId, mergedMetadata, source);
@@ -3342,6 +3350,6 @@ export class SyllabusManager {
         targetCollection.key,
       ),
       syllabusData: mergedMetadata,
-    }
+    };
   }
 }

@@ -30,7 +30,12 @@ class Addon {
       collectionId: number,
       metadata: {
         description?: string;
-        priorities?: Array<{ id: string; name: string; color: string; order: number }>;
+        priorities?: Array<{
+          id: string;
+          name: string;
+          color: string;
+          order: number;
+        }>;
         nomenclature?: string;
       },
     ) => Promise<void>;
@@ -69,7 +74,10 @@ class Addon {
               "page",
             );
           }
-          ztoolkit.log("Talis syllabus metadata set for collection", collectionId);
+          ztoolkit.log(
+            "Talis syllabus metadata set for collection",
+            collectionId,
+          );
         } catch (error) {
           ztoolkit.log("Error setting Talis syllabus metadata:", error);
         }

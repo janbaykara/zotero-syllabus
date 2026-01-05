@@ -8,7 +8,12 @@ declare const _globalThis: {
       collectionId: number,
       metadata: {
         description?: string;
-        priorities?: Array<{ id: string; name: string; color: string; order: number }>;
+        priorities?: Array<{
+          id: string;
+          name: string;
+          color: string;
+          order: number;
+        }>;
         nomenclature?: string;
       },
     ) => Promise<void>;

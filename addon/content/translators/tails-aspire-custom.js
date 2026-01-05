@@ -28,7 +28,11 @@ function safeLog(...args) {
   if (typeof ztoolkit !== "undefined") {
     ztoolkit.log(...args);
   } else if (typeof Zotero !== "undefined" && Zotero.debug) {
-    Zotero.debug(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' '));
+    Zotero.debug(
+      args
+        .map((a) => (typeof a === "object" ? JSON.stringify(a) : a))
+        .join(" "),
+    );
   } else if (typeof console !== "undefined") {
     console.log(...args);
   }
@@ -52,8 +56,8 @@ function detectWeb(doc, url) {
     "lists.surrey.ac.uk",
     "items.surrey.ac.uk",
     "rl.talis.com",
-  ]
-  if (!hostRegexes.some(regex => url.includes(regex))) {
+  ];
+  if (!hostRegexes.some((regex) => url.includes(regex))) {
     return false;
   }
 
@@ -74,11 +78,11 @@ function detectWeb(doc, url) {
 
 /**
  * Mapping of Talis Aspire list URLs to objects mapping item UUIDs to their priority.
- * 
+ *
  * @typedef {Object} ItemPriorities
  * @property {Object.<string, Object.<string, string>>} [url] - The URL of the Talis Aspire reading list.
  * @property {Object.<string, string>} [uuid] - The UUID of an item within the list, mapped to its priority string.
- * 
+ *
  * Example:
  * {
  *   "https://lists.example.com/lists/abcd1234": {
@@ -87,7 +91,7 @@ function detectWeb(doc, url) {
  *   }
  * }
  */
-var itemPriorities = {}
+var itemPriorities = {};
 
 /**
  * Return a dictionary of item UUIDs and titles from the search results.
@@ -115,7 +119,11 @@ async function getSearchResults(doc, url) {
         if (tailsItemsData.included) {
           for (var i = 0; i < tailsItemsData.included.length; i++) {
             var inc = tailsItemsData.included[i];
-            if (inc.type === "resources" && inc.attributes && inc.attributes.title) {
+            if (
+              inc.type === "resources" &&
+              inc.attributes &&
+              inc.attributes.title
+            ) {
               // Only update if we don't already have it (later pages might have duplicates)
               if (!allResourceTitles[inc.id]) {
                 allResourceTitles[inc.id] = inc.attributes.title;
@@ -133,17 +141,24 @@ async function getSearchResults(doc, url) {
             var itemId = item.id;
 
             // Get the resource ID from the relationship
-            var resourceId = item.relationships &&
+            var resourceId =
+              item.relationships &&
               item.relationships.resource &&
               item.relationships.resource.data &&
               item.relationships.resource.data.id;
 
             // item.relationships.importance.data.id
-            if (item.relationships && item.relationships.importance && item.relationships.importance.data && item.relationships.importance.data.id) {
+            if (
+              item.relationships &&
+              item.relationships.importance &&
+              item.relationships.importance.data &&
+              item.relationships.importance.data.id
+            ) {
               if (!itemPriorities[url]) {
                 itemPriorities[url] = {};
               }
-              itemPriorities[url][itemId] = item.relationships.importance.data.id;
+              itemPriorities[url][itemId] =
+                item.relationships.importance.data.id;
             }
 
             if (resourceId && allResourceTitles[resourceId]) {
@@ -173,7 +188,7 @@ async function getSearchResults(doc, url) {
         // Return whatever we've collected so far even on error
         resolve(allItems);
       }
-    })
+    });
   }
 
   // Start fetching from the first page
@@ -185,7 +200,7 @@ async function doWeb(doc, url) {
   if (detectWeb(doc, url) == "multiple") {
     var items = await getSearchResults(doc, url);
     // safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults items", items);
-    const requestedItems = await Zotero.selectItems(items)
+    const requestedItems = await Zotero.selectItems(items);
     if (requestedItems && Object.keys(requestedItems).length > 0) {
       await scrape(url, Object.keys(requestedItems));
     }
@@ -193,7 +208,7 @@ async function doWeb(doc, url) {
     await scrape(url, [extractSlug(url)]);
   }
 
-  return Zotero.done()
+  return Zotero.done();
 }
 
 // E.g. https://ucl.rl.talis.com/items/7DEB9EE7-8AE7-01D8-11E1-8708053A12F9.ris
@@ -208,7 +223,8 @@ function getRISURL(url, uuid) {
 function getUUIDFromRISURL(url) {
   // safeLog("TALIS-ASPIRE-CUSTOM: getUUIDFromRISURL", url);
   // use a standard regex to get the UUID from the RIS URL
-  var UNIVERSAL_UUID_REGEX = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+  var UNIVERSAL_UUID_REGEX =
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
   var matches = url.match(UNIVERSAL_UUID_REGEX);
   // safeLog("TALIS-ASPIRE-CUSTOM: getUUIDFromRISURL matches", matches);
   if (!matches || !matches.length) {
@@ -233,81 +249,92 @@ async function scrape(syllabusURL, selectedUUIDs) {
 
   safeLog("TALIS-ASPIRE-CUSTOM: scrape.selectedUUIDs", selectedUUIDs);
 
-  const results = await Promise.all(selectedUUIDs.map(async (uuid) => {
-    try {
-      var url = getRISURL(syllabusURL, uuid);
-      var { body: ris } = await ZU.request(url, { responseType: "text" });
-      var classInstruction = getValueFromRIS(ris, "N1") || undefined
+  const results = await Promise.all(
+    selectedUUIDs.map(async (uuid) => {
+      try {
+        var url = getRISURL(syllabusURL, uuid);
+        var { body: ris } = await ZU.request(url, { responseType: "text" });
+        var classInstruction = getValueFromRIS(ris, "N1") || undefined;
 
-      // Import to Zotero
-      var translator = Zotero.loadTranslator("import");
-      translator.setTranslator(RIS_TRANSLATOR_ID);
-      translator.setString(ris);
-      // Set handler to wrap up the show
-      translator.setHandler("itemDone", function (_, item) {
-        // Pull data via assignmentID
-        var classEntry = Object.entries(syllabusResponse.syllabusData.classes)
-          .find(([classNumber, classData]) => {
-            return classData.itemOrder.includes(uuidToAssignmentID(uuid))
-          })
-        var classNumber = classEntry ? Number(classEntry[0]) : undefined
-        var priority = itemPriorities[syllabusURL] ? itemPriorities[syllabusURL][uuid] : undefined
+        // Import to Zotero
+        var translator = Zotero.loadTranslator("import");
+        translator.setTranslator(RIS_TRANSLATOR_ID);
+        translator.setString(ris);
+        // Set handler to wrap up the show
+        translator.setHandler("itemDone", function (_, item) {
+          // Pull data via assignmentID
+          var classEntry = Object.entries(
+            syllabusResponse.syllabusData.classes,
+          ).find(([classNumber, classData]) => {
+            return classData.itemOrder.includes(uuidToAssignmentID(uuid));
+          });
+          var classNumber = classEntry ? Number(classEntry[0]) : undefined;
+          var priority = itemPriorities[syllabusURL]
+            ? itemPriorities[syllabusURL][uuid]
+            : undefined;
 
-        // Enhance classInstruction with nested section titles, excluding the top-level (class) title
-        var finalClassInstruction = classInstruction;
-        if (itemSectionTitles[uuid] && itemSectionTitles[uuid].length > 0) {
-          var sectionPath = itemSectionTitles[uuid].slice(); // Copy array
+          // Enhance classInstruction with nested section titles, excluding the top-level (class) title
+          var finalClassInstruction = classInstruction;
+          if (itemSectionTitles[uuid] && itemSectionTitles[uuid].length > 0) {
+            var sectionPath = itemSectionTitles[uuid].slice(); // Copy array
 
-          // Remove the top-level section title if it matches the class title
-          if (classNumber && classEntry && classEntry[1] && classEntry[1].title) {
-            var classTitle = classEntry[1].title;
-            if (sectionPath.length > 0 && sectionPath[0] === classTitle) {
-              sectionPath = sectionPath.slice(1); // Remove first element
-            }
-          }
-
-          // Only add section titles if there are any left after removing the top-level
-          if (sectionPath.length > 0) {
-            var sectionTitles = sectionPath.join(" > ");
-            if (finalClassInstruction) {
-              finalClassInstruction = finalClassInstruction + "\n\n" + sectionTitles;
-            } else {
-              finalClassInstruction = sectionTitles;
-            }
-          }
-        }
-
-        // safeLog("TALIS-ASPIRE-CUSTOM: got classNumber and priority for item:", { uuid: uuid, classNumber, priority });
-        if (classNumber) {
-          // safeLog("TALIS-ASPIRE-CUSTOM: got classNumber for item:", uuid, classNumber);
-          // Set reading assignment.
-          // One day — merge duplicate items and create multiple assignments with reading instructions instead
-          var itemSyllabusData = {
-            [syllabusResponse.collectionAndLibraryKey]: [
-              {
-                id: uuidToAssignmentID(uuid),
-                classNumber,
-                priority,
-                classInstruction: finalClassInstruction,
+            // Remove the top-level section title if it matches the class title
+            if (
+              classNumber &&
+              classEntry &&
+              classEntry[1] &&
+              classEntry[1].title
+            ) {
+              var classTitle = classEntry[1].title;
+              if (sectionPath.length > 0 && sectionPath[0] === classTitle) {
+                sectionPath = sectionPath.slice(1); // Remove first element
               }
-            ]
+            }
+
+            // Only add section titles if there are any left after removing the top-level
+            if (sectionPath.length > 0) {
+              var sectionTitles = sectionPath.join(" > ");
+              if (finalClassInstruction) {
+                finalClassInstruction =
+                  finalClassInstruction + "\n\n" + sectionTitles;
+              } else {
+                finalClassInstruction = sectionTitles;
+              }
+            }
           }
-          // (M2 is the RIS code that Zotero expects for the `extra` field: https://github.com/zotero/translators/blob/9937224d4a24ccb98ca92a3d8a3683ad3e331199/RIS.js#L476C2-L476C4)
-          // ris = addRowToRIS(ris, 'M2', `syllabus:${JSON.stringify(extraField)}`);
-          // safeLog("TALIS-ASPIRE-CUSTOM: got extraField for item:", uuid, extraField);
-          item.extra = `syllabus: ${JSON.stringify(itemSyllabusData)}`;
-        }
 
-        item.complete();
-        // safeLog("TALIS-ASPIRE-CUSTOM: itemDone", item);
-      });
+          // safeLog("TALIS-ASPIRE-CUSTOM: got classNumber and priority for item:", { uuid: uuid, classNumber, priority });
+          if (classNumber) {
+            // safeLog("TALIS-ASPIRE-CUSTOM: got classNumber for item:", uuid, classNumber);
+            // Set reading assignment.
+            // One day — merge duplicate items and create multiple assignments with reading instructions instead
+            var itemSyllabusData = {
+              [syllabusResponse.collectionAndLibraryKey]: [
+                {
+                  id: uuidToAssignmentID(uuid),
+                  classNumber,
+                  priority,
+                  classInstruction: finalClassInstruction,
+                },
+              ],
+            };
+            // (M2 is the RIS code that Zotero expects for the `extra` field: https://github.com/zotero/translators/blob/9937224d4a24ccb98ca92a3d8a3683ad3e331199/RIS.js#L476C2-L476C4)
+            // ris = addRowToRIS(ris, 'M2', `syllabus:${JSON.stringify(extraField)}`);
+            // safeLog("TALIS-ASPIRE-CUSTOM: got extraField for item:", uuid, extraField);
+            item.extra = `syllabus: ${JSON.stringify(itemSyllabusData)}`;
+          }
 
-      translator.translate();
-    } catch (e) {
-      safeLog("TALIS-ASPIRE-CUSTOM: Error importing item:", e);
-      safeLog("TALIS-ASPIRE-CUSTOM: Error additional vars", url, ris);
-    }
-  }))
+          item.complete();
+          // safeLog("TALIS-ASPIRE-CUSTOM: itemDone", item);
+        });
+
+        translator.translate();
+      } catch (e) {
+        safeLog("TALIS-ASPIRE-CUSTOM: Error importing item:", e);
+        safeLog("TALIS-ASPIRE-CUSTOM: Error additional vars", url, ris);
+      }
+    }),
+  );
 }
 
 function uuidToAssignmentID(uuid) {
@@ -325,24 +352,24 @@ function assignmentIDToUUID(assignmentID) {
 }
 
 function addRowToRIS(text, code, value) {
-  const newLine = `${code}  - ${value}\n`
-  const lines = text.trim().split('\n')
+  const newLine = `${code}  - ${value}\n`;
+  const lines = text.trim().split("\n");
   // Add the new line second to last, since the last line is the end marker.
-  lines.splice(-2, 0, newLine)
-  return lines.join('\n')
+  lines.splice(-2, 0, newLine);
+  return lines.join("\n");
 }
 
 function getValueFromRIS(text, code) {
-  const lines = text.trim().split('\n')
-  const line = lines.find(line => line.startsWith(code))
+  const lines = text.trim().split("\n");
+  const line = lines.find((line) => line.startsWith(code));
   if (!line) {
-    return null
+    return null;
   }
-  const array = line.split('-')
+  const array = line.split("-");
   if (!array || !array.length || array.length < 2) {
-    return null
+    return null;
   }
-  return array[1].trim()
+  return array[1].trim();
 }
 
 async function callZoteroClientEndpoint(endpoint, method, data) {
@@ -367,13 +394,17 @@ async function callZoteroClientEndpoint(endpoint, method, data) {
   });
 
   // safeLog("TALIS-ASPIRE-CUSTOM.callMethod.response", method);
-  return body
+  return body;
 }
 
 async function setTalisSyllabusMetadata({ _itemSectionTitles, ...metadata }) {
   // safeLog("TALIS-ASPIRE-CUSTOM.setTalisSyllabusMetadata");
   // Use callMethod to send metadata via POST request
-  return await callZoteroClientEndpoint("/syllabus/setTalisMetadata", "POST", metadata);
+  return await callZoteroClientEndpoint(
+    "/syllabus/setTalisMetadata",
+    "POST",
+    metadata,
+  );
 }
 
 /**
@@ -381,12 +412,16 @@ async function setTalisSyllabusMetadata({ _itemSectionTitles, ...metadata }) {
  * This object will be validated by Zotero before ingestion.
  */
 async function constructExportSyllabusMetadataFromTalisAPI(url) {
-  safeLog("TALIS-ASPIRE-CUSTOM: constructExportSyllabusMetadataFromTalisAPI", url);
+  safeLog(
+    "TALIS-ASPIRE-CUSTOM: constructExportSyllabusMetadataFromTalisAPI",
+    url,
+  );
 
   // Get the collection API URL
   var apiUrl = getTalisCollectionAPIUrl(url);
   // Try to get document from current window for authentication
-  var doc = typeof window !== "undefined" && window.document ? window.document : null;
+  var doc =
+    typeof window !== "undefined" && window.document ? window.document : null;
   var headers = getAuthenticationHeaders(doc, url);
 
   var { body } = await ZU.request(apiUrl, { headers: headers });
@@ -396,7 +431,7 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
   // Extract metadata from the API response
   var metadata = {
     // collectionTitle: null, // DO NOT CHANGE THIS LINE
-    // description: null, // DO NOT CHANGE THIS LINE  
+    // description: null, // DO NOT CHANGE THIS LINE
     // priorities: [], // DO NOT CHANGE THIS LINE
     classes: {},
     // nomenclature: null, // DO NOT CHANGE THIS LINE
@@ -423,9 +458,10 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
         if (inc.attributes.description && !metadata.description) {
           metadata.description = inc.attributes.description;
           if (metadata.description) {
-            metadata.description = metadata.description.trim() + "\n\n" + `Course details: ${url}`;
+            metadata.description =
+              metadata.description.trim() + "\n\n" + `Course details: ${url}`;
           } else {
-            metadata.description = `Course details: ${url}`
+            metadata.description = `Course details: ${url}`;
           }
         }
       }
@@ -437,7 +473,11 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
     var priorities = [];
     for (var i = 0; i < talisSyllabusData.included.length; i++) {
       var inc = talisSyllabusData.included[i];
-      if (inc.type === "importances" && inc.attributes && inc.attributes.is_active) {
+      if (
+        inc.type === "importances" &&
+        inc.attributes &&
+        inc.attributes.is_active
+      ) {
         // Map Talis importance IDs to Zotero Syllabus priorities
         priorities.push({
           id: inc.id,
@@ -465,7 +505,11 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
       }
     }
 
-    if (!section || !section.relationships || !section.relationships.all_children) {
+    if (
+      !section ||
+      !section.relationships ||
+      !section.relationships.all_children
+    ) {
       return itemOrder;
     }
 
@@ -487,10 +531,13 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
   }
 
   // Get top-level sections from data.relationships.sections
-  if (talisSyllabusData.data && talisSyllabusData.data.relationships &&
+  if (
+    talisSyllabusData.data &&
+    talisSyllabusData.data.relationships &&
     talisSyllabusData.data.relationships.sections &&
     talisSyllabusData.data.relationships.sections.data &&
-    talisSyllabusData.included) {
+    talisSyllabusData.included
+  ) {
     var classes = {};
     var topLevelSections = talisSyllabusData.data.relationships.sections.data;
 
@@ -515,7 +562,10 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
           var sectionDescription = topSection.attributes.description || null;
 
           // Recursively collect all items from this section and its nested children
-          var itemOrder = collectItemsFromSection(topSectionId, talisSyllabusData.included);
+          var itemOrder = collectItemsFromSection(
+            topSectionId,
+            talisSyllabusData.included,
+          );
 
           // Build class object (ExportClassMetadataSchema: title, description, itemOrder, readingDate)
           var classObj = {};
@@ -530,7 +580,10 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
           }
 
           // Only add class if it has at least a title or itemOrder
-          if (classObj.title || (classObj.itemOrder && classObj.itemOrder.length > 0)) {
+          if (
+            classObj.title ||
+            (classObj.itemOrder && classObj.itemOrder.length > 0)
+          ) {
             // Use section index + 1 as key to start at 1 (not 0)
             classes[(k + 1).toString()] = classObj;
           }
@@ -543,10 +596,13 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
   // Build section/item tree dictionary: maps item UUID to array of nested section titles
   // This will be used to enhance classInstruction with nested section titles
   var itemSectionTitles = {};
-  if (talisSyllabusData.data && talisSyllabusData.data.relationships &&
+  if (
+    talisSyllabusData.data &&
+    talisSyllabusData.data.relationships &&
     talisSyllabusData.data.relationships.sections &&
     talisSyllabusData.data.relationships.sections.data &&
-    talisSyllabusData.included) {
+    talisSyllabusData.included
+  ) {
     // Build a map of section ID to section data
     var sectionMap = {};
     for (var i = 0; i < talisSyllabusData.included.length; i++) {
@@ -559,11 +615,18 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
     // Recursive function to collect items with their section paths
     function collectItemsWithPaths(sectionId, parentPath) {
       var section = sectionMap[sectionId];
-      if (!section || !section.relationships || !section.relationships.all_children) {
+      if (
+        !section ||
+        !section.relationships ||
+        !section.relationships.all_children
+      ) {
         return;
       }
 
-      var sectionTitle = section.attributes && section.attributes.title ? section.attributes.title : "";
+      var sectionTitle =
+        section.attributes && section.attributes.title
+          ? section.attributes.title
+          : "";
       var currentPath = parentPath.concat(sectionTitle);
       var children = section.relationships.all_children.data || [];
 
@@ -571,7 +634,9 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
         var child = children[j];
         if (child.type === "items") {
           // Store the full path for this item (filter out empty titles)
-          itemSectionTitles[child.id] = currentPath.filter(function (title) { return title; });
+          itemSectionTitles[child.id] = currentPath.filter(function (title) {
+            return title;
+          });
         } else if (child.type === "sections") {
           // Recursively process nested sections
           collectItemsWithPaths(child.id, currentPath);
@@ -600,10 +665,10 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
 function getPriorityColor(priorityId) {
   // Default colors for priorities
   var colors = {
-    "importance1": "#8B5CF6",
-    "importance2": "#3B82F6",
-    "importance3": "#F39C12",
-    "importance4": "#95A5A6"
+    importance1: "#8B5CF6",
+    importance2: "#3B82F6",
+    importance3: "#F39C12",
+    importance4: "#95A5A6",
   };
   return colors[priorityId] || "#FFF";
 }
@@ -611,10 +676,10 @@ function getPriorityColor(priorityId) {
 function getPriorityOrder(importanceId) {
   // Order based on importance ID
   var order = {
-    "importance1": 1,
-    "importance2": 2,
-    "importance3": 3,
-    "importance4": 4
+    importance1: 1,
+    importance2: 2,
+    importance3: 3,
+    importance4: 4,
   };
   return order[importanceId] || 999;
 }
@@ -627,226 +692,227 @@ function extractSlug(url) {
 /** BEGIN TEST CASES **/
 var testCases = [
   {
-    "type": "web",
-    "url": "https://rl.talis.com/3/lincoln/items/FEB50B30-652C-55B2-08F8-F2D399BF308A.html",
-    "defer": true,
-    "items": [
+    type: "web",
+    url: "https://rl.talis.com/3/lincoln/items/FEB50B30-652C-55B2-08F8-F2D399BF308A.html",
+    defer: true,
+    items: [
       {
-        "itemType": "book",
-        "title": "American cultural studies: an introduction to American culture",
-        "creators": [
+        itemType: "book",
+        title: "American cultural studies: an introduction to American culture",
+        creators: [
           {
-            "lastName": "Campbell",
-            "firstName": "Neil",
-            "creatorType": "author"
+            lastName: "Campbell",
+            firstName: "Neil",
+            creatorType: "author",
           },
           {
-            "lastName": "Kean",
-            "firstName": "Alasdair",
-            "creatorType": "author"
-          }
+            lastName: "Kean",
+            firstName: "Alasdair",
+            creatorType: "author",
+          },
         ],
-        "date": "2006",
-        "ISBN": "9780415346665",
-        "edition": "2nd ed",
-        "libraryCatalog": "Talis Aspire",
-        "place": "London",
-        "publisher": "Routledge",
-        "shortTitle": "American cultural studies",
-        "attachments": [],
-        "tags": [],
-        "notes": [
+        date: "2006",
+        ISBN: "9780415346665",
+        edition: "2nd ed",
+        libraryCatalog: "Talis Aspire",
+        place: "London",
+        publisher: "Routledge",
+        shortTitle: "American cultural studies",
+        attachments: [],
+        tags: [],
+        notes: [
           {
-            "note": "<p>Ebook version of first edition also available</p>"
-          }
+            note: "<p>Ebook version of first edition also available</p>",
+          },
         ],
-        "seeAlso": []
-      }
-    ]
+        seeAlso: [],
+      },
+    ],
   },
   {
-    "type": "web",
-    "url": "http://lists.library.lincoln.ac.uk/lists/625177C4-A268-8971-E3C9-ACEA91A83585.html",
-    "defer": true,
-    "items": "multiple"
+    type: "web",
+    url: "http://lists.library.lincoln.ac.uk/lists/625177C4-A268-8971-E3C9-ACEA91A83585.html",
+    defer: true,
+    items: "multiple",
   },
   {
-    "type": "web",
-    "url": "https://rl.talis.com/3/qmul/items/66C2A847-80C3-8259-46AB-0DB8C0779068.html",
-    "defer": true,
-    "items": [
+    type: "web",
+    url: "https://rl.talis.com/3/qmul/items/66C2A847-80C3-8259-46AB-0DB8C0779068.html",
+    defer: true,
+    items: [
       {
-        "itemType": "journalArticle",
-        "title": "The Struggle against Sweatshops: Moving toward Responsible Global Business",
-        "creators": [
+        itemType: "journalArticle",
+        title:
+          "The Struggle against Sweatshops: Moving toward Responsible Global Business",
+        creators: [
           {
-            "lastName": "Tara J. Radin and Martin Calkins",
-            "creatorType": "author",
-            "fieldMode": 1
-          }
+            lastName: "Tara J. Radin and Martin Calkins",
+            creatorType: "author",
+            fieldMode: 1,
+          },
         ],
-        "date": "Jul., 2006",
-        "ISSN": "01674544",
-        "issue": "No. 2",
-        "libraryCatalog": "Talis Aspire",
-        "pages": "261-272",
-        "publicationTitle": "Journal of Business Ethics",
-        "shortTitle": "The Struggle against Sweatshops",
-        "url": "http://www.jstor.org/stable/25123831",
-        "volume": "Vol. 66",
-        "attachments": [],
-        "tags": [],
-        "notes": [],
-        "seeAlso": []
-      }
-    ]
+        date: "Jul., 2006",
+        ISSN: "01674544",
+        issue: "No. 2",
+        libraryCatalog: "Talis Aspire",
+        pages: "261-272",
+        publicationTitle: "Journal of Business Ethics",
+        shortTitle: "The Struggle against Sweatshops",
+        url: "http://www.jstor.org/stable/25123831",
+        volume: "Vol. 66",
+        attachments: [],
+        tags: [],
+        notes: [],
+        seeAlso: [],
+      },
+    ],
   },
   {
-    "type": "web",
-    "url": "https://rl.talis.com/3/bournemouth/items/AF2E5676-6A86-DCDC-FC7B-8CC554EFD9BF.html",
-    "defer": true,
-    "items": [
+    type: "web",
+    url: "https://rl.talis.com/3/bournemouth/items/AF2E5676-6A86-DCDC-FC7B-8CC554EFD9BF.html",
+    defer: true,
+    items: [
       {
-        "itemType": "book",
-        "title": "The Unified Modeling Language reference manual",
-        "creators": [
+        itemType: "book",
+        title: "The Unified Modeling Language reference manual",
+        creators: [
           {
-            "lastName": "Rumbaugh",
-            "firstName": "James",
-            "creatorType": "author"
+            lastName: "Rumbaugh",
+            firstName: "James",
+            creatorType: "author",
           },
           {
-            "lastName": "Jacobson",
-            "firstName": "Ivar",
-            "creatorType": "author"
+            lastName: "Jacobson",
+            firstName: "Ivar",
+            creatorType: "author",
           },
           {
-            "lastName": "Booch",
-            "firstName": "Grady",
-            "creatorType": "author"
-          }
+            lastName: "Booch",
+            firstName: "Grady",
+            creatorType: "author",
+          },
         ],
-        "date": "0000 c",
-        "ISBN": "9780201309980",
-        "libraryCatalog": "Talis Aspire",
-        "place": "Harlow",
-        "publisher": "Addison Wesley",
-        "volume": "The Addison-Wesley object technology series",
-        "attachments": [],
-        "tags": [],
-        "notes": [],
-        "seeAlso": []
-      }
-    ]
+        date: "0000 c",
+        ISBN: "9780201309980",
+        libraryCatalog: "Talis Aspire",
+        place: "Harlow",
+        publisher: "Addison Wesley",
+        volume: "The Addison-Wesley object technology series",
+        attachments: [],
+        tags: [],
+        notes: [],
+        seeAlso: [],
+      },
+    ],
   },
   {
-    "type": "web",
-    "url": "https://rl.talis.com/3/coventry/items/1CC2D394-7EDE-8DE5-4FF0-868C1C6E6BE5.html",
-    "defer": true,
-    "items": [
+    type: "web",
+    url: "https://rl.talis.com/3/coventry/items/1CC2D394-7EDE-8DE5-4FF0-868C1C6E6BE5.html",
+    defer: true,
+    items: [
       {
-        "itemType": "book",
-        "title": "Decision making in midwifery practice",
-        "creators": [
+        itemType: "book",
+        title: "Decision making in midwifery practice",
+        creators: [
           {
-            "lastName": "Marshall",
-            "firstName": "Jayne E",
-            "creatorType": "author"
+            lastName: "Marshall",
+            firstName: "Jayne E",
+            creatorType: "author",
           },
           {
-            "lastName": "Raynor",
-            "firstName": "Maureen D",
-            "creatorType": "author"
+            lastName: "Raynor",
+            firstName: "Maureen D",
+            creatorType: "author",
           },
           {
-            "lastName": "Sullivan",
-            "firstName": "Amanda",
-            "creatorType": "author"
-          }
+            lastName: "Sullivan",
+            firstName: "Amanda",
+            creatorType: "author",
+          },
         ],
-        "date": "2005",
-        "ISBN": "9780443073847",
-        "libraryCatalog": "Talis Aspire",
-        "place": "Edinburgh",
-        "publisher": "Elsevier/Churchill Livingstone",
-        "attachments": [],
-        "tags": [],
-        "notes": [],
-        "seeAlso": []
-      }
-    ]
+        date: "2005",
+        ISBN: "9780443073847",
+        libraryCatalog: "Talis Aspire",
+        place: "Edinburgh",
+        publisher: "Elsevier/Churchill Livingstone",
+        attachments: [],
+        tags: [],
+        notes: [],
+        seeAlso: [],
+      },
+    ],
   },
   {
-    "type": "web",
-    "url": "https://rl.talis.com/3/cyprus_uclan/items/57E6E313-82BF-0AF6-C0E5-940A3760507C.html",
-    "defer": true,
-    "items": [
+    type: "web",
+    url: "https://rl.talis.com/3/cyprus_uclan/items/57E6E313-82BF-0AF6-C0E5-940A3760507C.html",
+    defer: true,
+    items: [
       {
-        "itemType": "book",
-        "title": "Neocleous's introduction to Cyprus law",
-        "creators": [
+        itemType: "book",
+        title: "Neocleous's introduction to Cyprus law",
+        creators: [
           {
-            "lastName": "Neocleous",
-            "firstName": "Andreas",
-            "creatorType": "author"
+            lastName: "Neocleous",
+            firstName: "Andreas",
+            creatorType: "author",
           },
           {
-            "lastName": "Andreas Neocleous & Co",
-            "creatorType": "author",
-            "fieldMode": 1
-          }
+            lastName: "Andreas Neocleous & Co",
+            creatorType: "author",
+            fieldMode: 1,
+          },
         ],
-        "date": "2010",
-        "ISBN": "9789963935918",
-        "edition": "3rd ed",
-        "libraryCatalog": "Talis Aspire",
-        "place": "Limassol, Cyprus",
-        "publisher": "A. Neocleous & Co. LLC",
-        "attachments": [],
-        "tags": [],
-        "notes": [],
-        "seeAlso": []
-      }
-    ]
+        date: "2010",
+        ISBN: "9789963935918",
+        edition: "3rd ed",
+        libraryCatalog: "Talis Aspire",
+        place: "Limassol, Cyprus",
+        publisher: "A. Neocleous & Co. LLC",
+        attachments: [],
+        tags: [],
+        notes: [],
+        seeAlso: [],
+      },
+    ],
   },
   {
-    "type": "web",
-    "url": "https://rl.talis.com/3/derby/items/F9F66F67-142C-B05D-7401-22037C676876.html",
-    "defer": true,
-    "items": [
+    type: "web",
+    url: "https://rl.talis.com/3/derby/items/F9F66F67-142C-B05D-7401-22037C676876.html",
+    defer: true,
+    items: [
       {
-        "itemType": "book",
-        "title": "Preparing to teach in the lifelong learning sector: the new award",
-        "creators": [
+        itemType: "book",
+        title:
+          "Preparing to teach in the lifelong learning sector: the new award",
+        creators: [
           {
-            "lastName": "Gravells",
-            "firstName": "Ann",
-            "creatorType": "author"
-          }
+            lastName: "Gravells",
+            firstName: "Ann",
+            creatorType: "author",
+          },
         ],
-        "date": "2012",
-        "ISBN": "9780857257734",
-        "edition": "5th ed",
-        "libraryCatalog": "Talis Aspire",
-        "place": "London",
-        "publisher": "Learning Matters",
-        "shortTitle": "Preparing to teach in the lifelong learning sector",
-        "attachments": [],
-        "tags": [],
-        "notes": [
+        date: "2012",
+        ISBN: "9780857257734",
+        edition: "5th ed",
+        libraryCatalog: "Talis Aspire",
+        place: "London",
+        publisher: "Learning Matters",
+        shortTitle: "Preparing to teach in the lifelong learning sector",
+        attachments: [],
+        tags: [],
+        notes: [
           {
-            "note": "<p>Earlier editions are available in the Library.</p>"
-          }
+            note: "<p>Earlier editions are available in the Library.</p>",
+          },
         ],
-        "seeAlso": []
-      }
-    ]
-  }
-]
+        seeAlso: [],
+      },
+    ],
+  },
+];
 /** END TEST CASES **/
 
-
-var apiToken = {}
+var apiToken = {};
 /**
  * Extract the anonymous access token from the page.
  * First tries window.shipshape, then falls back to regex extraction from script tags.
@@ -875,7 +941,9 @@ function getAnonymousAccessToken(doc, url) {
     if (scriptContent && scriptContent.includes("anonymousAccessToken")) {
       // Match: "anonymousAccessToken": "eyJ..." or 'anonymousAccessToken': 'eyJ...'
       // The token is a JWT so it contains alphanumeric chars, dots, underscores, and hyphens
-      var tokenMatch = scriptContent.match(/["']?anonymousAccessToken["']?\s*:\s*["']([^"']+)["']/);
+      var tokenMatch = scriptContent.match(
+        /["']?anonymousAccessToken["']?\s*:\s*["']([^"']+)["']/,
+      );
       if (tokenMatch && tokenMatch[1]) {
         var token = tokenMatch[1];
         safeLog("TALIS-ASPIRE-CUSTOM: Token found via regex extraction", token);
@@ -892,11 +960,13 @@ function getAnonymousAccessToken(doc, url) {
 function getAuthenticationHeaders(doc, url) {
   var token = getAnonymousAccessToken(doc, url);
   if (!token) {
-    safeLog("TALIS-ASPIRE-CUSTOM: WARNING - No auth token found, API calls may fail");
+    safeLog(
+      "TALIS-ASPIRE-CUSTOM: WARNING - No auth token found, API calls may fail",
+    );
     return {};
   }
   return {
-    "Authorization": "Bearer " + token
+    Authorization: "Bearer " + token,
   };
 }
 
@@ -906,14 +976,14 @@ function getTalisBaseAPIUrl(url) {
   url.pathname = url.pathname.replace(/\.html$/, "");
   url.search = "";
   safeLog("TALIS-ASPIRE-CUSTOM: getTalisBaseAPIUrl", url);
-  return url
+  return url;
 }
 
 /* E.g. https://rl.talis.com/3/ucl/lists/99449747-A091-3F6D-E08A-965F4A5C3149/items?include=content,importance,resource.part_of&page%5Blimit%5D=400 */
 function getTalisItemAPIUrl(url, offset = null, limit = 200) {
   var baseUrl = new URL(getTalisBaseAPIUrl(url));
   baseUrl.pathname = `${baseUrl.pathname}/items`;
-  // ?include=content,importance,resource,resource.part_of&page%5Blimit%5D=200 
+  // ?include=content,importance,resource,resource.part_of&page%5Blimit%5D=200
   // Note: 'resource' is needed to get titles from the included resources
   baseUrl.searchParams.set("include", "content,importance,resource.part_of");
   baseUrl.searchParams.set("page[limit]", String(limit));
@@ -927,7 +997,10 @@ function getTalisItemAPIUrl(url, offset = null, limit = 200) {
 /* E.g. https://rl.talis.com/3/ucl/lists/99449747-A091-3F6D-E08A-965F4A5C3149?include=license,nodes,owners,period,rolled_over_from,rolled_over_to,sections_recursively,tenant.bookstores,tenant.citation_styles,tenant.importances,tenant.licenses,tenant.periods,tenant.reports,tenant.tags */
 function getTalisCollectionAPIUrl(url) {
   var baseUrl = new URL(getTalisBaseAPIUrl(url));
-  baseUrl.searchParams.set("include", "license,nodes,owners,period,rolled_over_from,rolled_over_to,sections_recursively,tenant.bookstores,tenant.citation_styles,tenant.importances,tenant.licenses,tenant.periods,tenant.reports,tenant.tags");
+  baseUrl.searchParams.set(
+    "include",
+    "license,nodes,owners,period,rolled_over_from,rolled_over_to,sections_recursively,tenant.bookstores,tenant.citation_styles,tenant.importances,tenant.licenses,tenant.periods,tenant.reports,tenant.tags",
+  );
   safeLog("TALIS-ASPIRE-CUSTOM: getTalisCollectionAPIUrl", baseUrl.toString());
   return baseUrl.toString();
 }

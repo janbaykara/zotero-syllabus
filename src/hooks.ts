@@ -4,7 +4,10 @@ import { registerPrefsScripts } from "./modules/preferenceScript";
 import { createZToolkit } from "./utils/ztoolkit";
 import { getCSSUrl } from "./utils/css";
 import { getSelectedCollection } from "./utils/zotero";
-import { ExportSyllabusMetadataSchema, SettingsSyllabusMetadata } from "./utils/schemas";
+import {
+  ExportSyllabusMetadataSchema,
+  SettingsSyllabusMetadata,
+} from "./utils/schemas";
 
 async function onStartup() {
   await Promise.all([
@@ -38,13 +41,18 @@ async function onStartup() {
  */
 function registerTalisMetadataEndpoint() {
   // Check if Zotero.Server.Endpoints exists (available in Zotero 7+)
-  if (typeof Zotero.Server === "undefined" || typeof Zotero.Server.Endpoints === "undefined") {
-    ztoolkit.log("Zotero.Server.Endpoints not available, skipping endpoint registration");
+  if (
+    typeof Zotero.Server === "undefined" ||
+    typeof Zotero.Server.Endpoints === "undefined"
+  ) {
+    ztoolkit.log(
+      "Zotero.Server.Endpoints not available, skipping endpoint registration",
+    );
     return;
   }
 
   // Register Hello World test endpoint
-  const HelloWorld = function () { };
+  const HelloWorld = function () {};
   HelloWorld.prototype = {
     supportedMethods: ["GET"],
     supportedDataTypes: ["application/json"],
@@ -63,10 +71,13 @@ function registerTalisMetadataEndpoint() {
   (Zotero.Server.Endpoints as any)["/syllabus/hello"] = HelloWorld;
   ztoolkit.log("Registered /syllabus/hello endpoint");
 
-  const SetTalisMetadata = function () { };
+  const SetTalisMetadata = function () {};
   SetTalisMetadata.prototype = {
     supportedMethods: ["POST"],
-    supportedDataTypes: ["application/x-www-form-urlencoded", "application/json"],
+    supportedDataTypes: [
+      "application/x-www-form-urlencoded",
+      "application/json",
+    ],
     permitBookmarklet: true,
 
     init: async function (req: any) {
@@ -75,52 +86,87 @@ function registerTalisMetadataEndpoint() {
         // Get metadata from request body
         if (!req.data) {
           ztoolkit.log("No data in request body");
-          return [400, "application/json", JSON.stringify({ error: "data required in request body" })];
+          return [
+            400,
+            "application/json",
+            JSON.stringify({ error: "data required in request body" }),
+          ];
         }
 
-        const { metadata } = req.data
+        const { metadata } = req.data;
 
         if (!metadata) {
           ztoolkit.log("No metadata in request body");
-          return [400, "application/json", JSON.stringify({ error: "metadata required in request body" })];
+          return [
+            400,
+            "application/json",
+            JSON.stringify({ error: "metadata required in request body" }),
+          ];
         }
 
-        const validatedMetadataFileContents = ExportSyllabusMetadataSchema.safeParse(metadata);
+        const validatedMetadataFileContents =
+          ExportSyllabusMetadataSchema.safeParse(metadata);
         if (!validatedMetadataFileContents.success) {
-          ztoolkit.log("Invalid metadata JSON", validatedMetadataFileContents, validatedMetadataFileContents);
-          return [400, "application/json", JSON.stringify({ error: "Invalid metadata JSON", details: validatedMetadataFileContents })];
+          ztoolkit.log(
+            "Invalid metadata JSON",
+            validatedMetadataFileContents,
+            validatedMetadataFileContents,
+          );
+          return [
+            400,
+            "application/json",
+            JSON.stringify({
+              error: "Invalid metadata JSON",
+              details: validatedMetadataFileContents,
+            }),
+          ];
         }
 
         ztoolkit.log("Validated metadata:", validatedMetadataFileContents.data);
 
         // Get the active collection ID
-        const collection = getSelectedCollection()
-        const collectionId = collection?.id
+        const collection = getSelectedCollection();
+        const collectionId = collection?.id;
 
         if (!collectionId) {
           ztoolkit.log("No collection selected");
-          return [400, "application/json", JSON.stringify({ error: "No collection selected" })];
+          return [
+            400,
+            "application/json",
+            JSON.stringify({ error: "No collection selected" }),
+          ];
         }
 
-        ztoolkit.log("Setting Talis syllabus metadata for collection", collectionId, metadata);
+        ztoolkit.log(
+          "Setting Talis syllabus metadata for collection",
+          collectionId,
+          metadata,
+        );
 
         try {
-          const { collectionAndLibraryKey, syllabusData } = await SyllabusManager.importSyllabusMetadata(
-            collectionId,
-            JSON.stringify(validatedMetadataFileContents.data),
-            "background",
-          );
+          const { collectionAndLibraryKey, syllabusData } =
+            await SyllabusManager.importSyllabusMetadata(
+              collectionId,
+              JSON.stringify(validatedMetadataFileContents.data),
+              "background",
+            );
 
-          return [200, "application/json", JSON.stringify({
-            collectionAndLibraryKey: collectionAndLibraryKey as string,
-            syllabusData: syllabusData as SettingsSyllabusMetadata
-          })];
+          return [
+            200,
+            "application/json",
+            JSON.stringify({
+              collectionAndLibraryKey: collectionAndLibraryKey as string,
+              syllabusData: syllabusData as SettingsSyllabusMetadata,
+            }),
+          ];
         } catch (error) {
           ztoolkit.log("Error setting Talis syllabus metadata:", error);
           return [
             500,
             "application/json",
-            JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
+            JSON.stringify({
+              error: error instanceof Error ? error.message : String(error),
+            }),
           ];
         }
       } catch (error) {
@@ -128,14 +174,17 @@ function registerTalisMetadataEndpoint() {
         return [
           500,
           "application/json",
-          JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
+          JSON.stringify({
+            error: error instanceof Error ? error.message : String(error),
+          }),
         ];
       }
     },
   };
 
   // Register the endpoint
-  (Zotero.Server.Endpoints as any)["/syllabus/setTalisMetadata"] = SetTalisMetadata;
+  (Zotero.Server.Endpoints as any)["/syllabus/setTalisMetadata"] =
+    SetTalisMetadata;
   ztoolkit.log("Registered /syllabus/setTalisMetadata endpoint");
 }
 

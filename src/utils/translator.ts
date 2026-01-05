@@ -14,11 +14,11 @@ export async function installTalisAspireTranslator(): Promise<void> {
       return;
     }
 
-    const PROD_PORT = 23119 // default
-    const DEV_PORT = 23124
+    const PROD_PORT = 23119; // default
+    const DEV_PORT = 23124;
     // If dev mode, replace 23119
     if (process.env.NODE_ENV === "development") {
-      code = code.replace(String(PROD_PORT), String(DEV_PORT))
+      code = code.replace(String(PROD_PORT), String(DEV_PORT));
     }
 
     const translatorID = "f16931f0-372e-4197-8927-05d2ba7599d8";

@@ -6,13 +6,13 @@ declare namespace Zotero {
     function throttle<Type>(
       fn: Type,
       wait: number,
-      options?: { leading?: boolean; trailing?: boolean }
+      options?: { leading?: boolean; trailing?: boolean },
     ): Type;
     function capitalizeName(s: string): string;
     function cleanAuthor<T extends CreatorType>(
       author: string,
       creatorType: T,
-      useComma?: boolean
+      useComma?: boolean,
     ): Creator<T>;
     function trim(s: string): string;
     function trimInternal(s: string): string;
@@ -21,10 +21,16 @@ declare namespace Zotero {
     function cleanURL(url: string, tryHttp: boolean = false): string;
     function cleanTags(s: string): string;
     function cleanDOI(s: string): string;
-    function cleanISBN(s: string, dontValidate: boolean = false): string | false;
+    function cleanISBN(
+      s: string,
+      dontValidate: boolean = false,
+    ): string | false;
     function toISBN13(isbnStr: string): string;
     function cleanISSN(issnStr: string): string | false;
-    function text2html(s: string, singleNewlineIsParagraph: boolean = false): string;
+    function text2html(
+      s: string,
+      singleNewlineIsParagraph: boolean = false,
+    ): string;
     function htmlSpecialChars(s: string): string;
     function unescapeHTML(s: string): string;
     // unimplemented: dom2text
@@ -35,12 +41,12 @@ declare namespace Zotero {
     function arrayDiff<Type>(
       array1: Type[],
       array2: Type[],
-      useIndex?: false
+      useIndex?: false,
     ): Type[];
     function arrayDiff<Type>(
       array1: Type[],
       array2: Type[],
-      useIndex: true
+      useIndex: true,
     ): number[];
     function arrayEquals<Type>(array1: Type[], array2: Type[]): boolean;
     function arrayShuffle<Type>(array: Type[]): Type[];
@@ -48,7 +54,7 @@ declare namespace Zotero {
     function forEachChunk<Type, RetType>(
       array: Type[],
       chunkSize: number,
-      func: (chunk: Type[]) => RetType
+      func: (chunk: Type[]) => RetType,
     ): RetType[];
     function rand(min: number, max: number): number;
     function getPageRange(pages: string): [fromPage: number, toPage: number];
@@ -57,17 +63,17 @@ declare namespace Zotero {
       s: string,
       len: number,
       wordBoundary?: boolean,
-      countChars?: boolean
+      countChars?: boolean,
     ): string;
     function pluralize(
       num: number,
-      forms: [singular: string, plural: string] | string
+      forms: [singular: string, plural: string] | string,
     ): string;
     function numberFormat(
       num: number,
       decimalPlaces: number,
       decimalPoint?: string,
-      thousandsSep?: string
+      thousandsSep?: string,
     ): string;
     function removeDiacritics(s: string, lowercaseOnly?: boolean): string;
     // processAsync
@@ -80,13 +86,13 @@ declare namespace Zotero {
     function xpath(
       elements: Element | Element[],
       xpath: string,
-      namespaces?: { [prefix: string]: string }
+      namespaces?: { [prefix: string]: string },
     ): Element[];
     function xpathText(
       node: Element | Element[],
       xpath: string,
       namespaces?: { [prefix: string]: string },
-      delimiter?: string
+      delimiter?: string,
     ): string | undefined;
     function randomString(len?: number, chars?: string): string;
     // varDump
@@ -95,7 +101,7 @@ declare namespace Zotero {
     function stringToUTF8Array(
       s: string,
       array: number[] | Uint8Array,
-      offset?: number
+      offset?: number,
     ): void;
     function getStringByteLength(s: string): number;
     function generateObjectKey(): string;
@@ -108,13 +114,13 @@ declare namespace Zotero {
       doc: Document,
       inHere: Element | Element[],
       urlRe?: RegExp,
-      rejectRe?: RegExp
+      rejectRe?: RegExp,
     ): { [link: string]: string };
     /** @deprecated use `requestDocument()` */
     function processDocuments(
       urls: string | string[],
       processor: (doc: Document) => any,
-      noCompleteOnError?: boolean
+      noCompleteOnError?: boolean,
     ): void;
     /** @deprecated use `request()`, `requestText()`, `requestJSON()`, or `requestDocument()` */
     function doGet(
@@ -123,7 +129,7 @@ declare namespace Zotero {
       done?: () => void,
       responseCharset?: string,
       requestHeaders?: { [header: string]: string },
-      successCodes?: number[]
+      successCodes?: number[],
     ): boolean;
     /** @deprecated use `request()`, `requestText()`, `requestJSON()`, or `requestDocument()` */
     function doPost(
@@ -132,7 +138,7 @@ declare namespace Zotero {
       onDone: (text: string, xmlhttp: XMLHttpRequest) => void,
       requestHeaders?: { [header: string]: string },
       responseCharset?: string,
-      successCodes?: number[]
+      successCodes?: number[],
     ): boolean;
     function urlToProxy(url: string): string;
     function urlToProper(url: string): string;
@@ -142,60 +148,57 @@ declare namespace Zotero {
     function createContextObject(
       item: Zotero.Item,
       version: string,
-      asObj?: boolean
+      asObj?: boolean,
     );
     function parseContextObject(
       co: string,
-      item: Zotero.Item[]
+      item: Zotero.Item[],
     ): Zotero.Item[] | false;
 
     type HTTPRequestParameters<T extends HTTPResponseType> = {
-      method?: string,
-      headers?: Record<string, string>,
-      body?: string,
-      responseCharset?: string,
-      responseType?: T
+      method?: string;
+      headers?: Record<string, string>;
+      body?: string;
+      responseCharset?: string;
+      responseType?: T;
     };
 
-    type HTTPResponseType =
-      | "text"
-      | "json"
-      | "document";
+    type HTTPResponseType = "text" | "json" | "document";
 
     type HTTPResponse<T> = {
-      status: number,
-      headers: Record<string, string>,
-      body: T
+      status: number;
+      headers: Record<string, string>;
+      body: T;
     };
 
     function request(
       url: string,
-      params?: HTTPRequestParameters<"text">
+      params?: HTTPRequestParameters<"text">,
     ): Promise<HTTPResponse<string>>;
 
     function requestText(
       url: string,
-      params?: HTTPRequestParameters<"text">
+      params?: HTTPRequestParameters<"text">,
     ): Promise<string>;
 
     function request(
       url: string,
-      params?: HTTPRequestParameters<"json">
+      params?: HTTPRequestParameters<"json">,
     ): Promise<HTTPResponse<any>>;
 
     function requestJSON(
       url: string,
-      params?: HTTPRequestParameters<"json">
+      params?: HTTPRequestParameters<"json">,
     ): Promise<any>;
 
     function request(
       url: string,
-      params?: HTTPRequestParameters<"document">
+      params?: HTTPRequestParameters<"document">,
     ): Promise<HTTPResponse<Document>>;
 
     function requestDocument(
       url: string,
-      params?: HTTPRequestParameters<"document">
+      params?: HTTPRequestParameters<"document">,
     ): Promise<Document>;
   }
 
@@ -220,10 +223,10 @@ declare namespace Zotero {
    */
   type Item = ItemTypes[ItemType];
 
-  var Item: {
-    new <T extends ItemType>(itemType: T): ItemTypes[T];
-    new(itemType: string): Item;
-  }
+  // var Item: {
+  //   new <T extends ItemType>(itemType: T): ItemTypes[T];
+  //   new(itemType: string): Item;
+  // }
 
   interface Creator<T extends CreatorType> {
     lastName?: string;
@@ -234,43 +237,43 @@ declare namespace Zotero {
 
   /* *** BEGIN GENERATED TYPES *** */
   type ItemTypes = {
-    "artwork": ArtworkItem,
-    "audioRecording": AudioRecordingItem,
-    "bill": BillItem,
-    "blogPost": BlogPostItem,
-    "book": BookItem,
-    "bookSection": BookSectionItem,
-    "case": CaseItem,
-    "computerProgram": ComputerProgramItem,
-    "conferencePaper": ConferencePaperItem,
-    "dataset": DatasetItem,
-    "dictionaryEntry": DictionaryEntryItem,
-    "document": DocumentItem,
-    "email": EmailItem,
-    "encyclopediaArticle": EncyclopediaArticleItem,
-    "film": FilmItem,
-    "forumPost": ForumPostItem,
-    "hearing": HearingItem,
-    "instantMessage": InstantMessageItem,
-    "interview": InterviewItem,
-    "journalArticle": JournalArticleItem,
-    "letter": LetterItem,
-    "magazineArticle": MagazineArticleItem,
-    "manuscript": ManuscriptItem,
-    "map": MapItem,
-    "newspaperArticle": NewspaperArticleItem,
-    "patent": PatentItem,
-    "podcast": PodcastItem,
-    "preprint": PreprintItem,
-    "presentation": PresentationItem,
-    "radioBroadcast": RadioBroadcastItem,
-    "report": ReportItem,
-    "standard": StandardItem,
-    "statute": StatuteItem,
-    "thesis": ThesisItem,
-    "tvBroadcast": TVBroadcastItem,
-    "videoRecording": VideoRecordingItem,
-    "webpage": WebpageItem,
+    artwork: ArtworkItem;
+    audioRecording: AudioRecordingItem;
+    bill: BillItem;
+    blogPost: BlogPostItem;
+    book: BookItem;
+    bookSection: BookSectionItem;
+    case: CaseItem;
+    computerProgram: ComputerProgramItem;
+    conferencePaper: ConferencePaperItem;
+    dataset: DatasetItem;
+    dictionaryEntry: DictionaryEntryItem;
+    document: DocumentItem;
+    email: EmailItem;
+    encyclopediaArticle: EncyclopediaArticleItem;
+    film: FilmItem;
+    forumPost: ForumPostItem;
+    hearing: HearingItem;
+    instantMessage: InstantMessageItem;
+    interview: InterviewItem;
+    journalArticle: JournalArticleItem;
+    letter: LetterItem;
+    magazineArticle: MagazineArticleItem;
+    manuscript: ManuscriptItem;
+    map: MapItem;
+    newspaperArticle: NewspaperArticleItem;
+    patent: PatentItem;
+    podcast: PodcastItem;
+    preprint: PreprintItem;
+    presentation: PresentationItem;
+    radioBroadcast: RadioBroadcastItem;
+    report: ReportItem;
+    standard: StandardItem;
+    statute: StatuteItem;
+    thesis: ThesisItem;
+    tvBroadcast: TVBroadcastItem;
+    videoRecording: VideoRecordingItem;
+    webpage: WebpageItem;
   };
 
   type ArtworkItem = {
@@ -414,7 +417,9 @@ declare namespace Zotero {
     rights?: string;
     extra?: string;
 
-    creators: Creator<"author" | "contributor" | "editor" | "translator" | "seriesEditor">[];
+    creators: Creator<
+      "author" | "contributor" | "editor" | "translator" | "seriesEditor"
+    >[];
     attachments: Attachment[];
     tags: Tag[];
     notes: Note[];
@@ -450,7 +455,14 @@ declare namespace Zotero {
     rights?: string;
     extra?: string;
 
-    creators: Creator<"author" | "contributor" | "editor" | "bookAuthor" | "translator" | "seriesEditor">[];
+    creators: Creator<
+      | "author"
+      | "contributor"
+      | "editor"
+      | "bookAuthor"
+      | "translator"
+      | "seriesEditor"
+    >[];
     attachments: Attachment[];
     tags: Tag[];
     notes: Note[];
@@ -545,7 +557,9 @@ declare namespace Zotero {
     rights?: string;
     extra?: string;
 
-    creators: Creator<"author" | "contributor" | "editor" | "translator" | "seriesEditor">[];
+    creators: Creator<
+      "author" | "contributor" | "editor" | "translator" | "seriesEditor"
+    >[];
     attachments: Attachment[];
     tags: Tag[];
     notes: Note[];
@@ -615,7 +629,9 @@ declare namespace Zotero {
     rights?: string;
     extra?: string;
 
-    creators: Creator<"author" | "contributor" | "editor" | "translator" | "seriesEditor">[];
+    creators: Creator<
+      "author" | "contributor" | "editor" | "translator" | "seriesEditor"
+    >[];
     attachments: Attachment[];
     tags: Tag[];
     notes: Note[];
@@ -642,7 +658,9 @@ declare namespace Zotero {
     rights?: string;
     extra?: string;
 
-    creators: Creator<"author" | "contributor" | "editor" | "translator" | "reviewedAuthor">[];
+    creators: Creator<
+      "author" | "contributor" | "editor" | "translator" | "reviewedAuthor"
+    >[];
     attachments: Attachment[];
     tags: Tag[];
     notes: Note[];
@@ -700,7 +718,9 @@ declare namespace Zotero {
     rights?: string;
     extra?: string;
 
-    creators: Creator<"author" | "contributor" | "editor" | "translator" | "seriesEditor">[];
+    creators: Creator<
+      "author" | "contributor" | "editor" | "translator" | "seriesEditor"
+    >[];
     attachments: Attachment[];
     tags: Tag[];
     notes: Note[];
@@ -730,7 +750,9 @@ declare namespace Zotero {
     rights?: string;
     extra?: string;
 
-    creators: Creator<"director" | "contributor" | "scriptwriter" | "producer">[];
+    creators: Creator<
+      "director" | "contributor" | "scriptwriter" | "producer"
+    >[];
     attachments: Attachment[];
     tags: Tag[];
     notes: Note[];
@@ -834,7 +856,9 @@ declare namespace Zotero {
     rights?: string;
     extra?: string;
 
-    creators: Creator<"interviewee" | "contributor" | "interviewer" | "translator">[];
+    creators: Creator<
+      "interviewee" | "contributor" | "interviewer" | "translator"
+    >[];
     attachments: Attachment[];
     tags: Tag[];
     notes: Note[];
@@ -870,7 +894,9 @@ declare namespace Zotero {
     rights?: string;
     extra?: string;
 
-    creators: Creator<"author" | "contributor" | "editor" | "translator" | "reviewedAuthor">[];
+    creators: Creator<
+      "author" | "contributor" | "editor" | "translator" | "reviewedAuthor"
+    >[];
     attachments: Attachment[];
     tags: Tag[];
     notes: Note[];
@@ -928,7 +954,9 @@ declare namespace Zotero {
     rights?: string;
     extra?: string;
 
-    creators: Creator<"author" | "contributor" | "translator" | "reviewedAuthor">[];
+    creators: Creator<
+      "author" | "contributor" | "translator" | "reviewedAuthor"
+    >[];
     attachments: Attachment[];
     tags: Tag[];
     notes: Note[];
@@ -1022,7 +1050,9 @@ declare namespace Zotero {
     rights?: string;
     extra?: string;
 
-    creators: Creator<"author" | "contributor" | "translator" | "reviewedAuthor">[];
+    creators: Creator<
+      "author" | "contributor" | "translator" | "reviewedAuthor"
+    >[];
     attachments: Attachment[];
     tags: Tag[];
     notes: Note[];
@@ -1114,7 +1144,9 @@ declare namespace Zotero {
     rights?: string;
     extra?: string;
 
-    creators: Creator<"author" | "contributor" | "editor" | "translator" | "reviewedAuthor">[];
+    creators: Creator<
+      "author" | "contributor" | "editor" | "translator" | "reviewedAuthor"
+    >[];
     attachments: Attachment[];
     tags: Tag[];
     notes: Note[];
@@ -1171,7 +1203,14 @@ declare namespace Zotero {
     rights?: string;
     extra?: string;
 
-    creators: Creator<"director" | "scriptwriter" | "producer" | "castMember" | "contributor" | "guest">[];
+    creators: Creator<
+      | "director"
+      | "scriptwriter"
+      | "producer"
+      | "castMember"
+      | "contributor"
+      | "guest"
+    >[];
     attachments: Attachment[];
     tags: Tag[];
     notes: Note[];
@@ -1203,7 +1242,9 @@ declare namespace Zotero {
     rights?: string;
     extra?: string;
 
-    creators: Creator<"author" | "contributor" | "translator" | "seriesEditor">[];
+    creators: Creator<
+      "author" | "contributor" | "translator" | "seriesEditor"
+    >[];
     attachments: Attachment[];
     tags: Tag[];
     notes: Note[];
@@ -1331,7 +1372,14 @@ declare namespace Zotero {
     rights?: string;
     extra?: string;
 
-    creators: Creator<"director" | "scriptwriter" | "producer" | "castMember" | "contributor" | "guest">[];
+    creators: Creator<
+      | "director"
+      | "scriptwriter"
+      | "producer"
+      | "castMember"
+      | "contributor"
+      | "guest"
+    >[];
     attachments: Attachment[];
     tags: Tag[];
     notes: Note[];
@@ -1365,7 +1413,9 @@ declare namespace Zotero {
     rights?: string;
     extra?: string;
 
-    creators: Creator<"director" | "scriptwriter" | "producer" | "castMember" | "contributor">[];
+    creators: Creator<
+      "director" | "scriptwriter" | "producer" | "castMember" | "contributor"
+    >[];
     attachments: Attachment[];
     tags: Tag[];
     notes: Note[];
@@ -1436,7 +1486,7 @@ declare namespace Zotero {
     note: string;
   }
 
-  interface Collection { }
+  // interface Collection { }
 
   interface Translator {
     [key: string]: any; // allow for exports
@@ -1465,51 +1515,46 @@ declare namespace Zotero {
   }
 
   interface Translate<T extends Translator> {
-    setTranslator(
-      translator: T[] | T | string
-    ): boolean;
+    setTranslator(translator: T[] | T | string): boolean;
     getTranslatorObject(): Promise<T>;
     getTranslatorObject(receiver: (obj: T) => void): void;
     setHandler(
       type: "select",
       handler: (
         translate: Zotero.Translate<T>,
-        items: { [id: string]: string }
-      ) => string[]
+        items: { [id: string]: string },
+      ) => string[],
     ): void;
     setHandler(
       type: "itemDone",
-      handler: (translate: Zotero.Translate<T>, item: Zotero.Item) => void
+      handler: (translate: Zotero.Translate<T>, item: Zotero.Item) => void,
     ): void;
     setHandler(
       type: "collectionDone",
       handler: (
         translate: Zotero.Translate,
-        collection: Zotero.Collection
-      ) => void
+        collection: Zotero.Collection,
+      ) => void,
     ): void;
     setHandler(
       type: "done",
-      handler: (translate: Zotero.Translate<T>, success: boolean) => void
+      handler: (translate: Zotero.Translate<T>, success: boolean) => void,
     ): void;
     setHandler(
       type: "debug",
-      handler: (translate: Zotero.Translate<T>, message: string) => boolean
+      handler: (translate: Zotero.Translate<T>, message: string) => boolean,
     ): void;
     setHandler(
       type: "error",
-      handler: (translate: Zotero.Translate<T>, error: Error | string) => void
+      handler: (translate: Zotero.Translate<T>, error: Error | string) => void,
     ): void;
     setHandler(
       type: "translators",
-      handler: (
-        translate: Zotero.Translate<T>,
-        translators: T[]
-      ) => void
+      handler: (translate: Zotero.Translate<T>, translators: T[]) => void,
     ): void;
     setHandler(
       type: "pageModified",
-      handler: (translate: Zotero.Translate<T>, doc: Document) => void
+      handler: (translate: Zotero.Translate<T>, doc: Document) => void,
     ): void;
     clearHandlers(
       type:
@@ -1520,57 +1565,54 @@ declare namespace Zotero {
         | "debug"
         | "error"
         | "translators"
-        | "pageModified"
+        | "pageModified",
     ): void;
     removeHandler(
       type: "select",
       handler: (
         translate: Zotero.Translate<T>,
-        items: { [id: string]: string }
-      ) => string[]
+        items: { [id: string]: string },
+      ) => string[],
     ): void;
     removeHandler(
       type: "itemDone",
-      handler: (translate: Zotero.Translate<T>, item: Zotero.Item) => void
+      handler: (translate: Zotero.Translate<T>, item: Zotero.Item) => void,
     ): void;
     removeHandler(
       type: "collectionDone",
       handler: (
         translate: Zotero.Translate<T>,
-        collection: Zotero.Collection
-      ) => void
+        collection: Zotero.Collection,
+      ) => void,
     ): void;
     removeHandler(
       type: "done",
-      handler: (translate: Zotero.Translate<T>, success: boolean) => void
+      handler: (translate: Zotero.Translate<T>, success: boolean) => void,
     ): void;
     removeHandler(
       type: "debug",
-      handler: (translate: Zotero.Translate<T>, message: string) => boolean
+      handler: (translate: Zotero.Translate<T>, message: string) => boolean,
     ): void;
     removeHandler(
       type: "error",
-      handler: (translate: Zotero.Translate<T>, error: Error | string) => void
+      handler: (translate: Zotero.Translate<T>, error: Error | string) => void,
     ): void;
     removeHandler(
       type: "translators",
-      handler: (
-        translate: Zotero.Translate<T>,
-        translators: T[]
-      ) => void
+      handler: (translate: Zotero.Translate<T>, translators: T[]) => void,
     ): void;
     removeHandler(
       type: "pageModified",
-      handler: (translate: Zotero.Translate<T>, doc: Document) => void
+      handler: (translate: Zotero.Translate<T>, doc: Document) => void,
     ): void;
     getTranslators(
       getAllTranslators?: boolean,
-      checkSetTranslator?: boolean
+      checkSetTranslator?: boolean,
     ): Promise<Zotero.Translator<T>[]>;
     translate(
       libraryID?: number | false,
       saveAttachments?: boolean,
-      linkFiles?: boolean
+      linkFiles?: boolean,
     ): Promise<Zotero.Item[]>;
     setDocument(doc: Document): void;
     setString(s: string): void;
@@ -1582,16 +1624,16 @@ declare namespace Zotero {
   function getOption(option: string): any;
   function getHiddenPref(pref: string): any;
   function loadTranslator(
-    translatorType: "web"
+    translatorType: "web",
   ): Zotero.Translate<WebTranslator>;
   function loadTranslator(
-    translatorType: "import"
+    translatorType: "import",
   ): Zotero.Translate<ImportTranslator>;
   function loadTranslator(
-    translatorType: "export"
+    translatorType: "export",
   ): Zotero.Translate<ExportTranslator>;
   function loadTranslator(
-    translatorType: "search"
+    translatorType: "search",
   ): Zotero.Translate<SearchTranslator>;
   function done(returnValue: string | false): void;
   function debug(str: string, level?: 1 | 2 | 3 | 4 | 5): void;
@@ -1604,10 +1646,12 @@ declare namespace Zotero {
   const parentTranslator: string | undefined;
 
   // web
-  function selectItems(items: Record<string, string>): Promise<Record<string, string> | null>;
   function selectItems(
     items: Record<string, string>,
-    callback: (items: Record<string, string> | null) => void
+  ): Promise<Record<string, string> | null>;
+  function selectItems(
+    items: Record<string, string>,
+    callback: (items: Record<string, string> | null) => void,
   ): void;
   function monitorDOMChanges(target: Node, config?: MutationObserverInit): void;
 
@@ -1626,23 +1670,23 @@ declare function attr(
   node: ParentNode,
   selector: string,
   attr: string,
-  index?: number
+  index?: number,
 ): string;
 declare function attr(selector: string, attr: string, index?: number): string;
 declare function text(
   node: ParentNode,
   selector: string,
-  index?: number
+  index?: number,
 ): string;
 declare function text(selector: string, index?: number): string;
 declare function innerText(
   node: ParentNode,
   selector: string,
-  index?: number
+  index?: number,
 ): string;
 declare function innerText(selector: string, index?: number): string;
 
-declare var request = ZU.request;
-declare var requestText = ZU.requestText;
-declare var requestJSON = ZU.requestJSON;
-declare var requestDocument = ZU.requestDocument;
+// declare var request = ZU.request;
+// declare var requestText = ZU.requestText;
+// declare var requestJSON = ZU.requestJSON;
+// declare var requestDocument = ZU.requestDocument;
