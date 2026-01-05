@@ -370,7 +370,7 @@ async function callZoteroClientEndpoint(endpoint, method, data) {
   return body
 }
 
-async function setTalisSyllabusMetadata(metadata) {
+async function setTalisSyllabusMetadata({ _itemSectionTitles, ...metadata }) {
   // safeLog("TALIS-ASPIRE-CUSTOM.setTalisSyllabusMetadata");
   // Use callMethod to send metadata via POST request
   return await callZoteroClientEndpoint("/syllabus/setTalisMetadata", "POST", metadata);
@@ -402,29 +402,31 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
     // nomenclature: null, // DO NOT CHANGE THIS LINE
   };
 
-  // Get description from list attributes
-  if (talisSyllabusData.data && talisSyllabusData.data.attributes) {
-    metadata.collectionTitle = talisSyllabusData.data.attributes.title;
-    var description = talisSyllabusData.data.attributes.description || "";
-    // Append Talis page URL to description if not already present
-    if (url && description.indexOf(url) === -1) {
-      description = description ? description + "\n\n" + url : url;
-    }
-    metadata.description = description;
-  }
-
-  // Get institution from tenant relationship
-  if (talisSyllabusData.data && talisSyllabusData.data.relationships &&
-    talisSyllabusData.data.relationships.tenant &&
-    talisSyllabusData.data.relationships.tenant.data) {
-    var tenantId = talisSyllabusData.data.relationships.tenant.data.id;
-    // Find tenant in included array
-    if (talisSyllabusData.included) {
-      for (var i = 0; i < talisSyllabusData.included.length; i++) {
-        var inc = talisSyllabusData.included[i];
-        if (inc.type === "tenants" && inc.id === tenantId && inc.attributes && inc.attributes.name) {
-          metadata.institution = inc.attributes.name;
-          break;
+  // Extract data from included array
+  var courseTitle = null;
+  if (talisSyllabusData.included) {
+    // Get institution from tenants
+    for (var i = 0; i < talisSyllabusData.included.length; i++) {
+      var inc = talisSyllabusData.included[i];
+      if (inc.type === "tenants" && inc.attributes && inc.attributes.name) {
+        metadata.institution = inc.attributes.name;
+      }
+      // Get courseCode and courseTitle from modules
+      if (inc.type === "modules" && inc.attributes) {
+        if (inc.attributes.code) {
+          metadata.courseCode = inc.attributes.code;
+        }
+        if (inc.attributes.title) {
+          metadata.collectionTitle = inc.attributes.title;
+        }
+        // Get description from modules if not already set
+        if (inc.attributes.description && !metadata.description) {
+          metadata.description = inc.attributes.description;
+          if (metadata.description) {
+            metadata.description = metadata.description.trim() + "\n\n" + `Course details: ${url}`;
+          } else {
+            metadata.description = `Course details: ${url}`
+          }
         }
       }
     }

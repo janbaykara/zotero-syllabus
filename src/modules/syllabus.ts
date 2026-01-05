@@ -2452,6 +2452,33 @@ export class SyllabusManager {
   }
 
   /**
+   * Get collection course code for a specific collection
+   */
+  static getCourseCode(
+    collectionId: number | GetByLibraryAndKeyArgs,
+  ): string {
+    const metadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    return metadata.courseCode || "";
+  }
+
+  /**
+   * Set collection course code for a specific collection
+   */
+  static async setCourseCode(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    courseCode: string,
+    source: "page" | "background",
+  ): Promise<void> {
+    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    syllabusMetadata.courseCode = courseCode.trim();
+    await SyllabusManager.setCollectionMetadata(
+      collectionId,
+      syllabusMetadata,
+      source,
+    );
+  }
+
+  /**
    * Set collection nomenclature for a specific collection
    */
   static async setNomenclature(
@@ -3046,6 +3073,7 @@ export class SyllabusManager {
     imported: SettingsSyllabusMetadata,
   ): SettingsSyllabusMetadata {
     const merged: SettingsSyllabusMetadata = { ...existing };
+    const { description, classes, nomenclature, priorities, locked, ...restOfImported } = imported;
 
     // Merge description (imported takes precedence if provided)
     if (imported.description !== undefined) {
@@ -3081,6 +3109,11 @@ export class SyllabusManager {
     // Replace locked status if provided
     if (imported.locked !== undefined) {
       merged.locked = imported.locked;
+    }
+
+    for (const key in restOfImported) {
+      // @ts-expect-error - key is a valid key in SettingsSyllabusMetadata
+      merged[key] = restOfImported[key];
     }
 
     return merged;
@@ -3293,10 +3326,12 @@ export class SyllabusManager {
 
     // Get current metadata and merge with imported data
     const existingMetadata = this.getSyllabusMetadata(collectionId);
+    ztoolkit.log("importSyllabusMetadata: metadata before merge:", { metadataData, existingMetadata });
     const mergedMetadata = this.deepMergeMetadata(
       existingMetadata,
       metadataValidation.data,
     );
+    ztoolkit.log("importSyllabusMetadata: metadata after merge:", { mergedMetadata });
 
     // Save merged metadata
     await this.setCollectionMetadata(collectionId, mergedMetadata, source);

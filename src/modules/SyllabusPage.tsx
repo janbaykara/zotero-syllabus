@@ -66,6 +66,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     _setNomenclature,
     _setPriorities,
     setInstitution,
+    setCourseCode,
     setLocked,
   ] = useZoteroSyllabusMetadata(collectionId);
 
@@ -1753,12 +1754,21 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
             <div
               className={twMerge("py-2 space-y-2", compactMode ? "text-base" : "text-lg")}
             >
-              <div>
+              <div className="flex flex-0! flex-row gap-2 items-center character-separator [--character-separator:'•']">
+                <TextInput
+                  elementType="input"
+                  initialValue={syllabusMetadata.courseCode || ""}
+                  onSave={setCourseCode}
+                  className="w-[90px] overflow-hidden text-ellipsis whitespace-nowrap px-0! mx-0! text-primary cursor-pointer shrink-0! grow-0!"
+                  placeholder="Course Code"
+                  emptyBehavior="delete"
+                  readOnly={isLocked}
+                />
                 <TextInput
                   elementType="input"
                   initialValue={syllabusMetadata.institution || ""}
                   onSave={setInstitution}
-                  className="w-full px-0! mx-0! text-primary cursor-pointer"
+                  className="px-0! mx-0! text-primary cursor-pointer grow shrink-0"
                   placeholder="Institution"
                   emptyBehavior="delete"
                   readOnly={isLocked}
@@ -2365,6 +2375,7 @@ function TextInput({
   elementType = "input",
   emptyBehavior = "reset",
   className,
+  containerClassName,
   fieldSizing = "content",
   readOnly = false,
   ...elementProps
@@ -2377,6 +2388,7 @@ function TextInput({
   className?: string;
   fieldSizing?: "content" | "fixed" | "auto";
   readOnly?: boolean;
+  containerClassName?: string;
 } & JSX.HTMLAttributes<HTMLInputElement | HTMLTextAreaElement>) {
   const [value, setValue] = useState(initialValue);
 
@@ -2427,8 +2439,8 @@ function TextInput({
     return null;
   }
 
-  return (
-    <div ref={setSizeRef} className="w-full">
+  const el = (
+    <>
       {h(elementType, {
         ref: inputRef,
         type: "text",
@@ -2487,8 +2499,18 @@ function TextInput({
       >
         {value || initialValue || ""}
       </div>
-    </div>
+    </>
   );
+
+  if (elementType === "input") {
+    return el
+  }
+
+  return (
+    <div ref={setSizeRef} className={twMerge("w-full", containerClassName)}>
+      {el}
+    </div>
+  )
 }
 
 export function SyllabusItemCard({

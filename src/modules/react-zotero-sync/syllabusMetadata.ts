@@ -77,6 +77,13 @@ export function useZoteroSyllabusMetadata(
     [collectionId],
   );
 
+  const setCourseCode = useCallback(
+    (courseCode: string) => {
+      SyllabusManager.setCourseCode(collectionId, courseCode, "page");
+    },
+    [collectionId],
+  );
+
   const setLocked = useCallback(
     (locked: boolean) => {
       SyllabusManager.setLocked(collectionId, locked, "page");
@@ -92,6 +99,7 @@ export function useZoteroSyllabusMetadata(
     setNomenclature,
     setPriorities,
     setInstitution,
+    setCourseCode,
     setLocked,
   ] as const;
 }
