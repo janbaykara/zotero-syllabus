@@ -44,6 +44,7 @@ export async function saveToFile(
   filename: string,
   textContent: string,
   dialogTitle: string = "Save File",
+  reveal: boolean = true,
 ): Promise<boolean> {
   try {
     // Use FilePicker to select download location
@@ -75,6 +76,9 @@ export async function saveToFile(
       // Verify file was created
       if (fileObj.exists()) {
         ztoolkit.log(`File saved successfully to: ${filePath}`);
+        if (reveal) {
+          fileObj.reveal();
+        }
         return true;
       } else {
         ztoolkit.log(`Warning: File may not have been created at: ${filePath}`);
