@@ -206,8 +206,6 @@ function ItemPaneContent({
   const handleSave = useCallback(async () => {
     setIsSaving(true);
     try {
-      // Invalidate cache before saving
-      SyllabusManager.invalidateSyllabusDataCache(itemVersion.item);
       await itemVersion.item.saveTx();
       // The useSelectedItem hook will automatically refresh when the item is modified
     } finally {

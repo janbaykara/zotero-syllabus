@@ -262,9 +262,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
               (a) => a.id === assignmentId,
             );
             if (matchingAssignment) {
-              SyllabusManager.invalidateSyllabusDataCache(
-                syllabusItem.zoteroItem,
-              );
+              // Assignment was updated
               await processor(assignmentId, syllabusItem.zoteroItem);
               itemsToSave.add(syllabusItem.zoteroItem);
               break;

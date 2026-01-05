@@ -96,15 +96,6 @@ export class SyllabusManager {
   }
 
 
-  // Cache for parsed syllabus data per item to avoid repeated JSON parsing
-  private static syllabusDataCache = new WeakMap<
-    Zotero.Item,
-    ItemSyllabusData
-  >();
-
-  // Cache for class titles per collection to avoid repeated preference reads
-  private static classTitleCache = new Map<string, Map<number, string>>();
-  private static classTitleCacheCollectionId: string | null = null;
 
   /**
    * Normalize collection identifier to library ID and key
@@ -268,7 +259,6 @@ export class SyllabusManager {
   //                 !ItemSyllabusDataEntity.isLatest(parsed)
   //               ) {
   //                 // Migrate and save back
-  //                 this.invalidateSyllabusDataCache(item);
   //                 const migratedJsonStr = JSON.stringify(result.value);
   //                 this.extraFieldTool
   //                   .setExtraField(item, this.SYLLABUS_DATA_KEY, migratedJsonStr)
@@ -1507,12 +1497,6 @@ export class SyllabusManager {
    * Now uses Zod validation with verzod for versioning
    */
   static getItemSyllabusData(item: Zotero.Item): ItemSyllabusData | undefined {
-    // Check cache first
-    const cached = this.syllabusDataCache.get(item);
-    if (cached !== undefined) {
-      return cached;
-    }
-
     const jsonStr = this.extraFieldTool.getExtraField(
       item,
       this.SYLLABUS_DATA_KEY,
@@ -1534,8 +1518,6 @@ export class SyllabusManager {
               //   parsed,
               //   result.value,
               // );
-              // Invalidate cache before saving to avoid stale data
-              this.invalidateSyllabusDataCache(item);
               // Save without triggering item update to avoid recursion
               // Use fire-and-forget to avoid making this method async
               const jsonStr = JSON.stringify(result.value);
@@ -1591,14 +1573,6 @@ export class SyllabusManager {
   }
 
   /**
-   * Invalidate cached syllabus data for an item
-   * Call this when an item's extra fields are modified
-   */
-  static invalidateSyllabusDataCache(item: Zotero.Item) {
-    this.syllabusDataCache.delete(item);
-  }
-
-  /**
    * Set syllabus data in an item's extra field
    * Validates with Zod before saving to ensure 100% type safety
    */
@@ -1649,8 +1623,6 @@ export class SyllabusManager {
       this.SYLLABUS_DATA_KEY,
       jsonStr,
     );
-    // Invalidate cache when data changes
-    this.invalidateSyllabusDataCache(item);
     this.onItemUpdate(item, source);
   }
 
@@ -2578,31 +2550,6 @@ export class SyllabusManager {
     return title;
   }
 
-  /**
-   * Invalidate class title cache
-   * Call this when collection metadata is updated
-   */
-  static invalidateClassTitleCache(
-    collectionId?: number | GetByLibraryAndKeyArgs,
-  ) {
-    if (collectionId !== undefined) {
-      const normalized = this.normalizeCollectionIdentifier(collectionId);
-      if (normalized) {
-        const collectionKeyStr = this.getCollectionReferenceString(
-          normalized.libraryID,
-          normalized.key,
-        );
-        this.classTitleCache.delete(collectionKeyStr);
-        if (this.classTitleCacheCollectionId === collectionKeyStr) {
-          this.classTitleCacheCollectionId = null;
-        }
-      }
-    } else {
-      // Invalidate all
-      this.classTitleCache.clear();
-      this.classTitleCacheCollectionId = null;
-    }
-  }
 
   static async setClassMetadata(
     collectionId: number | GetByLibraryAndKeyArgs,

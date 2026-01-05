@@ -77,15 +77,6 @@ export function createItemAssignmentsStore(
         if (type === "item" && ids.includes(itemId)) {
           if (event === "modify" || event === "delete") {
             shouldUpdate = true;
-            // Invalidate cache for this item
-            try {
-              const item = Zotero.Items.get(itemId);
-              if (item) {
-                SyllabusManager.invalidateSyllabusDataCache(item);
-              }
-            } catch (e) {
-              // Item might not exist anymore
-            }
           }
         }
 

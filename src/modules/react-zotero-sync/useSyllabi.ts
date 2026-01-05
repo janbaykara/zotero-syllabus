@@ -88,7 +88,7 @@ function createSyllabiStore() {
   let version = 0;
 
   function getSnapshot() {
-    // Force a fresh read by clearing any potential caches
+    // Get fresh data from Zotero
     const allCollections = getAllCollections();
     const allData = SyllabusManager.getSettingsCollectionDictionaryData();
 
