@@ -35,7 +35,7 @@ function safeLog(...args) {
 }
 
 // ============================================================================
-// ORIGINAL TRANSLATOR FUNCTIONS
+// TRANSLATOR FUNCTIONS
 // ============================================================================
 
 function detectWeb(doc, url) {
@@ -94,29 +94,27 @@ var itemPriorities = {}
  * If checkOnly is true, only return the dictionary if it is not empty.
  * If checkOnly is false, return the dictionary and the syllabus data.
  * @param {Document} doc - The document to search.
- * @returns {Record<string, string>} - The dictionary of item UUIDs and titles, or false if the search results are empty.
+ * @returns {Promise<Record<string, string>>} - The dictionary of item UUIDs and titles, or false if the search results are empty.
  */
-function getSearchResults(doc, url, callback) {
+async function getSearchResults(doc, url) {
   // Accumulate all items and included resources across all pages
   var allItems = {};
   var allResourceTitles = {};
   var limit = 200;
 
-  function fetchPage(offset) {
-    var apiUrl = getTalisItemAPIUrl(url, offset, limit);
-    var headers = getAuthenticationHeaders(doc, url);
-
-    safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults fetching page", offset);
-    ZU.doGet(apiUrl, function (text) {
-      safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults response");
-
+  async function fetchPage(offset) {
+    return new Promise(async (resolve, reject) => {
       try {
-        var json = JSON.parse(text);
+        var apiUrl = getTalisItemAPIUrl(url, offset, limit);
+        var headers = getAuthenticationHeaders(doc, url);
+        var { body } = await ZU.request(apiUrl, { headers });
+        var tailsItemsData = JSON.parse(body);
+        // safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults tailsItemsData", tailsItemsData);
 
         // Accumulate resource titles from included array
-        if (json.included) {
-          for (var i = 0; i < json.included.length; i++) {
-            var inc = json.included[i];
+        if (tailsItemsData.included) {
+          for (var i = 0; i < tailsItemsData.included.length; i++) {
+            var inc = tailsItemsData.included[i];
             if (inc.type === "resources" && inc.attributes && inc.attributes.title) {
               // Only update if we don't already have it (later pages might have duplicates)
               if (!allResourceTitles[inc.id]) {
@@ -128,10 +126,10 @@ function getSearchResults(doc, url, callback) {
 
         // Map each item UUID to its resource title
         var itemsInThisPage = 0;
-        if (json.data && json.data.length > 0) {
-          itemsInThisPage = json.data.length;
-          for (var i = 0; i < json.data.length; i++) {
-            var item = json.data[i];
+        if (tailsItemsData.data && tailsItemsData.data.length > 0) {
+          itemsInThisPage = tailsItemsData.data.length;
+          for (var i = 0; i < tailsItemsData.data.length; i++) {
+            var item = tailsItemsData.data[i];
             var itemId = item.id;
 
             // Get the resource ID from the relationship
@@ -158,41 +156,44 @@ function getSearchResults(doc, url, callback) {
         }
 
         // Check if there's a next page
-        var nextUrl = json.links && json.links.next;
+        var nextUrl = tailsItemsData.links && tailsItemsData.links.next;
         if (nextUrl && itemsInThisPage > 0) {
           // Calculate next offset based on current offset and items received
           var nextOffset = offset + itemsInThisPage;
-          safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults found next page, offset", nextOffset);
-          fetchPage(nextOffset);
+          // safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults found next page, offset", nextOffset);
+          resolve(await fetchPage(nextOffset));
         } else {
-          // No more pages, call callback with all accumulated items
-          safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults completed, found", Object.keys(allItems).length, "items");
-          callback(allItems);
+          // No more pages, return all accumulated items
+          // safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults completed, found", Object.keys(allItems).length, "items");
+          // safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults allItems", JSON.stringify(allItems));
+          resolve(allItems);
         }
       } catch (e) {
-        safeLog("TALIS-ASPIRE-CUSTOM: Error parsing items JSON", e);
-        // Call callback even on error with whatever we've collected so far
-        callback(allItems);
+        // safeLog("TALIS-ASPIRE-CUSTOM: Error parsing items JSON", e);
+        // Return whatever we've collected so far even on error
+        resolve(allItems);
       }
-    }, undefined, undefined, headers);
+    })
   }
 
   // Start fetching from the first page
-  fetchPage(0);
+  return await fetchPage(0);
 }
 
-function doWeb(doc, url) {
+async function doWeb(doc, url) {
   safeLog("TALIS-ASPIRE-CUSTOM: doWeb", doc, url);
   if (detectWeb(doc, url) == "multiple") {
-    getSearchResults(doc, url, function (items) {
-      Zotero.selectItems(items, function (items) {
-        if (!items) return;
-        scrape(url, Object.keys(items));
-      });
-    });
+    var items = await getSearchResults(doc, url);
+    // safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults items", items);
+    const requestedItems = await Zotero.selectItems(items)
+    if (requestedItems && Object.keys(requestedItems).length > 0) {
+      await scrape(url, Object.keys(requestedItems));
+    }
   } else {
-    scrape(url, [extractSlug(url)]);
+    await scrape(url, [extractSlug(url)]);
   }
+
+  return Zotero.done()
 }
 
 // E.g. https://ucl.rl.talis.com/items/7DEB9EE7-8AE7-01D8-11E1-8708053A12F9.ris
@@ -222,66 +223,64 @@ var RIS_TRANSLATOR_ID = "32d59d2d-b65a-4da4-b0a3-bdd3cfb979e7";
 /**
  * Extracts RIS data from the URL and scrapes it using the RIS translator.
  */
-function scrape(syllabusURL, selectedUUIDs) {
+async function scrape(syllabusURL, selectedUUIDs) {
   safeLog("TALIS-ASPIRE-CUSTOM: scraping ", selectedUUIDs.length, " items");
-  constructExportSyllabusMetadataFromTalisAPI(syllabusURL).then(metadata => {
-    setTalisSyllabusMetadata(metadata).then((syllabusResponse) => {
-      syllabusResponse = JSON.parse(syllabusResponse);
-      ZU.doGet(
-        selectedUUIDs.map(uuid => getRISURL(syllabusURL, uuid)),
-        function (ris, res, url) {
-          try {
-            var uuid = getUUIDFromRISURL(url);
-            // Import to Zotero
-            var translator = Zotero.loadTranslator("import");
-            translator.setTranslator(RIS_TRANSLATOR_ID);
-            translator.setString(ris);
-            // Set handler to wrap up the show
-            translator.setHandler("itemDone", function (_, item) {
-              // Pull data via assignmentID
-              if (uuid) {
-                var classEntry = Object.entries(syllabusResponse.syllabusData.classes)
-                  .find(([classNumber, classData]) => {
-                    return classData.itemOrder.includes(uuidToAssignmentID(uuid))
-                  })
-                var classNumber = classEntry ? classEntry[0] : undefined
-                var priority = itemPriorities[syllabusURL] ? itemPriorities[syllabusURL][uuid] : undefined
-                // safeLog("TALIS-ASPIRE-CUSTOM: got classNumber and priority for item:", { uuid, classNumber, priority });
-                if (classNumber) {
-                  // safeLog("TALIS-ASPIRE-CUSTOM: got classNumber for item:", uuid, classNumber);
-                  // Set reading assignment.
-                  var assignmentObject = createAssignmentObject(
-                    syllabusResponse.collectionAndLibraryKey,
-                    uuid,
-                    { classNumber, priority }
-                  )
-                  // (M2 is the RIS code that Zotero expects for the `extra` field: https://github.com/zotero/translators/blob/9937224d4a24ccb98ca92a3d8a3683ad3e331199/RIS.js#L476C2-L476C4)
-                  // ris = addRowToRIS(ris, 'M2', `syllabus:${JSON.stringify(extraField)}`);
-                  // safeLog("TALIS-ASPIRE-CUSTOM: got extraField for item:", uuid, extraField);
-                  item.extra = `syllabus:${JSON.stringify(assignmentObject)}`;
-                }
-              }
-              item.complete();
-              // safeLog("TALIS-ASPIRE-CUSTOM: itemDone", item);
-            });
-            translator.translate();
-          } catch (e) {
-            safeLog("TALIS-ASPIRE-CUSTOM: Error importing item:", e);
-            safeLog("TALIS-ASPIRE-CUSTOM: Error additional vars", url, res, ris);
-          }
-        }
-      )
-    })
-  })
-}
+  var metadata = await constructExportSyllabusMetadataFromTalisAPI(syllabusURL);
+  var syllabusResponseString = await setTalisSyllabusMetadata(metadata);
+  var syllabusResponse = JSON.parse(syllabusResponseString);
 
-function createAssignmentObject(collectionAndLibraryKey, uuid, args) {
-  return {
-    [collectionAndLibraryKey]: {
-      id: uuidToAssignmentID(uuid),
-      ...args
+  safeLog("TALIS-ASPIRE-CUSTOM: scrape.selectedUUIDs", selectedUUIDs);
+
+  const results = await Promise.all(selectedUUIDs.map(async (uuid) => {
+    try {
+      var url = getRISURL(syllabusURL, uuid);
+      var { body: ris } = await ZU.request(url, { responseType: "text" });
+      // Import to Zotero
+      var translator = Zotero.loadTranslator("import");
+      translator.setTranslator(RIS_TRANSLATOR_ID);
+      translator.setString(ris);
+      // Set handler to wrap up the show
+      translator.setHandler("itemDone", function (_, item) {
+        // Pull data via assignmentID
+        var classEntry = Object.entries(syllabusResponse.syllabusData.classes)
+          .find(([classNumber, classData]) => {
+            return classData.itemOrder.includes(uuidToAssignmentID(uuid))
+          })
+        var classNumber = classEntry ? Number(classEntry[0]) : undefined
+        var priority = itemPriorities[syllabusURL] ? itemPriorities[syllabusURL][uuid] : undefined
+        // TODO: get description from RIS
+        var classInstruction = undefined
+        // safeLog("TALIS-ASPIRE-CUSTOM: got classNumber and priority for item:", { uuid: uuid, classNumber, priority });
+        if (classNumber) {
+          // safeLog("TALIS-ASPIRE-CUSTOM: got classNumber for item:", uuid, classNumber);
+          // Set reading assignment.
+          // TODO: merge duplicate items and create multiple assignments with reading instructions instead
+          var itemSyllabusData = {
+            [syllabusResponse.collectionAndLibraryKey]: [
+              {
+                id: uuidToAssignmentID(uuid),
+                classNumber,
+                priority,
+                classInstruction,
+              }
+            ]
+          }
+          // (M2 is the RIS code that Zotero expects for the `extra` field: https://github.com/zotero/translators/blob/9937224d4a24ccb98ca92a3d8a3683ad3e331199/RIS.js#L476C2-L476C4)
+          // ris = addRowToRIS(ris, 'M2', `syllabus:${JSON.stringify(extraField)}`);
+          // safeLog("TALIS-ASPIRE-CUSTOM: got extraField for item:", uuid, extraField);
+          item.extra = `syllabus: ${JSON.stringify(itemSyllabusData)}`;
+        }
+
+        item.complete();
+        // safeLog("TALIS-ASPIRE-CUSTOM: itemDone", item);
+      });
+
+      translator.translate();
+    } catch (e) {
+      safeLog("TALIS-ASPIRE-CUSTOM: Error importing item:", e);
+      safeLog("TALIS-ASPIRE-CUSTOM: Error additional vars", url, ris);
     }
-  }
+  }))
 }
 
 function uuidToAssignmentID(uuid) {
@@ -306,34 +305,35 @@ function addRowToRIS(text, code, value) {
   return lines.join('\n')
 }
 
-function callMethod(method, data) {
-  return new Promise((resolve, reject) => {
-    safeLog("TALIS-ASPIRE-CUSTOM.callMethod", method);
-    var baseUrl = "http://127.0.0.1:23124";
-    var url = `${baseUrl}${method}`;
+async function callZoteroClientEndpoint(endpoint, method, data) {
+  var baseUrl = "http://127.0.0.1:23124";
+  var url = `${baseUrl}${endpoint}`;
 
-    safeLog("TALIS-ASPIRE-CUSTOM.callMethod.url", url);
+  // Use POST with data in request body
+  var payload = data ? JSON.stringify({ metadata: data }) : null;
+  // TODO: Replace this with Zotero.Connector().callMethod(endpoint, data)
+  var headers = {
+    // https://github.com/zotero/zotero/blob/47e6a0f7abaae0ad90c9f39c385fe24efd7071bf/chrome/content/zotero/xpcom/server/server.js#L411-L423
+    // https://github.com/zotero/zotero-connectors/blob/3a020fe77a275cc4c1ecf50df77f59ba665c012d/src/common/connector.js#L141-L145
+    "X-Zotero-Version": Zotero.version,
+    "X-Zotero-Connector-API-Version": 3,
+    "Content-Type": "application/json",
+  };
 
-    // Use POST with data in request body
-    var payload = data ? JSON.stringify({ metadata: data }) : null;
-    // TODO: Replace this with Zotero.Connector().callMethod(endpoint, data)
-    ZU.doPost(url, payload, function (text, xhr) {
-      safeLog("TALIS-ASPIRE-CUSTOM.callMethod.response", method, xhr ? xhr.status : "unknown");
-      resolve(text);
-    }, {
-      // https://github.com/zotero/zotero/blob/47e6a0f7abaae0ad90c9f39c385fe24efd7071bf/chrome/content/zotero/xpcom/server/server.js#L411-L423
-      // https://github.com/zotero/zotero-connectors/blob/3a020fe77a275cc4c1ecf50df77f59ba665c012d/src/common/connector.js#L141-L145
-      "X-Zotero-Version": Zotero.version,
-      "X-Zotero-Connector-API-Version": 3,
-      "Content-Type": "application/json",
-    });
+  var { body } = await ZU.request(url, {
+    method: "POST",
+    headers: headers,
+    body: payload,
   });
+
+  // safeLog("TALIS-ASPIRE-CUSTOM.callMethod.response", method);
+  return body
 }
 
-function setTalisSyllabusMetadata(metadata) {
-  safeLog("TALIS-ASPIRE-CUSTOM.setTalisSyllabusMetadata");
+async function setTalisSyllabusMetadata(metadata) {
+  // safeLog("TALIS-ASPIRE-CUSTOM.setTalisSyllabusMetadata");
   // Use callMethod to send metadata via POST request
-  return callMethod("/syllabus/setTalisMetadata", metadata);
+  return await callZoteroClientEndpoint("/syllabus/setTalisMetadata", "POST", metadata);
 }
 
 /**
@@ -341,148 +341,144 @@ function setTalisSyllabusMetadata(metadata) {
  * This object will be validated by Zotero before ingestion.
  */
 async function constructExportSyllabusMetadataFromTalisAPI(url) {
-  return new Promise((resolve, reject) => {
-    safeLog("TALIS-ASPIRE-CUSTOM: constructExportSyllabusMetadataFromTalisAPI", url);
+  safeLog("TALIS-ASPIRE-CUSTOM: constructExportSyllabusMetadataFromTalisAPI", url);
 
-    // Get the collection API URL
-    var apiUrl = getTalisCollectionAPIUrl(url);
-    // Try to get document from current window for authentication
-    var doc = typeof window !== "undefined" && window.document ? window.document : null;
-    var headers = getAuthenticationHeaders(doc, url);
+  // Get the collection API URL
+  var apiUrl = getTalisCollectionAPIUrl(url);
+  // Try to get document from current window for authentication
+  var doc = typeof window !== "undefined" && window.document ? window.document : null;
+  var headers = getAuthenticationHeaders(doc, url);
 
-    ZU.doGet(apiUrl, function (text) {
-      // safeLog("TALIS-ASPIRE-CUSTOM: Collection API response", text);
-      var talisSyllabusData = JSON.parse(text);
-      // safeLog("TALIS-ASPIRE-CUSTOM: Collection API response - parsed", json);
+  var { body } = await ZU.request(apiUrl, { headers: headers });
+  var talisSyllabusData = JSON.parse(body);
+  // safeLog("TALIS-ASPIRE-CUSTOM: Collection API response - parsed", json);
 
-      // Extract metadata from the API response
-      var metadata = {
-        // collectionTitle: null, // DO NOT CHANGE THIS LINE
-        // description: null, // DO NOT CHANGE THIS LINE  
-        // priorities: [], // DO NOT CHANGE THIS LINE
-        classes: {},
-        // nomenclature: null, // DO NOT CHANGE THIS LINE
-      };
+  // Extract metadata from the API response
+  var metadata = {
+    // collectionTitle: null, // DO NOT CHANGE THIS LINE
+    // description: null, // DO NOT CHANGE THIS LINE  
+    // priorities: [], // DO NOT CHANGE THIS LINE
+    classes: {},
+    // nomenclature: null, // DO NOT CHANGE THIS LINE
+  };
 
-      // Get description from list attributes
-      if (talisSyllabusData.data && talisSyllabusData.data.attributes) {
-        metadata.collectionTitle = talisSyllabusData.data.attributes.title;
-        metadata.description = talisSyllabusData.data.attributes.description;
+  // Get description from list attributes
+  if (talisSyllabusData.data && talisSyllabusData.data.attributes) {
+    metadata.collectionTitle = talisSyllabusData.data.attributes.title;
+    metadata.description = talisSyllabusData.data.attributes.description;
+  }
+
+  // Get priorities from included importances
+  if (talisSyllabusData.included) {
+    var priorities = [];
+    for (var i = 0; i < talisSyllabusData.included.length; i++) {
+      var inc = talisSyllabusData.included[i];
+      if (inc.type === "importances" && inc.attributes && inc.attributes.is_active) {
+        // Map Talis importance IDs to Zotero Syllabus priorities
+        priorities.push({
+          id: inc.id,
+          name: inc.attributes.description || inc.id,
+          color: getPriorityColor(inc.id),
+          order: getPriorityOrder(inc.id),
+        });
       }
+    }
+    // Sort by order
+    metadata.priorities = priorities;
+  }
 
-      // Get priorities from included importances
-      if (talisSyllabusData.included) {
-        var priorities = [];
-        for (var i = 0; i < talisSyllabusData.included.length; i++) {
-          var inc = talisSyllabusData.included[i];
-          if (inc.type === "importances" && inc.attributes && inc.attributes.is_active) {
-            // Map Talis importance IDs to Zotero Syllabus priorities
-            priorities.push({
-              id: inc.id,
-              name: inc.attributes.description || inc.id,
-              color: getPriorityColor(inc.id),
-              order: getPriorityOrder(inc.id),
-            });
-          }
-        }
-        // Sort by order
-        metadata.priorities = priorities;
+  // Build classes object from top-level sections only
+  // Helper function to recursively collect all items from a section and its children
+  function collectItemsFromSection(sectionId, included) {
+    var itemOrder = [];
+    var section = null;
+
+    // Find the section in included array
+    for (var i = 0; i < included.length; i++) {
+      if (included[i].type === "sections" && included[i].id === sectionId) {
+        section = included[i];
+        break;
       }
+    }
 
-      // Build classes object from top-level sections only
-      // Helper function to recursively collect all items from a section and its children
-      function collectItemsFromSection(sectionId, included) {
-        var itemOrder = [];
-        var section = null;
+    if (!section || !section.relationships || !section.relationships.all_children) {
+      return itemOrder;
+    }
 
-        // Find the section in included array
-        for (var i = 0; i < included.length; i++) {
-          if (included[i].type === "sections" && included[i].id === sectionId) {
-            section = included[i];
-            break;
-          }
-        }
-
-        if (!section || !section.relationships || !section.relationships.all_children) {
-          return itemOrder;
-        }
-
-        // Recursively collect items from all_children
-        var children = section.relationships.all_children.data || [];
-        for (var j = 0; j < children.length; j++) {
-          var child = children[j];
-          if (child.type === "items") {
-            // Direct item - add to list
-            itemOrder.push(uuidToAssignmentID(child.id));
-          } else if (child.type === "sections") {
-            // Nested section - recursively collect its items
-            var nestedItems = collectItemsFromSection(child.id, included);
-            itemOrder = itemOrder.concat(nestedItems);
-          }
-        }
-
-        return itemOrder;
+    // Recursively collect items from all_children
+    var children = section.relationships.all_children.data || [];
+    for (var j = 0; j < children.length; j++) {
+      var child = children[j];
+      if (child.type === "items") {
+        // Direct item - add to list
+        itemOrder.push(uuidToAssignmentID(child.id));
+      } else if (child.type === "sections") {
+        // Nested section - recursively collect its items
+        var nestedItems = collectItemsFromSection(child.id, included);
+        itemOrder = itemOrder.concat(nestedItems);
       }
+    }
 
-      // Get top-level sections from data.relationships.sections
-      if (talisSyllabusData.data && talisSyllabusData.data.relationships &&
-        talisSyllabusData.data.relationships.sections &&
-        talisSyllabusData.data.relationships.sections.data &&
-        talisSyllabusData.included) {
-        var classes = {};
-        var topLevelSections = talisSyllabusData.data.relationships.sections.data;
+    return itemOrder;
+  }
 
-        // Create a map of section ID to section data for quick lookup
-        var sectionMap = {};
-        for (var i = 0; i < talisSyllabusData.included.length; i++) {
-          var inc = talisSyllabusData.included[i];
-          if (inc.type === "sections") {
-            sectionMap[inc.id] = inc;
-          }
-        }
+  // Get top-level sections from data.relationships.sections
+  if (talisSyllabusData.data && talisSyllabusData.data.relationships &&
+    talisSyllabusData.data.relationships.sections &&
+    talisSyllabusData.data.relationships.sections.data &&
+    talisSyllabusData.included) {
+    var classes = {};
+    var topLevelSections = talisSyllabusData.data.relationships.sections.data;
 
-        // Process each top-level section
-        for (var k = 0; k < topLevelSections.length; k++) {
-          var topSectionRef = topLevelSections[k];
-          if (topSectionRef.type === "sections") {
-            var topSectionId = topSectionRef.id;
-            var topSection = sectionMap[topSectionId];
-
-            if (topSection && topSection.attributes) {
-              var sectionTitle = topSection.attributes.title || "";
-              var sectionDescription = topSection.attributes.description || null;
-
-              // Recursively collect all items from this section and its nested children
-              var itemOrder = collectItemsFromSection(topSectionId, talisSyllabusData.included);
-
-              // Build class object (ExportClassMetadataSchema: title, description, itemOrder, readingDate)
-              var classObj = {};
-              if (sectionTitle) {
-                classObj.title = sectionTitle;
-              }
-              if (sectionDescription) {
-                classObj.description = sectionDescription;
-              }
-              if (itemOrder.length > 0) {
-                classObj.itemOrder = itemOrder;
-              }
-
-              // Only add class if it has at least a title or itemOrder
-              if (classObj.title || (classObj.itemOrder && classObj.itemOrder.length > 0)) {
-                // Use section index + 1 as key to start at 1 (not 0)
-                classes[(k + 1).toString()] = classObj;
-              }
-            }
-          }
-        }
-        metadata.classes = classes;
+    // Create a map of section ID to section data for quick lookup
+    var sectionMap = {};
+    for (var i = 0; i < talisSyllabusData.included.length; i++) {
+      var inc = talisSyllabusData.included[i];
+      if (inc.type === "sections") {
+        sectionMap[inc.id] = inc;
       }
+    }
 
-      // safeLog("TALIS-ASPIRE-CUSTOM: Got Metadata", metadata);
+    // Process each top-level section
+    for (var k = 0; k < topLevelSections.length; k++) {
+      var topSectionRef = topLevelSections[k];
+      if (topSectionRef.type === "sections") {
+        var topSectionId = topSectionRef.id;
+        var topSection = sectionMap[topSectionId];
 
-      resolve(metadata);
-    }, undefined, undefined, headers);
-  })
+        if (topSection && topSection.attributes) {
+          var sectionTitle = topSection.attributes.title || "";
+          var sectionDescription = topSection.attributes.description || null;
+
+          // Recursively collect all items from this section and its nested children
+          var itemOrder = collectItemsFromSection(topSectionId, talisSyllabusData.included);
+
+          // Build class object (ExportClassMetadataSchema: title, description, itemOrder, readingDate)
+          var classObj = {};
+          if (sectionTitle) {
+            classObj.title = sectionTitle;
+          }
+          if (sectionDescription) {
+            classObj.description = sectionDescription;
+          }
+          if (itemOrder.length > 0) {
+            classObj.itemOrder = itemOrder;
+          }
+
+          // Only add class if it has at least a title or itemOrder
+          if (classObj.title || (classObj.itemOrder && classObj.itemOrder.length > 0)) {
+            // Use section index + 1 as key to start at 1 (not 0)
+            classes[(k + 1).toString()] = classObj;
+          }
+        }
+      }
+    }
+    metadata.classes = classes;
+  }
+
+  // safeLog("TALIS-ASPIRE-CUSTOM: Got Metadata", metadata);
+
+  return metadata;
 }
 
 function getPriorityColor(priorityId) {
