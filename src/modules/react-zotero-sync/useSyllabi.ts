@@ -84,10 +84,6 @@ export function useSyllabi(): SyllabusData[] {
 }
 
 function createSyllabiStore() {
-  const prefKey = SyllabusManager.getPreferenceKey(
-    SyllabusManager.settingsKeys.COLLECTION_METADATA,
-  );
-
   // Version counter to force snapshot changes even if data appears the same
   let version = 0;
 
@@ -139,11 +135,6 @@ function createSyllabiStore() {
       ) {
         let shouldUpdate = false;
 
-        // Listen to setting events for collection metadata (reading dates, class titles, etc.)
-        if (type === "setting" && extraData?.pref === prefKey) {
-          shouldUpdate = true;
-        }
-
         // Listen to item modify/delete events (assignments changed)
         if (type === "item" && (event === "modify" || event === "delete")) {
           shouldUpdate = true;
@@ -171,28 +162,31 @@ function createSyllabiStore() {
     };
 
     const notifierId = Zotero.Notifier.registerObserver(observer, [
-      "setting",
       "item",
       "collection-item",
       "collection",
     ]);
 
-    // Also listen to the custom event emitter for collection metadata changes
-    const unsubscribeEmitter = SyllabusManager.onCollectionMetadataChange(
-      () => {
+    // Register preference observer for collection metadata changes
+    const prefKey = SyllabusManager.getPreferenceKey(
+      SyllabusManager.settingsKeys.COLLECTION_METADATA,
+    );
+
+    const prefObserverId = Zotero.Prefs.registerObserver(
+      prefKey,
+      (value) => {
+        Zotero.debug(`Preference ${prefKey} changed to ${value}`);
         // Increment version to force snapshot change
         version++;
-        // Use a small delay to ensure preference is fully saved before reading
-        Zotero.Promise.delay(10).then(() => {
-          onStoreChange();
-        });
+        onStoreChange();
       },
+      true,
     );
 
     // Return an unsubscribe fn
     return () => {
       Zotero.Notifier.unregisterObserver(notifierId);
-      unsubscribeEmitter();
+      Zotero.Prefs.unregisterObserver(prefObserverId);
     };
   }
 

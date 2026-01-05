@@ -68,10 +68,6 @@ export function useZoteroClassMetadata(
 export function createClassMetadataStore(
   collectionId: number | GetByLibraryAndKeyArgs,
 ) {
-  const prefKey = SyllabusManager.getPreferenceKey(
-    SyllabusManager.settingsKeys.COLLECTION_METADATA,
-  );
-
   function getSnapshot() {
     // Read from preferences via SyllabusManager
     const metadata = SyllabusManager.getSyllabusMetadata(collectionId);
@@ -86,11 +82,7 @@ export function createClassMetadataStore(
         ids: (number | string)[],
         extraData: any,
       ) {
-        // Listen to setting events for our preference key
-        if (type === "setting" && extraData?.pref === prefKey) {
-          onStoreChange();
-        }
-        // Also listen to collection modify/refresh events in case metadata is updated
+        // Listen to collection modify/refresh events in case metadata is updated
         const collection =
           SyllabusManager.getCollectionFromIdentifier(collectionId);
         if (
@@ -105,19 +97,27 @@ export function createClassMetadataStore(
     };
 
     const notifierId = Zotero.Notifier.registerObserver(observer, [
-      "setting",
       "collection",
     ]);
 
-    // Also listen to the custom event emitter for collection metadata changes
-    // (since preference changes aren't notifiable in Zotero)
-    const unsubscribeEmitter =
-      SyllabusManager.onCollectionMetadataChange(onStoreChange);
+    // Register preference observer for collection metadata changes
+    const prefKey = SyllabusManager.getPreferenceKey(
+      SyllabusManager.settingsKeys.COLLECTION_METADATA,
+    );
+
+    const prefObserverId = Zotero.Prefs.registerObserver(
+      prefKey,
+      (value) => {
+        Zotero.debug(`Preference ${prefKey} changed to ${value}`);
+        onStoreChange();
+      },
+      true,
+    );
 
     // Return an unsubscribe fn
     return () => {
       Zotero.Notifier.unregisterObserver(notifierId);
-      unsubscribeEmitter();
+      Zotero.Prefs.unregisterObserver(prefObserverId);
     };
   }
 

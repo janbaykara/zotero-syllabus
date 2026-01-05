@@ -95,19 +95,6 @@ export class SyllabusManager {
     return `${addon.data.config.prefsPrefix}.${key}`;
   }
 
-  // Event emitter for collection metadata changes
-  private static collectionMetadataListeners = new Set<() => void>();
-
-  static onCollectionMetadataChange(listener: () => void): () => void {
-    this.collectionMetadataListeners.add(listener);
-    return () => {
-      this.collectionMetadataListeners.delete(listener);
-    };
-  }
-
-  private static emitCollectionMetadataChange() {
-    this.collectionMetadataListeners.forEach((listener) => listener());
-  }
 
   // Cache for parsed syllabus data per item to avoid repeated JSON parsing
   private static syllabusDataCache = new WeakMap<
@@ -2344,8 +2331,7 @@ export class SyllabusManager {
     );
     Zotero.Prefs.set(prefKey, JSON.stringify(inputResult.data), true);
     if (emitChange) {
-      ztoolkit.log("Emitting collection metadata change for source");
-      this.emitCollectionMetadataChange();
+      // Preference change notifications are handled by Zotero.Prefs.registerObserver
       // if (source !== "item-pane") this.reloadItemPane();
       if (source !== "page") this.setupPage();
       this.onClassListUpdate();

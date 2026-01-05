@@ -105,15 +105,25 @@ export function createItemAssignmentsStore(
       "collection-item",
     ]);
 
-    // Also listen to the custom event emitter for collection metadata changes
-    // (since item extra field changes aren't always notifiable)
-    const unsubscribeEmitter =
-      SyllabusManager.onCollectionMetadataChange(onStoreChange);
+    // Register preference observer for collection metadata changes
+    // (class titles, reading dates, etc. affect assignment display)
+    const prefKey = SyllabusManager.getPreferenceKey(
+      SyllabusManager.settingsKeys.COLLECTION_METADATA,
+    );
+
+    const prefObserverId = Zotero.Prefs.registerObserver(
+      prefKey,
+      (value: unknown) => {
+        Zotero.debug(`Preference ${prefKey} changed to ${value}`);
+        onStoreChange();
+      },
+      true,
+    );
 
     // Return an unsubscribe fn
     return () => {
       Zotero.Notifier.unregisterObserver(notifierId);
-      unsubscribeEmitter();
+      Zotero.Prefs.unregisterObserver(prefObserverId);
     };
   }
 
