@@ -24,8 +24,7 @@ class ZoteroCache {
   // Preference cache: key -> value (handles both JSON and simple prefs)
   private prefCache = new Map<string, any>();
 
-  // Track raw preference strings for JSON prefs to detect changes
-  private prefRawStrings = new Map<string, string>();
+
 
   // Global Zotero Notifier observer ID
   private notifierID: string | null = null;
@@ -99,7 +98,6 @@ class ZoteroCache {
     this.itemCache.clear();
     this.syllabusDataCache.clear();
     this.prefCache.clear();
-    this.prefRawStrings.clear();
   }
 
   /**
@@ -276,7 +274,6 @@ class ZoteroCache {
    */
   invalidatePref(key: string): void {
     this.prefCache.delete(key);
-    this.prefRawStrings.delete(key);
   }
 
   /**
