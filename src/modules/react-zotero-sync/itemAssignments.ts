@@ -1,7 +1,7 @@
 import { useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
 import SuperJSON from "superjson";
-import { SyllabusManager, ItemSyllabusAssignment } from "../syllabus";
+import { SyllabusManager, ItemSyllabusAssignment, SettingsSyllabusMetadata } from "../syllabus";
 
 export type ItemAssignmentsSnapshot = {
   assignments: ItemSyllabusAssignment[];
@@ -61,7 +61,7 @@ export function createItemAssignmentsStore(
 
   function subscribe(onStoreChange: () => void) {
     if (!itemId || !collectionId) {
-      return () => {}; // No-op unsubscribe
+      return () => { }; // No-op unsubscribe
     }
 
     const observer = {
@@ -113,7 +113,7 @@ export function createItemAssignmentsStore(
 
     const prefObserverId = Zotero.Prefs.registerObserver(
       prefKey,
-      (value: unknown) => {
+      (value: SettingsSyllabusMetadata) => {
         Zotero.debug(`Preference ${prefKey} changed to ${value}`);
         onStoreChange();
       },

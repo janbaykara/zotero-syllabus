@@ -157,7 +157,7 @@ export function createSyllabusMetadataStore(
 
     const prefObserverId = Zotero.Prefs.registerObserver(
       prefKey,
-      (value) => {
+      (value: SettingsSyllabusMetadata) => {
         Zotero.debug(`Preference ${prefKey} changed to ${value}`);
         onStoreChange();
       },

@@ -67,9 +67,9 @@ export function useSyllabi(): SyllabusData[] {
             }
           })
           .filter(Boolean) as Array<{
-          zoteroItem: Zotero.Item;
-          assignments: ItemSyllabusAssignment[];
-        }>;
+            zoteroItem: Zotero.Item;
+            assignments: ItemSyllabusAssignment[];
+          }>;
 
         return {
           collection,
@@ -174,7 +174,7 @@ function createSyllabiStore() {
 
     const prefObserverId = Zotero.Prefs.registerObserver(
       prefKey,
-      (value) => {
+      (value: SettingsSyllabusMetadata) => {
         Zotero.debug(`Preference ${prefKey} changed to ${value}`);
         // Increment version to force snapshot change
         version++;
