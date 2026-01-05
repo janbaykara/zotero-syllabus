@@ -16,12 +16,10 @@ export async function installTalisAspireTranslator(): Promise<void> {
 
     const PROD_PORT = 23119; // default
     const DEV_PORT = 23124;
-    // If dev mode, replace 23119
-    if (process.env.NODE_ENV === "development") {
-      code = code.replace(String(PROD_PORT), String(DEV_PORT));
-    }
+    const PORT = process.env.NODE_ENV === "development" ? DEV_PORT : PROD_PORT;
+    code = code.replace(String(PROD_PORT), String(DEV_PORT));
 
-    const translatorID = "f16931f0-372e-4197-8927-05d2ba7599d8";
+    const translatorID = "f16331f0-372e-4197-8927-05d2ba7599d8";
     const metadata = {
       translatorID: translatorID,
       label: "Talis Aspire for Zotero Syllabus",
@@ -31,7 +29,7 @@ export async function installTalisAspireTranslator(): Promise<void> {
       // https://rl.talis.com/3/ucl/lists/99449747-A091-3F6D-E08A-965F4A5C3149.html?lang=en-GB
       // target: "^https?://([^/]+\\.)?rl\\.talis\\..+/(lists|items)/",
       target: "",
-      minVersion: "7.0",
+      minVersion: "3.0",
       maxVersion: "",
       priority: 320,
       inRepository: false,
@@ -43,8 +41,30 @@ export async function installTalisAspireTranslator(): Promise<void> {
     ztoolkit.log("Saving translator", metadata, code);
     await Zotero.Translators.save(metadata, code);
     await Zotero.Translators.reinit();
-    ztoolkit.log("Talis Aspire translator installed successfully");
+
+    // Add a progress popup for success
+    new ztoolkit.ProgressWindow("Zotero Syllabus", {
+      closeOnClick: true,
+      closeTime: 6000,
+    })
+      .createLine({
+        text: "✅ Talis syllabus scraper successfully installed",
+        type: "success",
+      })
+      .addDescription(`You can now extract structured syllabi from Talis Aspire collections\n like https://rl.talis.com/3/ucl.\n(Using port ${PORT}.)`)
+      .show();
+    ztoolkit.log(" Talis syllabus scraper successfully installed");
   } catch (error) {
+    new ztoolkit.ProgressWindow("Zotero Syllabus", {
+      closeOnClick: true,
+      closeTime: 3000,
+    })
+      .createLine({
+        text: `❌ Error installing Talis syllabus scraper`,
+        type: "fail",
+      })
+      .addDescription(error instanceof Error ? error.message : String(error))
+      .show();
     ztoolkit.log(`Error installing Talis Aspire translator: ${error}`);
     // Don't throw - allow plugin to continue even if translator install fails
   }
