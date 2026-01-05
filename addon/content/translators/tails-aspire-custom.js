@@ -266,7 +266,7 @@ async function scrape(syllabusURL, selectedUUIDs) {
           var classEntry = Object.entries(
             syllabusResponse.syllabusData.classes,
           ).find(([classNumber, classData]) => {
-            return classData.itemOrder.includes(uuidToAssignmentID(uuid));
+            return classData && classData.itemOrder && classData.itemOrder.includes(uuidToAssignmentID(uuid));
           });
           var classNumber = classEntry ? Number(classEntry[0]) : undefined;
           var priority = itemPriorities[syllabusURL]
@@ -438,7 +438,7 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
   };
 
   // Extract data from included array
-  var courseTitle = null;
+  var moduleDescription = null;
   if (talisSyllabusData.included) {
     // Get institution from tenants
     for (var i = 0; i < talisSyllabusData.included.length; i++) {
@@ -454,18 +454,49 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
         if (inc.attributes.title) {
           metadata.collectionTitle = inc.attributes.title;
         }
-        // Get description from modules if not already set
-        if (inc.attributes.description && !metadata.description) {
-          metadata.description = inc.attributes.description;
-          if (metadata.description) {
-            metadata.description =
-              metadata.description.trim() + "\n\n" + `Course details: ${url}`;
-          } else {
-            metadata.description = `Course details: ${url}`;
-          }
+        // Get description from modules as fallback
+        if (inc.attributes.description) {
+          moduleDescription = inc.attributes.description;
         }
       }
     }
+  }
+
+  // Get description from list attributes (preferred source)
+  if (talisSyllabusData.data && talisSyllabusData.data.attributes) {
+    // data.attributes.title -> collectionTitle
+    var collectionTitle = talisSyllabusData.data.attributes.title;
+    if (collectionTitle) {
+      metadata.collectionTitle = collectionTitle;
+    }
+    var listDescription = talisSyllabusData.data.attributes.description || "";
+    if (listDescription) {
+      metadata.description = listDescription;
+    } else if (moduleDescription) {
+      // Fall back to module description if list description is not available
+      metadata.description = moduleDescription;
+    }
+
+    // Append Talis page URL to description if not already present
+    if (url && metadata.description) {
+      if (metadata.description.indexOf(url) === -1) {
+        metadata.description = metadata.description.trim() + "\n\n" + url;
+      }
+    } else if (url && !metadata.description) {
+      metadata.description = url;
+    }
+  } else if (moduleDescription) {
+    // If no list data, use module description
+    metadata.description = moduleDescription;
+    // Append URL
+    if (url) {
+      if (metadata.description.indexOf(url) === -1) {
+        metadata.description = metadata.description.trim() + "\n\n" + url;
+      }
+    }
+  } else if (url) {
+    // If no description at all, just use the URL
+    metadata.description = url;
   }
 
   // Get priorities from included importances
