@@ -237,3 +237,4 @@ addon/
 - https://www.zotero.org/support/kb/connector_zotero_unavailable
 - Translator code API: https://github.com/zotero/translators/blob/master/index.d.ts
 - Zotero server code: https://github.com/zotero/zotero/blob/47e6a0f7abaae0ad90c9f39c385fe24efd7071bf/chrome/content/zotero/xpcom/server/server_connector.js#L927
+- All Zotero icons: https://github.com/zotero/zotero/tree/b3ef63859d2dbeaf595f7482a4de3d586535c10e/chrome/skin/default/zotero/16/universal
