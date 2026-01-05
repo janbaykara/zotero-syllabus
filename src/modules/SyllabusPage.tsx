@@ -1504,6 +1504,12 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     @media print {
       body { margin: 0; padding: 10px; }
       .syllabus-page { overflow: visible !important; }
+      /* Force browsers to print background colors and images */
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
     }
     /* Apply print styles when .print class is present */
     body.print {
@@ -1512,6 +1518,12 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     }
     body.print .syllabus-page {
       overflow: visible !important;
+    }
+    /* Force browsers to print background colors and images */
+    body.print * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
     }
     ${tailwindCSS ? `/* Tailwind CSS */\n${tailwindCSS}` : ""}
     ${zoteroCSS ? `/* Zotero CSS */\n${zoteroCSS}` : ""}
