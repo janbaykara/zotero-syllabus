@@ -226,6 +226,8 @@ var RIS_TRANSLATOR_ID = "32d59d2d-b65a-4da4-b0a3-bdd3cfb979e7";
 async function scrape(syllabusURL, selectedUUIDs) {
   safeLog("TALIS-ASPIRE-CUSTOM: scraping ", selectedUUIDs.length, " items");
   var metadata = await constructExportSyllabusMetadataFromTalisAPI(syllabusURL);
+  // Extract itemSectionTitles before sending to Zotero (it will be stripped by schema validation)
+  var itemSectionTitles = metadata._itemSectionTitles || {};
   var syllabusResponseString = await setTalisSyllabusMetadata(metadata);
   var syllabusResponse = JSON.parse(syllabusResponseString);
 
@@ -236,6 +238,16 @@ async function scrape(syllabusURL, selectedUUIDs) {
       var url = getRISURL(syllabusURL, uuid);
       var { body: ris } = await ZU.request(url, { responseType: "text" });
       var classInstruction = getValueFromRIS(ris, "N1") || undefined
+
+      // Enhance classInstruction with nested section titles
+      if (itemSectionTitles[uuid] && itemSectionTitles[uuid].length > 0) {
+        var sectionTitles = itemSectionTitles[uuid].join(" > ");
+        if (classInstruction) {
+          classInstruction = classInstruction + "\n\n" + sectionTitles;
+        } else {
+          classInstruction = sectionTitles;
+        }
+      }
       // Import to Zotero
       var translator = Zotero.loadTranslator("import");
       translator.setTranslator(RIS_TRANSLATOR_ID);
@@ -377,7 +389,29 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
   // Get description from list attributes
   if (talisSyllabusData.data && talisSyllabusData.data.attributes) {
     metadata.collectionTitle = talisSyllabusData.data.attributes.title;
-    metadata.description = talisSyllabusData.data.attributes.description;
+    var description = talisSyllabusData.data.attributes.description || "";
+    // Append Talis page URL to description if not already present
+    if (url && description.indexOf(url) === -1) {
+      description = description ? description + "\n\n" + url : url;
+    }
+    metadata.description = description;
+  }
+
+  // Get institution from tenant relationship
+  if (talisSyllabusData.data && talisSyllabusData.data.relationships &&
+    talisSyllabusData.data.relationships.tenant &&
+    talisSyllabusData.data.relationships.tenant.data) {
+    var tenantId = talisSyllabusData.data.relationships.tenant.data.id;
+    // Find tenant in included array
+    if (talisSyllabusData.included) {
+      for (var i = 0; i < talisSyllabusData.included.length; i++) {
+        var inc = talisSyllabusData.included[i];
+        if (inc.type === "tenants" && inc.id === tenantId && inc.attributes && inc.attributes.name) {
+          metadata.institution = inc.attributes.name;
+          break;
+        }
+      }
+    }
   }
 
   // Get priorities from included importances
@@ -487,6 +521,58 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
     }
     metadata.classes = classes;
   }
+
+  // Build section/item tree dictionary: maps item UUID to array of nested section titles
+  // This will be used to enhance classInstruction with nested section titles
+  var itemSectionTitles = {};
+  if (talisSyllabusData.data && talisSyllabusData.data.relationships &&
+    talisSyllabusData.data.relationships.sections &&
+    talisSyllabusData.data.relationships.sections.data &&
+    talisSyllabusData.included) {
+    // Build a map of section ID to section data
+    var sectionMap = {};
+    for (var i = 0; i < talisSyllabusData.included.length; i++) {
+      var inc = talisSyllabusData.included[i];
+      if (inc.type === "sections") {
+        sectionMap[inc.id] = inc;
+      }
+    }
+
+    // Recursive function to collect items with their section paths
+    function collectItemsWithPaths(sectionId, parentPath) {
+      var section = sectionMap[sectionId];
+      if (!section || !section.relationships || !section.relationships.all_children) {
+        return;
+      }
+
+      var sectionTitle = section.attributes && section.attributes.title ? section.attributes.title : "";
+      var currentPath = parentPath.concat(sectionTitle);
+      var children = section.relationships.all_children.data || [];
+
+      for (var j = 0; j < children.length; j++) {
+        var child = children[j];
+        if (child.type === "items") {
+          // Store the path for this item (filter out empty titles)
+          itemSectionTitles[child.id] = currentPath.filter(function (title) { return title; });
+        } else if (child.type === "sections") {
+          // Recursively process nested sections
+          collectItemsWithPaths(child.id, currentPath);
+        }
+      }
+    }
+
+    // Process each top-level section
+    var topLevelSections = talisSyllabusData.data.relationships.sections.data;
+    for (var k = 0; k < topLevelSections.length; k++) {
+      var topSectionRef = topLevelSections[k];
+      if (topSectionRef.type === "sections") {
+        collectItemsWithPaths(topSectionRef.id, []);
+      }
+    }
+  }
+
+  // Store itemSectionTitles in metadata for use in scrape function
+  metadata._itemSectionTitles = itemSectionTitles;
 
   // safeLog("TALIS-ASPIRE-CUSTOM: Got Metadata", metadata);
 

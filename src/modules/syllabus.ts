@@ -2425,6 +2425,33 @@ export class SyllabusManager {
   }
 
   /**
+   * Get collection institution for a specific collection
+   */
+  static getInstitution(
+    collectionId: number | GetByLibraryAndKeyArgs,
+  ): string {
+    const metadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    return metadata.institution || "";
+  }
+
+  /**
+   * Set collection institution for a specific collection
+   */
+  static async setInstitution(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    institution: string,
+    source: "page" | "background",
+  ): Promise<void> {
+    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    syllabusMetadata.institution = institution.trim();
+    await SyllabusManager.setCollectionMetadata(
+      collectionId,
+      syllabusMetadata,
+      source,
+    );
+  }
+
+  /**
    * Set collection nomenclature for a specific collection
    */
   static async setNomenclature(

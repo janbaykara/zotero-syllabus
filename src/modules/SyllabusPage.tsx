@@ -65,6 +65,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     setClassTitle,
     _setNomenclature,
     _setPriorities,
+    setInstitution,
     setLocked,
   ] = useZoteroSyllabusMetadata(collectionId);
 
@@ -1750,8 +1751,19 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
           <div className="container-padded">
             <div
-              className={twMerge("py-2", compactMode ? "text-base" : "text-lg")}
+              className={twMerge("py-2 space-y-2", compactMode ? "text-base" : "text-lg")}
             >
+              <div>
+                <TextInput
+                  elementType="input"
+                  initialValue={syllabusMetadata.institution || ""}
+                  onSave={setInstitution}
+                  className="w-full px-0! mx-0! text-primary cursor-pointer"
+                  placeholder="Institution"
+                  emptyBehavior="delete"
+                  readOnly={isLocked}
+                />
+              </div>
               <TextInput
                 elementType="textarea"
                 initialValue={syllabusMetadata.description || ""}

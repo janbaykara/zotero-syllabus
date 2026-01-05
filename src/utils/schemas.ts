@@ -354,6 +354,7 @@ const transformClasses = <T extends z.ZodTypeAny>(classSchema: T) => {
  */
 export const SettingsSyllabusMetadataSchema = z.object({
   description: z.string().optional().nullable(),
+  institution: z.string().optional().nullable(),
   classes: transformClasses(SettingsClassMetadataSchema),
   nomenclature: z.string().optional(),
   priorities: z.array(PrioritySchema).default(DEFAULT_PRIORITIES),

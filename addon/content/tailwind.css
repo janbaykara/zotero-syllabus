@@ -1039,6 +1039,13 @@
       }
     }
   }
+  .hover\:text-accent-blue {
+    &:hover {
+      @media (hover: hover) {
+        color: var(--color-accent-blue);
+      }
+    }
+  }
   .hover\:text-primary {
     &:hover {
       @media (hover: hover) {
