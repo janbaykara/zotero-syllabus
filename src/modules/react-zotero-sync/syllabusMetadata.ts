@@ -91,6 +91,13 @@ export function useZoteroSyllabusMetadata(
     [collectionId],
   );
 
+  const setLinks = useCallback(
+    (links: string[]) => {
+      SyllabusManager.setCollectionLinks(collectionId, links, "page");
+    },
+    [collectionId],
+  );
+
   return [
     syllabusMetadata,
     setDescription,
@@ -101,6 +108,7 @@ export function useZoteroSyllabusMetadata(
     setInstitution,
     setCourseCode,
     setLocked,
+    setLinks,
   ] as const;
 }
 

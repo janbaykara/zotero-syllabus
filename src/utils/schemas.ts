@@ -360,6 +360,7 @@ export const SettingsSyllabusMetadataSchema = z.object({
   nomenclature: z.string().optional(),
   priorities: z.array(PrioritySchema).default(DEFAULT_PRIORITIES),
   locked: z.boolean().optional().nullable(),
+  links: z.array(z.string()).optional(),
 });
 
 /**

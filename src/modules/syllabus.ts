@@ -2492,6 +2492,31 @@ export class SyllabusManager {
   }
 
   /**
+   * Get collection links for a specific collection
+   */
+  static getCollectionLinks(collectionId: number | string): string[] {
+    const metadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    return metadata.links || [];
+  }
+
+  /**
+   * Set collection links for a specific collection
+   */
+  static async setCollectionLinks(
+    collectionId: number | string,
+    links: string[],
+    source: "page",
+  ): Promise<void> {
+    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    syllabusMetadata.links = links;
+    await SyllabusManager.setCollectionMetadata(
+      collectionId,
+      syllabusMetadata,
+      source,
+    );
+  }
+
+  /**
    * Set collection priorities for a specific collection
    */
   static async setPriorities(

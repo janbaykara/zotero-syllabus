@@ -266,7 +266,11 @@ async function scrape(syllabusURL, selectedUUIDs) {
           var classEntry = Object.entries(
             syllabusResponse.syllabusData.classes,
           ).find(([classNumber, classData]) => {
-            return classData && classData.itemOrder && classData.itemOrder.includes(uuidToAssignmentID(uuid));
+            return (
+              classData &&
+              classData.itemOrder &&
+              classData.itemOrder.includes(uuidToAssignmentID(uuid))
+            );
           });
           var classNumber = classEntry ? Number(classEntry[0]) : undefined;
           var priority = itemPriorities[syllabusURL]
@@ -435,6 +439,7 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
     // priorities: [], // DO NOT CHANGE THIS LINE
     classes: {},
     // nomenclature: null, // DO NOT CHANGE THIS LINE
+    links: [],
   };
 
   // Extract data from included array
@@ -476,27 +481,19 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
       // Fall back to module description if list description is not available
       metadata.description = moduleDescription;
     }
-
-    // Append Talis page URL to description if not already present
-    if (url && metadata.description) {
-      if (metadata.description.indexOf(url) === -1) {
-        metadata.description = metadata.description.trim() + "\n\n" + url;
-      }
-    } else if (url && !metadata.description) {
-      metadata.description = url;
-    }
   } else if (moduleDescription) {
     // If no list data, use module description
     metadata.description = moduleDescription;
-    // Append URL
-    if (url) {
-      if (metadata.description.indexOf(url) === -1) {
-        metadata.description = metadata.description.trim() + "\n\n" + url;
-      }
+  }
+
+  // Add Talis page URL to links array if not already present
+  if (url) {
+    if (!metadata.links) {
+      metadata.links = [];
     }
-  } else if (url) {
-    // If no description at all, just use the URL
-    metadata.description = url;
+    if (metadata.links.indexOf(url) === -1) {
+      metadata.links.push(url);
+    }
   }
 
   // Get priorities from included importances
