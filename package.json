@@ -25,10 +25,10 @@
     "build:css": "node scripts/build-css.js",
     "watch:css": "npx @tailwindcss/cli -i ./src/tailwind.css -o ./addon/content/tailwind.css --watch",
     "start": "concurrently \"pnpm watch:css\" \"zotero-plugin serve\"",
-    "build": "pnpm build:css && pnpm zotero-plugin build && pnpm tsc --noEmit",
+    "build": "NODE_ENV=production pnpm build:css && NODE_ENV=production pnpm zotero-plugin build && NODE_ENV=production pnpm tsc --noEmit",
     "lint:check": "prettier --check . && eslint .",
     "lint:fix": "prettier --write . && eslint . --fix",
-    "release": "zotero-plugin release",
+    "release": "NODE_ENV=production zotero-plugin release",
     "test": "zotero-plugin test",
     "update-deps": "pnpm update --save"
   },

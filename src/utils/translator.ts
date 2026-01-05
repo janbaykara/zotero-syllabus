@@ -19,7 +19,7 @@ export async function installTalisAspireTranslator(
 
     const PROD_PORT = 23119; // default
     const DEV_PORT = 23124;
-    const PORT = process.env.NODE_ENV === "development" ? DEV_PORT : PROD_PORT;
+    const PORT = __env__ === "development" ? DEV_PORT : PROD_PORT;
     code = code.replace(String(PROD_PORT), String(DEV_PORT));
 
     const translatorID = "f16331f0-372e-4197-8927-05d2ba7599d8";
