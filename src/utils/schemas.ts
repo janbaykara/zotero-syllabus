@@ -6,19 +6,9 @@ import { uuidv7 } from "uuidv7";
 declare const ztoolkit: ZToolkit;
 
 /**
- * Syllabus Priority enum
- */
-export enum SyllabusPriority {
-  COURSE_INFO = "course-info",
-  ESSENTIAL = "essential",
-  RECOMMENDED = "recommended",
-  OPTIONAL = "optional",
-}
-
-/**
  * Syllabus Priority enum schema
  */
-export const SyllabusPrioritySchema = z.nativeEnum(SyllabusPriority);
+export const SyllabusPrioritySchema = z.string();
 
 /**
  * Assignment Status schema
@@ -276,12 +266,42 @@ export const ItemSyllabusDataSchema = ItemSyllabusDataEntity.latestSchema;
 /**
  * Custom Priority schema
  */
-export const CustomPrioritySchema = z.object({
+export const PrioritySchema = z.object({
   id: z.string(),
   name: z.string(),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/), // Hex color
-  order: z.number().int(),
+  color: z.string().optional().nullable(), // Hex color, nullable
+  order: z.number().int()
 });
+
+/**
+ * Default priorities - defined here to avoid circular dependency
+ */
+export const DEFAULT_PRIORITIES: z.infer<typeof PrioritySchema>[] = [
+  {
+    id: "course-info",
+    name: "Course Information",
+    color: "#F97316",
+    order: 1,
+  },
+  {
+    id: "essential",
+    name: "Essential",
+    color: "#8B5CF6",
+    order: 2,
+  },
+  {
+    id: "recommended",
+    name: "Recommended",
+    color: "#3B82F6",
+    order: 3,
+  },
+  {
+    id: "optional",
+    name: "Optional",
+    color: "#AAA",
+    order: 4,
+  },
+];
 
 /**
  * Settings Class Metadata schema
@@ -336,7 +356,7 @@ export const SettingsSyllabusMetadataSchema = z.object({
   description: z.string().optional().nullable(),
   classes: transformClasses(SettingsClassMetadataSchema),
   nomenclature: z.string().optional(),
-  priorities: z.array(CustomPrioritySchema).optional(),
+  priorities: z.array(PrioritySchema).default(DEFAULT_PRIORITIES),
   locked: z.boolean().optional().nullable(),
 });
 
@@ -487,7 +507,7 @@ export type ItemSyllabusAssignment = z.infer<
   typeof ItemSyllabusAssignmentEntity.latestSchema
 >;
 export type ItemSyllabusData = z.infer<typeof ItemSyllabusDataSchema>;
-export type CustomPriority = z.infer<typeof CustomPrioritySchema>;
+export type Priority = z.infer<typeof PrioritySchema>;
 export type SettingsClassMetadata = z.infer<typeof SettingsClassMetadataSchema>;
 export type ExportClassMetadata = z.infer<typeof ExportClassMetadataSchema>;
 export type SettingsSyllabusMetadata = z.infer<

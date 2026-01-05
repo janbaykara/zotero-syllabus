@@ -18,7 +18,6 @@ import { getCSSUrl } from "../utils/css";
 import {
   SyllabusManager,
   ItemSyllabusAssignment,
-  SyllabusPriority,
   SettingsSyllabusMetadata,
   SettingsClassMetadata,
 } from "./syllabus";
@@ -51,14 +50,6 @@ import {
   Download,
   Upload,
 } from "lucide-preact";
-
-// Define priority type for use in this file
-// These values match SyllabusPriority enum in syllabus.ts
-type SyllabusPriorityType =
-  | "course-info"
-  | "essential"
-  | "recommended"
-  | "optional";
 
 interface SyllabusPageProps {
   collectionId: number;
@@ -309,7 +300,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   // Handler to apply priority - always receives identifier from item card
   const handlePriorityChange = useCallback(
     async (
-      priority: SyllabusPriority | undefined,
+      priority: string | undefined,
       identifier: { assignmentId?: string; itemId?: number },
     ) => {
       const identifiersToProcess = getIdentifiersToProcess(identifier);
@@ -1970,7 +1961,7 @@ interface ClassGroupComponentProps {
     itemIds: number[];
   };
   onPriorityChange?: (
-    priority: SyllabusPriority | undefined,
+    priority: string | undefined,
     identifier: { assignmentId?: string; itemId?: number },
   ) => Promise<void>;
   onDelete?: (identifier: {
@@ -2244,7 +2235,7 @@ function ClassGroupComponent({
                   slim={
                     compactMode ||
                     !priority ||
-                    priority === SyllabusManager.priorityKeys.OPTIONAL
+                    priority === "optional"
                   }
                   compactMode={compactMode}
                   readerMode={readerMode}
@@ -2542,7 +2533,7 @@ export function SyllabusItemCard({
     itemIds: number[];
   };
   onPriorityChange?: (
-    priority: SyllabusPriority | undefined,
+    priority: string | undefined,
     identifier: { assignmentId?: string; itemId?: number },
   ) => Promise<void>;
   onDelete?: (identifier: {
@@ -2763,7 +2754,7 @@ export function SyllabusItemCard({
 
   const { color: priorityColor } = SyllabusManager.getPriorityDisplay(
     collectionId,
-    priority as SyllabusPriority,
+    priority,
   );
 
   const assignmentStatus = assignment?.status || null;
@@ -2924,7 +2915,7 @@ export function SyllabusItemCard({
               </div>
               {!!priority && (
                 <PriorityIcon
-                  priority={priority}
+                  id={priority}
                   colors={!isIdentifierSelected}
                   className="shrink-0 grow-0 text-right block"
                   collectionId={collectionId}
@@ -2953,7 +2944,7 @@ export function SyllabusItemCard({
               {!!priority && (
                 <div className="grow-0 shrink-0">
                   <PriorityIcon
-                    priority={priority}
+                    id={priority}
                     colors={!isIdentifierSelected}
                     collectionId={collectionId}
                   />
@@ -3193,7 +3184,7 @@ export function SyllabusItemCard({
                                 itemId: assignment ? undefined : item.id,
                               };
                               await onPriorityChange(
-                                priorityOption.id as SyllabusPriority,
+                                priorityOption.id,
                                 identifier,
                               );
                             }
@@ -3251,23 +3242,23 @@ export function SyllabusItemCard({
 }
 
 function PriorityIcon({
-  priority,
+  id,
   colors = true,
   className,
   collectionId,
 }: {
-  priority: SyllabusPriorityType;
+  id: string;
   colors?: boolean;
   className?: string;
   collectionId?: number;
 }) {
-  if (!priority) return null;
+  if (!id) return null;
 
   // Use collection-specific colors and labels if collectionId is provided
   const { color: priorityColor, label: priorityLabel } =
     SyllabusManager.getPriorityDisplay(
       collectionId,
-      priority as SyllabusPriority,
+      id,
     );
 
   if (!priorityLabel) return null;

@@ -484,8 +484,8 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
 function getPriorityColor(priorityId) {
   // Default colors for priorities
   var colors = {
-    "importance1": "#4A90E2",
-    "importance2": "#E74C3C",
+    "importance1": "#8B5CF6",
+    "importance2": "#3B82F6",
     "importance3": "#F39C12",
     "importance4": "#95A5A6"
   };

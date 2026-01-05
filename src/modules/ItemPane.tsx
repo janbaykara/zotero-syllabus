@@ -3,7 +3,6 @@ import { h, Fragment } from "preact";
 import { useState, useCallback, useRef, useMemo } from "preact/hooks";
 import {
   SyllabusManager,
-  SyllabusPriority,
   ItemSyllabusAssignment,
 } from "./syllabus";
 import { Square, SquareCheck } from "lucide-preact";
@@ -27,7 +26,7 @@ interface AssignmentEditorProps {
   onPriorityChange: (
     assignmentId: string,
     collectionId: number,
-    priority: SyllabusPriority | "",
+    priority: string,
   ) => void;
   onClassNumberChange: (
     assignmentId: string,
@@ -219,7 +218,7 @@ function ItemPaneContent({
     async (
       assignmentId: string,
       collectionId: number,
-      priority: SyllabusPriority | "",
+      priority: string,
     ) => {
       if (!assignmentId) {
         ztoolkit.log("Error: Assignment ID missing");
