@@ -2085,7 +2085,7 @@ export class SyllabusManager {
   static async addClassAssignment(
     item: Zotero.Item,
     collectionId: number | GetByLibraryAndKeyArgs,
-    classNumber: number | undefined,
+    classNumber: number | null | undefined,
     metadata: Partial<ItemSyllabusAssignment>,
     source: "page" | "item-pane" | "context-menu",
   ): Promise<void> {
@@ -2798,7 +2798,7 @@ export class SyllabusManager {
    */
   static getPriorityOrderForCollection(
     collectionId: number | GetByLibraryAndKeyArgs,
-    priority: string | "" | undefined,
+    priority: string | "" | null | undefined,
   ): number {
     if (!priority) {
       return 999; // No priority = lowest

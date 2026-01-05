@@ -22,7 +22,7 @@ interface AssignmentEditorProps {
   assignmentIndex: number;
   editable: boolean;
   isSaving: boolean;
-  priorityOptions: Array<{ value: string; label: string; color?: string }>;
+  priorityOptions: Array<{ value: string; label: string; color?: string | null }>;
   onPriorityChange: (
     assignmentId: string,
     collectionId: number,

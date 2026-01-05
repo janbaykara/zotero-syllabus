@@ -235,6 +235,7 @@ async function scrape(syllabusURL, selectedUUIDs) {
     try {
       var url = getRISURL(syllabusURL, uuid);
       var { body: ris } = await ZU.request(url, { responseType: "text" });
+      var classInstruction = getValueFromRIS(ris, "N1") || undefined
       // Import to Zotero
       var translator = Zotero.loadTranslator("import");
       translator.setTranslator(RIS_TRANSLATOR_ID);
@@ -248,13 +249,11 @@ async function scrape(syllabusURL, selectedUUIDs) {
           })
         var classNumber = classEntry ? Number(classEntry[0]) : undefined
         var priority = itemPriorities[syllabusURL] ? itemPriorities[syllabusURL][uuid] : undefined
-        // TODO: get description from RIS
-        var classInstruction = undefined
         // safeLog("TALIS-ASPIRE-CUSTOM: got classNumber and priority for item:", { uuid: uuid, classNumber, priority });
         if (classNumber) {
           // safeLog("TALIS-ASPIRE-CUSTOM: got classNumber for item:", uuid, classNumber);
           // Set reading assignment.
-          // TODO: merge duplicate items and create multiple assignments with reading instructions instead
+          // One day — merge duplicate items and create multiple assignments with reading instructions instead
           var itemSyllabusData = {
             [syllabusResponse.collectionAndLibraryKey]: [
               {
@@ -303,6 +302,19 @@ function addRowToRIS(text, code, value) {
   // Add the new line second to last, since the last line is the end marker.
   lines.splice(-2, 0, newLine)
   return lines.join('\n')
+}
+
+function getValueFromRIS(text, code) {
+  const lines = text.trim().split('\n')
+  const line = lines.find(line => line.startsWith(code))
+  if (!line) {
+    return null
+  }
+  const array = line.split('-')
+  if (!array || !array.length || array.length < 2) {
+    return null
+  }
+  return array[1].trim()
 }
 
 async function callZoteroClientEndpoint(endpoint, method, data) {

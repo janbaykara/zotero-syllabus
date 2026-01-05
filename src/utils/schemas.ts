@@ -44,9 +44,9 @@ export const classNumberSchema = z.number().int().min(1).optional();
 const ItemSyllabusAssignmentV2Schema = z.object({
   id: z.string().default(generateAssignmentId),
   classNumber: classNumberSchema,
-  priority: SyllabusPrioritySchema.optional(),
-  classInstruction: z.string().optional(),
-  status: AssignmentStatusSchema.optional(),
+  priority: SyllabusPrioritySchema.optional().nullable(),
+  classInstruction: z.string().optional().nullable(),
+  status: AssignmentStatusSchema.optional().nullable(),
 });
 
 /**
