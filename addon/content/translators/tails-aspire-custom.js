@@ -377,7 +377,7 @@ function getValueFromRIS(text, code) {
 }
 
 async function callZoteroClientEndpoint(endpoint, method, data) {
-  var baseUrl = "http://127.0.0.1:23124";
+  var baseUrl = "http://127.0.0.1:23119";
   var url = `${baseUrl}${endpoint}`;
 
   // Use POST with data in request body
