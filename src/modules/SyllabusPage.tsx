@@ -1282,19 +1282,8 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       });
       const filename = `${titleSlug}-${dateStr}.syllabus`;
 
-      // Create a temporary file and save it
-      const tempDir = Zotero.getTempDirectory();
-      const tempFile = tempDir.clone();
-      tempFile.append(filename);
-      // NORMAL_FILE_TYPE = 0
-      tempFile.createUnique(0, 0o666);
-
-      // Write content to file using Zotero.File
-      const fileObj = Zotero.File.pathToFile(tempFile.path);
-      await Zotero.File.putContentsAsync(fileObj, jsonContent, "utf-8");
-
-      // Open the file location so user can save it
-      fileObj.reveal();
+      // Use saveToFile utility to save the export
+      await saveToFile(filename, jsonContent, "Save Syllabus Export");
     } catch (err) {
       ztoolkit.log("Error exporting syllabus metadata:", err);
     }
@@ -1535,23 +1524,6 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   ${syllabusPageElement.innerHTML}
 </body>
 </html>`;
-
-      // Create a temporary file and open it
-      const tempDir = Zotero.getTempDirectory();
-      const tempFile = tempDir.clone();
-      tempFile.append(
-        `printable-syllabus--${slugify(title) || "syllabus"}.html`,
-      );
-      // NORMAL_FILE_TYPE = 0
-      tempFile.createUnique(0, 0o666);
-
-      // Write content to file using Zotero.File
-      const fileObj = Zotero.File.pathToFile(tempFile.path);
-      await Zotero.File.putContentsAsync(fileObj, htmlContent, "utf-8");
-
-      // Open the file in the default external browser using reveal()
-      // This will open HTML files with the system's default browser
-      fileObj.reveal();
     } catch (err) {
       ztoolkit.log("Error printing syllabus:", err);
     }
