@@ -18,7 +18,8 @@ import { getCSSUrl } from "../utils/css";
 import {
   SyllabusManager,
   ItemSyllabusAssignment,
-  SyllabusPriority,
+  SettingsSyllabusMetadata,
+  SettingsClassMetadata,
 } from "./syllabus";
 import { renderComponent } from "../utils/react";
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
@@ -50,14 +51,6 @@ import {
   Upload,
 } from "lucide-preact";
 
-// Define priority type for use in this file
-// These values match SyllabusPriority enum in syllabus.ts
-type SyllabusPriorityType =
-  | "course-info"
-  | "essential"
-  | "recommended"
-  | "optional";
-
 interface SyllabusPageProps {
   collectionId: number;
 }
@@ -72,6 +65,8 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     setClassTitle,
     _setNomenclature,
     _setPriorities,
+    setInstitution,
+    setCourseCode,
     setLocked,
   ] = useZoteroSyllabusMetadata(collectionId);
 
@@ -307,7 +302,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   // Handler to apply priority - always receives identifier from item card
   const handlePriorityChange = useCallback(
     async (
-      priority: SyllabusPriority | undefined,
+      priority: string | undefined,
       identifier: { assignmentId?: string; itemId?: number },
     ) => {
       const identifiersToProcess = getIdentifiersToProcess(identifier);
@@ -1757,8 +1752,31 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
           <div className="container-padded">
             <div
-              className={twMerge("py-2", compactMode ? "text-base" : "text-lg")}
+              className={twMerge(
+                "py-2 space-y-2",
+                compactMode ? "text-base" : "text-lg",
+              )}
             >
+              <div className="flex flex-0! flex-row gap-2 items-center character-separator [--character-separator:'•']">
+                <TextInput
+                  elementType="input"
+                  initialValue={syllabusMetadata.courseCode || ""}
+                  onSave={setCourseCode}
+                  className="w-[90px] overflow-hidden text-ellipsis whitespace-nowrap px-0! mx-0! text-primary cursor-pointer shrink-0! grow-0!"
+                  placeholder="Course Code"
+                  emptyBehavior="delete"
+                  readOnly={isLocked}
+                />
+                <TextInput
+                  elementType="input"
+                  initialValue={syllabusMetadata.institution || ""}
+                  onSave={setInstitution}
+                  className="px-0! mx-0! text-primary cursor-pointer grow shrink-0"
+                  placeholder="Institution"
+                  emptyBehavior="delete"
+                  readOnly={isLocked}
+                />
+              </div>
               <TextInput
                 elementType="textarea"
                 initialValue={syllabusMetadata.description || ""}
@@ -1938,15 +1956,7 @@ interface ClassGroupComponentProps {
     assignment: ItemSyllabusAssignment;
   }>;
   collectionId: number;
-  syllabusMetadata: {
-    classes?: {
-      [key: string]: {
-        title?: string;
-        description?: string;
-        readingDate?: string;
-      };
-    };
-  };
+  syllabusMetadata: SettingsSyllabusMetadata;
   onClassTitleSave: (classNumber: number, title: string) => void;
   onClassDescriptionSave: (classNumber: number, description: string) => void;
   onClassReadingDateSave: (
@@ -1976,7 +1986,7 @@ interface ClassGroupComponentProps {
     itemIds: number[];
   };
   onPriorityChange?: (
-    priority: SyllabusPriority | undefined,
+    priority: string | undefined,
     identifier: { assignmentId?: string; itemId?: number },
   ) => Promise<void>;
   onDelete?: (identifier: {
@@ -2247,11 +2257,7 @@ function ClassGroupComponent({
                   collectionId={collectionId}
                   classNumber={classNumber ?? undefined}
                   assignment={assignment}
-                  slim={
-                    compactMode ||
-                    !priority ||
-                    priority === SyllabusManager.priorityKeys.OPTIONAL
-                  }
+                  slim={compactMode || !priority || priority === "optional"}
                   compactMode={compactMode}
                   readerMode={readerMode}
                   isLocked={isLocked}
@@ -2289,7 +2295,7 @@ function ReadingDateInput({
   onSave,
   compactMode = false,
 }: {
-  initialValue?: string; // ISO date string
+  initialValue?: SettingsClassMetadata["readingDate"]; // ISO date string
   onSave: (date: string | undefined) => void | Promise<void>;
   compactMode?: boolean;
 }) {
@@ -2368,6 +2374,7 @@ function TextInput({
   elementType = "input",
   emptyBehavior = "reset",
   className,
+  containerClassName,
   fieldSizing = "content",
   readOnly = false,
   ...elementProps
@@ -2380,6 +2387,7 @@ function TextInput({
   className?: string;
   fieldSizing?: "content" | "fixed" | "auto";
   readOnly?: boolean;
+  containerClassName?: string;
 } & JSX.HTMLAttributes<HTMLInputElement | HTMLTextAreaElement>) {
   const [value, setValue] = useState(initialValue);
 
@@ -2430,8 +2438,8 @@ function TextInput({
     return null;
   }
 
-  return (
-    <div ref={setSizeRef} className="w-full">
+  const el = (
+    <>
       {h(elementType, {
         ref: inputRef,
         type: "text",
@@ -2490,6 +2498,16 @@ function TextInput({
       >
         {value || initialValue || ""}
       </div>
+    </>
+  );
+
+  if (elementType === "input") {
+    return el;
+  }
+
+  return (
+    <div ref={setSizeRef} className={twMerge("w-full", containerClassName)}>
+      {el}
     </div>
   );
 }
@@ -2548,7 +2566,7 @@ export function SyllabusItemCard({
     itemIds: number[];
   };
   onPriorityChange?: (
-    priority: SyllabusPriority | undefined,
+    priority: string | undefined,
     identifier: { assignmentId?: string; itemId?: number },
   ) => Promise<void>;
   onDelete?: (identifier: {
@@ -2769,7 +2787,7 @@ export function SyllabusItemCard({
 
   const { color: priorityColor } = SyllabusManager.getPriorityDisplay(
     collectionId,
-    priority as SyllabusPriority,
+    priority,
   );
 
   const assignmentStatus = assignment?.status || null;
@@ -2930,7 +2948,7 @@ export function SyllabusItemCard({
               </div>
               {!!priority && (
                 <PriorityIcon
-                  priority={priority}
+                  id={priority}
                   colors={!isIdentifierSelected}
                   className="shrink-0 grow-0 text-right block"
                   collectionId={collectionId}
@@ -2959,7 +2977,7 @@ export function SyllabusItemCard({
               {!!priority && (
                 <div className="grow-0 shrink-0">
                   <PriorityIcon
-                    priority={priority}
+                    id={priority}
                     colors={!isIdentifierSelected}
                     collectionId={collectionId}
                   />
@@ -3199,7 +3217,7 @@ export function SyllabusItemCard({
                                 itemId: assignment ? undefined : item.id,
                               };
                               await onPriorityChange(
-                                priorityOption.id as SyllabusPriority,
+                                priorityOption.id,
                                 identifier,
                               );
                             }
@@ -3257,24 +3275,21 @@ export function SyllabusItemCard({
 }
 
 function PriorityIcon({
-  priority,
+  id,
   colors = true,
   className,
   collectionId,
 }: {
-  priority: SyllabusPriorityType;
+  id: string;
   colors?: boolean;
   className?: string;
   collectionId?: number;
 }) {
-  if (!priority) return null;
+  if (!id) return null;
 
   // Use collection-specific colors and labels if collectionId is provided
   const { color: priorityColor, label: priorityLabel } =
-    SyllabusManager.getPriorityDisplay(
-      collectionId,
-      priority as SyllabusPriority,
-    );
+    SyllabusManager.getPriorityDisplay(collectionId, id);
 
   if (!priorityLabel) return null;
 

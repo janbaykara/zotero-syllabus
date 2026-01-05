@@ -27,15 +27,10 @@ import {
   SettingsClassMetadataSchema,
   SettingsSyllabusMetadataSchema,
   ExportSyllabusMetadataSchema,
+  DEFAULT_PRIORITIES,
 } from "../utils/schemas";
 import * as z from "zod";
 import { getRDFStringForCollection, importRDF } from "../utils/rdf";
-
-// Enums are now defined in utils/schemas.ts
-import { SyllabusPriority } from "../utils/schemas";
-
-// Re-export for backward compatibility
-export { SyllabusPriority };
 
 enum SyllabusSettingsKey {
   COLLECTION_METADATA = "collectionMetadata",
@@ -52,10 +47,11 @@ import type {
   ItemSyllabusData,
   AssignmentStatus,
   ClassStatus,
-  CustomPriority,
+  PrioritySchema,
   SettingsCollectionDictionaryData,
   SettingsSyllabusMetadata,
   SettingsClassMetadata,
+  Priority,
 } from "../utils/schemas";
 import { installTalisAspireTranslator } from "../utils/translator";
 
@@ -65,7 +61,7 @@ export type {
   ItemSyllabusData,
   AssignmentStatus,
   ClassStatus,
-  CustomPriority,
+  PrioritySchema,
   SettingsCollectionDictionaryData,
   SettingsSyllabusMetadata,
   SettingsClassMetadata,
@@ -95,7 +91,6 @@ export class SyllabusManager {
   static readingScheduleTab = tabManager;
 
   static settingsKeys = SyllabusSettingsKey;
-  static priorityKeys = SyllabusPriority;
   static getPreferenceKey(key: SyllabusSettingsKey): string {
     return `${addon.data.config.prefsPrefix}.${key}`;
   }
@@ -213,60 +208,6 @@ export class SyllabusManager {
     };
 
     return iconMap[itemType] || "document";
-  }
-
-  /**
-   * Color definitions for syllabus priorities
-   */
-  static PRIORITY_COLORS: Record<SyllabusPriority, string> = {
-    [SyllabusPriority.COURSE_INFO]: "#F97316", // orange
-    [SyllabusPriority.ESSENTIAL]: "#8B5CF6", // purple
-    [SyllabusPriority.RECOMMENDED]: "#3B82F6", // blue
-    [SyllabusPriority.OPTIONAL]: "#AAA", // darker grey for better readability
-  };
-
-  /**
-   * Human-readable labels for syllabus priorities
-   */
-  static PRIORITY_LABELS: Record<SyllabusPriority, string> = {
-    [SyllabusPriority.COURSE_INFO]: "Course Information",
-    [SyllabusPriority.ESSENTIAL]: "Essential",
-    [SyllabusPriority.RECOMMENDED]: "Recommended",
-    [SyllabusPriority.OPTIONAL]: "Optional",
-  };
-
-  /**
-   * Get priority options for dropdowns/selects
-   * Returns array of { value, label, color } objects
-   */
-  static getPriorityOptions(): Array<{
-    value: string;
-    label: string;
-    color?: string;
-  }> {
-    return [
-      {
-        value: SyllabusPriority.COURSE_INFO,
-        label: this.PRIORITY_LABELS[SyllabusPriority.COURSE_INFO],
-        color: this.PRIORITY_COLORS[SyllabusPriority.COURSE_INFO],
-      },
-      {
-        value: SyllabusPriority.ESSENTIAL,
-        label: this.PRIORITY_LABELS[SyllabusPriority.ESSENTIAL],
-        color: this.PRIORITY_COLORS[SyllabusPriority.ESSENTIAL],
-      },
-      {
-        value: SyllabusPriority.RECOMMENDED,
-        label: this.PRIORITY_LABELS[SyllabusPriority.RECOMMENDED],
-        color: this.PRIORITY_COLORS[SyllabusPriority.RECOMMENDED],
-      },
-      {
-        value: SyllabusPriority.OPTIONAL,
-        label: this.PRIORITY_LABELS[SyllabusPriority.OPTIONAL],
-        color: this.PRIORITY_COLORS[SyllabusPriority.OPTIONAL],
-      },
-      { value: "", label: "(None)" },
-    ];
   }
 
   static SYLLABUS_DATA_KEY = "syllabus";
@@ -405,7 +346,7 @@ export class SyllabusManager {
 
   static onItemUpdate(
     item: Zotero.Item,
-    source: "page" | "item-pane" | "context-menu",
+    source: "page" | "item-pane" | "context-menu" | "background",
   ) {
     ztoolkit.log("SyllabusManager.onItemUpdate", source, item.id);
     // No need to call setupPage() - React stores will trigger re-render automatically
@@ -433,7 +374,7 @@ export class SyllabusManager {
    */
   static onCollectionUpdated(
     collection: Zotero.Collection,
-    source: "page",
+    source: "page" | "background",
     reason: string,
   ) {
     ztoolkit.log(
@@ -1136,7 +1077,7 @@ export class SyllabusManager {
             const priorityElements = SyllabusManager.createPriorityDisplay(
               doc,
               collectionIdNum,
-              priority as SyllabusPriority,
+              priority,
             );
             for (const element of priorityElements) {
               container.appendChild(element);
@@ -1182,7 +1123,7 @@ export class SyllabusManager {
             const priorityElements = SyllabusManager.createPriorityDisplay(
               doc,
               undefined, // No collectionId for backward compatibility
-              priority as SyllabusPriority,
+              priority,
             );
             for (const element of priorityElements) {
               container.appendChild(element);
@@ -1371,45 +1312,43 @@ export class SyllabusManager {
 
   static setupContextMenuSetPriority() {
     ztoolkit.Menu.unregister("syllabus-set-priority-menu");
-    const createPriorityHandler =
-      (priority: SyllabusPriority | "") => async () => {
-        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-        const selectedCollection = zoteroPane.getSelectedCollection();
-        if (!selectedCollection) return;
-        const items = zoteroPane.getSelectedItems();
-        for (const item of items) {
-          if (item.isRegularItem()) {
-            await this.applyToFirstAssignment(item, selectedCollection.id, {
-              priority: priority || undefined,
-            });
-            await item.saveTx();
-          }
+    const createPriorityHandler = (priority: string) => async () => {
+      const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
+      const selectedCollection = zoteroPane.getSelectedCollection();
+      if (!selectedCollection) return;
+      const items = zoteroPane.getSelectedItems();
+      for (const item of items) {
+        if (item.isRegularItem()) {
+          await this.applyToFirstAssignment(item, selectedCollection.id, {
+            priority: priority || undefined,
+          });
+          await item.saveTx();
         }
-        if (zoteroPane.itemPane) {
-          zoteroPane.itemPane.render();
-        }
-      };
+      }
+      if (zoteroPane.itemPane) {
+        zoteroPane.itemPane.render();
+      }
+    };
 
     // Get the selected collection to use collection-specific priorities
     const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
     const selectedCollection = zoteroPane?.getSelectedCollection();
 
     // Get collection-specific priority options if a collection is selected
-    const priorityOptions = selectedCollection
-      ? (() => {
-          const customPriorities = this.getPrioritiesForCollection(
-            selectedCollection.id,
-          );
-          const options = customPriorities.map((p) => ({
-            value: p.id,
-            label: p.name,
-            color: p.color,
-          }));
-          // Add "(None)" option
-          options.push({ value: "", label: "(None)", color: "" });
-          return options;
-        })()
-      : this.getPriorityOptions();
+    // Otherwise use default priorities
+    const priorityOptions = (() => {
+      const priorities = selectedCollection
+        ? this.getPrioritiesForCollection(selectedCollection.id)
+        : [];
+      const options = priorities.map((p) => ({
+        value: p.id,
+        label: p.name,
+        color: p.color,
+      }));
+      // Add "(None)" option
+      options.push({ value: "", label: "(None)", color: "" });
+      return options;
+    })();
 
     ztoolkit.Menu.register("item", {
       tag: "menu",
@@ -1432,9 +1371,7 @@ export class SyllabusManager {
           return {
             tag: "menuitem" as const,
             label: opt.label,
-            commandListener: createPriorityHandler(
-              opt.value as SyllabusPriority,
-            ),
+            commandListener: createPriorityHandler(opt.value),
           };
         })
         .flat(),
@@ -1560,7 +1497,7 @@ export class SyllabusManager {
   static setCollectionTitle(
     collectionId: number,
     title: string,
-    source: "page",
+    source: "page" | "background",
   ) {
     const collection = Zotero.Collections.get(collectionId);
     if (collection) {
@@ -1681,7 +1618,7 @@ export class SyllabusManager {
   static async setItemData(
     item: Zotero.Item,
     data: ItemSyllabusData,
-    source: "page" | "item-pane" | "context-menu",
+    source: "page" | "item-pane" | "context-menu" | "background",
   ): Promise<void> {
     // Validate input data with Zod before saving
     const inputResult = ItemSyllabusDataEntity.safeParse(data);
@@ -1730,38 +1667,38 @@ export class SyllabusManager {
     this.onItemUpdate(item, source);
   }
 
-  /**
-   * Get syllabus priority for a specific collection and class
-   * If classNumber is provided, returns priority for that class
-   * Otherwise, returns priority from first entry
-   */
-  static getSyllabusPriority(
-    item: Zotero.Item,
-    collectionId: number | GetByLibraryAndKeyArgs,
-    classNumber?: number,
-  ): SyllabusPriority | "" {
-    const normalized = this.normalizeCollectionIdentifier(collectionId);
-    if (!normalized) {
-      return "";
-    }
-    const data = this.getItemSyllabusData(item);
-    if (!data) {
-      return "";
-    }
-    const collectionKeyStr = this.getCollectionReferenceString(
-      normalized.libraryID,
-      normalized.key,
-    );
-    const entries = data[collectionKeyStr] || [];
+  // /**
+  //  * Get syllabus priority for a specific collection and class
+  //  * If classNumber is provided, returns priority for that class
+  //  * Otherwise, returns priority from first entry
+  //  */
+  // static getSyllabusPriority(
+  //   item: Zotero.Item,
+  //   collectionId: number | GetByLibraryAndKeyArgs,
+  //   classNumber?: number,
+  // ): string {
+  //   const normalized = this.normalizeCollectionIdentifier(collectionId);
+  //   if (!normalized) {
+  //     return "";
+  //   }
+  //   const data = this.getItemSyllabusData(item);
+  //   if (!data) {
+  //     return "";
+  //   }
+  //   const collectionKeyStr = this.getCollectionReferenceString(
+  //     normalized.libraryID,
+  //     normalized.key,
+  //   );
+  //   const entries = data[collectionKeyStr] || [];
 
-    if (classNumber !== undefined) {
-      const entry = entries.find((e) => e.classNumber === classNumber);
-      return entry?.priority || "";
-    }
+  //   if (classNumber !== undefined) {
+  //     const entry = entries.find((e) => e.classNumber === classNumber);
+  //     return entry?.priority || "";
+  //   }
 
-    // Return first entry's priority if no classNumber specified
-    return entries[0]?.priority || "";
-  }
+  //   // Return first entry's priority if no classNumber specified
+  //   return entries[0]?.priority || "";
+  // }
 
   /**
    * Get the full range of class numbers for a collection
@@ -1956,23 +1893,6 @@ export class SyllabusManager {
   }
 
   /**
-   * Get priority order number for sorting (lower = higher priority)
-   * @deprecated Use getPriorityOrderForCollection instead
-   */
-  static getPriorityOrder(priority: SyllabusPriority | "" | undefined): number {
-    try {
-      if (priority === SyllabusPriority.COURSE_INFO) return 1;
-      if (priority === SyllabusPriority.ESSENTIAL) return 2;
-      if (priority === SyllabusPriority.RECOMMENDED) return 3;
-      if (priority === SyllabusPriority.OPTIONAL) return 4;
-      return 4; // blank/undefined
-    } catch (e) {
-      ztoolkit.log("Error getting priority order:", e);
-      return 4;
-    }
-  }
-
-  /**
    * Compare two assignments for sorting.
    * Sort order: class number (undefined last), then priority, then by assignment ID for stability.
    * Returns: negative if a < b, positive if a > b, 0 if equal
@@ -2060,13 +1980,13 @@ export class SyllabusManager {
     }
 
     // Then priority order, etc.
-    // Note: getAssignmentSortKey doesn't have collectionId, so we use default order
-    // For collection-specific sorting, use sortClassItems which has collectionId
+    // Use collection-specific priorities if collectionId is provided, otherwise use default
+    const priorityOrder: number =
+      collectionId !== undefined
+        ? this.getPriorityOrderForCollection(collectionId, assignment.priority)
+        : 9999;
     sortKeyParts.push(
-      String(SyllabusManager.getPriorityOrder(assignment.priority)).padStart(
-        4,
-        "0",
-      ),
+      String(priorityOrder).padStart(4, "0"),
       // For priority value: use the priority string, or "zzzz" for unprioritized
       // This ensures OPTIONAL ("optional") sorts before unprioritized ("zzzz")
       assignment.priority || "zzzz",
@@ -2165,7 +2085,7 @@ export class SyllabusManager {
   static async addClassAssignment(
     item: Zotero.Item,
     collectionId: number | GetByLibraryAndKeyArgs,
-    classNumber: number | undefined,
+    classNumber: number | null | undefined,
     metadata: Partial<ItemSyllabusAssignment>,
     source: "page" | "item-pane" | "context-menu",
   ): Promise<void> {
@@ -2410,7 +2330,7 @@ export class SyllabusManager {
 
   static setSettingsCollectionDictionaryData(
     metadata: SettingsCollectionDictionaryData,
-    source: "page" | "item-pane",
+    source: "page" | "item-pane" | "background",
     emitChange: boolean = true,
   ) {
     const inputResult =
@@ -2462,7 +2382,7 @@ export class SyllabusManager {
   static async setCollectionMetadata(
     collectionId: number | GetByLibraryAndKeyArgs,
     metadata: SettingsSyllabusMetadata,
-    source: "page" | "item-pane",
+    source: "page" | "item-pane" | "background",
   ): Promise<void> {
     const normalized = this.normalizeCollectionIdentifier(collectionId);
     if (!normalized) {
@@ -2493,10 +2413,60 @@ export class SyllabusManager {
   static async setCollectionDescription(
     collectionId: number | GetByLibraryAndKeyArgs,
     description: string,
-    source: "page",
+    source: "page" | "background",
   ): Promise<void> {
     const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
     syllabusMetadata.description = description.trim();
+    await SyllabusManager.setCollectionMetadata(
+      collectionId,
+      syllabusMetadata,
+      source,
+    );
+  }
+
+  /**
+   * Get collection institution for a specific collection
+   */
+  static getInstitution(collectionId: number | GetByLibraryAndKeyArgs): string {
+    const metadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    return metadata.institution || "";
+  }
+
+  /**
+   * Set collection institution for a specific collection
+   */
+  static async setInstitution(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    institution: string,
+    source: "page" | "background",
+  ): Promise<void> {
+    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    syllabusMetadata.institution = institution.trim();
+    await SyllabusManager.setCollectionMetadata(
+      collectionId,
+      syllabusMetadata,
+      source,
+    );
+  }
+
+  /**
+   * Get collection course code for a specific collection
+   */
+  static getCourseCode(collectionId: number | GetByLibraryAndKeyArgs): string {
+    const metadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    return metadata.courseCode || "";
+  }
+
+  /**
+   * Set collection course code for a specific collection
+   */
+  static async setCourseCode(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    courseCode: string,
+    source: "page" | "background",
+  ): Promise<void> {
+    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    syllabusMetadata.courseCode = courseCode.trim();
     await SyllabusManager.setCollectionMetadata(
       collectionId,
       syllabusMetadata,
@@ -2526,8 +2496,8 @@ export class SyllabusManager {
    */
   static async setPriorities(
     collectionId: number | GetByLibraryAndKeyArgs,
-    priorities: CustomPriority[],
-    source: "page",
+    priorities: Priority[],
+    source: "page" | "background",
   ): Promise<void> {
     const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
     syllabusMetadata.priorities = priorities;
@@ -2650,7 +2620,7 @@ export class SyllabusManager {
   static async setClassTitle(
     collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
-    title: string,
+    title: string | null | undefined,
     source: "page" | "item-pane",
   ): Promise<void> {
     const classMetadata = SyllabusManager.getClassMetadata(
@@ -2686,7 +2656,7 @@ export class SyllabusManager {
   static async setClassDescription(
     collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
-    description: string,
+    description: string | null | undefined,
     source: "page",
   ): Promise<void> {
     const classMetadata = SyllabusManager.getClassMetadata(
@@ -2709,7 +2679,7 @@ export class SyllabusManager {
   static getClassReadingDate(
     collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
-  ): string | undefined {
+  ): SettingsClassMetadata["readingDate"] {
     const metadata = SyllabusManager.getClassMetadata(
       collectionId,
       classNumber,
@@ -2719,12 +2689,12 @@ export class SyllabusManager {
 
   /**
    * Set reading date for a specific collection and class number
-   * Accepts ISO date string or undefined
+   * Accepts ISO date string or undefined/null
    */
   static async setClassReadingDate(
     collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
-    readingDate: string | undefined,
+    readingDate: string | null | undefined,
     source: "page" | "item-pane",
   ): Promise<void> {
     const classMetadata = SyllabusManager.getClassMetadata(
@@ -2821,97 +2791,6 @@ export class SyllabusManager {
   }
 
   /**
-   * Get default priorities (used when no custom priorities are set)
-   */
-  static getDefaultPriorities(): CustomPriority[] {
-    return [
-      {
-        id: SyllabusPriority.COURSE_INFO,
-        name: this.PRIORITY_LABELS[SyllabusPriority.COURSE_INFO],
-        color: this.PRIORITY_COLORS[SyllabusPriority.COURSE_INFO],
-        order: 1,
-      },
-      {
-        id: SyllabusPriority.ESSENTIAL,
-        name: this.PRIORITY_LABELS[SyllabusPriority.ESSENTIAL],
-        color: this.PRIORITY_COLORS[SyllabusPriority.ESSENTIAL],
-        order: 2,
-      },
-      {
-        id: SyllabusPriority.RECOMMENDED,
-        name: this.PRIORITY_LABELS[SyllabusPriority.RECOMMENDED],
-        color: this.PRIORITY_COLORS[SyllabusPriority.RECOMMENDED],
-        order: 3,
-      },
-      {
-        id: SyllabusPriority.OPTIONAL,
-        name: this.PRIORITY_LABELS[SyllabusPriority.OPTIONAL],
-        color: this.PRIORITY_COLORS[SyllabusPriority.OPTIONAL],
-        order: 4,
-      },
-    ];
-  }
-
-  /**
-   * Get priorities for a collection (custom or default)
-   */
-  static getPrioritiesForCollection(
-    collectionId: number | GetByLibraryAndKeyArgs,
-  ): CustomPriority[] {
-    const metadata = this.getSyllabusMetadata(collectionId);
-    if (metadata.priorities && metadata.priorities.length > 0) {
-      // Sort by order
-      return [...metadata.priorities].sort((a, b) => a.order - b.order);
-    }
-    return this.getDefaultPriorities();
-  }
-
-  /**
-   * Get priority order for a specific priority in a collection
-   */
-  static getPriorityOrderForCollection(
-    collectionId: number | GetByLibraryAndKeyArgs,
-    priority: SyllabusPriority | "" | undefined,
-  ): number {
-    if (!priority) {
-      return 999; // No priority = lowest
-    }
-    const priorities = this.getPrioritiesForCollection(collectionId);
-    const customPriority = priorities.find((p) => p.id === priority);
-    return customPriority?.order ?? 999;
-  }
-
-  /**
-   * Get priority color for a specific priority in a collection
-   */
-  static getPriorityColorForCollection(
-    collectionId: number | GetByLibraryAndKeyArgs,
-    priority: SyllabusPriority | "" | undefined,
-  ): string {
-    if (!priority) {
-      return "#AAA";
-    }
-    const priorities = this.getPrioritiesForCollection(collectionId);
-    const customPriority = priorities.find((p) => p.id === priority);
-    return customPriority?.color ?? this.PRIORITY_COLORS[priority] ?? "#AAA";
-  }
-
-  /**
-   * Get priority label for a specific priority in a collection
-   */
-  static getPriorityLabelForCollection(
-    collectionId: number | GetByLibraryAndKeyArgs,
-    priority: SyllabusPriority | "" | undefined,
-  ): string {
-    if (!priority) {
-      return "";
-    }
-    const priorities = this.getPrioritiesForCollection(collectionId);
-    const customPriority = priorities.find((p) => p.id === priority);
-    return customPriority?.name ?? this.PRIORITY_LABELS[priority] ?? "";
-  }
-
-  /**
    * Get nomenclature for a collection (defaults to "class")
    */
   static getNomenclature(
@@ -2944,29 +2823,97 @@ export class SyllabusManager {
   }
 
   /**
+   * Get default priorities (used when no custom priorities are set)
+   */
+  static getDefaultPriorities(): Priority[] {
+    return [...DEFAULT_PRIORITIES];
+  }
+
+  /**
+   * Get priorities for a collection (custom or default)
+   */
+  static getPrioritiesForCollection(
+    collectionId: number | GetByLibraryAndKeyArgs,
+  ): Priority[] {
+    const metadata = this.getSyllabusMetadata(collectionId);
+    if (metadata.priorities && metadata.priorities.length > 0) {
+      // Sort by order
+      return [...metadata.priorities].sort((a, b) => a.order - b.order);
+    }
+    return this.getDefaultPriorities();
+  }
+
+  /**
+   * Get priority order for a specific priority in a collection
+   */
+  static getPriorityOrderForCollection(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    priority: string | "" | null | undefined,
+  ): number {
+    if (!priority) {
+      return 999; // No priority = lowest
+    }
+    const priorities = this.getPrioritiesForCollection(collectionId);
+    const customPriority = priorities.find((p) => p.id === priority);
+    return customPriority?.order ?? 999;
+  }
+
+  /**
+   * Get priority color for a specific priority in a collection
+   */
+  static getPriorityColorForCollection(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    priority: string | "" | undefined,
+  ): string {
+    if (!priority) {
+      return "#AAA";
+    }
+    const priorities = this.getPrioritiesForCollection(collectionId);
+    const customPriority = priorities.find((p) => p.id === priority);
+    return customPriority?.color ?? "#AAA";
+  }
+
+  /**
+   * Get priority label for a specific priority in a collection
+   */
+  static getPriorityLabelForCollection(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    priority: string | "" | undefined,
+  ): string {
+    if (!priority) {
+      return "";
+    }
+    const priorities = this.getPrioritiesForCollection(collectionId);
+    const customPriority = priorities.find((p) => p.id === priority);
+    return customPriority?.name ?? "";
+  }
+
+  /**
    * Get priority color and label for a collection
    * Returns both in a single call to avoid duplicate lookups
    */
   static getPriorityDisplay(
     collectionId: number | GetByLibraryAndKeyArgs | undefined,
-    priority: SyllabusPriority | "" | undefined,
-  ): { color: string; label: string } {
-    if (!priority) {
-      return { color: "#AAA", label: "" };
+    id: string | undefined,
+  ): { color: string; label: string; value: string } {
+    if (!id) {
+      return { color: "#AAA", label: "", value: "" };
     }
-
-    const priorityEnum = priority as SyllabusPriority;
 
     if (collectionId !== undefined) {
       return {
-        color: this.getPriorityColorForCollection(collectionId, priorityEnum),
-        label: this.getPriorityLabelForCollection(collectionId, priorityEnum),
+        color: this.getPriorityColorForCollection(collectionId, id),
+        label: this.getPriorityLabelForCollection(collectionId, id),
+        value: id,
       };
     }
 
+    // Fall back to default priorities when no collection is provided
+    const defaultPriority = DEFAULT_PRIORITIES.find((p) => p.id === id);
     return {
-      color: this.PRIORITY_COLORS[priorityEnum] || "#AAA",
-      label: this.PRIORITY_LABELS[priorityEnum] || "",
+      color: defaultPriority?.color ?? "#AAA",
+      label: defaultPriority?.name ?? "",
+      value: id,
     };
   }
 
@@ -3002,7 +2949,7 @@ export class SyllabusManager {
   static createPriorityDisplay(
     doc: Document,
     collectionId: number | GetByLibraryAndKeyArgs | undefined,
-    priority: SyllabusPriority | "" | undefined,
+    priority: string | "" | undefined,
     options?: {
       dotSize?: number;
       showDot?: boolean;
@@ -3068,7 +3015,7 @@ export class SyllabusManager {
           );
 
           // Only include classes with reading dates
-          if (readingDate === undefined) continue;
+          if (!readingDate) continue;
 
           if (!result.has(readingDate)) {
             result.set(readingDate, new Map());
@@ -3122,6 +3069,14 @@ export class SyllabusManager {
     imported: SettingsSyllabusMetadata,
   ): SettingsSyllabusMetadata {
     const merged: SettingsSyllabusMetadata = { ...existing };
+    const {
+      description,
+      classes,
+      nomenclature,
+      priorities,
+      locked,
+      ...restOfImported
+    } = imported;
 
     // Merge description (imported takes precedence if provided)
     if (imported.description !== undefined) {
@@ -3157,6 +3112,11 @@ export class SyllabusManager {
     // Replace locked status if provided
     if (imported.locked !== undefined) {
       merged.locked = imported.locked;
+    }
+
+    for (const key in restOfImported) {
+      // @ts-expect-error - key is a valid key in SettingsSyllabusMetadata
+      merged[key] = restOfImported[key];
     }
 
     return merged;
@@ -3213,8 +3173,11 @@ export class SyllabusManager {
   static async importSyllabusMetadata(
     collectionId: number | GetByLibraryAndKeyArgs,
     importedJsonString: string,
-    source: "page" = "page",
-  ): Promise<void> {
+    source: "page" | "background" = "page",
+  ): Promise<{
+    collectionAndLibraryKey: string;
+    syllabusData: SettingsSyllabusMetadata;
+  }> {
     // Parse JSON
     let parsedData: unknown;
     try {
@@ -3366,12 +3329,27 @@ export class SyllabusManager {
 
     // Get current metadata and merge with imported data
     const existingMetadata = this.getSyllabusMetadata(collectionId);
+    ztoolkit.log("importSyllabusMetadata: metadata before merge:", {
+      metadataData,
+      existingMetadata,
+    });
     const mergedMetadata = this.deepMergeMetadata(
       existingMetadata,
       metadataValidation.data,
     );
+    ztoolkit.log("importSyllabusMetadata: metadata after merge:", {
+      mergedMetadata,
+    });
 
     // Save merged metadata
     await this.setCollectionMetadata(collectionId, mergedMetadata, source);
+
+    return {
+      collectionAndLibraryKey: this.getCollectionReferenceString(
+        targetCollection.libraryID,
+        targetCollection.key,
+      ),
+      syllabusData: mergedMetadata,
+    };
   }
 }

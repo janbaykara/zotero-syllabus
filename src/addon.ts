@@ -2,6 +2,7 @@ import { config } from "../package.json";
 import { ColumnOptions, DialogHelper } from "zotero-plugin-toolkit";
 import hooks from "./hooks";
 import { createZToolkit } from "./utils/ztoolkit";
+import { SyllabusManager } from "./modules/syllabus";
 
 class Addon {
   public data: {
@@ -24,7 +25,21 @@ class Addon {
   // Lifecycle hooks
   public hooks: typeof hooks;
   // APIs
-  public api: object;
+  public api: {
+    setTalisSyllabusMetadata: (
+      collectionId: number,
+      metadata: {
+        description?: string;
+        priorities?: Array<{
+          id: string;
+          name: string;
+          color: string;
+          order: number;
+        }>;
+        nomenclature?: string;
+      },
+    ) => Promise<void>;
+  };
 
   constructor() {
     this.data = {
@@ -35,7 +50,39 @@ class Addon {
       ztoolkit: createZToolkit(),
     };
     this.hooks = hooks;
-    this.api = {};
+    this.api = {
+      setTalisSyllabusMetadata: async (collectionId, metadata) => {
+        try {
+          if (metadata.description) {
+            await SyllabusManager.setCollectionDescription(
+              collectionId,
+              metadata.description,
+              "page",
+            );
+          }
+          if (metadata.priorities && metadata.priorities.length > 0) {
+            await SyllabusManager.setPriorities(
+              collectionId,
+              metadata.priorities,
+              "page",
+            );
+          }
+          if (metadata.nomenclature) {
+            await SyllabusManager.setNomenclature(
+              collectionId,
+              metadata.nomenclature,
+              "page",
+            );
+          }
+          ztoolkit.log(
+            "Talis syllabus metadata set for collection",
+            collectionId,
+          );
+        } catch (error) {
+          ztoolkit.log("Error setting Talis syllabus metadata:", error);
+        }
+      },
+    };
   }
 }
 

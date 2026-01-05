@@ -3,6 +3,11 @@ import { getString, initLocale } from "./utils/locale";
 import { registerPrefsScripts } from "./modules/preferenceScript";
 import { createZToolkit } from "./utils/ztoolkit";
 import { getCSSUrl } from "./utils/css";
+import { getSelectedCollection } from "./utils/zotero";
+import {
+  ExportSyllabusMetadataSchema,
+  SettingsSyllabusMetadata,
+} from "./utils/schemas";
 
 async function onStartup() {
   await Promise.all([
@@ -16,6 +21,9 @@ async function onStartup() {
   // Install Talis Aspire translator
   SyllabusManager.onStartup();
 
+  // Register HTTP endpoint for translator to set Talis syllabus metadata
+  registerTalisMetadataEndpoint();
+
   await Promise.all(
     Zotero.getMainWindows().map((win) => onMainWindowLoad(win)),
   );
@@ -23,6 +31,161 @@ async function onStartup() {
   // Mark initialized as true to confirm plugin loading status
   // outside of the plugin (e.g. scaffold testing process)
   addon.data.initialized = true;
+}
+
+/**
+ * Register HTTP endpoint for translators to set Talis syllabus metadata
+ * Endpoint: /syllabus/setTalisMetadata
+ * Method: POST
+ * Body: { collectionId: number, metadata: { description?, priorities?, nomenclature? } }
+ */
+function registerTalisMetadataEndpoint() {
+  // Check if Zotero.Server.Endpoints exists (available in Zotero 7+)
+  if (
+    typeof Zotero.Server === "undefined" ||
+    typeof Zotero.Server.Endpoints === "undefined"
+  ) {
+    ztoolkit.log(
+      "Zotero.Server.Endpoints not available, skipping endpoint registration",
+    );
+    return;
+  }
+
+  // Register Hello World test endpoint
+  const HelloWorld = function () {};
+  HelloWorld.prototype = {
+    supportedMethods: ["GET"],
+    supportedDataTypes: ["application/json"],
+    permitBookmarklet: true,
+
+    init: async function (req: any) {
+      ztoolkit.log("Hello World endpoint called!");
+      return [
+        200,
+        "application/json",
+        JSON.stringify({ message: "Hello World from Zotero Syllabus!" }),
+      ];
+    },
+  };
+
+  (Zotero.Server.Endpoints as any)["/syllabus/hello"] = HelloWorld;
+  ztoolkit.log("Registered /syllabus/hello endpoint");
+
+  const SetTalisMetadata = function () {};
+  SetTalisMetadata.prototype = {
+    supportedMethods: ["POST"],
+    supportedDataTypes: [
+      "application/x-www-form-urlencoded",
+      "application/json",
+    ],
+    permitBookmarklet: true,
+
+    init: async function (req: any) {
+      ztoolkit.log("syllabus/setTalisMetadata endpoint called", req);
+      try {
+        // Get metadata from request body
+        if (!req.data) {
+          ztoolkit.log("No data in request body");
+          return [
+            400,
+            "application/json",
+            JSON.stringify({ error: "data required in request body" }),
+          ];
+        }
+
+        const { metadata } = req.data;
+
+        if (!metadata) {
+          ztoolkit.log("No metadata in request body");
+          return [
+            400,
+            "application/json",
+            JSON.stringify({ error: "metadata required in request body" }),
+          ];
+        }
+
+        const validatedMetadataFileContents =
+          ExportSyllabusMetadataSchema.safeParse(metadata);
+        if (!validatedMetadataFileContents.success) {
+          ztoolkit.log(
+            "Invalid metadata JSON",
+            validatedMetadataFileContents,
+            validatedMetadataFileContents,
+          );
+          return [
+            400,
+            "application/json",
+            JSON.stringify({
+              error: "Invalid metadata JSON",
+              details: validatedMetadataFileContents,
+            }),
+          ];
+        }
+
+        ztoolkit.log("Validated metadata:", validatedMetadataFileContents.data);
+
+        // Get the active collection ID
+        const collection = getSelectedCollection();
+        const collectionId = collection?.id;
+
+        if (!collectionId) {
+          ztoolkit.log("No collection selected");
+          return [
+            400,
+            "application/json",
+            JSON.stringify({ error: "No collection selected" }),
+          ];
+        }
+
+        ztoolkit.log(
+          "Setting Talis syllabus metadata for collection",
+          collectionId,
+          metadata,
+        );
+
+        try {
+          const { collectionAndLibraryKey, syllabusData } =
+            await SyllabusManager.importSyllabusMetadata(
+              collectionId,
+              JSON.stringify(validatedMetadataFileContents.data),
+              "background",
+            );
+
+          return [
+            200,
+            "application/json",
+            JSON.stringify({
+              collectionAndLibraryKey: collectionAndLibraryKey as string,
+              syllabusData: syllabusData as SettingsSyllabusMetadata,
+            }),
+          ];
+        } catch (error) {
+          ztoolkit.log("Error setting Talis syllabus metadata:", error);
+          return [
+            500,
+            "application/json",
+            JSON.stringify({
+              error: error instanceof Error ? error.message : String(error),
+            }),
+          ];
+        }
+      } catch (error) {
+        ztoolkit.log("Error setting Talis syllabus metadata:", error);
+        return [
+          500,
+          "application/json",
+          JSON.stringify({
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        ];
+      }
+    },
+  };
+
+  // Register the endpoint
+  (Zotero.Server.Endpoints as any)["/syllabus/setTalisMetadata"] =
+    SetTalisMetadata;
+  ztoolkit.log("Registered /syllabus/setTalisMetadata endpoint");
 }
 
 function registerStyleSheet(win: _ZoteroTypes.MainWindow) {

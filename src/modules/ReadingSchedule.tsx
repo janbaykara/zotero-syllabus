@@ -413,9 +413,7 @@ export function ReadingSchedule() {
                                           slim={
                                             compactMode ||
                                             !priority ||
-                                            priority ===
-                                              SyllabusManager.priorityKeys
-                                                .OPTIONAL
+                                            priority === "optional"
                                           }
                                           compactMode={compactMode}
                                           isLocked={true}

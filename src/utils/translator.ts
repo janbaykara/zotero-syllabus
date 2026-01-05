@@ -5,20 +5,35 @@
 
 export async function installTalisAspireTranslator(): Promise<void> {
   try {
-    const code = await getFileByPath(
+    let code = await getFileByPath(
       `content/translators/tails-aspire-custom.js`,
     );
+
+    if (!code || typeof code !== "string") {
+      ztoolkit.log("Error getting translator code");
+      return;
+    }
+
+    const PROD_PORT = 23119; // default
+    const DEV_PORT = 23124;
+    // If dev mode, replace 23119
+    if (process.env.NODE_ENV === "development") {
+      code = code.replace(String(PROD_PORT), String(DEV_PORT));
+    }
 
     const translatorID = "f16931f0-372e-4197-8927-05d2ba7599d8";
     const metadata = {
       translatorID: translatorID,
       label: "Talis Aspire for Zotero Syllabus",
       creator: "Jan Baykara",
-      target:
-        "^https?://([^/]+\\.)?(((my)?reading|resource|lib|cyprus|)lists|aspire\\.surrey|rl\\.talis)\\..+/(lists|items)/",
-      minVersion: "3.0",
+      // target:
+      // "^https?://([^/]+\\.)?(((my)?reading|resource|lib|cyprus|)lists|aspire\\.surrey|rl\\.talis)\\..+/(lists|items)/",
+      // https://rl.talis.com/3/ucl/lists/99449747-A091-3F6D-E08A-965F4A5C3149.html?lang=en-GB
+      // target: "^https?://([^/]+\\.)?rl\\.talis\\..+/(lists|items)/",
+      target: "",
+      minVersion: "7.0",
       maxVersion: "",
-      priority: 100,
+      priority: 320,
       inRepository: false,
       translatorType: 4,
       browserSupport: "gcsibv",

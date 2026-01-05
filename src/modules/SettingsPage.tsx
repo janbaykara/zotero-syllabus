@@ -2,10 +2,12 @@
 import { h, Fragment } from "preact";
 import { useState, useEffect, useCallback, useMemo } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
-import { SyllabusManager, CustomPriority } from "./syllabus";
+import { SyllabusManager } from "./syllabus";
 import pluralize from "pluralize";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { useDebouncedEffect } from "../utils/react/useDebouncedEffect";
+import { Priority, PrioritySchema } from "../utils/schemas";
+import { uuidv7 } from "uuidv7";
 
 interface SettingsPageProps {
   collectionId: number;
@@ -52,7 +54,7 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
   }, []);
 
   const handlePriorityChange = useCallback(
-    (priorityId: string, updates: Partial<CustomPriority>) => {
+    (priorityId: string, updates: Partial<Priority>) => {
       if (!priorities) return;
       const updated = priorities.map((p) =>
         p.id === priorityId ? { ...p, ...updates } : p,
@@ -93,12 +95,12 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
 
   const handleAddPriority = useCallback(() => {
     if (!priorities) return;
-    const newPriority: CustomPriority = {
-      id: `custom-${Date.now()}`,
+    const newPriority: Priority = PrioritySchema.parse({
+      id: `custom-${uuidv7()}`,
       name: "New Priority",
       color: "#808080",
       order: priorities.length + 1,
-    };
+    });
     setPriorities([...priorities, newPriority]);
   }, [priorities, setPriorities]);
 
@@ -214,10 +216,10 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
 }
 
 interface PriorityEditorProps {
-  priority: CustomPriority;
+  priority: Priority;
   isFirst: boolean;
   isLast: boolean;
-  onUpdate: (updates: Partial<CustomPriority>) => void;
+  onUpdate: (updates: Partial<Priority>) => void;
   onMove: (direction: "up" | "down") => void;
   onDelete: () => void;
   canDelete: boolean;
@@ -271,7 +273,7 @@ function PriorityEditor({
         <div className="flex flex-0! items-center gap-2">
           <input
             type="color"
-            value={priority.color}
+            value={priority.color || "#CCC"}
             onChange={(e) => onUpdate({ color: e.currentTarget.value })}
             className="w-12 h-12 rounded border border-quinary cursor-pointer"
             title="Priority color"

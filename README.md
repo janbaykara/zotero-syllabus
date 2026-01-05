@@ -234,3 +234,6 @@ addon/
   - Docs: https://windingwind.github.io/zotero-plugin-toolkit/
 - Zotero 7 plugin development guide: https://gist.github.com/EwoutH/04c8df5a97963b5b46cec9f392ceb103#file-zotero_7_plugin_dev_guide-md
 - Zotero 7 plugin technical notes: https://www.zotero.org/support/dev/zotero_7_for_developers#plugin_changes
+- https://www.zotero.org/support/kb/connector_zotero_unavailable
+- Translator code API: https://github.com/zotero/translators/blob/master/index.d.ts
+- Zotero server code: https://github.com/zotero/zotero/blob/47e6a0f7abaae0ad90c9f39c385fe24efd7071bf/chrome/content/zotero/xpcom/server/server_connector.js#L927

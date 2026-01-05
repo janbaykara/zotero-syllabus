@@ -6,19 +6,9 @@ import { uuidv7 } from "uuidv7";
 declare const ztoolkit: ZToolkit;
 
 /**
- * Syllabus Priority enum
- */
-export enum SyllabusPriority {
-  COURSE_INFO = "course-info",
-  ESSENTIAL = "essential",
-  RECOMMENDED = "recommended",
-  OPTIONAL = "optional",
-}
-
-/**
  * Syllabus Priority enum schema
  */
-export const SyllabusPrioritySchema = z.nativeEnum(SyllabusPriority);
+export const SyllabusPrioritySchema = z.string();
 
 /**
  * Assignment Status schema
@@ -54,9 +44,9 @@ export const classNumberSchema = z.number().int().min(1).optional();
 const ItemSyllabusAssignmentV2Schema = z.object({
   id: z.string().default(generateAssignmentId),
   classNumber: classNumberSchema,
-  priority: SyllabusPrioritySchema.optional(),
-  classInstruction: z.string().optional(),
-  status: AssignmentStatusSchema.optional(),
+  priority: SyllabusPrioritySchema.optional().nullable(),
+  classInstruction: z.string().optional().nullable(),
+  status: AssignmentStatusSchema.optional().nullable(),
 });
 
 /**
@@ -276,22 +266,52 @@ export const ItemSyllabusDataSchema = ItemSyllabusDataEntity.latestSchema;
 /**
  * Custom Priority schema
  */
-export const CustomPrioritySchema = z.object({
+export const PrioritySchema = z.object({
   id: z.string(),
   name: z.string(),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/), // Hex color
+  color: z.string().optional().nullable(), // Hex color, nullable
   order: z.number().int(),
 });
+
+/**
+ * Default priorities - defined here to avoid circular dependency
+ */
+export const DEFAULT_PRIORITIES: z.infer<typeof PrioritySchema>[] = [
+  {
+    id: "course-info",
+    name: "Course Information",
+    color: "#F97316",
+    order: 1,
+  },
+  {
+    id: "essential",
+    name: "Essential",
+    color: "#8B5CF6",
+    order: 2,
+  },
+  {
+    id: "recommended",
+    name: "Recommended",
+    color: "#3B82F6",
+    order: 3,
+  },
+  {
+    id: "optional",
+    name: "Optional",
+    color: "#AAA",
+    order: 4,
+  },
+];
 
 /**
  * Settings Class Metadata schema
  */
 export const SettingsClassMetadataSchema = z.object({
-  title: z.string().optional(),
-  description: z.string().optional(),
+  title: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
   itemOrder: z.array(z.string()).optional(),
-  readingDate: z.string().optional(), // ISO date string
-  status: ClassStatusSchema.optional(),
+  readingDate: z.string().optional().nullable(), // ISO date string
+  status: ClassStatusSchema.optional().nullable(),
 });
 
 /**
@@ -333,11 +353,13 @@ const transformClasses = <T extends z.ZodTypeAny>(classSchema: T) => {
  * Automatically filters out null classes, empty itemOrder arrays, and empty class entries during parsing
  */
 export const SettingsSyllabusMetadataSchema = z.object({
-  description: z.string().optional(),
+  description: z.string().optional().nullable(),
+  institution: z.string().optional().nullable(),
+  courseCode: z.string().optional().nullable(),
   classes: transformClasses(SettingsClassMetadataSchema),
   nomenclature: z.string().optional(),
-  priorities: z.array(CustomPrioritySchema).optional(),
-  locked: z.boolean().optional(),
+  priorities: z.array(PrioritySchema).default(DEFAULT_PRIORITIES),
+  locked: z.boolean().optional().nullable(),
 });
 
 /**
@@ -355,7 +377,7 @@ export const ExportSyllabusMetadataSchema = SettingsSyllabusMetadataSchema.omit(
     locked: true,
   },
 ).extend({
-  collectionTitle: z.string(),
+  collectionTitle: z.string().optional().nullable(),
   classes: transformClasses(ExportClassMetadataSchema),
   rdf: z.string().optional(), // RDF serialized as XML string
 });
@@ -487,7 +509,7 @@ export type ItemSyllabusAssignment = z.infer<
   typeof ItemSyllabusAssignmentEntity.latestSchema
 >;
 export type ItemSyllabusData = z.infer<typeof ItemSyllabusDataSchema>;
-export type CustomPriority = z.infer<typeof CustomPrioritySchema>;
+export type Priority = z.infer<typeof PrioritySchema>;
 export type SettingsClassMetadata = z.infer<typeof SettingsClassMetadataSchema>;
 export type ExportClassMetadata = z.infer<typeof ExportClassMetadataSchema>;
 export type SettingsSyllabusMetadata = z.infer<

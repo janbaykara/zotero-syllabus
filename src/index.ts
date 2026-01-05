@@ -12,6 +12,17 @@ if (!basicTool.getGlobal("Zotero")[config.addonInstance]) {
   });
   // @ts-expect-error - Plugin instance is not typed
   Zotero[config.addonInstance] = addon;
+
+  // Expose API for translators to use
+  if (typeof window !== "undefined") {
+    (window as any).ZoteroSyllabus = {
+      setTalisSyllabusMetadata: addon.api.setTalisSyllabusMetadata,
+    };
+  }
+  // Also expose on globalThis for non-window contexts
+  _globalThis.ZoteroSyllabus = {
+    setTalisSyllabusMetadata: addon.api.setTalisSyllabusMetadata,
+  };
 }
 
 function defineGlobal(name: Parameters<BasicTool["getGlobal"]>[0]): void;
