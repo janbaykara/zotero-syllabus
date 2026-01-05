@@ -3,11 +3,14 @@
  * This allows the translator to be used via Zotero.Translators.get() like any other translator.
  */
 
-export async function installTalisAspireTranslator(): Promise<void> {
+export async function installTalisAspireTranslator(rootURI: string): Promise<void> {
+  ztoolkit.log("installTalisAspireTranslator", { rootURI });
+  let path = `${rootURI}/content/translators/tails-aspire-custom.js`
+  if (rootURI.startsWith("jar:")) {
+    path = `${rootURI}content/translators/tails-aspire-custom.js`
+  }
   try {
-    let code = await getFileByPath(
-      `content/translators/tails-aspire-custom.js`,
-    );
+    let code = await getFileByPath(path);
 
     if (!code || typeof code !== "string") {
       ztoolkit.log("Error getting translator code");
@@ -51,7 +54,10 @@ export async function installTalisAspireTranslator(): Promise<void> {
         text: "✅ Talis syllabus scraper successfully installed",
         type: "success",
       })
-      .addDescription(`You can now extract structured syllabi from Talis Aspire collections\n like https://rl.talis.com/3/ucl.\n(Using port ${PORT}.)`)
+      .createLine({
+        text: `You can now extract structured syllabi from Talis Aspire collections\n like https://rl.talis.com/3/ucl.\n(Using port ${PORT}.)`,
+        type: "default",
+      })
       .show();
     ztoolkit.log(" Talis syllabus scraper successfully installed");
   } catch (error) {
@@ -63,7 +69,14 @@ export async function installTalisAspireTranslator(): Promise<void> {
         text: `❌ Error installing Talis syllabus scraper`,
         type: "fail",
       })
-      .addDescription(error instanceof Error ? error.message : String(error))
+      .createLine({
+        text: `Tried loading from ${path}`,
+        type: "fail",
+      })
+      .createLine({
+        text: error instanceof Error ? error.message : String(error),
+        type: "fail",
+      })
       .show();
     ztoolkit.log(`Error installing Talis Aspire translator: ${error}`);
     // Don't throw - allow plugin to continue even if translator install fails
@@ -72,7 +85,7 @@ export async function installTalisAspireTranslator(): Promise<void> {
 
 async function getFileByPath(path: string) {
   // Convert rootURI to a file path using Services.io
-  const sourceURI = (Services.io as any).newURI(`${rootURI}${path}`);
+  const sourceURI = (Services.io as any).newURI(path)
   const fileHandler = (Services.io as any)
     .getProtocolHandler("file")
     .QueryInterface((Components.interfaces as any).nsIFileProtocolHandler);

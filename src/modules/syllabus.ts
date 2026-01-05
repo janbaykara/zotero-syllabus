@@ -217,7 +217,7 @@ export class SyllabusManager {
   // Create an ExtraFieldTool instance for safe extra field operations
   static extraFieldTool = new ExtraFieldTool();
 
-  static onStartup() {
+  static onStartup(rootURI: string) {
     ztoolkit.log("SyllabusManager.onStartup");
     // this.migrateCollectionIdentifiers();
     this.registerPrefs();
@@ -228,7 +228,7 @@ export class SyllabusManager {
     this.registerSyllabusItemPaneSection();
 
     Zotero.Promise.delay(10000).then(() => {
-      installTalisAspireTranslator();
+      installTalisAspireTranslator(rootURI);
     });
   }
 
