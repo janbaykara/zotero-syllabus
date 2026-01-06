@@ -3024,12 +3024,12 @@ export function SyllabusItemCard({
           </>
         )}
       </div>
-      {!!viewableAttachments?.length && (
+      {(!!viewableAttachments?.length || url) && (
         <div
           className="syllabus-item-actions shrink-0 inline-flex flex-col gap-1 in-[.print]:hidden"
           draggable={false}
         >
-          {/* Delete assignment button - only show if there's an assignment */}
+          {/* Attachment buttons */}
           {viewableAttachments.map((viewableAttachment) => {
             const attachmentLabel =
               viewableAttachment?.type === "pdf"
@@ -3066,8 +3066,9 @@ export function SyllabusItemCard({
               </div>
             );
           })}
+          {/* URL link button */}
           {url && (
-            <div className="focus-states-target print:hidden">
+            <div className="focus-states-target in-[.print]:hidden">
               <button
                 className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
                 onClick={handleUrlClick}
