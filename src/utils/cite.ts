@@ -1,6 +1,41 @@
 /**
+ * Get the quick copy CSL style from Zotero's export settings
+ * @returns The style URL or null if not found
+ */
+function getQuickCopyStyle(): string | null {
+  try {
+    // Get the quick copy setting from Zotero preferences
+    // The preference format is typically like "bibliography=http://www.zotero.org/styles/apa"
+    const quickCopySetting = Zotero.Prefs.get(
+      "export.quickCopy.setting",
+    ) as string;
+    ztoolkit.log("getQuickCopyStyle: quickCopySetting:", quickCopySetting);
+    if (!quickCopySetting) {
+      return null;
+    }
+
+    // Parse the setting to extract the style URL
+    // Format is typically "bibliography=http://www.zotero.org/styles/apa" or just the URL
+    const match = quickCopySetting.match(/bibliography=(.+)/);
+    if (match && Array.isArray(match) && match.length > 1 && match[1]) {
+      return match[1];
+    }
+
+    // If it's just a URL, return it directly
+    // if (quickCopySetting.startsWith("http://") || quickCopySetting.startsWith("https://")) {
+    //   return quickCopySetting;
+    // }
+
+    return null;
+  } catch (error) {
+    ztoolkit.log("Error getting quick copy style:", error);
+    return null;
+  }
+}
+
+/**
  * Generate a bibliographic reference for an item using Zotero's CSL processor
- * and the user's preferred citation style.
+ * and the user's preferred citation style (defaults to quick copy style from Settings > Export).
  * @param item - The Zotero item to generate a reference for
  * @returns The formatted bibliographic reference, or null if generation fails
  */
@@ -10,12 +45,24 @@ export async function generateBibliographicReference(
 ): Promise<string | null> {
   const itemArray = Array.isArray(item) ? item : [item];
   try {
-    const styles = Zotero.Styles.getVisible();
-    const style = styles[styles.length - 1];
+    // Try to get the quick copy style from export settings first
+    let styleUrl: string | null = getQuickCopyStyle();
+
+    // Fallback to the last visible style if quick copy style is not set
+    if (!styleUrl) {
+      const styles = Zotero.Styles.getVisible();
+      if (styles.length > 0) {
+        styleUrl = styles[styles.length - 1].url;
+      }
+    }
+
+    if (!styleUrl) {
+      throw new Error("No style available");
+    }
+
     const result = await Zotero.QuickCopy.getContentFromItems(
       itemArray,
-      // format,
-      `bibliography=${style.url}`,
+      `bibliography=${styleUrl}`,
     );
     if (result?.text) {
       return result.text;
