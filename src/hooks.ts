@@ -8,6 +8,7 @@ import {
   ExportSyllabusMetadataSchema,
   SettingsSyllabusMetadata,
 } from "./utils/schemas";
+import { zoteroCache } from "./utils/cache";
 
 async function onStartup(rootURI: string) {
   await Promise.all([
@@ -17,6 +18,9 @@ async function onStartup(rootURI: string) {
   ]);
 
   initLocale();
+
+  // Initialize cache system
+  zoteroCache.initialize();
 
   // Install Talis Aspire translator
   SyllabusManager.onStartup(rootURI);
@@ -273,6 +277,7 @@ async function onMainWindowUnload(win: _ZoteroTypes.MainWindow): Promise<void> {
 
 function onShutdown(): void {
   SyllabusManager.onShutdown();
+  zoteroCache.shutdown();
   ztoolkit.unregisterAll();
   addon.data.dialog?.window?.close();
   // Remove addon object

@@ -16,6 +16,7 @@ import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import { useSyllabi } from "./react-zotero-sync/useSyllabi";
 import { getPref } from "../utils/prefs";
 import { TabManager } from "../utils/tabManager";
+import { getCachedCollectionById } from "../utils/cache";
 
 setDefaultOptions({
   weekStartsOn: 1,
@@ -145,7 +146,7 @@ export function ReadingSchedule() {
   const handleCollectionClick = (collectionId: number) => {
     try {
       const ZoteroPane = ztoolkit.getGlobal("ZoteroPane");
-      const collection = Zotero.Collections.get(collectionId);
+      const collection = getCachedCollectionById(collectionId);
       if (!collection) return;
 
       const collectionsView = ZoteroPane.collectionsView;
@@ -162,7 +163,7 @@ export function ReadingSchedule() {
   const handleItemClick = (item: Zotero.Item, collectionId: number) => {
     try {
       const ZoteroPane = ztoolkit.getGlobal("ZoteroPane");
-      const collection = Zotero.Collections.get(collectionId);
+      const collection = getCachedCollectionById(collectionId);
 
       if (collection) {
         const collectionsView = ZoteroPane.collectionsView;

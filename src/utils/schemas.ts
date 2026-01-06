@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createVersionedEntity, defineVersion } from "verzod";
 import { uuidv7 } from "uuidv7";
+import { getCachedCollectionById } from "./cache";
 
 // ztoolkit is available as a global
 declare const ztoolkit: ZToolkit;
@@ -224,7 +225,7 @@ export const ItemSyllabusDataEntity = createVersionedEntity({
           }
 
           // Get collection to extract libraryID and key
-          const collection = Zotero.Collections.get(collectionId);
+          const collection = getCachedCollectionById(collectionId);
           if (!collection) {
             // Collection doesn't exist (orphaned data), skip
             // ztoolkit.log(

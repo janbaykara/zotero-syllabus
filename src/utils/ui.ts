@@ -1,3 +1,5 @@
+import { getCachedItem } from "./cache";
+
 /**
  * Helper to escape HTML special characters
  */
@@ -56,21 +58,17 @@ export function getThumbnailForItem(item: Zotero.Item): string | null {
   if (!imageSrc) {
     const attachments = item.getAttachments();
     for (const attId of attachments) {
-      try {
-        const att = Zotero.Items.get(attId);
-        if (
-          att &&
-          att.isAttachment() &&
-          att.attachmentContentType?.startsWith("image/")
-        ) {
-          const file = att.getFilePath();
-          if (file) {
-            imageSrc = `file://${file}`;
-            break;
-          }
+      const att = getCachedItem(attId);
+      if (
+        att &&
+        att.isAttachment() &&
+        att.attachmentContentType?.startsWith("image/")
+      ) {
+        const file = att.getFilePath();
+        if (file) {
+          imageSrc = `file://${file}`;
+          break;
         }
-      } catch (e) {
-        // Continue to next attachment
       }
     }
   }

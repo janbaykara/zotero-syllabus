@@ -1,4 +1,5 @@
 import { config } from "../../package.json";
+import { getCachedPref } from "./cache";
 
 type PluginPrefsMap = _ZoteroTypes.Prefs["PluginPrefsMap"];
 
@@ -14,12 +15,12 @@ export const PREFS_KEYS: (keyof PluginPrefsMap)[] = [
 const PREFS_PREFIX = config.prefsPrefix;
 
 /**
- * Get preference value.
- * Wrapper of `Zotero.Prefs.get`.
+ * Get preference value (cached).
+ * Wrapper of `Zotero.Prefs.get` with caching.
  * @param key
  */
 export function getPref<K extends keyof PluginPrefsMap>(key: K) {
-  return Zotero.Prefs.get(`${PREFS_PREFIX}.${key}`, true) as PluginPrefsMap[K];
+  return getCachedPref(`${PREFS_PREFIX}.${key}`) as PluginPrefsMap[K];
 }
 
 /**

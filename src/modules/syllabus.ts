@@ -31,6 +31,14 @@ import {
 } from "../utils/schemas";
 import * as z from "zod";
 import { getRDFStringForCollection, importRDF } from "../utils/rdf";
+import {
+  getCachedItemSyllabusData,
+  getCachedPref,
+  getCachedCollection,
+  getCachedCollectionById,
+  getCachedCollectionByKey,
+  zoteroCache,
+} from "../utils/cache";
 
 enum SyllabusSettingsKey {
   COLLECTION_METADATA = "collectionMetadata",
@@ -74,13 +82,13 @@ export type { GetByLibraryAndKeyArgs };
 
 const tabManager = FEATURE_FLAG.READING_SCHEDULE
   ? new TabManager<Record<string, never>>({
-      type: "reading-list",
-      title: "Reading Schedule",
-      rootElementIdFactory: () => "reading-list-tab-root",
-      data: { icon: "book" },
-      componentFactory: () => h(ReadingSchedule, {}),
-      getTabId: () => "syllabus-reading-list-tab",
-    })
+    type: "reading-list",
+    title: "Reading Schedule",
+    rootElementIdFactory: () => "reading-list-tab-root",
+    data: { icon: "book" },
+    componentFactory: () => h(ReadingSchedule, {}),
+    getTabId: () => "syllabus-reading-list-tab",
+  })
   : null;
 
 export class SyllabusManager {
@@ -96,15 +104,6 @@ export class SyllabusManager {
   }
 
 
-  // Cache for parsed syllabus data per item to avoid repeated JSON parsing
-  private static syllabusDataCache = new WeakMap<
-    Zotero.Item,
-    ItemSyllabusData
-  >();
-
-  // Cache for class titles per collection to avoid repeated preference reads
-  private static classTitleCache = new Map<string, Map<number, string>>();
-  private static classTitleCacheCollectionId: string | null = null;
 
   /**
    * Normalize collection identifier to library ID and key
@@ -122,7 +121,7 @@ export class SyllabusManager {
 
     // If it's a number, get the collection and extract libraryID and key
     if (typeof collectionId === "number") {
-      const collection = Zotero.Collections.get(collectionId);
+      const collection = getCachedCollectionById(collectionId);
       if (!collection) {
         return null;
       }
@@ -150,14 +149,7 @@ export class SyllabusManager {
   static getCollectionFromIdentifier(
     collectionId: number | GetByLibraryAndKeyArgs,
   ): Zotero.Collection | null {
-    const normalized = this.normalizeCollectionIdentifier(collectionId);
-    if (!normalized) {
-      return null;
-    }
-    const collection = Zotero.Collections.getByLibraryAndKey(
-      normalized.libraryID,
-      normalized.key,
-    );
+    const collection = getCachedCollection(collectionId);
     return collection || null;
   }
 
@@ -268,7 +260,6 @@ export class SyllabusManager {
   //                 !ItemSyllabusDataEntity.isLatest(parsed)
   //               ) {
   //                 // Migrate and save back
-  //                 this.invalidateSyllabusDataCache(item);
   //                 const migratedJsonStr = JSON.stringify(result.value);
   //                 this.extraFieldTool
   //                   .setExtraField(item, this.SYLLABUS_DATA_KEY, migratedJsonStr)
@@ -493,13 +484,13 @@ export class SyllabusManager {
     const prefKey = SyllabusManager.getPreferenceKey(
       SyllabusSettingsKey.COLLECTION_VIEW_MODES,
     );
-    const _viewModes = String(Zotero.Prefs.get(prefKey, true) || "");
-    const viewModes = _viewModes
-      ? (JSON.parse(_viewModes) as Record<string, boolean>)
-      : {};
+    const viewModes = getCachedPref(
+      prefKey,
+      z.record(z.string(), z.boolean()),
+    ) || {};
 
     // Default to false (tree view) if not set for this collection
-    return viewModes?.[collectionId] === true;
+    return viewModes[collectionId] === true;
   }
 
   static setSyllabusPageVisible(enabled: boolean): void {
@@ -515,14 +506,16 @@ export class SyllabusManager {
     const prefKey = SyllabusManager.getPreferenceKey(
       SyllabusSettingsKey.COLLECTION_VIEW_MODES,
     );
-    const _viewModes = String(Zotero.Prefs.get(prefKey, true) || "");
-    const viewModes = _viewModes
-      ? (JSON.parse(_viewModes) as Record<string, boolean>)
-      : {};
+    const viewModes = getCachedPref(
+      prefKey,
+      z.record(z.string(), z.boolean()),
+    ) || {};
 
     // Update the preference for this collection
     viewModes[collectionId] = enabled;
     Zotero.Prefs.set(prefKey, JSON.stringify(viewModes), true);
+    // Invalidate cache after setting
+    zoteroCache.invalidatePref(prefKey);
   }
 
   // Function to create/update the toggle button
@@ -992,9 +985,9 @@ export class SyllabusManager {
             const classTitle =
               classNumber !== undefined
                 ? SyllabusManager.getClassTitle(
-                    selectedCollection.id,
-                    classNumber,
-                  )
+                  selectedCollection.id,
+                  classNumber,
+                )
                 : "";
             const priority = firstAssignment.priority || "";
             return `${sortKey}|${priority}|${classNumber ?? ""}|${classTitle}|${selectedCollection.id}`;
@@ -1256,13 +1249,13 @@ export class SyllabusManager {
           body,
           selectedCollection
             ? h(ItemPane, {
-                currentCollectionId: selectedCollection.id,
-                editable,
-              })
+              currentCollectionId: selectedCollection.id,
+              editable,
+            })
             : h("div", {
-                innerText: "Select a collection to view syllabus assignments",
-                className: "text-center text-gray-500 p-4",
-              }),
+              innerText: "Select a collection to view syllabus assignments",
+              className: "text-center text-gray-500 p-4",
+            }),
           "syllabus-item-pane",
         );
       },
@@ -1311,9 +1304,6 @@ export class SyllabusManager {
           });
           await item.saveTx();
         }
-      }
-      if (zoteroPane.itemPane) {
-        zoteroPane.itemPane.render();
       }
     };
 
@@ -1410,9 +1400,6 @@ export class SyllabusManager {
             await item.saveTx();
           }
         }
-        if (zoteroPane.itemPane) {
-          zoteroPane.itemPane.render();
-        }
       };
 
     const children: any[] = sortedClassNumbers.map((classNumber) => {
@@ -1456,9 +1443,6 @@ export class SyllabusManager {
           await item.saveTx();
         }
       }
-      if (zoteroPane.itemPane) {
-        zoteroPane.itemPane.render();
-      }
     };
 
     ztoolkit.Menu.register("item", {
@@ -1486,7 +1470,7 @@ export class SyllabusManager {
     title: string,
     source: "page" | "background",
   ) {
-    const collection = Zotero.Collections.get(collectionId);
+    const collection = getCachedCollectionById(collectionId);
     if (collection) {
       try {
         // Feeds may be read-only, so wrap in try-catch
@@ -1497,7 +1481,9 @@ export class SyllabusManager {
         ztoolkit.log("Could not set collection title (may be read-only):", e);
       }
     }
-    this.onCollectionUpdated(collection, source, "setCollectionTitle");
+    if (collection) {
+      this.onCollectionUpdated(collection, source, "setCollectionTitle");
+    }
   }
 
   /**
@@ -1507,65 +1493,7 @@ export class SyllabusManager {
    * Now uses Zod validation with verzod for versioning
    */
   static getItemSyllabusData(item: Zotero.Item): ItemSyllabusData | undefined {
-    // Check cache first
-    const cached = this.syllabusDataCache.get(item);
-    if (cached !== undefined) {
-      return cached;
-    }
-
-    const jsonStr = this.extraFieldTool.getExtraField(
-      item,
-      this.SYLLABUS_DATA_KEY,
-    );
-
-    if (jsonStr) {
-      try {
-        const parsed = JSON.parse(jsonStr);
-        // Use Zod schema with verzod for parsing and migration
-        const result = ItemSyllabusDataEntity.safeParse(parsed);
-        if (result.type === "ok") {
-          (async () => {
-            const isLatest = ItemSyllabusDataEntity.isLatest(parsed);
-            // ztoolkit.log("item - considering migration save", { result, parsed, isLatest });
-            // Save the result back to the extra field if it was upgraded
-            if (!isLatest) {
-              // ztoolkit.log(
-              //   "Upgrading item syllabus data to latest version",
-              //   parsed,
-              //   result.value,
-              // );
-              // Invalidate cache before saving to avoid stale data
-              this.invalidateSyllabusDataCache(item);
-              // Save without triggering item update to avoid recursion
-              // Use fire-and-forget to avoid making this method async
-              const jsonStr = JSON.stringify(result.value);
-              this.extraFieldTool
-                .setExtraField(item, this.SYLLABUS_DATA_KEY, jsonStr)
-                .catch((e) => {
-                  ztoolkit.log("Error saving upgraded syllabus data:", e);
-                })
-                .finally(() => {
-                  ztoolkit.log(
-                    "item - migrated syllabus data saved",
-                    item.id,
-                    item.getDisplayTitle(),
-                    jsonStr,
-                  );
-                });
-            }
-          })();
-
-          return result.value;
-        } else {
-          ztoolkit.log("Error parsing syllabus data - after JSON.parse:", {
-            result,
-            parsed,
-          });
-        }
-      } catch (e) {
-        ztoolkit.log("Error parsing syllabus data:", e, jsonStr);
-      }
-    }
+    return getCachedItemSyllabusData(item.id);
   }
 
   static getItemSyllabusDataForCollection(
@@ -1582,20 +1510,12 @@ export class SyllabusManager {
     }
     const assignments =
       data[
-        this.getCollectionReferenceString(normalized.libraryID, normalized.key)
+      this.getCollectionReferenceString(normalized.libraryID, normalized.key)
       ];
     if (!assignments || !Array.isArray(assignments)) {
       return [];
     }
     return assignments;
-  }
-
-  /**
-   * Invalidate cached syllabus data for an item
-   * Call this when an item's extra fields are modified
-   */
-  static invalidateSyllabusDataCache(item: Zotero.Item) {
-    this.syllabusDataCache.delete(item);
   }
 
   /**
@@ -1649,8 +1569,6 @@ export class SyllabusManager {
       this.SYLLABUS_DATA_KEY,
       jsonStr,
     );
-    // Invalidate cache when data changes
-    this.invalidateSyllabusDataCache(item);
     this.onItemUpdate(item, source);
   }
 
@@ -1978,7 +1896,7 @@ export class SyllabusManager {
       // This ensures OPTIONAL ("optional") sorts before unprioritized ("zzzz")
       assignment.priority || "zzzz",
       assignment.classInstruction?.slice(0, 4).replace(/[^a-zA-Z0-9]/g, "_") ||
-        "",
+      "",
       assignment.id || "",
     );
 
@@ -2288,31 +2206,13 @@ export class SyllabusManager {
     const prefKey = SyllabusManager.getPreferenceKey(
       SyllabusSettingsKey.COLLECTION_METADATA,
     );
-    const metadataStr = String(Zotero.Prefs.get(prefKey, true) || "");
-    if (!metadataStr) {
-      return {};
-    }
-    try {
-      const parsed = JSON.parse(metadataStr);
-      // Use verzod versioned entity for validation and migration
-      const result = SettingsCollectionDictionaryDataEntity.safeParse(parsed);
-      if (result.type === "ok") {
-        // If data was migrated, save it back
-        if (!SettingsCollectionDictionaryDataEntity.isLatest(parsed)) {
-          ztoolkit.log(
-            "Migrated collection metadata to latest version, saving back",
-          );
-          Zotero.Prefs.set(prefKey, JSON.stringify(result.value), true);
-        }
-        return result.value;
-      } else {
-        ztoolkit.log("Error validating collection metadata:", result.error);
-        return {};
-      }
-    } catch (e) {
-      ztoolkit.log("Error parsing collection metadata:", e);
-      return {};
-    }
+    const result = getCachedPref(
+      prefKey,
+      SettingsCollectionDictionaryDataSchema,
+      SettingsCollectionDictionaryDataEntity,
+    );
+    // Type assertion needed because schema allows optional fields but type expects them
+    return result as SettingsCollectionDictionaryData;
   }
 
   static setSettingsCollectionDictionaryData(
@@ -2578,31 +2478,6 @@ export class SyllabusManager {
     return title;
   }
 
-  /**
-   * Invalidate class title cache
-   * Call this when collection metadata is updated
-   */
-  static invalidateClassTitleCache(
-    collectionId?: number | GetByLibraryAndKeyArgs,
-  ) {
-    if (collectionId !== undefined) {
-      const normalized = this.normalizeCollectionIdentifier(collectionId);
-      if (normalized) {
-        const collectionKeyStr = this.getCollectionReferenceString(
-          normalized.libraryID,
-          normalized.key,
-        );
-        this.classTitleCache.delete(collectionKeyStr);
-        if (this.classTitleCacheCollectionId === collectionKeyStr) {
-          this.classTitleCacheCollectionId = null;
-        }
-      }
-    } else {
-      // Invalidate all
-      this.classTitleCache.clear();
-      this.classTitleCacheCollectionId = null;
-    }
-  }
 
   static async setClassMetadata(
     collectionId: number | GetByLibraryAndKeyArgs,

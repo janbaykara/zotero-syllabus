@@ -36,6 +36,7 @@
     "concurrently": "^9.2.1",
     "date-fns": "^4.1.0",
     "lodash-es": "^4.17.22",
+    "lru-cache": "^11.2.4",
     "lucide-preact": "^0.562.0",
     "pluralize": "^8.0.0",
     "preact": "^10.19.3",

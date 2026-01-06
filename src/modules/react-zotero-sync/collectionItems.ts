@@ -7,6 +7,7 @@ import {
   GetByLibraryAndKeyArgs,
   ItemSyllabusAssignment,
 } from "../syllabus";
+import { getCachedItem } from "../../utils/cache";
 
 export type ItemID = {
   [field in _ZoteroTypes.Item.ItemField]: string | unknown;
@@ -38,7 +39,7 @@ export function useZoteroCollectionItems(
     ) as CollectionItemsSnapshot;
     return snapshot.items
       .map((itemJSON) => {
-        const zoteroItem = Zotero.Items.get(itemJSON.id);
+        const zoteroItem = getCachedItem(itemJSON.id);
         if (!zoteroItem) {
           return null;
         }
@@ -52,9 +53,9 @@ export function useZoteroCollectionItems(
         };
       })
       .filter(Boolean) as {
-      zoteroItem: Zotero.Item;
-      assignments: ItemSyllabusAssignment[];
-    }[];
+        zoteroItem: Zotero.Item;
+        assignments: ItemSyllabusAssignment[];
+      }[];
   }, [__itemsFromZotero]);
 
   return parsedItems;
@@ -104,18 +105,16 @@ export function createCollectionItemsStore(
           // Check if the item belongs to our collection
           const itemIds = ids as number[];
           for (const itemId of itemIds) {
-            try {
-              const item = Zotero.Items.get(itemId);
-              if (item && item.isRegularItem()) {
-                const collections = item.getCollections();
-                const collection =
-                  SyllabusManager.getCollectionFromIdentifier(collectionId);
-                if (collection && collections.includes(collection.id)) {
-                  shouldUpdate = true;
-                  break;
-                }
+            const item = getCachedItem(itemId);
+            if (item && item.isRegularItem()) {
+              const collections = item.getCollections();
+              const collection =
+                SyllabusManager.getCollectionFromIdentifier(collectionId);
+              if (collection && collections.includes(collection.id)) {
+                shouldUpdate = true;
+                break;
               }
-            } catch (e) {
+            } else {
               // Item might not exist anymore, trigger update anyway
               shouldUpdate = true;
               break;

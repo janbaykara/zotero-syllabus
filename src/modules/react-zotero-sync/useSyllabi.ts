@@ -7,6 +7,10 @@ import {
   ItemSyllabusAssignment,
 } from "../syllabus";
 import { getAllCollections } from "../../utils/zotero";
+import {
+  getCachedItem,
+  getCachedCollectionById,
+} from "../../utils/cache";
 
 export type SyllabusData = {
   collection: Zotero.Collection;
@@ -41,30 +45,26 @@ export function useSyllabi(): SyllabusData[] {
 
     return snapshot.syllabi
       .map((syllabusData) => {
-        const collection = Zotero.Collections.get(syllabusData.collectionId);
+        const collection = getCachedCollectionById(syllabusData.collectionId);
         if (!collection) {
           return null;
         }
 
         const items = syllabusData.itemIds
           .map((itemId) => {
-            try {
-              const item = Zotero.Items.get(itemId);
-              if (!item || !item.isRegularItem()) {
-                return null;
-              }
-              const assignments =
-                SyllabusManager.getItemSyllabusDataForCollection(
-                  item,
-                  syllabusData.collectionId,
-                );
-              return {
-                zoteroItem: item,
-                assignments,
-              };
-            } catch (e) {
+            const item = getCachedItem(itemId);
+            if (!item || !item.isRegularItem()) {
               return null;
             }
+            const assignments =
+              SyllabusManager.getItemSyllabusDataForCollection(
+                item,
+                syllabusData.collectionId,
+              );
+            return {
+              zoteroItem: item,
+              assignments,
+            };
           })
           .filter(Boolean) as Array<{
             zoteroItem: Zotero.Item;
@@ -88,7 +88,7 @@ function createSyllabiStore() {
   let version = 0;
 
   function getSnapshot() {
-    // Force a fresh read by clearing any potential caches
+    // Get fresh data from Zotero
     const allCollections = getAllCollections();
     const allData = SyllabusManager.getSettingsCollectionDictionaryData();
 

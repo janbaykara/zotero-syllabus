@@ -8,6 +8,9 @@ import { useZoteroItem } from "./react-zotero-sync/item";
 import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
 import { useSelectedCollectionId } from "./react-zotero-sync/collection";
 import { classNumberSchema } from "../utils/schemas";
+import { getCachedCollectionById, getCachedCollectionByKey } from "../utils/cache";
+import { useZoteroClassMetadata } from "./react-zotero-sync/classMetadata";
+import { formatReadingDate } from "../utils/dates";
 
 interface ItemPaneProps {
   editable: boolean;
@@ -111,7 +114,7 @@ function ItemPaneContent({
   // Get all assignments across all collections
   const allAssignmentsByCollection = useMemo(() => {
     const currentCollection = currentCollectionId
-      ? Zotero.Collections.get(currentCollectionId)
+      ? getCachedCollectionById(currentCollectionId)
       : null;
 
     const collectionsWithAssignments: Array<{
@@ -146,31 +149,23 @@ function ItemPaneContent({
         }
 
         // Get collection from libraryID and key
-        try {
-          const collection = Zotero.Collections.getByLibraryAndKey(
-            libraryID,
-            collectionKey,
-          );
-          if (!collection) {
-            continue;
-          }
-
-          // Filter out assignments without IDs
-          const validAssignments = assignments.filter((a) => a.id);
-
-          if (validAssignments.length > 0) {
-            collectionsWithAssignments.push({
-              collection,
-              collectionId: collection.id,
-              collectionName: collection.name,
-              assignments: validAssignments.sort(
-                SyllabusManager.compareAssignments,
-              ),
-            });
-          }
-        } catch (e) {
-          ztoolkit.log("Error getting collection:", e);
+        const collection = getCachedCollectionByKey(libraryID, collectionKey);
+        if (!collection) {
           continue;
+        }
+
+        // Filter out assignments without IDs
+        const validAssignments = assignments.filter((a) => a.id);
+
+        if (validAssignments.length > 0) {
+          collectionsWithAssignments.push({
+            collection,
+            collectionId: collection.id,
+            collectionName: collection.name,
+            assignments: validAssignments.sort(
+              SyllabusManager.compareAssignments,
+            ),
+          });
         }
       }
 
@@ -206,8 +201,6 @@ function ItemPaneContent({
   const handleSave = useCallback(async () => {
     setIsSaving(true);
     try {
-      // Invalidate cache before saving
-      SyllabusManager.invalidateSyllabusDataCache(itemVersion.item);
       await itemVersion.item.saveTx();
       // The useSelectedItem hook will automatically refresh when the item is modified
     } finally {
@@ -505,14 +498,14 @@ function AssignmentEditor({
   onDelete,
   onDuplicate,
 }: AssignmentEditorProps) {
+  const [cls, _, __] = useZoteroClassMetadata(collectionId);
+  const assignmentClass = assignment.classNumber ? cls.classes[assignment.classNumber] : null;
+
   if (!assignment.id) {
     return null;
   }
 
-  const classTitle =
-    assignment.classNumber !== undefined
-      ? SyllabusManager.getClassTitle(collectionId, assignment.classNumber)
-      : "";
+  const classTitle = assignmentClass?.title || "";
 
   const { singularCapitalized } =
     SyllabusManager.getNomenclatureFormatted(collectionId);
@@ -523,19 +516,26 @@ function AssignmentEditor({
   return (
     <div className="border border-quinary rounded-md m-0 flex flex-col opacity-100 transition-opacity duration-200 bg-background divide-y divide-quarternary space-y-2.5 *:not-last:pb-2.5 p-2.5 z-10">
       {/* Header with class info and status */}
-      <header className="flex items-center justify-between gap-3">
-        <div className="flex-1 min-w-0 font-medium">
+      <header className="flex items-end justify-between gap-3">
+        <div className="flex-1 min-w-0 font-medium self-baseline">
           {assignment.classNumber !== undefined ? (
             <div>
-              Assignment #{assignmentIndex + 1}{" "}
-              {classTitle ? (
-                <span>
-                  for <span>{classTitle}</span>
-                </span>
+              <div>
+                Assignment #{assignmentIndex + 1}{" "}
+                {classTitle ? (
+                  <span>
+                    for <span>{classTitle}</span>
+                  </span>
+                ) : null}
+              </div>
+              {assignmentClass?.readingDate ? (
+                <div className="mt-1 text-sm text-secondary">
+                  Due {formatReadingDate(assignmentClass.readingDate)}
+                </div>
               ) : null}
             </div>
           ) : (
-            <div>Reference material</div>
+            <div className="self-baseline">Reference material</div>
           )}
         </div>
         {editable && (
@@ -550,7 +550,7 @@ function AssignmentEditor({
             }
             disabled={isSaving}
             className={twMerge(
-              "px-2 py-1 text-xs font-medium",
+              "px-2 py-1 text-xs font-medium rounded-md -mt-1!",
               isDone ? "bg-quinary" : "bg-transparent",
               isDone ? "border-quinary" : "border-transparent",
               isDone ? "text-primary" : "text-secondary",

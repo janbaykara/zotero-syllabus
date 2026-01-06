@@ -1,3 +1,5 @@
+import { getCachedCollectionById } from "./cache";
+
 // import { getCurrentTab } from './window';
 export function getSelectedCollection() {
   const pane = ztoolkit.getGlobal("ZoteroPane");
@@ -27,8 +29,10 @@ export function getAllCollections(recursive = true) {
     for (const collection of collections) {
       collection.getDescendents().forEach((childObject) => {
         if (childObject.type === "collection") {
-          const collection = Zotero.Collections.get(childObject.id);
-          collections.push(collection);
+          const childCollection = getCachedCollectionById(childObject.id);
+          if (childCollection) {
+            collections.push(childCollection);
+          }
         }
       });
     }

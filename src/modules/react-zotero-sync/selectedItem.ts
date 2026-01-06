@@ -58,19 +58,6 @@ export function createSelectedItemStore() {
 
           if (hasSelectedItem && (event === "modify" || event === "delete")) {
             if (event === "modify") {
-              // Items were modified, invalidate cache for affected items
-              for (const itemId of selectedItemIds) {
-                if (itemIdsArray.includes(itemId)) {
-                  try {
-                    const item = Zotero.Items.get(itemId);
-                    if (item) {
-                      SyllabusManager.invalidateSyllabusDataCache(item);
-                    }
-                  } catch (e) {
-                    // Item might not exist anymore
-                  }
-                }
-              }
               listeners.forEach((l) => l());
             } else if (event === "delete") {
               // Remove deleted items from selection

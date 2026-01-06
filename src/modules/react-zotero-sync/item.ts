@@ -1,6 +1,7 @@
 import { useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
 import { SyllabusManager } from "../syllabus";
+import { getCachedItem } from "../../utils/cache";
 
 export function useZoteroItem(itemId: number | null) {
   // Create the store once per item ID
@@ -13,11 +14,7 @@ export function useZoteroItem(itemId: number | null) {
     if (!itemId) {
       return null;
     }
-    try {
-      return Zotero.Items.get(itemId);
-    } catch (e) {
-      return null;
-    }
+    return getCachedItem(itemId);
   }, [itemId, version]);
 
   // We return the number because the extra field isn't gettable, by default, so we need a concrete indication of change or invalidation.
@@ -40,7 +37,7 @@ export function createItemStore(itemId: number | null) {
 
   function subscribe(onStoreChange: () => void) {
     if (!itemId) {
-      return () => {}; // No-op unsubscribe
+      return () => { }; // No-op unsubscribe
     }
 
     listeners.add(onStoreChange);
@@ -62,15 +59,6 @@ export function createItemStore(itemId: number | null) {
         if (type === "item" && ids.includes(itemId)) {
           version++;
           if (event === "modify") {
-            // Item was modified, invalidate cache and trigger update
-            try {
-              const item = Zotero.Items.get(itemId);
-              if (item) {
-                SyllabusManager.invalidateSyllabusDataCache(item);
-              }
-            } catch (e) {
-              // Item might not exist anymore
-            }
             listeners.forEach((l) => l());
           } else if (event === "delete") {
             // Item was deleted, increment version to signal it's gone

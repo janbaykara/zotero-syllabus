@@ -1,5 +1,6 @@
 import { ExtraFieldTool } from "zotero-plugin-toolkit";
 import SuperJSON from "superjson";
+import { getCachedPref } from "../utils/cache";
 
 const extraFieldTool = new ExtraFieldTool();
 
@@ -59,7 +60,7 @@ export function getReadingListStatusNameAndIconList() {
 }
 
 function getZoteroPref(ns: string, key: string) {
-  return Zotero.Prefs.get(`${ns}.${key}`, true);
+  return getCachedPref(`${ns}.${key}`);
 }
 
 export function prefStringToList(prefString: string) {
