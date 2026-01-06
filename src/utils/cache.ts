@@ -10,6 +10,7 @@ import {
   type ItemSyllabusData,
 } from "./schemas";
 import { ExtraFieldTool } from "zotero-plugin-toolkit";
+import type { GetByLibraryAndKeyArgs } from "../modules/syllabus";
 
 // ztoolkit is available as a global
 declare const ztoolkit: ZToolkit;
@@ -24,7 +25,11 @@ class ZoteroCache {
   // Preference cache: key -> value (handles both JSON and simple prefs)
   private prefCache = new Map<string, any>();
 
+  // Collection cache: libraryID:key -> collection (primary cache)
+  private collectionCache = new Map<string, Zotero.Collection>();
 
+  // Collection ID index: collectionId -> libraryID:key (for reverse lookup)
+  private collectionIdIndex = new Map<number, string>();
 
   // Global Zotero Notifier observer ID
   private notifierID: string | null = null;
@@ -65,10 +70,24 @@ class ZoteroCache {
             }
           });
         }
+
+        // Invalidate collection cache on collection changes
+        if (type === "collection") {
+          ids.forEach((id) => {
+            if (typeof id === "number") {
+              if (event === "modify" || event === "delete") {
+                this.invalidateCollection(id);
+              }
+            }
+          });
+        }
       },
     };
 
-    this.notifierID = Zotero.Notifier.registerObserver(observer, ["item"]);
+    this.notifierID = Zotero.Notifier.registerObserver(observer, [
+      "item",
+      "collection",
+    ]);
     this.initialized = true;
   }
 
@@ -98,6 +117,8 @@ class ZoteroCache {
     this.itemCache.clear();
     this.syllabusDataCache.clear();
     this.prefCache.clear();
+    this.collectionCache.clear();
+    this.collectionIdIndex.clear();
   }
 
   /**
@@ -292,6 +313,118 @@ class ZoteroCache {
       this.prefObserverIDs.set(key, observerID);
     }
   }
+
+  /**
+   * Get collection by ID (cached)
+   */
+  getCollectionById(collectionId: number): Zotero.Collection | undefined {
+    // Check ID index first
+    const cacheKey = this.collectionIdIndex.get(collectionId);
+    if (cacheKey) {
+      const cached = this.collectionCache.get(cacheKey);
+      if (cached) {
+        return cached;
+      }
+      // Cache key exists but collection not found - index is stale, remove it
+      this.collectionIdIndex.delete(collectionId);
+    }
+
+    // Fetch from Zotero
+    try {
+      const collection = Zotero.Collections.get(collectionId);
+      if (collection) {
+        // Cache it using libraryID:key as the primary key
+        this.setCollection(collection);
+      }
+      return collection;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Get collection by library ID and key (cached)
+   */
+  getCollectionByKey(
+    libraryID: number,
+    key: string,
+  ): Zotero.Collection | undefined {
+    const cacheKey = `${libraryID}:${key}`;
+
+    // Check primary cache
+    const cached = this.collectionCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // Fetch from Zotero
+    try {
+      const collection = Zotero.Collections.getByLibraryAndKey(
+        libraryID,
+        key,
+      );
+      if (collection) {
+        this.setCollection(collection);
+      }
+      return collection || undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Get collection by either ID or library:key tuple (cached)
+   */
+  getCollection(
+    identifier: number | GetByLibraryAndKeyArgs,
+  ): Zotero.Collection | undefined {
+    if (typeof identifier === "number") {
+      return this.getCollectionById(identifier);
+    } else {
+      const [libraryID, key] = identifier;
+      return this.getCollectionByKey(libraryID, key);
+    }
+  }
+
+  /**
+   * Internal method to cache a collection in both maps
+   */
+  private setCollection(collection: Zotero.Collection): void {
+    const cacheKey = `${collection.libraryID}:${collection.key}`;
+
+    // Store in primary cache
+    this.collectionCache.set(cacheKey, collection);
+
+    // Store in ID index
+    this.collectionIdIndex.set(collection.id, cacheKey);
+  }
+
+  /**
+   * Invalidate collection cache entry by ID
+   */
+  invalidateCollection(collectionId: number): void {
+    const cacheKey = this.collectionIdIndex.get(collectionId);
+    if (cacheKey) {
+      this.collectionCache.delete(cacheKey);
+      this.collectionIdIndex.delete(collectionId);
+    }
+  }
+
+  /**
+   * Invalidate collection by library:key
+   */
+  invalidateCollectionByKey(libraryID: number, key: string): void {
+    const cacheKey = `${libraryID}:${key}`;
+    this.collectionCache.delete(cacheKey);
+
+    // Find and remove from ID index
+    for (const [id, cachedKey] of this.collectionIdIndex.entries()) {
+      if (cachedKey === cacheKey) {
+        this.collectionIdIndex.delete(id);
+        break;
+      }
+    }
+  }
 }
 
 // Singleton instance
@@ -326,5 +459,33 @@ export function getCachedPref<T = any>(
   entity?: VersionedEntity<any, any>,
 ): T | undefined {
   return zoteroCache.getPref(key, schema, entity);
+}
+
+/**
+ * Get collection by either ID or library:key tuple (cached)
+ */
+export function getCachedCollection(
+  identifier: number | GetByLibraryAndKeyArgs,
+): Zotero.Collection | undefined {
+  return zoteroCache.getCollection(identifier);
+}
+
+/**
+ * Get collection by ID (cached)
+ */
+export function getCachedCollectionById(
+  collectionId: number,
+): Zotero.Collection | undefined {
+  return zoteroCache.getCollectionById(collectionId);
+}
+
+/**
+ * Get collection by library ID and key (cached)
+ */
+export function getCachedCollectionByKey(
+  libraryID: number,
+  key: string,
+): Zotero.Collection | undefined {
+  return zoteroCache.getCollectionByKey(libraryID, key);
 }
 

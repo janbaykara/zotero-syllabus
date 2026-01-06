@@ -8,6 +8,7 @@ import { useZoteroItem } from "./react-zotero-sync/item";
 import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
 import { useSelectedCollectionId } from "./react-zotero-sync/collection";
 import { classNumberSchema } from "../utils/schemas";
+import { getCachedCollectionById, getCachedCollectionByKey } from "../utils/cache";
 
 interface ItemPaneProps {
   editable: boolean;
@@ -111,7 +112,7 @@ function ItemPaneContent({
   // Get all assignments across all collections
   const allAssignmentsByCollection = useMemo(() => {
     const currentCollection = currentCollectionId
-      ? Zotero.Collections.get(currentCollectionId)
+      ? getCachedCollectionById(currentCollectionId)
       : null;
 
     const collectionsWithAssignments: Array<{
@@ -146,31 +147,23 @@ function ItemPaneContent({
         }
 
         // Get collection from libraryID and key
-        try {
-          const collection = Zotero.Collections.getByLibraryAndKey(
-            libraryID,
-            collectionKey,
-          );
-          if (!collection) {
-            continue;
-          }
-
-          // Filter out assignments without IDs
-          const validAssignments = assignments.filter((a) => a.id);
-
-          if (validAssignments.length > 0) {
-            collectionsWithAssignments.push({
-              collection,
-              collectionId: collection.id,
-              collectionName: collection.name,
-              assignments: validAssignments.sort(
-                SyllabusManager.compareAssignments,
-              ),
-            });
-          }
-        } catch (e) {
-          ztoolkit.log("Error getting collection:", e);
+        const collection = getCachedCollectionByKey(libraryID, collectionKey);
+        if (!collection) {
           continue;
+        }
+
+        // Filter out assignments without IDs
+        const validAssignments = assignments.filter((a) => a.id);
+
+        if (validAssignments.length > 0) {
+          collectionsWithAssignments.push({
+            collection,
+            collectionId: collection.id,
+            collectionName: collection.name,
+            assignments: validAssignments.sort(
+              SyllabusManager.compareAssignments,
+            ),
+          });
         }
       }
 

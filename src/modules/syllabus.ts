@@ -34,6 +34,9 @@ import { getRDFStringForCollection, importRDF } from "../utils/rdf";
 import {
   getCachedItemSyllabusData,
   getCachedPref,
+  getCachedCollection,
+  getCachedCollectionById,
+  getCachedCollectionByKey,
   zoteroCache,
 } from "../utils/cache";
 
@@ -118,7 +121,7 @@ export class SyllabusManager {
 
     // If it's a number, get the collection and extract libraryID and key
     if (typeof collectionId === "number") {
-      const collection = Zotero.Collections.get(collectionId);
+      const collection = getCachedCollectionById(collectionId);
       if (!collection) {
         return null;
       }
@@ -146,14 +149,7 @@ export class SyllabusManager {
   static getCollectionFromIdentifier(
     collectionId: number | GetByLibraryAndKeyArgs,
   ): Zotero.Collection | null {
-    const normalized = this.normalizeCollectionIdentifier(collectionId);
-    if (!normalized) {
-      return null;
-    }
-    const collection = Zotero.Collections.getByLibraryAndKey(
-      normalized.libraryID,
-      normalized.key,
-    );
+    const collection = getCachedCollection(collectionId);
     return collection || null;
   }
 
@@ -1474,7 +1470,7 @@ export class SyllabusManager {
     title: string,
     source: "page" | "background",
   ) {
-    const collection = Zotero.Collections.get(collectionId);
+    const collection = getCachedCollectionById(collectionId);
     if (collection) {
       try {
         // Feeds may be read-only, so wrap in try-catch
@@ -1485,7 +1481,9 @@ export class SyllabusManager {
         ztoolkit.log("Could not set collection title (may be read-only):", e);
       }
     }
-    this.onCollectionUpdated(collection, source, "setCollectionTitle");
+    if (collection) {
+      this.onCollectionUpdated(collection, source, "setCollectionTitle");
+    }
   }
 
   /**

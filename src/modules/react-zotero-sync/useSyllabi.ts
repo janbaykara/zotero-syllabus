@@ -7,7 +7,10 @@ import {
   ItemSyllabusAssignment,
 } from "../syllabus";
 import { getAllCollections } from "../../utils/zotero";
-import { getCachedItem } from "../../utils/cache";
+import {
+  getCachedItem,
+  getCachedCollectionById,
+} from "../../utils/cache";
 
 export type SyllabusData = {
   collection: Zotero.Collection;
@@ -42,7 +45,7 @@ export function useSyllabi(): SyllabusData[] {
 
     return snapshot.syllabi
       .map((syllabusData) => {
-        const collection = Zotero.Collections.get(syllabusData.collectionId);
+        const collection = getCachedCollectionById(syllabusData.collectionId);
         if (!collection) {
           return null;
         }
