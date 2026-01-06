@@ -6,6 +6,7 @@ import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
 import { SyllabusItemCard } from "./SyllabusPage";
 import {
   addWeeks,
+  differenceInDays,
   differenceInWeeks,
   formatDate,
   isThisWeek,
@@ -17,6 +18,7 @@ import { useSyllabi } from "./react-zotero-sync/useSyllabi";
 import { getPref } from "../utils/prefs";
 import { TabManager } from "../utils/tabManager";
 import { getCachedCollectionById } from "../utils/cache";
+import { isSameWeek } from "date-fns/fp";
 
 setDefaultOptions({
   weekStartsOn: 1,
@@ -466,13 +468,14 @@ function formatReadingDate(isoDate: string): string {
 function WeekHeader({ weekStartDate }: { weekStartDate: Date }) {
   const start = startOfWeek(weekStartDate);
   let str = "";
-  if (isThisWeek(start, { weekStartsOn: 1 })) {
-    str = "this week";
-  } else if (isThisWeek(addWeeks(start, 1), { weekStartsOn: 1 })) {
-    str = "next week";
+  ztoolkit.log("WeekHeader: start:", differenceInDays(start, new Date()));
+  if (isThisWeek(start)) {
+    str = "This week";
+  } else if (isSameWeek(start, addWeeks(new Date(), 1))) {
+    str = "Next week";
   } else {
     const long = new Intl.RelativeTimeFormat("en-us", { style: "long" });
-    const diff = differenceInWeeks(start, new Date());
+    const diff = differenceInWeeks(startOfWeek(start), startOfWeek(new Date()));
     str = long.format(diff, "week");
   }
 
