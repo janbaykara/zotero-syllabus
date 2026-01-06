@@ -22,6 +22,9 @@ importers:
       lodash-es:
         specifier: ^4.17.22
         version: 4.17.22
+      lru-cache:
+        specifier: ^11.2.4
+        version: 11.2.4
       lucide-preact:
         specifier: ^0.562.0
         version: 0.562.0(preact@10.28.1)
@@ -1305,6 +1308,10 @@ packages:
 
   lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
+
+  lru-cache@11.2.4:
+    resolution: {integrity: sha512-B5Y16Jr9LB9dHVkh6ZevG+vAbOsNOYCX+sXvFWFu7B3Iz5mijW3zdbMyhsh8ANd2mSWBYdJgnqi+mL7/LrOPYg==}
+    engines: {node: 20 || >=22}
 
   lucide-preact@0.562.0:
     resolution: {integrity: sha512-1LOH/QVkxZ0zMspMPcVAbEfmwKHM3llG8ikA8j2M7GaMKRHZLn32PohXnvmsqDMhrCBsBc9pt1ybPCUYteywtQ==}
@@ -2860,6 +2867,8 @@ snapshots:
       is-unicode-supported: 0.1.0
 
   lru-cache@10.4.3: {}
+
+  lru-cache@11.2.4: {}
 
   lucide-preact@0.562.0(preact@10.28.1):
     dependencies:

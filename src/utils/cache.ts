@@ -5,6 +5,7 @@
 
 import type { z } from "zod";
 import type { VersionedEntity } from "verzod";
+import { LRUCache } from "lru-cache";
 import {
   ItemSyllabusDataEntity,
   type ItemSyllabusData,
@@ -15,12 +16,25 @@ import type { GetByLibraryAndKeyArgs } from "../modules/syllabus";
 // ztoolkit is available as a global
 declare const ztoolkit: ZToolkit;
 
+// Sentinel value to represent "no syllabus data" in cache
+// This allows us to distinguish between "not cached" and "cached as undefined"
+const NO_SYLLABUS_DATA = Symbol("no-syllabus-data");
+
 class ZoteroCache {
   // Item cache: itemId -> item
-  private itemCache = new Map<number, Zotero.Item>();
+  private itemCache = new LRUCache<number, Zotero.Item>({
+    max: 5000,
+    updateAgeOnGet: true,
+  });
 
-  // Syllabus data cache: itemId -> parsed/validated ItemSyllabusData
-  private syllabusDataCache = new Map<number, ItemSyllabusData>();
+  // Syllabus data cache: itemId -> parsed/validated ItemSyllabusData or NO_SYLLABUS_DATA
+  private syllabusDataCache = new LRUCache<
+    number,
+    ItemSyllabusData | typeof NO_SYLLABUS_DATA
+  >({
+    max: 2000,
+    updateAgeOnGet: true,
+  });
 
   // Preference cache: key -> value (handles both JSON and simple prefs)
   private prefCache = new Map<string, any>();
@@ -150,6 +164,11 @@ class ZoteroCache {
     // Check cache first
     const cached = this.syllabusDataCache.get(itemId);
     if (cached !== undefined) {
+      // If it's the sentinel, return undefined
+      if (cached === NO_SYLLABUS_DATA) {
+        return undefined;
+      }
+      // Otherwise return the cached data
       return cached;
     }
 
@@ -166,8 +185,8 @@ class ZoteroCache {
     );
 
     if (!jsonStr) {
-      // Cache undefined to avoid repeated lookups
-      this.syllabusDataCache.set(itemId, undefined as any);
+      // Cache sentinel to avoid repeated lookups
+      this.syllabusDataCache.set(itemId, NO_SYLLABUS_DATA);
       return undefined;
     }
 
@@ -206,14 +225,14 @@ class ZoteroCache {
           result,
           parsed,
         });
-        // Cache undefined for invalid data
-        this.syllabusDataCache.set(itemId, undefined as any);
+        // Cache sentinel for invalid data
+        this.syllabusDataCache.set(itemId, NO_SYLLABUS_DATA);
         return undefined;
       }
     } catch (e) {
       ztoolkit.log("Error parsing syllabus data:", e, jsonStr);
-      // Cache undefined for parse errors
-      this.syllabusDataCache.set(itemId, undefined as any);
+      // Cache sentinel for parse errors
+      this.syllabusDataCache.set(itemId, NO_SYLLABUS_DATA);
       return undefined;
     }
   }
