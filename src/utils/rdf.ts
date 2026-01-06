@@ -10,19 +10,70 @@ export function getRDFStringForCollection(collection: Zotero.Collection) {
     // translator.setCollection(collection);
     // translator.translate()
     const translation = new Zotero.Translate.Export();
-    translation.setItems(collection.getChildItems());
-    translation.setTranslator(RDF_EXPORT_TRANSLATOR_ID); // Zotero RDF
+    const items = collection.getChildItems();
+    ztoolkit.log("getRDFStringForCollection: items count:", items.length);
 
-    translation.setHandler("done", (obj: { string: string }, success: any) => {
-      if (success) {
-        const rdfXml: string = obj.string; // <- your RDF/XML string
-        // do something with rdfXml (upload, parse, etc.)
-        return resolve(rdfXml);
-      }
-      reject(success);
+    translation.setItems(items);
+    const translatorSet = translation.setTranslator(RDF_EXPORT_TRANSLATOR_ID); // Zotero RDF
+    ztoolkit.log("getRDFStringForCollection: translator set:", translatorSet);
+
+    if (!translatorSet) {
+      reject(new Error("Failed to set RDF translator"));
+      return;
+    }
+
+    // Add timeout to prevent hanging forever
+    const timeout = setTimeout(() => {
+      ztoolkit.log("getRDFStringForCollection: timeout after 30 seconds");
+      reject(new Error("RDF export timed out after 30 seconds"));
+    }, 10000);
+
+    let handlerCalled = false;
+
+    // Set error handler first to catch any errors
+    translation.setHandler("error", (translate: any, error: Error | string) => {
+      if (handlerCalled) return;
+      handlerCalled = true;
+      clearTimeout(timeout);
+      ztoolkit.log("getRDFStringForCollection: error handler called:", error);
+      reject(error instanceof Error ? error : new Error(String(error)));
     });
 
-    translation.translate();
+    // The "done" handler signature is (translate, success), not (obj, success)
+    translation.setHandler("done", (translate: any, success: boolean) => {
+      if (handlerCalled) return;
+      handlerCalled = true;
+      clearTimeout(timeout);
+      ztoolkit.log("getRDFStringForCollection: done handler called, success:", success);
+      ztoolkit.log("getRDFStringForCollection: translate object keys:", Object.keys(translate || {}));
+
+      if (success) {
+        // Access the string from the translate object
+        // The translate object should have a 'string' property for Export translations
+        const translateObj = translate as any;
+        const rdfXml: string = translateObj.string;
+        ztoolkit.log("getRDFStringForCollection: rdfXml length:", rdfXml?.length || 0);
+        if (rdfXml && typeof rdfXml === "string") {
+          resolve(rdfXml);
+        } else {
+          ztoolkit.log("getRDFStringForCollection: rdfXml is not a valid string:", rdfXml);
+          reject(new Error("RDF export did not return a valid string"));
+        }
+      } else {
+        ztoolkit.log("getRDFStringForCollection: translation failed");
+        reject(new Error("RDF export failed"));
+      }
+    });
+
+    ztoolkit.log("getRDFStringForCollection: starting translation");
+    try {
+      translation.translate();
+      ztoolkit.log("getRDFStringForCollection: translate() called");
+    } catch (error) {
+      clearTimeout(timeout);
+      ztoolkit.log("getRDFStringForCollection: error calling translate():", error);
+      reject(error);
+    }
   });
 }
 
