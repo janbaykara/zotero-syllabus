@@ -59,6 +59,7 @@ import {
   Trash2,
 } from "lucide-preact";
 import { saveToFile } from "../utils/file";
+import { formatReadingDate } from "../utils/dates";
 
 interface SyllabusPageProps {
   collectionId: number;
@@ -2284,11 +2285,6 @@ function ClassGroupComponent({
       </div>
     </div>
   );
-}
-
-function formatReadingDate(isoDate: string): string {
-  const date = new Date(isoDate);
-  return formatDate(date, "iii do MMM");
 }
 
 function ReadingDateInput({
