@@ -2444,6 +2444,33 @@ export class SyllabusManager {
     );
   }
 
+  /**
+   * Get CSL style for a specific collection
+   */
+  static getCslStyle(
+    collectionId: number | GetByLibraryAndKeyArgs,
+  ): string | null {
+    const metadata = this.getSyllabusMetadata(collectionId);
+    return metadata.cslStyle || null;
+  }
+
+  /**
+   * Set CSL style for a specific collection
+   */
+  static async setCslStyle(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    cslStyle: string | null,
+    source: "page",
+  ): Promise<void> {
+    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    syllabusMetadata.cslStyle = cslStyle?.trim() || null;
+    await SyllabusManager.setCollectionMetadata(
+      collectionId,
+      syllabusMetadata,
+      source,
+    );
+  }
+
   static getClassMetadata(
     collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,

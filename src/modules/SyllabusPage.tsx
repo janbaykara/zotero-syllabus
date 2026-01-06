@@ -1940,7 +1940,11 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
               </div>
             )}
 
-            <Bibliography items={items} compactMode={compactMode} />
+            <Bibliography
+              items={items}
+              compactMode={compactMode}
+              cslStyle={syllabusMetadata.cslStyle || null}
+            />
           </div>
         </div>
       </div>
@@ -2443,34 +2447,34 @@ function TextInput({
         onChange: readOnly
           ? undefined
           : (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-              setValue((e.target as HTMLInputElement).value),
+            setValue((e.target as HTMLInputElement).value),
         onBlur: readOnly ? undefined : () => save(value),
         onKeyDown: readOnly
           ? undefined
           : (
-              e: JSX.TargetedKeyboardEvent<
-                HTMLInputElement | HTMLTextAreaElement
-              >,
-            ) => {
-              if (e.key === "Escape" || e.key === "Enter") {
-                e.preventDefault();
-                e.currentTarget.blur();
-                save(value);
-              }
-            },
+            e: JSX.TargetedKeyboardEvent<
+              HTMLInputElement | HTMLTextAreaElement
+            >,
+          ) => {
+            if (e.key === "Escape" || e.key === "Enter") {
+              e.preventDefault();
+              e.currentTarget.blur();
+              save(value);
+            }
+          },
         onSelect: readOnly
           ? (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-              e.preventDefault();
-              e.currentTarget.setSelectionRange(0, 0);
-            }
+            e.preventDefault();
+            e.currentTarget.setSelectionRange(0, 0);
+          }
           : undefined,
         onClick: readOnly
           ? (
-              e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
-            ) => {
-              e.preventDefault();
-              e.currentTarget.blur();
-            }
+            e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
+          ) => {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
           : undefined,
         placeholder: readOnly ? undefined : placeholder || "Click to edit",
         className: twMerge(
@@ -2601,16 +2605,18 @@ export function SyllabusItemCard({
     item.getField("publicationTitle") || item.getField("bookTitle") || "";
   const url = item.getField("url") || "";
 
+  const [syllabusMetadata] = useZoteroSyllabusMetadata(collectionId);
   const [bibliographicReference, setBibliographicReference] = useState("");
   useEffect(() => {
     (async () => {
       if (slim) return;
       if (getPref("showBibliography")) {
-        const ref = await generateBibliographicReference(item);
+        const cslStyle = syllabusMetadata.cslStyle || null;
+        const ref = await generateBibliographicReference(item, true, cslStyle);
         setBibliographicReference(ref || "");
       }
     })();
-  }, [item, slim]);
+  }, [item, slim, syllabusMetadata.cslStyle]);
 
   const viewableAttachments = useMemo(() => {
     return item
@@ -2642,9 +2648,9 @@ export function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-      item: Zotero.Item;
-      type: "pdf" | "snapshot" | "epub";
-    }>;
+        item: Zotero.Item;
+        type: "pdf" | "snapshot" | "epub";
+      }>;
   }, [item, slim]);
 
   const metadataParts = [
@@ -2788,8 +2794,8 @@ export function SyllabusItemCard({
 
   const colors = priority
     ? {
-        backgroundColor: priorityColor + "15",
-      }
+      backgroundColor: priorityColor + "15",
+    }
     : {};
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
@@ -2856,8 +2862,8 @@ export function SyllabusItemCard({
             ? "px-4 py-2.5 gap-4"
             : "px-4 py-4 gap-4",
         isZoteroSelected &&
-          !isIdentifierSelected &&
-          "not-in-[.print]:outline-2! not-in-[.print]:outline-accent-blue",
+        !isIdentifierSelected &&
+        "not-in-[.print]:outline-2! not-in-[.print]:outline-accent-blue",
         isIdentifierSelected && "not-in-[.print]:bg-accent-blue! scheme-dark",
         // isZoteroSelected && isIdentifierSelected && "outline-none!",
         // assignmentStatus === "done" ? "opacity-40" : "",
@@ -3090,17 +3096,17 @@ export function SyllabusItemCard({
             "after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full! after:bg-(--after-background-color) after:rounded-b-lg rounded-t-0! after:z-25! after:h-full!",
             // Overrides
             isZoteroSelected &&
-              !isIdentifierSelected &&
-              "not-in-[.print]:border-accent-blue! not-in-[.print]:border-3! not-in-[.print]:border-t-0!",
+            !isIdentifierSelected &&
+            "not-in-[.print]:border-accent-blue! not-in-[.print]:border-3! not-in-[.print]:border-t-0!",
             isIdentifierSelected && "not-in-[.print]:after:bg-accent-blue!",
           )}
           style={
             !isIdentifierSelected
               ? {
-                  "--after-background-color": priority
-                    ? priorityColor + "15"
-                    : "var(--material-sidepane)",
-                }
+                "--after-background-color": priority
+                  ? priorityColor + "15"
+                  : "var(--material-sidepane)",
+              }
               : {}
           }
         >
@@ -3332,21 +3338,23 @@ function ReadStatusIcon({ readStatusName }: { readStatusName: string }) {
 export function Bibliography({
   items,
   compactMode = false,
+  cslStyle = null,
 }: {
   items: Zotero.Item[];
   compactMode?: boolean;
+  cslStyle?: string | null;
 }) {
   const [bibliographicReference, setBibliographicReference] = useState(
     generateFallbackBibliographicReference(items),
   );
   useEffect(() => {
     (async () => {
-      const ref = await generateBibliographicReference(items, false);
+      const ref = await generateBibliographicReference(items, false, cslStyle);
       if (ref) {
         setBibliographicReference(ref);
       }
     })();
-  }, [items]);
+  }, [items, cslStyle]);
 
   return (
     <div>

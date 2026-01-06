@@ -8,6 +8,7 @@ import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata"
 import { useDebouncedEffect } from "../utils/react/useDebouncedEffect";
 import { Priority, PrioritySchema } from "../utils/schemas";
 import { uuidv7 } from "uuidv7";
+import { getAvailableStyles, getStyleName, getQuickCopyStyle } from "../utils/cite";
 
 interface SettingsPageProps {
   collectionId: number;
@@ -22,6 +23,11 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
     _setClassTitle,
     setNomenclature,
     setPriorities,
+    _setInstitution,
+    _setCourseCode,
+    _setLocked,
+    _setLinks,
+    setCslStyle,
   ] = useZoteroSyllabusMetadata(collectionId);
 
   // Use local state for immediate UI feedback, but save immediately
@@ -121,6 +127,23 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
     [localNomenclature],
   );
 
+  // CSL Style dropdown
+  const availableStyles = useMemo(() => getAvailableStyles(), []);
+  const quickCopyStyleUrl = useMemo(() => getQuickCopyStyle(), []);
+  const defaultStyleName = useMemo(
+    () => getStyleName(quickCopyStyleUrl),
+    [quickCopyStyleUrl],
+  );
+  const currentStyle = metadata.cslStyle || null;
+
+  const handleCslStyleChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const value = e.currentTarget.value;
+      setCslStyle(value === "" ? null : value);
+    },
+    [setCslStyle],
+  );
+
   return (
     <div className="syllabus-page overflow-y-auto overflow-x-hidden h-full">
       <div className="pb-12">
@@ -167,6 +190,36 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
               <p className="text-sm text-secondary">
                 Plural form: <strong>{pluralNomenclature}</strong>
               </p>
+            </div>
+          </section>
+
+          {/* CSL Style Section */}
+          <section className="space-y-4">
+            <h2 className="text-2xl font-semibold">Bibliography Style</h2>
+            <p className="text-secondary">
+              Choose a CSL (Citation Style Language) style for bibliographic
+              references. If not set, the user default style will be used.
+            </p>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-secondary">
+                Citation Style
+              </label>
+              <select
+                value={currentStyle || ""}
+                onChange={handleCslStyleChange}
+                className="px-4 py-2 border border-quinary rounded-md bg-background text-primary focus:outline-3 focus:outline-accent-blue focus:outline-offset-2"
+              >
+                <option value="">
+                  {defaultStyleName
+                    ? `User default: ${defaultStyleName}`
+                    : "User default"}
+                </option>
+                {availableStyles.map((style) => (
+                  <option key={style.url} value={style.url}>
+                    {style.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </section>
 

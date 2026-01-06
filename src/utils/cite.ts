@@ -1,8 +1,66 @@
 /**
+ * Get all available CSL styles
+ * @returns Array of style objects with name and url
+ */
+export function getAvailableStyles(): Array<{ name: string; url: string }> {
+  try {
+    const styles = Zotero.Styles.getVisible() as Array<{
+      title?: string;
+      name?: string;
+      url: string;
+    }>;
+    return styles.map((style) => ({
+      name: style.title || style.name || "Unknown Style",
+      url: style.url,
+    }));
+  } catch (error) {
+    ztoolkit.log("Error getting available styles:", error);
+    return [];
+  }
+}
+
+/**
+ * Get the name of a CSL style from its URL
+ * @param styleUrl - The style URL to get the name for
+ * @returns The style name or null if not found
+ */
+export function getStyleName(styleUrl: string | null): string | null {
+  if (!styleUrl) {
+    return null;
+  }
+
+  try {
+    // Try to find the style name from available styles
+    const styles = Zotero.Styles.getVisible() as Array<{
+      title?: string;
+      name?: string;
+      url: string;
+    }>;
+    const style = styles.find((s) => s.url === styleUrl);
+    if (style) {
+      return style.title || style.name || null;
+    }
+
+    // If not found in visible styles, extract from URL
+    const urlMatch = styleUrl.match(/styles\/([^/]+)$/);
+    if (urlMatch && urlMatch[1]) {
+      return urlMatch[1]
+        .replace(/-/g, " ")
+        .replace(/\b\w/g, (l) => l.toUpperCase());
+    }
+
+    return null;
+  } catch (error) {
+    ztoolkit.log("Error getting style name:", error);
+    return null;
+  }
+}
+
+/**
  * Get the quick copy CSL style from Zotero's export settings
  * @returns The style URL or null if not found
  */
-function getQuickCopyStyle(): string | null {
+export function getQuickCopyStyle(): string | null {
   try {
     // Get the quick copy setting from Zotero preferences
     // The preference format is typically like "bibliography=http://www.zotero.org/styles/apa"
@@ -37,40 +95,62 @@ function getQuickCopyStyle(): string | null {
  * Generate a bibliographic reference for an item using Zotero's CSL processor
  * and the user's preferred citation style (defaults to quick copy style from Settings > Export).
  * @param item - The Zotero item to generate a reference for
+ * @param fallback - Whether to use fallback formatting if style generation fails
+ * @param styleUrl - Optional CSL style URL to use instead of the default style
  * @returns The formatted bibliographic reference, or null if generation fails
  */
 export async function generateBibliographicReference(
   item: Zotero.Item | Zotero.Item[],
   fallback = true,
+  styleUrl?: string | null,
 ): Promise<string | null> {
   const itemArray = Array.isArray(item) ? item : [item];
-  try {
-    // Try to get the quick copy style from export settings first
-    let styleUrl: string | null = getQuickCopyStyle();
 
-    // Fallback to the last visible style if quick copy style is not set
-    if (!styleUrl) {
-      const styles = Zotero.Styles.getVisible();
-      if (styles.length > 0) {
-        styleUrl = styles[styles.length - 1].url;
+  // Helper function to try generating with a specific style URL
+  const tryWithStyle = async (url: string): Promise<string | null> => {
+    try {
+      const result = await Zotero.QuickCopy.getContentFromItems(
+        itemArray,
+        `bibliography=${url}`,
+      );
+      if (result?.text) {
+        return result.text;
       }
+    } catch (error) {
+      ztoolkit.log(`Error generating bibliographic reference with style ${url}:`, error);
     }
+    return null;
+  };
 
-    if (!styleUrl) {
-      throw new Error("No style available");
+  // If a custom style URL is provided, try it first
+  if (styleUrl) {
+    const result = await tryWithStyle(styleUrl);
+    if (result) {
+      return result;
     }
-
-    const result = await Zotero.QuickCopy.getContentFromItems(
-      itemArray,
-      `bibliography=${styleUrl}`,
-    );
-    if (result?.text) {
-      return result.text;
-    }
-  } catch (error) {
-    ztoolkit.log("Error generating bibliographic reference:", error);
+    // If custom style fails, fallback to default style chain
+    ztoolkit.log(`Custom CSL style ${styleUrl} failed to load, falling back to default style`);
   }
 
+  // Try to get the quick copy style from export settings
+  const quickCopyStyle = getQuickCopyStyle();
+  if (quickCopyStyle) {
+    const result = await tryWithStyle(quickCopyStyle);
+    if (result) {
+      return result;
+    }
+  }
+
+  // Fallback to the last visible style if quick copy style is not set or failed
+  const styles = Zotero.Styles.getVisible() as Array<{ url: string }>;
+  if (styles.length > 0) {
+    const result = await tryWithStyle(styles[styles.length - 1].url);
+    if (result) {
+      return result;
+    }
+  }
+
+  // If all style attempts failed, use fallback formatting if enabled
   return fallback ? generateFallbackBibliographicReference(item) : null;
 }
 

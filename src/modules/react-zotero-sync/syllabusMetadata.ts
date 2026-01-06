@@ -98,6 +98,13 @@ export function useZoteroSyllabusMetadata(
     [collectionId],
   );
 
+  const setCslStyle = useCallback(
+    (cslStyle: string | null) => {
+      SyllabusManager.setCslStyle(collectionId, cslStyle, "page");
+    },
+    [collectionId],
+  );
+
   return [
     syllabusMetadata,
     setDescription,
@@ -109,6 +116,7 @@ export function useZoteroSyllabusMetadata(
     setCourseCode,
     setLocked,
     setLinks,
+    setCslStyle,
   ] as const;
 }
 
