@@ -262,7 +262,7 @@ export function ReadingSchedule() {
                 </div>
 
                 <div className="container-padded">
-                  <div className="space-y-8 my-6">
+                  <div className="space-y-12 my-6">
                     {sortedDates.map((dateTimestamp) => {
                       const classReadings = weekData.get(dateTimestamp)!;
 
@@ -286,156 +286,158 @@ export function ReadingSchedule() {
                             {formatReadingDate(dateTimestamp)}
                           </div>
 
-                          {sortedClassReadings.map((classReading) => {
-                            const { singularCapitalized, singular } =
-                              SyllabusManager.getNomenclatureFormatted(
+                          <div className="space-y-8">
+                            {sortedClassReadings.map((classReading) => {
+                              const { singularCapitalized, singular } =
+                                SyllabusManager.getNomenclatureFormatted(
+                                  classReading.collectionId,
+                                );
+
+                              const classStatus = SyllabusManager.getClassStatus(
                                 classReading.collectionId,
+                                classReading.classNumber,
                               );
 
-                            const classStatus = SyllabusManager.getClassStatus(
-                              classReading.collectionId,
-                              classReading.classNumber,
-                            );
+                              const handleClassStatusToggle = async () => {
+                                try {
+                                  const newStatus =
+                                    classStatus === "done" ? null : "done";
+                                  await SyllabusManager.setClassStatus(
+                                    classReading.collectionId,
+                                    classReading.classNumber,
+                                    newStatus,
+                                    "page",
+                                  );
+                                } catch (err) {
+                                  ztoolkit.log(
+                                    "Error toggling class status:",
+                                    err,
+                                  );
+                                }
+                              };
 
-                            const handleClassStatusToggle = async () => {
-                              try {
-                                const newStatus =
-                                  classStatus === "done" ? null : "done";
-                                await SyllabusManager.setClassStatus(
-                                  classReading.collectionId,
-                                  classReading.classNumber,
-                                  newStatus,
-                                  "page",
-                                );
-                              } catch (err) {
-                                ztoolkit.log(
-                                  "Error toggling class status:",
-                                  err,
-                                );
-                              }
-                            };
-
-                            return (
-                              <div
-                                key={`${classReading.collectionId}-${classReading.classNumber}`}
-                                className={twMerge(
-                                  "mb-4 relative",
-                                  classStatus === "done" ? "opacity-40" : "",
-                                )}
-                              >
-                                <div className="flex flex-col gap-2 mb-2">
-                                  <div>
-                                    <input
-                                      type="checkbox"
-                                      checked={classStatus === "done"}
-                                      onChange={handleClassStatusToggle}
-                                      className={twMerge(
-                                        "absolute right-full mr-1 md:mr-2! w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden accent-accent-green!",
-                                      )}
-                                      title={
-                                        classStatus === "done"
-                                          ? "Mark as not done"
-                                          : "Mark as done"
-                                      }
-                                      aria-label={
-                                        classStatus === "done"
-                                          ? "Mark as not done"
-                                          : "Mark as done"
-                                      }
-                                    />
-                                    <div
-                                      className={twMerge(
-                                        "text-xl flex-1",
-                                        classStatus === "done"
-                                          ? "line-through"
-                                          : "",
-                                        "hover:cursor-pointer hover:bg-quinary active:bg-quarternary rounded-md px-1 -mx-1 inline-block",
-                                      )}
-                                      onClick={() =>
-                                        handleCollectionClick(
-                                          classReading.collectionId,
-                                        )
-                                      }
-                                    >
-                                      {classReading.classTitle ? (
-                                        <>
-                                          <span className="font-semibold">
-                                            {classReading.classTitle}
-                                          </span>
-                                          <span className="text-secondary">
-                                            ,{" "}
-                                          </span>
-                                        </>
-                                      ) : null}
-                                      <span className="text-secondary">
-                                        {classReading.classTitle
-                                          ? singular
-                                          : singularCapitalized}{" "}
-                                        {classReading.classNumber}
-                                      </span>
-                                      <span className="text-secondary">
-                                        {" "}
-                                        of{" "}
-                                      </span>
-                                      <span
-                                        className={twMerge("font-semibold")}
-                                      >
-                                        {classReading.collectionName}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  {classReading.classDescription && (
-                                    <div className="text-base mb-1">
-                                      {classReading.classDescription}
-                                    </div>
-                                  )}
-                                </div>
+                              return (
                                 <div
+                                  key={`${classReading.collectionId}-${classReading.classNumber}`}
                                   className={twMerge(
-                                    "space-y-2",
-                                    compactMode ? "space-y-2" : "space-y-4",
+                                    "relative",
+                                    classStatus === "done" ? "opacity-40" : "",
                                   )}
                                 >
-                                  {classReading.items.map(
-                                    ({ item, assignment }) => {
-                                      if (!assignment.id) return null;
+                                  <div className="flex flex-col gap-2 mb-2">
+                                    <div>
+                                      <input
+                                        type="checkbox"
+                                        checked={classStatus === "done"}
+                                        onChange={handleClassStatusToggle}
+                                        className={twMerge(
+                                          "absolute right-full mr-1 md:mr-2! w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden accent-accent-green!",
+                                        )}
+                                        title={
+                                          classStatus === "done"
+                                            ? "Mark as not done"
+                                            : "Mark as done"
+                                        }
+                                        aria-label={
+                                          classStatus === "done"
+                                            ? "Mark as not done"
+                                            : "Mark as done"
+                                        }
+                                      />
+                                      <div
+                                        className={twMerge(
+                                          "text-xl flex-1",
+                                          classStatus === "done"
+                                            ? "line-through"
+                                            : "",
+                                          "hover:cursor-pointer hover:bg-quinary active:bg-quarternary rounded-md px-1 -mx-1 inline-block",
+                                        )}
+                                        onClick={() =>
+                                          handleCollectionClick(
+                                            classReading.collectionId,
+                                          )
+                                        }
+                                      >
+                                        {classReading.classTitle ? (
+                                          <>
+                                            <span className="font-semibold">
+                                              {classReading.classTitle}
+                                            </span>
+                                            <span className="text-secondary">
+                                              ,{" "}
+                                            </span>
+                                          </>
+                                        ) : null}
+                                        <span className="text-secondary">
+                                          {classReading.classTitle
+                                            ? singular
+                                            : singularCapitalized}{" "}
+                                          {classReading.classNumber}
+                                        </span>
+                                        <span className="text-secondary">
+                                          {" "}
+                                          of{" "}
+                                        </span>
+                                        <span
+                                          className={twMerge("font-semibold")}
+                                        >
+                                          {classReading.collectionName}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    {classReading.classDescription && (
+                                      <div className="text-base mb-1">
+                                        {classReading.classDescription}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div
+                                    className={twMerge(
+                                      "space-y-2",
+                                      compactMode ? "space-y-2" : "space-y-4",
+                                    )}
+                                  >
+                                    {classReading.items.map(
+                                      ({ item, assignment }) => {
+                                        if (!assignment.id) return null;
 
-                                      const priority =
-                                        assignment.priority || "";
-                                      const uniqueKey = `${item.id}-assignment-${assignment.id}`;
+                                        const priority =
+                                          assignment.priority || "";
+                                        const uniqueKey = `${item.id}-assignment-${assignment.id}`;
 
-                                      return (
-                                        <SyllabusItemCard
-                                          key={uniqueKey}
-                                          item={item}
-                                          collectionId={
-                                            classReading.collectionId
-                                          }
-                                          classNumber={classReading.classNumber}
-                                          assignment={assignment}
-                                          slim={
-                                            compactMode ||
-                                            !priority ||
-                                            priority === "optional"
-                                          }
-                                          compactMode={compactMode}
-                                          isLocked={true}
-                                          onClick={(item) =>
-                                            handleItemClick(
-                                              item,
-                                              classReading.collectionId,
-                                            )
-                                          }
-                                          readerMode
-                                          className="cursor-pointer"
-                                        />
-                                      );
-                                    },
-                                  )}
+                                        return (
+                                          <SyllabusItemCard
+                                            key={uniqueKey}
+                                            item={item}
+                                            collectionId={
+                                              classReading.collectionId
+                                            }
+                                            classNumber={classReading.classNumber}
+                                            assignment={assignment}
+                                            slim={
+                                              compactMode ||
+                                              !priority ||
+                                              priority === "optional"
+                                            }
+                                            compactMode={compactMode}
+                                            isLocked={true}
+                                            onClick={(item) =>
+                                              handleItemClick(
+                                                item,
+                                                classReading.collectionId,
+                                              )
+                                            }
+                                            readerMode
+                                            className="cursor-pointer"
+                                          />
+                                        );
+                                      },
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
+                          </div>
                         </div>
                       );
                     })}
