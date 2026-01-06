@@ -2809,7 +2809,7 @@ export function SyllabusItemCard({
   const uniqueUrls = useMemo(() => {
     const urls: Array<{
       url: string;
-      label: string;
+      label?: string;
       onClick: (e: JSX.TargetedMouseEvent<HTMLElement>) => void;
     }> = [];
     const normalizedUrls = new Set<string>();
@@ -2821,7 +2821,7 @@ export function SyllabusItemCard({
         normalizedUrls.add(normalized);
         urls.push({
           url: snapshotUrl,
-          label: "Link",
+          label: "URL",
           onClick: handleSnapshotUrlClick,
         });
       }
@@ -2834,7 +2834,7 @@ export function SyllabusItemCard({
         normalizedUrls.add(normalized);
         urls.push({
           url: url,
-          label: "Link",
+          label: "URL",
           onClick: handleUrlClick,
         });
       }
@@ -3154,7 +3154,7 @@ export function SyllabusItemCard({
       </div>
       {(!!viewableAttachments?.length || uniqueUrls.length > 0) && (
         <div
-          className="syllabus-item-actions shrink-0 inline-flex flex-col gap-1 in-[.print]:hidden"
+          className="syllabus-item-actions shrink-0 inline-flex flex-row gap-1 in-[.print]:hidden"
           draggable={false}
         >
           {/* Attachment buttons */}
@@ -3209,9 +3209,8 @@ export function SyllabusItemCard({
                 case "epub":
                   return "attachmentEPUB";
                 case "snapshot":
-                  return "attachmentSnapshot";
                 case "html":
-                  return "attachmentHTML";
+                  return "attachmentSnapshot";
                 case "doc":
                   return "attachmentDocument";
                 case "txt":
