@@ -46,7 +46,6 @@ import {
   Unlock,
   Maximize2,
   Minimize2,
-  ListChecks,
   List,
   Download,
   Upload,
@@ -119,6 +118,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
   // Settings view state
   const [showSettings, setShowSettings] = useState(false);
+
+  // Table of Contents state
+  const [showTOC, setShowTOC] = useState(false);
 
   // Selection state (separate from Zotero selection)
   // Uses format: "assignment:${assignmentId}" or "item:${itemId}"
@@ -1621,16 +1623,41 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                 </div>
               )}
               <div className="flex flex-row items-center gap-2 justify-between">
-                <div className="flex-1 text-3xl font-semibold grow shrink-0">
-                  <TextInput
-                    elementType="input"
-                    initialValue={title || ""}
-                    onSave={setTitle}
-                    emptyBehavior="reset"
-                    placeholder="Add a title..."
-                    className="w-full px-0! mx-0! text-primary! disabled:text-primary!"
-                    readOnly={isLocked}
-                  />
+                <div className="flex flex-row items-center gap-2 flex-1 relative">
+                  {/* Table of Contents Icon */}
+                  <div className="shrink-0 absolute right-full mr-2!">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowTOC((prev) => !prev);
+                      }}
+                      className="text-secondary hover:text-primary p-1 rounded hover:bg-quinary transition-colors bg-transparent! border-none"
+                      title="Table of Contents"
+                      aria-label="Table of Contents"
+                      data-toc-button="true"
+                    >
+                      <List size={20} />
+                    </button>
+                    {showTOC && (
+                      <TableOfContents
+                        classGroups={classGroups}
+                        collectionId={collectionId}
+                        isOpen={showTOC}
+                        onClose={() => setShowTOC(false)}
+                      />
+                    )}
+                  </div>
+                  <div className="flex-1 text-3xl font-semibold grow shrink-0">
+                    <TextInput
+                      elementType="input"
+                      initialValue={title || ""}
+                      onSave={setTitle}
+                      emptyBehavior="reset"
+                      placeholder="Add a title..."
+                      className="w-full px-0! mx-0! text-primary! disabled:text-primary!"
+                      readOnly={isLocked}
+                    />
+                  </div>
                 </div>
                 <div className="inline-flex items-center gap-2.5 shrink grow-0">
                   {!isLocked && (
@@ -2099,8 +2126,12 @@ function ClassGroupComponent({
     }
   };
 
+  // Generate ID for TOC navigation
+  const tocId = classNumber ? `toc-class-${classNumber}` : null;
+
   return (
     <div
+      id={tocId || undefined}
       className={twMerge(
         "syllabus-class-group in-[.print]:scheme-light",
         readerMode && classIsDone ? "opacity-40" : "",
