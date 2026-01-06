@@ -2447,34 +2447,34 @@ function TextInput({
         onChange: readOnly
           ? undefined
           : (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-              setValue((e.target as HTMLInputElement).value),
+            setValue((e.target as HTMLInputElement).value),
         onBlur: readOnly ? undefined : () => save(value),
         onKeyDown: readOnly
           ? undefined
           : (
-              e: JSX.TargetedKeyboardEvent<
-                HTMLInputElement | HTMLTextAreaElement
-              >,
-            ) => {
-              if (e.key === "Escape" || e.key === "Enter") {
-                e.preventDefault();
-                e.currentTarget.blur();
-                save(value);
-              }
-            },
+            e: JSX.TargetedKeyboardEvent<
+              HTMLInputElement | HTMLTextAreaElement
+            >,
+          ) => {
+            if (e.key === "Escape" || e.key === "Enter") {
+              e.preventDefault();
+              e.currentTarget.blur();
+              save(value);
+            }
+          },
         onSelect: readOnly
           ? (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-              e.preventDefault();
-              e.currentTarget.setSelectionRange(0, 0);
-            }
+            e.preventDefault();
+            e.currentTarget.setSelectionRange(0, 0);
+          }
           : undefined,
         onClick: readOnly
           ? (
-              e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
-            ) => {
-              e.preventDefault();
-              e.currentTarget.blur();
-            }
+            e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
+          ) => {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
           : undefined,
         placeholder: readOnly ? undefined : placeholder || "Click to edit",
         className: twMerge(
@@ -2648,10 +2648,36 @@ export function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-      item: Zotero.Item;
-      type: "pdf" | "snapshot" | "epub";
-    }>;
+        item: Zotero.Item;
+        type: "pdf" | "snapshot" | "epub";
+      }>;
   }, [item, slim]);
+
+  // Find snapshot attachment and get its URL
+  const snapshotUrl = useMemo(() => {
+    const snapshot = viewableAttachments.find(
+      (att) => att.type === "snapshot",
+    );
+    if (snapshot) {
+      return snapshot.item.getField("url") || null;
+    }
+    return null;
+  }, [viewableAttachments]);
+
+  // Normalize URLs for comparison (remove trailing slashes, fragments, etc.)
+  const normalizeUrl = (urlString: string | null): string | null => {
+    if (!urlString) return null;
+    try {
+      const url = new URL(urlString);
+      // Remove fragment and trailing slash from pathname
+      url.hash = "";
+      url.pathname = url.pathname.replace(/\/$/, "");
+      return url.toString();
+    } catch {
+      // If URL parsing fails, just trim and lowercase for comparison
+      return urlString.trim().toLowerCase().replace(/\/$/, "");
+    }
+  };
 
   const metadataParts = [
     author,
@@ -2718,10 +2744,61 @@ export function SyllabusItemCard({
     (e.currentTarget as HTMLElement).classList.remove("syllabus-item-dragging");
   };
 
-  const handleUrlClick = (e: JSX.TargetedMouseEvent<HTMLElement>) => {
-    e.stopPropagation();
-    Zotero.launchURL(url);
-  };
+  const handleUrlClick = useCallback(
+    (e: JSX.TargetedMouseEvent<HTMLElement>) => {
+      e.stopPropagation();
+      Zotero.launchURL(url);
+    },
+    [url],
+  );
+
+  const handleSnapshotUrlClick = useCallback(
+    (e: JSX.TargetedMouseEvent<HTMLElement>) => {
+      e.stopPropagation();
+      if (snapshotUrl) {
+        Zotero.launchURL(snapshotUrl);
+      }
+    },
+    [snapshotUrl],
+  );
+
+  // Deduplicate URLs - only show unique URLs
+  const uniqueUrls = useMemo(() => {
+    const urls: Array<{
+      url: string;
+      label: string;
+      onClick: (e: JSX.TargetedMouseEvent<HTMLElement>) => void;
+    }> = [];
+    const normalizedUrls = new Set<string>();
+
+    // Add snapshot URL if it exists and is unique
+    if (snapshotUrl) {
+      const normalized = normalizeUrl(snapshotUrl);
+      if (normalized && !normalizedUrls.has(normalized)) {
+        normalizedUrls.add(normalized);
+        urls.push({
+          url: snapshotUrl,
+          label: "Link",
+          onClick: handleSnapshotUrlClick,
+        });
+      }
+    }
+
+    // Add item URL if it exists and is unique
+    if (url) {
+      const normalized = normalizeUrl(url);
+      if (normalized && !normalizedUrls.has(normalized)) {
+        normalizedUrls.add(normalized);
+        urls.push({
+          url: url,
+          label: "Link",
+          onClick: handleUrlClick,
+        });
+      }
+    }
+
+    return urls;
+  }, [snapshotUrl, url, handleSnapshotUrlClick, handleUrlClick]);
 
   function onClick(
     _item: Zotero.Item,
@@ -2794,8 +2871,8 @@ export function SyllabusItemCard({
 
   const colors = priority
     ? {
-        backgroundColor: priorityColor + "15",
-      }
+      backgroundColor: priorityColor + "15",
+    }
     : {};
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
@@ -2862,8 +2939,8 @@ export function SyllabusItemCard({
             ? "px-4 py-2.5 gap-4"
             : "px-4 py-4 gap-4",
         isZoteroSelected &&
-          !isIdentifierSelected &&
-          "not-in-[.print]:outline-2! not-in-[.print]:outline-accent-blue",
+        !isIdentifierSelected &&
+        "not-in-[.print]:outline-2! not-in-[.print]:outline-accent-blue",
         isIdentifierSelected && "not-in-[.print]:bg-accent-blue! scheme-dark",
         // isZoteroSelected && isIdentifierSelected && "outline-none!",
         // assignmentStatus === "done" ? "opacity-40" : "",
@@ -3024,7 +3101,7 @@ export function SyllabusItemCard({
           </>
         )}
       </div>
-      {(!!viewableAttachments?.length || url) && (
+      {(!!viewableAttachments?.length || uniqueUrls.length > 0) && (
         <div
           className="syllabus-item-actions shrink-0 inline-flex flex-col gap-1 in-[.print]:hidden"
           draggable={false}
@@ -3066,24 +3143,27 @@ export function SyllabusItemCard({
               </div>
             );
           })}
-          {/* URL link button */}
-          {url && (
-            <div className="focus-states-target in-[.print]:hidden">
+          {/* Unique URL link buttons */}
+          {uniqueUrls.map((urlInfo, index) => (
+            <div
+              key={`url-${index}`}
+              className="focus-states-target in-[.print]:hidden"
+            >
               <button
                 className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
-                onClick={handleUrlClick}
-                title="Open URL"
-                aria-label="Open URL"
+                onClick={urlInfo.onClick}
+                title={`Open ${urlInfo.label}`}
+                aria-label={`Open ${urlInfo.label}`}
               >
                 <span
                   className="syllabus-action-icon icon icon-css icon-attachment-type"
                   data-item-type="attachmentLink"
-                  aria-label="Open URL"
+                  aria-label={`Open ${urlInfo.label}`}
                 />
-                <span className="syllabus-action-label">Link</span>
+                <span className="syllabus-action-label">{urlInfo.label}</span>
               </button>
             </div>
-          )}
+          ))}
         </div>
       )}
       {!isLocked && (
@@ -3097,17 +3177,17 @@ export function SyllabusItemCard({
             "after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full! after:bg-(--after-background-color) after:rounded-b-lg rounded-t-0! after:z-25! after:h-full!",
             // Overrides
             isZoteroSelected &&
-              !isIdentifierSelected &&
-              "not-in-[.print]:border-accent-blue! not-in-[.print]:border-3! not-in-[.print]:border-t-0!",
+            !isIdentifierSelected &&
+            "not-in-[.print]:border-accent-blue! not-in-[.print]:border-3! not-in-[.print]:border-t-0!",
             isIdentifierSelected && "not-in-[.print]:after:bg-accent-blue!",
           )}
           style={
             !isIdentifierSelected
               ? {
-                  "--after-background-color": priority
-                    ? priorityColor + "15"
-                    : "var(--material-sidepane)",
-                }
+                "--after-background-color": priority
+                  ? priorityColor + "15"
+                  : "var(--material-sidepane)",
+              }
               : {}
           }
         >
