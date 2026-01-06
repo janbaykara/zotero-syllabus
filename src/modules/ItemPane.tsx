@@ -517,7 +517,7 @@ function AssignmentEditor({
     <div className="border border-quinary rounded-md m-0 flex flex-col opacity-100 transition-opacity duration-200 bg-background divide-y divide-quarternary space-y-2.5 *:not-last:pb-2.5 p-2.5 z-10">
       {/* Header with class info and status */}
       <header className="flex items-end justify-between gap-3">
-        <div className="flex-1 min-w-0 font-medium">
+        <div className="flex-1 min-w-0 font-medium self-baseline">
           {assignment.classNumber !== undefined ? (
             <div>
               <div>
@@ -535,7 +535,7 @@ function AssignmentEditor({
               ) : null}
             </div>
           ) : (
-            <div>Reference material</div>
+            <div className="self-baseline">Reference material</div>
           )}
         </div>
         {editable && (
@@ -550,7 +550,7 @@ function AssignmentEditor({
             }
             disabled={isSaving}
             className={twMerge(
-              "px-2 py-1 text-xs font-medium rounded-md",
+              "px-2 py-1 text-xs font-medium rounded-md -mt-1!",
               isDone ? "bg-quinary" : "bg-transparent",
               isDone ? "border-quinary" : "border-transparent",
               isDone ? "text-primary" : "text-secondary",
