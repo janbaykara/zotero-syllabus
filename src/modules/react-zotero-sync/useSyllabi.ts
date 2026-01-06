@@ -7,10 +7,7 @@ import {
   ItemSyllabusAssignment,
 } from "../syllabus";
 import { getAllCollections } from "../../utils/zotero";
-import {
-  getCachedItem,
-  getCachedCollectionById,
-} from "../../utils/cache";
+import { getCachedItem, getCachedCollectionById } from "../../utils/cache";
 
 export type SyllabusData = {
   collection: Zotero.Collection;
@@ -67,9 +64,9 @@ export function useSyllabi(): SyllabusData[] {
             };
           })
           .filter(Boolean) as Array<{
-            zoteroItem: Zotero.Item;
-            assignments: ItemSyllabusAssignment[];
-          }>;
+          zoteroItem: Zotero.Item;
+          assignments: ItemSyllabusAssignment[];
+        }>;
 
         return {
           collection,

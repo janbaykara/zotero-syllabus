@@ -53,9 +53,9 @@ export function useZoteroCollectionItems(
         };
       })
       .filter(Boolean) as {
-        zoteroItem: Zotero.Item;
-        assignments: ItemSyllabusAssignment[];
-      }[];
+      zoteroItem: Zotero.Item;
+      assignments: ItemSyllabusAssignment[];
+    }[];
   }, [__itemsFromZotero]);
 
   return parsedItems;

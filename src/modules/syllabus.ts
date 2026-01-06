@@ -83,13 +83,13 @@ export type { GetByLibraryAndKeyArgs };
 
 const tabManager = FEATURE_FLAG.READING_SCHEDULE
   ? new TabManager<Record<string, never>>({
-    type: "reading-list",
-    title: "Reading Schedule",
-    rootElementIdFactory: () => "reading-list-tab-root",
-    data: { icon: "book" },
-    componentFactory: () => h(ReadingSchedule, {}),
-    getTabId: () => "syllabus-reading-list-tab",
-  })
+      type: "reading-list",
+      title: "Reading Schedule",
+      rootElementIdFactory: () => "reading-list-tab-root",
+      data: { icon: "book" },
+      componentFactory: () => h(ReadingSchedule, {}),
+      getTabId: () => "syllabus-reading-list-tab",
+    })
   : null;
 
 export class SyllabusManager {
@@ -103,8 +103,6 @@ export class SyllabusManager {
   static getPreferenceKey(key: SyllabusSettingsKey): string {
     return `${addon.data.config.prefsPrefix}.${key}`;
   }
-
-
 
   /**
    * Normalize collection identifier to library ID and key
@@ -485,10 +483,8 @@ export class SyllabusManager {
     const prefKey = SyllabusManager.getPreferenceKey(
       SyllabusSettingsKey.COLLECTION_VIEW_MODES,
     );
-    const viewModes = getCachedPref(
-      prefKey,
-      z.record(z.string(), z.boolean()),
-    ) || {};
+    const viewModes =
+      getCachedPref(prefKey, z.record(z.string(), z.boolean())) || {};
 
     // Default to false (tree view) if not set for this collection
     return viewModes[collectionId] === true;
@@ -507,10 +503,8 @@ export class SyllabusManager {
     const prefKey = SyllabusManager.getPreferenceKey(
       SyllabusSettingsKey.COLLECTION_VIEW_MODES,
     );
-    const viewModes = getCachedPref(
-      prefKey,
-      z.record(z.string(), z.boolean()),
-    ) || {};
+    const viewModes =
+      getCachedPref(prefKey, z.record(z.string(), z.boolean())) || {};
 
     // Update the preference for this collection
     viewModes[collectionId] = enabled;
@@ -986,9 +980,9 @@ export class SyllabusManager {
             const classTitle =
               classNumber !== undefined
                 ? SyllabusManager.getClassTitle(
-                  selectedCollection.id,
-                  classNumber,
-                )
+                    selectedCollection.id,
+                    classNumber,
+                  )
                 : "";
             const priority = firstAssignment.priority || "";
             return `${sortKey}|${priority}|${classNumber ?? ""}|${classTitle}|${selectedCollection.id}`;
@@ -1250,13 +1244,13 @@ export class SyllabusManager {
           body,
           selectedCollection
             ? h(ItemPane, {
-              currentCollectionId: selectedCollection.id,
-              editable,
-            })
+                currentCollectionId: selectedCollection.id,
+                editable,
+              })
             : h("div", {
-              innerText: "Select a collection to view syllabus assignments",
-              className: "text-center text-gray-500 p-4",
-            }),
+                innerText: "Select a collection to view syllabus assignments",
+                className: "text-center text-gray-500 p-4",
+              }),
           "syllabus-item-pane",
         );
       },
@@ -1511,7 +1505,7 @@ export class SyllabusManager {
     }
     const assignments =
       data[
-      this.getCollectionReferenceString(normalized.libraryID, normalized.key)
+        this.getCollectionReferenceString(normalized.libraryID, normalized.key)
       ];
     if (!assignments || !Array.isArray(assignments)) {
       return [];
@@ -1900,7 +1894,7 @@ export class SyllabusManager {
       // This ensures OPTIONAL ("optional") sorts before unprioritized ("zzzz")
       assignment.priority || "zzzz",
       assignment.classInstruction?.slice(0, 4).replace(/[^a-zA-Z0-9]/g, "_") ||
-      "",
+        "",
       assignment.id || "",
     );
 
@@ -2481,7 +2475,6 @@ export class SyllabusManager {
     }
     return title;
   }
-
 
   static async setClassMetadata(
     collectionId: number | GetByLibraryAndKeyArgs,

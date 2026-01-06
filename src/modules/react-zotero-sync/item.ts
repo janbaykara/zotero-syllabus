@@ -37,7 +37,7 @@ export function createItemStore(itemId: number | null) {
 
   function subscribe(onStoreChange: () => void) {
     if (!itemId) {
-      return () => { }; // No-op unsubscribe
+      return () => {}; // No-op unsubscribe
     }
 
     listeners.add(onStoreChange);

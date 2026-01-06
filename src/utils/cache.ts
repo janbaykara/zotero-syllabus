@@ -6,10 +6,7 @@
 import type { z } from "zod";
 import type { VersionedEntity } from "verzod";
 import { LRUCache } from "lru-cache";
-import {
-  ItemSyllabusDataEntity,
-  type ItemSyllabusData,
-} from "./schemas";
+import { ItemSyllabusDataEntity, type ItemSyllabusData } from "./schemas";
 import { ExtraFieldTool } from "zotero-plugin-toolkit";
 import type { GetByLibraryAndKeyArgs } from "../modules/syllabus";
 
@@ -202,7 +199,11 @@ class ZoteroCache {
             // Save the migrated data back to the extra field
             const migratedJsonStr = JSON.stringify(result.value);
             this.extraFieldTool
-              .setExtraField(item, ZoteroCache.SYLLABUS_DATA_KEY, migratedJsonStr)
+              .setExtraField(
+                item,
+                ZoteroCache.SYLLABUS_DATA_KEY,
+                migratedJsonStr,
+              )
               .catch((e) => {
                 ztoolkit.log("Error saving upgraded syllabus data:", e);
               })
@@ -378,10 +379,7 @@ class ZoteroCache {
 
     // Fetch from Zotero
     try {
-      const collection = Zotero.Collections.getByLibraryAndKey(
-        libraryID,
-        key,
-      );
+      const collection = Zotero.Collections.getByLibraryAndKey(libraryID, key);
       if (collection) {
         this.setCollection(collection);
       }
@@ -523,4 +521,3 @@ export function getCachedCollectionByKey(
 export function invalidateCachedItemSyllabusData(itemId: number): void {
   zoteroCache.invalidateItemSyllabusData(itemId);
 }
-

@@ -1,7 +1,11 @@
 import { useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
 import SuperJSON from "superjson";
-import { SyllabusManager, ItemSyllabusAssignment, SettingsSyllabusMetadata } from "../syllabus";
+import {
+  SyllabusManager,
+  ItemSyllabusAssignment,
+  SettingsSyllabusMetadata,
+} from "../syllabus";
 import { getCachedItem } from "../../utils/cache";
 
 export type ItemAssignmentsSnapshot = {
@@ -57,7 +61,7 @@ export function createItemAssignmentsStore(
 
   function subscribe(onStoreChange: () => void) {
     if (!itemId || !collectionId) {
-      return () => { }; // No-op unsubscribe
+      return () => {}; // No-op unsubscribe
     }
 
     const observer = {
