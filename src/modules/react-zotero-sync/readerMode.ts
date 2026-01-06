@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
-import { getPref, setPref, getPrefKey } from "../../utils/prefs";
+import { getPref, setPref, getPrefKey, getPrefValue } from "../../utils/prefs";
 
 const PREF_KEY = getPrefKey("readerMode");
 
@@ -22,7 +22,7 @@ export function useZoteroReaderMode() {
 
 export function createReaderModeStore() {
   function getSnapshot() {
-    return String(getPref("readerMode"));
+    return String(getPrefValue("readerMode"));
   }
 
   function subscribe(onStoreChange: () => void) {

@@ -23,6 +23,10 @@ export function getPref<K extends keyof PluginPrefsMap>(key: K) {
   return getCachedPref(`${PREFS_PREFIX}.${key}`) as PluginPrefsMap[K];
 }
 
+export function getPrefValue<K extends keyof PluginPrefsMap>(key: K) {
+  return Zotero.Prefs.get(`${PREFS_PREFIX}.${key}`, true) as PluginPrefsMap[K];
+}
+
 /**
  * Set preference value.
  * Wrapper of `Zotero.Prefs.set`.
