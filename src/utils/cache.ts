@@ -444,6 +444,14 @@ class ZoteroCache {
       }
     }
   }
+
+  /**
+   * Invalidate syllabus data cache for a specific item
+   * Call this immediately after modifying item's syllabus data to ensure cache stays in sync
+   */
+  invalidateItemSyllabusData(itemId: number): void {
+    this.syllabusDataCache.delete(itemId);
+  }
 }
 
 // Singleton instance
@@ -506,5 +514,13 @@ export function getCachedCollectionByKey(
   key: string,
 ): Zotero.Collection | undefined {
   return zoteroCache.getCollectionByKey(libraryID, key);
+}
+
+/**
+ * Invalidate syllabus data cache for a specific item
+ * Call this immediately after modifying item's syllabus data to ensure cache stays in sync
+ */
+export function invalidateCachedItemSyllabusData(itemId: number): void {
+  zoteroCache.invalidateItemSyllabusData(itemId);
 }
 

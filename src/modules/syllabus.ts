@@ -38,6 +38,7 @@ import {
   getCachedCollectionById,
   getCachedCollectionByKey,
   zoteroCache,
+  invalidateCachedItemSyllabusData,
 } from "../utils/cache";
 
 enum SyllabusSettingsKey {
@@ -1569,6 +1570,9 @@ export class SyllabusManager {
       this.SYLLABUS_DATA_KEY,
       jsonStr,
     );
+    // Invalidate cache immediately after setting the extra field
+    // This ensures the cache reflects the current state even before the item is saved
+    invalidateCachedItemSyllabusData(item.id);
     this.onItemUpdate(item, source);
   }
 
