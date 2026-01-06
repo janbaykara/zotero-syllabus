@@ -2628,18 +2628,53 @@ export function SyllabusItemCard({
             const contentType = att.attachmentContentType || "";
             const linkMode = att.attachmentLinkMode;
             const path = att.attachmentPath?.toLowerCase() || "";
+
+            // PDF
             if (contentType === "application/pdf" || path.endsWith(".pdf")) {
-              return { item: att, type: "pdf" };
+              return { item: att, type: "pdf" as const };
             }
+
+            // Snapshot (linkMode 3)
             if (linkMode === 3) {
-              return { item: att, type: "snapshot" };
+              return { item: att, type: "snapshot" as const };
             }
+
+            // EPUB
             if (
               contentType === "application/epub+zip" ||
               contentType === "application/epub" ||
               path.endsWith(".epub")
             ) {
-              return { item: att, type: "epub" };
+              return { item: att, type: "epub" as const };
+            }
+
+            // HTML
+            if (
+              contentType === "text/html" ||
+              path.endsWith(".html") ||
+              path.endsWith(".htm")
+            ) {
+              return { item: att, type: "html" as const };
+            }
+
+            // Other file attachments (not linked files)
+            // linkMode 0 = imported file, 1 = linked file, 2 = imported URL, 3 = snapshot
+            if (linkMode === 0 || linkMode === 1) {
+              // Determine type from extension or content type
+              if (path.endsWith(".doc") || path.endsWith(".docx")) {
+                return { item: att, type: "doc" as const };
+              }
+              if (path.endsWith(".txt") || contentType === "text/plain") {
+                return { item: att, type: "txt" as const };
+              }
+              if (
+                path.endsWith(".zip") ||
+                contentType === "application/zip"
+              ) {
+                return { item: att, type: "zip" as const };
+              }
+              // Generic file attachment
+              return { item: att, type: "file" as const };
             }
           }
         } catch {
@@ -2649,7 +2684,15 @@ export function SyllabusItemCard({
       })
       .filter(Boolean) as Array<{
         item: Zotero.Item;
-        type: "pdf" | "snapshot" | "epub";
+        type:
+        | "pdf"
+        | "snapshot"
+        | "epub"
+        | "html"
+        | "doc"
+        | "txt"
+        | "zip"
+        | "file";
       }>;
   }, [item, slim]);
 
@@ -2832,7 +2875,15 @@ export function SyllabusItemCard({
 
   const handleAttachmentClick = async (viewableAttachment?: {
     item: Zotero.Item;
-    type: "pdf" | "snapshot" | "epub";
+    type:
+    | "pdf"
+    | "snapshot"
+    | "epub"
+    | "html"
+    | "doc"
+    | "txt"
+    | "zip"
+    | "file";
   }) => {
     if (!viewableAttachment) return;
 
@@ -3108,14 +3159,76 @@ export function SyllabusItemCard({
         >
           {/* Attachment buttons */}
           {viewableAttachments.map((viewableAttachment) => {
-            const attachmentLabel =
-              viewableAttachment?.type === "pdf"
-                ? "PDF"
-                : viewableAttachment?.type === "snapshot"
-                  ? "Snapshot"
-                  : viewableAttachment?.type === "epub"
-                    ? "EPUB"
-                    : "View";
+            const getAttachmentLabel = (
+              type:
+                | "pdf"
+                | "snapshot"
+                | "epub"
+                | "html"
+                | "doc"
+                | "txt"
+                | "zip"
+                | "file",
+            ) => {
+              switch (type) {
+                case "pdf":
+                  return "PDF";
+                case "snapshot":
+                  return "Snapshot";
+                case "epub":
+                  return "EPUB";
+                case "html":
+                  return "HTML";
+                case "doc":
+                  return "DOC";
+                case "txt":
+                  return "TXT";
+                case "zip":
+                  return "ZIP";
+                case "file":
+                  return "File";
+                default:
+                  return "View";
+              }
+            };
+
+            const getAttachmentIconType = (
+              type:
+                | "pdf"
+                | "snapshot"
+                | "epub"
+                | "html"
+                | "doc"
+                | "txt"
+                | "zip"
+                | "file",
+            ) => {
+              switch (type) {
+                case "pdf":
+                  return "attachmentPDF";
+                case "epub":
+                  return "attachmentEPUB";
+                case "snapshot":
+                  return "attachmentSnapshot";
+                case "html":
+                  return "attachmentHTML";
+                case "doc":
+                  return "attachmentDocument";
+                case "txt":
+                  return "attachmentText";
+                case "zip":
+                  return "attachmentZIP";
+                case "file":
+                  return "attachmentFile";
+                default:
+                  return "attachmentFile";
+              }
+            };
+
+            const attachmentLabel = getAttachmentLabel(
+              viewableAttachment.type,
+            );
+            const iconType = getAttachmentIconType(viewableAttachment.type);
 
             return (
               <div className="focus-states-target in-[.print]:hidden">
@@ -3127,13 +3240,7 @@ export function SyllabusItemCard({
                 >
                   <span
                     className="syllabus-action-icon icon icon-css icon-attachment-type"
-                    data-item-type={
-                      viewableAttachment.type === "pdf"
-                        ? "attachmentPDF"
-                        : viewableAttachment.type === "epub"
-                          ? "attachmentEPUB"
-                          : "attachmentSnapshot"
-                    }
+                    data-item-type={iconType}
                     aria-label={`Open ${attachmentLabel}`}
                   />
                   <span className="syllabus-action-label">
