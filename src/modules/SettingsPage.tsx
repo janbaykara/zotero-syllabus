@@ -8,7 +8,11 @@ import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata"
 import { useDebouncedEffect } from "../utils/react/useDebouncedEffect";
 import { Priority, PrioritySchema } from "../utils/schemas";
 import { uuidv7 } from "uuidv7";
-import { getAvailableStyles, getStyleName, getQuickCopyStyle } from "../utils/cite";
+import {
+  getAvailableStyles,
+  getStyleName,
+  getQuickCopyStyle,
+} from "../utils/cite";
 
 interface SettingsPageProps {
   collectionId: number;

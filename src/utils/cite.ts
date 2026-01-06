@@ -117,7 +117,10 @@ export async function generateBibliographicReference(
         return result.text;
       }
     } catch (error) {
-      ztoolkit.log(`Error generating bibliographic reference with style ${url}:`, error);
+      ztoolkit.log(
+        `Error generating bibliographic reference with style ${url}:`,
+        error,
+      );
     }
     return null;
   };
@@ -129,7 +132,9 @@ export async function generateBibliographicReference(
       return result;
     }
     // If custom style fails, fallback to default style chain
-    ztoolkit.log(`Custom CSL style ${styleUrl} failed to load, falling back to default style`);
+    ztoolkit.log(
+      `Custom CSL style ${styleUrl} failed to load, falling back to default style`,
+    );
   }
 
   // Try to get the quick copy style from export settings
