@@ -548,10 +548,6 @@
     border-style: var(--tw-border-style);
     border-width: 2px;
   }
-  .border-3\! {
-    border-style: var(--tw-border-style) !important;
-    border-width: 3px !important;
-  }
   .border-4 {
     border-style: var(--tw-border-style);
     border-width: 4px;
@@ -568,10 +564,6 @@
     border-top-style: var(--tw-border-style);
     border-top-width: 0px;
   }
-  .border-t-0\! {
-    border-top-style: var(--tw-border-style) !important;
-    border-top-width: 0px !important;
-  }
   .border-t-2\! {
     border-top-style: var(--tw-border-style) !important;
     border-top-width: 2px !important;
@@ -586,9 +578,6 @@
   }
   .border-accent-blue {
     border-color: var(--color-accent-blue);
-  }
-  .border-accent-blue\! {
-    border-color: var(--color-accent-blue) !important;
   }
   .border-background {
     border-color: var(--color-background);
@@ -610,9 +599,6 @@
   }
   .border-transparent {
     border-color: transparent;
-  }
-  .bg-accent-blue\! {
-    background-color: var(--color-accent-blue) !important;
   }
   .bg-accent-blue\/10 {
     background-color: color-mix(in srgb, #4072e5 10%, transparent);
@@ -862,9 +848,6 @@
     outline-style: var(--tw-outline-style) !important;
     outline-width: 2px !important;
   }
-  .outline-accent-blue {
-    outline-color: var(--color-accent-blue);
-  }
   .outline-transparent {
     outline-color: transparent;
   }
@@ -914,6 +897,39 @@
       &:not(*:last-child) {
         padding-bottom: calc(var(--spacing) * 2.5);
       }
+    }
+  }
+  .not-in-\[\.print\]\:border-3\! {
+    &:not(:where(*:is(.print)) *) {
+      border-style: var(--tw-border-style) !important;
+      border-width: 3px !important;
+    }
+  }
+  .not-in-\[\.print\]\:border-t-0\! {
+    &:not(:where(*:is(.print)) *) {
+      border-top-style: var(--tw-border-style) !important;
+      border-top-width: 0px !important;
+    }
+  }
+  .not-in-\[\.print\]\:border-accent-blue\! {
+    &:not(:where(*:is(.print)) *) {
+      border-color: var(--color-accent-blue) !important;
+    }
+  }
+  .not-in-\[\.print\]\:bg-accent-blue\! {
+    &:not(:where(*:is(.print)) *) {
+      background-color: var(--color-accent-blue) !important;
+    }
+  }
+  .not-in-\[\.print\]\:outline-2\! {
+    &:not(:where(*:is(.print)) *) {
+      outline-style: var(--tw-outline-style) !important;
+      outline-width: 2px !important;
+    }
+  }
+  .not-in-\[\.print\]\:outline-accent-blue {
+    &:not(:where(*:is(.print)) *) {
+      outline-color: var(--color-accent-blue);
     }
   }
   .group-hover\:flex {
@@ -1039,16 +1055,18 @@
       background-color: var(--after-background-color);
     }
   }
-  .after\:bg-accent-blue\! {
-    &::after {
-      content: var(--tw-content);
-      background-color: var(--color-accent-blue) !important;
-    }
-  }
   .after\:content-\[\'\'\] {
     &::after {
       --tw-content: '';
       content: var(--tw-content);
+    }
+  }
+  .not-in-\[\.print\]\:after\:bg-accent-blue\! {
+    &:not(:where(*:is(.print)) *) {
+      &::after {
+        content: var(--tw-content);
+        background-color: var(--color-accent-blue) !important;
+      }
     }
   }
   .hover\:cursor-pointer {

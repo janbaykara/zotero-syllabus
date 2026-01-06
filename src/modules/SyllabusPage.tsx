@@ -2860,8 +2860,8 @@ export function SyllabusItemCard({
             : "px-4 py-4 gap-4",
         isZoteroSelected &&
         !isIdentifierSelected &&
-        "outline-2! outline-accent-blue",
-        isIdentifierSelected && "bg-accent-blue! scheme-dark",
+        "not-in-[.print]:outline-2! not-in-[.print]:outline-accent-blue",
+        isIdentifierSelected && "not-in-[.print]:bg-accent-blue! scheme-dark",
         // isZoteroSelected && isIdentifierSelected && "outline-none!",
         // assignmentStatus === "done" ? "opacity-40" : "",
         className,
@@ -3094,8 +3094,8 @@ export function SyllabusItemCard({
             // Overrides
             isZoteroSelected &&
             !isIdentifierSelected &&
-            "border-accent-blue! border-3! border-t-0!",
-            isIdentifierSelected && "after:bg-accent-blue!",
+            "not-in-[.print]:border-accent-blue! not-in-[.print]:border-3! not-in-[.print]:border-t-0!",
+            isIdentifierSelected && "not-in-[.print]:after:bg-accent-blue!",
           )}
           style={
             !isIdentifierSelected
