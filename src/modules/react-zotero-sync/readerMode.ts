@@ -1,19 +1,8 @@
 import { useCallback, useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
-import { getPref, setPref } from "../../utils/prefs";
+import { getPref, setPref, getPrefKey } from "../../utils/prefs";
 
-const readerModeListeners = new Set<() => void>();
-
-function registerReaderModeChangeListener(listener: () => void): () => void {
-  readerModeListeners.add(listener);
-  return () => {
-    readerModeListeners.delete(listener);
-  };
-}
-
-function emitReaderModeChange() {
-  readerModeListeners.forEach((listener) => listener());
-}
+const PREF_KEY = getPrefKey("readerMode");
 
 export function useZoteroReaderMode() {
   // Create the store once
@@ -26,8 +15,6 @@ export function useZoteroReaderMode() {
 
   const setReaderMode = useCallback((value: boolean) => {
     setPref("readerMode", String(value) as any);
-    // Emit change event after setting preference
-    emitReaderModeChange();
   }, []);
 
   return [readerMode, setReaderMode] as const;
@@ -39,13 +26,19 @@ export function createReaderModeStore() {
   }
 
   function subscribe(onStoreChange: () => void) {
-    // Subscribe to custom event emitter instead of Zotero notifier
-    const unsubscribe = registerReaderModeChangeListener(() => {
-      onStoreChange();
-    });
+    // Use Zotero's built-in preference observer
+    const observerID = Zotero.Prefs.registerObserver(
+      PREF_KEY,
+      () => {
+        onStoreChange();
+      },
+      true,
+    );
 
     // Return an unsubscribe fn
-    return unsubscribe;
+    return () => {
+      Zotero.Prefs.unregisterObserver(observerID);
+    };
   }
 
   return { getSnapshot, subscribe };

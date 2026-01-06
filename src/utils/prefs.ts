@@ -1,5 +1,5 @@
 import { config } from "../../package.json";
-import { getCachedPref } from "./cache";
+import { getCachedPref, zoteroCache } from "./cache";
 
 type PluginPrefsMap = _ZoteroTypes.Prefs["PluginPrefsMap"];
 
@@ -43,4 +43,12 @@ export function setPref<K extends keyof PluginPrefsMap>(
  */
 export function clearPref(key: string) {
   return Zotero.Prefs.clear(`${PREFS_PREFIX}.${key}`, true);
+}
+
+/**
+ * Get the full preference key with prefix.
+ * @param key
+ */
+export function getPrefKey<K extends keyof PluginPrefsMap>(key: K): string {
+  return `${PREFS_PREFIX}.${key}`;
 }

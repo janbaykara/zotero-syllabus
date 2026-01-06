@@ -1,19 +1,8 @@
 import { useCallback, useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
-import { getPref, setPref } from "../../utils/prefs";
+import { getPref, setPref, getPrefKey } from "../../utils/prefs";
 
-const compactModeListeners = new Set<() => void>();
-
-function registerCompactModeChangeListener(listener: () => void): () => void {
-  compactModeListeners.add(listener);
-  return () => {
-    compactModeListeners.delete(listener);
-  };
-}
-
-function emitCompactModeChange() {
-  compactModeListeners.forEach((listener) => listener());
-}
+const PREF_KEY = getPrefKey("compactMode");
 
 export function useZoteroCompactMode() {
   // Create the store once
@@ -29,8 +18,6 @@ export function useZoteroCompactMode() {
 
   const setCompactMode = useCallback((value: boolean) => {
     setPref("compactMode", String(value) as any);
-    // Emit change event after setting preference
-    emitCompactModeChange();
   }, []);
 
   return [compactMode, setCompactMode] as const;
@@ -42,13 +29,20 @@ export function createCompactModeStore() {
   }
 
   function subscribe(onStoreChange: () => void) {
-    // Subscribe to custom event emitter instead of Zotero notifier
-    const unsubscribe = registerCompactModeChangeListener(() => {
-      onStoreChange();
-    });
+    // Use Zotero's built-in preference observer
+    const observerID = Zotero.Prefs.registerObserver(
+      PREF_KEY,
+      () => {
+        ztoolkit.log("Compact mode preference changed");
+        onStoreChange();
+      },
+      true,
+    );
 
     // Return an unsubscribe fn
-    return unsubscribe;
+    return () => {
+      Zotero.Prefs.unregisterObserver(observerID);
+    };
   }
 
   return { getSnapshot, subscribe };
