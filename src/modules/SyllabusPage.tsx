@@ -54,7 +54,10 @@ import {
   Plus,
   ExternalLink,
   Trash2,
+  Menu,
+  ListTodo,
 } from "lucide-preact";
+import { TableOfContents } from "./TableOfContents";
 import { saveToFile } from "../utils/file";
 import { formatReadingDate } from "../utils/dates";
 
@@ -1673,12 +1676,12 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                         onClick={toggleReaderMode}
                       >
                         {readerMode ? (
-                          <List
+                          <Menu
                             size={20}
                             className="text-primary hover:text-primary hover:bg-quinary rounded p-1"
                           />
                         ) : (
-                          <ListChecks
+                          <ListTodo
                             size={20}
                             className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
                           />
