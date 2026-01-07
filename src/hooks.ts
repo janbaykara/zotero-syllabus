@@ -65,7 +65,7 @@ function registerTalisMetadataEndpoint() {
   }
 
   // Register Hello World test endpoint
-  const HelloWorld = function () {};
+  const HelloWorld = function () { };
   HelloWorld.prototype = {
     supportedMethods: ["GET"],
     supportedDataTypes: ["application/json"],
@@ -84,7 +84,7 @@ function registerTalisMetadataEndpoint() {
   (Zotero.Server.Endpoints as any)["/syllabus/hello"] = HelloWorld;
   ztoolkit.log("Registered /syllabus/hello endpoint");
 
-  const SetTalisMetadata = function () {};
+  const SetTalisMetadata = function () { };
   SetTalisMetadata.prototype = {
     supportedMethods: ["POST"],
     supportedDataTypes: [

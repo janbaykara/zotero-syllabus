@@ -402,7 +402,6 @@ async function callZoteroClientEndpoint(endpoint, method, data) {
 }
 
 async function setTalisSyllabusMetadata({ _itemSectionTitles, ...metadata }) {
-  // safeLog("TALIS-ASPIRE-CUSTOM.setTalisSyllabusMetadata");
   // Use callMethod to send metadata via POST request
   return await callZoteroClientEndpoint(
     "/syllabus/setTalisMetadata",
