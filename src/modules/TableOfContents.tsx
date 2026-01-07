@@ -84,50 +84,51 @@ export function TableOfContents({
       onClose();
       return;
     }
-    
+
     // Find the scrollable container (.syllabus-page)
-    const scrollContainer = element.closest('.syllabus-page') as HTMLElement;
-    
+    const scrollContainer = element.closest(".syllabus-page") as HTMLElement;
+
     if (!scrollContainer) {
       // Fallback: use scrollIntoView if container not found
       element.scrollIntoView({ behavior: "smooth", block: "start" });
       onClose();
       return;
     }
-    
+
     // Use a small delay to ensure DOM is ready
     setTimeout(() => {
       // Calculate total height of all sticky headers
       let stickyOffset = 0;
-      
+
       // Find the main sticky title container within the scroll container
       const titleContainer = scrollContainer.querySelector(
-        '[syllabus-view-title-container]',
+        "[syllabus-view-title-container]",
       ) as HTMLElement;
       if (titleContainer) {
         const rect = titleContainer.getBoundingClientRect();
         stickyOffset += rect.height;
       }
-      
+
       // Add some padding for visual spacing
       const padding = 16;
       const totalOffset = stickyOffset + padding;
-      
+
       // Calculate positions relative to the scroll container
       const containerRect = scrollContainer.getBoundingClientRect();
       const elementRect = element.getBoundingClientRect();
-      
+
       // Calculate the target scroll position within the container
-      const elementTopRelative = elementRect.top - containerRect.top + scrollContainer.scrollTop;
+      const elementTopRelative =
+        elementRect.top - containerRect.top + scrollContainer.scrollTop;
       const targetScroll = elementTopRelative - totalOffset;
-      
+
       // Scroll the container to the calculated position
       scrollContainer.scrollTo({
         top: Math.max(0, targetScroll),
         behavior: "smooth",
       });
     }, 10);
-    
+
     onClose();
   };
 
