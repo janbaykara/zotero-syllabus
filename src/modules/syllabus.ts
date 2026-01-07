@@ -2764,7 +2764,7 @@ export class SyllabusManager {
     singularCapitalized: string;
     pluralCapitalized: string;
   } {
-    const singular = this.getNomenclature(collectionId);
+    const singular = SyllabusManager.getNomenclature(collectionId);
     const plural = pluralize(singular);
 
     return {

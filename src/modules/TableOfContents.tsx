@@ -1,53 +1,47 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h } from "preact";
 import { useMemo, useRef, useEffect } from "preact/hooks";
-import { ItemSyllabusAssignment } from "./syllabus";
+import { SyllabusManager } from "./syllabus";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
+import { formatReadingDate } from "../utils/dates";
+import { useSyllabusClassGroups } from "./classGroups";
 
 interface TableOfContentsProps {
-  classGroups: Array<{
-    classNumber: number | null;
-    itemAssignments: Array<{
-      item: Zotero.Item;
-      assignment: ItemSyllabusAssignment;
-    }>;
-  }>;
   collectionId: number;
+  classGroups: ReturnType<typeof useSyllabusClassGroups>["classGroups"];
   isOpen: boolean;
   onClose: () => void;
 }
 
 export function TableOfContents({
-  classGroups,
   collectionId,
+  classGroups,
   isOpen,
   onClose,
 }: TableOfContentsProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [syllabusMetadata] = useZoteroSyllabusMetadata(collectionId);
 
+  const [syllabusMetadata] = useZoteroSyllabusMetadata(collectionId);
   const singularCapitalized = useMemo(() => {
     const singular = syllabusMetadata.nomenclature || "class";
     return singular.charAt(0).toUpperCase() + singular.slice(1);
   }, [syllabusMetadata.nomenclature]);
 
   const tocEntries = useMemo(() => {
-    return classGroups
-      .filter((g) => g.classNumber !== null && g.itemAssignments.length > 0)
-      .map((group) => {
-        const classNumber = group.classNumber!;
-        const classTitle = syllabusMetadata.classes?.[classNumber]?.title || "";
-        const label = classTitle
-          ? `${singularCapitalized} ${classNumber}: ${classTitle}`
-          : `${singularCapitalized} ${classNumber}`;
-
-        return {
-          id: `toc-class-${classNumber}`,
-          label,
-          classNumber,
-        };
-      });
-  }, [classGroups, syllabusMetadata, singularCapitalized]);
+    return classGroups.map(({ classNumber, syllabusMetadata }) => {
+      const label = SyllabusManager.getClassTitle(
+        collectionId,
+        Number(classNumber),
+        true,
+      );
+      return {
+        id: `toc-class-${classNumber}`,
+        label,
+        classNumber,
+        syllabusMetadata,
+      };
+    });
+  }, [syllabusMetadata, singularCapitalized]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -155,13 +149,22 @@ export function TableOfContents({
                   e.preventDefault();
                   handleClick(entry.id);
                 }}
-                className="block text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer py-1"
-                style={{
-                  textDecoration: "underline",
-                  color: "var(--color-accent-blue)",
-                }}
+                className="block font-medium decoration-none! text-primary! hover:text-accent-blue hover:bg-quinary rounded-md px-1 hover:underline cursor-pointer py-1"
               >
                 {entry.label}
+                <span className="text-secondary">
+                  {(() => {
+                    const readingDate = entry.syllabusMetadata?.readingDate;
+                    if (!readingDate) {
+                      return "";
+                    }
+                    return (
+                      <span className="ml-2 text-secondary">
+                        {formatReadingDate(readingDate)}
+                      </span>
+                    );
+                  })()}
+                </span>
               </a>
             ))
           )}

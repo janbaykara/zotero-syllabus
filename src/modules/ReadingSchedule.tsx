@@ -8,7 +8,6 @@ import {
   addWeeks,
   differenceInDays,
   differenceInWeeks,
-  formatDate,
   isThisWeek,
   setDefaultOptions,
   startOfWeek,
@@ -19,6 +18,7 @@ import { getPref } from "../utils/prefs";
 import { TabManager } from "../utils/tabManager";
 import { getCachedCollectionById } from "../utils/cache";
 import { isSameWeek } from "date-fns/fp";
+import { formatReadingDate } from "../utils/dates";
 
 setDefaultOptions({
   weekStartsOn: 1,
@@ -283,7 +283,7 @@ export function ReadingSchedule() {
                           <div
                             className={twMerge("mb-3 text-secondary text-2xl")}
                           >
-                            {formatReadingDate(dateTimestamp)}
+                            {formatReadingDate(dateTimestamp, false)}
                           </div>
 
                           <div className="space-y-8">
@@ -463,11 +463,6 @@ interface ClassReading {
   classDescription: string;
   readingDate: string; // ISO date string
   items: Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }>;
-}
-
-function formatReadingDate(isoDate: string): string {
-  const date = new Date(isoDate);
-  return formatDate(date, "iiii do");
 }
 
 function WeekHeader({ weekStartDate }: { weekStartDate: Date }) {
