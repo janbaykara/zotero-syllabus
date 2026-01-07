@@ -1395,6 +1395,11 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         readCSS(zoteroCSSUrl),
       ]);
 
+      const __prevLocked = isLocked;
+      setLocked(true);
+      const __prevReaderMode = readerMode;
+      setReaderMode(false);
+
       // Create HTML content with inline CSS
       const htmlContent = `<!DOCTYPE html>
 <html>
@@ -1445,6 +1450,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 </body>
 </html>`;
 
+      setLocked(isLocked);
+      setReaderMode(readerMode);
+
       await saveToFile(
         `printable-syllabus--${slugify(title) || "syllabus"}.html`,
         htmlContent,
@@ -1452,6 +1460,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
       );
     } catch (err) {
       ztoolkit.log("Error printing syllabus:", err);
+      setLocked(false);
     }
   };
 
@@ -1562,7 +1571,11 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
         <div className="pb-12">
           <div
             syllabus-view-title-container
-            className="sticky top-0 z-40 bg-background py-1 md:pt-8 in-[.print]:static"
+            className={twMerge(
+              "sticky top-0 z-40 bg-background py-1",
+              Zotero.version.startsWith("8.") ? "md:pt-8" : "pt-8",
+              "in-[.print]:static",
+            )}
           >
             <div className="container-padded bg-background">
               {getPref("debugMode") && (
@@ -1575,7 +1588,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
               <div className="flex flex-row items-center gap-2 justify-between">
                 <div className="flex flex-row items-center gap-2 flex-1 relative">
                   {/* Table of Contents Icon */}
-                  <div className="shrink-0 absolute right-full mr-2!">
+                  <div className="shrink-0 absolute right-full mr-2! in-[.print]:hidden">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1743,7 +1756,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
                 compactMode ? "text-base" : "text-lg",
               )}
             >
-              <div className="flex flex-0! flex-row gap-2 items-center character-separator [--character-separator:'•']">
+              <div className="flex flex-0! flex-row gap-2 items-center">
                 <TextInput
                   elementType="input"
                   initialValue={syllabusMetadata.courseCode || ""}
@@ -2094,7 +2107,8 @@ function ClassGroupComponent({
         <>
           <div
             className={twMerge(
-              "sticky z-35 bg-background py-1 in-[.print]:static top-10 md:top-18",
+              "sticky z-35 bg-background py-1 in-[.print]:static top-10",
+              Zotero.version.startsWith("8.") ? "md:pt-8" : "pt-8",
             )}
           >
             <div
@@ -2109,7 +2123,10 @@ function ClassGroupComponent({
                     type="checkbox"
                     checked={classIsDone}
                     onChange={handleClassStatusToggle}
-                    className="mt-1! absolute right-full mr-1 md:mr-2! w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden"
+                    className={twMerge(
+                      "mt-1! absolute right-full mr-1 w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden",
+                      Zotero.version.startsWith("8.") ? "md:mr-2!" : "mr-2!",
+                    )}
                     title={classIsDone ? "Mark as not done" : "Mark as done"}
                     aria-label={
                       classIsDone ? "Mark as not done" : "Mark as done"
@@ -2216,6 +2233,7 @@ function ClassGroupComponent({
             "syllabus-class-items box-border! rounded-lg",
             compactMode ? "mt-1 space-y-2 p-1 -m-1" : "mt-4 space-y-4 p-2 -m-2",
             "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:outline-accent-blue! data-[dropzone-active='true']:text-accent-blue! transition-all duration-200 outline-transparent outline-2! outline-dashed!",
+            !Zotero.version.startsWith("8.") && "compat-space-y",
           )}
           onDrop={isLocked ? undefined : (e) => onDrop(e, classNumber ?? null)}
           onDragOver={isLocked ? undefined : onDragOver}
@@ -3022,7 +3040,10 @@ export function SyllabusItemCard({
           type="checkbox"
           checked={assignmentStatus === "done"}
           onChange={handleAssignmentStatusToggle}
-          className="absolute right-full mr-1 md:mr-2! w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden"
+          className={twMerge(
+            "absolute right-full mr-1 w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden",
+            Zotero.version.startsWith("8.") ? "md:mr-2!" : "mr-2!",
+          )}
           title={
             assignmentStatus === "done" ? "Mark as not done" : "Mark as done"
           }
@@ -3716,7 +3737,7 @@ function LinksSection({
           {!isLocked && (
             <button
               onClick={handleAddLink}
-              className="flex items-center gap-2 text-secondary hover:text-primary cursor-pointer self-start"
+              className="flex items-center gap-2 text-secondary hover:text-primary cursor-pointer self-start in-[.print]:hidden"
               title="Add link"
               aria-label="Add link"
             >

@@ -151,7 +151,12 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
   return (
     <div className="syllabus-page overflow-y-auto overflow-x-hidden h-full">
       <div className="pb-12">
-        <div className="sticky top-0 z-10 bg-background py-1 md:pt-8">
+        <div
+          className={twMerge(
+            "sticky top-0 z-10 bg-background py-1",
+            Zotero.version.startsWith("8.") ? "md:pt-8" : "pt-8",
+          )}
+        >
           <div className="container-padded bg-background">
             <div className="flex flex-row items-center gap-4 justify-between">
               <div className="flex-1 text-3xl font-semibold">

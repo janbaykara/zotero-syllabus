@@ -784,6 +784,9 @@
   .pt-4 {
     padding-top: calc(var(--spacing) * 4);
   }
+  .pt-8 {
+    padding-top: calc(var(--spacing) * 8);
+  }
   .pb-2 {
     padding-bottom: calc(var(--spacing) * 2);
   }
@@ -1370,11 +1373,6 @@
       top: calc(var(--spacing) * 16);
     }
   }
-  .md\:top-18 {
-    @media (width >= 48rem) {
-      top: calc(var(--spacing) * 18);
-    }
-  }
   .md\:mr-2\! {
     @media (width >= 48rem) {
       margin-right: calc(var(--spacing) * 2) !important;
@@ -1398,6 +1396,15 @@
       padding-inline: calc(var(--spacing) * 10);
     }
   }
+}
+.compat-space-y > * {
+  --tw-space-y-reverse: 0;
+  margin-block-start: calc(
+    calc(var(--spacing) * 2) * var(--tw-space-y-reverse)
+  );
+  margin-block-end: calc(
+    calc(var(--spacing) * 2) * calc(1 - var(--tw-space-y-reverse))
+  );
 }
 .syllabus\\\@janbaykara\\\.com-syllabus-info-item-tree-main-default {
   height: 100% !important;

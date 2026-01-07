@@ -229,7 +229,12 @@ export function ReadingSchedule() {
   return (
     <div className="syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background">
       <div className="pb-12">
-        <div className="sticky top-0 z-20 bg-background py-1 pt-4 md:pt-8">
+        <div
+          className={twMerge(
+            "sticky top-0 z-20 bg-background py-1",
+            Zotero.version.startsWith("8.") ? "pt-4 md:pt-8" : "pt-8",
+          )}
+        >
           <div className="container-padded bg-background">
             <div className={twMerge("font-semibold text-3xl")}>
               Reading Schedule
@@ -256,7 +261,8 @@ export function ReadingSchedule() {
                 <div
                   className={twMerge(
                     "container-padded",
-                    "text-3xl sticky top-12 md:top-16 z-10 py-2 bg-background text-tertiary",
+                    "text-3xl sticky top-12 z-10 py-2 bg-background text-tertiary",
+                    Zotero.version.startsWith("8.") ? "md:top-16" : "top-12",
                   )}
                 >
                   <WeekHeader weekStartDate={weekStartDate} />
@@ -336,7 +342,10 @@ export function ReadingSchedule() {
                                         checked={classStatus === "done"}
                                         onChange={handleClassStatusToggle}
                                         className={twMerge(
-                                          "absolute right-full mr-1 md:mr-2! w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden accent-accent-green!",
+                                          "absolute right-full mr-1 w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden accent-accent-green!",
+                                          Zotero.version.startsWith("8.")
+                                            ? "md:mr-2!"
+                                            : "mr-2!",
                                         )}
                                         title={
                                           classStatus === "done"
