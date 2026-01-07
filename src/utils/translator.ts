@@ -7,6 +7,15 @@ export async function installTalisAspireTranslator(
   rootURI: string,
 ): Promise<void> {
   ztoolkit.log("installTalisAspireTranslator", { rootURI });
+
+  // Only enable TALIS connector in Zotero 8 and higher
+  if (!Zotero.version.startsWith("8.")) {
+    ztoolkit.log("TALIS connector skipped - requires Zotero 8 or higher", {
+      version: Zotero.version,
+    });
+    return;
+  }
+
   try {
     // Use chrome:// path instead of rootURI
     const relativePath = "translators/tails-aspire-custom.js";
