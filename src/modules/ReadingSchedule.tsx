@@ -293,10 +293,11 @@ export function ReadingSchedule() {
                                   classReading.collectionId,
                                 );
 
-                              const classStatus = SyllabusManager.getClassStatus(
-                                classReading.collectionId,
-                                classReading.classNumber,
-                              );
+                              const classStatus =
+                                SyllabusManager.getClassStatus(
+                                  classReading.collectionId,
+                                  classReading.classNumber,
+                                );
 
                               const handleClassStatusToggle = async () => {
                                 try {
@@ -412,7 +413,9 @@ export function ReadingSchedule() {
                                             collectionId={
                                               classReading.collectionId
                                             }
-                                            classNumber={classReading.classNumber}
+                                            classNumber={
+                                              classReading.classNumber
+                                            }
                                             assignment={assignment}
                                             slim={
                                               compactMode ||

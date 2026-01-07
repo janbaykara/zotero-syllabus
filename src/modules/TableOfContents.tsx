@@ -1,9 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h } from "preact";
 import { useMemo, useRef, useEffect } from "preact/hooks";
-import {
-  ItemSyllabusAssignment,
-} from "./syllabus";
+import { ItemSyllabusAssignment } from "./syllabus";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 
 interface TableOfContentsProps {
@@ -38,8 +36,7 @@ export function TableOfContents({
       .filter((g) => g.classNumber !== null && g.itemAssignments.length > 0)
       .map((group) => {
         const classNumber = group.classNumber!;
-        const classTitle =
-          syllabusMetadata.classes?.[classNumber]?.title || "";
+        const classTitle = syllabusMetadata.classes?.[classNumber]?.title || "";
         const label = classTitle
           ? `${singularCapitalized} ${classNumber}: ${classTitle}`
           : `${singularCapitalized} ${classNumber}`;

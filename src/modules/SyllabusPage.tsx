@@ -1559,11 +1559,14 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
       // Check for date pattern in previous classes and set next date
       if (nextClassNumber > 1) {
-        const previousClasses = Array.from({ length: Math.min(3, nextClassNumber - 1) }, (_, i) => {
-          const classNum = nextClassNumber - 1 - i;
-          const date = syllabusMetadata.classes?.[classNum]?.readingDate;
-          return { classNumber: classNum, date };
-        }).filter((c) => c.date); // Only classes with dates
+        const previousClasses = Array.from(
+          { length: Math.min(3, nextClassNumber - 1) },
+          (_, i) => {
+            const classNum = nextClassNumber - 1 - i;
+            const date = syllabusMetadata.classes?.[classNum]?.readingDate;
+            return { classNumber: classNum, date };
+          },
+        ).filter((c) => c.date); // Only classes with dates
 
         if (previousClasses.length >= 2) {
           // Calculate intervals between consecutive classes
@@ -1576,9 +1579,11 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
           }
 
           // Check if intervals are consistent (within 1 day tolerance)
-          const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+          const avgInterval =
+            intervals.reduce((a, b) => a + b, 0) / intervals.length;
           const isConsistent = intervals.every(
-            (interval) => Math.abs(interval - avgInterval) < 24 * 60 * 60 * 1000
+            (interval) =>
+              Math.abs(interval - avgInterval) < 24 * 60 * 60 * 1000,
           );
 
           if (isConsistent && avgInterval > 0) {
@@ -2233,7 +2238,7 @@ function ClassGroupComponent({
                       defaultDate={
                         classNumber > 1
                           ? syllabusMetadata.classes?.[classNumber - 1]
-                            ?.readingDate
+                              ?.readingDate
                           : undefined
                       }
                       onSave={(date) =>
@@ -2539,34 +2544,34 @@ function TextInput({
         onChange: readOnly
           ? undefined
           : (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-            setValue((e.target as HTMLInputElement).value),
+              setValue((e.target as HTMLInputElement).value),
         onBlur: readOnly ? undefined : () => save(value),
         onKeyDown: readOnly
           ? undefined
           : (
-            e: JSX.TargetedKeyboardEvent<
-              HTMLInputElement | HTMLTextAreaElement
-            >,
-          ) => {
-            if (e.key === "Escape" || e.key === "Enter") {
-              e.preventDefault();
-              e.currentTarget.blur();
-              save(value);
-            }
-          },
+              e: JSX.TargetedKeyboardEvent<
+                HTMLInputElement | HTMLTextAreaElement
+              >,
+            ) => {
+              if (e.key === "Escape" || e.key === "Enter") {
+                e.preventDefault();
+                e.currentTarget.blur();
+                save(value);
+              }
+            },
         onSelect: readOnly
           ? (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            e.preventDefault();
-            e.currentTarget.setSelectionRange(0, 0);
-          }
+              e.preventDefault();
+              e.currentTarget.setSelectionRange(0, 0);
+            }
           : undefined,
         onClick: readOnly
           ? (
-            e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
-          ) => {
-            e.preventDefault();
-            e.currentTarget.blur();
-          }
+              e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
+            ) => {
+              e.preventDefault();
+              e.currentTarget.blur();
+            }
           : undefined,
         placeholder: readOnly ? undefined : placeholder || "Click to edit",
         className: twMerge(
@@ -2759,10 +2764,7 @@ export function SyllabusItemCard({
               if (path.endsWith(".txt") || contentType === "text/plain") {
                 return { item: att, type: "txt" as const };
               }
-              if (
-                path.endsWith(".zip") ||
-                contentType === "application/zip"
-              ) {
+              if (path.endsWith(".zip") || contentType === "application/zip") {
                 return { item: att, type: "zip" as const };
               }
               // Generic file attachment
@@ -2775,8 +2777,8 @@ export function SyllabusItemCard({
         return null;
       })
       .filter(Boolean) as Array<{
-        item: Zotero.Item;
-        type:
+      item: Zotero.Item;
+      type:
         | "pdf"
         | "snapshot"
         | "epub"
@@ -2785,14 +2787,12 @@ export function SyllabusItemCard({
         | "txt"
         | "zip"
         | "file";
-      }>;
+    }>;
   }, [item, slim]);
 
   // Find snapshot attachment and get its URL
   const snapshotUrl = useMemo(() => {
-    const snapshot = viewableAttachments.find(
-      (att) => att.type === "snapshot",
-    );
+    const snapshot = viewableAttachments.find((att) => att.type === "snapshot");
     if (snapshot) {
       return snapshot.item.getField("url") || null;
     }
@@ -2967,15 +2967,7 @@ export function SyllabusItemCard({
 
   const handleAttachmentClick = async (viewableAttachment?: {
     item: Zotero.Item;
-    type:
-    | "pdf"
-    | "snapshot"
-    | "epub"
-    | "html"
-    | "doc"
-    | "txt"
-    | "zip"
-    | "file";
+    type: "pdf" | "snapshot" | "epub" | "html" | "doc" | "txt" | "zip" | "file";
   }) => {
     if (!viewableAttachment) return;
 
@@ -3014,8 +3006,8 @@ export function SyllabusItemCard({
 
   const colors = priority
     ? {
-      backgroundColor: priorityColor + "15",
-    }
+        backgroundColor: priorityColor + "15",
+      }
     : {};
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
@@ -3082,8 +3074,8 @@ export function SyllabusItemCard({
             ? "px-4 py-2.5 gap-4"
             : "px-4 py-4 gap-4",
         isZoteroSelected &&
-        !isIdentifierSelected &&
-        "not-in-[.print]:outline-2! not-in-[.print]:outline-accent-blue",
+          !isIdentifierSelected &&
+          "not-in-[.print]:outline-2! not-in-[.print]:outline-accent-blue",
         isIdentifierSelected && "not-in-[.print]:bg-accent-blue! scheme-dark",
         // isZoteroSelected && isIdentifierSelected && "outline-none!",
         // assignmentStatus === "done" ? "opacity-40" : "",
@@ -3316,9 +3308,7 @@ export function SyllabusItemCard({
               }
             };
 
-            const attachmentLabel = getAttachmentLabel(
-              viewableAttachment.type,
-            );
+            const attachmentLabel = getAttachmentLabel(viewableAttachment.type);
             const iconType = getAttachmentIconType(viewableAttachment.type);
 
             return (
@@ -3375,17 +3365,17 @@ export function SyllabusItemCard({
             "after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full! after:bg-(--after-background-color) after:rounded-b-lg rounded-t-0! after:z-25! after:h-full!",
             // Overrides
             isZoteroSelected &&
-            !isIdentifierSelected &&
-            "not-in-[.print]:border-accent-blue! not-in-[.print]:border-3! not-in-[.print]:border-t-0!",
+              !isIdentifierSelected &&
+              "not-in-[.print]:border-accent-blue! not-in-[.print]:border-3! not-in-[.print]:border-t-0!",
             isIdentifierSelected && "not-in-[.print]:after:bg-accent-blue!",
           )}
           style={
             !isIdentifierSelected
               ? {
-                "--after-background-color": priority
-                  ? priorityColor + "15"
-                  : "var(--material-sidepane)",
-              }
+                  "--after-background-color": priority
+                    ? priorityColor + "15"
+                    : "var(--material-sidepane)",
+                }
               : {}
           }
         >
