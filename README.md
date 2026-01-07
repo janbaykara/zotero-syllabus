@@ -57,6 +57,21 @@ Items are grouped by class number, and can be given a priority. Assign classes a
 
 ![Syllabus module interface showing class organization](doc/images/classes.png)
 
+#### How can I assign an item to a class?
+
+1. First, select the collection where the classes will live.
+2. Then you'll need to add some classes. You can do this by...
+
+- Clicking "View As Syllabus" and then clicking the "Add Class" button.
+- Right-clicking an item within a collection, then selecting "Assign to class" -> "Add to new class".
+
+3. Once you've added some classes, you can assign an item to a class by...
+
+- Right-clicking an item within a collection, then selecting "Assign to class" and then picking the class
+- Clicking "View As Syllabus", then dragging the item to the class.
+
+An item can be assigned multiple times to different classes. In "View As Syllabus", you'll find a "duplicate" button when you hover over an item.
+
 ### Course documents
 
 Pin important course information to the top of the syllabus.
