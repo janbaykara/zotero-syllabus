@@ -3,6 +3,7 @@ import { ColumnOptions, DialogHelper } from "zotero-plugin-toolkit";
 import hooks from "./hooks";
 import { createZToolkit } from "./utils/ztoolkit";
 import { SyllabusManager } from "./modules/syllabus";
+import { FEATURE_FLAG } from "./modules/featureFlags";
 
 class Addon {
   public data: {
@@ -52,6 +53,14 @@ class Addon {
     this.hooks = hooks;
     this.api = {
       setTalisSyllabusMetadata: async (collectionId, metadata) => {
+        // Only allow when feature flag is enabled
+        if (!FEATURE_FLAG.TALIS_METADATA) {
+          ztoolkit.log(
+            "setTalisSyllabusMetadata called but feature flag is disabled",
+            { version: Zotero.version },
+          );
+          return;
+        }
         try {
           if (metadata.description) {
             await SyllabusManager.setCollectionDescription(

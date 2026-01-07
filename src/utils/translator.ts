@@ -1,16 +1,17 @@
+import { FEATURE_FLAG } from "../modules/featureFlags";
+
 /**
  * Installs the Talis Aspire translator into Zotero's data directory.
  * This allows the translator to be used via Zotero.Translators.get() like any other translator.
  */
-
 export async function installTalisAspireTranslator(
   rootURI: string,
 ): Promise<void> {
   ztoolkit.log("installTalisAspireTranslator", { rootURI });
 
-  // Only enable TALIS connector in Zotero 8 and higher
-  if (!Zotero.version.startsWith("8.")) {
-    ztoolkit.log("TALIS connector skipped - requires Zotero 8 or higher", {
+  // Only enable TALIS connector when feature flag is enabled
+  if (!FEATURE_FLAG.TALIS_METADATA) {
+    ztoolkit.log("TALIS connector skipped - feature flag disabled", {
       version: Zotero.version,
     });
     return;

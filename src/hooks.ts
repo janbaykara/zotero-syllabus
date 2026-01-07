@@ -9,6 +9,7 @@ import {
   SettingsSyllabusMetadata,
 } from "./utils/schemas";
 import { zoteroCache } from "./utils/cache";
+import { FEATURE_FLAG } from "./modules/featureFlags";
 
 async function onStartup(rootURI: string) {
   await Promise.all([
@@ -44,6 +45,14 @@ async function onStartup(rootURI: string) {
  * Body: { collectionId: number, metadata: { description?, priorities?, nomenclature? } }
  */
 function registerTalisMetadataEndpoint() {
+  // Only enable Talis features when feature flag is enabled
+  if (!FEATURE_FLAG.TALIS_METADATA) {
+    ztoolkit.log("Talis HTTP endpoints skipped - feature flag disabled", {
+      version: Zotero.version,
+    });
+    return;
+  }
+
   // Check if Zotero.Server.Endpoints exists (available in Zotero 7+)
   if (
     typeof Zotero.Server === "undefined" ||

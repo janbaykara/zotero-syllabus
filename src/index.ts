@@ -1,6 +1,7 @@
 import { BasicTool } from "zotero-plugin-toolkit";
 import Addon from "./addon";
 import { config } from "../package.json";
+import { FEATURE_FLAG } from "./modules/featureFlags";
 
 const basicTool = new BasicTool();
 
@@ -13,16 +14,18 @@ if (!basicTool.getGlobal("Zotero")[config.addonInstance]) {
   // @ts-expect-error - Plugin instance is not typed
   Zotero[config.addonInstance] = addon;
 
-  // Expose API for translators to use
-  if (typeof window !== "undefined") {
-    (window as any).ZoteroSyllabus = {
+  // Expose API for translators to use (only when feature flag is enabled)
+  if (FEATURE_FLAG.TALIS_METADATA) {
+    if (typeof window !== "undefined") {
+      (window as any).ZoteroSyllabus = {
+        setTalisSyllabusMetadata: addon.api.setTalisSyllabusMetadata,
+      };
+    }
+    // Also expose on globalThis for non-window contexts
+    _globalThis.ZoteroSyllabus = {
       setTalisSyllabusMetadata: addon.api.setTalisSyllabusMetadata,
     };
   }
-  // Also expose on globalThis for non-window contexts
-  _globalThis.ZoteroSyllabus = {
-    setTalisSyllabusMetadata: addon.api.setTalisSyllabusMetadata,
-  };
 }
 
 function defineGlobal(name: Parameters<BasicTool["getGlobal"]>[0]): void;
