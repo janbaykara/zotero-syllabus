@@ -28,20 +28,22 @@ export function TableOfContents({
   }, [syllabusMetadata.nomenclature]);
 
   const tocEntries = useMemo(() => {
-    return classGroups.map(({ classNumber, syllabusMetadata }) => {
-      const label = SyllabusManager.getClassTitle(
-        collectionId,
-        Number(classNumber),
-        true,
-      );
-      return {
-        id: `toc-class-${classNumber}`,
-        label,
-        classNumber,
-        syllabusMetadata,
-      };
-    });
-  }, [syllabusMetadata, singularCapitalized]);
+    return classGroups
+      .filter(({ classNumber }) => !!classNumber)
+      .map(({ classNumber, syllabusMetadata }) => {
+        const label = SyllabusManager.getClassTitle(
+          collectionId,
+          Number(classNumber),
+          true,
+        );
+        return {
+          id: `toc-class-${classNumber}`,
+          label,
+          classNumber,
+          syllabusMetadata,
+        };
+      });
+  }, [classGroups, collectionId, syllabusMetadata, singularCapitalized]);
 
   useEffect(() => {
     if (!isOpen) return;
