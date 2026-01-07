@@ -284,7 +284,10 @@ export function ReadingSchedule() {
                           <div
                             className={twMerge("mb-3 text-secondary text-2xl")}
                           >
-                            {formatReadingDate(dateTimestamp, !isThisMonth(new Date(dateTimestamp)))}
+                            {formatReadingDate(
+                              dateTimestamp,
+                              !isThisMonth(new Date(dateTimestamp)),
+                            )}
                           </div>
 
                           <div className="space-y-8">
