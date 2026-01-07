@@ -1,0 +1,61 @@
+name: Update Release Stats
+
+on:
+  schedule:
+    # Run daily at midnight UTC
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: "Repository in format owner/repo"
+        required: false
+        default: "janbaykara/zotero-syllabus"
+        type: string
+      csv_path:
+        description: "Path to CSV file"
+        required: false
+        default: "releases.csv"
+        type: string
+      asset_extension:
+        description: "Asset file extension to filter (e.g., .xpi)"
+        required: false
+        default: ".xpi"
+        type: string
+
+jobs:
+  update-stats:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GitHub_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Update release stats
+        env:
+          GitHub_TOKEN: ${{ secrets.GitHub_TOKEN }}
+          REPOSITORY: ${{ inputs.repository || 'janbaykara/zotero-syllabus' }}
+          CSV_PATH: ${{ inputs.csv_path || 'releases.csv' }}
+          ASSET_EXTENSION: ${{ inputs.asset_extension || '.xpi' }}
+        run: |
+          node scripts/update-release-stats.js "$REPOSITORY" "$CSV_PATH" "$ASSET_EXTENSION"
+
+      - name: Commit and push changes
+        if: success()
+        env:
+          CSV_PATH: ${{ inputs.csv_path || 'releases.csv' }}
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add "$CSV_PATH"
+          git diff --staged --quiet || git commit -m "chore: update release stats [skip ci]"
+          git push
