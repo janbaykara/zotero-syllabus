@@ -1556,6 +1556,45 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   const addClass = async () => {
     try {
       await SyllabusManager.addClass(collectionId, nextClassNumber, "page");
+
+      // Check for date pattern in previous classes and set next date
+      if (nextClassNumber > 1) {
+        const previousClasses = Array.from({ length: Math.min(3, nextClassNumber - 1) }, (_, i) => {
+          const classNum = nextClassNumber - 1 - i;
+          const date = syllabusMetadata.classes?.[classNum]?.readingDate;
+          return { classNumber: classNum, date };
+        }).filter((c) => c.date); // Only classes with dates
+
+        if (previousClasses.length >= 2) {
+          // Calculate intervals between consecutive classes
+          const intervals: number[] = [];
+          for (let i = 0; i < previousClasses.length - 1; i++) {
+            const date1 = new Date(previousClasses[i].date!);
+            const date2 = new Date(previousClasses[i + 1].date!);
+            const diff = date1.getTime() - date2.getTime();
+            intervals.push(diff);
+          }
+
+          // Check if intervals are consistent (within 1 day tolerance)
+          const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+          const isConsistent = intervals.every(
+            (interval) => Math.abs(interval - avgInterval) < 24 * 60 * 60 * 1000
+          );
+
+          if (isConsistent && avgInterval > 0) {
+            // Calculate next date based on pattern
+            const lastDate = new Date(previousClasses[0].date!);
+            const nextDate = new Date(lastDate.getTime() + avgInterval);
+            await SyllabusManager.setClassReadingDate(
+              collectionId,
+              nextClassNumber,
+              nextDate.toISOString(),
+              "page",
+            );
+          }
+        }
+      }
+
       // The store should update automatically via the Zotero notifier
       // when the preference changes. The useSyncExternalStore hook will
       // re-render when the store's getSnapshot returns new data.
