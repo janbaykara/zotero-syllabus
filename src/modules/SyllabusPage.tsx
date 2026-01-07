@@ -2686,9 +2686,6 @@ export function SyllabusItemCard({
 
   // const is
 
-  // Get priority and class instruction from the assignment (if found)
-  // When assignmentId is provided, these MUST come from that specific assignment
-  const priority = assignment?.priority || "";
   const classInstruction = assignment?.classInstruction || "";
   const title = item.getField("title") || "Untitled";
   const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(item.itemType);
@@ -2704,6 +2701,18 @@ export function SyllabusItemCard({
   const url = item.getField("url") || "";
   const [syllabusMetadata] = useZoteroSyllabusMetadata(collectionId);
   const readingTime = getReadingTimeSync(item, { roundUp: true });
+
+  // Get priority and class instruction from the assignment (if found)
+  // When assignmentId is provided, these MUST come from that specific assignment
+  const rawPriority = assignment?.priority || "";
+
+  // Validate priority exists in the collection's priorities list
+  const priority = useMemo(() => {
+    if (!rawPriority) return "";
+    const priorities = syllabusMetadata.priorities || [];
+    const priorityExists = priorities.some((p) => p.id === rawPriority);
+    return priorityExists ? rawPriority : null;
+  }, [rawPriority, syllabusMetadata]);
 
   const [bibliographicReference, setBibliographicReference] = useState("");
   useEffect(() => {
@@ -3000,10 +3009,9 @@ export function SyllabusItemCard({
 
   // Check if there's an assignment for this card
 
-  const { color: priorityColor } = SyllabusManager.getPriorityDisplay(
-    collectionId,
-    priority,
-  );
+  const { color: priorityColor } = syllabusMetadata.priorities?.find(
+    (p) => p.id === priority,
+  ) || { color: "#AAA" };
 
   const assignmentStatus = assignment?.status || null;
 
@@ -3470,8 +3478,7 @@ export function SyllabusItemCard({
               </>
             )}
             {(() => {
-              const priorityOptions =
-                SyllabusManager.getPrioritiesForCollection(collectionId);
+              const priorityOptions = syllabusMetadata.priorities || [];
               return [
                 ...priorityOptions.map((priorityOption) => {
                   return (
