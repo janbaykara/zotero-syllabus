@@ -1,7 +1,10 @@
+import { BasicTool } from "zotero-plugin-toolkit";
+
 // Import FilePicker for file downloads
-const { FilePicker } = ChromeUtils.import(
-  "chrome://zotero/content/modules/filePicker.jsm",
-);
+const ZoteroInstance = new BasicTool().getGlobal("Zotero");
+const { FilePicker } = ZoteroInstance.version.startsWith("8.")
+  ? ChromeUtils.import("chrome://zotero/content/modules/filePicker.jsm")
+  : { FilePicker: null };
 
 /**
  * Gets the default download directory (Downloads folder on Mac/Windows)
@@ -46,6 +49,24 @@ export async function saveToFile(
   dialogTitle: string = "Save File",
   reveal: boolean = true,
 ): Promise<boolean> {
+  if (!ZoteroInstance.version.startsWith("8.")) {
+    // Zotero 7 doesn't support file picker, so we need to create a temporary file and save it
+    // Create a temporary file and save it
+    const tempDir = Zotero.getTempDirectory();
+    const tempFile = tempDir.clone();
+    tempFile.append(filename);
+    // NORMAL_FILE_TYPE = 0
+    tempFile.createUnique(0, 0o666);
+
+    // Write content to file using Zotero.File
+    const fileObj = Zotero.File.pathToFile(tempFile.path);
+    await Zotero.File.putContentsAsync(fileObj, textContent, "utf-8");
+
+    // Open the file location so user can save it
+    fileObj.reveal();
+    return true;
+  }
+
   try {
     // Use FilePicker to select download location
     const fp = new FilePicker();

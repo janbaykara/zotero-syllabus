@@ -23,10 +23,11 @@ export function getRDFStringForCollection(collection: Zotero.Collection) {
     }
 
     // Add timeout to prevent hanging forever
+    const TIMEOUT_MS = 10000;
     const timeout = setTimeout(() => {
-      ztoolkit.log("getRDFStringForCollection: timeout after 30 seconds");
-      reject(new Error("RDF export timed out after 30 seconds"));
-    }, 10000);
+      ztoolkit.log(`getRDFStringForCollection: timeout after ${TIMEOUT_MS}ms`);
+      reject(new Error(`RDF export timed out after ${TIMEOUT_MS}ms`));
+    }, TIMEOUT_MS);
 
     let handlerCalled = false;
 
