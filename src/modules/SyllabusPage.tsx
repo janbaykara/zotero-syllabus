@@ -2191,6 +2191,12 @@ function ClassGroupComponent({
                   {FEATURE_FLAG.READING_SCHEDULE && !isLocked && (
                     <ReadingDateInput
                       initialValue={readingDate}
+                      defaultDate={
+                        classNumber > 1
+                          ? syllabusMetadata.classes?.[classNumber - 1]
+                            ?.readingDate
+                          : undefined
+                      }
                       onSave={(date) =>
                         onClassReadingDateSave(classNumber, date)
                       }
@@ -2324,10 +2330,12 @@ function ClassGroupComponent({
 
 function ReadingDateInput({
   initialValue,
+  defaultDate,
   onSave,
   compactMode = false,
 }: {
   initialValue?: SettingsClassMetadata["readingDate"]; // ISO date string
+  defaultDate?: SettingsClassMetadata["readingDate"]; // ISO date string from previous class
   onSave: (date: string | undefined) => void | Promise<void>;
   compactMode?: boolean;
 }) {
@@ -2342,6 +2350,16 @@ function ReadingDateInput({
       setValue("");
     }
   }, [initialValue]);
+
+  const handleFocus = () => {
+    // If the field is empty and we have a default date, populate it
+    if (!value && defaultDate) {
+      const defaultDateString = new Date(defaultDate)
+        .toISOString()
+        .split("T")[0];
+      setValue(defaultDateString);
+    }
+  };
 
   useDebouncedEffect(
     () => {
@@ -2389,6 +2407,7 @@ function ReadingDateInput({
         type="date"
         value={value}
         onChange={(e) => setValue(e.currentTarget.value)}
+        onFocus={handleFocus}
         className={twMerge(
           "px-2 py-1 border border-quinary rounded-md bg-background text-secondary focus:outline-3 focus:outline-accent-blue focus:outline-offset-2",
           compactMode ? "text-sm" : "text-base",
