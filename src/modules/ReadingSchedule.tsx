@@ -8,6 +8,7 @@ import {
   addWeeks,
   differenceInDays,
   differenceInWeeks,
+  isThisMonth,
   isThisWeek,
   setDefaultOptions,
   startOfWeek,
@@ -283,7 +284,7 @@ export function ReadingSchedule() {
                           <div
                             className={twMerge("mb-3 text-secondary text-2xl")}
                           >
-                            {formatReadingDate(dateTimestamp, false)}
+                            {formatReadingDate(dateTimestamp, !isThisMonth(new Date(dateTimestamp)))}
                           </div>
 
                           <div className="space-y-8">
