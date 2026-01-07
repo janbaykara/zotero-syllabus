@@ -63,6 +63,7 @@ import type {
   Priority,
 } from "../utils/schemas";
 import { installTalisAspireTranslator } from "../utils/translator";
+import { getReadingTimeSync, formatReadingTime } from "../utils/readingTime";
 
 // Re-export for backward compatibility with other modules
 export type {
@@ -203,6 +204,7 @@ export class SyllabusManager {
     this.registerSyllabusInfoColumn();
     this.registerSyllabusClassInstructionColumn();
     this.registerSyllabusStatusColumn();
+    this.registerReadingTimeColumn();
     this.registerSyllabusItemPaneSection();
 
     Zotero.Promise.delay(10000).then(() => {
@@ -940,6 +942,45 @@ export class SyllabusManager {
           checkmark.style.fontWeight = "bold";
           checkmark.style.fontSize = "14px";
           container.appendChild(checkmark);
+        }
+
+        return container;
+      },
+    });
+  }
+
+  static async registerReadingTimeColumn() {
+    const field = "reading-time";
+    await Zotero.ItemTreeManager.registerColumns({
+      pluginID: addon.data.config.addonID,
+      dataKey: field,
+      label: "Reading Time",
+      // width: "100px",
+      // fixedWidth: true,
+      dataProvider: (item: Zotero.Item, dataKey: string) => {
+        const readingTime = getReadingTimeSync(item, { roundUp: true });
+        if (readingTime === null) {
+          return "";
+        }
+        // Return minutes as number for sorting, we'll format in renderCell
+        return readingTime.toString();
+      },
+      renderCell: (index, data, column, isFirstColumn, doc) => {
+        const container = doc.createElement("span");
+        container.className = `cell ${column.className}`;
+        container.style.display = "flex";
+        container.style.alignItems = "center";
+        container.style.justifyContent = "flex-start";
+
+        const dataStr = String(data);
+        if (dataStr && dataStr !== "") {
+          const minutes = parseInt(dataStr, 10);
+          if (!isNaN(minutes) && minutes > 0) {
+            const formatted = formatReadingTime(minutes);
+            container.textContent = formatted;
+            container.style.color = "var(--fill-secondary)";
+            container.style.fontSize = "0.9em";
+          }
         }
 
         return container;

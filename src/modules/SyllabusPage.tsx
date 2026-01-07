@@ -39,6 +39,7 @@ import { useElementSize } from "../utils/react/useElementSize";
 import slugify from "slugify";
 import { SettingsPage } from "./SettingsPage";
 import { formatDate } from "date-fns";
+import { getReadingTimeSync, formatReadingTime } from "../utils/readingTime";
 import {
   Printer,
   Settings,
@@ -2701,8 +2702,9 @@ export function SyllabusItemCard({
   const publicationName =
     item.getField("publicationTitle") || item.getField("bookTitle") || "";
   const url = item.getField("url") || "";
-
   const [syllabusMetadata] = useZoteroSyllabusMetadata(collectionId);
+  const readingTime = getReadingTimeSync(item, { roundUp: true });
+
   const [bibliographicReference, setBibliographicReference] = useState("");
   useEffect(() => {
     (async () => {
@@ -2819,6 +2821,7 @@ export function SyllabusItemCard({
     date,
     slim ? itemTypeLabel : undefined,
     publicationName ? `in ${publicationName}` : undefined,
+    readingTime ? formatReadingTime(readingTime) : undefined,
   ].filter(Boolean);
 
   const handleDragStart = (e: JSX.TargetedDragEvent<HTMLElement>) => {
@@ -3175,6 +3178,7 @@ export function SyllabusItemCard({
                   <span className="text-secondary">{itemTypeLabel}</span>
                 )}
                 {publicationName && <span>in {publicationName}</span>}
+                {readingTime && <span>{formatReadingTime(readingTime)}</span>}
               </span>
             </div>
             {classInstruction && (

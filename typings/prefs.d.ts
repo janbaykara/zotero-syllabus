@@ -13,6 +13,7 @@ declare namespace _ZoteroTypes {
       "readerMode": boolean;
       "shouldColourSyllabusRows": boolean;
       "debugMode": boolean;
+      "wpm": number;
     };
   }
 }

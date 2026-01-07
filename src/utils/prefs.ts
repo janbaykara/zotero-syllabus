@@ -10,6 +10,7 @@ export const PREFS_KEYS: (keyof PluginPrefsMap)[] = [
   "readerMode",
   "shouldColourSyllabusRows",
   "debugMode",
+  "wpm",
 ];
 
 const PREFS_PREFIX = config.prefsPrefix;
