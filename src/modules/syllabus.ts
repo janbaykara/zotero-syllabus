@@ -1399,7 +1399,7 @@ export class SyllabusManager {
       tag: "menu",
       id: "syllabus-reassign-class-number-menu",
       icon: "chrome://zotero/skin/16/universal/book.svg",
-      label: "Set Class Number",
+      label: "Assign to a class",
       children: SyllabusManager.buildClassNumberChildren(),
     });
   }
@@ -1421,6 +1421,10 @@ export class SyllabusManager {
     const sortedClassNumbers = this.getFullClassNumberRange(
       selectedCollection.id,
     );
+
+    // Calculate next class number
+    const nextClassNumber =
+      sortedClassNumbers.length > 0 ? Math.max(...sortedClassNumbers) + 1 : 1;
 
     const createClassHandler =
       (classNumber: number | undefined) => async () => {
@@ -1451,9 +1455,23 @@ export class SyllabusManager {
       };
     });
 
+    // Add separator before "Add to new class" if there are existing classes
     if (sortedClassNumbers.length > 0) {
       children.push({ tag: "menuseparator" as const });
     }
+
+    // Add "Add to new class N" option (always last before "(None)")
+    const { singularCapitalized } = this.getNomenclatureFormatted(
+      selectedCollection.id,
+    );
+    children.push({
+      tag: "menuitem" as const,
+      label: `Add to new ${singularCapitalized} ${nextClassNumber}`,
+      commandListener: createClassHandler(nextClassNumber),
+    });
+
+    // Add separator before "(None)"
+    children.push({ tag: "menuseparator" as const });
 
     children.push({
       tag: "menuitem" as const,
