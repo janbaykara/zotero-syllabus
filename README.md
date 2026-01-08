@@ -20,6 +20,20 @@ A Zotero add-on / plugin that turns your collections into syllabi and course rea
 > [!NOTE]
 > Just an FYI: for best results, use [Zotero 8 (beta)](https://www.zotero.org/support/beta_builds). Zotero 7 (stable release) works fine but has some minor styling issues.
 
+## Can YOU spare 15 minutes to tell me how you're using the tool?
+
+A message from Jan, the software developer:
+
+> Hey all! According to Github over 350+ people have downloaded the extension so far. Great!
+>
+> To help improve the plugin for students, would you be up for a quick 15 min Zoom call? ([Here's the booking link.](https://calendly.com/janbaykara-pm/30min)) We'd talk through how you're using the tool, how you found getting started, and what could be improved to improve studying with Zotero.
+>
+> I'm particularly interested to improve the onboarding / documentation / accessibility of the tool, but your thoughts might also help shape new features! I'll be listening as a software developer, as a fellow student, and as student of pedagogy in particular!
+>
+> If you can spare 15 minutes, here's a booking link: https://calendly.com/janbaykara-pm/30min - Pick a slot and I look forward to chatting!
+>
+> — Jan :)
+
 ## Discussion
 
 - For **bug reports** and **feature requests**, please use the [GitHub Issues](https://github.com/janbaykara/zotero-syllabus/issues) page.
