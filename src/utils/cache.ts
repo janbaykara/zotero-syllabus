@@ -265,7 +265,7 @@ class ZoteroCache {
     // JSON pref - parse and validate
     try {
       value = Zotero.Prefs.get(key, true) as T;
-      const obj = JSON.parse(String(value || ""));
+      const obj = JSON.parse(String(value || "{}"));
 
       if (entity) {
         // Use versioned entity if provided (for migration)
