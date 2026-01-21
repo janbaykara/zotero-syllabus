@@ -27,13 +27,13 @@ importers:
         version: 11.2.4
       lucide-preact:
         specifier: ^0.562.0
-        version: 0.562.0(preact@10.28.1)
+        version: 0.562.0(preact@10.28.2)
       pluralize:
         specifier: ^8.0.0
         version: 8.0.0
       preact:
-        specifier: ^10.19.3
-        version: 10.28.1
+        specifier: ^10.28.2
+        version: 10.28.2
       slugify:
         specifier: ^1.6.6
         version: 1.6.6
@@ -47,8 +47,8 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0
       verzod:
-        specifier: ^0.4.0
-        version: 0.4.0(patch_hash=f2e5a9c883985bfe7377ed5c380aba29c57807fd3f5c68dba138e485c165e067)(zod@3.25.76)
+        specifier: ^0.5.1
+        version: 0.5.1(patch_hash=f2e5a9c883985bfe7377ed5c380aba29c57807fd3f5c68dba138e485c165e067)(zod@3.25.76)
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -90,8 +90,8 @@ importers:
         specifier: ^8.5.6
         version: 8.5.6
       prettier:
-        specifier: ^3.7.4
-        version: 3.7.4
+        specifier: ^3.8.0
+        version: 3.8.0
       tailwindcss:
         specifier: ^4.1.18
         version: 4.1.18
@@ -1435,15 +1435,15 @@ packages:
     resolution: {integrity: sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==}
     engines: {node: ^10 || ^12 || >=14}
 
-  preact@10.28.1:
-    resolution: {integrity: sha512-u1/ixq/lVQI0CakKNvLDEcW5zfCjUQfZdK9qqWuIJtsezuyG6pk9TWj75GMuI/EzRSZB/VAE43sNWWZfiy8psw==}
+  preact@10.28.2:
+    resolution: {integrity: sha512-lbteaWGzGHdlIuiJ0l2Jq454m6kcpI1zNje6d8MlGAFlYvP2GO4ibnat7P74Esfz4sPTdM6UxtTwh/d3pwM9JA==}
 
   prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
 
-  prettier@3.7.4:
-    resolution: {integrity: sha512-v6UNi1+3hSlVvv8fSaoUbggEM5VErKmmpGA7Pl3HF8V6uKY7rvClBOJlH6yNwQtfTueNkGVpOv/mtWL9L4bgRA==}
+  prettier@3.8.0:
+    resolution: {integrity: sha512-yEPsovQfpxYfgWNhCfECjG5AQaO+K3dp6XERmOepyPDVqcJm+bjyCVO3pmU+nAPe0N5dDvekfGezt/EIiRe1TA==}
     engines: {node: '>=14'}
     hasBin: true
 
@@ -1644,8 +1644,8 @@ packages:
     resolution: {integrity: sha512-2VNnOC0+XQlwogChUDzy6pe8GQEys9QFZBGOh54l6qVfwoCUwwRvk7rDTgaIsRgsF5GFa5oiNg8LqXE3jofBBg==}
     hasBin: true
 
-  verzod@0.4.0:
-    resolution: {integrity: sha512-TYAukAYYC1sK4MWSGoi1a5FrqJnknP7fp6Z9oJNt7BJACUW9oj8Yt4JZhF6nxbuhHn69Ay44zrXsD+W8jlcK6A==}
+  verzod@0.5.1:
+    resolution: {integrity: sha512-zWjmFU/NSrGZA/O0WufiHxusNLkTeXqZlO+AT0QLIu5upS/cxxtMyXYKpBYWbjB9OtJgoAaUO5B7EdBMykIZzA==}
     engines: {node: '>=16'}
     peerDependencies:
       zod: ^3.22.0
@@ -2870,9 +2870,9 @@ snapshots:
 
   lru-cache@11.2.4: {}
 
-  lucide-preact@0.562.0(preact@10.28.1):
+  lucide-preact@0.562.0(preact@10.28.2):
     dependencies:
-      preact: 10.28.1
+      preact: 10.28.2
 
   magic-string@0.30.21:
     dependencies:
@@ -3008,11 +3008,11 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  preact@10.28.1: {}
+  preact@10.28.2: {}
 
   prelude-ls@1.2.1: {}
 
-  prettier@3.7.4: {}
+  prettier@3.8.0: {}
 
   process-nextick-args@2.0.1: {}
 
@@ -3179,7 +3179,7 @@ snapshots:
 
   uuidv7@1.1.0: {}
 
-  verzod@0.4.0(patch_hash=f2e5a9c883985bfe7377ed5c380aba29c57807fd3f5c68dba138e485c165e067)(zod@3.25.76):
+  verzod@0.5.1(patch_hash=f2e5a9c883985bfe7377ed5c380aba29c57807fd3f5c68dba138e485c165e067)(zod@3.25.76):
     dependencies:
       zod: 3.25.76
 
