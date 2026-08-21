@@ -20,6 +20,7 @@ import { TabManager } from "../utils/tabManager";
 import { getCachedCollectionById } from "../utils/cache";
 import { isSameWeek } from "date-fns/fp";
 import { formatReadingDate } from "../utils/dates";
+import { isZotero8OrLater } from "../utils/zotero";
 
 setDefaultOptions({
   weekStartsOn: 1,
@@ -232,7 +233,7 @@ export function ReadingSchedule() {
         <div
           className={twMerge(
             "sticky top-0 z-20 bg-background py-1",
-            Zotero.version.startsWith("8.") ? "pt-4 md:pt-8" : "pt-8",
+            isZotero8OrLater() ? "pt-4 md:pt-8" : "pt-8",
           )}
         >
           <div className="container-padded bg-background">
@@ -262,7 +263,7 @@ export function ReadingSchedule() {
                   className={twMerge(
                     "container-padded",
                     "text-3xl sticky top-12 z-10 py-2 bg-background text-tertiary",
-                    Zotero.version.startsWith("8.") ? "md:top-16" : "top-12",
+                    isZotero8OrLater() ? "md:top-16" : "top-12",
                   )}
                 >
                   <WeekHeader weekStartDate={weekStartDate} />
@@ -343,7 +344,7 @@ export function ReadingSchedule() {
                                         onChange={handleClassStatusToggle}
                                         className={twMerge(
                                           "absolute right-full mr-1 w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden accent-accent-green!",
-                                          Zotero.version.startsWith("8.")
+                                          isZotero8OrLater()
                                             ? "md:mr-2!"
                                             : "mr-2!",
                                         )}

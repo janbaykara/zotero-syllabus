@@ -2,6 +2,7 @@
 import { h, Fragment } from "preact";
 import { useState, useEffect, useCallback, useMemo } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
+import { isZotero8OrLater } from "../utils/zotero";
 import { SyllabusManager } from "./syllabus";
 import pluralize from "pluralize";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
@@ -154,7 +155,7 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
         <div
           className={twMerge(
             "sticky top-0 z-10 bg-background py-1",
-            Zotero.version.startsWith("8.") ? "md:pt-8" : "pt-8",
+            isZotero8OrLater() ? "md:pt-8" : "pt-8",
           )}
         >
           <div className="container-padded bg-background">

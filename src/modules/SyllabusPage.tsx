@@ -30,6 +30,7 @@ import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import { useZoteroReaderMode } from "./react-zotero-sync/readerMode";
 import { FEATURE_FLAG } from "./featureFlags";
+import { isZotero8OrLater } from "../utils/zotero";
 import {
   getItemReadStatusName,
   getReadStatusMetadata,
@@ -1573,7 +1574,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
             syllabus-view-title-container
             className={twMerge(
               "sticky top-0 z-40 bg-background py-1",
-              Zotero.version.startsWith("8.") ? "md:pt-8" : "pt-8",
+              isZotero8OrLater() ? "md:pt-8" : "pt-8",
               "in-[.print]:static",
             )}
           >
@@ -2108,7 +2109,7 @@ function ClassGroupComponent({
           <div
             className={twMerge(
               "sticky z-35 bg-background py-1 in-[.print]:static top-10",
-              Zotero.version.startsWith("8.") ? "md:pt-8" : "pt-8",
+              isZotero8OrLater() ? "md:pt-8" : "pt-8",
             )}
           >
             <div
@@ -2125,7 +2126,7 @@ function ClassGroupComponent({
                     onChange={handleClassStatusToggle}
                     className={twMerge(
                       "mt-1! absolute right-full mr-1 w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden",
-                      Zotero.version.startsWith("8.") ? "md:mr-2!" : "mr-2!",
+                      isZotero8OrLater() ? "md:mr-2!" : "mr-2!",
                     )}
                     title={classIsDone ? "Mark as not done" : "Mark as done"}
                     aria-label={
@@ -2233,7 +2234,7 @@ function ClassGroupComponent({
             "syllabus-class-items box-border! rounded-lg",
             compactMode ? "mt-1 space-y-2 p-1 -m-1" : "mt-4 space-y-4 p-2 -m-2",
             "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:outline-accent-blue! data-[dropzone-active='true']:text-accent-blue! transition-all duration-200 outline-transparent outline-2! outline-dashed!",
-            !Zotero.version.startsWith("8.") && "compat-space-y",
+            !isZotero8OrLater() && "compat-space-y",
           )}
           onDrop={isLocked ? undefined : (e) => onDrop(e, classNumber ?? null)}
           onDragOver={isLocked ? undefined : onDragOver}
@@ -3042,7 +3043,7 @@ export function SyllabusItemCard({
           onChange={handleAssignmentStatusToggle}
           className={twMerge(
             "absolute right-full mr-1 w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden",
-            Zotero.version.startsWith("8.") ? "md:mr-2!" : "mr-2!",
+            isZotero8OrLater() ? "md:mr-2!" : "mr-2!",
           )}
           title={
             assignmentStatus === "done" ? "Mark as not done" : "Mark as done"
@@ -3760,6 +3761,6 @@ export function renderSyllabusPage(
     win,
     rootElement,
     <SyllabusPage collectionId={collectionId} />,
-    "syllabus-page",
+    "syllabus-custom-view",
   );
 }

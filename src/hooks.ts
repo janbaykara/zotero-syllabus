@@ -225,12 +225,12 @@ function registerStyleSheet(win: _ZoteroTypes.MainWindow) {
   });
   doc.documentElement?.appendChild(tailwindStyles);
 
-  // Load existing stylesheet
+  // Load existing stylesheet (cache-bust so chrome:// updates after rebuild)
   const styles = ztoolkit.UI.createElement(doc, "link", {
     properties: {
       type: "text/css",
       rel: "stylesheet",
-      href: `chrome://${addon.data.config.addonRef}/content/zoteroPane.css`,
+      href: `chrome://${addon.data.config.addonRef}/content/zoteroPane.css?t=${Date.now()}`,
     },
     attributes: {
       "data-syllabus-stylesheet": "true",

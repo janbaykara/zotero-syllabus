@@ -1,4 +1,6 @@
+import { isZotero8OrLater } from "../utils/zotero";
+
 export const FEATURE_FLAG = {
-  READING_SCHEDULE: Zotero.version.startsWith("8."),
-  TALIS_METADATA: Zotero.version.startsWith("8."),
+  READING_SCHEDULE: isZotero8OrLater(),
+  TALIS_METADATA: isZotero8OrLater(),
 };
