@@ -1,17 +1,59 @@
+/* Segmented Collection / Tags / Syllabus control */
+.syllabus-view-mode-button {
+  fill: currentColor;
+  -moz-context-properties: fill, fill-opacity;
+  width: auto !important;
+  min-width: 5.5em !important;
+  margin: 0 !important;
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+  border: 0.5px solid var(--fill-secondary) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.syllabus-view-mode-button[data-view-mode="collection"] {
+  min-width: 6.5em !important;
+  border-start-start-radius: 4px !important;
+  border-end-start-radius: 4px !important;
+  margin-inline-start: 4px !important;
+}
+
+.syllabus-view-mode-button[data-view-mode="tags"] {
+  min-width: 4em !important;
+  border-inline-start: none !important;
+}
+
+.syllabus-view-mode-button[data-view-mode="syllabus"] {
+  min-width: 5.5em !important;
+  border-inline-start: none !important;
+  border-start-end-radius: 4px !important;
+  border-end-end-radius: 4px !important;
+  margin-inline-end: 4px !important;
+}
+
+.syllabus-view-mode-button .toolbarbutton-text {
+  min-width: max-content !important;
+  max-width: none !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+.syllabus-view-mode-button[data-selected="true"],
+.syllabus-view-mode-button[checked="true"] {
+  background-color: var(--color-accent) !important;
+  color: #fff !important;
+}
+
+.syllabus-toolbar-button,
 .syllabus-view-toggle {
   fill: currentColor;
   -moz-context-properties: fill, fill-opacity;
   width: auto !important;
+  min-width: max-content !important;
   gap: 4px;
   padding-left: 8px !important;
   padding-right: 8px !important;
   border: 0.5px solid var(--fill-secondary);
-}
-
-.syllabus-view-toggle[data-syllabus-current-ui-mode="syllabus"] {
-  list-style-image: url("chrome://zotero/skin/16/universal/folder.svg");
-}
-
-.syllabus-view-toggle[data-syllabus-current-ui-mode="collection"] {
-  list-style-image: url("chrome://zotero/skin/16/universal/book.svg");
+  margin-inline-start: 4px;
 }

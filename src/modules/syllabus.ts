@@ -6,6 +6,7 @@ import slugify from "slugify";
 import { getLocaleID, getString } from "../utils/locale";
 import { ExtraFieldTool, ZoteroToolkit } from "zotero-plugin-toolkit";
 import { renderSyllabusPage } from "./SyllabusPage";
+import { renderTagsPage } from "./TagsPage";
 import { getSelectedCollection } from "../utils/zotero";
 import { getCurrentTab } from "../utils/window";
 import { set } from "lodash-es";
@@ -44,6 +45,31 @@ import {
 enum SyllabusSettingsKey {
   COLLECTION_METADATA = "collectionMetadata",
   COLLECTION_VIEW_MODES = "collectionViewModes",
+}
+
+export type CollectionViewMode = "collection" | "syllabus" | "tags";
+
+const COLLECTION_VIEW_MODES: CollectionViewMode[] = [
+  "collection",
+  "syllabus",
+  "tags",
+];
+
+const CollectionViewModeSchema = z.enum(["collection", "syllabus", "tags"]);
+
+/** Coerce legacy boolean prefs and validate string modes. */
+function coerceCollectionViewMode(value: unknown): CollectionViewMode {
+  if (value === true) return "syllabus";
+  if (value === false || value === undefined || value === null) {
+    return "collection";
+  }
+  const parsed = CollectionViewModeSchema.safeParse(value);
+  return parsed.success ? parsed.data : "collection";
+}
+
+function nextCollectionViewMode(mode: CollectionViewMode): CollectionViewMode {
+  const index = COLLECTION_VIEW_MODES.indexOf(mode);
+  return COLLECTION_VIEW_MODES[(index + 1) % COLLECTION_VIEW_MODES.length];
 }
 
 type GetByLibraryAndKeyArgs = Parameters<
@@ -471,28 +497,28 @@ export class SyllabusManager {
     SyllabusManager.reloadItemPane();
   }
 
-  // Function to get/set syllabus view toggle state (per collection)
-  static getSyllabusPageVisible(): boolean {
+  // Function to get/set collection pane view mode (per collection)
+  static getCollectionViewMode(): CollectionViewMode {
     const pane = ztoolkit.getGlobal("ZoteroPane");
     const selectedCollection = pane?.getSelectedCollection();
 
-    // If no collection is selected, default to false (tree view)
+    // If no collection is selected, default to collection (tree) view
     if (!selectedCollection) {
-      return false;
+      return "collection";
     }
 
     const collectionId = String(selectedCollection.id);
     const prefKey = SyllabusManager.getPreferenceKey(
       SyllabusSettingsKey.COLLECTION_VIEW_MODES,
     );
+    // Accept legacy booleans and current string modes
     const viewModes =
-      getCachedPref(prefKey, z.record(z.string(), z.boolean())) || {};
+      getCachedPref(prefKey, z.record(z.string(), z.unknown())) || {};
 
-    // Default to false (tree view) if not set for this collection
-    return viewModes[collectionId] === true;
+    return coerceCollectionViewMode(viewModes[collectionId]);
   }
 
-  static setSyllabusPageVisible(enabled: boolean): void {
+  static setCollectionViewMode(mode: CollectionViewMode): void {
     const pane = ztoolkit.getGlobal("ZoteroPane");
     const selectedCollection = pane?.getSelectedCollection();
 
@@ -506,18 +532,35 @@ export class SyllabusManager {
       SyllabusSettingsKey.COLLECTION_VIEW_MODES,
     );
     const viewModes =
-      getCachedPref(prefKey, z.record(z.string(), z.boolean())) || {};
+      getCachedPref(prefKey, z.record(z.string(), z.unknown())) || {};
 
-    // Update the preference for this collection
-    viewModes[collectionId] = enabled;
+    viewModes[collectionId] = mode;
     Zotero.Prefs.set(prefKey, JSON.stringify(viewModes), true);
-    // Invalidate cache after setting
     zoteroCache.invalidatePref(prefKey);
   }
 
-  // Function to create/update the toggle button
+  static cycleCollectionViewMode(): CollectionViewMode {
+    const next = nextCollectionViewMode(
+      SyllabusManager.getCollectionViewMode(),
+    );
+    SyllabusManager.setCollectionViewMode(next);
+    return next;
+  }
+
+  /** @deprecated Use getCollectionViewMode() === "syllabus" */
+  static getSyllabusPageVisible(): boolean {
+    return SyllabusManager.getCollectionViewMode() === "syllabus";
+  }
+
+  /** @deprecated Use setCollectionViewMode() */
+  static setSyllabusPageVisible(enabled: boolean): void {
+    SyllabusManager.setCollectionViewMode(
+      enabled ? "syllabus" : "collection",
+    );
+  }
+
+  // Function to create/update the view-mode radio control
   static setupToggleButton() {
-    const pane = ztoolkit.getGlobal("ZoteroPane");
     const w = Zotero.getMainWindow();
     const doc = w.document;
 
@@ -528,226 +571,162 @@ export class SyllabusManager {
     // Find the search spinner to insert before it
     const searchSpinner = doc.getElementById("zotero-tb-search-spinner");
 
-    // Check if toggle button already exists
-    let toggleButton = doc.getElementById(
-      "syllabus-view-toggle",
-    ) as unknown as XULButtonElement;
-    let readingScheduleButton = doc.getElementById(
-      "syllabus-reading-schedule-button",
-    ) as unknown as XULButtonElement;
-    let collectionReadingScheduleButton = doc.getElementById(
-      "syllabus-collection-reading-schedule-button",
-    ) as unknown as XULButtonElement;
-    let spacer = doc.getElementById("syllabus-view-spacer") as Element | null;
+    // Remove legacy / duplicate toolbar controls (IDs can be duplicated after hot reload)
+    for (const el of Array.from(
+      doc.querySelectorAll(
+        "#syllabus-view-toggle, #syllabus-view-mode-group, .syllabus-view-mode-button, #syllabus-reading-schedule-button, #syllabus-collection-reading-schedule-button",
+      ),
+    )) {
+      el.remove();
+    }
 
-    if (!toggleButton) {
-      // Create toggle button
-      toggleButton = ztoolkit.UI.createElement(doc, "toolbarbutton", {
-        id: "syllabus-view-toggle",
-        classList: ["syllabus-view-toggle"],
+    const viewModeOptions: {
+      mode: CollectionViewMode;
+      label: string;
+      tooltip: string;
+    }[] = [
+      {
+        mode: "collection",
+        label: "Collection",
+        tooltip: "View as Collection",
+      },
+      { mode: "tags", label: "Tags", tooltip: "View as Tags" },
+      { mode: "syllabus", label: "Syllabus", tooltip: "View as Syllabus" },
+    ];
+
+    const viewModeButtons: XULButtonElement[] = [];
+    for (const option of viewModeOptions) {
+      const button = ztoolkit.UI.createElement(doc, "toolbarbutton", {
+        id: `syllabus-view-mode-${option.mode}`,
+        classList: ["syllabus-view-mode-button"],
+        attributes: {
+          "data-view-mode": option.mode,
+          crop: "none",
+        },
         properties: {
-          type: "menu",
+          type: "radio",
+          group: "syllabus-view-mode",
+          label: option.label,
+          tooltiptext: option.tooltip,
         },
         listeners: [
           {
             type: "click",
             listener: (e: Event) => {
-              const target = e.target as XUL.MenuItem;
-              const checked = !SyllabusManager.getSyllabusPageVisible();
-              SyllabusManager.setSyllabusPageVisible(checked);
-              SyllabusManager.updateButtonLabel(target);
+              e.preventDefault?.();
+              SyllabusManager.setCollectionViewMode(option.mode);
+              SyllabusManager.updateViewModeButtons();
               SyllabusManager.updateButtonVisibility();
               SyllabusManager.setupPage();
             },
           },
         ],
       });
-
-      // Set initial label
-      SyllabusManager.updateButtonLabel(toggleButton);
-
-      // Create "Review your Reading Schedule" button (for Main Library)
-      if (FEATURE_FLAG.READING_SCHEDULE) {
-        readingScheduleButton = ztoolkit.UI.createElement(
-          doc,
-          "toolbarbutton",
-          {
-            id: "syllabus-reading-schedule-button",
-            classList: ["syllabus-view-toggle"],
-            properties: {
-              label: "Review your Reading Schedule",
-              tooltiptext: "Open Reading Schedule",
-            },
-            listeners: [
-              {
-                type: "click",
-                listener: () => {
-                  SyllabusManager.openReadingListTab();
-                },
-              },
-            ],
-          },
-        );
-
-        // Create "Reading Schedule" button (for collection pages)
-        collectionReadingScheduleButton = ztoolkit.UI.createElement(
-          doc,
-          "toolbarbutton",
-          {
-            id: "syllabus-collection-reading-schedule-button",
-            classList: ["syllabus-view-toggle"],
-            properties: {
-              label: "Reading Schedule",
-              tooltiptext: "Open Reading Schedule",
-            },
-            listeners: [
-              {
-                type: "click",
-                listener: () => {
-                  SyllabusManager.openReadingListTab();
-                },
-              },
-            ],
-          },
-        );
-      }
-
-      // Create spacer element if it doesn't exist
-      if (!spacer) {
-        spacer = doc.createElementNS(
-          "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
-          "spacer",
-        );
-        spacer.id = "syllabus-view-spacer";
-        spacer.setAttribute("flex", "1");
-      }
-
-      // Insert buttons and spacer before the search spinner, or append to toolbar if spinner not found
-      if (searchSpinner && searchSpinner.parentNode) {
-        searchSpinner.parentNode.insertBefore(toggleButton, searchSpinner);
-        if (FEATURE_FLAG.READING_SCHEDULE && collectionReadingScheduleButton) {
-          searchSpinner.parentNode.insertBefore(
-            collectionReadingScheduleButton,
-            searchSpinner,
-          );
-        }
-        if (FEATURE_FLAG.READING_SCHEDULE && readingScheduleButton) {
-          searchSpinner.parentNode.insertBefore(
-            readingScheduleButton,
-            searchSpinner,
-          );
-        }
-        searchSpinner.parentNode.insertBefore(spacer, searchSpinner);
-      } else {
-        itemsToolbar.appendChild(toggleButton);
-        if (FEATURE_FLAG.READING_SCHEDULE && collectionReadingScheduleButton) {
-          itemsToolbar.appendChild(collectionReadingScheduleButton);
-        }
-        if (FEATURE_FLAG.READING_SCHEDULE && readingScheduleButton) {
-          itemsToolbar.appendChild(readingScheduleButton);
-        }
-        itemsToolbar.appendChild(spacer);
-      }
-    } else {
-      // Ensure reading schedule buttons exist (only if feature is enabled)
-      if (FEATURE_FLAG.READING_SCHEDULE) {
-        if (!readingScheduleButton) {
-          readingScheduleButton = doc.getElementById(
-            "syllabus-reading-schedule-button",
-          ) as unknown as XULButtonElement;
-          if (!readingScheduleButton) {
-            readingScheduleButton = ztoolkit.UI.createElement(
-              doc,
-              "toolbarbutton",
-              {
-                id: "syllabus-reading-schedule-button",
-                classList: ["syllabus-view-toggle"],
-                properties: {
-                  label: "Review your Reading Schedule",
-                  tooltiptext: "Open Reading Schedule",
-                },
-                listeners: [
-                  {
-                    type: "click",
-                    listener: () => {
-                      SyllabusManager.openReadingListTab();
-                    },
-                  },
-                ],
-              },
-            );
-
-            // Insert after toggle button
-            if (toggleButton.parentNode) {
-              toggleButton.parentNode.insertBefore(
-                readingScheduleButton,
-                toggleButton.nextSibling,
-              );
-            }
-          }
-        }
-
-        if (!collectionReadingScheduleButton) {
-          collectionReadingScheduleButton = doc.getElementById(
-            "syllabus-collection-reading-schedule-button",
-          ) as unknown as XULButtonElement;
-          if (!collectionReadingScheduleButton) {
-            collectionReadingScheduleButton = ztoolkit.UI.createElement(
-              doc,
-              "toolbarbutton",
-              {
-                id: "syllabus-collection-reading-schedule-button",
-                classList: ["syllabus-view-toggle"],
-                properties: {
-                  label: "Reading Schedule",
-                  tooltiptext: "Open Reading Schedule",
-                },
-                listeners: [
-                  {
-                    type: "click",
-                    listener: () => {
-                      SyllabusManager.openReadingListTab();
-                    },
-                  },
-                ],
-              },
-            );
-
-            // Insert right after toggle button
-            if (toggleButton.parentNode) {
-              toggleButton.parentNode.insertBefore(
-                collectionReadingScheduleButton,
-                toggleButton.nextSibling,
-              );
-            }
-          }
-        }
-      }
-
-      // Update button state and label
-      SyllabusManager.updateButtonLabel(toggleButton);
+      viewModeButtons.push(button);
     }
 
-    // Update visibility of both buttons
+    let readingScheduleButton: XULButtonElement | null = null;
+    let collectionReadingScheduleButton: XULButtonElement | null = null;
+
+    if (FEATURE_FLAG.READING_SCHEDULE) {
+      readingScheduleButton = ztoolkit.UI.createElement(doc, "toolbarbutton", {
+        id: "syllabus-reading-schedule-button",
+        classList: ["syllabus-toolbar-button"],
+        properties: {
+          label: "Review your Reading Schedule",
+          tooltiptext: "Open Reading Schedule",
+        },
+        listeners: [
+          {
+            type: "click",
+            listener: () => {
+              SyllabusManager.openReadingListTab();
+            },
+          },
+        ],
+      });
+
+      collectionReadingScheduleButton = ztoolkit.UI.createElement(
+        doc,
+        "toolbarbutton",
+        {
+          id: "syllabus-collection-reading-schedule-button",
+          classList: ["syllabus-toolbar-button"],
+          properties: {
+            label: "Reading Schedule",
+            tooltiptext: "Open Reading Schedule",
+          },
+          listeners: [
+            {
+              type: "click",
+              listener: () => {
+                SyllabusManager.openReadingListTab();
+              },
+            },
+          ],
+        },
+      );
+    }
+
+    let spacer = doc.getElementById("syllabus-view-spacer") as Element | null;
+    if (!spacer) {
+      spacer = doc.createElementNS(
+        "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
+        "spacer",
+      );
+      spacer.id = "syllabus-view-spacer";
+      spacer.setAttribute("flex", "1");
+    }
+
+    const insertBefore = (el: Element) => {
+      if (searchSpinner && searchSpinner.parentNode) {
+        searchSpinner.parentNode.insertBefore(el, searchSpinner);
+      } else {
+        itemsToolbar.appendChild(el);
+      }
+    };
+
+    for (const button of viewModeButtons) {
+      insertBefore(button);
+    }
+    if (collectionReadingScheduleButton) {
+      insertBefore(collectionReadingScheduleButton);
+    }
+    if (readingScheduleButton) {
+      insertBefore(readingScheduleButton);
+    }
+    if (!spacer.parentNode) {
+      insertBefore(spacer);
+    }
+
+    SyllabusManager.updateViewModeButtons();
     SyllabusManager.updateButtonVisibility();
   }
 
-  // Function to update button label based on current state
-  static updateButtonLabel(button: Element) {
-    const isEnabled = SyllabusManager.getSyllabusPageVisible();
+  // Highlight the selected view-mode radio button
+  static updateViewModeButtons() {
+    const w = Zotero.getMainWindow();
+    const doc = w.document;
+    const mode = SyllabusManager.getCollectionViewMode();
+    const buttons = doc.querySelectorAll(
+      ".syllabus-view-mode-button",
+    ) as NodeListOf<XULButtonElement>;
 
-    button.setAttribute(
-      "data-syllabus-current-ui-mode",
-      SyllabusManager.getSyllabusPageVisible() ? "syllabus" : "collection",
-    );
+    for (const button of buttons) {
+      const buttonMode = button.getAttribute("data-view-mode");
+      const selected = buttonMode === mode;
+      button.setAttribute("data-selected", selected ? "true" : "false");
+      if (selected) {
+        button.setAttribute("checked", "true");
+      } else {
+        button.removeAttribute("checked");
+      }
+    }
+  }
 
-    (button as XUL.Button).label = isEnabled
-      ? "View as Collection"
-      : "View as Syllabus";
-
-    (button as XUL.Button).tooltiptext = isEnabled
-      ? "Switch to Collection View"
-      : "Switch to Syllabus View";
+  /** @deprecated Use updateViewModeButtons() */
+  static updateButtonLabel(_button?: Element) {
+    SyllabusManager.updateViewModeButtons();
   }
 
   // Function to update button visibility based on current state
@@ -755,9 +734,9 @@ export class SyllabusManager {
     const w = Zotero.getMainWindow();
     const doc = w.document;
 
-    const toggleButton = doc.getElementById(
-      "syllabus-view-toggle",
-    ) as XULButtonElement | null;
+    const viewModeButtons = Array.from(
+      doc.querySelectorAll(".syllabus-view-mode-button"),
+    ) as XULButtonElement[];
     const readingScheduleButton = doc.getElementById(
       "syllabus-reading-schedule-button",
     ) as XULButtonElement | null;
@@ -765,7 +744,7 @@ export class SyllabusManager {
       "syllabus-collection-reading-schedule-button",
     ) as XULButtonElement | null;
 
-    if (!toggleButton) return;
+    if (!viewModeButtons.length) return;
 
     // If reading schedule feature is disabled, hide all reading schedule buttons
     if (!FEATURE_FLAG.READING_SCHEDULE) {
@@ -791,7 +770,9 @@ export class SyllabusManager {
     const isInCollection = !!selectedCollection;
 
     // Hide/show buttons based on conditions
-    toggleButton.hidden = shouldShowReadingSchedule;
+    for (const button of viewModeButtons) {
+      button.hidden = shouldShowReadingSchedule;
+    }
     readingScheduleButton.hidden = !shouldShowReadingSchedule;
     // Show "Reading Schedule" button when viewing a collection, hide it in Main Library
     collectionReadingScheduleButton.hidden =
@@ -822,9 +803,10 @@ export class SyllabusManager {
       }
 
       // Check if we should show custom view
-      // Show if: syllabus view is enabled AND we have a collection
-      const syllabusViewEnabled = SyllabusManager.getSyllabusPageVisible();
-      const shouldShowCustomView = syllabusViewEnabled && selectedCollection;
+      // Show if: syllabus or tags view is enabled AND we have a collection
+      const viewMode = SyllabusManager.getCollectionViewMode();
+      const shouldShowCustomView =
+        (viewMode === "syllabus" || viewMode === "tags") && selectedCollection;
 
       // Find or create custom syllabus view container
       let customView = doc.getElementById(
@@ -870,7 +852,11 @@ export class SyllabusManager {
 
         // Insert the master template
         if (customView && selectedCollection) {
-          renderSyllabusPage(w, customView, selectedCollection.id);
+          if (viewMode === "tags") {
+            renderTagsPage(w, customView, selectedCollection.id);
+          } else {
+            renderSyllabusPage(w, customView, selectedCollection.id);
+          }
         }
       }
     } catch (e) {
