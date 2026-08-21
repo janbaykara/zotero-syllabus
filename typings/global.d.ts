@@ -39,4 +39,12 @@ declare const Services: {
   };
   scriptloader?: any;
   io?: any;
+  dirsvc: {
+    get: (key: string, iface: any) => any;
+  };
+};
+
+declare const Ci: {
+  nsIFile: any;
+  [key: string]: any;
 };

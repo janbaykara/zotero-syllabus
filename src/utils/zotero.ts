@@ -1,5 +1,26 @@
 import { getCachedCollectionById } from "./cache";
 
+/**
+ * Compare the running Zotero app version against a major.minor.patch target.
+ */
+export function isZoteroVersionAtLeast(minVersion: string): boolean {
+  const parse = (v: string) =>
+    v
+      .split(".")
+      .slice(0, 3)
+      .map((part) => Number.parseInt(part, 10) || 0);
+  const [aMaj, aMin = 0, aPatch = 0] = parse(Zotero.version);
+  const [bMaj, bMin = 0, bPatch = 0] = parse(minVersion);
+  if (aMaj !== bMaj) return aMaj > bMaj;
+  if (aMin !== bMin) return aMin > bMin;
+  return aPatch >= bPatch;
+}
+
+/** Zotero 8+ platform / UI features (also true on Zotero 9). */
+export function isZotero8OrLater(): boolean {
+  return isZoteroVersionAtLeast("8.0");
+}
+
 // import { getCurrentTab } from './window';
 export function getSelectedCollection() {
   const pane = ztoolkit.getGlobal("ZoteroPane");

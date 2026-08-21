@@ -1,10 +1,5 @@
-import { BasicTool } from "zotero-plugin-toolkit";
-
-// Import FilePicker for file downloads
-const ZoteroInstance = new BasicTool().getGlobal("Zotero");
-const { FilePicker } = ZoteroInstance.version.startsWith("8.")
-  ? ChromeUtils.import("chrome://zotero/content/modules/filePicker.jsm")
-  : { FilePicker: null };
+import { FilePickerHelper } from "zotero-plugin-toolkit";
+import { isZotero8OrLater } from "./zotero";
 
 /**
  * Gets the default download directory (Downloads folder on Mac/Windows)
@@ -12,9 +7,7 @@ const { FilePicker } = ZoteroInstance.version.startsWith("8.")
  */
 function getDefaultDownloadPath(): string | null {
   try {
-    const { Services } = ChromeUtils.import(
-      "resource://gre/modules/Services.jsm",
-    );
+    // Services is a global in Zotero 7+ — do not import Services.jsm/sys.mjs
     const homeDir = Services.dirsvc.get("Home", Ci.nsIFile);
     if (!homeDir) return null;
 
@@ -49,66 +42,53 @@ export async function saveToFile(
   dialogTitle: string = "Save File",
   reveal: boolean = true,
 ): Promise<boolean> {
-  if (!ZoteroInstance.version.startsWith("8.")) {
-    // Zotero 7 doesn't support file picker, so we need to create a temporary file and save it
-    // Create a temporary file and save it
+  if (!isZotero8OrLater()) {
+    // Zotero 7 doesn't support the modern file picker path used below
     const tempDir = Zotero.getTempDirectory();
     const tempFile = tempDir.clone();
     tempFile.append(filename);
     // NORMAL_FILE_TYPE = 0
     tempFile.createUnique(0, 0o666);
 
-    // Write content to file using Zotero.File
     const fileObj = Zotero.File.pathToFile(tempFile.path);
     await Zotero.File.putContentsAsync(fileObj, textContent, "utf-8");
 
-    // Open the file location so user can save it
     fileObj.reveal();
     return true;
   }
 
   try {
-    // Use FilePicker to select download location
-    const fp = new FilePicker();
     const defaultPath = getDefaultDownloadPath();
-    if (defaultPath) {
-      fp.displayDirectory = defaultPath;
-    }
-    fp.init(Zotero.getMainWindow(), dialogTitle, fp.modeSave);
-    fp.defaultString = filename;
-    fp.appendFilters(fp.filterAll);
-    const rv = await fp.show();
+    const filePath = await new FilePickerHelper(
+      dialogTitle,
+      "save",
+      undefined,
+      filename,
+      Zotero.getMainWindow(),
+      "all",
+      defaultPath ?? undefined,
+    ).open();
 
-    if (rv === fp.returnOK) {
-      // fp.file is a string path, not an nsIFile object
-      const filePath = fp.file;
-
-      if (!filePath || typeof filePath !== "string") {
-        ztoolkit.log("Error: File path is invalid:", filePath);
-        throw new Error("File path is invalid");
-      }
-
-      ztoolkit.log(`Saving to path: ${filePath}`);
-
-      // Create file object and write content
-      const fileObj = Zotero.File.pathToFile(filePath);
-      await Zotero.File.putContentsAsync(fileObj, textContent, "utf-8");
-
-      // Verify file was created
-      if (fileObj.exists()) {
-        ztoolkit.log(`File saved successfully to: ${filePath}`);
-        if (reveal) {
-          fileObj.reveal();
-        }
-        return true;
-      } else {
-        ztoolkit.log(`Warning: File may not have been created at: ${filePath}`);
-        return false;
-      }
-    } else {
+    if (!filePath || typeof filePath !== "string") {
       ztoolkit.log("File save cancelled by user");
       return false;
     }
+
+    ztoolkit.log(`Saving to path: ${filePath}`);
+
+    const fileObj = Zotero.File.pathToFile(filePath);
+    await Zotero.File.putContentsAsync(fileObj, textContent, "utf-8");
+
+    if (fileObj.exists()) {
+      ztoolkit.log(`File saved successfully to: ${filePath}`);
+      if (reveal) {
+        fileObj.reveal();
+      }
+      return true;
+    }
+
+    ztoolkit.log(`Warning: File may not have been created at: ${filePath}`);
+    return false;
   } catch (err) {
     ztoolkit.log("Error saving file:", err);
     throw err;

@@ -1,6 +1,6 @@
 # Zotero Syllabus
 
-[![zotero target version](https://img.shields.io/badge/Zotero-7-green?style=flat-square&logo=zotero&logoColor=CC2936)](https://www.zotero.org)
+[![zotero target version](https://img.shields.io/badge/Zotero-7%2F8%2F9-green?style=flat-square&logo=zotero&logoColor=CC2936)](https://www.zotero.org)
 
 A Zotero add-on / plugin that turns your collections into syllabi and course reading lists. Order your items by class, tag things as required / optional reading and pin course information.
 
@@ -18,7 +18,7 @@ A Zotero add-on / plugin that turns your collections into syllabi and course rea
 6. Restart Zotero!
 
 > [!NOTE]
-> Just an FYI: for best results, use [Zotero 8 (beta)](https://www.zotero.org/support/beta_builds). Zotero 7 (stable release) works fine but has some minor styling issues.
+> For best results, use [Zotero 8 or 9](https://www.zotero.org/download/). Zotero 7 works but has some minor styling issues.
 
 ## Can YOU spare 15 minutes to tell me how you're using the tool?
 
@@ -159,7 +159,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ### Requirements
 
-- Zotero 7 beta or later
+- Zotero 7 or later (8/9 recommended)
 - Node.js (LTS version)
 - Git
 - pnpm
