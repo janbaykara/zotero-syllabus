@@ -6,6 +6,7 @@
 import { ExtraFieldTool } from "zotero-plugin-toolkit";
 import { config } from "../../package.json";
 import { getString } from "../utils/locale";
+import { confirmPrompt } from "../utils/window";
 import {
   CollectionSyllabusDocumentEntity,
   CollectionSyllabusDocumentSchema,
@@ -1388,24 +1389,11 @@ function prefEntryHasConfiguredClasses(value: unknown): boolean {
 }
 
 function confirmTurnIntoSyllabus(collection: Zotero.Collection): boolean {
-  if (__env__ === "test") {
-    return true;
-  }
-  const win = Zotero.getMainWindow();
-  if (!win) {
-    return false;
-  }
-  try {
-    const name = collection.name || "this collection";
-    return Services.prompt.confirm(
-      win,
-      getString("enable-syllabus-title"),
-      getString("enable-syllabus-message", { args: { name } }),
-    );
-  } catch (error) {
-    ztoolkit.log("Error showing syllabus enable dialog:", error);
-    return false;
-  }
+  const name = collection.name || "this collection";
+  return confirmPrompt(
+    getString("enable-syllabus-title"),
+    getString("enable-syllabus-message", { args: { name } }),
+  );
 }
 
 function mayCreateSyllabusNote(

@@ -9,3 +9,5 @@ pref-compact-mode =
     .label = 使用紧凑布局
 pref-input = 输入
 pref-help = { $name } Build { $version } { $time }
+pref-debug-mode =
+    .label = 开启调试模式

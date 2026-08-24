@@ -7,7 +7,7 @@ import { getLocaleID, getString } from "../utils/locale";
 import { renderSyllabusPage } from "./SyllabusPage";
 import { renderTagsPage } from "./TagsPage";
 import { getSelectedCollection } from "../utils/zotero";
-import { getCurrentTab } from "../utils/window";
+import { getCurrentTab, confirmPrompt } from "../utils/window";
 import { set } from "lodash-es";
 import { renderComponent } from "../utils/react";
 import { ItemPane } from "./ItemPane";
@@ -96,29 +96,17 @@ function nextCollectionViewMode(mode: CollectionViewMode): CollectionViewMode {
 function confirmEnableSubcollections(
   collectionId: number | GetByLibraryAndKeyArgs,
 ): boolean {
-  if (__env__ === "test") {
-    return true;
-  }
-  const win = Zotero.getMainWindow();
-  if (!win) {
-    return false;
-  }
-  try {
-    const collection =
-      getCachedCollection(collectionId) ||
-      (typeof collectionId === "number"
-        ? Zotero.Collections.get(collectionId)
-        : Zotero.Collections.getByLibraryAndKey(...collectionId));
-    const name = collection?.name || "this collection";
-    return Services.prompt.confirm(
-      win,
-      getString("enable-subcollections-title"),
-      getString("enable-subcollections-message", { args: { name } }),
-    );
-  } catch (error) {
-    ztoolkit.log("Error showing subcollections enable dialog:", error);
-    return false;
-  }
+  const cached = getCachedCollection(collectionId);
+  const fetched =
+    cached ||
+    (typeof collectionId === "number"
+      ? Zotero.Collections.get(collectionId)
+      : Zotero.Collections.getByLibraryAndKey(...collectionId));
+  const name = fetched ? fetched.name || "this collection" : "this collection";
+  return confirmPrompt(
+    getString("enable-subcollections-title"),
+    getString("enable-subcollections-message", { args: { name } }),
+  );
 }
 
 type GetByLibraryAndKeyArgs = Parameters<

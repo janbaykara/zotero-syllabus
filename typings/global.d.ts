@@ -42,6 +42,14 @@ declare const Services: {
   dirsvc: {
     get: (key: string, iface: any) => any;
   };
+  prompt: {
+    confirm: (
+      parent: Window | null,
+      dialogTitle: string,
+      text: string,
+    ) => boolean;
+    alert: (parent: Window | null, dialogTitle: string, text: string) => void;
+  };
 };
 
 declare const Ci: {
