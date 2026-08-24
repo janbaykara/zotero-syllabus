@@ -394,6 +394,8 @@ export const SettingsSyllabusMetadataSchema = z.object({
   locked: z.boolean().optional().nullable(),
   links: z.array(z.string()).optional(),
   cslStyle: z.string().optional().nullable(),
+  /** When true, class folders are created and deleted. Missing means off. */
+  createSubcollections: z.boolean().optional(),
 });
 
 /**
@@ -727,6 +729,13 @@ export function classByNumber(
     return undefined;
   }
   return metadata.classes[classNumber] || metadata.classes[String(classNumber)];
+}
+
+/** Only an explicit `true` enables class folders. Missing means off. */
+export function shouldCreateSubcollections(document: {
+  createSubcollections?: boolean | null;
+}): boolean {
+  return document.createSubcollections === true;
 }
 
 export function classesToNumberKeyed(

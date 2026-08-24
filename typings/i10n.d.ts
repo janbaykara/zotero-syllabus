@@ -3,6 +3,10 @@
 /* eslint-disable */
 // @ts-nocheck
 export type FluentMessageId =
+  | 'enable-subcollections-message'
+  | 'enable-subcollections-title'
+  | 'enable-syllabus-message'
+  | 'enable-syllabus-title'
   | 'item-section-syllabus-head-text'
   | 'item-section-syllabus-sidenav-tooltip'
   | 'menu-toggle-bibliography'

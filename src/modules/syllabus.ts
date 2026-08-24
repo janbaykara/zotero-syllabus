@@ -31,6 +31,7 @@ import {
   ensureClassRecord,
   findClassIdByNumber,
   getClassNumberById,
+  shouldCreateSubcollections,
 } from "../utils/schemas";
 import * as z from "zod";
 import { importRDF, getRDFStringForCollection, isRdfFile } from "../utils/rdf";
@@ -58,6 +59,8 @@ import {
   setItemAssignmentsInDocument,
   shutdownSyllabusNotes,
   getClassSubcollectionContext,
+  collectionHasSyllabusNote,
+  ensureSyllabusNoteForUser,
 } from "./syllabusNote";
 import { migrateLegacyCollectionMetadataPrefs } from "./migratePrefsToNotes";
 
@@ -88,6 +91,34 @@ function coerceCollectionViewMode(value: unknown): CollectionViewMode {
 function nextCollectionViewMode(mode: CollectionViewMode): CollectionViewMode {
   const index = COLLECTION_VIEW_MODES.indexOf(mode);
   return COLLECTION_VIEW_MODES[(index + 1) % COLLECTION_VIEW_MODES.length];
+}
+
+function confirmEnableSubcollections(
+  collectionId: number | GetByLibraryAndKeyArgs,
+): boolean {
+  if (__env__ === "test") {
+    return true;
+  }
+  const win = Zotero.getMainWindow();
+  if (!win) {
+    return false;
+  }
+  try {
+    const collection =
+      getCachedCollection(collectionId) ||
+      (typeof collectionId === "number"
+        ? Zotero.Collections.get(collectionId)
+        : Zotero.Collections.getByLibraryAndKey(...collectionId));
+    const name = collection?.name || "this collection";
+    return Services.prompt.confirm(
+      win,
+      getString("enable-subcollections-title"),
+      getString("enable-subcollections-message", { args: { name } }),
+    );
+  } catch (error) {
+    ztoolkit.log("Error showing subcollections enable dialog:", error);
+    return false;
+  }
 }
 
 type GetByLibraryAndKeyArgs = Parameters<
@@ -564,7 +595,7 @@ export class SyllabusManager {
     return coerceCollectionViewMode(stored);
   }
 
-  static setCollectionViewMode(mode: CollectionViewMode): void {
+  static async setCollectionViewMode(mode: CollectionViewMode): Promise<void> {
     const pane = ztoolkit.getGlobal("ZoteroPane");
     const selectedCollection = pane?.getSelectedCollection();
 
@@ -573,6 +604,20 @@ export class SyllabusManager {
       return;
     }
 
+    if (mode === "syllabus") {
+      const enabled = await ensureSyllabusNoteForUser(selectedCollection);
+      if (!enabled) {
+        return;
+      }
+    }
+
+    this.writeCollectionViewMode(selectedCollection, mode);
+  }
+
+  static writeCollectionViewMode(
+    selectedCollection: Zotero.Collection,
+    mode: CollectionViewMode,
+  ): void {
     const collectionId = String(selectedCollection.id);
     const prefKey = SyllabusManager.getPreferenceKey(
       SyllabusSettingsKey.COLLECTION_VIEW_MODES,
@@ -585,12 +630,12 @@ export class SyllabusManager {
     zoteroCache.invalidatePref(prefKey);
   }
 
-  static cycleCollectionViewMode(): CollectionViewMode {
+  static async cycleCollectionViewMode(): Promise<CollectionViewMode> {
     const next = nextCollectionViewMode(
       SyllabusManager.getCollectionViewMode(),
     );
-    SyllabusManager.setCollectionViewMode(next);
-    return next;
+    await SyllabusManager.setCollectionViewMode(next);
+    return SyllabusManager.getCollectionViewMode();
   }
 
   /** @deprecated Use getCollectionViewMode() === "syllabus" */
@@ -600,7 +645,9 @@ export class SyllabusManager {
 
   /** @deprecated Use setCollectionViewMode() */
   static setSyllabusPageVisible(enabled: boolean): void {
-    SyllabusManager.setCollectionViewMode(enabled ? "syllabus" : "collection");
+    void SyllabusManager.setCollectionViewMode(
+      enabled ? "syllabus" : "collection",
+    );
   }
 
   // Function to create/update the view-mode radio control
@@ -658,10 +705,12 @@ export class SyllabusManager {
             type: "click",
             listener: (e: Event) => {
               e.preventDefault?.();
-              SyllabusManager.setCollectionViewMode(option.mode);
-              SyllabusManager.updateViewModeButtons();
-              SyllabusManager.updateButtonVisibility();
-              SyllabusManager.setupPage();
+              void (async () => {
+                await SyllabusManager.setCollectionViewMode(option.mode);
+                SyllabusManager.updateViewModeButtons();
+                SyllabusManager.updateButtonVisibility();
+                SyllabusManager.setupPage();
+              })();
             },
           },
         ],
@@ -849,8 +898,28 @@ export class SyllabusManager {
       // Check if we should show custom view
       // Show if: syllabus or tags view is enabled AND we have a collection
       const viewMode = SyllabusManager.getCollectionViewMode();
+      if (
+        viewMode === "syllabus" &&
+        selectedCollection &&
+        !collectionHasSyllabusNote(selectedCollection)
+      ) {
+        await mutateCollectionDocument(
+          selectedCollection,
+          (document) => document,
+          { createNote: "legacy" },
+        );
+        if (!collectionHasSyllabusNote(selectedCollection)) {
+          SyllabusManager.writeCollectionViewMode(
+            selectedCollection,
+            "collection",
+          );
+          SyllabusManager.updateViewModeButtons();
+        }
+      }
+      const resolvedViewMode = SyllabusManager.getCollectionViewMode();
       const shouldShowCustomView =
-        (viewMode === "syllabus" || viewMode === "tags") && selectedCollection;
+        (resolvedViewMode === "syllabus" || resolvedViewMode === "tags") &&
+        selectedCollection;
 
       // Find or create custom syllabus view container
       let customView = doc.getElementById(
@@ -896,7 +965,7 @@ export class SyllabusManager {
 
         // Insert the master template
         if (customView && selectedCollection) {
-          if (viewMode === "tags") {
+          if (resolvedViewMode === "tags") {
             renderTagsPage(w, customView, selectedCollection.id);
           } else {
             renderSyllabusPage(w, customView, selectedCollection.id);
@@ -2148,7 +2217,9 @@ export class SyllabusManager {
       ztoolkit.log("Error validating collection metadata:", parsed.error);
       return;
     }
-    await setCollectionDocumentMetadata(collectionId, parsed.data);
+    await setCollectionDocumentMetadata(collectionId, parsed.data, {
+      createNote: source === "background" ? "always" : "prompt",
+    });
     if (source !== "page") {
       this.setupPage();
     }
@@ -2319,6 +2390,37 @@ export class SyllabusManager {
   }
 
   /**
+   * Whether class folders should be created and deleted for this syllabus.
+   * Only an explicit true enables them.
+   */
+  static getCreateSubcollections(
+    collectionId: number | GetByLibraryAndKeyArgs,
+  ): boolean {
+    return shouldCreateSubcollections(this.getSyllabusMetadata(collectionId));
+  }
+
+  static async setCreateSubcollections(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    createSubcollections: boolean,
+    source: "page",
+  ): Promise<void> {
+    if (
+      createSubcollections &&
+      !this.getCreateSubcollections(collectionId) &&
+      !confirmEnableSubcollections(collectionId)
+    ) {
+      return;
+    }
+    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
+    syllabusMetadata.createSubcollections = createSubcollections;
+    await SyllabusManager.setCollectionMetadata(
+      collectionId,
+      syllabusMetadata,
+      source,
+    );
+  }
+
+  /**
    * Get CSL style for a specific collection
    */
   static getCslStyle(
@@ -2379,11 +2481,15 @@ export class SyllabusManager {
     classNumber: number,
   ): Promise<string> {
     let classId = "";
-    await mutateCollectionDocument(collectionId, (document) => {
-      const classes = { ...(document.classes || {}) };
-      classId = ensureClassRecord(classes, classNumber);
-      return { ...document, classes };
-    });
+    await mutateCollectionDocument(
+      collectionId,
+      (document) => {
+        const classes = { ...(document.classes || {}) };
+        classId = ensureClassRecord(classes, classNumber);
+        return { ...document, classes };
+      },
+      { createNote: "prompt" },
+    );
     return classId;
   }
 
@@ -2593,11 +2699,15 @@ export class SyllabusManager {
     source: "page",
   ): Promise<void> {
     ztoolkit.log("SyllabusManager.addClass", collectionId, classNumber);
-    await mutateCollectionDocument(collectionId, (document) => {
-      const classes = { ...(document.classes || {}) };
-      ensureClassRecord(classes, classNumber);
-      return { ...document, classes };
-    });
+    await mutateCollectionDocument(
+      collectionId,
+      (document) => {
+        const classes = { ...(document.classes || {}) };
+        ensureClassRecord(classes, classNumber);
+        return { ...document, classes };
+      },
+      { createNote: "prompt" },
+    );
     this.setupPage();
     this.onClassListUpdate();
   }
@@ -2973,6 +3083,7 @@ export class SyllabusManager {
       nomenclature,
       priorities,
       locked,
+      createSubcollections,
       ...restOfImported
     } = imported;
 
@@ -3010,6 +3121,10 @@ export class SyllabusManager {
     // Replace locked status if provided
     if (imported.locked !== undefined) {
       merged.locked = imported.locked;
+    }
+
+    if (imported.createSubcollections !== undefined) {
+      merged.createSubcollections = imported.createSubcollections;
     }
 
     for (const key in restOfImported) {
@@ -3073,6 +3188,7 @@ export class SyllabusManager {
       const saved = await mutateCollectionDocument(
         collectionId,
         () => document,
+        { createNote: "always" },
       );
       if (source !== "page") {
         this.setupPage();
@@ -3134,7 +3250,13 @@ export class SyllabusManager {
       .find((document) => document);
     if (importedDocument) {
       importedDocument = remapDocumentItemKeys(importedDocument, otherItems);
-      await mutateCollectionDocument(targetCollection, () => importedDocument!);
+      await mutateCollectionDocument(
+        targetCollection,
+        () => importedDocument!,
+        {
+          createNote: "always",
+        },
+      );
     }
 
     await absorbSyllabusExtraFromItems(otherItems);
@@ -3308,7 +3430,11 @@ export class SyllabusManager {
     });
 
     // Save merged metadata
-    await this.setCollectionMetadata(collectionId, mergedMetadata, source);
+    await this.setCollectionMetadata(
+      collectionId,
+      mergedMetadata,
+      "background",
+    );
 
     if (exportedItems && Object.keys(exportedItems).length > 0) {
       const collectionItemKeys = new Set(

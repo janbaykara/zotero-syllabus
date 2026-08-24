@@ -33,6 +33,7 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
     _setLocked,
     _setLinks,
     setCslStyle,
+    setCreateSubcollections,
   ] = useZoteroSyllabusMetadata(collectionId);
 
   // Use local state for immediate UI feedback, but save immediately
@@ -201,6 +202,30 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
                 Plural form: <strong>{pluralNomenclature}</strong>
               </p>
             </div>
+          </section>
+
+          {/* Class folders */}
+          <section className="space-y-4">
+            <h2 className="text-2xl font-semibold">Class subcollections</h2>
+            <p className="text-secondary">
+              Off by default. When enabled, each class gets a folder under this
+              collection. Folders are created, renamed, and removed to match the
+              syllabus — including existing child collections, which can be
+              deleted. Turning this off leaves folders in place.
+            </p>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={metadata.createSubcollections === true}
+                onChange={(e) =>
+                  setCreateSubcollections(e.currentTarget.checked)
+                }
+                className="w-4 h-4 cursor-pointer accent-accent-green!"
+              />
+              <span className="text-sm font-medium">
+                Create subcollections?
+              </span>
+            </label>
           </section>
 
           {/* CSL Style Section */}

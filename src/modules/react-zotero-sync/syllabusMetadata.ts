@@ -99,6 +99,17 @@ export function useZoteroSyllabusMetadata(
     [collectionId],
   );
 
+  const setCreateSubcollections = useCallback(
+    (createSubcollections: boolean) => {
+      SyllabusManager.setCreateSubcollections(
+        collectionId,
+        createSubcollections,
+        "page",
+      );
+    },
+    [collectionId],
+  );
+
   return [
     syllabusMetadata,
     setDescription,
@@ -111,6 +122,7 @@ export function useZoteroSyllabusMetadata(
     setLocked,
     setLinks,
     setCslStyle,
+    setCreateSubcollections,
   ] as const;
 }
 

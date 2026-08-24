@@ -43,8 +43,9 @@ export function openCollectionSyllabusPage(collectionId: number): void {
       return;
     }
     TabManager.selectLibraryTab();
-    SyllabusManager.setCollectionViewMode("syllabus");
-    SyllabusManager.setupPage();
+    void SyllabusManager.setCollectionViewMode("syllabus").then(() => {
+      SyllabusManager.setupPage();
+    });
   } catch (error) {
     ztoolkit.log("Error opening syllabus page:", error);
   }

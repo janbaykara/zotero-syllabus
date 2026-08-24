@@ -4,6 +4,8 @@
  */
 
 import { ExtraFieldTool } from "zotero-plugin-toolkit";
+import { config } from "../../package.json";
+import { getString } from "../utils/locale";
 import {
   CollectionSyllabusDocumentEntity,
   CollectionSyllabusDocumentSchema,
@@ -17,6 +19,7 @@ import {
   hydrateAssignment,
   mergeNumberKeyedClasses,
   persistAssignment,
+  shouldCreateSubcollections,
   type CollectionSyllabusDocument,
   type ItemSyllabusAssignment,
   type ItemSyllabusData,
@@ -40,6 +43,7 @@ import {
   enqueueClassFolderEnsure,
   enqueueClassSubcollectionItemSync,
   ensureClassSubcollections,
+  forgetManagedSubcollection,
   isClassFolderSyncHeld,
   parentCollectionForManagedId,
   rememberManagedSubcollections,
@@ -1292,6 +1296,9 @@ async function rebuildDocumentIndex(): Promise<void> {
     }
     try {
       rememberManagedSubcollections(collection, entry.document);
+      if (!shouldCreateSubcollections(entry.document)) {
+        continue;
+      }
       const ensured = await enqueueClassFolderEnsure(collection, () =>
         ensureClassSubcollections(collection, entry.document, entry.document),
       );
@@ -1321,9 +1328,109 @@ export function getSyllabusCollectionDictionary(): SettingsCollectionDictionaryD
   return result;
 }
 
-async function getOrCreateSyllabusNote(
+export type CreateNotePolicy = "never" | "legacy" | "prompt" | "always";
+
+export function collectionHasSyllabusNote(
+  collectionId: CollectionIdentifier | Zotero.Collection,
+): boolean {
+  const collection = resolveSyllabusCollection(collectionId);
+  if (!collection) {
+    return false;
+  }
+  return findSyllabusNoteUncached(collection) != null;
+}
+
+function collectionHasLegacySyllabusPref(
   collection: Zotero.Collection,
-): Promise<{ note: Zotero.Item; created: boolean }> {
+): boolean {
+  let raw: unknown;
+  try {
+    raw = Zotero.Prefs.get(`${config.prefsPrefix}.collectionMetadata`, true);
+  } catch {
+    return false;
+  }
+  if (raw === undefined || raw === null || raw === "") {
+    return false;
+  }
+  let parsed: Record<string, unknown>;
+  if (typeof raw === "object" && !Array.isArray(raw)) {
+    parsed = raw as Record<string, unknown>;
+  } else if (typeof raw === "string") {
+    try {
+      const value = JSON.parse(raw);
+      if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return false;
+      }
+      parsed = value as Record<string, unknown>;
+    } catch {
+      return false;
+    }
+  } else {
+    return false;
+  }
+  return (
+    prefEntryHasConfiguredClasses(parsed[String(collection.id)]) ||
+    prefEntryHasConfiguredClasses(
+      parsed[`${collection.libraryID}:${collection.key}`],
+    )
+  );
+}
+
+function prefEntryHasConfiguredClasses(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  const classes = (value as { classes?: unknown }).classes;
+  if (!classes || typeof classes !== "object" || Array.isArray(classes)) {
+    return false;
+  }
+  return Object.keys(classes).length > 0;
+}
+
+function confirmTurnIntoSyllabus(collection: Zotero.Collection): boolean {
+  if (__env__ === "test") {
+    return true;
+  }
+  const win = Zotero.getMainWindow();
+  if (!win) {
+    return false;
+  }
+  try {
+    const name = collection.name || "this collection";
+    return Services.prompt.confirm(
+      win,
+      getString("enable-syllabus-title"),
+      getString("enable-syllabus-message", { args: { name } }),
+    );
+  } catch (error) {
+    ztoolkit.log("Error showing syllabus enable dialog:", error);
+    return false;
+  }
+}
+
+function mayCreateSyllabusNote(
+  collection: Zotero.Collection,
+  createNote: CreateNotePolicy,
+): boolean {
+  if (createNote === "never") {
+    return false;
+  }
+  if (createNote === "always") {
+    return true;
+  }
+  if (collectionHasLegacySyllabusPref(collection)) {
+    return true;
+  }
+  if (createNote === "prompt") {
+    return confirmTurnIntoSyllabus(collection);
+  }
+  return false;
+}
+
+async function getSyllabusNoteForWrite(
+  collection: Zotero.Collection,
+  createNote: CreateNotePolicy,
+): Promise<{ note: Zotero.Item; created: boolean } | null> {
   const live = findSyllabusNoteUncached(collection);
   if (live) {
     return { note: live, created: false };
@@ -1339,9 +1446,50 @@ async function getOrCreateSyllabusNote(
     return { note: trashed, created: false };
   }
 
+  if (!mayCreateSyllabusNote(collection, createNote)) {
+    return null;
+  }
+
   const note = new Zotero.Item("note");
   note.libraryID = collection.libraryID;
   return { note, created: true };
+}
+
+/**
+ * Make this collection a syllabus if the user agrees (or a legacy pref exists).
+ * No-op when a note is already present.
+ */
+export async function ensureSyllabusNoteForUser(
+  collectionId: CollectionIdentifier | Zotero.Collection,
+): Promise<boolean> {
+  const collection = resolveSyllabusCollection(collectionId);
+  if (!collection) {
+    return false;
+  }
+  if (findSyllabusNoteUncached(collection)) {
+    return true;
+  }
+  await mutateCollectionDocument(collection, (document) => document, {
+    createNote: "prompt",
+  });
+  if (!findSyllabusNoteUncached(collection)) {
+    return false;
+  }
+  try {
+    const items = collection.getChildItems().filter((item) => {
+      try {
+        return item.isRegularItem();
+      } catch {
+        return false;
+      }
+    });
+    if (items.length > 0) {
+      await absorbSyllabusExtraFromItems(items);
+    }
+  } catch (error) {
+    ztoolkit.log("Error absorbing Extra after enabling syllabus:", error);
+  }
+  return true;
 }
 
 function isDocumentWriteInFlight(ref: string): boolean {
@@ -1384,6 +1532,7 @@ function enqueueWrite<T>(key: string, task: () => Promise<T>): Promise<T> {
 export async function mutateCollectionDocument(
   collectionId: CollectionIdentifier | Zotero.Collection,
   mutator: (document: CollectionSyllabusDocument) => CollectionSyllabusDocument,
+  options: { createNote?: CreateNotePolicy } = {},
 ): Promise<CollectionSyllabusDocument> {
   const collection = resolveSyllabusCollection(collectionId);
   if (!collection) {
@@ -1394,7 +1543,18 @@ export async function mutateCollectionDocument(
 
   return enqueueWrite(ref, async () => {
     try {
-      const { note, created } = await getOrCreateSyllabusNote(collection);
+      const got = await getSyllabusNoteForWrite(
+        collection,
+        options.createNote ?? "legacy",
+      );
+      if (!got) {
+        ztoolkit.log(
+          "Skipping syllabus write; collection is not a syllabus",
+          collection.id,
+        );
+        return documentCache.get(ref)?.document || emptyCollectionDocument();
+      }
+      const { note, created } = got;
       const cached = documentCache.get(ref);
       let fromNote: CollectionSyllabusDocument | null = null;
       if (!created) {
@@ -1424,6 +1584,9 @@ export async function mutateCollectionDocument(
         );
       }
       let next = nextResult.success ? nextResult.data : mutated;
+      if (created && next.createSubcollections === undefined) {
+        next = { ...next, createSubcollections: false };
+      }
       setCacheEntry(ref, note.id || null, note.version || 0, next);
       try {
         const ensured = await enqueueClassFolderEnsure(collection, () =>
@@ -1462,14 +1625,23 @@ export async function mutateCollectionDocument(
 export async function setCollectionDocumentMetadata(
   collectionId: CollectionIdentifier | Zotero.Collection,
   metadata: SettingsSyllabusMetadata,
+  options: { createNote?: CreateNotePolicy } = {},
 ): Promise<CollectionSyllabusDocument> {
-  return mutateCollectionDocument(collectionId, (document) => ({
-    ...document,
-    ...metadata,
-    version: COLLECTION_SYLLABUS_DOCUMENT_VERSION,
-    classes: mergeNumberKeyedClasses(document.classes, metadata.classes),
-    items: document.items,
-  }));
+  return mutateCollectionDocument(
+    collectionId,
+    (document) => ({
+      ...document,
+      ...metadata,
+      version: COLLECTION_SYLLABUS_DOCUMENT_VERSION,
+      classes: mergeNumberKeyedClasses(document.classes, metadata.classes),
+      items: document.items,
+      createSubcollections:
+        metadata.createSubcollections !== undefined
+          ? metadata.createSubcollections
+          : document.createSubcollections,
+    }),
+    { createNote: options.createNote ?? "prompt" },
+  );
 }
 
 export async function setItemAssignmentsInDocument(
@@ -1477,15 +1649,19 @@ export async function setItemAssignmentsInDocument(
   itemKey: string,
   assignments: ItemSyllabusAssignment[],
 ): Promise<CollectionSyllabusDocument> {
-  return mutateCollectionDocument(collectionId, (document) => {
-    const items = { ...document.items };
-    if (!assignments.length) {
-      delete items[itemKey];
-    } else {
-      items[itemKey] = assignments;
-    }
-    return { ...document, items };
-  });
+  return mutateCollectionDocument(
+    collectionId,
+    (document) => {
+      const items = { ...document.items };
+      if (!assignments.length) {
+        delete items[itemKey];
+      } else {
+        items[itemKey] = assignments;
+      }
+      return { ...document, items };
+    },
+    { createNote: "prompt" },
+  );
 }
 
 export async function mergeItemAssignmentsInDocument(
@@ -1664,6 +1840,13 @@ function handleManagedCollectionChange(
       if (!parent) {
         continue;
       }
+      const cached = documentCache.get(
+        collectionRefFromCollection(parent),
+      )?.document;
+      if (!cached || !shouldCreateSubcollections(cached)) {
+        forgetManagedSubcollection(collectionId);
+        continue;
+      }
       mutateCollectionDocument(parent, (document) =>
         clearStaleSubcollectionKey(document, collectionId),
       ).catch((error) => {
@@ -1679,7 +1862,10 @@ function handleManagedCollectionChange(
       continue;
     }
     const parentRef = collectionRefFromCollection(parent);
+    const cachedForModify = documentCache.get(parentRef)?.document;
     if (
+      !cachedForModify ||
+      !shouldCreateSubcollections(cachedForModify) ||
       isClassFolderSyncHeld(parent.id) ||
       isDocumentWriteInFlight(parentRef)
     ) {

@@ -1,7 +1,8 @@
 /**
  * One-time migration: copy collectionMetadata prefs (+ Extra assignments)
- * into collection syllabus notes. Each prefs object is deleted only after
- * that collection's note is known to exist on disk.
+ * into collection syllabus notes. Prefs with no classes are deleted without
+ * creating a note. Other prefs objects are deleted only after that
+ * collection's note is known to exist on disk.
  */
 
 import { config } from "../../package.json";
@@ -85,6 +86,7 @@ async function runMigration(): Promise<void> {
   let migrated = 0;
   let failed = 0;
   let skippedMissing = 0;
+  let clearedEmpty = 0;
 
   try {
     for (let i = 0; i < keys.length; i++) {
@@ -118,6 +120,17 @@ async function runMigration(): Promise<void> {
         continue;
       }
 
+      if (!prefsHaveConfiguredClasses(metadataResult.data)) {
+        ztoolkit.log(
+          "Wiping collectionMetadata with no classes; not creating a note:",
+          prefKey,
+        );
+        delete remaining[prefKey];
+        writeCollectionMetadataPref(remaining);
+        clearedEmpty++;
+        continue;
+      }
+
       try {
         const ok = await migrateOneCollection(collection, metadataResult.data);
         if (!ok) {
@@ -148,6 +161,7 @@ async function runMigration(): Promise<void> {
       migrated,
       failed,
       skippedMissing,
+      clearedEmpty,
       Object.keys(remaining).length,
     );
   }
@@ -179,6 +193,12 @@ async function migrateOneCollection(
   return prefsMetadataPresentInDocument(prefsMetadata, persisted);
 }
 
+function prefsHaveConfiguredClasses(
+  metadata: SettingsSyllabusMetadata,
+): boolean {
+  return Object.keys(metadata.classes || {}).length > 0;
+}
+
 function mergePrefsMetadataIntoDocument(
   document: CollectionSyllabusDocument,
   prefsMetadata: SettingsSyllabusMetadata,
@@ -199,6 +219,13 @@ function mergePrefsMetadataIntoDocument(
     nomenclature: document.nomenclature || prefsMetadata.nomenclature,
     cslStyle: document.cslStyle || prefsMetadata.cslStyle,
     locked: document.locked ?? prefsMetadata.locked,
+    createSubcollections:
+      document.createSubcollections ??
+      (Object.values(document.classes || {}).some(
+        (meta) => !!(meta?.subcollectionKey || "").trim(),
+      )
+        ? true
+        : false),
     links:
       document.links && document.links.length > 0
         ? document.links
@@ -347,9 +374,15 @@ function closeProgress(
   migrated: number,
   failed: number,
   skippedMissing: number,
+  clearedEmpty: number,
   remaining: number,
 ): void {
   const parts = [`Migrated ${migrated} syllabus${migrated === 1 ? "" : "es"}`];
+  if (clearedEmpty) {
+    parts.push(
+      `${clearedEmpty} empty pref${clearedEmpty === 1 ? "" : "s"} cleared`,
+    );
+  }
   if (skippedMissing) {
     parts.push(
       `${skippedMissing} collection${skippedMissing === 1 ? "" : "s"} not found`,
@@ -366,6 +399,7 @@ function closeProgress(
     migrated,
     failed,
     skippedMissing,
+    clearedEmpty,
     remaining,
   });
 

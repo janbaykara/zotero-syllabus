@@ -265,7 +265,7 @@ src/
 
 This section is for people changing the plugin. End-user behaviour is described above.
 
-A **syllabus is one Zotero collection**. Items in that collection are the membership. Everything else — classes, assignments, course metadata — is stored in a **collection note** so it syncs with the library. Plugin **prefs** hold UI chrome only (and leftover legacy data). **Class subcollections** are a derived, one-way view of the note.
+A **syllabus is one Zotero collection** that you have turned into a syllabus (or that had a legacy `collectionMetadata` preference). Items in that collection are the membership. Everything else — classes, assignments, course metadata — is stored in a **collection note** so it syncs with the library. Plugin **prefs** hold UI chrome only (and leftover legacy data). **Class subcollections** are a derived, one-way view of the note.
 
 ```
                     ┌─────────────────────────────────────┐
@@ -304,7 +304,7 @@ Prefix: `extensions.zotero.syllabus`.
 
 **Still prefs** (see `src/utils/prefs.ts` and `addon/prefs.js`): plugin enable, compact/reader mode, debug, bibliography, row colouring, WPM. Per-collection **view mode** (Items / Syllabus / Tags) is stored in `collectionViewModes`, keyed by collection id. Class folders with no saved mode inherit the parent’s mode.
 
-**No longer prefs:** collection syllabus content used to live in `extensions.zotero.syllabus.collectionMetadata`. On startup, `src/modules/migratePrefsToNotes.ts` copies each remaining object into that collection’s note (and Extra assignments into the same note), then deletes that prefs entry only after a successful write. Failed or missing collections stay in the pref and retry next launch.
+**No longer prefs:** collection syllabus content used to live in `extensions.zotero.syllabus.collectionMetadata`. On startup, `src/modules/migratePrefsToNotes.ts` copies each remaining object that has classes into that collection’s note (and Extra assignments into the same note), then deletes that prefs entry only after a successful write. Entries with no classes are deleted without creating a note. Failed or missing collections stay in the pref and retry next launch.
 
 ### Item Extra (legacy absorb)
 
@@ -316,11 +316,12 @@ After each note persist, `src/modules/classSubcollections.ts` makes the tree mat
 
 - One child collection per class, named like `Class 1: Title` (or `Week 1: …` when nomenclature is set). A reading deadline is appended (`— Friday 28th Aug`); when the class is marked done, the name ends with `✅`.
 - The class record stores `subcollectionKey` (Zotero collection key). It is stripped from UI metadata and preserved across number-keyed merges.
-- Desired items = regular items with assignments for that `classId`. Missing items are added to the folder; extras are removed from the **folder only**. Items stay on the parent. Deleting a class folder does not trash items (`eraseTx({ deleteItems: false })`).
+- Desired items = regular items with assignments for that `classId`. Missing items are added to the folder; extras are removed from the **folder only**. Items stay on the parent.
 - User edits in a folder never update the note. Removing an item from the folder is restored on the next sync; adding a stray item is dropped. Deleting a managed folder recreates it from the note.
-- Extra child collections that are not a class folder are removed, but only when the parent has a `zotero-syllabus` note. Nested collections that have their own syllabus note are kept. Collections without a syllabus note are never cleaned.
+- Extra child collections that are not class folders (and do not have their own syllabus note) are removed.
+- This is controlled per syllabus by **Create subcollections?** in Syllabus Settings (off by default for new syllabi and for collections migrated from legacy prefs). Turning it on asks for confirmation: existing child collections become managed, extra folders can be deleted, and class-folder membership is rewritten from the note. Turning it off stops create/rename/delete; leftover folders are not removed.
 
-On startup, folders are ensured for every syllabus that has classes. New folder keys are written back to the note; if keys are already present, only membership is synced.
+On startup, folders are ensured for every syllabus that has the setting on. New folder keys are written back to the note; if keys are already present, only membership is synced.
 
 Class-folder Syllabus view is a single-class page (same class renderer as the Reading Schedule) with a link back to the parent. Document reads/writes for a class folder resolve to the parent note (`getClassSubcollectionContext` / `resolveSyllabusRoot`).
 
