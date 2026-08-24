@@ -411,6 +411,8 @@ export const ExportSyllabusMetadataSchema = SettingsSyllabusMetadataSchema.omit(
     .optional(),
 });
 
+export const COLLECTION_SYLLABUS_DOCUMENT_VERSION = 2 as const;
+
 /**
  * Collection syllabus document stored in a top-level collection note.
  * Combines syllabus metadata with per-item assignments keyed by item.key.
@@ -430,27 +432,34 @@ const CollectionSyllabusDocumentV1Schema = SettingsSyllabusMetadataSchema.extend
 const CollectionSyllabusDocumentV2Schema = SettingsSyllabusMetadataSchema.omit({
   classes: true,
 }).extend({
-  version: z.literal(2).default(2),
+  version: z.literal(COLLECTION_SYLLABUS_DOCUMENT_VERSION).default(
+    COLLECTION_SYLLABUS_DOCUMENT_VERSION,
+  ),
   classes: transformClasses(StoredClassMetadataSchema),
   items: z
     .record(z.string(), z.array(ItemSyllabusAssignmentEntity.latestSchema))
     .default(() => ({})),
+  itemIndex: z
+    .record(
+      z.string(),
+      z.object({
+        title: z.string().optional(),
+        doi: z.string().optional().nullable(),
+        isbn: z.string().optional().nullable(),
+      }),
+    )
+    .optional(),
 });
 
 function getCollectionSyllabusDocumentVersion(data: unknown): number | null {
   if (typeof data !== "object" || data === null) {
     return null;
   }
-  const obj = data as Record<string, unknown>;
-  if (obj.version === 2) {
-    return 2;
+  const version = (data as Record<string, unknown>).version;
+  if (typeof version === "number" && Number.isInteger(version) && version >= 1) {
+    return version;
   }
-  if (obj.version === 1 || obj.version === undefined) {
-    return 1;
-  }
-  if (typeof obj.version === "number") {
-    return obj.version;
-  }
+  // Unversioned JSON is the original number-keyed document.
   return 1;
 }
 
@@ -495,7 +504,7 @@ function migrateClassesToIds(
 }
 
 export const CollectionSyllabusDocumentEntity = createVersionedEntity({
-  latestVersion: 2,
+  latestVersion: COLLECTION_SYLLABUS_DOCUMENT_VERSION,
   getVersion: getCollectionSyllabusDocumentVersion,
   versionMap: {
     1: defineVersion({
@@ -509,7 +518,7 @@ export const CollectionSyllabusDocumentEntity = createVersionedEntity({
         const { classes, items } = migrateClassesToIds(old.classes, old.items);
         return {
           ...old,
-          version: 2 as const,
+          version: COLLECTION_SYLLABUS_DOCUMENT_VERSION,
           classes,
           items,
         };

@@ -1177,14 +1177,14 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
   const handleExport = async () => {
     try {
-      const noteHtml = SyllabusManager.prepareExportData(collectionId);
+      const rdf = await SyllabusManager.prepareExportData(collectionId);
       const dateStr = formatDate(new Date(), "yyyy-MM-dd");
       const titleSlug = slugify(title || "syllabus", {
         lower: true,
         strict: true,
       });
       const filename = `${titleSlug}-${dateStr}.syllabus`;
-      await saveToFile(filename, noteHtml, "Save Syllabus Export");
+      await saveToFile(filename, rdf, "Save Syllabus Export");
     } catch (err) {
       ztoolkit.log("Error exporting syllabus metadata:", err);
     }

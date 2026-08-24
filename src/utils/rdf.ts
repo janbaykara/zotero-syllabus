@@ -2,6 +2,15 @@
 
 const RDF_EXPORT_TRANSLATOR_ID = "14763d24-8ba0-45df-8f52-b8d1108e7ac9";
 
+export function isRdfFile(contents: string): boolean {
+  const trimmed = contents.trim();
+  return (
+    trimmed.startsWith("<?xml") ||
+    trimmed.startsWith("<rdf:") ||
+    trimmed.includes("xmlns:rdf=")
+  );
+}
+
 export function getRDFStringForCollection(collection: Zotero.Collection) {
   return new Promise((resolve, reject) => {
     // const zotero = ztoolkit.getGlobal("zotero")
@@ -16,6 +25,10 @@ export function getRDFStringForCollection(collection: Zotero.Collection) {
     translation.setItems(items);
     const translatorSet = translation.setTranslator(RDF_EXPORT_TRANSLATOR_ID); // Zotero RDF
     ztoolkit.log("getRDFStringForCollection: translator set:", translatorSet);
+
+    if (typeof (translation as any).setDisplayOptions === "function") {
+      (translation as any).setDisplayOptions({ exportNotes: true });
+    }
 
     if (!translatorSet) {
       reject(new Error("Failed to set RDF translator"));

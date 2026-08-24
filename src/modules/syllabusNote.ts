@@ -7,6 +7,7 @@ import { ExtraFieldTool } from "zotero-plugin-toolkit";
 import {
   CollectionSyllabusDocumentEntity,
   CollectionSyllabusDocumentSchema,
+  COLLECTION_SYLLABUS_DOCUMENT_VERSION,
   ItemSyllabusAssignmentEntity,
   ItemSyllabusDataEntity,
   SettingsSyllabusMetadataSchema,
@@ -27,6 +28,7 @@ import {
   getCachedItem,
 } from "../utils/cache";
 import { getAllCollections } from "../utils/zotero";
+import { formatReadingDate } from "../utils/dates";
 
 type CollectionIdentifier =
   | number
@@ -84,7 +86,10 @@ function collectionRefFromCollection(collection: Zotero.Collection): string {
 }
 
 export function emptyCollectionDocument(): CollectionSyllabusDocument {
-  return CollectionSyllabusDocumentSchema.parse({ version: 2, items: {} });
+  return CollectionSyllabusDocumentSchema.parse({
+    version: COLLECTION_SYLLABUS_DOCUMENT_VERSION,
+    items: {},
+  });
 }
 
 export function metadataFromDocument(
@@ -105,6 +110,85 @@ export function getHydratedItemAssignments(
   );
 }
 
+export function buildItemIndex(
+  collection: Zotero.Collection,
+  document: CollectionSyllabusDocument,
+): NonNullable<CollectionSyllabusDocument["itemIndex"]> {
+  const index: NonNullable<CollectionSyllabusDocument["itemIndex"]> = {};
+  for (const itemKey of Object.keys(document.items || {})) {
+    const item = Zotero.Items.getByLibraryAndKey(
+      collection.libraryID,
+      itemKey,
+    );
+    if (!item || !item.isRegularItem()) {
+      continue;
+    }
+    const doi = String(item.getField("DOI") || "").trim();
+    const isbn = String(item.getField("ISBN") || "").trim();
+    index[itemKey] = {
+      title: item.getDisplayTitle() || "",
+      ...(doi ? { doi } : {}),
+      ...(isbn ? { isbn } : {}),
+    };
+  }
+  return index;
+}
+
+export function remapDocumentItemKeys(
+  document: CollectionSyllabusDocument,
+  items: Zotero.Item[],
+): CollectionSyllabusDocument {
+  const regularItems = items.filter((item) => {
+    try {
+      return item.isRegularItem();
+    } catch {
+      return false;
+    }
+  });
+  const byDoi = new Map<string, string>();
+  const byIsbn = new Map<string, string>();
+  const byTitle = new Map<string, string>();
+  const existingKeys = new Set<string>();
+  for (const item of regularItems) {
+    existingKeys.add(item.key);
+    const doi = String(item.getField("DOI") || "")
+      .trim()
+      .toLowerCase();
+    const isbn = String(item.getField("ISBN") || "")
+      .replace(/[-\s]/g, "")
+      .toLowerCase();
+    const title = (item.getDisplayTitle() || "").trim().toLowerCase();
+    if (doi) {
+      byDoi.set(doi, item.key);
+    }
+    if (isbn) {
+      byIsbn.set(isbn, item.key);
+    }
+    if (title && !byTitle.has(title)) {
+      byTitle.set(title, item.key);
+    }
+  }
+
+  const itemIndex = document.itemIndex || {};
+  const itemsOut: CollectionSyllabusDocument["items"] = {};
+  for (const [oldKey, assignments] of Object.entries(document.items || {})) {
+    const meta = itemIndex[oldKey];
+    const doi = meta?.doi?.trim().toLowerCase();
+    const isbn = meta?.isbn?.replace(/[-\s]/g, "").toLowerCase();
+    const title = meta?.title?.trim().toLowerCase();
+    const newKey =
+      (doi && byDoi.get(doi)) ||
+      (isbn && byIsbn.get(isbn)) ||
+      (title && byTitle.get(title)) ||
+      (existingKeys.has(oldKey) ? oldKey : undefined) ||
+      oldKey;
+    itemsOut[newKey] = [...(itemsOut[newKey] || []), ...assignments];
+  }
+
+  const { itemIndex: _itemIndex, ...rest } = document;
+  return { ...rest, items: itemsOut };
+}
+
 function persistDocument(
   document: CollectionSyllabusDocument,
 ): CollectionSyllabusDocument {
@@ -120,7 +204,7 @@ function persistDocument(
   }
   return {
     ...document,
-    version: 2,
+    version: COLLECTION_SYLLABUS_DOCUMENT_VERSION,
     classes,
     items,
   };
@@ -293,7 +377,7 @@ function renderReadableNoteBody(
     .map(([, classMeta]) => [
       classMeta?.number,
       classMeta?.title,
-      classMeta?.readingDate,
+      classMeta?.readingDate ? formatReadingDate(classMeta.readingDate) : "",
       classMeta?.status,
       classMeta?.description,
       formatItemOrder(classMeta?.itemOrder, assignmentTitles, titles),
@@ -345,16 +429,60 @@ function renderReadableNoteBody(
       ["Item", "Class", "Priority", "Status", "Instructions"],
       assignmentRows,
     ),
-    `<pre ${SYLLABUS_NOTE_PRE_ATTR}="1">${escapeHtml(json)}</pre>`,
+    `<pre ${SYLLABUS_NOTE_PRE_ATTR}="1" data-version="${document.version || COLLECTION_SYLLABUS_DOCUMENT_VERSION}">${escapeHtml(json)}</pre>`,
   ].join("");
 }
 
 export function isSyllabusNoteFile(contents: string): boolean {
-  const trimmed = contents.trim();
-  return (
-    trimmed.includes(`${SYLLABUS_NOTE_PRE_ATTR}=`) ||
-    trimmed.startsWith("<")
+  return contents.includes(`${SYLLABUS_NOTE_PRE_ATTR}=`);
+}
+
+export function getSyllabusNoteFormatVersion(
+  html: string,
+): number | null {
+  const pre = html.match(
+    /<pre[^>]*\bdata-zotero-syllabus(?:="[^"]*")?[^>]*>/i,
   );
+  if (!pre) {
+    return html.includes(`${SYLLABUS_NOTE_PRE_ATTR}=`) ? 1 : null;
+  }
+  const versionMatch = pre[0].match(/\bdata-version="(\d+)"/i);
+  if (versionMatch) {
+    return parseInt(versionMatch[1], 10);
+  }
+  // Original envelope used data-zotero-syllabus="1" as a marker, not a version.
+  return 1;
+}
+
+function isUnsupportedFutureNote(html: string): boolean {
+  const envelopeVersion = getSyllabusNoteFormatVersion(html);
+  if (
+    envelopeVersion != null &&
+    envelopeVersion > COLLECTION_SYLLABUS_DOCUMENT_VERSION
+  ) {
+    return true;
+  }
+  const jsonText = extractJsonPayload(html);
+  if (!jsonText) {
+    return false;
+  }
+  try {
+    const parsed = JSON.parse(jsonText) as { version?: unknown };
+    return (
+      typeof parsed.version === "number" &&
+      parsed.version > COLLECTION_SYLLABUS_DOCUMENT_VERSION
+    );
+  } catch {
+    return false;
+  }
+}
+
+function noteNeedsFormatPatch(html: string): boolean {
+  if (isUnsupportedFutureNote(html)) {
+    return false;
+  }
+  const envelopeVersion = getSyllabusNoteFormatVersion(html);
+  return envelopeVersion !== COLLECTION_SYLLABUS_DOCUMENT_VERSION;
 }
 
 export function serializeSyllabusNote(
@@ -371,7 +499,7 @@ export function serializeSyllabusNote(
 function extractJsonPayload(html: string): string | null {
   const preMatch =
     html.match(
-      /<pre[^>]*data-zotero-syllabus="1"[^>]*>([\s\S]*?)<\/pre>/i,
+      /<pre[^>]*\bdata-zotero-syllabus(?:="[^"]*")?[^>]*>([\s\S]*?)<\/pre>/i,
     ) || html.match(/<pre[^>]*>([\s\S]*?)<\/pre>/i);
   if (preMatch) {
     return unescapeHtml(preMatch[1]).trim();
@@ -393,6 +521,12 @@ export function parseSyllabusNote(
   html: string,
 ): CollectionSyllabusDocument | null {
   if (!html) {
+    return null;
+  }
+  if (isUnsupportedFutureNote(html)) {
+    ztoolkit.log(
+      "Syllabus note format is newer than this plugin; leaving it unchanged",
+    );
     return null;
   }
 
@@ -531,7 +665,7 @@ function serializeSyllabusNoteFallback(
   document: CollectionSyllabusDocument,
 ): string {
   const json = JSON.stringify(document, null, 2);
-  const body = `<p>${SYLLABUS_NOTE_TITLE}</p><pre ${SYLLABUS_NOTE_PRE_ATTR}="1">${escapeHtml(json)}</pre>`;
+  const body = `<p>${SYLLABUS_NOTE_TITLE}</p><pre ${SYLLABUS_NOTE_PRE_ATTR}="1" data-version="${document.version || COLLECTION_SYLLABUS_DOCUMENT_VERSION}">${escapeHtml(json)}</pre>`;
   if (typeof Zotero !== "undefined" && Zotero.Notes?.notePrefix) {
     return `${Zotero.Notes.notePrefix}${body}${Zotero.Notes.noteSuffix}`;
   }
@@ -767,15 +901,22 @@ function ensureIndex(): void {
 }
 
 async function rebuildDocumentIndex(): Promise<void> {
+  const notesToPatch: Zotero.Collection[] = [];
   for (const collection of getAllCollections()) {
     try {
       const note = findSyllabusNoteUncached(collection);
       if (!note) {
         continue;
       }
+      let html = "";
+      try {
+        html = note.getNote() || "";
+      } catch {
+        html = "";
+      }
       let parsed: CollectionSyllabusDocument | null = null;
       try {
-        parsed = parseSyllabusNote(note.getNote());
+        parsed = parseSyllabusNote(html);
       } catch {
         parsed = null;
       }
@@ -790,12 +931,18 @@ async function rebuildDocumentIndex(): Promise<void> {
         )
       ) {
         setCacheEntry(ref, note.id, note.version, parsed);
+        if (noteNeedsFormatPatch(html)) {
+          notesToPatch.push(collection);
+        }
       } else if (cached) {
         cached.noteId = note.id;
         cached.noteVersion = note.version;
         collectionRefByNoteId.set(note.id, ref);
       } else if (parsed) {
         setCacheEntry(ref, note.id, note.version, parsed);
+        if (noteNeedsFormatPatch(html)) {
+          notesToPatch.push(collection);
+        }
       }
     } catch (error) {
       ztoolkit.log("Error indexing syllabus note:", error);
@@ -804,6 +951,13 @@ async function rebuildDocumentIndex(): Promise<void> {
   indexBuilt = true;
   documentGeneration++;
   notifyDocumentListeners();
+  for (const collection of notesToPatch) {
+    try {
+      await mutateCollectionDocument(collection, (document) => document);
+    } catch (error) {
+      ztoolkit.log("Error patching syllabus note format:", error);
+    }
+  }
 }
 
 export function getSyllabusCollectionDictionary(): SettingsCollectionDictionaryData {
@@ -878,7 +1032,17 @@ export async function mutateCollectionDocument(
       let fromNote: CollectionSyllabusDocument | null = null;
       if (!created) {
         try {
-          fromNote = parseSyllabusNote(note.getNote());
+          const existingHtml = note.getNote();
+          if (isUnsupportedFutureNote(existingHtml)) {
+            ztoolkit.log(
+              "Refusing to overwrite a newer syllabus note format",
+              collection.id,
+            );
+            return (
+              documentCache.get(ref)?.document || emptyCollectionDocument()
+            );
+          }
+          fromNote = parseSyllabusNote(existingHtml);
         } catch (error) {
           ztoolkit.log("Error reading existing syllabus note:", error);
         }
@@ -923,7 +1087,7 @@ export async function setCollectionDocumentMetadata(
   return mutateCollectionDocument(collectionId, (document) => ({
     ...document,
     ...metadata,
-    version: 2,
+    version: COLLECTION_SYLLABUS_DOCUMENT_VERSION,
     classes: mergeNumberKeyedClasses(document.classes, metadata.classes),
     items: document.items,
   }));

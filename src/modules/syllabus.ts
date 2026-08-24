@@ -33,7 +33,7 @@ import {
   getClassNumberById,
 } from "../utils/schemas";
 import * as z from "zod";
-import { importRDF } from "../utils/rdf";
+import { importRDF, getRDFStringForCollection, isRdfFile } from "../utils/rdf";
 import {
   getCachedPref,
   getCachedCollection,
@@ -51,8 +51,9 @@ import {
   metadataFromDocument,
   mutateCollectionDocument,
   parseSyllabusNote,
-  serializeSyllabusNote,
   isSyllabusNoteFile,
+  buildItemIndex,
+  remapDocumentItemKeys,
   setCollectionDocumentMetadata,
   setItemAssignmentsInDocument,
   shutdownSyllabusNotes,
@@ -3003,21 +3004,30 @@ export class SyllabusManager {
   }
 
   /**
-   * Export the collection syllabus as the same HTML stored in the Zotero note.
+   * Export the collection as Zotero RDF, including the syllabus note.
    */
-  static prepareExportData(
+  static async prepareExportData(
     collectionId: number | GetByLibraryAndKeyArgs,
     _collectionTitle?: string,
-  ): string {
+  ): Promise<string> {
     const collection = this.getCollectionFromIdentifier(collectionId);
-    return serializeSyllabusNote(
-      getCollectionDocument(collectionId),
-      collection,
-    );
+    if (!collection) {
+      throw new Error("prepareExportData: Collection not found");
+    }
+    await mutateCollectionDocument(collectionId, (document) => ({
+      ...document,
+      itemIndex: buildItemIndex(collection, document),
+    }));
+    const rdf = await getRDFStringForCollection(collection);
+    if (typeof rdf !== "string" || !rdf) {
+      throw new Error("prepareExportData: RDF export did not return a string");
+    }
+    return rdf;
   }
 
   /**
-   * Import a .syllabus file (note HTML) or legacy JSON / Talis metadata.
+   * Import a .syllabus file (collection RDF with syllabus note), note HTML,
+   * or legacy JSON / Talis metadata.
    */
   static async importSyllabusMetadata(
     collectionId: number | GetByLibraryAndKeyArgs,
@@ -3030,6 +3040,14 @@ export class SyllabusManager {
     const targetCollection = this.getCollectionFromIdentifier(collectionId);
     if (!targetCollection) {
       throw new Error("importSyllabusMetadata: Target collection not found");
+    }
+
+    if (isRdfFile(importedContents)) {
+      return this.importSyllabusRdf(
+        targetCollection,
+        importedContents,
+        source,
+      );
     }
 
     if (isSyllabusNoteFile(importedContents)) {
@@ -3061,6 +3079,76 @@ export class SyllabusManager {
       importedContents,
       source,
     );
+  }
+
+  private static async importSyllabusRdf(
+    targetCollection: Zotero.Collection,
+    rdfString: string,
+    source: "page" | "background",
+  ): Promise<{
+    collectionAndLibraryKey: string;
+    syllabusData: SettingsSyllabusMetadata;
+  }> {
+    const importedItems = await importRDF(rdfString);
+    const syllabusNotes: Zotero.Item[] = [];
+    const otherItems: Zotero.Item[] = [];
+    for (const item of importedItems) {
+      if (!item) {
+        continue;
+      }
+      let noteHtml = "";
+      try {
+        if (item.isNote()) {
+          noteHtml = item.getNote() || "";
+        }
+      } catch {
+        // Ignore items that cannot be inspected yet.
+      }
+      if (noteHtml && parseSyllabusNote(noteHtml)) {
+        syllabusNotes.push(item);
+      } else {
+        otherItems.push(item);
+      }
+    }
+
+    for (const item of otherItems) {
+      item.addToCollection(targetCollection.id);
+      await item.saveTx();
+    }
+
+    let importedDocument = syllabusNotes
+      .map((note) => parseSyllabusNote(note.getNote()))
+      .find((document) => document);
+    if (importedDocument) {
+      importedDocument = remapDocumentItemKeys(importedDocument, otherItems);
+      await mutateCollectionDocument(
+        targetCollection,
+        () => importedDocument!,
+      );
+    }
+
+    await absorbSyllabusExtraFromItems(otherItems);
+
+    for (const note of syllabusNotes) {
+      try {
+        note.deleted = true;
+        await note.saveTx();
+      } catch (error) {
+        ztoolkit.log("Could not remove duplicate imported syllabus note:", error);
+      }
+    }
+
+    if (source !== "page") {
+      this.setupPage();
+    }
+    this.onClassListUpdate();
+    return {
+      collectionAndLibraryKey: this.getCollectionReferenceString(
+        targetCollection.libraryID,
+        targetCollection.key,
+      ),
+      syllabusData: this.getSyllabusMetadata(targetCollection.id),
+    };
   }
 
   /**
