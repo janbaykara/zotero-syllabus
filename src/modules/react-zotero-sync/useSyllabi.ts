@@ -126,8 +126,7 @@ function createSyllabiStore() {
         if (
           type === "item" ||
           type === "collection-item" ||
-          (type === "collection" &&
-            (event === "modify" || event === "refresh"))
+          (type === "collection" && (event === "modify" || event === "refresh"))
         ) {
           onStoreChange();
         }

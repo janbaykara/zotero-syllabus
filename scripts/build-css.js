@@ -18,15 +18,23 @@ try {
     cwd: rootDir,
   });
 
-  // Compute hash of the generated CSS file
+  execSync(`npx prettier --write "${outputFile}"`, {
+    stdio: "inherit",
+    cwd: rootDir,
+  });
+
+  // Hash the formatted CSS so lint:fix cannot invalidate the cache-buster.
   const cssContent = readFileSync(outputFile, "utf8");
   const hash = createHash("sha256")
     .update(cssContent)
     .digest("hex")
     .substring(0, 8);
 
-  // Write hash to JSON file
   writeFileSync(hashFile, JSON.stringify({ hash, version: hash }), "utf8");
+  execSync(`npx prettier --write "${hashFile}"`, {
+    stdio: "inherit",
+    cwd: rootDir,
+  });
 
   console.log(`✓ Built Tailwind CSS: ${outputFile}`);
   console.log(`✓ CSS hash: ${hash}`);

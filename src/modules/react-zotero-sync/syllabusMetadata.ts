@@ -1,9 +1,6 @@
 import { useCallback, useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
-import {
-  SyllabusManager,
-  GetByLibraryAndKeyArgs,
-} from "../syllabus";
+import { SyllabusManager, GetByLibraryAndKeyArgs } from "../syllabus";
 import { Priority } from "../../utils/schemas";
 import { createCollectionDocumentStore } from "./collectionDocument";
 import { getCollectionDocument, metadataFromDocument } from "../syllabusNote";

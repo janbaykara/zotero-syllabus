@@ -128,14 +128,10 @@ export function TagsPage({ collectionId }: TagsPageProps) {
                 <div
                   className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
                   title={
-                    compactMode
-                      ? "Disable compact mode"
-                      : "Enable compact mode"
+                    compactMode ? "Disable compact mode" : "Enable compact mode"
                   }
                   aria-label={
-                    compactMode
-                      ? "Disable compact mode"
-                      : "Enable compact mode"
+                    compactMode ? "Disable compact mode" : "Enable compact mode"
                   }
                   onClick={toggleCompactMode}
                 >

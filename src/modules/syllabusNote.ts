@@ -1363,12 +1363,14 @@ function endWrite(ref: string): void {
 
 function enqueueWrite<T>(key: string, task: () => Promise<T>): Promise<T> {
   const previous = writeQueues.get(key) || Promise.resolve();
-  const next = previous.catch(() => undefined).then(() => {
-    beginWrite(key);
-    return Promise.resolve()
-      .then(task)
-      .finally(() => endWrite(key));
-  });
+  const next = previous
+    .catch(() => undefined)
+    .then(() => {
+      beginWrite(key);
+      return Promise.resolve()
+        .then(task)
+        .finally(() => endWrite(key));
+    });
   writeQueues.set(
     key,
     next.then(

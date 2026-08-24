@@ -63,7 +63,10 @@ const patchToolkitEsmImport: Plugin = {
         }
         patched = true;
         return {
-          contents: source.replace(TOOLKIT_LEGACY_IMPORT, TOOLKIT_PATCHED_IMPORT),
+          contents: source.replace(
+            TOOLKIT_LEGACY_IMPORT,
+            TOOLKIT_PATCHED_IMPORT,
+          ),
           loader: "js",
         };
       },

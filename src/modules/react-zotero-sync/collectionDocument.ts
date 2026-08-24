@@ -1,9 +1,6 @@
 import { useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
-import {
-  GetByLibraryAndKeyArgs,
-  SyllabusManager,
-} from "../syllabus";
+import { GetByLibraryAndKeyArgs, SyllabusManager } from "../syllabus";
 import {
   getCollectionDocumentSnapshot,
   getDocumentGeneration,
@@ -23,7 +20,8 @@ function createDocumentGenerationStore() {
   }
 
   function subscribe(onStoreChange: () => void) {
-    const unsubscribeDocuments = subscribeToSyllabusDocumentChanges(onStoreChange);
+    const unsubscribeDocuments =
+      subscribeToSyllabusDocumentChanges(onStoreChange);
     const observer = {
       notify(_event: string, type: string) {
         if (type === "item" || type === "collection-item") {
@@ -91,7 +89,10 @@ export function createCollectionDocumentStore(
           onStoreChange();
           return;
         }
-        if (type === "collection" && (event === "modify" || event === "refresh")) {
+        if (
+          type === "collection" &&
+          (event === "modify" || event === "refresh")
+        ) {
           const collection =
             SyllabusManager.getCollectionFromIdentifier(collectionId);
           if (collection && ids.includes(collection.id)) {
@@ -106,7 +107,8 @@ export function createCollectionDocumentStore(
       "collection-item",
       "collection",
     ]);
-    const unsubscribeDocuments = subscribeToSyllabusDocumentChanges(onStoreChange);
+    const unsubscribeDocuments =
+      subscribeToSyllabusDocumentChanges(onStoreChange);
 
     return () => {
       unsubscribeDocuments();
