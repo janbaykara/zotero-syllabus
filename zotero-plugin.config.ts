@@ -129,7 +129,8 @@ export default defineConfig({
   },
 
   test: {
-    waitForPlugin: `() => Zotero.${pkg.config.addonInstance}.data.initialized`,
+    watch: false,
+    waitForPlugin: `() => !!(Zotero.${pkg.config.addonInstance} && Zotero.${pkg.config.addonInstance}.data && Zotero.${pkg.config.addonInstance}.data.initialized)`,
   },
 
   // If you need to see a more detailed log, uncomment the following line:
