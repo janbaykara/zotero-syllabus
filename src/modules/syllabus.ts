@@ -27,12 +27,13 @@ import {
   ExportSyllabusMetadataSchema,
   DEFAULT_PRIORITIES,
   assignmentClassNumber,
+  classByNumber,
   ensureClassRecord,
-  exportAssignment,
   findClassIdByNumber,
+  getClassNumberById,
 } from "../utils/schemas";
 import * as z from "zod";
-import { getRDFStringForCollection, importRDF } from "../utils/rdf";
+import { importRDF } from "../utils/rdf";
 import {
   getCachedPref,
   getCachedCollection,
@@ -49,6 +50,9 @@ import {
   mergeItemAssignmentsInDocument,
   metadataFromDocument,
   mutateCollectionDocument,
+  parseSyllabusNote,
+  serializeSyllabusNote,
+  isSyllabusNoteFile,
   setCollectionDocumentMetadata,
   setItemAssignmentsInDocument,
   shutdownSyllabusNotes,
@@ -126,6 +130,7 @@ export type {
   SettingsSyllabusMetadata,
   SettingsClassMetadata,
 };
+export { classByNumber } from "../utils/schemas";
 
 // Export GetByLibraryAndKeyArgs for use in other modules
 export type { GetByLibraryAndKeyArgs };
@@ -2343,6 +2348,16 @@ export class SyllabusManager {
     return classId ? document.classes?.[classId] : undefined;
   }
 
+  static getClassNumber(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    classId: string | undefined,
+  ): number | undefined {
+    return getClassNumberById(
+      getCollectionDocument(collectionId).classes,
+      classId,
+    );
+  }
+
   static async ensureClass(
     collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
@@ -2360,8 +2375,10 @@ export class SyllabusManager {
     collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
   ) {
-    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
-    return syllabusMetadata.classes?.[classNumber] || {};
+    return classByNumber(
+      SyllabusManager.getSyllabusMetadata(collectionId),
+      classNumber,
+    ) || {};
   }
 
   /**
@@ -2986,80 +3003,86 @@ export class SyllabusManager {
   }
 
   /**
-   * Prepare export data for a collection
-   * Returns validated export JSON object ready for stringification
-   * Includes RDF data if available
+   * Export the collection syllabus as the same HTML stored in the Zotero note.
    */
-  static async prepareExportData(
+  static prepareExportData(
     collectionId: number | GetByLibraryAndKeyArgs,
-    collectionTitle: string,
-  ): Promise<z.infer<typeof ExportSyllabusMetadataSchema>> {
-    // Get current collection's metadata
-    const metadata = this.getSyllabusMetadata(collectionId);
-
-    // Get collection object for RDF export
+    _collectionTitle?: string,
+  ): string {
     const collection = this.getCollectionFromIdentifier(collectionId);
-    let rdfString: string | undefined;
-
-    // Try to export RDF, but don't fail if it doesn't work
-    if (collection) {
-      try {
-        const rdfResult = await getRDFStringForCollection(collection);
-        if (typeof rdfResult === "string") {
-          rdfString = rdfResult;
-        }
-      } catch (error) {
-        ztoolkit.log("Error exporting RDF:", error);
-        // Continue without RDF - export will work without it
-      }
-    }
-
-    // Create export object with collection title - schema handles all transformations
-    const document = getCollectionDocument(collectionId);
-    const exportItems: typeof document.items = {};
-    for (const [itemKey, assignments] of Object.entries(document.items || {})) {
-      exportItems[itemKey] = assignments.map((assignment) =>
-        exportAssignment(assignment, document.classes),
-      );
-    }
-    const exportData = {
-      collectionTitle: collectionTitle || "",
-      ...metadata,
-      items: exportItems,
-      ...(rdfString ? { rdf: rdfString } : {}),
-    };
-
-    // Validate and transform export data using the export schema
-    // Schema automatically: removes status fields, excludes locked, filters empty classes
-    return ExportSyllabusMetadataSchema.parse(exportData);
+    return serializeSyllabusNote(
+      getCollectionDocument(collectionId),
+      collection,
+    );
   }
 
   /**
-   * Import syllabus metadata from a JSON string (export format)
-   * Validates against ExportSyllabusMetadataSchema, updates collection title if provided,
-   * merges metadata with existing, and saves everything
-   * If RDF data is present, imports items into the current collection
-   * Throws errors for invalid JSON or schema validation failures
+   * Import a .syllabus file (note HTML) or legacy JSON / Talis metadata.
    */
   static async importSyllabusMetadata(
     collectionId: number | GetByLibraryAndKeyArgs,
-    importedJsonString: string,
+    importedContents: string,
     source: "page" | "background" = "page",
   ): Promise<{
     collectionAndLibraryKey: string;
     syllabusData: SettingsSyllabusMetadata;
   }> {
-    // Parse JSON
+    const targetCollection = this.getCollectionFromIdentifier(collectionId);
+    if (!targetCollection) {
+      throw new Error("importSyllabusMetadata: Target collection not found");
+    }
+
+    if (isSyllabusNoteFile(importedContents)) {
+      const document = parseSyllabusNote(importedContents);
+      if (!document) {
+        throw new Error(
+          "importSyllabusMetadata: The file is not a valid syllabus note",
+        );
+      }
+      const saved = await mutateCollectionDocument(
+        collectionId,
+        () => document,
+      );
+      if (source !== "page") {
+        this.setupPage();
+      }
+      this.onClassListUpdate();
+      return {
+        collectionAndLibraryKey: this.getCollectionReferenceString(
+          targetCollection.libraryID,
+          targetCollection.key,
+        ),
+        syllabusData: metadataFromDocument(saved),
+      };
+    }
+
+    return this.importLegacySyllabusMetadata(
+      targetCollection,
+      importedContents,
+      source,
+    );
+  }
+
+  /**
+   * Talis translator JSON and older .syllabus files (number-keyed classes, RDF).
+   */
+  private static async importLegacySyllabusMetadata(
+    targetCollection: Zotero.Collection,
+    importedJsonString: string,
+    source: "page" | "background",
+  ): Promise<{
+    collectionAndLibraryKey: string;
+    syllabusData: SettingsSyllabusMetadata;
+  }> {
     let parsedData: unknown;
     try {
       parsedData = JSON.parse(importedJsonString);
     } catch (parseError) {
       throw new Error(
-        `importSyllabusMetadata: The file is not valid JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+        `importSyllabusMetadata: The file is not a valid syllabus note or JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
       );
     }
 
-    // Validate against ExportSyllabusMetadataSchema (includes collectionTitle)
     const validationResult = ExportSyllabusMetadataSchema.safeParse(parsedData);
     if (!validationResult.success) {
       throw new Error(
@@ -3068,16 +3091,10 @@ export class SyllabusManager {
     }
 
     const exportData = validationResult.data;
-
-    // Extract metadata (without collectionTitle and rdf) for merging
     const { collectionTitle, rdf, items: exportedItems, ...metadataData } =
       exportData;
+    const collectionId = targetCollection.id;
 
-    // Get target collection for RDF import and title update
-    const targetCollection = this.getCollectionFromIdentifier(collectionId);
-    if (!targetCollection) {
-      throw new Error("importSyllabusMetadata: Target collection not found");
-    }
 
     // Update collection title if provided
     if (collectionTitle) {

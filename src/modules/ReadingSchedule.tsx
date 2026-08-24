@@ -71,7 +71,12 @@ export function ReadingSchedule() {
 
         for (const { zoteroItem, assignments } of items) {
           for (const assignment of assignments) {
-            if (assignment.classNumber === classNumber) {
+            if (
+              (SyllabusManager.getClassNumber(
+                collectionId,
+                assignment.classId,
+              ) ?? assignment.classNumber) === classNumber
+            ) {
               classItems.push({ item: zoteroItem, assignment });
             }
           }

@@ -3,6 +3,7 @@ import {
   ItemSyllabusAssignment,
   SettingsSyllabusMetadata,
   SyllabusManager,
+  classByNumber,
 } from "./syllabus";
 
 export function useSyllabusClassGroups(
@@ -30,10 +31,16 @@ export function useSyllabusClassGroups(
       // If no assignments or all assignments are empty, add to further reading
       if (
         assignments.length === 0 ||
-        assignments.every(
-          (a) =>
-            !a.priority && !a.classInstruction && a.classNumber === undefined,
-        )
+        assignments.every((a) => {
+          const resolvedClassNumber =
+            SyllabusManager.getClassNumber(collectionId, a.classId) ??
+            a.classNumber;
+          return (
+            !a.priority &&
+            !a.classInstruction &&
+            resolvedClassNumber === undefined
+          );
+        })
       ) {
         furtherReading.push(item);
         continue;
@@ -42,16 +49,19 @@ export function useSyllabusClassGroups(
       // Add item with each assignment to each class it's assigned to (supporting repeat inclusions)
       for (const assignment of assignments) {
         // Skip empty assignments
+        const resolvedClassNumber =
+          SyllabusManager.getClassNumber(collectionId, assignment.classId) ??
+          assignment.classNumber;
         if (
           !assignment.priority &&
           !assignment.classInstruction &&
-          assignment.classNumber === undefined
+          resolvedClassNumber === undefined
         ) {
           continue;
         }
 
         const normalizedClassNumber =
-          assignment.classNumber === undefined ? null : assignment.classNumber;
+          resolvedClassNumber === undefined ? null : resolvedClassNumber;
         if (!itemsByClass.has(normalizedClassNumber)) {
           itemsByClass.set(normalizedClassNumber, []);
         }
@@ -111,9 +121,7 @@ export function useSyllabusClassGroups(
     return {
       classGroups: sortedFinalClassNumbers.map((classNumber) => ({
         classNumber,
-        syllabusMetadata: classNumber
-          ? syllabusMetadata.classes?.[classNumber]
-          : null,
+        syllabusMetadata: classByNumber(syllabusMetadata, classNumber),
         itemAssignments: itemsByClass.get(classNumber) || [],
       })),
       furtherReadingItems: furtherReading,

@@ -56,7 +56,7 @@ const ItemSyllabusAssignmentV2Schema = z.object({
 
 /**
  * Version 3: assignments point at a stable classId. classNumber is accepted on
- * ingest (Extra, .syllabus import) but is not stored as identity.
+ * ingest (Extra, Talis JSON) but is not stored as identity.
  */
 const ItemSyllabusAssignmentV3Schema = z.object({
   id: z.string().default(generateAssignmentId),
@@ -395,13 +395,7 @@ export const SettingsSyllabusMetadataSchema = z.object({
 });
 
 /**
- * Export Syllabus Metadata schema
- * Extends SettingsSyllabusMetadataSchema with:
- * - collectionTitle field added
- * - locked field excluded
- * - classes use ExportClassMetadataSchema (excludes status)
- *
- * Uses shared transform function to avoid duplication
+ * Legacy / Talis translator JSON. .syllabus files are the collection note HTML.
  */
 export const ExportSyllabusMetadataSchema = SettingsSyllabusMetadataSchema.omit(
   {
@@ -709,6 +703,16 @@ export function assignmentClassNumber(
   return assignment.classNumber;
 }
 
+export function classByNumber(
+  metadata: SettingsSyllabusMetadata | undefined,
+  classNumber: number | null | undefined,
+): SettingsClassMetadata | undefined {
+  if (!metadata?.classes || classNumber == null) {
+    return undefined;
+  }
+  return metadata.classes[classNumber] || metadata.classes[String(classNumber)];
+}
+
 export function classesToNumberKeyed(
   classes: CollectionSyllabusDocument["classes"] | undefined,
 ): SettingsSyllabusMetadata["classes"] {
@@ -765,9 +769,13 @@ export function persistAssignment(
   classes: NonNullable<CollectionSyllabusDocument["classes"]>,
 ): ItemSyllabusAssignment {
   const { classNumber, classId: existingClassId, ...rest } = assignment;
-  let classId = existingClassId && classes[existingClassId] ? existingClassId : undefined;
+  let classId =
+    existingClassId && classes[existingClassId] ? existingClassId : undefined;
   if (typeof classNumber === "number") {
-    classId = ensureClassRecord(classes, classNumber);
+    const currentNumber = classId ? classes[classId]?.number : undefined;
+    if (currentNumber !== classNumber) {
+      classId = ensureClassRecord(classes, classNumber);
+    }
   }
   const persisted: ItemSyllabusAssignment = { ...rest };
   if (classId) {
@@ -794,20 +802,4 @@ export function hydrateAssignments(
   return (assignments || []).map((assignment) =>
     hydrateAssignment(assignment, classes),
   );
-}
-
-/** Portable assignment for .syllabus files: display number, no opaque classId. */
-export function exportAssignment(
-  assignment: ItemSyllabusAssignment,
-  classes?: CollectionSyllabusDocument["classes"],
-): ItemSyllabusAssignment {
-  const classNumber = assignmentClassNumber(assignment, classes);
-  const { classId: _classId, ...rest } = assignment;
-  const exported: ItemSyllabusAssignment = { ...rest };
-  if (classNumber === undefined) {
-    delete exported.classNumber;
-  } else {
-    exported.classNumber = classNumber;
-  }
-  return exported;
 }

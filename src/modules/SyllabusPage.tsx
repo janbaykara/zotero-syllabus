@@ -20,6 +20,7 @@ import {
   ItemSyllabusAssignment,
   SettingsSyllabusMetadata,
   SettingsClassMetadata,
+  classByNumber,
 } from "./syllabus";
 import { getCachedItem, getCachedCollectionById } from "../utils/cache";
 import { renderComponent } from "../utils/react";
@@ -958,7 +959,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     // If dropping to a specific class number, ensure it exists in metadata
     if (targetClassNumberValue !== undefined) {
       const metadata = SyllabusManager.getSyllabusMetadata(collectionId);
-      if (!metadata.classes || !metadata.classes[targetClassNumberValue]) {
+      if (!classByNumber(metadata, targetClassNumberValue)) {
         // Auto-create the class metadata entry
         await SyllabusManager.addClass(
           collectionId,
@@ -1176,25 +1177,14 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
 
   const handleExport = async () => {
     try {
-      // Prepare export data using SyllabusManager (now async to include RDF)
-      const exportData = await SyllabusManager.prepareExportData(
-        collectionId,
-        title || "",
-      );
-
-      // Create JSON string with pretty formatting
-      const jsonContent = JSON.stringify(exportData, null, 2);
-
-      // Generate filename: syllabus-{slugified-title}-{YYYY-MM-DD}.json
+      const noteHtml = SyllabusManager.prepareExportData(collectionId);
       const dateStr = formatDate(new Date(), "yyyy-MM-dd");
       const titleSlug = slugify(title || "syllabus", {
         lower: true,
         strict: true,
       });
       const filename = `${titleSlug}-${dateStr}.syllabus`;
-
-      // Use saveToFile utility to save the export
-      await saveToFile(filename, jsonContent, "Save Syllabus Export");
+      await saveToFile(filename, noteHtml, "Save Syllabus Export");
     } catch (err) {
       ztoolkit.log("Error exporting syllabus metadata:", err);
     }
@@ -2030,15 +2020,14 @@ function ClassGroupComponent({
     SyllabusManager.getNomenclatureFormatted(collectionId);
 
   // Get class title, description, reading date, and status from metadata
-  const classTitle = classNumber
-    ? syllabusMetadata.classes?.[classNumber]?.title || ""
-    : "";
-  const classDescription = classNumber
-    ? syllabusMetadata.classes?.[classNumber]?.description || ""
-    : "";
-  const readingDate = classNumber
-    ? syllabusMetadata.classes?.[classNumber]?.readingDate
-    : undefined;
+  const classMeta = classByNumber(syllabusMetadata, classNumber);
+  const previousClassMeta = classByNumber(
+    syllabusMetadata,
+    classNumber != null ? classNumber - 1 : undefined,
+  );
+  const classTitle = classMeta?.title || "";
+  const classDescription = classMeta?.description || "";
+  const readingDate = classMeta?.readingDate;
   const classIsDone = classNumber
     ? SyllabusManager.getClassStatus(collectionId, classNumber) === "done"
     : false;
@@ -2188,12 +2177,7 @@ function ClassGroupComponent({
                   {FEATURE_FLAG.READING_SCHEDULE && !isLocked && (
                     <ReadingDateInput
                       initialValue={readingDate}
-                      defaultDate={
-                        classNumber > 1
-                          ? syllabusMetadata.classes?.[classNumber - 1]
-                              ?.readingDate
-                          : undefined
-                      }
+                      defaultDate={previousClassMeta?.readingDate}
                       onSave={(date) =>
                         onClassReadingDateSave(classNumber, date)
                       }

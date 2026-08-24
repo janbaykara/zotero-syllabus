@@ -349,6 +349,14 @@ function renderReadableNoteBody(
   ].join("");
 }
 
+export function isSyllabusNoteFile(contents: string): boolean {
+  const trimmed = contents.trim();
+  return (
+    trimmed.includes(`${SYLLABUS_NOTE_PRE_ATTR}=`) ||
+    trimmed.startsWith("<")
+  );
+}
+
 export function serializeSyllabusNote(
   document: CollectionSyllabusDocument,
   collection?: Zotero.Collection | null,

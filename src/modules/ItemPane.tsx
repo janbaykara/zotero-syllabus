@@ -7,7 +7,7 @@ import { twMerge } from "tailwind-merge";
 import { useZoteroItem } from "./react-zotero-sync/item";
 import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
 import { useSelectedCollectionId } from "./react-zotero-sync/collection";
-import { classNumberSchema } from "../utils/schemas";
+import { classByNumber, classNumberSchema } from "../utils/schemas";
 import {
   getCachedCollectionById,
   getCachedCollectionByKey,
@@ -502,9 +502,7 @@ function AssignmentEditor({
   onDuplicate,
 }: AssignmentEditorProps) {
   const [cls, _, __] = useZoteroClassMetadata(collectionId);
-  const assignmentClass = assignment.classNumber
-    ? cls.classes[assignment.classNumber]
-    : null;
+  const assignmentClass = classByNumber(cls, assignment.classNumber);
 
   if (!assignment.id) {
     return null;
