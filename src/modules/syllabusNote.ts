@@ -11,6 +11,7 @@ import {
   ItemSyllabusAssignmentEntity,
   ItemSyllabusDataEntity,
   SettingsSyllabusMetadataSchema,
+  DEFAULT_PRIORITIES,
   assignmentClassNumber,
   classesToNumberKeyed,
   hydrateAssignment,
@@ -29,6 +30,7 @@ import {
 } from "../utils/cache";
 import { getAllCollections } from "../utils/zotero";
 import { formatReadingDate } from "../utils/dates";
+import { generateBibliographicReference } from "../utils/cite";
 
 type CollectionIdentifier =
   | number
@@ -268,47 +270,24 @@ function unescapeHtml(text: string): string {
     .replace(/&amp;/g, "&");
 }
 
-function displayValue(value: unknown): string {
-  if (value === undefined || value === null || value === "") {
+function paragraph(text: string | null | undefined): string {
+  const trimmed = (text || "").trim();
+  return trimmed ? `<p>${escapeHtml(trimmed)}</p>` : "";
+}
+
+function heading(level: 1 | 3, text: string): string {
+  const trimmed = text.trim();
+  return trimmed ? `<h${level}>${escapeHtml(trimmed)}</h${level}>` : "";
+}
+
+function bulletList(items: string[]): string {
+  if (items.length === 0) {
     return "";
   }
-  if (typeof value === "boolean") {
-    return value ? "Yes" : "No";
-  }
-  if (Array.isArray(value)) {
-    return value.filter(Boolean).join(", ");
-  }
-  return String(value);
-}
-
-function tableCell(value: unknown): string {
-  const text = displayValue(value);
-  return `<td><p>${escapeHtml(text).replace(/\n/g, "<br/>")}</p></td>`;
-}
-
-function kvTable(rows: Array<[string, unknown]>): string {
-  const visible = rows.filter(([, value]) => displayValue(value) !== "");
-  if (visible.length === 0) {
-    return "<p><i>None</i></p>";
-  }
-  const body = visible
-    .map(
-      ([key, value]) =>
-        `<tr><th><p>${escapeHtml(key)}</p></th>${tableCell(value)}</tr>`,
-    )
+  const lis = items
+    .map((item) => `<li><p>${escapeHtml(item)}</p></li>`)
     .join("");
-  return `<table><tbody>${body}</tbody></table>`;
-}
-
-function dataTable(headers: string[], rows: unknown[][]): string {
-  if (rows.length === 0) {
-    return "<p><i>None</i></p>";
-  }
-  const head = `<tr>${headers.map((header) => `<th><p>${escapeHtml(header)}</p></th>`).join("")}</tr>`;
-  const body = rows
-    .map((row) => `<tr>${row.map((cell) => tableCell(cell)).join("")}</tr>`)
-    .join("");
-  return `<table><tbody>${head}${body}</tbody></table>`;
+  return `<ul>${lis}</ul>`;
 }
 
 function itemTitlesByKey(
@@ -328,107 +307,289 @@ function itemTitlesByKey(
   return titles;
 }
 
-function itemDisplayTitle(
+function getCollectionItem(
+  collection: Zotero.Collection | null | undefined,
   itemKey: string,
-  titles: Map<string, string>,
-): string {
-  return titles.get(itemKey) || itemKey;
+): Zotero.Item | null {
+  if (!collection) {
+    return null;
+  }
+  try {
+    const item = Zotero.Items.getByLibraryAndKey(collection.libraryID, itemKey);
+    if (item && item.isRegularItem()) {
+      return item;
+    }
+  } catch {
+    // Item may have been deleted.
+  }
+  return null;
 }
 
-function assignmentTitleById(
+type ClassReading = {
+  itemKey: string;
+  assignment: ItemSyllabusAssignment;
+};
+
+function gatherClassReadings(
+  classId: string,
+  classNumber: number | undefined,
+  itemOrder: string[] | undefined,
   document: CollectionSyllabusDocument,
-  titles: Map<string, string>,
-): Map<string, string> {
-  const byId = new Map<string, string>();
+): ClassReading[] {
+  const assigned: ClassReading[] = [];
   for (const [itemKey, assignments] of Object.entries(document.items || {})) {
-    const title = itemDisplayTitle(itemKey, titles);
     for (const assignment of assignments) {
-      if (assignment.id) {
-        byId.set(assignment.id, title);
+      const number = assignmentClassNumber(assignment, document.classes);
+      if (
+        assignment.classId === classId ||
+        (classNumber !== undefined && number === classNumber)
+      ) {
+        assigned.push({ itemKey, assignment });
       }
     }
   }
-  return byId;
-}
 
-function formatItemOrder(
-  itemOrder: string[] | undefined,
-  assignmentTitles: Map<string, string>,
-  titles: Map<string, string>,
-): string {
-  if (!itemOrder?.length) {
-    return "";
+  const byId = new Map<string, ClassReading>();
+  for (const row of assigned) {
+    if (row.assignment.id) {
+      byId.set(row.assignment.id, row);
+    }
+    byId.set(row.itemKey, row);
   }
-  return itemOrder
-    .map((id) => assignmentTitles.get(id) || titles.get(id) || id)
-    .join(", ");
-}
 
-function renderReadableNoteBody(
-  document: CollectionSyllabusDocument,
-  collection?: Zotero.Collection | null,
-): string {
-  const titles = itemTitlesByKey(collection);
-  const assignmentTitles = assignmentTitleById(document, titles);
-  const classRows = Object.entries(document.classes || {})
-    .sort(([, a], [, b]) => (a?.number || 0) - (b?.number || 0))
-    .map(([, classMeta]) => [
-      classMeta?.number,
-      classMeta?.title,
-      classMeta?.readingDate ? formatReadingDate(classMeta.readingDate) : "",
-      classMeta?.status,
-      classMeta?.description,
-      formatItemOrder(classMeta?.itemOrder, assignmentTitles, titles),
-    ]);
+  const used = new Set<string>();
+  const result: ClassReading[] = [];
+  const add = (row: ClassReading) => {
+    const key = row.assignment.id || row.itemKey;
+    if (used.has(key)) {
+      return;
+    }
+    used.add(key);
+    result.push(row);
+  };
 
-  const priorityRows = (document.priorities || []).map((priority) => [
-    priority.order,
-    priority.name,
-    priority.color,
-  ]);
-
-  const assignmentRows: unknown[][] = [];
-  for (const [itemKey, assignments] of Object.entries(document.items || {})) {
-    const title = itemDisplayTitle(itemKey, titles);
-    for (const assignment of assignments) {
-      assignmentRows.push([
-        title,
-        assignmentClassNumber(assignment, document.classes),
-        assignment.priority,
-        assignment.status,
-        assignment.classInstruction,
-      ]);
+  for (const id of itemOrder || []) {
+    const match = byId.get(id);
+    if (match) {
+      add(match);
     }
   }
+  for (const row of assigned) {
+    add(row);
+  }
+  return result;
+}
 
+function gatherFurtherReadings(
+  document: CollectionSyllabusDocument,
+): ClassReading[] {
+  const result: ClassReading[] = [];
+  for (const [itemKey, assignments] of Object.entries(document.items || {})) {
+    for (const assignment of assignments) {
+      if (
+        assignment.classId ||
+        assignmentClassNumber(assignment, document.classes) !== undefined
+      ) {
+        continue;
+      }
+      result.push({ itemKey, assignment });
+    }
+  }
+  return result;
+}
+
+function priorityMeta(
+  document: CollectionSyllabusDocument,
+  priorityId: string | undefined,
+) {
+  if (!priorityId) {
+    return undefined;
+  }
+  const list =
+    document.priorities && document.priorities.length > 0
+      ? document.priorities
+      : DEFAULT_PRIORITIES;
+  return list.find((priority) => priority.id === priorityId);
+}
+
+function sortReadingsByPriority(
+  readings: ClassReading[],
+  document: CollectionSyllabusDocument,
+): ClassReading[] {
+  return [...readings].sort((a, b) => {
+    const orderA = priorityMeta(document, a.assignment.priority)?.order ?? 999;
+    const orderB = priorityMeta(document, b.assignment.priority)?.order ?? 999;
+    if (orderA !== orderB) {
+      return orderA - orderB;
+    }
+    return 0;
+  });
+}
+
+function formatReadingLine(
+  priorityName: string,
+  citation: string,
+  instruction: string,
+): string {
+  const parts: string[] = [];
+  if (priorityName) {
+    parts.push(`[${priorityName}]`);
+  }
+  parts.push(citation);
+  if (instruction) {
+    parts.push(instruction);
+  }
+  return parts.join(" - ");
+}
+
+async function citationForItem(
+  item: Zotero.Item | null,
+  fallbackTitle: string,
+  styleUrl: string | null | undefined,
+): Promise<string> {
+  if (!item) {
+    return fallbackTitle;
+  }
+  try {
+    const ref = await generateBibliographicReference(item, true, styleUrl);
+    const cleaned = (ref || "").replace(/\s+/g, " ").trim();
+    return cleaned || fallbackTitle;
+  } catch {
+    return fallbackTitle;
+  }
+}
+
+async function readingLines(
+  readings: ClassReading[],
+  document: CollectionSyllabusDocument,
+  collection: Zotero.Collection | null | undefined,
+  titles: Map<string, string>,
+): Promise<string[]> {
+  const style = document.cslStyle || null;
+  return Promise.all(
+    readings.map(async (row) => {
+      const item = getCollectionItem(collection, row.itemKey);
+      const citation = await citationForItem(
+        item,
+        titles.get(row.itemKey) || row.itemKey,
+        style,
+      );
+      const priorityName =
+        priorityMeta(document, row.assignment.priority)?.name || "";
+      return formatReadingLine(
+        priorityName,
+        citation,
+        (row.assignment.classInstruction || "").trim(),
+      );
+    }),
+  );
+}
+
+function classHeading(
+  nomenclature: string | undefined,
+  number: number,
+  title: string | null | undefined,
+): string {
+  const noun = (nomenclature || "class").trim() || "class";
+  const label = `${noun.charAt(0).toUpperCase()}${noun.slice(1)} ${number}`;
+  const classTitle = (title || "").trim();
+  return classTitle ? `${label}: ${classTitle}` : label;
+}
+
+function courseByline(
+  courseCode: string | null | undefined,
+  institution: string | null | undefined,
+): string {
+  return [courseCode?.trim(), institution?.trim()].filter(Boolean).join(" - ");
+}
+
+function linksBlock(links: string[] | undefined): string {
+  const urls = (links || []).map((link) => link.trim()).filter(Boolean);
+  if (urls.length === 0) {
+    return "";
+  }
+  const items = urls
+    .map((url) => {
+      const href = escapeHtml(url);
+      return `<li><p><a href="${href}">${href}</a></p></li>`;
+    })
+    .join("");
+  return `<ul>${items}</ul>`;
+}
+
+async function renderReadableNoteBody(
+  document: CollectionSyllabusDocument,
+  collection?: Zotero.Collection | null,
+): Promise<string> {
+  const titles = itemTitlesByKey(collection);
+  const classes = Object.entries(document.classes || {}).sort(
+    ([, a], [, b]) => (a?.number || 0) - (b?.number || 0),
+  );
+
+  const classSections: string[] = [];
+  for (const [classId, classMeta] of classes) {
+    if (!classMeta?.number) {
+      continue;
+    }
+    const readings = sortReadingsByPriority(
+      gatherClassReadings(
+        classId,
+        classMeta.number,
+        classMeta.itemOrder,
+        document,
+      ),
+      document,
+    );
+    const date = classMeta.readingDate
+      ? formatReadingDate(classMeta.readingDate)
+      : "";
+    const status = (classMeta.status || "").trim();
+    const metaLine = [date, status].filter(Boolean).join(" - ");
+    const lines = await readingLines(readings, document, collection, titles);
+    classSections.push(
+      [
+        heading(
+          3,
+          classHeading(
+            document.nomenclature,
+            classMeta.number,
+            classMeta.title,
+          ),
+        ),
+        paragraph(metaLine),
+        paragraph(classMeta.description),
+        bulletList(lines),
+      ]
+        .filter(Boolean)
+        .join(""),
+    );
+  }
+
+  const further = sortReadingsByPriority(
+    gatherFurtherReadings(document),
+    document,
+  );
+  const furtherLines = await readingLines(
+    further,
+    document,
+    collection,
+    titles,
+  );
   const json = JSON.stringify(document, null, 2);
 
   return [
-    `<h1>${SYLLABUS_NOTE_TITLE}</h1>`,
-    "<h2>Course</h2>",
-    kvTable([
-      ["Institution", document.institution],
-      ["Course code", document.courseCode],
-      ["Description", document.description],
-      ["Terminology", document.nomenclature],
-      ["Citation style", document.cslStyle],
-      ["Locked", document.locked],
-      ["Links", document.links],
-    ]),
-    "<h2>Priorities</h2>",
-    dataTable(["Order", "Name", "Color"], priorityRows),
-    "<h2>Classes</h2>",
-    dataTable(
-      ["#", "Title", "Date", "Status", "Description", "Readings"],
-      classRows,
-    ),
-    "<h2>Readings</h2>",
-    dataTable(
-      ["Item", "Class", "Priority", "Status", "Instructions"],
-      assignmentRows,
-    ),
+    heading(1, collection?.name || SYLLABUS_NOTE_TITLE),
+    paragraph(courseByline(document.courseCode, document.institution)),
+    paragraph(document.description),
+    linksBlock(document.links),
+    ...classSections,
+    ...(furtherLines.length
+      ? [heading(3, "Further reading"), bulletList(furtherLines)]
+      : []),
     `<pre ${SYLLABUS_NOTE_PRE_ATTR}="1" data-version="${document.version || COLLECTION_SYLLABUS_DOCUMENT_VERSION}">${escapeHtml(json)}</pre>`,
-  ].join("");
+  ]
+    .filter(Boolean)
+    .join("");
 }
 
 export function isSyllabusNoteFile(contents: string): boolean {
@@ -471,19 +632,44 @@ function isUnsupportedFutureNote(html: string): boolean {
   }
 }
 
-function noteNeedsFormatPatch(html: string): boolean {
+function noteNeedsFormatPatch(
+  html: string,
+  document?: CollectionSyllabusDocument,
+): boolean {
   if (isUnsupportedFutureNote(html)) {
     return false;
   }
   const envelopeVersion = getSyllabusNoteFormatVersion(html);
-  return envelopeVersion !== COLLECTION_SYLLABUS_DOCUMENT_VERSION;
+  if (envelopeVersion !== COLLECTION_SYLLABUS_DOCUMENT_VERSION) {
+    return true;
+  }
+  if (
+    /<table[\s>]/i.test(html) ||
+    /<h2>Classes<\/h2>/i.test(html) ||
+    /<h2>Course<\/h2>/i.test(html) ||
+    /<h2>Priorities<\/h2>/i.test(html) ||
+    /<h2>Readings<\/h2>/i.test(html)
+  ) {
+    return true;
+  }
+  const links = (document?.links || [])
+    .map((link) => link.trim())
+    .filter(Boolean);
+  if (links.length === 0) {
+    return false;
+  }
+  const readable = html.split(/<pre\b/i)[0] || "";
+  return links.some((link) => {
+    const href = escapeHtml(link);
+    return !readable.includes(`href="${href}"`) && !readable.includes(link);
+  });
 }
 
-export function serializeSyllabusNote(
+export async function serializeSyllabusNote(
   document: CollectionSyllabusDocument,
   collection?: Zotero.Collection | null,
-): string {
-  const body = renderReadableNoteBody(document, collection);
+): Promise<string> {
+  const body = await renderReadableNoteBody(document, collection);
   if (typeof Zotero !== "undefined" && Zotero.Notes?.notePrefix) {
     return `${Zotero.Notes.notePrefix}${body}${Zotero.Notes.noteSuffix}`;
   }
@@ -685,12 +871,12 @@ function serializeSyllabusNoteFallback(
   return `<div data-schema-version="9">${body}</div>`;
 }
 
-function noteHtmlForDocument(
+async function noteHtmlForDocument(
   document: CollectionSyllabusDocument,
   collection?: Zotero.Collection | null,
-): string {
+): Promise<string> {
   try {
-    return serializeSyllabusNote(document, collection);
+    return await serializeSyllabusNote(document, collection);
   } catch (error) {
     ztoolkit.log(
       "Error serializing readable syllabus note, using JSON fallback:",
@@ -941,7 +1127,7 @@ async function rebuildDocumentIndex(): Promise<void> {
         )
       ) {
         setCacheEntry(ref, note.id, note.version, parsed);
-        if (noteNeedsFormatPatch(html)) {
+        if (noteNeedsFormatPatch(html, parsed)) {
           notesToPatch.push(collection);
         }
       } else if (cached) {
@@ -950,7 +1136,7 @@ async function rebuildDocumentIndex(): Promise<void> {
         collectionRefByNoteId.set(note.id, ref);
       } else if (parsed) {
         setCacheEntry(ref, note.id, note.version, parsed);
-        if (noteNeedsFormatPatch(html)) {
+        if (noteNeedsFormatPatch(html, parsed)) {
           notesToPatch.push(collection);
         }
       }
@@ -1072,7 +1258,7 @@ export async function mutateCollectionDocument(
         );
       }
       const next = nextResult.success ? nextResult.data : mutated;
-      const html = noteHtmlForDocument(next, collection);
+      const html = await noteHtmlForDocument(next, collection);
       const fallbackHtml = serializeSyllabusNoteFallback(next);
       setCacheEntry(ref, note.id || null, (note.version || 0) + 1, next);
       const saved = await persistSyllabusNote(
