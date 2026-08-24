@@ -146,11 +146,7 @@ Right-click an item to re-assign class number or priority.
 
 This plugin is built using the [Zotero Plugin Template](https://github.com/windingwind/zotero-plugin-template).
 
-Here's how I've thought about the plugin's data model:
-
-- 'Syllabi' are organised representations of a collection. Syllabi must mirror the items of a collection. If it's not in the collection, it's not in the syllabus.
-- All syllabus content — class metadata, item order, priorities, reading instructions, and assignment status — lives in a **top-level note** in that collection (tagged `zotero-syllabus`, titled "Syllabus"). That note syncs with the library.
-- Classes group 1+ assignments. Assignments point at items in the collection by item key; they are not stored on the items themselves.
+A syllabus is an organised view of one Zotero collection. The collection’s items are the membership; class metadata, assignments, and related state live in a collection note (not on the items). See [How data is stored](#how-data-is-stored) for the developer-oriented model (notes, prefs, class folders).
 
 ### Contributing
 
@@ -237,25 +233,20 @@ pnpm run lint:fix
 
 ```
 src/
-├── addon.ts              # Main addon class
-├── hooks.ts              # Lifecycle hooks
-├── index.ts              # Entry point
+├── addon.ts
+├── hooks.ts
+├── index.ts
 ├── modules/
-│   ├── syllabus.ts       # Core syllabus functionality
-│   └── preferenceScript.ts # Preferences handling
+│   ├── syllabus.ts              # Manager, view modes, columns, menus
+│   ├── syllabusNote.ts          # Collection note: parse/save + in-memory cache
+│   ├── classSubcollections.ts   # One-way class folders
+│   ├── migratePrefsToNotes.ts   # Legacy collectionMetadata → notes
+│   ├── SyllabusPage.tsx         # Syllabus (and class-folder) view
+│   └── ReadingSchedule.tsx
 └── utils/
-    ├── locale.ts         # Localization utilities
-    ├── prefs.ts          # Preferences management
-    ├── syllabus.ts       # Syllabus data utilities
-    ├── window.ts         # Window management
-    └── ztoolkit.ts       # Zotero toolkit setup
-
-addon/
-├── manifest.json         # Plugin manifest
-├── bootstrap.js          # Bootstrap script
-├── prefs.js              # Preferences defaults
-├── content/              # UI content
-└── locale/               # Localization files
+    ├── schemas.ts               # CollectionSyllabusDocument and related types
+    ├── prefs.ts                 # UI / plugin prefs
+    └── cache.ts
 ```
 
 ### Technical references
@@ -269,3 +260,74 @@ addon/
 - Translator code API: https://github.com/zotero/translators/blob/master/index.d.ts
 - Zotero server code: https://github.com/zotero/zotero/blob/47e6a0f7abaae0ad90c9f39c385fe24efd7071bf/chrome/content/zotero/xpcom/server/server_connector.js#L927
 - All Zotero icons: https://github.com/zotero/zotero/tree/b3ef63859d2dbeaf595f7482a4de3d586535c10e/chrome/skin/default/zotero/16/universal
+
+## How data is stored
+
+This section is for people changing the plugin. End-user behaviour is described above.
+
+A **syllabus is one Zotero collection**. Items in that collection are the membership. Everything else — classes, assignments, course metadata — is stored in a **collection note** so it syncs with the library. Plugin **prefs** hold UI chrome only (and leftover legacy data). **Class subcollections** are a derived, one-way view of the note.
+
+```
+                    ┌─────────────────────────────────────┐
+                    │  Collection note (source of truth)  │
+                    │  tag: zotero-syllabus               │
+                    └──────────────┬──────────────────────┘
+           writes / reads          │           drives
+    ┌──────────────┴──────────┐    │    ┌──────┴──────────┐
+    │  In-memory document     │    │    │  Class folders  │
+    │  cache (hot-path reads) │    │    │  (one-way sync) │
+    └──────────────┬──────────┘    │    └─────────────────┘
+                   │               │
+                   ▼               ▼
+            Syllabus UI      Zotero collection tree
+```
+
+### Collection note
+
+Each syllabus collection has a top-level note tagged `zotero-syllabus` (title `Syllabus`). The plugin treats the JSON in that note as canonical and regenerates the readable HTML around it.
+
+The note HTML is roughly:
+
+1. Human-readable prose (collection title, course line, class headings, citations).
+2. A “Plugin data (do not edit)” heading.
+3. A `<pre data-zotero-syllabus="1">` block with the JSON document.
+
+Schema: `CollectionSyllabusDocument` in `src/utils/schemas.ts` (currently **v2**). Classes are keyed by a stable `classId`; each class stores a display `number`. Assignments live under `items[itemKey]` and point at a `classId` (not at the display number). Swapping two classes only exchanges numbers; identities and folders stay put.
+
+Reads on the UI hot path must not call `getNote()`. `src/modules/syllabusNote.ts` keeps an in-memory cache, rebuilt at startup and updated after writes / note notifiers. Mutations go through `mutateCollectionDocument`, which serialises writes per collection, persists the note, then syncs class folders.
+
+UI metadata is a projection of the document (`classesToNumberKeyed`): number-keyed classes **without** `subcollectionKey`. Merging UI edits back (`mergeNumberKeyedClasses`) keeps existing class IDs and folder keys.
+
+### Preferences
+
+Prefix: `extensions.zotero.syllabus`.
+
+**Still prefs** (see `src/utils/prefs.ts` and `addon/prefs.js`): plugin enable, compact/reader mode, debug, bibliography, row colouring, WPM. Per-collection **view mode** (Items / Syllabus / Tags) is stored in `collectionViewModes`, keyed by collection id. Class folders with no saved mode inherit the parent’s mode.
+
+**No longer prefs:** collection syllabus content used to live in `extensions.zotero.syllabus.collectionMetadata`. On startup, `src/modules/migratePrefsToNotes.ts` copies each remaining object into that collection’s note (and Extra assignments into the same note), then deletes that prefs entry only after a successful write. Failed or missing collections stay in the pref and retry next launch.
+
+### Item Extra (legacy absorb)
+
+Older builds stored assignments in the item Extra field (`syllabus: {…}`). On item add/modify, `absorbSyllabusExtraFromItems` copies Extra into the parent collection note and clears Extra. Absorb is skipped for class folders so a child collection never gets its own syllabus note and folder membership cannot write back to the parent document.
+
+### Class subcollections
+
+After each note persist, `src/modules/classSubcollections.ts` makes the tree match the document:
+
+- One child collection per class, named like `Class 1: Title` (or `Week 1: …` when nomenclature is set). A reading deadline is appended (`— Friday 28th Aug`); when the class is marked done, the name ends with `✅`.
+- The class record stores `subcollectionKey` (Zotero collection key). It is stripped from UI metadata and preserved across number-keyed merges.
+- Desired items = regular items with assignments for that `classId`. Missing items are added to the folder; extras are removed from the **folder only**. Items stay on the parent. Deleting a class folder does not trash items (`eraseTx({ deleteItems: false })`).
+- User edits in a folder never update the note. Removing an item from the folder is restored on the next sync; adding a stray item is dropped. Deleting a managed folder recreates it from the note.
+- Unrecognised child collections (manually created folders) are left alone.
+
+On startup, folders are ensured for every syllabus that has classes. New folder keys are written back to the note; if keys are already present, only membership is synced.
+
+Class-folder Syllabus view is a single-class page (same class renderer as the Reading Schedule) with a link back to the parent. Document reads/writes for a class folder resolve to the parent note (`getClassSubcollectionContext` / `resolveSyllabusRoot`).
+
+### Practical rules
+
+- Do not persist hydrated `classNumber` on assignments; identity is `classId`.
+- Do not call `getNote()` from render/hot paths; use the document cache.
+- The plugin sandbox often has no `structuredClone`; clone documents with JSON.
+- Do not call `mutateCollectionDocument` from inside a class-folder ensure that already runs inside a write (deadlock on the per-collection write queue). Folder create/rename runs in the same write as the note persist; item membership runs after.
+- Do not absorb Extra, or create a syllabus note, on a collection whose parent already has a syllabus.
