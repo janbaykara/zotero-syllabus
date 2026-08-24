@@ -24,6 +24,13 @@ import {
   classByNumber,
 } from "./syllabus";
 import { getCachedItem, getCachedCollectionById } from "../utils/cache";
+import {
+  youtubeStartSeconds,
+  youtubeThumbnailUrl,
+  youtubeUrlFromItem,
+  youtubeVideoIdFromUrl,
+  youtubeWatchUrl,
+} from "../utils/youtube";
 import { renderComponent } from "../utils/react";
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
@@ -2518,11 +2525,7 @@ function TextInput({
       el.style.height = "auto";
       el.setAttribute("rows", "1");
     }
-    if (
-      el.ownerDocument.activeElement === el &&
-      start != null &&
-      end != null
-    ) {
+    if (el.ownerDocument.activeElement === el && start != null && end != null) {
       el.setSelectionRange(start, end);
     }
   }, [value, fieldSizing, elementType]);
@@ -2618,6 +2621,74 @@ function TextInput({
   return <div className={twMerge("w-full", containerClassName)}>{el}</div>;
 }
 
+function YoutubePlayer({
+  videoId,
+  startSeconds,
+  title,
+}: {
+  videoId: string;
+  startSeconds?: number;
+  title: string;
+}) {
+  const play = (e: JSX.TargetedMouseEvent<HTMLElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+    Zotero.launchURL(youtubeWatchUrl(videoId, startSeconds));
+  };
+
+  return (
+    <div
+      className="relative w-full shrink-0 overflow-hidden rounded-md in-[.print]:hidden"
+      style={{ aspectRatio: "16 / 9", backgroundColor: "#000" }}
+      draggable={false}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <img
+        src={youtubeThumbnailUrl(videoId)}
+        alt=""
+        draggable={false}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+        }}
+      />
+      <button
+        type="button"
+        className="flex items-center justify-center border-0 p-0"
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          backgroundColor: "rgba(0, 0, 0, 0.2)",
+        }}
+        draggable={false}
+        onClick={play}
+        onDblClick={play}
+        title={`Play ${title} on YouTube`}
+        aria-label={`Play ${title} on YouTube`}
+      >
+        <span
+          className="flex items-center justify-center text-white shadow-md"
+          style={{
+            height: "48px",
+            width: "68px",
+            borderRadius: "12px",
+            backgroundColor: "#ff0000",
+          }}
+        >
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+            <path fill="currentColor" d="M8 5v14l11-7z" />
+          </svg>
+        </span>
+      </button>
+    </div>
+  );
+}
+
 export function SyllabusItemCard({
   className,
   item,
@@ -2709,6 +2780,9 @@ export function SyllabusItemCard({
   const publicationName =
     item.getField("publicationTitle") || item.getField("bookTitle") || "";
   const url = item.getField("url") || "";
+  const youtubeSourceUrl = useMemo(() => youtubeUrlFromItem(item), [item]);
+  const youtubeVideoId = youtubeVideoIdFromUrl(youtubeSourceUrl);
+  const showYoutubeEmbed = !compactMode && Boolean(youtubeVideoId);
   const [syllabusMetadata] = useZoteroSyllabusMetadata(collectionId);
   const readingTime = getReadingTimeSync(item, { roundUp: true });
 
@@ -3083,10 +3157,11 @@ export function SyllabusItemCard({
       style={colors}
       className={twMerge(
         "in-[.print]:scheme-light",
-        "rounded-lg flex flex-row items-start justify-between shrink-0",
+        "rounded-lg flex shrink-0",
+        showYoutubeEmbed ? "flex-col" : "flex-row items-start justify-between",
         "bg-background-sidepane text-primary",
         "relative",
-        isLocked ? "cursor-default" : "cursor-grab",
+        isLocked || showYoutubeEmbed ? "cursor-default" : "cursor-grab",
         // For hovering contextual btns
         "group relative",
         compactMode
@@ -3103,7 +3178,7 @@ export function SyllabusItemCard({
         className,
       )}
       data-item-id={item.id}
-      draggable={!isLocked}
+      draggable={!isLocked && !showYoutubeEmbed}
       onClick={(e) => {
         if (customOnClick) {
           customOnClick(item, e);
@@ -3114,8 +3189,8 @@ export function SyllabusItemCard({
         }
       }}
       onDblClick={(e) => onDoubleClick(item, e)}
-      onDragStart={isLocked ? undefined : handleDragStart}
-      onDragEnd={isLocked ? undefined : handleDragEnd}
+      onDragStart={isLocked || showYoutubeEmbed ? undefined : handleDragStart}
+      onDragEnd={isLocked || showYoutubeEmbed ? undefined : handleDragEnd}
       onDragOver={isLocked ? undefined : handleItemDragOver}
       onDrop={isLocked ? undefined : handleItemDrop}
     >
@@ -3138,247 +3213,272 @@ export function SyllabusItemCard({
         />
       )}
       <div
-        className={twMerge(
-          "syllabus-item-thumbnail grow-0 shrink-0 in-[.print]:hidden",
-          compactMode ? "size-6" : slim ? "size-10" : "size-20",
-          // !compactMode ? "self-center" : "mt-0.5"
-          "self-center",
-        )}
+        className={
+          showYoutubeEmbed
+            ? twMerge(
+                "flex w-full flex-row items-start justify-between gap-4",
+                isLocked ? "cursor-default" : "cursor-grab",
+              )
+            : "contents"
+        }
+        draggable={!isLocked && showYoutubeEmbed}
+        onDragStart={
+          !isLocked && showYoutubeEmbed ? handleDragStart : undefined
+        }
+        onDragEnd={!isLocked && showYoutubeEmbed ? handleDragEnd : undefined}
       >
-        <span
-          className="icon icon-css icon-item-type cell-icon"
-          data-item-type={item.itemType}
-          style={{
-            width: "100%",
-            height: "100%",
-            backgroundOrigin:
-              "padding-box, padding-box, padding-box, padding-box",
-            backgroundPositionX: "50%, 50%, 50%, 50%",
-            backgroundPositionY: "50%, 50%, 50%, 50%",
-            backgroundRepeat: "no-repeat, repeat, repeat, repeat",
-            backgroundSize: "contain, 0px, 0px, 0px",
-            filter: isIdentifierSelected
-              ? "invert(0.85) brightness(2.5) contrast(1) hue-rotate(175deg)"
-              : undefined,
-          }}
-        />
-      </div>
-      <div
-        className={twMerge(
-          "syllabus-item-text grow flex flex-col",
-          compactMode ? "gap-0.5" : !slim ? "gap-1" : "gap-0.25",
-        )}
-      >
-        {compactMode ? (
-          <>
-            <div className="syllabus-item-title-row flex flex-row gap-2 items-baseline justify-between">
-              <div
-                className={twMerge(
-                  "text-base font-medium grow wrap-break-word",
-                  readerMode && assignmentStatus === "done"
-                    ? "line-through"
-                    : "",
-                )}
-              >
-                {title}
-              </div>
-              {!!priority && (
-                <PriorityIcon
-                  id={priority}
-                  colors={!isIdentifierSelected}
-                  className="shrink-0 grow-0 text-right block"
-                  collectionId={collectionId}
-                />
-              )}
-            </div>
-            <div className="syllabus-item-metadata text-secondary flex flex-row gap-4">
-              <span className="flex flex-row gap-1 flex-wrap character-separator [--character-separator:'•']">
-                {author && <span>{author}</span>}
-                {date && <span>{date}</span>}
-                {itemTypeLabel && (
-                  <span className="text-secondary">{itemTypeLabel}</span>
-                )}
-                {publicationName && <span>in {publicationName}</span>}
-                {readingTime && <span>{formatReadingTime(readingTime)}</span>}
-              </span>
-            </div>
-            {classInstruction && (
-              <div className="syllabus-item-description">
-                {classInstruction}
-              </div>
-            )}
-          </>
-        ) : (
-          <>
-            <div className="flex flex-row gap-3 items-baseline justify-start">
-              {!!priority && (
-                <div className="grow-0 shrink-0">
+        <div
+          className={twMerge(
+            "syllabus-item-thumbnail grow-0 shrink-0 in-[.print]:hidden",
+            compactMode ? "size-6" : slim ? "size-10" : "size-20",
+            // !compactMode ? "self-center" : "mt-0.5"
+            "self-center",
+          )}
+        >
+          <span
+            className="icon icon-css icon-item-type cell-icon"
+            data-item-type={item.itemType}
+            style={{
+              width: "100%",
+              height: "100%",
+              backgroundOrigin:
+                "padding-box, padding-box, padding-box, padding-box",
+              backgroundPositionX: "50%, 50%, 50%, 50%",
+              backgroundPositionY: "50%, 50%, 50%, 50%",
+              backgroundRepeat: "no-repeat, repeat, repeat, repeat",
+              backgroundSize: "contain, 0px, 0px, 0px",
+              filter: isIdentifierSelected
+                ? "invert(0.85) brightness(2.5) contrast(1) hue-rotate(175deg)"
+                : undefined,
+            }}
+          />
+        </div>
+        <div
+          className={twMerge(
+            "syllabus-item-text grow flex flex-col",
+            compactMode ? "gap-0.5" : !slim ? "gap-1" : "gap-0.25",
+          )}
+        >
+          {compactMode ? (
+            <>
+              <div className="syllabus-item-title-row flex flex-row gap-2 items-baseline justify-between">
+                <div
+                  className={twMerge(
+                    "text-base font-medium grow wrap-break-word",
+                    readerMode && assignmentStatus === "done"
+                      ? "line-through"
+                      : "",
+                  )}
+                >
+                  {title}
+                </div>
+                {!!priority && (
                   <PriorityIcon
                     id={priority}
                     colors={!isIdentifierSelected}
+                    className="shrink-0 grow-0 text-right block"
                     collectionId={collectionId}
                   />
-                </div>
-              )}
-              {!slim && itemTypeLabel && (
-                <div className="grow-0 shrink-0">
-                  <span className="text-secondary">{itemTypeLabel}</span>
-                </div>
-              )}
-              {!!readStatusName && (
-                <div className="grow-0 shrink-0">
-                  <ReadStatusIcon readStatusName={readStatusName} />
-                </div>
-              )}
-            </div>
-            <div className="syllabus-item-title-row">
-              <div
-                className={twMerge(
-                  !slim ? "text-xl font-medium" : "text-lg font-medium",
-                  readerMode && assignmentStatus === "done"
-                    ? "line-through"
-                    : "",
                 )}
-              >
-                {title}
               </div>
-            </div>
-            <div className="syllabus-item-metadata text-secondary">
-              {metadataParts.length > 0 && (
-                <span>{metadataParts.join(" • ")}</span>
+              <div className="syllabus-item-metadata text-secondary flex flex-row gap-4">
+                <span className="flex flex-row gap-1 flex-wrap character-separator [--character-separator:'•']">
+                  {author && <span>{author}</span>}
+                  {date && <span>{date}</span>}
+                  {itemTypeLabel && (
+                    <span className="text-secondary">{itemTypeLabel}</span>
+                  )}
+                  {publicationName && <span>in {publicationName}</span>}
+                  {readingTime && <span>{formatReadingTime(readingTime)}</span>}
+                </span>
+              </div>
+              {classInstruction && (
+                <div className="syllabus-item-description">
+                  {classInstruction}
+                </div>
               )}
-            </div>
-            {!slim && bibliographicReference && (
-              <div className="syllabus-item-reference">
-                {bibliographicReference}
+            </>
+          ) : (
+            <>
+              <div className="flex flex-row gap-3 items-baseline justify-start">
+                {!!priority && (
+                  <div className="grow-0 shrink-0">
+                    <PriorityIcon
+                      id={priority}
+                      colors={!isIdentifierSelected}
+                      collectionId={collectionId}
+                    />
+                  </div>
+                )}
+                {!slim && itemTypeLabel && (
+                  <div className="grow-0 shrink-0">
+                    <span className="text-secondary">{itemTypeLabel}</span>
+                  </div>
+                )}
+                {!!readStatusName && (
+                  <div className="grow-0 shrink-0">
+                    <ReadStatusIcon readStatusName={readStatusName} />
+                  </div>
+                )}
               </div>
-            )}
-            {classInstruction && (
-              <div className="syllabus-item-description">
-                {classInstruction}
+              <div className="syllabus-item-title-row">
+                <div
+                  className={twMerge(
+                    !slim ? "text-xl font-medium" : "text-lg font-medium",
+                    readerMode && assignmentStatus === "done"
+                      ? "line-through"
+                      : "",
+                  )}
+                >
+                  {title}
+                </div>
               </div>
-            )}
-          </>
-        )}
-      </div>
-      {(!!viewableAttachments?.length || uniqueUrls.length > 0) && (
-        <div
-          className="syllabus-item-actions shrink-0 inline-flex flex-row gap-1 in-[.print]:hidden"
-          draggable={false}
-        >
-          {/* Attachment buttons */}
-          {viewableAttachments.map((viewableAttachment) => {
-            const getAttachmentLabel = (
-              type:
-                | "pdf"
-                | "snapshot"
-                | "epub"
-                | "html"
-                | "doc"
-                | "txt"
-                | "zip"
-                | "file",
-            ) => {
-              switch (type) {
-                case "pdf":
-                  return "PDF";
-                case "snapshot":
-                  return "Snapshot";
-                case "epub":
-                  return "EPUB";
-                case "html":
-                  return "HTML";
-                case "doc":
-                  return "DOC";
-                case "txt":
-                  return "TXT";
-                case "zip":
-                  return "ZIP";
-                case "file":
-                  return "File";
-                default:
-                  return "View";
-              }
-            };
+              <div className="syllabus-item-metadata text-secondary">
+                {metadataParts.length > 0 && (
+                  <span>{metadataParts.join(" • ")}</span>
+                )}
+              </div>
+              {!slim && bibliographicReference && (
+                <div className="syllabus-item-reference">
+                  {bibliographicReference}
+                </div>
+              )}
+              {classInstruction && (
+                <div className="syllabus-item-description">
+                  {classInstruction}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        {(!!viewableAttachments?.length || uniqueUrls.length > 0) && (
+          <div
+            className="syllabus-item-actions shrink-0 inline-flex flex-row gap-1 in-[.print]:hidden"
+            draggable={false}
+          >
+            {/* Attachment buttons */}
+            {viewableAttachments.map((viewableAttachment) => {
+              const getAttachmentLabel = (
+                type:
+                  | "pdf"
+                  | "snapshot"
+                  | "epub"
+                  | "html"
+                  | "doc"
+                  | "txt"
+                  | "zip"
+                  | "file",
+              ) => {
+                switch (type) {
+                  case "pdf":
+                    return "PDF";
+                  case "snapshot":
+                    return "Snapshot";
+                  case "epub":
+                    return "EPUB";
+                  case "html":
+                    return "HTML";
+                  case "doc":
+                    return "DOC";
+                  case "txt":
+                    return "TXT";
+                  case "zip":
+                    return "ZIP";
+                  case "file":
+                    return "File";
+                  default:
+                    return "View";
+                }
+              };
 
-            const getAttachmentIconType = (
-              type:
-                | "pdf"
-                | "snapshot"
-                | "epub"
-                | "html"
-                | "doc"
-                | "txt"
-                | "zip"
-                | "file",
-            ) => {
-              switch (type) {
-                case "pdf":
-                  return "attachmentPDF";
-                case "epub":
-                  return "attachmentEPUB";
-                case "snapshot":
-                case "html":
-                  return "attachmentSnapshot";
-                case "doc":
-                  return "attachmentDocument";
-                case "txt":
-                  return "attachmentText";
-                case "zip":
-                  return "attachmentZIP";
-                case "file":
-                  return "attachmentFile";
-                default:
-                  return "attachmentFile";
-              }
-            };
+              const getAttachmentIconType = (
+                type:
+                  | "pdf"
+                  | "snapshot"
+                  | "epub"
+                  | "html"
+                  | "doc"
+                  | "txt"
+                  | "zip"
+                  | "file",
+              ) => {
+                switch (type) {
+                  case "pdf":
+                    return "attachmentPDF";
+                  case "epub":
+                    return "attachmentEPUB";
+                  case "snapshot":
+                  case "html":
+                    return "attachmentSnapshot";
+                  case "doc":
+                    return "attachmentDocument";
+                  case "txt":
+                    return "attachmentText";
+                  case "zip":
+                    return "attachmentZIP";
+                  case "file":
+                    return "attachmentFile";
+                  default:
+                    return "attachmentFile";
+                }
+              };
 
-            const attachmentLabel = getAttachmentLabel(viewableAttachment.type);
-            const iconType = getAttachmentIconType(viewableAttachment.type);
+              const attachmentLabel = getAttachmentLabel(
+                viewableAttachment.type,
+              );
+              const iconType = getAttachmentIconType(viewableAttachment.type);
 
-            return (
-              <div className="focus-states-target in-[.print]:hidden">
+              return (
+                <div className="focus-states-target in-[.print]:hidden">
+                  <button
+                    className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
+                    onClick={() => handleAttachmentClick(viewableAttachment)}
+                    title={`Open ${attachmentLabel}`}
+                    aria-label={`Open ${attachmentLabel}`}
+                  >
+                    <span
+                      className="syllabus-action-icon icon icon-css icon-attachment-type"
+                      data-item-type={iconType}
+                      aria-label={`Open ${attachmentLabel}`}
+                    />
+                    <span className="syllabus-action-label">
+                      {attachmentLabel}
+                    </span>
+                  </button>
+                </div>
+              );
+            })}
+            {/* Unique URL link buttons */}
+            {uniqueUrls.map((urlInfo, index) => (
+              <div
+                key={`url-${index}`}
+                className="focus-states-target in-[.print]:hidden"
+              >
                 <button
                   className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
-                  onClick={() => handleAttachmentClick(viewableAttachment)}
-                  title={`Open ${attachmentLabel}`}
-                  aria-label={`Open ${attachmentLabel}`}
+                  onClick={urlInfo.onClick}
+                  title={`Open ${urlInfo.label}`}
+                  aria-label={`Open ${urlInfo.label}`}
                 >
                   <span
                     className="syllabus-action-icon icon icon-css icon-attachment-type"
-                    data-item-type={iconType}
-                    aria-label={`Open ${attachmentLabel}`}
+                    data-item-type="attachmentLink"
+                    aria-label={`Open ${urlInfo.label}`}
                   />
-                  <span className="syllabus-action-label">
-                    {attachmentLabel}
-                  </span>
+                  <span className="syllabus-action-label">{urlInfo.label}</span>
                 </button>
               </div>
-            );
-          })}
-          {/* Unique URL link buttons */}
-          {uniqueUrls.map((urlInfo, index) => (
-            <div
-              key={`url-${index}`}
-              className="focus-states-target in-[.print]:hidden"
-            >
-              <button
-                className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
-                onClick={urlInfo.onClick}
-                title={`Open ${urlInfo.label}`}
-                aria-label={`Open ${urlInfo.label}`}
-              >
-                <span
-                  className="syllabus-action-icon icon icon-css icon-attachment-type"
-                  data-item-type="attachmentLink"
-                  aria-label={`Open ${urlInfo.label}`}
-                />
-                <span className="syllabus-action-label">{urlInfo.label}</span>
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
+      {showYoutubeEmbed && youtubeVideoId ? (
+        <YoutubePlayer
+          videoId={youtubeVideoId}
+          startSeconds={youtubeStartSeconds(youtubeSourceUrl)}
+          title={title}
+        />
+      ) : null}
       {!isLocked && (
         <div
           className={twMerge(

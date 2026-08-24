@@ -318,7 +318,7 @@ After each note persist, `src/modules/classSubcollections.ts` makes the tree mat
 - The class record stores `subcollectionKey` (Zotero collection key). It is stripped from UI metadata and preserved across number-keyed merges.
 - Desired items = regular items with assignments for that `classId`. Missing items are added to the folder; extras are removed from the **folder only**. Items stay on the parent. Deleting a class folder does not trash items (`eraseTx({ deleteItems: false })`).
 - User edits in a folder never update the note. Removing an item from the folder is restored on the next sync; adding a stray item is dropped. Deleting a managed folder recreates it from the note.
-- Unrecognised child collections (manually created folders) are left alone.
+- Extra child collections that are not a class folder are removed, but only when the parent has a `zotero-syllabus` note. Nested collections that have their own syllabus note are kept. Collections without a syllabus note are never cleaned.
 
 On startup, folders are ensured for every syllabus that has classes. New folder keys are written back to the note; if keys are already present, only membership is synced.
 

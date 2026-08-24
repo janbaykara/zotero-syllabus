@@ -69,6 +69,7 @@ type CachedDocument = {
 const documentCache = new Map<string, CachedDocument>();
 const collectionRefByNoteId = new Map<number, string>();
 const writeQueues = new Map<string, Promise<unknown>>();
+const writesInFlight = new Map<string, number>();
 const documentListeners = new Set<() => void>();
 
 let indexBuilt = false;
@@ -1133,11 +1134,14 @@ function loadDocumentForCollection(
 ): CachedDocument {
   const ref = collectionRefFromCollection(collection);
   const cached = documentCache.get(ref);
+  if (cached && isDocumentWriteInFlight(ref)) {
+    return cached;
+  }
   if (cached?.noteId != null) {
     const note =
       getCachedItem(cached.noteId) || Zotero.Items.get(cached.noteId) || null;
     if (note && isLiveSyllabusNote(note, collection)) {
-      if (note.version === cached.noteVersion) {
+      if (note.version <= cached.noteVersion) {
         return cached;
       }
       let parsed: CollectionSyllabusDocument | null = null;
@@ -1236,6 +1240,9 @@ async function rebuildDocumentIndex(): Promise<void> {
         parsed = null;
       }
       const ref = collectionRefFromCollection(collection);
+      if (isDocumentWriteInFlight(ref)) {
+        continue;
+      }
       const cached = documentCache.get(ref);
       if (
         parsed &&
@@ -1276,11 +1283,11 @@ async function rebuildDocumentIndex(): Promise<void> {
   }
   for (const collection of getAllCollections()) {
     const entry = documentCache.get(collectionRefFromCollection(collection));
-    if (
-      !entry?.noteId ||
-      !Object.keys(entry.document.classes || {}).length ||
-      patchedIds.has(collection.id)
-    ) {
+    if (!entry?.noteId || patchedIds.has(collection.id)) {
+      continue;
+    }
+    const hasClasses = Object.keys(entry.document.classes || {}).length > 0;
+    if (!hasClasses && collection.getChildCollections().length === 0) {
       continue;
     }
     try {
@@ -1337,15 +1344,31 @@ async function getOrCreateSyllabusNote(
   return { note, created: true };
 }
 
+function isDocumentWriteInFlight(ref: string): boolean {
+  return (writesInFlight.get(ref) || 0) > 0;
+}
+
+function beginWrite(ref: string): void {
+  writesInFlight.set(ref, (writesInFlight.get(ref) || 0) + 1);
+}
+
+function endWrite(ref: string): void {
+  const depth = (writesInFlight.get(ref) || 1) - 1;
+  if (depth <= 0) {
+    writesInFlight.delete(ref);
+  } else {
+    writesInFlight.set(ref, depth);
+  }
+}
+
 function enqueueWrite<T>(key: string, task: () => Promise<T>): Promise<T> {
-  const previous = writeQueues.get(key);
-  const waitForPrevious = previous
-    ? Promise.race([
-        previous.catch(() => undefined),
-        new Promise<void>((resolve) => setTimeout(resolve, 2000)),
-      ])
-    : Promise.resolve();
-  const next = waitForPrevious.then(task, task);
+  const previous = writeQueues.get(key) || Promise.resolve();
+  const next = previous.catch(() => undefined).then(() => {
+    beginWrite(key);
+    return Promise.resolve()
+      .then(task)
+      .finally(() => endWrite(key));
+  });
   writeQueues.set(
     key,
     next.then(
@@ -1399,7 +1422,7 @@ export async function mutateCollectionDocument(
         );
       }
       let next = nextResult.success ? nextResult.data : mutated;
-      setCacheEntry(ref, note.id || null, (note.version || 0) + 1, next);
+      setCacheEntry(ref, note.id || null, note.version || 0, next);
       try {
         const ensured = await enqueueClassFolderEnsure(collection, () =>
           ensureClassSubcollections(collection, next, current),
@@ -1407,13 +1430,13 @@ export async function mutateCollectionDocument(
         if (ensured) {
           next = ensured;
         }
-        setCacheEntry(ref, note.id || null, (note.version || 0) + 1, next);
+        setCacheEntry(ref, note.id || null, note.version || 0, next);
       } catch (error) {
         ztoolkit.log("Error ensuring class subcollections:", error);
       }
       const html = await noteHtmlForDocument(next, collection);
       const fallbackHtml = serializeSyllabusNoteFallback(next);
-      setCacheEntry(ref, note.id || null, (note.version || 0) + 1, next);
+      setCacheEntry(ref, note.id || null, note.version || 0, next);
       const saved = await persistSyllabusNote(
         note,
         collection,
@@ -1653,11 +1676,20 @@ function handleManagedCollectionChange(
     if (!parent) {
       continue;
     }
-    if (isClassFolderSyncHeld(parent.id)) {
+    const parentRef = collectionRefFromCollection(parent);
+    if (
+      isClassFolderSyncHeld(parent.id) ||
+      isDocumentWriteInFlight(parentRef)
+    ) {
       continue;
     }
-    const parentRef = collectionRefFromCollection(parent);
     enqueueClassFolderEnsure(parent, async () => {
+      if (
+        isClassFolderSyncHeld(parent.id) ||
+        isDocumentWriteInFlight(parentRef)
+      ) {
+        return;
+      }
       const cached = documentCache.get(parentRef)?.document;
       if (!cached) {
         return;
@@ -1704,11 +1736,14 @@ function handleNoteChange(item: Zotero.Item, event: string): void {
       continue;
     }
     const ref = collectionRefFromCollection(collection);
+    if (isDocumentWriteInFlight(ref)) {
+      continue;
+    }
     const cached = documentCache.get(ref);
     if (
       cached &&
       cached.noteId === item.id &&
-      cached.noteVersion === item.version
+      cached.noteVersion >= item.version
     ) {
       continue;
     }
@@ -1733,6 +1768,7 @@ export function initializeSyllabusNotes(): void {
   // Hot reload can leave a hung write promise in this map. Always drop it so
   // Add Class / Create assignment are not queued behind a dead lock.
   writeQueues.clear();
+  writesInFlight.clear();
   if (notifierID) {
     indexReady = rebuildDocumentIndex().catch((error) => {
       ztoolkit.log("Error rebuilding syllabus note index:", error);
@@ -1841,6 +1877,7 @@ export function shutdownSyllabusNotes(): void {
   documentCache.clear();
   collectionRefByNoteId.clear();
   writeQueues.clear();
+  writesInFlight.clear();
   documentListeners.clear();
   clearManagedSubcollections();
   indexBuilt = false;

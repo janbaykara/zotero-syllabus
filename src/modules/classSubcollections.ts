@@ -16,6 +16,8 @@ const DONE_SUFFIX = " ✅";
 const DATE_SEPARATOR = " — ";
 const DATE_SUFFIX_PATTERN =
   /\s+—\s+(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+\d{1,2}(?:st|nd|rd|th)\s+[A-Z][a-z]{2}\s*$/;
+const SYLLABUS_NOTE_TAG = "zotero-syllabus";
+const SYLLABUS_NOTE_PRE_ATTR = "data-zotero-syllabus";
 
 type ManagedSubcollection = {
   parentId: number;
@@ -261,6 +263,60 @@ async function eraseManagedChild(child: Zotero.Collection): Promise<void> {
   }
 }
 
+function childNoteLooksLikeSyllabus(item: Zotero.Item): boolean {
+  try {
+    if (!item.isNote() || item.deleted) {
+      return false;
+    }
+  } catch {
+    return false;
+  }
+  try {
+    if (item.hasTag(SYLLABUS_NOTE_TAG)) {
+      return true;
+    }
+  } catch {
+    // Tags often aren't loaded on collection children.
+  }
+  try {
+    const html = item.getNote() || "";
+    return html.includes(SYLLABUS_NOTE_PRE_ATTR);
+  } catch {
+    return false;
+  }
+}
+
+function collectionHasSyllabusNote(collection: Zotero.Collection): boolean {
+  try {
+    for (const item of collection.getChildItems()) {
+      if (childNoteLooksLikeSyllabus(item)) {
+        return true;
+      }
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+async function eraseExtraChildren(
+  parent: Zotero.Collection,
+  usedKeys: Set<string>,
+): Promise<void> {
+  if (!collectionHasSyllabusNote(parent)) {
+    return;
+  }
+  for (const child of parent.getChildCollections()) {
+    if (child.deleted || usedKeys.has(child.key)) {
+      continue;
+    }
+    if (collectionHasSyllabusNote(child)) {
+      continue;
+    }
+    await eraseManagedChild(child);
+  }
+}
+
 async function ensureChildForClass(
   parent: Zotero.Collection,
   meta: StoredClassMetadata,
@@ -342,6 +398,12 @@ export async function ensureClassSubcollections(
       } catch (error) {
         ztoolkit.log("Error ensuring class subcollection:", classId, error);
       }
+    }
+
+    try {
+      await eraseExtraChildren(parent, usedKeys);
+    } catch (error) {
+      ztoolkit.log("Error removing extra class subcollections:", error);
     }
 
     return { ...next, classes };
