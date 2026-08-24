@@ -3,6 +3,7 @@ import { h, Fragment } from "preact";
 import {
   useState,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useCallback,
@@ -37,7 +38,6 @@ import {
   getReadStatusMetadata,
 } from "../zotero-reading-list/compat";
 import { useDebouncedEffect } from "../utils/react/useDebouncedEffect";
-import { useElementSize } from "../utils/react/useElementSize";
 import slugify from "slugify";
 import { SettingsPage } from "./SettingsPage";
 import { formatDate } from "date-fns";
@@ -65,12 +65,30 @@ import { TableOfContents } from "./TableOfContents";
 import { saveToFile } from "../utils/file";
 import { formatReadingDate } from "../utils/dates";
 import { useSyllabusClassGroups } from "./classGroups";
+import { ClassSubcollectionPage } from "./ClassReadingBlock";
+import { getClassSubcollectionContext } from "./syllabusNote";
+import { useSyllabusDocumentGeneration } from "./react-zotero-sync/collectionDocument";
 
 interface SyllabusPageProps {
   collectionId: number;
 }
 
 export function SyllabusPage({ collectionId }: SyllabusPageProps) {
+  useSyllabusDocumentGeneration();
+  const classContext = getClassSubcollectionContext(collectionId);
+  if (classContext) {
+    return (
+      <ClassSubcollectionPage
+        parentCollectionId={classContext.parent.id}
+        classCollectionId={collectionId}
+        classNumber={classContext.classNumber}
+      />
+    );
+  }
+  return <CollectionSyllabusPage collectionId={collectionId} />;
+}
+
+function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   // Sync with external Zotero stores using hooks
   const [title, setTitle] = useZoteroCollectionTitle(collectionId);
   const [
@@ -2053,8 +2071,7 @@ function ClassGroupComponent({
   const classIndex =
     classNumber == null ? -1 : classNumbers.indexOf(classNumber);
   const canMoveUp = classIndex > 0;
-  const canMoveDown =
-    classIndex >= 0 && classIndex < classNumbers.length - 1;
+  const canMoveDown = classIndex >= 0 && classIndex < classNumbers.length - 1;
 
   const handleMoveClass = async (direction: "up" | "down") => {
     if (classNumber == null) {
@@ -2418,6 +2435,18 @@ function ReadingDateInput({
   );
 }
 
+function supportsCssFieldSizing(): boolean {
+  try {
+    return (
+      typeof CSS !== "undefined" &&
+      typeof CSS.supports === "function" &&
+      CSS.supports("field-sizing", "content")
+    );
+  } catch {
+    return false;
+  }
+}
+
 function TextInput({
   initialValue,
   onSave,
@@ -2441,19 +2470,22 @@ function TextInput({
   containerClassName?: string;
 } & JSX.HTMLAttributes<HTMLInputElement | HTMLTextAreaElement>) {
   const [value, setValue] = useState(initialValue);
+  const focusedRef = useRef(false);
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
-  function save(value: string) {
-    onSave(emptyBehavior === "reset" ? value || initialValue : value);
+  function save(next: string) {
+    onSave(emptyBehavior === "reset" ? next || initialValue : next);
   }
 
   useEffect(() => {
-    // This means the global value has changed, so we need to update the local value
+    if (focusedRef.current) {
+      return;
+    }
     setValue(initialValue);
   }, [initialValue]);
 
   useDebouncedEffect(
     () => {
-      // Don't update the global API too often
       if (value !== initialValue) {
         save(value);
       }
@@ -2462,27 +2494,38 @@ function TextInput({
     500,
   );
 
-  const [setSizeRef, size] = useElementSize();
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
-
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (
-      fieldSizing === "content" &&
-      inputRef.current &&
-      elementType === "textarea"
+      fieldSizing !== "content" ||
+      elementType !== "textarea" ||
+      !inputRef.current
     ) {
-      if (value) {
-        // Set it to 1px so we can measure the scrollheight
-        inputRef.current.style.height = "1px";
-        const contentHeight = inputRef.current.scrollHeight;
-        inputRef.current.style.height = contentHeight + "px";
-        inputRef.current.removeAttribute("rows");
-      } else {
-        inputRef.current.style.height = "auto";
-        inputRef.current.setAttribute("rows", "1");
-      }
+      return;
     }
-  }, [value, fieldSizing, size, elementType]);
+    const el = inputRef.current;
+    if (supportsCssFieldSizing()) {
+      el.style.height = "";
+      el.removeAttribute("rows");
+      return;
+    }
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    if (value) {
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight}px`;
+      el.removeAttribute("rows");
+    } else {
+      el.style.height = "auto";
+      el.setAttribute("rows", "1");
+    }
+    if (
+      el.ownerDocument.activeElement === el &&
+      start != null &&
+      end != null
+    ) {
+      el.setSelectionRange(start, end);
+    }
+  }, [value, fieldSizing, elementType]);
 
   // Hide the entire component when readOnly and no value
   if (readOnly && !value && !initialValue) {
@@ -2492,6 +2535,7 @@ function TextInput({
   const el = (
     <>
       {h(elementType, {
+        ...elementProps,
         ref: inputRef,
         type: "text",
         value,
@@ -2501,7 +2545,17 @@ function TextInput({
           ? undefined
           : (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) =>
               setValue((e.target as HTMLInputElement).value),
-        onBlur: readOnly ? undefined : () => save(value),
+        onFocus: readOnly
+          ? undefined
+          : () => {
+              focusedRef.current = true;
+            },
+        onBlur: readOnly
+          ? undefined
+          : () => {
+              focusedRef.current = false;
+              save(value);
+            },
         onKeyDown: readOnly
           ? undefined
           : (
@@ -2509,7 +2563,13 @@ function TextInput({
                 HTMLInputElement | HTMLTextAreaElement
               >,
             ) => {
-              if (e.key === "Escape" || e.key === "Enter") {
+              if (e.key === "Escape") {
+                e.preventDefault();
+                e.currentTarget.blur();
+                save(value);
+                return;
+              }
+              if (e.key === "Enter" && elementType !== "textarea") {
                 e.preventDefault();
                 e.currentTarget.blur();
                 save(value);
@@ -2538,7 +2598,6 @@ function TextInput({
         style: {
           "--color-focus-border": "var(--color-accent-blue)",
         },
-        ...elementProps,
       })}
       {/* Print-only div that shows the value */}
       <div
@@ -2556,11 +2615,7 @@ function TextInput({
     return el;
   }
 
-  return (
-    <div ref={setSizeRef} className={twMerge("w-full", containerClassName)}>
-      {el}
-    </div>
-  );
+  return <div className={twMerge("w-full", containerClassName)}>{el}</div>;
 }
 
 export function SyllabusItemCard({
@@ -3708,9 +3763,7 @@ function LinksSection({
           {rows.map((row) => {
             const isDraftRow = "draft" in row;
             const index = isDraftRow ? null : row.index;
-            const isEditing = draft
-              ? draft.index === index
-              : false;
+            const isEditing = draft ? draft.index === index : false;
 
             return (
               <div

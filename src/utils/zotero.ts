@@ -39,6 +39,21 @@ export function getSelectedCollection() {
   return collection || null;
 }
 
+export function selectZoteroCollection(collectionId: number): boolean {
+  try {
+    const pane = ztoolkit.getGlobal("ZoteroPane");
+    const collection = getCachedCollectionById(collectionId);
+    if (!collection || !pane?.collectionsView) {
+      return false;
+    }
+    pane.collectionsView.selectByID(collection.treeViewID);
+    return true;
+  } catch (error) {
+    ztoolkit.log("Error selecting collection:", error);
+    return false;
+  }
+}
+
 export function getAllCollections(recursive = true) {
   const libraries = Array.from(Zotero.Libraries.getAll());
   const collections: Zotero.Collection[] = [];

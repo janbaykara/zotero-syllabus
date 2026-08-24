@@ -342,6 +342,8 @@ export const SettingsClassMetadataSchema = z.object({
 
 export const StoredClassMetadataSchema = SettingsClassMetadataSchema.extend({
   number: z.number().int().min(1),
+  /** Zotero collection.key of the one-way class subcollection. */
+  subcollectionKey: z.string().optional(),
 });
 
 /**
@@ -417,14 +419,13 @@ export const COLLECTION_SYLLABUS_DOCUMENT_VERSION = 2 as const;
  * Collection syllabus document stored in a top-level collection note.
  * Combines syllabus metadata with per-item assignments keyed by item.key.
  */
-const CollectionSyllabusDocumentV1Schema = SettingsSyllabusMetadataSchema.extend(
-  {
+const CollectionSyllabusDocumentV1Schema =
+  SettingsSyllabusMetadataSchema.extend({
     version: z.literal(1).default(1),
     items: z
       .record(z.string(), z.array(ItemSyllabusAssignmentEntity.latestSchema))
       .default(() => ({})),
-  },
-);
+  });
 
 /**
  * v2: classes are keyed by stable classId; each class stores its display number.
@@ -432,9 +433,9 @@ const CollectionSyllabusDocumentV1Schema = SettingsSyllabusMetadataSchema.extend
 const CollectionSyllabusDocumentV2Schema = SettingsSyllabusMetadataSchema.omit({
   classes: true,
 }).extend({
-  version: z.literal(COLLECTION_SYLLABUS_DOCUMENT_VERSION).default(
-    COLLECTION_SYLLABUS_DOCUMENT_VERSION,
-  ),
+  version: z
+    .literal(COLLECTION_SYLLABUS_DOCUMENT_VERSION)
+    .default(COLLECTION_SYLLABUS_DOCUMENT_VERSION),
   classes: transformClasses(StoredClassMetadataSchema),
   items: z
     .record(z.string(), z.array(ItemSyllabusAssignmentEntity.latestSchema))
@@ -456,7 +457,11 @@ function getCollectionSyllabusDocumentVersion(data: unknown): number | null {
     return null;
   }
   const version = (data as Record<string, unknown>).version;
-  if (typeof version === "number" && Number.isInteger(version) && version >= 1) {
+  if (
+    typeof version === "number" &&
+    Number.isInteger(version) &&
+    version >= 1
+  ) {
     return version;
   }
   // Unversioned JSON is the original number-keyed document.
@@ -494,7 +499,9 @@ function migrateClassesToIds(
       if (!classId) {
         classId = generateClassId();
         numberToId.set(classNumber, classId);
-        classes[classId] = StoredClassMetadataSchema.parse({ number: classNumber });
+        classes[classId] = StoredClassMetadataSchema.parse({
+          number: classNumber,
+        });
       }
       return { ...rest, classId };
     });
@@ -730,7 +737,11 @@ export function classesToNumberKeyed(
     if (!meta?.number) {
       continue;
     }
-    const { number: _number, ...rest } = meta;
+    const {
+      number: _number,
+      subcollectionKey: _subcollectionKey,
+      ...rest
+    } = meta;
     byNumber[String(meta.number)] = rest;
   }
   return Object.keys(byNumber).length > 0 ? byNumber : {};
@@ -740,19 +751,29 @@ export function mergeNumberKeyedClasses(
   existing: CollectionSyllabusDocument["classes"] | undefined,
   incoming: SettingsSyllabusMetadata["classes"] | undefined,
 ): NonNullable<CollectionSyllabusDocument["classes"]> {
-  const next: NonNullable<CollectionSyllabusDocument["classes"]> = {};
+  const next: NonNullable<CollectionSyllabusDocument["classes"]> = {
+    ...(existing || {}),
+  };
   const usedIds = new Set<string>();
   for (const [key, meta] of Object.entries(incoming || {})) {
     const number = parseInt(key, 10);
     if (isNaN(number) || !meta) {
       continue;
     }
-    let classId = findClassIdByNumber(existing, number);
+    let classId = findClassIdByNumber(next, number);
     if (!classId || usedIds.has(classId)) {
       classId = generateClassId();
     }
     usedIds.add(classId);
-    next[classId] = StoredClassMetadataSchema.parse({ ...meta, number });
+    const existingMeta = next[classId];
+    next[classId] = StoredClassMetadataSchema.parse({
+      ...existingMeta,
+      ...meta,
+      number,
+      ...(existingMeta?.subcollectionKey
+        ? { subcollectionKey: existingMeta.subcollectionKey }
+        : {}),
+    });
   }
   return next;
 }

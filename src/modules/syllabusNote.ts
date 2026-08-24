@@ -31,6 +31,19 @@ import {
 import { getAllCollections } from "../utils/zotero";
 import { formatReadingDate } from "../utils/dates";
 import { generateBibliographicReference } from "../utils/cite";
+import {
+  classSubcollectionKeysChanged,
+  classSubcollectionName,
+  classSubcollectionNameBase,
+  clearManagedSubcollections,
+  clearStaleSubcollectionKey,
+  enqueueClassFolderEnsure,
+  enqueueClassSubcollectionItemSync,
+  ensureClassSubcollections,
+  isClassFolderSyncHeld,
+  parentCollectionForManagedId,
+  rememberManagedSubcollections,
+} from "./classSubcollections";
 
 type CollectionIdentifier =
   | number
@@ -265,6 +278,10 @@ function escapeHtml(text: string): string {
 
 function unescapeHtml(text: string): string {
   return text
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#160;/g, " ")
+    .replace(/&#x0*a0;/gi, " ")
+    .replace(/\u00a0/g, " ")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
@@ -492,10 +509,7 @@ function classHeading(
   number: number,
   title: string | null | undefined,
 ): string {
-  const noun = (nomenclature || "class").trim() || "class";
-  const label = `${noun.charAt(0).toUpperCase()}${noun.slice(1)} ${number}`;
-  const classTitle = (title || "").trim();
-  return classTitle ? `${label}: ${classTitle}` : label;
+  return classSubcollectionName(nomenclature, number, title);
 }
 
 function pluginJsonBlock(document: CollectionSyllabusDocument): string {
@@ -795,6 +809,24 @@ function isEmptyCollectionDocument(
   return snapshotOf(document) === snapshotOf(emptyCollectionDocument());
 }
 
+/** Prefer the note when it parses; keep in-flight cache fields the note lacks. */
+function documentForWrite(
+  fromNote: CollectionSyllabusDocument | null,
+  cached: CollectionSyllabusDocument | undefined,
+): CollectionSyllabusDocument {
+  const cachedDoc =
+    cached && !isEmptyCollectionDocument(cached) ? cached : null;
+  if (fromNote && cachedDoc) {
+    return {
+      ...fromNote,
+      ...cachedDoc,
+      classes: { ...(fromNote.classes || {}), ...(cachedDoc.classes || {}) },
+      items: { ...(fromNote.items || {}), ...(cachedDoc.items || {}) },
+    };
+  }
+  return fromNote || cachedDoc || emptyCollectionDocument();
+}
+
 function collectionNoteCandidates(
   collection: Zotero.Collection,
   includeDeleted = false,
@@ -984,6 +1016,80 @@ function resolveCollection(
   }
 }
 
+/** Class folders are not syllabi; reads and writes go to the parent note. */
+function resolveSyllabusRoot(collection: Zotero.Collection): Zotero.Collection {
+  const managedParent = parentCollectionForManagedId(collection.id);
+  if (managedParent) {
+    return managedParent;
+  }
+  if (!collection.parentID) {
+    return collection;
+  }
+  const parent =
+    getCachedCollectionById(collection.parentID) ||
+    Zotero.Collections.get(collection.parentID);
+  if (!parent) {
+    return collection;
+  }
+  const parentEntry = documentCache.get(collectionRefFromCollection(parent));
+  if (parentEntry?.noteId) {
+    return parent;
+  }
+  const isManagedChild = Object.values(
+    parentEntry?.document.classes || {},
+  ).some((meta) => meta?.subcollectionKey === collection.key);
+  return isManagedChild ? parent : collection;
+}
+
+function resolveSyllabusCollection(
+  collectionId: CollectionIdentifier | Zotero.Collection,
+): Zotero.Collection | null {
+  const collection = resolveCollection(collectionId);
+  return collection ? resolveSyllabusRoot(collection) : null;
+}
+
+export type ClassSubcollectionContext = {
+  parent: Zotero.Collection;
+  classId: string | null;
+  classNumber: number | null;
+};
+
+/** If this collection is a folder under a syllabus, return the parent (and class when known). */
+export function getClassSubcollectionContext(
+  collectionId: CollectionIdentifier | Zotero.Collection,
+): ClassSubcollectionContext | null {
+  const collection = resolveCollection(collectionId);
+  if (!collection) {
+    return null;
+  }
+  const parent = resolveSyllabusRoot(collection);
+  if (parent.id === collection.id) {
+    return null;
+  }
+  const document = loadDocumentForCollection(parent).document;
+  const classes = document.classes || {};
+  for (const [classId, meta] of Object.entries(classes)) {
+    if (!meta?.number) {
+      continue;
+    }
+    if (meta.subcollectionKey === collection.key) {
+      return { parent, classId, classNumber: meta.number };
+    }
+  }
+  for (const [classId, meta] of Object.entries(classes)) {
+    if (!meta?.number) {
+      continue;
+    }
+    if (
+      classSubcollectionName(document.nomenclature, meta.number, meta.title) ===
+      classSubcollectionNameBase(collection.name)
+    ) {
+      return { parent, classId, classNumber: meta.number };
+    }
+  }
+  return { parent, classId: null, classNumber: null };
+}
+
 function parseDocumentFromNote(
   note: Zotero.Item,
   fallback?: CollectionSyllabusDocument,
@@ -1064,7 +1170,7 @@ function loadDocumentForCollection(
 export function getCollectionDocument(
   collectionId: CollectionIdentifier | Zotero.Collection,
 ): CollectionSyllabusDocument {
-  const collection = resolveCollection(collectionId);
+  const collection = resolveSyllabusCollection(collectionId);
   if (!collection) {
     return emptyCollectionDocument();
   }
@@ -1074,7 +1180,7 @@ export function getCollectionDocument(
 export function getCollectionDocumentSnapshot(
   collectionId: CollectionIdentifier | Zotero.Collection,
 ): string {
-  const collection = resolveCollection(collectionId);
+  const collection = resolveSyllabusCollection(collectionId);
   if (!collection) {
     return snapshotOf(emptyCollectionDocument());
   }
@@ -1084,7 +1190,7 @@ export function getCollectionDocumentSnapshot(
 export function getSyllabusNoteId(
   collectionId: CollectionIdentifier | Zotero.Collection,
 ): number | null {
-  const collection = resolveCollection(collectionId);
+  const collection = resolveSyllabusCollection(collectionId);
   if (!collection) {
     return null;
   }
@@ -1160,11 +1266,38 @@ async function rebuildDocumentIndex(): Promise<void> {
   indexBuilt = true;
   documentGeneration++;
   notifyDocumentListeners();
+  const patchedIds = new Set(notesToPatch.map((collection) => collection.id));
   for (const collection of notesToPatch) {
     try {
       await mutateCollectionDocument(collection, (document) => document);
     } catch (error) {
       ztoolkit.log("Error patching syllabus note format:", error);
+    }
+  }
+  for (const collection of getAllCollections()) {
+    const entry = documentCache.get(collectionRefFromCollection(collection));
+    if (
+      !entry?.noteId ||
+      !Object.keys(entry.document.classes || {}).length ||
+      patchedIds.has(collection.id)
+    ) {
+      continue;
+    }
+    try {
+      rememberManagedSubcollections(collection, entry.document);
+      const ensured = await enqueueClassFolderEnsure(collection, () =>
+        ensureClassSubcollections(collection, entry.document, entry.document),
+      );
+      if (!ensured) {
+        continue;
+      }
+      if (classSubcollectionKeysChanged(entry.document, ensured)) {
+        await mutateCollectionDocument(collection, () => ensured);
+      } else {
+        await enqueueClassSubcollectionItemSync(collection, ensured);
+      }
+    } catch (error) {
+      ztoolkit.log("Error syncing class subcollections:", error);
     }
   }
 }
@@ -1227,7 +1360,7 @@ export async function mutateCollectionDocument(
   collectionId: CollectionIdentifier | Zotero.Collection,
   mutator: (document: CollectionSyllabusDocument) => CollectionSyllabusDocument,
 ): Promise<CollectionSyllabusDocument> {
-  const collection = resolveCollection(collectionId);
+  const collection = resolveSyllabusCollection(collectionId);
   if (!collection) {
     ztoolkit.log("Cannot save syllabus: collection not found", collectionId);
     return emptyCollectionDocument();
@@ -1256,12 +1389,7 @@ export async function mutateCollectionDocument(
           ztoolkit.log("Error reading existing syllabus note:", error);
         }
       }
-      const current =
-        (cached?.document && !isEmptyCollectionDocument(cached.document)
-          ? cached.document
-          : null) ||
-        fromNote ||
-        emptyCollectionDocument();
+      const current = documentForWrite(fromNote, cached?.document);
       const mutated = persistDocument(mutator(cloneDocument(current)));
       const nextResult = CollectionSyllabusDocumentSchema.safeParse(mutated);
       if (!nextResult.success) {
@@ -1270,7 +1398,19 @@ export async function mutateCollectionDocument(
           nextResult.error,
         );
       }
-      const next = nextResult.success ? nextResult.data : mutated;
+      let next = nextResult.success ? nextResult.data : mutated;
+      setCacheEntry(ref, note.id || null, (note.version || 0) + 1, next);
+      try {
+        const ensured = await enqueueClassFolderEnsure(collection, () =>
+          ensureClassSubcollections(collection, next, current),
+        );
+        if (ensured) {
+          next = ensured;
+        }
+        setCacheEntry(ref, note.id || null, (note.version || 0) + 1, next);
+      } catch (error) {
+        ztoolkit.log("Error ensuring class subcollections:", error);
+      }
       const html = await noteHtmlForDocument(next, collection);
       const fallbackHtml = serializeSyllabusNoteFallback(next);
       setCacheEntry(ref, note.id || null, (note.version || 0) + 1, next);
@@ -1281,6 +1421,11 @@ export async function mutateCollectionDocument(
         fallbackHtml,
       );
       setCacheEntry(ref, saved.id, saved.version, next);
+      try {
+        await enqueueClassSubcollectionItemSync(collection, next);
+      } catch (error) {
+        ztoolkit.log("Error syncing class subcollection items:", error);
+      }
       return next;
     } catch (error) {
       logSyllabusError("Error saving syllabus note:", error);
@@ -1416,6 +1561,9 @@ export async function absorbSyllabusExtraFromItems(
       if (!collection) {
         continue;
       }
+      if (resolveSyllabusRoot(collection).id !== collection.id) {
+        continue;
+      }
       const assignments = pickAssignmentsFromExtra(extraData, collection);
       if (!assignments) {
         continue;
@@ -1449,6 +1597,76 @@ function parseCollectionItemId(id: number | string): number | null {
   const parts = String(id).split("-");
   const itemId = parseInt(parts[parts.length - 1], 10);
   return Number.isNaN(itemId) ? null : itemId;
+}
+
+function parseCollectionItemCollectionId(id: number | string): number | null {
+  if (typeof id === "number") {
+    return null;
+  }
+  const dash = String(id).indexOf("-");
+  if (dash <= 0) {
+    return null;
+  }
+  const collectionId = parseInt(String(id).slice(0, dash), 10);
+  return Number.isNaN(collectionId) ? null : collectionId;
+}
+
+function restoreManagedSubcollectionItems(collectionId: number): void {
+  const parent = parentCollectionForManagedId(collectionId);
+  if (!parent) {
+    return;
+  }
+  const document = documentCache.get(
+    collectionRefFromCollection(parent),
+  )?.document;
+  if (!document) {
+    return;
+  }
+  enqueueClassSubcollectionItemSync(parent, document);
+}
+
+function handleManagedCollectionChange(
+  event: string,
+  ids: (number | string)[],
+): void {
+  for (const id of ids) {
+    const collectionId = typeof id === "number" ? id : parseInt(String(id), 10);
+    if (Number.isNaN(collectionId)) {
+      continue;
+    }
+    if (event === "delete" || event === "trash") {
+      const parent = parentCollectionForManagedId(collectionId);
+      if (!parent) {
+        continue;
+      }
+      mutateCollectionDocument(parent, (document) =>
+        clearStaleSubcollectionKey(document, collectionId),
+      ).catch((error) => {
+        ztoolkit.log("Error recreating class subcollection:", error);
+      });
+      continue;
+    }
+    if (event !== "modify") {
+      continue;
+    }
+    const parent = parentCollectionForManagedId(collectionId);
+    if (!parent) {
+      continue;
+    }
+    if (isClassFolderSyncHeld(parent.id)) {
+      continue;
+    }
+    const parentRef = collectionRefFromCollection(parent);
+    enqueueClassFolderEnsure(parent, async () => {
+      const cached = documentCache.get(parentRef)?.document;
+      if (!cached) {
+        return;
+      }
+      return ensureClassSubcollections(parent, cached, cached);
+    }).catch((error) => {
+      ztoolkit.log("Error restoring class subcollection name:", error);
+    });
+  }
 }
 
 function handleNoteChange(item: Zotero.Item, event: string): void {
@@ -1516,6 +1734,9 @@ export function initializeSyllabusNotes(): void {
   // Add Class / Create assignment are not queued behind a dead lock.
   writeQueues.clear();
   if (notifierID) {
+    indexReady = rebuildDocumentIndex().catch((error) => {
+      ztoolkit.log("Error rebuilding syllabus note index:", error);
+    });
     return;
   }
 
@@ -1583,6 +1804,17 @@ export function initializeSyllabusNotes(): void {
         }
         documentGeneration++;
         notifyDocumentListeners();
+        for (const id of ids) {
+          const collectionId = parseCollectionItemCollectionId(id);
+          if (collectionId == null) {
+            continue;
+          }
+          restoreManagedSubcollectionItems(collectionId);
+        }
+      }
+
+      if (type === "collection") {
+        handleManagedCollectionChange(event, ids);
       }
     },
   };
@@ -1590,6 +1822,7 @@ export function initializeSyllabusNotes(): void {
   notifierID = Zotero.Notifier.registerObserver(observer, [
     "item",
     "collection-item",
+    "collection",
   ]);
   indexReady = rebuildDocumentIndex().catch((error) => {
     ztoolkit.log("Error rebuilding syllabus note index:", error);
@@ -1609,6 +1842,7 @@ export function shutdownSyllabusNotes(): void {
   collectionRefByNoteId.clear();
   writeQueues.clear();
   documentListeners.clear();
+  clearManagedSubcollections();
   indexBuilt = false;
   documentGeneration = 0;
   indexReady = Promise.resolve();
@@ -1617,7 +1851,7 @@ export function shutdownSyllabusNotes(): void {
 export function invalidateCollectionDocument(
   collectionId: CollectionIdentifier | Zotero.Collection,
 ): void {
-  const collection = resolveCollection(collectionId);
+  const collection = resolveSyllabusCollection(collectionId);
   if (!collection) {
     return;
   }

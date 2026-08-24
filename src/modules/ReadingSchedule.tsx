@@ -3,7 +3,12 @@ import { h, Fragment } from "preact";
 import { useMemo } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
 import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
-import { SyllabusItemCard } from "./SyllabusPage";
+import {
+  ClassReadingBlock,
+  selectCollectionInLibrary,
+  selectItemInCollection,
+  type ClassReading,
+} from "./ClassReadingBlock";
 import {
   addWeeks,
   differenceInDays,
@@ -16,8 +21,6 @@ import {
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import { useSyllabi } from "./react-zotero-sync/useSyllabi";
 import { getPref } from "../utils/prefs";
-import { TabManager } from "../utils/tabManager";
-import { getCachedCollectionById } from "../utils/cache";
 import { isSameWeek } from "date-fns/fp";
 import {
   formatReadingDate,
@@ -132,8 +135,7 @@ export function ReadingSchedule() {
     // Sort dates within each week
     for (const [weekStartKey, weekData] of result) {
       const sortedDates = Array.from(weekData.keys()).sort(
-        (a, b) =>
-          parseReadingDate(a).getTime() - parseReadingDate(b).getTime(),
+        (a, b) => parseReadingDate(a).getTime() - parseReadingDate(b).getTime(),
       );
       const sortedWeekData = new Map<string, ClassReading[]>();
       for (const date of sortedDates) {
@@ -155,45 +157,11 @@ export function ReadingSchedule() {
   }, [readingsByWeek]);
 
   const handleCollectionClick = (collectionId: number) => {
-    try {
-      const ZoteroPane = ztoolkit.getGlobal("ZoteroPane");
-      const collection = getCachedCollectionById(collectionId);
-      if (!collection) return;
-
-      const collectionsView = ZoteroPane.collectionsView;
-      if (collectionsView) {
-        collectionsView.selectByID(collection.treeViewID);
-        // switch to the collection tab
-        TabManager.selectLibraryTab();
-      }
-    } catch (err) {
-      ztoolkit.log("Error selecting collection:", err);
-    }
+    selectCollectionInLibrary(collectionId);
   };
 
   const handleItemClick = (item: Zotero.Item, collectionId: number) => {
-    try {
-      const ZoteroPane = ztoolkit.getGlobal("ZoteroPane");
-      const collection = getCachedCollectionById(collectionId);
-
-      if (collection) {
-        const collectionsView = ZoteroPane.collectionsView;
-        if (collectionsView) {
-          collectionsView.selectByID(collection.treeViewID);
-          // Do not try to view deleted items in a collection.
-          // They do not appear outside of trash, and selecting a deleted item
-          // will re-open trash in collectionTree.
-          if (!item.deleted) {
-            ZoteroPane.selectItem(item.id);
-          }
-        }
-      } else {
-        // Fallback: just select the item (it will show in its collection context)
-        ZoteroPane.selectItem(item.id);
-      }
-    } catch (err) {
-      ztoolkit.log("Error selecting item in collection:", err);
-    }
+    selectItemInCollection(item, collectionId);
   };
 
   if (sortedWeeks.length === 0) {
@@ -305,162 +273,24 @@ export function ReadingSchedule() {
                           </div>
 
                           <div className="space-y-8">
-                            {sortedClassReadings.map((classReading) => {
-                              const { singularCapitalized, singular } =
-                                SyllabusManager.getNomenclatureFormatted(
-                                  classReading.collectionId,
-                                );
-
-                              const classStatus =
-                                SyllabusManager.getClassStatus(
-                                  classReading.collectionId,
-                                  classReading.classNumber,
-                                );
-
-                              const handleClassStatusToggle = async () => {
-                                try {
-                                  const newStatus =
-                                    classStatus === "done" ? null : "done";
-                                  await SyllabusManager.setClassStatus(
+                            {sortedClassReadings.map((classReading) => (
+                              <ClassReadingBlock
+                                key={`${classReading.collectionId}-${classReading.classNumber}`}
+                                classReading={classReading}
+                                compactMode={compactMode}
+                                onCollectionClick={() =>
+                                  handleCollectionClick(
                                     classReading.collectionId,
-                                    classReading.classNumber,
-                                    newStatus,
-                                    "page",
-                                  );
-                                } catch (err) {
-                                  ztoolkit.log(
-                                    "Error toggling class status:",
-                                    err,
-                                  );
+                                  )
                                 }
-                              };
-
-                              return (
-                                <div
-                                  key={`${classReading.collectionId}-${classReading.classNumber}`}
-                                  className={twMerge(
-                                    "relative",
-                                    classStatus === "done" ? "opacity-40" : "",
-                                  )}
-                                >
-                                  <div className="flex flex-col gap-2 mb-2">
-                                    <div>
-                                      <input
-                                        type="checkbox"
-                                        checked={classStatus === "done"}
-                                        onChange={handleClassStatusToggle}
-                                        className={twMerge(
-                                          "absolute right-full mr-1 w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden accent-accent-green!",
-                                          isZotero8OrLater()
-                                            ? "md:mr-2!"
-                                            : "mr-2!",
-                                        )}
-                                        title={
-                                          classStatus === "done"
-                                            ? "Mark as not done"
-                                            : "Mark as done"
-                                        }
-                                        aria-label={
-                                          classStatus === "done"
-                                            ? "Mark as not done"
-                                            : "Mark as done"
-                                        }
-                                      />
-                                      <div
-                                        className={twMerge(
-                                          "text-xl flex-1",
-                                          classStatus === "done"
-                                            ? "line-through"
-                                            : "",
-                                          "hover:cursor-pointer hover:bg-quinary active:bg-quarternary rounded-md px-1 -mx-1 inline-block",
-                                        )}
-                                        onClick={() =>
-                                          handleCollectionClick(
-                                            classReading.collectionId,
-                                          )
-                                        }
-                                      >
-                                        {classReading.classTitle ? (
-                                          <>
-                                            <span className="font-semibold">
-                                              {classReading.classTitle}
-                                            </span>
-                                            <span className="text-secondary">
-                                              ,{" "}
-                                            </span>
-                                          </>
-                                        ) : null}
-                                        <span className="text-secondary">
-                                          {classReading.classTitle
-                                            ? singular
-                                            : singularCapitalized}{" "}
-                                          {classReading.classNumber}
-                                        </span>
-                                        <span className="text-secondary">
-                                          {" "}
-                                          of{" "}
-                                        </span>
-                                        <span
-                                          className={twMerge("font-semibold")}
-                                        >
-                                          {classReading.collectionName}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    {classReading.classDescription && (
-                                      <div className="text-base mb-1">
-                                        {classReading.classDescription}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div
-                                    className={twMerge(
-                                      "space-y-2",
-                                      compactMode ? "space-y-2" : "space-y-4",
-                                    )}
-                                  >
-                                    {classReading.items.map(
-                                      ({ item, assignment }) => {
-                                        if (!assignment.id) return null;
-
-                                        const priority =
-                                          assignment.priority || "";
-                                        const uniqueKey = `${item.id}-assignment-${assignment.id}`;
-
-                                        return (
-                                          <SyllabusItemCard
-                                            key={uniqueKey}
-                                            item={item}
-                                            collectionId={
-                                              classReading.collectionId
-                                            }
-                                            classNumber={
-                                              classReading.classNumber
-                                            }
-                                            assignment={assignment}
-                                            slim={
-                                              compactMode ||
-                                              !priority ||
-                                              priority === "optional"
-                                            }
-                                            compactMode={compactMode}
-                                            isLocked={true}
-                                            onClick={(item) =>
-                                              handleItemClick(
-                                                item,
-                                                classReading.collectionId,
-                                              )
-                                            }
-                                            readerMode
-                                            className="cursor-pointer"
-                                          />
-                                        );
-                                      },
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
+                                onItemClick={(item) =>
+                                  handleItemClick(
+                                    item,
+                                    classReading.collectionId,
+                                  )
+                                }
+                              />
+                            ))}
                           </div>
                         </div>
                       );
@@ -474,16 +304,6 @@ export function ReadingSchedule() {
       </div>
     </div>
   );
-}
-
-interface ClassReading {
-  collectionId: number;
-  collectionName: string;
-  classNumber: number;
-  classTitle: string;
-  classDescription: string;
-  readingDate: string; // ISO date string
-  items: Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }>;
 }
 
 function WeekHeader({ weekStartDate }: { weekStartDate: Date }) {

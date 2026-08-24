@@ -57,6 +57,7 @@ import {
   setCollectionDocumentMetadata,
   setItemAssignmentsInDocument,
   shutdownSyllabusNotes,
+  getClassSubcollectionContext,
 } from "./syllabusNote";
 import { migrateLegacyCollectionMetadataPrefs } from "./migratePrefsToNotes";
 
@@ -550,7 +551,17 @@ export class SyllabusManager {
     const viewModes =
       getCachedPref(prefKey, z.record(z.string(), z.unknown())) || {};
 
-    return coerceCollectionViewMode(viewModes[collectionId]);
+    const stored = viewModes[collectionId];
+    if (stored !== undefined && stored !== null) {
+      return coerceCollectionViewMode(stored);
+    }
+    const classContext = getClassSubcollectionContext(selectedCollection);
+    if (classContext) {
+      return coerceCollectionViewMode(
+        viewModes[String(classContext.parent.id)],
+      );
+    }
+    return coerceCollectionViewMode(stored);
   }
 
   static setCollectionViewMode(mode: CollectionViewMode): void {
