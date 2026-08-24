@@ -420,7 +420,7 @@ function gatherFurtherReadings(
 
 function priorityMeta(
   document: CollectionSyllabusDocument,
-  priorityId: string | undefined,
+  priorityId: string | null | undefined,
 ) {
   if (!priorityId) {
     return undefined;

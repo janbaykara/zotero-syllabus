@@ -620,7 +620,7 @@ export class SyllabusManager {
       doc.querySelectorAll(
         "#syllabus-view-toggle, #syllabus-view-mode-group, .syllabus-view-mode-button, #syllabus-reading-schedule-button, #syllabus-collection-reading-schedule-button",
       ),
-    )) {
+    ) as Element[]) {
       el.remove();
     }
 
@@ -752,9 +752,9 @@ export class SyllabusManager {
     const w = Zotero.getMainWindow();
     const doc = w.document;
     const mode = SyllabusManager.getCollectionViewMode();
-    const buttons = doc.querySelectorAll(
-      ".syllabus-view-mode-button",
-    ) as NodeListOf<XULButtonElement>;
+    const buttons = Array.from(
+      doc.querySelectorAll(".syllabus-view-mode-button"),
+    ) as XULButtonElement[];
 
     for (const button of buttons) {
       const buttonMode = button.getAttribute("data-view-mode");
