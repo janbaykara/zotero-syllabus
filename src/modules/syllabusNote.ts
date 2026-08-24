@@ -57,6 +57,7 @@ const documentListeners = new Set<() => void>();
 let indexBuilt = false;
 let notifierID: string | null = null;
 let documentGeneration = 0;
+let indexReady: Promise<void> = Promise.resolve();
 
 export function subscribeToSyllabusDocumentChanges(
   listener: () => void,
@@ -116,10 +117,7 @@ export function buildItemIndex(
 ): NonNullable<CollectionSyllabusDocument["itemIndex"]> {
   const index: NonNullable<CollectionSyllabusDocument["itemIndex"]> = {};
   for (const itemKey of Object.keys(document.items || {})) {
-    const item = Zotero.Items.getByLibraryAndKey(
-      collection.libraryID,
-      itemKey,
-    );
+    const item = Zotero.Items.getByLibraryAndKey(collection.libraryID, itemKey);
     if (!item || !item.isRegularItem()) {
       continue;
     }
@@ -437,12 +435,8 @@ export function isSyllabusNoteFile(contents: string): boolean {
   return contents.includes(`${SYLLABUS_NOTE_PRE_ATTR}=`);
 }
 
-export function getSyllabusNoteFormatVersion(
-  html: string,
-): number | null {
-  const pre = html.match(
-    /<pre[^>]*\bdata-zotero-syllabus(?:="[^"]*")?[^>]*>/i,
-  );
+export function getSyllabusNoteFormatVersion(html: string): number | null {
+  const pre = html.match(/<pre[^>]*\bdata-zotero-syllabus(?:="[^"]*")?[^>]*>/i);
   if (!pre) {
     return html.includes(`${SYLLABUS_NOTE_PRE_ATTR}=`) ? 1 : null;
   }
@@ -635,7 +629,10 @@ function looksLikeSyllabusNote(item: Zotero.Item): boolean {
     }
     try {
       const title = item.getNoteTitle() || "";
-      if (title === SYLLABUS_NOTE_TITLE || title.startsWith(SYLLABUS_NOTE_TITLE)) {
+      if (
+        title === SYLLABUS_NOTE_TITLE ||
+        title.startsWith(SYLLABUS_NOTE_TITLE)
+      ) {
         return true;
       }
     } catch {
@@ -659,6 +656,22 @@ function findSyllabusNoteUncached(
   }
   matches.sort((a, b) => a.id - b.id);
   return matches[0];
+}
+
+/** Re-read the collection note from Zotero; does not trust the in-memory cache. */
+export function peekPersistedSyllabusDocument(
+  collection: Zotero.Collection,
+): CollectionSyllabusDocument | null {
+  const note = findSyllabusNoteUncached(collection);
+  if (!note) {
+    return null;
+  }
+  try {
+    return parseSyllabusNote(note.getNote());
+  } catch (error) {
+    ztoolkit.log("Error peeking persisted syllabus note:", error);
+    return null;
+  }
 }
 
 function serializeSyllabusNoteFallback(
@@ -777,7 +790,9 @@ function parseDocumentFromNote(
   fallback?: CollectionSyllabusDocument,
 ): CollectionSyllabusDocument {
   try {
-    return parseSyllabusNote(note.getNote()) || fallback || emptyCollectionDocument();
+    return (
+      parseSyllabusNote(note.getNote()) || fallback || emptyCollectionDocument()
+    );
   } catch (error) {
     ztoolkit.log("Error parsing syllabus note during cache load:", error);
     return fallback || emptyCollectionDocument();
@@ -844,12 +859,7 @@ function loadDocumentForCollection(
   if (!note) {
     return setCacheEntry(ref, null, 0, emptyCollectionDocument());
   }
-  return setCacheEntry(
-    ref,
-    note.id,
-    note.version,
-    parseDocumentFromNote(note),
-  );
+  return setCacheEntry(ref, note.id, note.version, parseDocumentFromNote(note));
 }
 
 export function getCollectionDocument(
@@ -1173,7 +1183,9 @@ function stripAssignmentStatus(
       ...assignment,
       status: null,
     });
-    return parsed.type === "ok" ? parsed.value : { ...assignment, status: null };
+    return parsed.type === "ok"
+      ? parsed.value
+      : { ...assignment, status: null };
   });
 }
 
@@ -1182,7 +1194,10 @@ export async function absorbSyllabusExtraFromItems(
 ): Promise<void> {
   const byCollection = new Map<
     number,
-    { collection: Zotero.Collection; updates: Record<string, ItemSyllabusAssignment[]> }
+    {
+      collection: Zotero.Collection;
+      updates: Record<string, ItemSyllabusAssignment[]>;
+    }
   >();
   const toClear: Zotero.Item[] = [];
 
@@ -1273,7 +1288,11 @@ function handleNoteChange(item: Zotero.Item, event: string): void {
     }
     const ref = collectionRefFromCollection(collection);
     const cached = documentCache.get(ref);
-    if (cached && cached.noteId === item.id && cached.noteVersion === item.version) {
+    if (
+      cached &&
+      cached.noteId === item.id &&
+      cached.noteVersion === item.version
+    ) {
       continue;
     }
     if (
@@ -1309,7 +1328,9 @@ export function initializeSyllabusNotes(): void {
       _extraData: { [key: string]: unknown },
     ) {
       if (type === "item") {
-        const numericIds = ids.filter((id): id is number => typeof id === "number");
+        const numericIds = ids.filter(
+          (id): id is number => typeof id === "number",
+        );
         if (event === "delete") {
           for (const id of numericIds) {
             detachNoteFromCache(id);
@@ -1328,10 +1349,7 @@ export function initializeSyllabusNotes(): void {
             handleNoteChange(item, event);
             continue;
           }
-          if (
-            item.isRegularItem() &&
-            (event === "add" || event === "modify")
-          ) {
+          if (item.isRegularItem() && (event === "add" || event === "modify")) {
             extrasToAbsorb.push(item);
           }
         }
@@ -1374,9 +1392,13 @@ export function initializeSyllabusNotes(): void {
     "item",
     "collection-item",
   ]);
-  void rebuildDocumentIndex().catch((error) => {
+  indexReady = rebuildDocumentIndex().catch((error) => {
     ztoolkit.log("Error rebuilding syllabus note index:", error);
   });
+}
+
+export function whenSyllabusNotesReady(): Promise<void> {
+  return indexReady;
 }
 
 export function shutdownSyllabusNotes(): void {
@@ -1390,6 +1412,7 @@ export function shutdownSyllabusNotes(): void {
   documentListeners.clear();
   indexBuilt = false;
   documentGeneration = 0;
+  indexReady = Promise.resolve();
 }
 
 export function invalidateCollectionDocument(

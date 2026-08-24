@@ -58,6 +58,7 @@ import {
   setItemAssignmentsInDocument,
   shutdownSyllabusNotes,
 } from "./syllabusNote";
+import { migrateLegacyCollectionMetadataPrefs } from "./migratePrefsToNotes";
 
 enum SyllabusSettingsKey {
   COLLECTION_VIEW_MODES = "collectionViewModes",
@@ -252,6 +253,12 @@ export class SyllabusManager {
   static onStartup(rootURI: string) {
     ztoolkit.log("SyllabusManager.onStartup");
     initializeSyllabusNotes();
+    void migrateLegacyCollectionMetadataPrefs().catch((error) => {
+      ztoolkit.log(
+        "Error migrating collectionMetadata prefs to syllabus notes:",
+        error,
+      );
+    });
     this.registerPrefs();
     this.registerNotifier();
     this.registerSyllabusInfoColumn();
@@ -582,9 +589,7 @@ export class SyllabusManager {
 
   /** @deprecated Use setCollectionViewMode() */
   static setSyllabusPageVisible(enabled: boolean): void {
-    SyllabusManager.setCollectionViewMode(
-      enabled ? "syllabus" : "collection",
-    );
+    SyllabusManager.setCollectionViewMode(enabled ? "syllabus" : "collection");
   }
 
   // Function to create/update the view-mode radio control
@@ -1814,10 +1819,7 @@ export class SyllabusManager {
       hasClassNumber &&
       classNumber !== undefined
     ) {
-      const manualOrder = this.getClassItemOrder(
-        collectionId,
-        classNumber,
-      );
+      const manualOrder = this.getClassItemOrder(collectionId, classNumber);
       if (manualOrder.length > 0 && assignment.id) {
         hasManualOrder = true;
         const position = manualOrder.indexOf(assignment.id);
@@ -2048,7 +2050,9 @@ export class SyllabusManager {
     const assignments = [
       ...this.getItemSyllabusDataForCollection(item, collectionId),
     ];
-    const entryIndex = assignments.findIndex((entry) => entry.id === assignmentId);
+    const entryIndex = assignments.findIndex(
+      (entry) => entry.id === assignmentId,
+    );
 
     if (entryIndex >= 0) {
       const next = { ...assignments[entryIndex], ...metadata };
@@ -2376,10 +2380,12 @@ export class SyllabusManager {
     collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
   ) {
-    return classByNumber(
-      SyllabusManager.getSyllabusMetadata(collectionId),
-      classNumber,
-    ) || {};
+    return (
+      classByNumber(
+        SyllabusManager.getSyllabusMetadata(collectionId),
+        classNumber,
+      ) || {}
+    );
   }
 
   /**
@@ -3043,11 +3049,7 @@ export class SyllabusManager {
     }
 
     if (isRdfFile(importedContents)) {
-      return this.importSyllabusRdf(
-        targetCollection,
-        importedContents,
-        source,
-      );
+      return this.importSyllabusRdf(targetCollection, importedContents, source);
     }
 
     if (isSyllabusNoteFile(importedContents)) {
@@ -3121,10 +3123,7 @@ export class SyllabusManager {
       .find((document) => document);
     if (importedDocument) {
       importedDocument = remapDocumentItemKeys(importedDocument, otherItems);
-      await mutateCollectionDocument(
-        targetCollection,
-        () => importedDocument!,
-      );
+      await mutateCollectionDocument(targetCollection, () => importedDocument!);
     }
 
     await absorbSyllabusExtraFromItems(otherItems);
@@ -3134,7 +3133,10 @@ export class SyllabusManager {
         note.deleted = true;
         await note.saveTx();
       } catch (error) {
-        ztoolkit.log("Could not remove duplicate imported syllabus note:", error);
+        ztoolkit.log(
+          "Could not remove duplicate imported syllabus note:",
+          error,
+        );
       }
     }
 
@@ -3179,10 +3181,13 @@ export class SyllabusManager {
     }
 
     const exportData = validationResult.data;
-    const { collectionTitle, rdf, items: exportedItems, ...metadataData } =
-      exportData;
+    const {
+      collectionTitle,
+      rdf,
+      items: exportedItems,
+      ...metadataData
+    } = exportData;
     const collectionId = targetCollection.id;
-
 
     // Update collection title if provided
     if (collectionTitle) {
