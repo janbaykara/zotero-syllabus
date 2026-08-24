@@ -19,7 +19,11 @@ import { getPref } from "../utils/prefs";
 import { TabManager } from "../utils/tabManager";
 import { getCachedCollectionById } from "../utils/cache";
 import { isSameWeek } from "date-fns/fp";
-import { formatReadingDate } from "../utils/dates";
+import {
+  formatReadingDate,
+  parseReadingDate,
+  toLocalDateKey,
+} from "../utils/dates";
 import { isZotero8OrLater } from "../utils/zotero";
 
 setDefaultOptions({
@@ -59,9 +63,11 @@ export function ReadingSchedule() {
         const readingDate = classMetadata.readingDate;
         if (!readingDate) continue;
 
-        // Get week start and normalize to ISO string for consistent grouping
-        const weekStartDate = startOfWeek(new Date(readingDate));
-        const weekStartKey = weekStartDate.toISOString().split("T")[0]; // Use date-only ISO string
+        // Group by local week start. Do not use toISOString() here: local
+        // Monday midnight is the previous UTC date east of UTC, which then
+        // fails the "current week onwards" filter.
+        const weekStartDate = startOfWeek(parseReadingDate(readingDate));
+        const weekStartKey = toLocalDateKey(weekStartDate);
 
         // Get items for this class
         const classItems: Array<{
@@ -88,8 +94,6 @@ export function ReadingSchedule() {
           collectionId,
           classNumber,
         );
-
-        if (sortedItems.length === 0) continue;
 
         const classTitle = SyllabusManager.getClassTitle(
           collectionId,
@@ -128,7 +132,8 @@ export function ReadingSchedule() {
     // Sort dates within each week
     for (const [weekStartKey, weekData] of result) {
       const sortedDates = Array.from(weekData.keys()).sort(
-        (a, b) => new Date(a).getTime() - new Date(b).getTime(),
+        (a, b) =>
+          parseReadingDate(a).getTime() - parseReadingDate(b).getTime(),
       );
       const sortedWeekData = new Map<string, ClassReading[]>();
       for (const date of sortedDates) {
@@ -142,14 +147,11 @@ export function ReadingSchedule() {
 
   // Convert to sorted array for rendering, filtering out past weeks
   const sortedWeeks = useMemo(() => {
-    const currentWeekStart = startOfWeek(new Date());
+    const currentWeekStartKey = toLocalDateKey(startOfWeek(new Date()));
 
     return Array.from(readingsByWeek.keys())
-      .filter((weekKey) => {
-        // Only include weeks from the current week onwards
-        return new Date(weekKey).getTime() >= currentWeekStart.getTime();
-      })
-      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+      .filter((weekKey) => weekKey >= currentWeekStartKey)
+      .sort();
   }, [readingsByWeek]);
 
   const handleCollectionClick = (collectionId: number) => {
@@ -256,11 +258,11 @@ export function ReadingSchedule() {
           {sortedWeeks.map((weekStartKey) => {
             const weekData = readingsByWeek.get(weekStartKey)!;
             const sortedDates = Array.from(weekData.keys()).sort(
-              (a, b) => new Date(a).getTime() - new Date(b).getTime(),
+              (a, b) =>
+                parseReadingDate(a).getTime() - parseReadingDate(b).getTime(),
             );
 
-            // Convert weekStartKey back to Date for formatting
-            const weekStartDate = new Date(weekStartKey);
+            const weekStartDate = parseReadingDate(weekStartKey);
 
             return (
               <div key={weekStartKey} className="syllabus-class-group">
@@ -298,7 +300,7 @@ export function ReadingSchedule() {
                           >
                             {formatReadingDate(
                               dateTimestamp,
-                              !isThisMonth(new Date(dateTimestamp)),
+                              !isThisMonth(parseReadingDate(dateTimestamp)),
                             )}
                           </div>
 
