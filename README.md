@@ -149,9 +149,8 @@ This plugin is built using the [Zotero Plugin Template](https://github.com/windi
 Here's how I've thought about the plugin's data model:
 
 - 'Syllabi' are organised representations of a collection. Syllabi must mirror the items of a collection. If it's not in the collection, it's not in the syllabus.
-- Syllabi have 'classes', which represent the different sections of the syllabus. Since they aren't items, and apply to multiple items, they are stored in the plugin's preferences, not the items themselves.
-- Classes are made up of groups of 1+ 'assignments'. Assignments are the items that are assigned to a class, plus instructions and priorities.
-- Since assignments relate strongly to items, they are stored in the items' extra fields themselves.
+- All syllabus content — class metadata, item order, priorities, reading instructions, and assignment status — lives in a **top-level note** in that collection (tagged `zotero-syllabus`, titled "Syllabus"). That note syncs with the library.
+- Classes group 1+ assignments. Assignments point at items in the collection by item key; they are not stored on the items themselves.
 
 ### Contributing
 
@@ -186,10 +185,13 @@ Contributions are welcome! Please feel free to submit a Pull Request.
    # Edit .env with your Zotero installation path
    ```
 
-4. Start development:
-   ```bash
-   pnpm start
-   ```
+### Start development
+
+Run the plugin in development mode:
+
+```bash
+pnpm start
+```
 
 ### Build
 

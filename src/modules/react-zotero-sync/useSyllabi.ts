@@ -8,6 +8,13 @@ import {
 } from "../syllabus";
 import { getAllCollections } from "../../utils/zotero";
 import { getCachedItem, getCachedCollectionById } from "../../utils/cache";
+import {
+  getCollectionDocument,
+  getDocumentGeneration,
+  getHydratedItemAssignments,
+  getSyllabusCollectionDictionary,
+  subscribeToSyllabusDocumentChanges,
+} from "../syllabusNote";
 
 export type SyllabusData = {
   collection: Zotero.Collection;
@@ -28,7 +35,6 @@ export type SyllabiSnapshot = {
   version?: number;
 };
 
-// This function will return all syllabi, collections and items in a single object. It will also refresh when the data changes.
 export function useSyllabi(): SyllabusData[] {
   const store = useMemo(() => createSyllabiStore(), []);
 
@@ -47,20 +53,16 @@ export function useSyllabi(): SyllabusData[] {
           return null;
         }
 
+        const document = getCollectionDocument(collection);
         const items = syllabusData.itemIds
           .map((itemId) => {
             const item = getCachedItem(itemId);
             if (!item || !item.isRegularItem()) {
               return null;
             }
-            const assignments =
-              SyllabusManager.getItemSyllabusDataForCollection(
-                item,
-                syllabusData.collectionId,
-              );
             return {
               zoteroItem: item,
-              assignments,
+              assignments: getHydratedItemAssignments(document, item.key),
             };
           })
           .filter(Boolean) as Array<{
@@ -81,45 +83,36 @@ export function useSyllabi(): SyllabusData[] {
 }
 
 function createSyllabiStore() {
-  // Version counter to force snapshot changes even if data appears the same
-  let version = 0;
-
   function getSnapshot() {
-    // Get fresh data from Zotero
     const allCollections = getAllCollections();
-    const allData = SyllabusManager.getSettingsCollectionDictionaryData();
+    const allData = getSyllabusCollectionDictionary();
 
     const syllabi: SyllabiSnapshot["syllabi"] = [];
 
     for (const collection of allCollections) {
-      const collectionId = collection.id;
-      // Use the correct key format: `${libraryID}:${collectionKey}`
       const collectionKeyStr = SyllabusManager.getCollectionReferenceString(
         collection.libraryID,
         collection.key,
       );
       const collectionData = allData[collectionKeyStr];
-
-      // Only include collections that have syllabus metadata
       if (!collectionData) {
         continue;
       }
 
-      const items = collection.getChildItems();
-      const itemIds = items
+      const itemIds = collection
+        .getChildItems()
         .filter((item) => item.isRegularItem())
         .map((item) => item.id);
 
       syllabi.push({
-        collectionId,
+        collectionId: collection.id,
         collectionName: collection.name,
         metadata: collectionData,
         itemIds,
       });
     }
 
-    // Include version in snapshot to ensure it changes on every update
-    return SuperJSON.stringify({ syllabi, version });
+    return SuperJSON.stringify({ syllabi, version: getDocumentGeneration() });
   }
 
   function subscribe(onStoreChange: () => void) {
@@ -127,32 +120,15 @@ function createSyllabiStore() {
       notify(
         event: string,
         type: string,
-        ids: (number | string)[],
-        extraData: any,
+        _ids: (number | string)[],
+        _extraData: unknown,
       ) {
-        let shouldUpdate = false;
-
-        // Listen to item modify/delete events (assignments changed)
-        if (type === "item" && (event === "modify" || event === "delete")) {
-          shouldUpdate = true;
-        }
-
-        // Listen to collection-item events (items added/removed from collections)
-        if (type === "collection-item") {
-          shouldUpdate = true;
-        }
-
-        // Listen to collection modify/refresh events
         if (
-          type === "collection" &&
-          (event === "modify" || event === "refresh")
+          type === "item" ||
+          type === "collection-item" ||
+          (type === "collection" &&
+            (event === "modify" || event === "refresh"))
         ) {
-          shouldUpdate = true;
-        }
-
-        if (shouldUpdate) {
-          // Increment version to force snapshot change
-          version++;
           onStoreChange();
         }
       },
@@ -163,27 +139,12 @@ function createSyllabiStore() {
       "collection-item",
       "collection",
     ]);
+    const unsubscribeDocuments =
+      subscribeToSyllabusDocumentChanges(onStoreChange);
 
-    // Register preference observer for collection metadata changes
-    const prefKey = SyllabusManager.getPreferenceKey(
-      SyllabusManager.settingsKeys.COLLECTION_METADATA,
-    );
-
-    const prefObserverId = Zotero.Prefs.registerObserver(
-      prefKey,
-      (value: SettingsSyllabusMetadata) => {
-        Zotero.debug(`Preference ${prefKey} changed to ${value}`);
-        // Increment version to force snapshot change
-        version++;
-        onStoreChange();
-      },
-      true,
-    );
-
-    // Return an unsubscribe fn
     return () => {
+      unsubscribeDocuments();
       Zotero.Notifier.unregisterObserver(notifierId);
-      Zotero.Prefs.unregisterObserver(prefObserverId);
     };
   }
 

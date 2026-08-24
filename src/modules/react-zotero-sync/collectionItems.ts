@@ -3,11 +3,16 @@ import { useSyncExternalStore } from "react-dom/src";
 import SuperJSON from "superjson";
 import {
   SyllabusManager,
-  ItemSyllabusData,
   GetByLibraryAndKeyArgs,
   ItemSyllabusAssignment,
 } from "../syllabus";
 import { getCachedItem } from "../../utils/cache";
+import {
+  getCollectionDocument,
+  getDocumentGeneration,
+  getHydratedItemAssignments,
+  subscribeToSyllabusDocumentChanges,
+} from "../syllabusNote";
 
 export type ItemID = {
   [field in _ZoteroTypes.Item.ItemField]: string | unknown;
@@ -17,6 +22,7 @@ export type ItemID = {
 
 export type CollectionItemsSnapshot = {
   items: ItemID[];
+  documentGeneration: number;
 };
 
 export function useZoteroCollectionItems(
@@ -43,9 +49,10 @@ export function useZoteroCollectionItems(
         if (!zoteroItem) {
           return null;
         }
-        const assignments = SyllabusManager.getItemSyllabusDataForCollection(
-          zoteroItem,
-          collectionId,
+        const document = getCollectionDocument(collectionId);
+        const assignments = getHydratedItemAssignments(
+          document,
+          zoteroItem.key,
         );
         return {
           zoteroItem,
@@ -56,7 +63,7 @@ export function useZoteroCollectionItems(
       zoteroItem: Zotero.Item;
       assignments: ItemSyllabusAssignment[];
     }[];
-  }, [__itemsFromZotero]);
+  }, [__itemsFromZotero, collectionId]);
 
   return parsedItems;
 }
@@ -80,7 +87,10 @@ export function createCollectionItemsStore(
           ...item.toJSON(),
         };
       });
-    return SuperJSON.stringify({ items });
+    return SuperJSON.stringify({
+      items,
+      documentGeneration: getDocumentGeneration(),
+    });
   }
 
   function subscribe(onStoreChange: () => void) {
@@ -144,9 +154,11 @@ export function createCollectionItemsStore(
       "item",
       "collection",
     ]);
+    const unsubscribeDocuments =
+      subscribeToSyllabusDocumentChanges(onStoreChange);
 
-    // Return an unsubscribe fn
     return () => {
+      unsubscribeDocuments();
       Zotero.Notifier.unregisterObserver(notifierId);
     };
   }

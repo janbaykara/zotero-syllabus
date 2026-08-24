@@ -57,6 +57,8 @@ import {
   Trash2,
   Menu,
   ListTodo,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-preact";
 import { TableOfContents } from "./TableOfContents";
 import { saveToFile } from "../utils/file";
@@ -2048,12 +2050,36 @@ function ClassGroupComponent({
     SyllabusManager.getClassItemOrder(collectionId, classNumber).length > 0;
 
   const handleDeleteClass = async () => {
-    if (classNumber) {
-      try {
-        await SyllabusManager.deleteClass(collectionId, classNumber, "page");
-      } catch (err) {
-        ztoolkit.log("Error deleting class:", err);
-      }
+    if (classNumber == null) {
+      return;
+    }
+    try {
+      await SyllabusManager.deleteClass(collectionId, classNumber, "page");
+    } catch (err) {
+      ztoolkit.log("Error deleting class:", err);
+    }
+  };
+
+  const classNumbers = SyllabusManager.getFullClassNumberRange(collectionId);
+  const classIndex =
+    classNumber == null ? -1 : classNumbers.indexOf(classNumber);
+  const canMoveUp = classIndex > 0;
+  const canMoveDown =
+    classIndex >= 0 && classIndex < classNumbers.length - 1;
+
+  const handleMoveClass = async (direction: "up" | "down") => {
+    if (classNumber == null) {
+      return;
+    }
+    try {
+      await SyllabusManager.moveClass(
+        collectionId,
+        classNumber,
+        direction,
+        "page",
+      );
+    } catch (err) {
+      ztoolkit.log("Error moving class:", err);
     }
   };
 
@@ -2194,6 +2220,24 @@ function ClassGroupComponent({
                           <div className="text-lg text-center">⇅</div>
                         </button>
                       )}
+                      <button
+                        className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-secondary"
+                        onClick={() => handleMoveClass("up")}
+                        disabled={!canMoveUp}
+                        title={`Move ${SyllabusManager.getNomenclatureFormatted(collectionId).singular} up`}
+                        aria-label={`Move ${SyllabusManager.getNomenclatureFormatted(collectionId).singular} up`}
+                      >
+                        <ChevronUp size={16} />
+                      </button>
+                      <button
+                        className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-secondary"
+                        onClick={() => handleMoveClass("down")}
+                        disabled={!canMoveDown}
+                        title={`Move ${SyllabusManager.getNomenclatureFormatted(collectionId).singular} down`}
+                        aria-label={`Move ${SyllabusManager.getNomenclatureFormatted(collectionId).singular} down`}
+                      >
+                        <ChevronDown size={16} />
+                      </button>
                       <button
                         className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-red-500/15 text-secondary hover:text-red-400 inline-flex flex-row items-center justify-center w-8 h-8"
                         onClick={handleDeleteClass}

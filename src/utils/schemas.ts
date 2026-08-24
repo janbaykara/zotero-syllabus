@@ -36,6 +36,10 @@ function generateAssignmentId(): string {
   return `assignment-${uuidv7()}`;
 }
 
+export function generateClassId(): string {
+  return `class-${uuidv7()}`;
+}
+
 /**
  * ItemSyllabusAssignment schema
  * Version 2: Ensures id is always present
@@ -51,6 +55,19 @@ const ItemSyllabusAssignmentV2Schema = z.object({
 });
 
 /**
+ * Version 3: assignments point at a stable classId. classNumber is accepted on
+ * ingest (Extra, .syllabus import) but is not stored as identity.
+ */
+const ItemSyllabusAssignmentV3Schema = z.object({
+  id: z.string().default(generateAssignmentId),
+  classId: z.string().optional(),
+  classNumber: classNumberSchema,
+  priority: SyllabusPrioritySchema.optional().nullable(),
+  classInstruction: z.string().optional().nullable(),
+  status: AssignmentStatusSchema.optional().nullable(),
+});
+
+/**
  * Get version from assignment data
  */
 function getAssignmentVersion(data: unknown): number | null {
@@ -58,7 +75,9 @@ function getAssignmentVersion(data: unknown): number | null {
     return null;
   }
   const obj = data as Record<string, unknown>;
-  // If no version specified, check if id exists - if not, it's v1, otherwise assume v2
+  if (typeof obj.classId === "string" && obj.classId.length > 0) {
+    return 3;
+  }
   if (!("id" in obj) || obj.id === undefined) {
     return 1;
   }
@@ -67,10 +86,10 @@ function getAssignmentVersion(data: unknown): number | null {
 
 /**
  * Versioned ItemSyllabusAssignment entity
- * Handles migration from v1 (id optional) to v2 (id required)
+ * Handles migration from v1 (id optional) to v2 (id required) to v3 (classId)
  */
 export const ItemSyllabusAssignmentEntity = createVersionedEntity({
-  latestVersion: 2,
+  latestVersion: 3,
   getVersion: getAssignmentVersion,
   versionMap: {
     1: defineVersion({
@@ -81,13 +100,19 @@ export const ItemSyllabusAssignmentEntity = createVersionedEntity({
       schema: ItemSyllabusAssignmentV2Schema,
       initial: false,
       up: (old: z.infer<typeof ItemSyllabusAssignmentV1Schema>) => {
-        // Generate ID if missing using uuidv7
         const id = old.id || generateAssignmentId();
         return {
           ...old,
           id,
         };
       },
+    }),
+    3: defineVersion({
+      schema: ItemSyllabusAssignmentV3Schema,
+      initial: false,
+      up: (old: z.infer<typeof ItemSyllabusAssignmentV2Schema>) => ({
+        ...old,
+      }),
     }),
   },
 });
@@ -315,6 +340,10 @@ export const SettingsClassMetadataSchema = z.object({
   status: ClassStatusSchema.optional().nullable(),
 });
 
+export const StoredClassMetadataSchema = SettingsClassMetadataSchema.extend({
+  number: z.number().int().min(1),
+});
+
 /**
  * Export Class Metadata schema (excludes status field)
  */
@@ -383,7 +412,120 @@ export const ExportSyllabusMetadataSchema = SettingsSyllabusMetadataSchema.omit(
   collectionTitle: z.string().optional().nullable(),
   classes: transformClasses(ExportClassMetadataSchema),
   rdf: z.string().optional(), // RDF serialized as XML string
+  items: z
+    .record(z.string(), z.array(ItemSyllabusAssignmentEntity.latestSchema))
+    .optional(),
 });
+
+/**
+ * Collection syllabus document stored in a top-level collection note.
+ * Combines syllabus metadata with per-item assignments keyed by item.key.
+ */
+const CollectionSyllabusDocumentV1Schema = SettingsSyllabusMetadataSchema.extend(
+  {
+    version: z.literal(1).default(1),
+    items: z
+      .record(z.string(), z.array(ItemSyllabusAssignmentEntity.latestSchema))
+      .default(() => ({})),
+  },
+);
+
+/**
+ * v2: classes are keyed by stable classId; each class stores its display number.
+ */
+const CollectionSyllabusDocumentV2Schema = SettingsSyllabusMetadataSchema.omit({
+  classes: true,
+}).extend({
+  version: z.literal(2).default(2),
+  classes: transformClasses(StoredClassMetadataSchema),
+  items: z
+    .record(z.string(), z.array(ItemSyllabusAssignmentEntity.latestSchema))
+    .default(() => ({})),
+});
+
+function getCollectionSyllabusDocumentVersion(data: unknown): number | null {
+  if (typeof data !== "object" || data === null) {
+    return null;
+  }
+  const obj = data as Record<string, unknown>;
+  if (obj.version === 2) {
+    return 2;
+  }
+  if (obj.version === 1 || obj.version === undefined) {
+    return 1;
+  }
+  if (typeof obj.version === "number") {
+    return obj.version;
+  }
+  return 1;
+}
+
+function migrateClassesToIds(
+  oldClasses: Record<string, SettingsClassMetadata> | undefined,
+  oldItems: Record<string, ItemSyllabusAssignment[]> | undefined,
+): {
+  classes: Record<string, z.infer<typeof StoredClassMetadataSchema>>;
+  items: Record<string, ItemSyllabusAssignment[]>;
+} {
+  const classes: Record<string, z.infer<typeof StoredClassMetadataSchema>> = {};
+  const numberToId = new Map<number, string>();
+
+  for (const [key, meta] of Object.entries(oldClasses || {})) {
+    const number = parseInt(key, 10);
+    if (isNaN(number) || !meta) {
+      continue;
+    }
+    const id = generateClassId();
+    numberToId.set(number, id);
+    classes[id] = StoredClassMetadataSchema.parse({ ...meta, number });
+  }
+
+  const items: Record<string, ItemSyllabusAssignment[]> = {};
+  for (const [itemKey, assignments] of Object.entries(oldItems || {})) {
+    items[itemKey] = assignments.map((assignment) => {
+      const { classNumber, ...rest } = assignment;
+      if (classNumber === undefined) {
+        return rest;
+      }
+      let classId = numberToId.get(classNumber);
+      if (!classId) {
+        classId = generateClassId();
+        numberToId.set(classNumber, classId);
+        classes[classId] = StoredClassMetadataSchema.parse({ number: classNumber });
+      }
+      return { ...rest, classId };
+    });
+  }
+
+  return { classes, items };
+}
+
+export const CollectionSyllabusDocumentEntity = createVersionedEntity({
+  latestVersion: 2,
+  getVersion: getCollectionSyllabusDocumentVersion,
+  versionMap: {
+    1: defineVersion({
+      schema: CollectionSyllabusDocumentV1Schema,
+      initial: true,
+    }),
+    2: defineVersion({
+      schema: CollectionSyllabusDocumentV2Schema,
+      initial: false,
+      up: (old: z.infer<typeof CollectionSyllabusDocumentV1Schema>) => {
+        const { classes, items } = migrateClassesToIds(old.classes, old.items);
+        return {
+          ...old,
+          version: 2 as const,
+          classes,
+          items,
+        };
+      },
+    }),
+  },
+});
+
+export const CollectionSyllabusDocumentSchema =
+  CollectionSyllabusDocumentEntity.latestSchema;
 
 /**
  * Settings Collection Dictionary Data schema
@@ -524,5 +666,148 @@ export type ExportSyllabusMetadata = z.infer<
 export type SettingsCollectionDictionaryData = z.infer<
   typeof SettingsCollectionDictionaryDataSchema
 >;
+export type CollectionSyllabusDocument = z.infer<
+  typeof CollectionSyllabusDocumentSchema
+>;
+export type StoredClassMetadata = z.infer<typeof StoredClassMetadataSchema>;
 export type AssignmentStatus = z.infer<typeof AssignmentStatusSchema>;
 export type ClassStatus = z.infer<typeof ClassStatusSchema>;
+
+export function findClassIdByNumber(
+  classes: CollectionSyllabusDocument["classes"] | undefined,
+  classNumber: number,
+): string | undefined {
+  if (!classes) {
+    return undefined;
+  }
+  for (const [classId, meta] of Object.entries(classes)) {
+    if (meta?.number === classNumber) {
+      return classId;
+    }
+  }
+  return undefined;
+}
+
+export function getClassNumberById(
+  classes: CollectionSyllabusDocument["classes"] | undefined,
+  classId: string | undefined,
+): number | undefined {
+  if (!classes || !classId) {
+    return undefined;
+  }
+  return classes[classId]?.number;
+}
+
+export function assignmentClassNumber(
+  assignment: Pick<ItemSyllabusAssignment, "classId" | "classNumber">,
+  classes?: CollectionSyllabusDocument["classes"],
+): number | undefined {
+  const fromId = getClassNumberById(classes, assignment.classId);
+  if (fromId !== undefined) {
+    return fromId;
+  }
+  return assignment.classNumber;
+}
+
+export function classesToNumberKeyed(
+  classes: CollectionSyllabusDocument["classes"] | undefined,
+): SettingsSyllabusMetadata["classes"] {
+  const byNumber: NonNullable<SettingsSyllabusMetadata["classes"]> = {};
+  for (const meta of Object.values(classes || {})) {
+    if (!meta?.number) {
+      continue;
+    }
+    const { number: _number, ...rest } = meta;
+    byNumber[String(meta.number)] = rest;
+  }
+  return Object.keys(byNumber).length > 0 ? byNumber : {};
+}
+
+export function mergeNumberKeyedClasses(
+  existing: CollectionSyllabusDocument["classes"] | undefined,
+  incoming: SettingsSyllabusMetadata["classes"] | undefined,
+): NonNullable<CollectionSyllabusDocument["classes"]> {
+  const next: NonNullable<CollectionSyllabusDocument["classes"]> = {};
+  const usedIds = new Set<string>();
+  for (const [key, meta] of Object.entries(incoming || {})) {
+    const number = parseInt(key, 10);
+    if (isNaN(number) || !meta) {
+      continue;
+    }
+    let classId = findClassIdByNumber(existing, number);
+    if (!classId || usedIds.has(classId)) {
+      classId = generateClassId();
+    }
+    usedIds.add(classId);
+    next[classId] = StoredClassMetadataSchema.parse({ ...meta, number });
+  }
+  return next;
+}
+
+export function ensureClassRecord(
+  classes: NonNullable<CollectionSyllabusDocument["classes"]>,
+  classNumber: number,
+): string {
+  const existing = findClassIdByNumber(classes, classNumber);
+  if (existing) {
+    return existing;
+  }
+  const classId = generateClassId();
+  classes[classId] = StoredClassMetadataSchema.parse({
+    title: "",
+    number: classNumber,
+  });
+  return classId;
+}
+
+export function persistAssignment(
+  assignment: ItemSyllabusAssignment,
+  classes: NonNullable<CollectionSyllabusDocument["classes"]>,
+): ItemSyllabusAssignment {
+  const { classNumber, classId: existingClassId, ...rest } = assignment;
+  let classId = existingClassId && classes[existingClassId] ? existingClassId : undefined;
+  if (typeof classNumber === "number") {
+    classId = ensureClassRecord(classes, classNumber);
+  }
+  const persisted: ItemSyllabusAssignment = { ...rest };
+  if (classId) {
+    persisted.classId = classId;
+  }
+  return persisted;
+}
+
+export function hydrateAssignment(
+  assignment: ItemSyllabusAssignment,
+  classes?: CollectionSyllabusDocument["classes"],
+): ItemSyllabusAssignment {
+  const classNumber = assignmentClassNumber(assignment, classes);
+  if (classNumber === undefined) {
+    return assignment;
+  }
+  return { ...assignment, classNumber };
+}
+
+export function hydrateAssignments(
+  assignments: ItemSyllabusAssignment[] | undefined,
+  classes?: CollectionSyllabusDocument["classes"],
+): ItemSyllabusAssignment[] {
+  return (assignments || []).map((assignment) =>
+    hydrateAssignment(assignment, classes),
+  );
+}
+
+/** Portable assignment for .syllabus files: display number, no opaque classId. */
+export function exportAssignment(
+  assignment: ItemSyllabusAssignment,
+  classes?: CollectionSyllabusDocument["classes"],
+): ItemSyllabusAssignment {
+  const classNumber = assignmentClassNumber(assignment, classes);
+  const { classId: _classId, ...rest } = assignment;
+  const exported: ItemSyllabusAssignment = { ...rest };
+  if (classNumber === undefined) {
+    delete exported.classNumber;
+  } else {
+    exported.classNumber = classNumber;
+  }
+  return exported;
+}

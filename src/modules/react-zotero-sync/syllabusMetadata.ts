@@ -1,30 +1,27 @@
 import { useCallback, useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
 import {
-  SettingsSyllabusMetadata,
   SyllabusManager,
   GetByLibraryAndKeyArgs,
 } from "../syllabus";
-import SuperJSON from "superjson";
 import { Priority } from "../../utils/schemas";
+import { createCollectionDocumentStore } from "./collectionDocument";
+import { getCollectionDocument, metadataFromDocument } from "../syllabusNote";
 
 export function useZoteroSyllabusMetadata(
   collectionId: number | GetByLibraryAndKeyArgs,
 ) {
-  // Create the store once per ID
   const store = useMemo(
-    () => createSyllabusMetadataStore(collectionId),
+    () => createCollectionDocumentStore(collectionId),
     [collectionId],
   );
 
-  const __syllabusMetadata = useSyncExternalStore(
-    store.subscribe,
-    store.getSnapshot,
-  );
+  const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
 
   const syllabusMetadata = useMemo(() => {
-    return SuperJSON.parse(__syllabusMetadata) as SettingsSyllabusMetadata;
-  }, [__syllabusMetadata]);
+    void snapshot;
+    return metadataFromDocument(getCollectionDocument(collectionId));
+  }, [snapshot, collectionId]);
 
   const setDescription = useCallback(
     (description: string) => {
@@ -123,61 +120,5 @@ export function useZoteroSyllabusMetadata(
 export function createSyllabusMetadataStore(
   collectionId: number | GetByLibraryAndKeyArgs,
 ) {
-  function getSnapshot() {
-    // Read from preferences via SyllabusManager
-    return SuperJSON.stringify(
-      SyllabusManager.getSyllabusMetadata(collectionId),
-    );
-  }
-
-  function subscribe(onStoreChange: () => void) {
-    const observer = {
-      notify(
-        event: string,
-        type: string,
-        ids: (number | string)[],
-        extraData: any,
-      ) {
-        ztoolkit.log("Syllabus metadata changed:", event, type, ids, extraData);
-
-        // Listen to collection modify/refresh events in case description is updated
-        const collection =
-          SyllabusManager.getCollectionFromIdentifier(collectionId);
-        if (
-          collection &&
-          type === "collection" &&
-          ids.includes(collection.id) &&
-          (event === "modify" || event === "refresh")
-        ) {
-          onStoreChange();
-        }
-      },
-    };
-
-    const notifierId = Zotero.Notifier.registerObserver(observer, [
-      "collection",
-    ]);
-
-    // Register preference observer for collection metadata changes
-    const prefKey = SyllabusManager.getPreferenceKey(
-      SyllabusManager.settingsKeys.COLLECTION_METADATA,
-    );
-
-    const prefObserverId = Zotero.Prefs.registerObserver(
-      prefKey,
-      (value: SettingsSyllabusMetadata) => {
-        Zotero.debug(`Preference ${prefKey} changed to ${value}`);
-        onStoreChange();
-      },
-      true,
-    );
-
-    // Return an unsubscribe fn
-    return () => {
-      Zotero.Notifier.unregisterObserver(notifierId);
-      Zotero.Prefs.unregisterObserver(prefObserverId);
-    };
-  }
-
-  return { getSnapshot, subscribe };
+  return createCollectionDocumentStore(collectionId);
 }

@@ -13,6 +13,7 @@ import {
   getCachedCollectionByKey,
 } from "../utils/cache";
 import { useZoteroClassMetadata } from "./react-zotero-sync/classMetadata";
+import { useSyllabusDocumentGeneration } from "./react-zotero-sync/collectionDocument";
 import { formatReadingDate } from "../utils/dates";
 
 interface ItemPaneProps {
@@ -113,6 +114,7 @@ function ItemPaneContent({
   editable: boolean;
 }) {
   const currentCollectionId = useSelectedCollectionId();
+  const documentGeneration = useSyllabusDocumentGeneration();
 
   // Get all assignments across all collections
   const allAssignmentsByCollection = useMemo(() => {
@@ -171,22 +173,20 @@ function ItemPaneContent({
           });
         }
       }
+    }
 
-      if (
-        !!currentCollection &&
-        // not already in the list
-        !collectionsWithAssignments.some(
-          (c) => c.collectionId === currentCollection!.id,
-        )
-      ) {
-        // Display this collection so assignments can be added to it
-        collectionsWithAssignments.push({
-          collection: currentCollection!,
-          collectionId: currentCollection.id,
-          collectionName: currentCollection.name,
-          assignments: [],
-        });
-      }
+    if (
+      !!currentCollection &&
+      !collectionsWithAssignments.some(
+        (c) => c.collectionId === currentCollection.id,
+      )
+    ) {
+      collectionsWithAssignments.push({
+        collection: currentCollection,
+        collectionId: currentCollection.id,
+        collectionName: currentCollection.name,
+        assignments: [],
+      });
     }
 
     // Sort so current collection is first, then alphabetically by name
@@ -197,7 +197,7 @@ function ItemPaneContent({
     });
 
     return collectionsWithAssignments;
-  }, [itemVersion, currentCollectionId]);
+  }, [itemVersion, currentCollectionId, documentGeneration]);
 
   const [isSaving, setIsSaving] = useState(false);
 

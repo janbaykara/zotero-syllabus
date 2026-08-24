@@ -4,7 +4,6 @@ import slugify from "slugify";
  */
 
 import { getLocaleID, getString } from "../utils/locale";
-import { ExtraFieldTool, ZoteroToolkit } from "zotero-plugin-toolkit";
 import { renderSyllabusPage } from "./SyllabusPage";
 import { renderTagsPage } from "./TagsPage";
 import { getSelectedCollection } from "../utils/zotero";
@@ -23,27 +22,39 @@ import { FEATURE_FLAG } from "./featureFlags";
 import {
   ItemSyllabusDataEntity,
   ItemSyllabusAssignmentEntity,
-  SettingsCollectionDictionaryDataSchema,
-  SettingsCollectionDictionaryDataEntity,
   SettingsClassMetadataSchema,
   SettingsSyllabusMetadataSchema,
   ExportSyllabusMetadataSchema,
   DEFAULT_PRIORITIES,
+  assignmentClassNumber,
+  ensureClassRecord,
+  exportAssignment,
+  findClassIdByNumber,
 } from "../utils/schemas";
 import * as z from "zod";
 import { getRDFStringForCollection, importRDF } from "../utils/rdf";
 import {
-  getCachedItemSyllabusData,
   getCachedPref,
   getCachedCollection,
   getCachedCollectionById,
   getCachedCollectionByKey,
   zoteroCache,
-  invalidateCachedItemSyllabusData,
 } from "../utils/cache";
+import {
+  absorbSyllabusExtraFromItems,
+  getCollectionDocument,
+  getHydratedItemAssignments,
+  getSyllabusCollectionDictionary,
+  initializeSyllabusNotes,
+  mergeItemAssignmentsInDocument,
+  metadataFromDocument,
+  mutateCollectionDocument,
+  setCollectionDocumentMetadata,
+  setItemAssignmentsInDocument,
+  shutdownSyllabusNotes,
+} from "./syllabusNote";
 
 enum SyllabusSettingsKey {
-  COLLECTION_METADATA = "collectionMetadata",
   COLLECTION_VIEW_MODES = "collectionViewModes",
 }
 
@@ -90,6 +101,19 @@ import type {
 } from "../utils/schemas";
 import { installTalisAspireTranslator } from "../utils/translator";
 import { getReadingTimeSync, formatReadingTime } from "../utils/readingTime";
+
+function resolveAssignmentClassNumber(
+  assignment: ItemSyllabusAssignment,
+  collectionId?: number | GetByLibraryAndKeyArgs,
+): number | undefined {
+  if (collectionId === undefined) {
+    return assignment.classNumber;
+  }
+  return assignmentClassNumber(
+    assignment,
+    getCollectionDocument(collectionId).classes,
+  );
+}
 
 // Re-export for backward compatibility with other modules
 export type {
@@ -219,12 +243,9 @@ export class SyllabusManager {
 
   static SYLLABUS_CLASS_NUMBER_FIELD = "syllabus-class-number";
 
-  // Create an ExtraFieldTool instance for safe extra field operations
-  static extraFieldTool = new ExtraFieldTool();
-
   static onStartup(rootURI: string) {
     ztoolkit.log("SyllabusManager.onStartup");
-    // this.migrateCollectionIdentifiers();
+    initializeSyllabusNotes();
     this.registerPrefs();
     this.registerNotifier();
     this.registerSyllabusInfoColumn();
@@ -403,6 +424,7 @@ export class SyllabusManager {
   static onShutdown() {
     ztoolkit.log("SyllabusManager.onShutdown");
     this.unregisterNotifier();
+    shutdownSyllabusNotes();
   }
 
   static registerNotifier() {
@@ -1527,47 +1549,52 @@ export class SyllabusManager {
   }
 
   /**
-   * Get syllabus data from an item's extra field
-   * Uses caching to avoid repeated JSON parsing for the same item
-   * Handles migration from old format (single object) to new format (array)
-   * Now uses Zod validation with verzod for versioning
+   * Get syllabus assignments for an item across every collection it belongs to.
+   * Built from collection notes (not item Extra).
    */
   static getItemSyllabusData(item: Zotero.Item): ItemSyllabusData | undefined {
-    return getCachedItemSyllabusData(item.id);
+    const data: ItemSyllabusData = {};
+    let hasAny = false;
+    for (const collectionId of item.getCollections()) {
+      const collection = getCachedCollectionById(collectionId);
+      if (!collection) {
+        continue;
+      }
+      const collectionKeyStr = this.getCollectionReferenceString(
+        collection.libraryID,
+        collection.key,
+      );
+      const assignments = getHydratedItemAssignments(
+        getCollectionDocument(collection),
+        item.key,
+      );
+      if (assignments.length > 0) {
+        data[collectionKeyStr] = assignments;
+        hasAny = true;
+      }
+    }
+    return hasAny ? data : undefined;
   }
 
   static getItemSyllabusDataForCollection(
     item: Zotero.Item,
     collectionId: number | GetByLibraryAndKeyArgs,
   ): ItemSyllabusAssignment[] {
-    const normalized = this.normalizeCollectionIdentifier(collectionId);
-    if (!normalized) {
-      return [];
-    }
-    const data = this.getItemSyllabusData(item);
-    if (!data) {
-      return [];
-    }
-    const assignments =
-      data[
-        this.getCollectionReferenceString(normalized.libraryID, normalized.key)
-      ];
-    if (!assignments || !Array.isArray(assignments)) {
-      return [];
-    }
-    return assignments;
+    return getHydratedItemAssignments(
+      getCollectionDocument(collectionId),
+      item.key,
+    );
   }
 
   /**
-   * Set syllabus data in an item's extra field
-   * Validates with Zod before saving to ensure 100% type safety
+   * Write one item's assignments into the collection syllabus note.
+   * `data` is still keyed by collection reference for call-site compatibility.
    */
   static async setItemData(
     item: Zotero.Item,
     data: ItemSyllabusData,
     source: "page" | "item-pane" | "context-menu" | "background",
   ): Promise<void> {
-    // Validate input data with Zod before saving
     const inputResult = ItemSyllabusDataEntity.safeParse(data);
     if (inputResult.type !== "ok") {
       ztoolkit.log(
@@ -1580,38 +1607,34 @@ export class SyllabusManager {
     }
     const validatedData = inputResult.value;
 
-    // Double-check: validate the stringified JSON will parse correctly
-    const jsonStr = JSON.stringify(validatedData);
-    try {
-      const parsed = JSON.parse(jsonStr);
-      const revalidationResult = ItemSyllabusDataEntity.safeParse(parsed);
-      if (revalidationResult.type !== "ok") {
-        ztoolkit.log(
-          "[Zotero Syllabus] Error: Validated data failed revalidation after JSON.stringify:",
-          revalidationResult.error,
-          "Validated data:",
-          validatedData,
-        );
-        return;
+    for (const [collectionKeyStr, assignments] of Object.entries(
+      validatedData,
+    )) {
+      const parts = collectionKeyStr.split(":");
+      if (parts.length < 2) {
+        continue;
       }
-    } catch (e) {
-      ztoolkit.log(
-        "[Zotero Syllabus] Error: Failed to parse JSON string:",
-        e,
-        "JSON string:",
-        jsonStr,
+      const libraryID = parseInt(parts[0], 10);
+      const collectionKey = parts.slice(1).join(":");
+      if (isNaN(libraryID) || !collectionKey) {
+        continue;
+      }
+      await setItemAssignmentsInDocument(
+        [libraryID, collectionKey],
+        item.key,
+        assignments,
       );
-      return;
     }
+    this.onItemUpdate(item, source);
+  }
 
-    await this.extraFieldTool.setExtraField(
-      item,
-      this.SYLLABUS_DATA_KEY,
-      jsonStr,
-    );
-    // Invalidate cache immediately after setting the extra field
-    // This ensures the cache reflects the current state even before the item is saved
-    invalidateCachedItemSyllabusData(item.id);
+  static async setItemAssignments(
+    item: Zotero.Item,
+    collectionId: number | GetByLibraryAndKeyArgs,
+    assignments: ItemSyllabusAssignment[],
+    source: "page" | "item-pane" | "context-menu" | "background",
+  ): Promise<void> {
+    await setItemAssignmentsInDocument(collectionId, item.key, assignments);
     this.onItemUpdate(item, source);
   }
 
@@ -1649,79 +1672,21 @@ export class SyllabusManager {
   // }
 
   /**
-   * Get the full range of class numbers for a collection
-   * Returns all class numbers from 1 to max, plus any classes with items outside that range
-   * This is the same logic used in SyllabusPage and the contextual menu
+   * Display numbers for classes that exist on the collection document.
+   * Empty classes from Add Class are included; deleted middle classes stay
+   * as gaps (not filled back in as 1..max).
    */
   static getFullClassNumberRange(
     collectionId: number | GetByLibraryAndKeyArgs,
   ): number[] {
-    const normalized = this.normalizeCollectionIdentifier(collectionId);
-    if (!normalized) {
-      return [];
-    }
-    const collection = this.getCollectionFromIdentifier(collectionId);
-    if (!collection) {
-      return [];
-    }
-
+    const document = getCollectionDocument(collectionId);
     const classNumbers = new Set<number>();
-
-    // Get class numbers from items in the collection
-    try {
-      const items = collection.getChildItems();
-      for (const item of items) {
-        if (item.isRegularItem()) {
-          // Get all class assignments for this item
-          const assignments = this.getAllClassAssignments(item, collectionId);
-          for (const assignment of assignments) {
-            if (assignment.classNumber !== undefined) {
-              classNumbers.add(assignment.classNumber);
-            }
-          }
-        }
-      }
-    } catch (e) {
-      ztoolkit.log("Error getting class numbers from items:", e);
-    }
-
-    // Get class numbers from metadata
-    const metadata = this.getSyllabusMetadata(collectionId);
-    if (metadata.classes) {
-      for (const classNumStr of Object.keys(metadata.classes)) {
-        const classNum = parseInt(classNumStr, 10);
-        if (!isNaN(classNum)) {
-          classNumbers.add(classNum);
-        }
+    for (const meta of Object.values(document.classes || {})) {
+      if (meta?.number) {
+        classNumbers.add(meta.number);
       }
     }
-
-    // Calculate min/max from collected class numbers
-    let max: number | null = null;
-    if (classNumbers.size > 0) {
-      const sortedNumbers = Array.from(classNumbers).sort((a, b) => a - b);
-      max = sortedNumbers[sortedNumbers.length - 1];
-    }
-
-    // Generate all class numbers from 1 to max (even if empty)
-    // Always start from 1, even if the minimum class number is greater than 1
-    const allClassNumbers: number[] = [];
-    if (max !== null) {
-      for (let i = 1; i <= max; i++) {
-        allClassNumbers.push(i);
-      }
-    }
-
-    // Merge: use allClassNumbers as base, but ensure we include any classes with items
-    const finalClassNumbers = new Set<number>();
-    for (const num of allClassNumbers) {
-      finalClassNumbers.add(num);
-    }
-    for (const num of classNumbers) {
-      finalClassNumbers.add(num);
-    }
-
-    return Array.from(finalClassNumbers).sort((a, b) => a - b);
+    return Array.from(classNumbers).sort((a, b) => a - b);
   }
 
   /**
@@ -1735,22 +1700,14 @@ export class SyllabusManager {
     classNumber: number | undefined,
     source: "page" | "item-pane" | "context-menu",
   ) {
-    const normalized = this.normalizeCollectionIdentifier(collectionId);
-    if (!normalized) {
-      return;
-    }
-    const data = this.getItemSyllabusData(item);
-    const collectionKeyStr = this.getCollectionReferenceString(
-      normalized.libraryID,
-      normalized.key,
+    const assignments = this.getItemSyllabusDataForCollection(
+      item,
+      collectionId,
     );
-    let assignments = data?.[collectionKeyStr] || [];
 
     if (classNumber) {
-      // Find or create assignment for this class number
       const assignment = assignments.find((e) => e.classNumber === classNumber);
       if (!assignment) {
-        // Create new assignment
         await this.addClassAssignment(
           item,
           collectionId,
@@ -1758,14 +1715,7 @@ export class SyllabusManager {
           {},
           source,
         );
-        // Re-fetch data after adding
-        const updatedData = this.getItemSyllabusData(item);
-        if (!updatedData) {
-          return;
-        }
-        assignments = updatedData[collectionKeyStr] || [];
       } else {
-        // Update existing assignment
         await this.updateClassAssignment(
           item,
           collectionId,
@@ -1773,27 +1723,16 @@ export class SyllabusManager {
           { classNumber },
           source,
         );
-        // Re-fetch data after updating
-        const updatedData = this.getItemSyllabusData(item);
-        if (!updatedData) {
-          return;
-        }
-        assignments = updatedData[collectionKeyStr] || [];
       }
-    } else {
-      // Remove classNumber from first assignment
-      if (assignments.length > 0) {
-        delete assignments[0].classNumber;
-      }
+    } else if (assignments.length > 0) {
+      await this.updateClassAssignment(
+        item,
+        collectionId,
+        assignments[0].id,
+        { classNumber: undefined, classId: undefined },
+        source,
+      );
     }
-
-    // if (!Array.isArray(assignments) || assignments.length === 0) {
-    //   delete data[collectionKeyStr];
-    // } else {
-    //   data[collectionKeyStr] = assignments;
-    // }
-
-    // await this.setItemData(item, data, source);
   }
 
   /**
@@ -1803,24 +1742,7 @@ export class SyllabusManager {
     item: Zotero.Item,
     collectionId: number | GetByLibraryAndKeyArgs,
   ): ItemSyllabusAssignment[] {
-    const normalized = this.normalizeCollectionIdentifier(collectionId);
-    if (!normalized) {
-      return [];
-    }
-    const data = this.getItemSyllabusData(item);
-    if (!data) {
-      return [];
-    }
-    const collectionKeyStr = this.getCollectionReferenceString(
-      normalized.libraryID,
-      normalized.key,
-    );
-    // Data from getItemSyllabusData is already validated and has IDs via Zod
-    const res = data[collectionKeyStr] || [];
-    if (!Array.isArray(res)) {
-      return [];
-    }
-    return res;
+    return this.getItemSyllabusDataForCollection(item, collectionId);
   }
 
   /**
@@ -1874,7 +1796,8 @@ export class SyllabusManager {
     collectionId?: number | GetByLibraryAndKeyArgs,
   ): string {
     const hasPriority = !!assignment.priority;
-    const hasClassNumber = assignment.classNumber !== undefined;
+    const classNumber = resolveAssignmentClassNumber(assignment, collectionId);
+    const hasClassNumber = classNumber !== undefined;
 
     // Check for manual order if item and collectionId are provided
     let manualOrderPosition: string | null = null;
@@ -1883,11 +1806,11 @@ export class SyllabusManager {
       item &&
       collectionId !== undefined &&
       hasClassNumber &&
-      assignment.classNumber !== undefined
+      classNumber !== undefined
     ) {
       const manualOrder = this.getClassItemOrder(
         collectionId,
-        assignment.classNumber,
+        classNumber,
       );
       if (manualOrder.length > 0 && assignment.id) {
         hasManualOrder = true;
@@ -1915,7 +1838,7 @@ export class SyllabusManager {
 
     // Class number comes first (after group)
     sortKeyParts.push(
-      hasClassNumber ? String(assignment.classNumber).padStart(4, "0") : "9999",
+      hasClassNumber ? String(classNumber).padStart(4, "0") : "9999",
     );
 
     // Only include manual order position if manual order exists for this class
@@ -2000,8 +1923,10 @@ export class SyllabusManager {
       // Natural order: by class number, then priority (using collection-specific order), then title
       return [...items].sort((a, b) => {
         // First compare by class number
-        const classNumA = a.assignment.classNumber ?? 9999;
-        const classNumB = b.assignment.classNumber ?? 9999;
+        const classNumA =
+          resolveAssignmentClassNumber(a.assignment, collectionId) ?? 9999;
+        const classNumB =
+          resolveAssignmentClassNumber(b.assignment, collectionId) ?? 9999;
         if (classNumA !== classNumB) {
           return classNumA - classNumB;
         }
@@ -2037,20 +1962,10 @@ export class SyllabusManager {
     metadata: Partial<ItemSyllabusAssignment>,
     source: "page" | "item-pane" | "context-menu",
   ): Promise<void> {
-    const normalized = this.normalizeCollectionIdentifier(collectionId);
-    if (!normalized) {
-      return;
-    }
-    const data =
-      this.getItemSyllabusData(item) ||
-      ItemSyllabusDataEntity.latestSchema.parse({});
-    const collectionKeyStr = this.getCollectionReferenceString(
-      normalized.libraryID,
-      normalized.key,
-    );
-    const assignments = data[collectionKeyStr] || [];
+    const assignments = [
+      ...this.getItemSyllabusDataForCollection(item, collectionId),
+    ];
 
-    // Add new entry with ID
     const newEntry = ItemSyllabusAssignmentEntity.safeParse({
       classNumber,
       ...metadata,
@@ -2060,10 +1975,7 @@ export class SyllabusManager {
       return;
     }
     assignments.push(newEntry.value);
-
-    // New entry already has ID, existing entries validated via getItemSyllabusData
-    data[collectionKeyStr] = assignments;
-    await this.setItemData(item, data, source);
+    await this.setItemAssignments(item, collectionId, assignments, source);
   }
 
   /**
@@ -2076,29 +1988,17 @@ export class SyllabusManager {
     classNumber: number,
     source: "page" | "item-pane" | "context-menu",
   ): Promise<void> {
-    const normalized = this.normalizeCollectionIdentifier(collectionId);
-    if (!normalized) {
-      return;
-    }
-    const data = this.getItemSyllabusData(item);
-    if (!data) {
-      return;
-    }
-    const collectionKeyStr = this.getCollectionReferenceString(
-      normalized.libraryID,
-      normalized.key,
-    );
-    let entries = data[collectionKeyStr] || [];
-
-    entries = entries.filter((e) => e.classNumber !== classNumber);
-
-    if (entries.length === 0) {
-      delete data[collectionKeyStr];
-    } else {
-      data[collectionKeyStr] = entries;
-    }
-
-    await this.setItemData(item, data, source);
+    const classId = this.getClassIdByNumber(collectionId, classNumber);
+    const assignments = this.getItemSyllabusDataForCollection(
+      item,
+      collectionId,
+    ).filter((entry) => {
+      if (classId && entry.classId === classId) {
+        return false;
+      }
+      return entry.classNumber !== classNumber;
+    });
+    await this.setItemAssignments(item, collectionId, assignments, source);
   }
 
   /**
@@ -2110,29 +2010,11 @@ export class SyllabusManager {
     assignmentId: string,
     source: "page" | "item-pane" | "context-menu",
   ): Promise<void> {
-    const normalized = this.normalizeCollectionIdentifier(collectionId);
-    if (!normalized) {
-      return;
-    }
-    const data = this.getItemSyllabusData(item);
-    if (!data) {
-      return;
-    }
-    const collectionKeyStr = this.getCollectionReferenceString(
-      normalized.libraryID,
-      normalized.key,
-    );
-    let entries = data[collectionKeyStr] || [];
-
-    entries = entries.filter((e) => e.id !== assignmentId);
-
-    if (entries.length === 0) {
-      delete data[collectionKeyStr];
-    } else {
-      data[collectionKeyStr] = entries;
-    }
-
-    await this.setItemData(item, data, source);
+    const assignments = this.getItemSyllabusDataForCollection(
+      item,
+      collectionId,
+    ).filter((entry) => entry.id !== assignmentId);
+    await this.setItemAssignments(item, collectionId, assignments, source);
   }
 
   /**
@@ -2143,20 +2025,7 @@ export class SyllabusManager {
     collectionId: number | GetByLibraryAndKeyArgs,
     source: "page" | "item-pane" | "context-menu",
   ): Promise<void> {
-    const normalized = this.normalizeCollectionIdentifier(collectionId);
-    if (!normalized) {
-      return;
-    }
-    const data = this.getItemSyllabusData(item);
-    if (!data) {
-      return;
-    }
-    const collectionKeyStr = this.getCollectionReferenceString(
-      normalized.libraryID,
-      normalized.key,
-    );
-    delete data[collectionKeyStr];
-    await this.setItemData(item, data, source);
+    await this.setItemAssignments(item, collectionId, [], source);
   }
 
   /**
@@ -2170,40 +2039,26 @@ export class SyllabusManager {
     metadata: Partial<ItemSyllabusAssignment>,
     source: "page" | "item-pane" | "context-menu",
   ): Promise<void> {
-    const normalized = this.normalizeCollectionIdentifier(collectionId);
-    if (!normalized) {
-      return;
-    }
-    const data = this.getItemSyllabusData(item);
-    if (!data) {
-      // Can't update an assignment that doesn't exist
-      return;
-    }
-    const collectionKeyStr = this.getCollectionReferenceString(
-      normalized.libraryID,
-      normalized.key,
-    );
-    const entries = data[collectionKeyStr] || [];
-
-    // Find the entry by ID
-    const entryIndex = entries.findIndex((e) => e.id === assignmentId);
+    const assignments = [
+      ...this.getItemSyllabusDataForCollection(item, collectionId),
+    ];
+    const entryIndex = assignments.findIndex((entry) => entry.id === assignmentId);
 
     if (entryIndex >= 0) {
-      // Update existing entry
-      entries[entryIndex] = { ...entries[entryIndex], ...metadata };
+      const next = { ...assignments[entryIndex], ...metadata };
+      if (
+        Object.prototype.hasOwnProperty.call(metadata, "classNumber") &&
+        metadata.classNumber === undefined
+      ) {
+        next.classId = undefined;
+        next.classNumber = undefined;
+      }
+      assignments[entryIndex] = next;
     } else {
-      // Assignment not found by ID - this shouldn't happen, but log it
       ztoolkit.log("Warning: Assignment not found by ID:", assignmentId);
     }
 
-    // Entries from getItemSyllabusData are already validated and have IDs via Zod
-    if (entries.length === 0) {
-      delete data[collectionKeyStr];
-    } else {
-      data[collectionKeyStr] = entries;
-    }
-
-    await this.setItemData(item, data, source);
+    await this.setItemAssignments(item, collectionId, assignments, source);
   }
 
   /**
@@ -2246,84 +2101,37 @@ export class SyllabusManager {
   }
 
   static getSettingsCollectionDictionaryData(): SettingsCollectionDictionaryData {
-    const prefKey = SyllabusManager.getPreferenceKey(
-      SyllabusSettingsKey.COLLECTION_METADATA,
-    );
-    const result = getCachedPref(
-      prefKey,
-      SettingsCollectionDictionaryDataSchema,
-      SettingsCollectionDictionaryDataEntity,
-    );
-    // Type assertion needed because schema allows optional fields but type expects them
-    return result as SettingsCollectionDictionaryData;
-  }
-
-  static setSettingsCollectionDictionaryData(
-    metadata: SettingsCollectionDictionaryData,
-    source: "page" | "item-pane" | "background",
-    emitChange: boolean = true,
-  ) {
-    const inputResult =
-      SettingsCollectionDictionaryDataSchema.safeParse(metadata);
-    if (!inputResult.success) {
-      ztoolkit.log("Error validating collection metadata:", inputResult.error);
-      return;
-    }
-    const prefKey = SyllabusManager.getPreferenceKey(
-      SyllabusSettingsKey.COLLECTION_METADATA,
-    );
-    Zotero.Prefs.set(prefKey, JSON.stringify(inputResult.data), true);
-    if (emitChange) {
-      // Preference change notifications are handled by Zotero.Prefs.registerObserver
-      // if (source !== "item-pane") this.reloadItemPane();
-      if (source !== "page") this.setupPage();
-      this.onClassListUpdate();
-    }
+    return getSyllabusCollectionDictionary();
   }
 
   /**
-   * Get collection metadata from preferences
+   * Get collection metadata from the collection syllabus note
    */
   static getSyllabusMetadata(
     collectionId: number | GetByLibraryAndKeyArgs,
   ): SettingsSyllabusMetadata {
-    const normalized = this.normalizeCollectionIdentifier(collectionId);
-    if (!normalized) {
-      return SettingsSyllabusMetadataSchema.parse({});
-    }
-    const data = this.getSettingsCollectionDictionaryData();
-    const collectionKeyStr = this.getCollectionReferenceString(
-      normalized.libraryID,
-      normalized.key,
-    );
-    if (!data[collectionKeyStr]) {
-      data[collectionKeyStr] = SettingsSyllabusMetadataSchema.parse({});
-    }
-    return data[collectionKeyStr];
+    return metadataFromDocument(getCollectionDocument(collectionId));
   }
 
   /**
-   * Set collection metadata in preferences
-   * Validates with Zod before saving to ensure 100% type safety
-   * Note: This method is called with the full dictionary (SettingsCollectionDictionaryData)
-   * even though it's typed as SettingsSyllabusMetadata for backward compatibility
+   * Set collection metadata in the collection syllabus note.
+   * Assignment data on the note is preserved.
    */
   static async setCollectionMetadata(
     collectionId: number | GetByLibraryAndKeyArgs,
     metadata: SettingsSyllabusMetadata,
     source: "page" | "item-pane" | "background",
   ): Promise<void> {
-    const normalized = this.normalizeCollectionIdentifier(collectionId);
-    if (!normalized) {
+    const parsed = SettingsSyllabusMetadataSchema.safeParse(metadata);
+    if (!parsed.success) {
+      ztoolkit.log("Error validating collection metadata:", parsed.error);
       return;
     }
-    const allData = this.getSettingsCollectionDictionaryData();
-    const collectionKeyStr = this.getCollectionReferenceString(
-      normalized.libraryID,
-      normalized.key,
-    );
-    allData[collectionKeyStr] = metadata;
-    this.setSettingsCollectionDictionaryData(allData, source);
+    await setCollectionDocumentMetadata(collectionId, parsed.data);
+    if (source !== "page") {
+      this.setupPage();
+    }
+    this.onClassListUpdate();
   }
 
   /**
@@ -2514,6 +2322,38 @@ export class SyllabusManager {
       syllabusMetadata,
       source,
     );
+  }
+
+  static getClassIdByNumber(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    classNumber: number,
+  ): string | undefined {
+    return findClassIdByNumber(
+      getCollectionDocument(collectionId).classes,
+      classNumber,
+    );
+  }
+
+  static getClassByNumber(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    classNumber: number,
+  ) {
+    const document = getCollectionDocument(collectionId);
+    const classId = findClassIdByNumber(document.classes, classNumber);
+    return classId ? document.classes?.[classId] : undefined;
+  }
+
+  static async ensureClass(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    classNumber: number,
+  ): Promise<string> {
+    let classId = "";
+    await mutateCollectionDocument(collectionId, (document) => {
+      const classes = { ...(document.classes || {}) };
+      classId = ensureClassRecord(classes, classNumber);
+      return { ...document, classes };
+    });
+    return classId;
   }
 
   static getClassMetadata(
@@ -2717,34 +2557,98 @@ export class SyllabusManager {
     classNumber: number,
     source: "page",
   ): Promise<void> {
-    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
-    syllabusMetadata.classes[classNumber] = SettingsClassMetadataSchema.parse(
-      {},
-    );
-    await SyllabusManager.setCollectionMetadata(
-      collectionId,
-      syllabusMetadata,
-      source,
-    );
+    ztoolkit.log("SyllabusManager.addClass", collectionId, classNumber);
+    await mutateCollectionDocument(collectionId, (document) => {
+      const classes = { ...(document.classes || {}) };
+      ensureClassRecord(classes, classNumber);
+      return { ...document, classes };
+    });
+    this.setupPage();
+    this.onClassListUpdate();
   }
 
   /**
-   * Delete a class from metadata
+   * Delete a class: drop its metadata and unassign items from it.
    */
   static async deleteClass(
     collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
     source: "page",
   ): Promise<void> {
-    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
-    if (syllabusMetadata.classes[classNumber]) {
-      delete syllabusMetadata.classes[classNumber];
-      await SyllabusManager.setCollectionMetadata(
-        collectionId,
-        syllabusMetadata,
-        source,
-      );
+    ztoolkit.log("SyllabusManager.deleteClass", collectionId, classNumber);
+    await mutateCollectionDocument(collectionId, (document) => {
+      const classes = { ...(document.classes || {}) };
+      const classId = findClassIdByNumber(classes, classNumber);
+      if (classId) {
+        delete classes[classId];
+      }
+      const items: typeof document.items = {};
+      for (const [itemKey, assignments] of Object.entries(
+        document.items || {},
+      )) {
+        const remaining = assignments.filter((assignment) => {
+          if (classId && assignment.classId === classId) {
+            return false;
+          }
+          return assignment.classNumber !== classNumber;
+        });
+        if (remaining.length) {
+          items[itemKey] = remaining;
+        }
+      }
+      return { ...document, classes, items };
+    });
+    this.setupPage();
+    this.onClassListUpdate();
+  }
+
+  /**
+   * Swap two classes: only the displayed numbers move. Assignments keep
+   * their classId, so readings and itemOrder stay with the class identity.
+   */
+  static async swapClasses(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    classNumberA: number,
+    classNumberB: number,
+  ): Promise<void> {
+    if (classNumberA === classNumberB) {
+      return;
     }
+    ztoolkit.log(
+      "SyllabusManager.swapClasses",
+      collectionId,
+      classNumberA,
+      classNumberB,
+    );
+    await mutateCollectionDocument(collectionId, (document) => {
+      const classes = { ...(document.classes || {}) };
+      const idA = findClassIdByNumber(classes, classNumberA);
+      const idB = findClassIdByNumber(classes, classNumberB);
+      if (idA && classes[idA]) {
+        classes[idA] = { ...classes[idA], number: classNumberB };
+      }
+      if (idB && classes[idB]) {
+        classes[idB] = { ...classes[idB], number: classNumberA };
+      }
+      return { ...document, classes };
+    });
+    this.setupPage();
+    this.onClassListUpdate();
+  }
+
+  static async moveClass(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    classNumber: number,
+    direction: "up" | "down",
+    _source: "page",
+  ): Promise<void> {
+    const range = this.getFullClassNumberRange(collectionId);
+    const index = range.indexOf(classNumber);
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (index < 0 || targetIndex < 0 || targetIndex >= range.length) {
+      return;
+    }
+    await this.swapClasses(collectionId, classNumber, range[targetIndex]);
   }
 
   /**
@@ -2964,11 +2868,15 @@ export class SyllabusManager {
         const assignments = this.getAllClassAssignments(item, collectionId);
 
         for (const assignment of assignments) {
-          if (assignment.classNumber === undefined) continue;
+          const classNumber = resolveAssignmentClassNumber(
+            assignment,
+            collectionId,
+          );
+          if (classNumber === undefined) continue;
 
           const readingDate = this.getClassReadingDate(
             collectionId,
-            assignment.classNumber,
+            classNumber,
           );
 
           // Only include classes with reading dates
@@ -2979,13 +2887,11 @@ export class SyllabusManager {
           }
 
           const classesForDate = result.get(readingDate)!;
-          if (!classesForDate.has(assignment.classNumber)) {
-            classesForDate.set(assignment.classNumber, []);
+          if (!classesForDate.has(classNumber)) {
+            classesForDate.set(classNumber, []);
           }
 
-          classesForDate
-            .get(assignment.classNumber)!
-            .push({ item, assignment });
+          classesForDate.get(classNumber)!.push({ item, assignment });
         }
       }
 
@@ -3109,9 +3015,17 @@ export class SyllabusManager {
     }
 
     // Create export object with collection title - schema handles all transformations
+    const document = getCollectionDocument(collectionId);
+    const exportItems: typeof document.items = {};
+    for (const [itemKey, assignments] of Object.entries(document.items || {})) {
+      exportItems[itemKey] = assignments.map((assignment) =>
+        exportAssignment(assignment, document.classes),
+      );
+    }
     const exportData = {
       collectionTitle: collectionTitle || "",
       ...metadata,
+      items: exportItems,
       ...(rdfString ? { rdf: rdfString } : {}),
     };
 
@@ -3156,7 +3070,8 @@ export class SyllabusManager {
     const exportData = validationResult.data;
 
     // Extract metadata (without collectionTitle and rdf) for merging
-    const { collectionTitle, rdf, ...metadataData } = exportData;
+    const { collectionTitle, rdf, items: exportedItems, ...metadataData } =
+      exportData;
 
     // Get target collection for RDF import and title update
     const targetCollection = this.getCollectionFromIdentifier(collectionId);
@@ -3234,35 +3149,8 @@ export class SyllabusManager {
             );
           }
 
-          // Patch the assignment config to point to this collection.
-          for (const item of importedItems) {
-            const assignments = this.getItemSyllabusData(item);
-
-            const newAssignments = ItemSyllabusDataEntity.latestSchema.parse(
-              {},
-            );
-            if (assignments && Object.keys(assignments).length > 0) {
-              const firstKey = Object.keys(assignments)[0];
-              newAssignments[
-                this.getCollectionReferenceString(
-                  targetCollection.libraryID,
-                  targetCollection.key,
-                )
-              ] = assignments[firstKey];
-
-              // (Also remove read statuses)
-              for (const [collectionId, assignments] of Object.entries(
-                newAssignments,
-              )) {
-                for (const [index, assignment] of assignments.entries()) {
-                  newAssignments[collectionId][index].status = null;
-                }
-              }
-
-              // Save
-              this.setItemData(item, newAssignments, source);
-            }
-          }
+          // Absorb Extra payloads (Talis/RDF transport) into the collection note.
+          await absorbSyllabusExtraFromItems(importedItems);
         }
       } catch (error) {
         // Log error but don't fail the entire import
@@ -3300,6 +3188,27 @@ export class SyllabusManager {
 
     // Save merged metadata
     await this.setCollectionMetadata(collectionId, mergedMetadata, source);
+
+    if (exportedItems && Object.keys(exportedItems).length > 0) {
+      const collectionItemKeys = new Set(
+        targetCollection
+          .getChildItems()
+          .filter((item) => item.isRegularItem())
+          .map((item) => item.key),
+      );
+      const matchingItems: Record<string, (typeof exportedItems)[string]> = {};
+      for (const [itemKey, assignments] of Object.entries(exportedItems)) {
+        if (collectionItemKeys.has(itemKey) && assignments?.length) {
+          matchingItems[itemKey] = assignments.map((assignment) => ({
+            ...assignment,
+            status: null,
+          }));
+        }
+      }
+      if (Object.keys(matchingItems).length > 0) {
+        await mergeItemAssignmentsInDocument(targetCollection, matchingItems);
+      }
+    }
 
     return {
       collectionAndLibraryKey: this.getCollectionReferenceString(
