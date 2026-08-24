@@ -673,6 +673,9 @@
   .p-16 {
     padding: calc(var(--spacing) * 16);
   }
+  .px-0 {
+    padding-inline: 0px;
+  }
   .px-0\! {
     padding-inline: 0px !important;
   }

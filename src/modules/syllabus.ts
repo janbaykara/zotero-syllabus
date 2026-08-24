@@ -620,8 +620,8 @@ export class SyllabusManager {
     }[] = [
       {
         mode: "collection",
-        label: "Collection",
-        tooltip: "View as Collection",
+        label: "Items",
+        tooltip: "View as Items",
       },
       { mode: "tags", label: "Tags", tooltip: "View as Tags" },
       { mode: "syllabus", label: "Syllabus", tooltip: "View as Syllabus" },
@@ -2257,7 +2257,7 @@ export class SyllabusManager {
     source: "page",
   ): Promise<void> {
     const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
-    syllabusMetadata.links = links;
+    syllabusMetadata.links = links.map((link) => link.trim()).filter(Boolean);
     await SyllabusManager.setCollectionMetadata(
       collectionId,
       syllabusMetadata,

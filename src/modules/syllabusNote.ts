@@ -40,6 +40,8 @@ export const SYLLABUS_NOTE_TAG = "zotero-syllabus";
 export const SYLLABUS_NOTE_TITLE = "Syllabus";
 export const SYLLABUS_EXTRA_KEY = "syllabus";
 export const SYLLABUS_NOTE_PRE_ATTR = "data-zotero-syllabus";
+const PLUGIN_JSON_HEADING = "Plugin data (do not edit)";
+const PLUGIN_REPO_URL = "https://github.com/janbaykara/zotero-syllabus";
 
 const extraFieldTool = new ExtraFieldTool();
 
@@ -496,6 +498,16 @@ function classHeading(
   return classTitle ? `${label}: ${classTitle}` : label;
 }
 
+function pluginJsonBlock(document: CollectionSyllabusDocument): string {
+  const json = JSON.stringify(document, null, 2);
+  const repoHref = escapeHtml(PLUGIN_REPO_URL);
+  return [
+    heading(3, PLUGIN_JSON_HEADING),
+    `<p>This JSON is the machine-readable syllabus used by the <a href="${repoHref}">Zotero Syllabus</a> plugin. Do not edit it: the plugin treats it as the source of truth and will overwrite the readable text above.</p>`,
+    `<pre ${SYLLABUS_NOTE_PRE_ATTR}="1" data-version="${document.version || COLLECTION_SYLLABUS_DOCUMENT_VERSION}">${escapeHtml(json)}</pre>`,
+  ].join("");
+}
+
 function courseByline(
   courseCode: string | null | undefined,
   institution: string | null | undefined,
@@ -575,7 +587,6 @@ async function renderReadableNoteBody(
     collection,
     titles,
   );
-  const json = JSON.stringify(document, null, 2);
 
   return [
     heading(1, collection?.name || SYLLABUS_NOTE_TITLE),
@@ -586,7 +597,7 @@ async function renderReadableNoteBody(
     ...(furtherLines.length
       ? [heading(3, "Further reading"), bulletList(furtherLines)]
       : []),
-    `<pre ${SYLLABUS_NOTE_PRE_ATTR}="1" data-version="${document.version || COLLECTION_SYLLABUS_DOCUMENT_VERSION}">${escapeHtml(json)}</pre>`,
+    pluginJsonBlock(document),
   ]
     .filter(Boolean)
     .join("");
@@ -641,6 +652,9 @@ function noteNeedsFormatPatch(
   }
   const envelopeVersion = getSyllabusNoteFormatVersion(html);
   if (envelopeVersion !== COLLECTION_SYLLABUS_DOCUMENT_VERSION) {
+    return true;
+  }
+  if (!html.includes(PLUGIN_JSON_HEADING) || !html.includes(PLUGIN_REPO_URL)) {
     return true;
   }
   if (
@@ -863,8 +877,7 @@ export function peekPersistedSyllabusDocument(
 function serializeSyllabusNoteFallback(
   document: CollectionSyllabusDocument,
 ): string {
-  const json = JSON.stringify(document, null, 2);
-  const body = `<p>${SYLLABUS_NOTE_TITLE}</p><pre ${SYLLABUS_NOTE_PRE_ATTR}="1" data-version="${document.version || COLLECTION_SYLLABUS_DOCUMENT_VERSION}">${escapeHtml(json)}</pre>`;
+  const body = `<p>${SYLLABUS_NOTE_TITLE}</p>${pluginJsonBlock(document)}`;
   if (typeof Zotero !== "undefined" && Zotero.Notes?.notePrefix) {
     return `${Zotero.Notes.notePrefix}${body}${Zotero.Notes.noteSuffix}`;
   }
