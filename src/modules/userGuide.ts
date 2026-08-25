@@ -7,6 +7,7 @@ import { ensureClassRecord } from "../utils/schemas";
 import { mutateCollectionDocument } from "./syllabusNote";
 import { SyllabusManager } from "./syllabus";
 import { FEATURE_FLAG } from "./featureFlags";
+import { getSelectedCollection } from "../utils/zotero";
 
 export {
   showUserGuide,
@@ -113,8 +114,7 @@ async function selectPlaygroundCollection(
       if (collectionsView) {
         collectionsView.selectByID(live.treeViewID);
       }
-      const selected = pane?.getSelectedCollection?.();
-      if (selected?.id === live.id) {
+      if (getSelectedCollection()?.id === live.id) {
         return true;
       }
     } catch (error) {

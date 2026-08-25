@@ -76,6 +76,7 @@ function registerTalisMetadataEndpoint() {
     supportedMethods: ["GET"],
     supportedDataTypes: ["application/json"],
     permitBookmarklet: true,
+    allowRequestsFromUnsafeWebContent: true,
 
     init: async function (req: any) {
       ztoolkit.log("Hello World endpoint called!");
@@ -98,6 +99,7 @@ function registerTalisMetadataEndpoint() {
       "application/json",
     ],
     permitBookmarklet: true,
+    allowRequestsFromUnsafeWebContent: true,
 
     init: async function (req: any) {
       ztoolkit.log("syllabus/setTalisMetadata endpoint called", req);

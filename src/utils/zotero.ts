@@ -16,27 +16,51 @@ export function isZoteroVersionAtLeast(minVersion: string): boolean {
   return aPatch >= bPatch;
 }
 
-/** Zotero 8+ platform / UI features (also true on Zotero 9). */
+/** Zotero 8+ platform / UI features (also true on Zotero 9/10). */
 export function isZotero8OrLater(): boolean {
   return isZoteroVersionAtLeast("8.0");
 }
 
-// import { getCurrentTab } from './window';
-export function getSelectedCollection() {
-  const pane = ztoolkit.getGlobal("ZoteroPane");
-  // const selectedGroup = pane?.getSelectedGroup()
-  // const selectedLibraryID = pane.getSelectedLibraryID()
-  // const library = Zotero.Libraries.get(selectedLibraryID)
-  // const tab = getCurrentTab()
-  const collection = pane?.getSelectedCollection();
-  // ztoolkit.log("current", {
-  //   selectedGroup,
-  //   selectedLibraryID,
-  //   library,
-  //   collection,
-  //   tab
-  // });
-  return collection || null;
+type ZoteroPaneSelection = {
+  getSelectedCollections?: () => Zotero.Collection[] | false | null | undefined;
+  getSelectedCollection?: () => Zotero.Collection | false | null | undefined;
+};
+
+/**
+ * Collections currently selected in the collections pane.
+ * Zotero 10 removed the singular getters; use the plural API when present.
+ */
+export function getSelectedCollections(): Zotero.Collection[] {
+  const pane = ztoolkit.getGlobal("ZoteroPane") as
+    | ZoteroPaneSelection
+    | undefined;
+  if (!pane) return [];
+
+  if (typeof pane.getSelectedCollections === "function") {
+    try {
+      const collections = pane.getSelectedCollections();
+      return Array.isArray(collections) ? collections : [];
+    } catch {
+      return [];
+    }
+  }
+
+  if (typeof pane.getSelectedCollection === "function") {
+    try {
+      const collection = pane.getSelectedCollection();
+      return collection ? [collection] : [];
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+}
+
+/** The selected collection, or null if none or more than one is selected. */
+export function getSelectedCollection(): Zotero.Collection | null {
+  const collections = getSelectedCollections();
+  return collections.length === 1 ? collections[0] : null;
 }
 
 export function selectZoteroCollection(collectionId: number): boolean {

@@ -388,6 +388,7 @@ async function callZoteroClientEndpoint(endpoint, method, data) {
     // https://github.com/zotero/zotero-connectors/blob/3a020fe77a275cc4c1ecf50df77f59ba665c012d/src/common/connector.js#L141-L145
     "X-Zotero-Version": Zotero.version,
     "X-Zotero-Connector-API-Version": 3,
+    "Zotero-Allowed-Request": "1",
     "Content-Type": "application/json",
   };
 

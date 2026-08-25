@@ -1,6 +1,6 @@
 # Zotero Syllabus
 
-[![zotero target version](https://img.shields.io/badge/Zotero-7%2F8%2F9-green?style=flat-square&logo=zotero&logoColor=CC2936)](https://www.zotero.org)
+[![zotero target version](https://img.shields.io/badge/Zotero-7%2F8%2F9%2F10-green?style=flat-square&logo=zotero&logoColor=CC2936)](https://www.zotero.org)
 
 A Zotero add-on / plugin that turns your collections into syllabi and course reading lists. Order your items by class, tag things as required / optional reading and pin course information.
 
@@ -18,7 +18,7 @@ A Zotero add-on / plugin that turns your collections into syllabi and course rea
 6. Restart Zotero!
 
 > [!NOTE]
-> For best results, use [Zotero 8 or 9](https://www.zotero.org/download/). Zotero 7 works but has some minor styling issues.
+> For best results, use [Zotero 8, 9, or 10](https://www.zotero.org/download/). Zotero 7 works but has some minor styling issues.
 
 ## Can YOU spare 15 minutes to tell me how you're using the tool?
 
@@ -154,7 +154,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ### Requirements
 
-- Zotero 7 or later (8/9 recommended)
+- Zotero 7 or later (8–10 recommended)
 - Node.js (LTS version)
 - Git
 - pnpm
@@ -256,6 +256,7 @@ src/
   - Docs: https://windingwind.github.io/zotero-plugin-toolkit/
 - Zotero 7 plugin development guide: https://gist.github.com/EwoutH/04c8df5a97963b5b46cec9f392ceb103#file-zotero_7_plugin_dev_guide-md
 - Zotero 7 plugin technical notes: https://www.zotero.org/support/dev/zotero_7_for_developers#plugin_changes
+- Zotero 10 plugin technical notes: https://www.zotero.org/support/dev/zotero_10_for_developers
 - https://www.zotero.org/support/kb/connector_zotero_unavailable
 - Translator code API: https://github.com/zotero/translators/blob/master/index.d.ts
 - Zotero server code: https://github.com/zotero/zotero/blob/47e6a0f7abaae0ad90c9f39c385fe24efd7071bf/chrome/content/zotero/xpcom/server/server_connector.js#L927

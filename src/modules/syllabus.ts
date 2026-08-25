@@ -642,8 +642,7 @@ export class SyllabusManager {
 
   // Function to get/set collection pane view mode (per collection)
   static getCollectionViewMode(): CollectionViewMode {
-    const pane = ztoolkit.getGlobal("ZoteroPane");
-    const selectedCollection = pane?.getSelectedCollection();
+    const selectedCollection = getSelectedCollection();
 
     // If no collection is selected, default to collection (tree) view
     if (!selectedCollection) {
@@ -672,8 +671,7 @@ export class SyllabusManager {
   }
 
   static async setCollectionViewMode(mode: CollectionViewMode): Promise<void> {
-    const pane = ztoolkit.getGlobal("ZoteroPane");
-    const selectedCollection = pane?.getSelectedCollection();
+    const selectedCollection = getSelectedCollection();
 
     // If no collection is selected, don't save preference
     if (!selectedCollection) {
@@ -968,8 +966,7 @@ export class SyllabusManager {
        */
 
       // Get collection
-      const pane = ztoolkit.getGlobal("ZoteroPane");
-      const selectedCollection = pane.getSelectedCollection();
+      const selectedCollection = getSelectedCollection();
 
       // Confirm item tree
       // Find the items tree container
@@ -1076,8 +1073,7 @@ export class SyllabusManager {
       dataKey: field,
       label: "Reading Instructions",
       dataProvider: (item: Zotero.Item, dataKey: string) => {
-        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-        const selectedCollection = zoteroPane.getSelectedCollection();
+        const selectedCollection = getSelectedCollection();
 
         if (selectedCollection) {
           const firstAssignment = SyllabusManager.getFirstAssignment(
@@ -1105,8 +1101,7 @@ export class SyllabusManager {
       width: "100px",
       fixedWidth: true,
       dataProvider: (item: Zotero.Item, dataKey: string) => {
-        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-        const selectedCollection = zoteroPane.getSelectedCollection();
+        const selectedCollection = getSelectedCollection();
 
         if (selectedCollection) {
           const firstAssignment = SyllabusManager.getFirstAssignment(
@@ -1192,8 +1187,7 @@ export class SyllabusManager {
       dataKey: field,
       label: "Syllabus Info",
       dataProvider: (item: Zotero.Item, dataKey: string) => {
-        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-        const selectedCollection = zoteroPane.getSelectedCollection();
+        const selectedCollection = getSelectedCollection();
 
         if (selectedCollection) {
           const firstAssignment = SyllabusManager.getFirstAssignment(
@@ -1461,8 +1455,7 @@ export class SyllabusManager {
         icon: "chrome://zotero/skin/16/universal/book.svg",
       },
       onRender: ({ body, item, editable }) => {
-        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-        const selectedCollection = zoteroPane.getSelectedCollection();
+        const selectedCollection = getSelectedCollection();
         const win = Zotero.getMainWindow();
 
         body.textContent = "";
@@ -1521,7 +1514,7 @@ export class SyllabusManager {
     ztoolkit.Menu.unregister("syllabus-set-priority-menu");
     const createPriorityHandler = (priority: string) => async () => {
       const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-      const selectedCollection = zoteroPane.getSelectedCollection();
+      const selectedCollection = getSelectedCollection();
       if (!selectedCollection) return;
       const items = zoteroPane.getSelectedItems();
       for (const item of items) {
@@ -1535,8 +1528,7 @@ export class SyllabusManager {
     };
 
     // Get the selected collection to use collection-specific priorities
-    const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-    const selectedCollection = zoteroPane?.getSelectedCollection();
+    const selectedCollection = getSelectedCollection();
 
     // Get collection-specific priority options if a collection is selected
     // Otherwise use default priorities
@@ -1596,8 +1588,7 @@ export class SyllabusManager {
   }
 
   static buildClassNumberChildren() {
-    const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-    const selectedCollection = zoteroPane.getSelectedCollection();
+    const selectedCollection = getSelectedCollection();
     if (!selectedCollection) {
       return [
         {
@@ -1620,7 +1611,7 @@ export class SyllabusManager {
     const createClassHandler =
       (classNumber: number | undefined) => async () => {
         const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-        const selectedCollection = zoteroPane.getSelectedCollection();
+        const selectedCollection = getSelectedCollection();
         if (!selectedCollection) return;
         const items = zoteroPane.getSelectedItems();
         for (const item of items) {
@@ -1677,7 +1668,7 @@ export class SyllabusManager {
     ztoolkit.Menu.unregister("syllabus-set-status-menu");
     const createStatusHandler = (status: "done" | null) => async () => {
       const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-      const selectedCollection = zoteroPane.getSelectedCollection();
+      const selectedCollection = getSelectedCollection();
       if (!selectedCollection) return;
       const items = zoteroPane.getSelectedItems();
       for (const item of items) {

@@ -6,7 +6,7 @@ import type { Plugin } from "esbuild";
 import pkg from "./package.json";
 
 // ---------------------------------------------------------------------------
-// zotero-plugin-toolkit Zotero 8/9 compatibility patch
+// zotero-plugin-toolkit Zotero 8+ compatibility patch
 //
 // The toolkit (through at least 5.1.0-beta.13) feature-detects the legacy JSM
 // loader with `typeof ChromeUtils.import === "undefined"`. On Zotero 8+
@@ -55,7 +55,7 @@ const patchToolkitEsmImport: Plugin = {
         if (!source.includes(TOOLKIT_LEGACY_IMPORT)) {
           throw new Error(
             "zotero-plugin-toolkit's _importESModule no longer matches the " +
-              "Zotero 8/9 compatibility patch in zotero-plugin.config.ts. If " +
+              "Zotero 8+ compatibility patch in zotero-plugin.config.ts. If " +
               "the toolkit fixed its ChromeUtils.import feature detection " +
               "upstream, delete the patch; otherwise update " +
               `TOOLKIT_LEGACY_IMPORT to the new source. (${args.path})`,
@@ -116,7 +116,7 @@ export default defineConfig({
           __env__: `"${process.env.NODE_ENV}"`,
         },
         bundle: true,
-        // Keep firefox115 so the bundle still runs on Zotero 7; Zotero 8/9
+        // Keep firefox115 so the bundle still runs on Zotero 7; Zotero 8–10
         // (Firefox 140) are a superset for the syntax we emit.
         target: "firefox115",
         outfile: `.scaffold/build/addon/content/scripts/${pkg.config.addonRef}.js`,

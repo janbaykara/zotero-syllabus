@@ -1,5 +1,6 @@
 import { useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
+import { getSelectedCollection } from "../../utils/zotero";
 
 export function useSelectedCollectionId(): number | null {
   // Create the store once
@@ -21,8 +22,7 @@ export function createSelectedCollectionStore() {
   }
 
   function updateSelectedCollection() {
-    const pane = ztoolkit.getGlobal("ZoteroPane");
-    const collection = pane?.getSelectedCollection();
+    const collection = getSelectedCollection();
     const newCollectionId = collection?.id || null;
 
     // Check if collection actually changed
