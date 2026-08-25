@@ -15,7 +15,13 @@ import {
   generateBibliographicReference,
 } from "../utils/cite";
 import { getPref } from "../utils/prefs";
+import { getString } from "../utils/locale";
 import { getCSSUrl } from "../utils/css";
+import {
+  showUserGuide,
+  TOUR_EVENT_CLOSE_SETTINGS,
+  TOUR_EVENT_OPEN_SETTINGS,
+} from "./userGuide";
 import {
   SyllabusManager,
   ItemSyllabusAssignment,
@@ -149,6 +155,21 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
   // Settings view state
   const [showSettings, setShowSettings] = useState(false);
+
+  useEffect(() => {
+    const win = Zotero.getMainWindow();
+    if (!win) {
+      return;
+    }
+    const openSettings = () => setShowSettings(true);
+    const closeSettings = () => setShowSettings(false);
+    win.addEventListener(TOUR_EVENT_OPEN_SETTINGS, openSettings);
+    win.addEventListener(TOUR_EVENT_CLOSE_SETTINGS, closeSettings);
+    return () => {
+      win.removeEventListener(TOUR_EVENT_OPEN_SETTINGS, openSettings);
+      win.removeEventListener(TOUR_EVENT_CLOSE_SETTINGS, closeSettings);
+    };
+  }, []);
 
   // Table of Contents state
   const [showTOC, setShowTOC] = useState(false);
@@ -1724,6 +1745,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                         className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
                         title="Edit syllabus settings"
                         aria-label="Edit syllabus settings"
+                        data-tour="syllabus-settings-button"
                         onClick={() => setShowSettings(true)}
                       >
                         <Settings
@@ -1852,9 +1874,46 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
             {(() => {
               const { singularCapitalized } =
                 SyllabusManager.getNomenclatureFormatted(collectionId);
+              const hasNoClasses = classGroups.length === 0;
 
               return (
                 <>
+                  {!isLocked && hasNoClasses && (
+                    <div
+                      className="in-[.print]:hidden mb-6 rounded-lg border border-quinary bg-quinary/40 p-6 space-y-3"
+                      data-tour="syllabus-empty-state"
+                    >
+                      <div className="text-xl font-semibold text-primary">
+                        {getString("userGuide-empty-title")}
+                      </div>
+                      <p className="text-secondary text-base m-0">
+                        {getString("userGuide-empty-desc")}
+                      </p>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        <button
+                          className="syllabus-create-class-button"
+                          data-tour="syllabus-add-class"
+                          onClick={addClass}
+                          title={`Add ${singularCapitalized} ${nextClassNumber}`}
+                        >
+                          Add {singularCapitalized} {nextClassNumber}
+                        </button>
+                        <button
+                          type="button"
+                          className="px-3 py-1.5 rounded-md border border-quinary bg-background text-primary cursor-pointer hover:bg-quinary"
+                          onClick={() => {
+                            const win = Zotero.getMainWindow();
+                            if (win) {
+                              void showUserGuide(win, true);
+                            }
+                          }}
+                        >
+                          {getString("userGuide-empty-tour")}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {!isLocked && isDragging && !compactMode && (
                     <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
                       <div className="syllabus-class-header-container">
@@ -1876,10 +1935,11 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                     </div>
                   )}
 
-                  {!isLocked && (
+                  {!isLocked && !hasNoClasses && (
                     <div className="syllabus-create-class-control in-[.print]:hidden">
                       <button
                         className="syllabus-create-class-button"
+                        data-tour="syllabus-add-class"
                         onClick={addClass}
                         title={`Add ${singularCapitalized} ${nextClassNumber}`}
                       >
@@ -1892,7 +1952,10 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
             })()}
 
             {furtherReadingItems.length > 0 && (
-              <div className="syllabus-class-group in-[.print]:scheme-light">
+              <div
+                className="syllabus-class-group in-[.print]:scheme-light"
+                data-tour="syllabus-further-reading"
+              >
                 <div
                   className={twMerge(
                     "font-semibold",
@@ -2138,6 +2201,7 @@ function ClassGroupComponent({
   return (
     <div
       id={tocId || undefined}
+      data-tour="syllabus-class-group"
       className={twMerge(
         "syllabus-class-group in-[.print]:scheme-light",
         readerMode && classIsDone ? "opacity-40" : "",
@@ -2409,7 +2473,10 @@ function ReadingDateInput({
   }
 
   return (
-    <div className="flex flex-row items-center gap-2">
+    <div
+      className="flex flex-row items-center gap-2"
+      data-tour="syllabus-class-reading-date"
+    >
       <label
         className={twMerge(
           "text-tertiary shrink-0",

@@ -392,7 +392,7 @@ function ItemPaneContent({
   }, []);
 
   return (
-    <div className="flex flex-col gap-2 pb-2">
+    <div className="flex flex-col gap-2 pb-2" data-tour="syllabus-item-pane">
       {allAssignmentsByCollection.map((group) => {
         const isCurrentCollection = group.collectionId === currentCollectionId;
         return (

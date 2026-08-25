@@ -14,3 +14,6 @@ reading-date-label = 阅读日期
 view-readings-button = 查看阅读
 no-readings-scheduled = 未安排阅读
 no-readings-scheduled-description = 为课程添加阅读日期以在此处查看。
+
+menuHelp-openUserGuide =
+    .label = 打开 Zotero Syllabus 用户指南

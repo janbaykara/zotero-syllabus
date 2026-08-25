@@ -10,6 +10,10 @@ import {
 } from "./utils/schemas";
 import { zoteroCache } from "./utils/cache";
 import { FEATURE_FLAG } from "./modules/featureFlags";
+import {
+  registerUserGuideHelpMenu,
+  showUserGuide,
+} from "./modules/userGuide";
 
 async function onStartup(rootURI: string) {
   await Promise.all([
@@ -252,10 +256,18 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
   registerStyleSheet(win);
 
   SyllabusManager.onMainWindowLoad(win);
+  registerUserGuideHelpMenu();
 
   win.MozXULElement.insertFTLIfNeeded(
     `${addon.data.config.addonRef}-mainWindow.ftl`,
   );
+
+  // First-run / outdated tour — wait for toolbar chrome to exist
+  Zotero.Promise.delay(800).then(() => {
+    void showUserGuide(win).catch((error) => {
+      ztoolkit.log("Error showing user guide:", error);
+    });
+  });
 }
 
 async function onMainWindowUnload(win: _ZoteroTypes.MainWindow): Promise<void> {
@@ -310,4 +322,5 @@ export default {
   onMainWindowUnload,
   onNotify,
   onPrefsEvent,
+  onShowUserGuide: showUserGuide,
 };

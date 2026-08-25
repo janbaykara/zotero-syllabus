@@ -27,3 +27,39 @@ prefs-table-detail = 详情
 tabpanel-lib-tab-label = 库标签
 tabpanel-reader-tab-label = 阅读器标签
 menu-toggle-bibliography = 切换参考文献
+menuHelp-openUserGuide = 打开 Zotero Syllabus 用户指南
+userGuide-start-title = 欢迎使用 Zotero Syllabus
+userGuide-start-desc =
+    将任意 Zotero 分类变成课程阅读清单——按课堂组织、设置优先级，并跟踪接下来要读什么。
+userGuide-start-close = 以后再说
+userGuide-collection-title = 从分类开始
+userGuide-collection-desc =
+    教学大纲建立在分类上。我们将打开一个“Syllabus Tour”练习分类，并放入几篇示例阅读。
+userGuide-syllabusButton-title = 打开教学大纲视图
+userGuide-syllabusButton-desc =
+    在条目工具栏点击「教学大纲」，用课程大纲替换列表视图。本指南会自动切换过去。
+userGuide-addClass-title = 添加课堂
+userGuide-addClass-desc =
+    课堂（或周次 / 单元——稍后可改名）是教学大纲的分节。先添加一个开始。
+userGuide-assign-title = 分配阅读
+userGuide-assign-desc =
+    将条目拖入课堂，或右键 → 分配到课堂。未分配的条目会留在「扩展阅读」中。
+userGuide-itemPane-title = 在条目面板中编辑
+userGuide-itemPane-desc =
+    选中一篇阅读，即可在「阅读作业」区域设置课堂编号、优先级、说明和完成状态。
+userGuide-readingDate-title = 设置课堂截止日期
+userGuide-readingDate-desc =
+    每个课堂都可以设置阅读日期。点击「下一步」后我们会为第 1 课设置一个日期，然后你可以打开阅读日程。
+userGuide-readingSchedule-title = 打开阅读日程
+userGuide-readingSchedule-desc =
+    「阅读日程」会汇总各教学大纲中带截止日期的课堂。下一步将打开它，方便查看接下来的安排。
+userGuide-subcollections-title = 可选：课堂文件夹
+userGuide-subcollections-desc =
+    需要按课堂镜像文件夹吗？在设置中启用「课堂子分类」。除非希望插件管理子文件夹，否则请保持关闭。
+userGuide-finish-title = 准备就绪
+userGuide-finish-desc =
+    可随时通过「帮助 → 打开 Zotero Syllabus 用户指南」重新打开本教程。祝学习顺利！
+userGuide-empty-title = 按课堂组织此分类
+userGuide-empty-desc =
+    为每周或每节课添加课堂，然后分配阅读。也可以先跟随简短引导教程。
+userGuide-empty-tour = 开始教程

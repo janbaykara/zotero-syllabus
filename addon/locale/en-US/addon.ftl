@@ -27,3 +27,39 @@ prefs-table-detail = Detail
 tabpanel-lib-tab-label = Lib Tab
 tabpanel-reader-tab-label = Reader Tab
 menu-toggle-bibliography = Toggle Bibliography
+menuHelp-openUserGuide = Open Zotero Syllabus User Guide
+userGuide-start-title = Welcome to Zotero Syllabus
+userGuide-start-desc =
+    Turn any Zotero collection into a course reading list — organize by class, set priorities, and track what to read next.
+userGuide-start-close = Remind me later
+userGuide-collection-title = Start from a collection
+userGuide-collection-desc =
+    Syllabi live on collections. We’ll open a “Syllabus Tour” playground collection with a couple of sample readings.
+userGuide-syllabusButton-title = Open Syllabus view
+userGuide-syllabusButton-desc =
+    Click Syllabus in the items toolbar to replace the list with your course outline. The tour will switch there for you.
+userGuide-addClass-title = Add a class
+userGuide-addClass-desc =
+    Classes (or weeks / sessions — you can rename them later) are the sections of your syllabus. Add one to get started.
+userGuide-assign-title = Assign readings
+userGuide-assign-desc =
+    Drag items into a class, or right-click → Assign to a class. Unassigned items stay under Further reading.
+userGuide-itemPane-title = Edit in the item pane
+userGuide-itemPane-desc =
+    Select a reading to set class number, priority, instructions, and done status in the Reading assignments section.
+userGuide-readingDate-title = Set a class due date
+userGuide-readingDate-desc =
+    Each class can have a reading date. We’ll set one on Class 1 when you click Next — then you can open the Reading Schedule.
+userGuide-readingSchedule-title = Open Reading Schedule
+userGuide-readingSchedule-desc =
+    Reading Schedule gathers classes with due dates across your syllabi. Next opens it so you can see what’s coming up.
+userGuide-subcollections-title = Optional: class folders
+userGuide-subcollections-desc =
+    Want folder mirrors per class? Enable Class subcollections in Settings. Leave this off unless you want the plugin to manage child folders.
+userGuide-finish-title = You’re ready
+userGuide-finish-desc =
+    Reopen this tour anytime from Help → Open Zotero Syllabus User Guide. Happy studying!
+userGuide-empty-title = Organize this collection by class
+userGuide-empty-desc =
+    Add classes for each week or session, then assign readings. You can also take a short guided tour.
+userGuide-empty-tour = Take the tour

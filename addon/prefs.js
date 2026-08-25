@@ -5,3 +5,4 @@ pref("readerMode", false);
 pref("shouldColourSyllabusRows", false);
 pref("debugMode", false);
 pref("wpm", 220);
+pref("latestTourVersion", 0);

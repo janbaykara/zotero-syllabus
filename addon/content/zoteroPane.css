@@ -3,7 +3,7 @@
   fill: currentColor;
   -moz-context-properties: fill, fill-opacity;
   width: auto !important;
-  min-width: 5.5em !important;
+  min-width: 0 !important;
   margin: 0 !important;
   padding-left: 10px !important;
   padding-right: 10px !important;
@@ -13,19 +13,16 @@
 }
 
 .syllabus-view-mode-button[data-view-mode="collection"] {
-  min-width: 6.5em !important;
   border-start-start-radius: 4px !important;
   border-end-start-radius: 4px !important;
   margin-inline-start: 4px !important;
 }
 
 .syllabus-view-mode-button[data-view-mode="tags"] {
-  min-width: 4em !important;
   border-inline-start: none !important;
 }
 
 .syllabus-view-mode-button[data-view-mode="syllabus"] {
-  min-width: 5.5em !important;
   border-inline-start: none !important;
   border-start-end-radius: 4px !important;
   border-end-end-radius: 4px !important;
@@ -33,10 +30,11 @@
 }
 
 .syllabus-view-mode-button .toolbarbutton-text {
-  min-width: max-content !important;
+  min-width: 0 !important;
   max-width: none !important;
   overflow: visible !important;
   text-overflow: clip !important;
+  padding-inline: 0 !important;
 }
 
 .syllabus-view-mode-button[data-selected="true"],

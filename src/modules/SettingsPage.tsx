@@ -205,7 +205,10 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
           </section>
 
           {/* Class folders */}
-          <section className="space-y-4">
+          <section
+            className="space-y-4"
+            data-tour="syllabus-class-subcollections"
+          >
             <h2 className="text-2xl font-semibold">Class subcollections</h2>
             <p className="text-secondary">
               Off by default. When enabled, each class gets a folder under this

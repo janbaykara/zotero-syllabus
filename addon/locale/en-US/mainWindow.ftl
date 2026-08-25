@@ -14,3 +14,6 @@ reading-date-label = Reading date
 view-readings-button = View Readings
 no-readings-scheduled = No readings scheduled
 no-readings-scheduled-description = Add reading dates to classes to see them here.
+
+menuHelp-openUserGuide =
+    .label = Open Zotero Syllabus User Guide

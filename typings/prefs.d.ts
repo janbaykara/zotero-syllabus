@@ -14,6 +14,7 @@ declare namespace _ZoteroTypes {
       "shouldColourSyllabusRows": boolean;
       "debugMode": boolean;
       "wpm": number;
+      "latestTourVersion": number;
     };
   }
 }
