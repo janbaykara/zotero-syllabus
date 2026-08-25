@@ -37,9 +37,9 @@ import { formatReadingDate } from "../utils/dates";
 import { getPrefValue } from "../utils/prefs";
 import { generateBibliographicReference } from "../utils/cite";
 import {
+  classFolderNameMatches,
   classSubcollectionKeysChanged,
   classSubcollectionName,
-  classSubcollectionNameBase,
   clearManagedSubcollections,
   clearStaleSubcollectionKey,
   enqueueClassFolderEnsure,
@@ -48,6 +48,7 @@ import {
   forgetManagedSubcollection,
   isClassFolderSyncHeld,
   parentCollectionForManagedId,
+  rememberManagedClassFolder,
   rememberManagedSubcollections,
 } from "./classSubcollections";
 import {
@@ -97,9 +98,40 @@ const writesInFlight = new Map<string, number>();
 const documentListeners = new Set<() => void>();
 
 let indexBuilt = false;
+let itemDataReady = false;
 let notifierID: string | null = null;
 let documentGeneration = 0;
 let indexReady: Promise<void> = Promise.resolve();
+
+async function waitForLibraryItemData(): Promise<void> {
+  const libraries = Zotero.Libraries.getAll();
+  await Promise.all(
+    libraries.map(async (library) => {
+      try {
+        if (typeof library.waitForDataLoad === "function") {
+          await library.waitForDataLoad("item");
+        }
+      } catch (error) {
+        ztoolkit.log(
+          `Error waiting for items in library ${library.id}:`,
+          error,
+        );
+      }
+    }),
+  );
+  itemDataReady = true;
+}
+
+function emptyCachedDocument(ref: string): CachedDocument {
+  const document = emptyCollectionDocument();
+  return {
+    collectionRef: ref,
+    noteId: null,
+    noteVersion: 0,
+    document,
+    snapshot: snapshotOf(document),
+  };
+}
 
 export function subscribeToSyllabusDocumentChanges(
   listener: () => void,
@@ -756,12 +788,6 @@ export function parseSyllabusNote(
   if (!html) {
     return null;
   }
-  if (isUnsupportedFutureNote(html)) {
-    ztoolkit.log(
-      "Syllabus note format is newer than this plugin; leaving it unchanged",
-    );
-    return null;
-  }
 
   const jsonText = extractJsonPayload(html);
   if (!jsonText) {
@@ -769,7 +795,7 @@ export function parseSyllabusNote(
   }
 
   try {
-    const parsed = JSON.parse(jsonText);
+    const parsed = coerceDocumentJson(JSON.parse(jsonText));
     const result = CollectionSyllabusDocumentEntity.safeParse(parsed);
     if (result.type === "ok") {
       return result.value;
@@ -778,12 +804,33 @@ export function parseSyllabusNote(
     if (fallback.success) {
       return fallback.data;
     }
+    if (isUnsupportedFutureNote(html)) {
+      ztoolkit.log(
+        "Syllabus note format is newer than this plugin; leaving it unchanged",
+      );
+      return null;
+    }
     ztoolkit.log("Error validating syllabus note JSON:", result.error);
     return null;
   } catch (error) {
     ztoolkit.log("Error parsing syllabus note JSON:", error);
     return null;
   }
+}
+
+/** Read notes written with a newer document.version by keeping known fields. */
+function coerceDocumentJson(parsed: unknown): unknown {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return parsed;
+  }
+  const obj = { ...(parsed as Record<string, unknown>) };
+  if (
+    typeof obj.version === "number" &&
+    obj.version > COLLECTION_SYLLABUS_DOCUMENT_VERSION
+  ) {
+    obj.version = COLLECTION_SYLLABUS_DOCUMENT_VERSION;
+  }
+  return obj;
 }
 
 function itemHasSyllabusTag(item: Zotero.Item): boolean | null {
@@ -895,7 +942,15 @@ function looksLikeSyllabusNote(item: Zotero.Item): boolean {
     } catch {
       // Title isn't required if the tag already matched.
     }
-    return false;
+    try {
+      const html = item.getNote() || "";
+      return (
+        html.includes(SYLLABUS_NOTE_PRE_ATTR) ||
+        html.includes(PLUGIN_JSON_HEADING)
+      );
+    } catch {
+      return false;
+    }
   } catch {
     return false;
   }
@@ -1091,6 +1146,11 @@ export function getClassSubcollectionContext(
   if (!collection) {
     return null;
   }
+  if (
+    documentCache.get(collectionRefFromCollection(collection))?.noteId != null
+  ) {
+    return null;
+  }
   const parent = resolveSyllabusRoot(collection);
   if (parent.id === collection.id) {
     return null;
@@ -1101,22 +1161,15 @@ export function getClassSubcollectionContext(
     if (!meta?.number) {
       continue;
     }
-    if (meta.subcollectionKey === collection.key) {
-      return { parent, classId, classNumber: meta.number };
-    }
-  }
-  for (const [classId, meta] of Object.entries(classes)) {
-    if (!meta?.number) {
-      continue;
-    }
     if (
-      classSubcollectionName(document.nomenclature, meta.number, meta.title) ===
-      classSubcollectionNameBase(collection.name)
+      meta.subcollectionKey === collection.key ||
+      classFolderNameMatches(document, meta, collection.name)
     ) {
+      rememberManagedClassFolder(collection, parent);
       return { parent, classId, classNumber: meta.number };
     }
   }
-  return { parent, classId: null, classNumber: null };
+  return null;
 }
 
 registerManagedClassFolderCheck((collectionId) => {
@@ -1126,9 +1179,6 @@ registerManagedClassFolderCheck((collectionId) => {
 
 registerSyllabusRootCheck((collectionId) => {
   if (getReadingScheduleCollectionContext(collectionId)) {
-    return false;
-  }
-  if (getClassSubcollectionContext(collectionId)) {
     return false;
   }
   const collection = resolveCollection(collectionId);
@@ -1157,20 +1207,9 @@ function parseDocumentFromNote(
 function findLoadedSyllabusNote(
   collection: Zotero.Collection,
 ): Zotero.Item | null {
-  const matches = collectionNoteCandidates(collection).filter((item) => {
-    const tagged = itemHasSyllabusTag(item);
-    if (tagged === true) {
-      return true;
-    }
-    if (tagged === false) {
-      return false;
-    }
-    try {
-      return Boolean(parseSyllabusNote(item.getNote()));
-    } catch {
-      return false;
-    }
-  });
+  const matches = collectionNoteCandidates(collection).filter((item) =>
+    looksLikeSyllabusNote(item),
+  );
   if (matches.length === 0) {
     return null;
   }
@@ -1215,6 +1254,11 @@ function loadDocumentForCollection(
 
   const note = findLoadedSyllabusNote(collection);
   if (!note) {
+    // Collection children are empty until item data is loaded. Caching a miss
+    // here would permanently hide syllabus notes (and class-folder icons).
+    if (!itemDataReady) {
+      return emptyCachedDocument(ref);
+    }
     return setCacheEntry(ref, null, 0, emptyCollectionDocument());
   }
   return setCacheEntry(ref, note.id, note.version, parseDocumentFromNote(note));
@@ -1269,6 +1313,7 @@ function ensureIndex(): void {
 }
 
 async function rebuildDocumentIndex(): Promise<void> {
+  await waitForLibraryItemData();
   const notesToPatch: Zotero.Collection[] = [];
   for (const collection of getAllCollections()) {
     try {
@@ -1332,7 +1377,7 @@ async function rebuildDocumentIndex(): Promise<void> {
   }
   for (const collection of getAllCollections()) {
     const entry = documentCache.get(collectionRefFromCollection(collection));
-    if (!entry?.noteId || patchedIds.has(collection.id)) {
+    if (!entry?.noteId) {
       continue;
     }
     const hasClasses = Object.keys(entry.document.classes || {}).length > 0;
@@ -1341,7 +1386,10 @@ async function rebuildDocumentIndex(): Promise<void> {
     }
     try {
       rememberManagedSubcollections(collection, entry.document);
-      if (!shouldCreateSubcollections(entry.document)) {
+      if (
+        patchedIds.has(collection.id) ||
+        !shouldCreateSubcollections(entry.document)
+      ) {
         continue;
       }
       const ensured = await enqueueClassFolderEnsure(collection, () =>
@@ -1647,6 +1695,7 @@ export async function mutateCollectionDocument(
         if (ensured) {
           next = ensured;
         }
+        rememberManagedSubcollections(collection, next);
         setCacheEntry(ref, note.id || null, note.version || 0, next);
       } catch (error) {
         ztoolkit.log("Error ensuring class subcollections:", error);
@@ -1661,6 +1710,7 @@ export async function mutateCollectionDocument(
         fallbackHtml,
       );
       setCacheEntry(ref, saved.id, saved.version, next);
+      refreshManagedCollectionTrees();
       try {
         await enqueueClassSubcollectionItemSync(collection, next);
       } catch (error) {
@@ -2163,6 +2213,7 @@ export function shutdownSyllabusNotes(): void {
   clearManagedSubcollections();
   clearManagedReadingScheduleCollection();
   indexBuilt = false;
+  itemDataReady = false;
   documentGeneration = 0;
   indexReady = Promise.resolve();
 }

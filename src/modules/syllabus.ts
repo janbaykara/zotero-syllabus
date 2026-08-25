@@ -62,11 +62,13 @@ import {
   getClassSubcollectionContext,
   collectionHasSyllabusNote,
   ensureSyllabusNoteForUser,
+  whenSyllabusNotesReady,
 } from "./syllabusNote";
 import { migrateLegacyCollectionMetadataPrefs } from "./migratePrefsToNotes";
 import { isManagedReadingScheduleCollection } from "./readingScheduleCollection";
 import {
   patchManagedCollectionTree,
+  refreshManagedCollectionTrees,
   unpatchManagedCollectionTree,
   unpatchManagedCollectionTreePrototype,
 } from "./managedCollectionTree";
@@ -394,6 +396,11 @@ export class SyllabusManager {
     this.setupSyllabusViewReloadListener();
     patchManagedCollectionTree(win);
     this.syncReadingScheduleTabIcon(win);
+    void whenSyllabusNotesReady().then(() => {
+      patchManagedCollectionTree(win);
+      refreshManagedCollectionTrees();
+      this.syncReadingScheduleTabIcon(win);
+    });
 
     // Re-render reading list tab if it exists (for hot reload)
     // Use a small delay to ensure tabs are initialized
@@ -543,6 +550,7 @@ export class SyllabusManager {
     this.unregisterNotifier();
     for (const mainWindow of Zotero.getMainWindows() as _ZoteroTypes.MainWindow[]) {
       this.unpatchReadingScheduleTabBar(mainWindow);
+      unpatchManagedCollectionTree(mainWindow);
     }
     unpatchManagedCollectionTreePrototype();
     shutdownSyllabusNotes();

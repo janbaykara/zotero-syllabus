@@ -111,6 +111,42 @@ export function classSubcollectionNameBase(name: string): string {
     .trimEnd();
 }
 
+/** True when a folder name matches a class, including dated / done suffixes. */
+export function classFolderNameMatches(
+  document: CollectionSyllabusDocument,
+  meta: StoredClassMetadata,
+  collectionName: string,
+): boolean {
+  if (!meta?.number) {
+    return false;
+  }
+  const base = classSubcollectionNameBase(collectionName);
+  const withoutDate = classSubcollectionName(
+    document.nomenclature,
+    meta.number,
+    meta.title,
+  );
+  const withDate = classSubcollectionName(
+    document.nomenclature,
+    meta.number,
+    meta.title,
+    { done: meta.status === "done", readingDate: meta.readingDate },
+  );
+  return (
+    collectionName === withDate ||
+    collectionName === withoutDate ||
+    base === withoutDate ||
+    base === withDate
+  );
+}
+
+export function rememberManagedClassFolder(
+  child: Zotero.Collection,
+  parent: Zotero.Collection,
+): void {
+  rememberManaged(child, parent);
+}
+
 export function classSubcollectionKeysChanged(
   before: CollectionSyllabusDocument,
   after: CollectionSyllabusDocument,
@@ -147,6 +183,21 @@ export function rememberManagedSubcollections(
     if (child) {
       rememberManaged(child, parent);
     }
+  }
+  try {
+    for (const child of parent.getChildCollections()) {
+      if (managedByCollectionId.has(child.id) || child.deleted) {
+        continue;
+      }
+      for (const meta of Object.values(document.classes || {})) {
+        if (classFolderNameMatches(document, meta, child.name)) {
+          rememberManaged(child, parent);
+          break;
+        }
+      }
+    }
+  } catch (error) {
+    ztoolkit.log("Error matching class folders by name:", error);
   }
 }
 

@@ -121,10 +121,7 @@ function patchRenderItem(view: CollectionsView): void {
   const patchedView = view as CollectionsView & {
     [RENDER_PATCH_KEY]?: CollectionsView["renderItem"];
   };
-  if (patchedView[RENDER_PATCH_KEY]) {
-    return;
-  }
-  const original = view.renderItem.bind(view);
+  const original = patchedView[RENDER_PATCH_KEY] || view.renderItem.bind(view);
   patchedView[RENDER_PATCH_KEY] = original;
   view.renderItem = (index, selection, oldDiv, columns) => {
     const div = original(index, selection, oldDiv, columns);
@@ -179,6 +176,11 @@ export function unpatchManagedCollectionTreePrototype(): void {
 /** Re-render tree rows so managed icons apply after folders are remembered. */
 export function refreshManagedCollectionTrees(): void {
   for (const win of Zotero.getMainWindows() as _ZoteroTypes.MainWindow[]) {
-    collectionsViewForWindow(win)?.tree?.invalidate?.();
+    const view = collectionsViewForWindow(win);
+    if (!view) {
+      continue;
+    }
+    view.forceUpdate?.();
+    view.tree?.invalidate?.();
   }
 }
