@@ -65,6 +65,11 @@ import {
 } from "./syllabusNote";
 import { migrateLegacyCollectionMetadataPrefs } from "./migratePrefsToNotes";
 import { isManagedReadingScheduleCollection } from "./readingScheduleCollection";
+import {
+  patchManagedCollectionTree,
+  unpatchManagedCollectionTree,
+  unpatchManagedCollectionTreePrototype,
+} from "./managedCollectionTree";
 
 enum SyllabusSettingsKey {
   COLLECTION_VIEW_MODES = "collectionViewModes",
@@ -176,7 +181,7 @@ const tabManager = FEATURE_FLAG.READING_SCHEDULE
       type: "reading-list",
       title: "Reading Schedule",
       rootElementIdFactory: () => "reading-list-tab-root",
-      data: { icon: "book" },
+      data: { icon: "calendar" },
       componentFactory: () => h(ReadingSchedule, {}),
       getTabId: () => "syllabus-reading-list-tab",
     })
@@ -387,10 +392,14 @@ export class SyllabusManager {
     this.setupUI();
     this.setupSyllabusViewTabListener();
     this.setupSyllabusViewReloadListener();
+    patchManagedCollectionTree(win);
+    this.syncReadingScheduleTabIcon(win);
 
     // Re-render reading list tab if it exists (for hot reload)
     // Use a small delay to ensure tabs are initialized
     Zotero.Promise.delay(100).then(() => {
+      patchManagedCollectionTree(win);
+      this.syncReadingScheduleTabIcon(win);
       if (this.readingScheduleTab) {
         ztoolkit.log(
           "SyllabusManager.onMainWindowLoad: rerendering reading schedule tab",
@@ -398,6 +407,66 @@ export class SyllabusManager {
         this.readingScheduleTab.renderAllTabs(win);
       }
     });
+  }
+
+  static syncReadingScheduleTabIcon(win: _ZoteroTypes.MainWindow): void {
+    try {
+      const tabs = win.Zotero_Tabs as typeof win.Zotero_Tabs & {
+        _tabBarRef?: {
+          current?: {
+            setTabs: (tabs: unknown[]) => void;
+            _syllabusSetTabsPatched?: boolean;
+            _syllabusOriginalSetTabs?: (tabs: unknown[]) => void;
+          };
+        };
+      };
+      const bar = tabs._tabBarRef?.current;
+      if (bar && !bar._syllabusSetTabsPatched) {
+        const original = bar.setTabs.bind(bar);
+        bar._syllabusOriginalSetTabs = original;
+        bar._syllabusSetTabsPatched = true;
+        bar.setTabs = (list: Array<{ id?: string; isItemType?: boolean }>) => {
+          original(
+            list.map((tab) =>
+              tab.id === "syllabus-reading-list-tab"
+                ? { ...tab, isItemType: false }
+                : tab,
+            ),
+          );
+        };
+      }
+      const existing = tabs._getTab("syllabus-reading-list-tab");
+      if (existing?.tab) {
+        existing.tab.data = { ...existing.tab.data, icon: "calendar" };
+      }
+      tabs._update();
+    } catch (error) {
+      ztoolkit.log("Error updating Reading Schedule tab icon:", error);
+    }
+  }
+
+  static unpatchReadingScheduleTabBar(win: _ZoteroTypes.MainWindow): void {
+    try {
+      const tabs = win.Zotero_Tabs as typeof win.Zotero_Tabs & {
+        _tabBarRef?: {
+          current?: {
+            setTabs: (tabs: unknown[]) => void;
+            _syllabusSetTabsPatched?: boolean;
+            _syllabusOriginalSetTabs?: (tabs: unknown[]) => void;
+          };
+        };
+      };
+      const bar = tabs._tabBarRef?.current;
+      if (!bar?._syllabusOriginalSetTabs) {
+        return;
+      }
+      bar.setTabs = bar._syllabusOriginalSetTabs;
+      delete bar._syllabusOriginalSetTabs;
+      delete bar._syllabusSetTabsPatched;
+      tabs._update();
+    } catch (error) {
+      ztoolkit.log("Error unpatching Reading Schedule tab bar:", error);
+    }
   }
 
   static registerContextualMenus() {
@@ -459,6 +528,8 @@ export class SyllabusManager {
 
   static onMainWindowUnload(win: _ZoteroTypes.MainWindow) {
     ztoolkit.log("SyllabusManager.onMainWindowUnload", win);
+    unpatchManagedCollectionTree(win);
+    this.unpatchReadingScheduleTabBar(win);
     this.setupUI();
     this.cleanupSyllabusViewTabListener();
     if (this.readingScheduleTab) {
@@ -469,6 +540,10 @@ export class SyllabusManager {
   static onShutdown() {
     ztoolkit.log("SyllabusManager.onShutdown");
     this.unregisterNotifier();
+    for (const mainWindow of Zotero.getMainWindows() as _ZoteroTypes.MainWindow[]) {
+      this.unpatchReadingScheduleTabBar(mainWindow);
+    }
+    unpatchManagedCollectionTreePrototype();
     shutdownSyllabusNotes();
   }
 
@@ -3082,6 +3157,7 @@ export class SyllabusManager {
     const win = Zotero.getMainWindow();
     if (this.readingScheduleTab) {
       this.readingScheduleTab.open(win);
+      this.syncReadingScheduleTabIcon(win);
     }
   }
 

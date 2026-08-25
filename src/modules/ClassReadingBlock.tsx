@@ -259,6 +259,10 @@ export function ClassSubcollectionPage({
               <ChevronLeft size={18} />
               <span className="font-semibold">{parentTitle || "Syllabus"}</span>
             </button>
+            <p className="text-sm text-secondary mt-1 in-[.print]:hidden">
+              Auto-managed from this syllabus. Edits in this folder are
+              overwritten.
+            </p>
           </div>
         </div>
 

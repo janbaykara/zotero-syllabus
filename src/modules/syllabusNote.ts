@@ -63,6 +63,11 @@ import {
   type ReadingScheduleSource,
   unregisterReadingSchedulePrefObserver,
 } from "./readingScheduleCollection";
+import {
+  registerManagedClassFolderCheck,
+  registerSyllabusRootCheck,
+} from "./autoManagedCollection";
+import { refreshManagedCollectionTrees } from "./managedCollectionTree";
 
 type CollectionIdentifier =
   | number
@@ -1114,6 +1119,27 @@ export function getClassSubcollectionContext(
   return { parent, classId: null, classNumber: null };
 }
 
+registerManagedClassFolderCheck((collectionId) => {
+  const context = getClassSubcollectionContext(collectionId);
+  return context != null && context.classNumber != null;
+});
+
+registerSyllabusRootCheck((collectionId) => {
+  if (getReadingScheduleCollectionContext(collectionId)) {
+    return false;
+  }
+  if (getClassSubcollectionContext(collectionId)) {
+    return false;
+  }
+  const collection = resolveCollection(collectionId);
+  if (!collection) {
+    return false;
+  }
+  return (
+    documentCache.get(collectionRefFromCollection(collection))?.noteId != null
+  );
+});
+
 function parseDocumentFromNote(
   note: Zotero.Item,
   fallback?: CollectionSyllabusDocument,
@@ -1340,6 +1366,7 @@ async function rebuildDocumentIndex(): Promise<void> {
   } catch (error) {
     ztoolkit.log("Error syncing reading schedule collection:", error);
   }
+  refreshManagedCollectionTrees();
 }
 
 export function getSyllabusCollectionDictionary(): SettingsCollectionDictionaryData {

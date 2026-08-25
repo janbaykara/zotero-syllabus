@@ -248,6 +248,9 @@ export function ReadingScheduleDayPage({
                 Reading schedule
               </div>
             )}
+            <p className="text-sm text-secondary mt-1 in-[.print]:hidden">
+              Auto-managed from your syllabi. Edits here are overwritten.
+            </p>
           </div>
         </div>
 

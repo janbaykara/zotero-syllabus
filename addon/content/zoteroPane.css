@@ -67,8 +67,48 @@
 
 .syllabus-view-mode-button[data-selected="true"],
 .syllabus-view-mode-button[checked="true"] {
-  background-color: var(--color-accent) !important;
+  background-color: #7b4ddb !important;
   color: #fff !important;
+}
+
+.icon-css.icon-calendar,
+.icon-css.icon-calendar-date,
+.icon-css.icon-syllabus-class-date,
+.icon-css.icon-syllabus-collection {
+  width: 16px;
+  height: 16px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  -moz-context-properties: fill, fill-opacity;
+  fill: #7b4ddb;
+}
+
+.icon-css.icon-calendar {
+  background-image: url("chrome://syllabus/content/icons/calendar.svg");
+}
+
+.icon-css.icon-calendar-date,
+.icon-css.icon-syllabus-class-date {
+  background-image: url("chrome://syllabus/content/icons/calendar-date.svg");
+}
+
+.icon-css.icon-syllabus-collection {
+  background-image: url("chrome://syllabus/content/icons/syllabus-collection.svg");
+}
+
+/* Non-library tabs render data.icon as an item-type; show our calendar instead. */
+#tab-bar-container .tab[data-id="syllabus-reading-list-tab"] .icon-item-type[data-item-type="calendar"] {
+  background: url("chrome://syllabus/content/icons/calendar.svg") no-repeat center / contain !important;
+  fill: #7b4ddb;
+  -moz-context-properties: fill, fill-opacity;
+}
+
+#zotero-collections-tree .row.selected .icon-css.icon-calendar,
+#zotero-collections-tree .row.selected .icon-css.icon-calendar-date,
+#zotero-collections-tree .row.selected .icon-css.icon-syllabus-class-date,
+#zotero-collections-tree .row.selected .icon-css.icon-syllabus-collection {
+  fill: #fff;
 }
 
 .syllabus-toolbar-button,
