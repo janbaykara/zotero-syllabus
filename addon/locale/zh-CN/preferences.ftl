@@ -11,3 +11,5 @@ pref-input = 输入
 pref-help = { $name } Build { $version } { $time }
 pref-debug-mode =
     .label = 开启调试模式
+pref-generate-reading-schedule-collection =
+    .label = 生成“阅读日程”分类（由插件自动管理；取消勾选将删除该分类）

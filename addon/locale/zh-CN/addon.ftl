@@ -21,6 +21,30 @@ enable-subcollections-message =
     之后关闭此选项将停止管理文件夹，已有文件夹会保留。
 
     要继续吗？
+enable-reading-schedule-collection-title = 生成“阅读日程”分类？
+enable-reading-schedule-collection-message =
+    开启后，将在“我的文库”中创建顶层“阅读日程”分类，并为每个阅读日期（从 10 天前起）各建一个子分类。
+
+    具体行为：
+
+    • 日期文件夹会根据教学大纲自动创建、重命名并填充条目。
+
+    • 这些文件夹中的条目会按日程重写。多余条目只会从文件夹中移除，不会从文献库删除。
+
+    • 在此设置开启期间，若你删除该分类或某个日期文件夹，插件会重新创建。
+
+    • 群组文库中的教学大纲不会纳入（条目不能跨库）。
+
+    之后关闭此选项将删除“阅读日程”分类及其日期子分类。教学大纲中的条目会保留。
+
+    要继续吗？
+disable-reading-schedule-collection-title = 删除“阅读日程”分类？
+disable-reading-schedule-collection-message =
+    关闭后将删除由插件管理的“阅读日程”分类及其日期子分类。
+
+    条目不会从文献库中删除，仍留在原教学大纲分类中。
+
+    要继续吗？
 prefs-title = Zotero Syllabus
 prefs-table-title = 标题
 prefs-table-detail = 详情

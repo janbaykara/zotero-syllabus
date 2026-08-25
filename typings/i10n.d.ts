@@ -3,6 +3,10 @@
 /* eslint-disable */
 // @ts-nocheck
 export type FluentMessageId =
+  | 'disable-reading-schedule-collection-message'
+  | 'disable-reading-schedule-collection-title'
+  | 'enable-reading-schedule-collection-message'
+  | 'enable-reading-schedule-collection-title'
   | 'enable-subcollections-message'
   | 'enable-subcollections-title'
   | 'enable-syllabus-message'
@@ -18,6 +22,7 @@ export type FluentMessageId =
   | 'pref-compact-mode'
   | 'pref-debug-mode'
   | 'pref-enable'
+  | 'pref-generate-reading-schedule-collection'
   | 'pref-help'
   | 'pref-input'
   | 'pref-should-colour-syllabus-rows'

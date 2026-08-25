@@ -15,6 +15,8 @@ declare namespace _ZoteroTypes {
       "debugMode": boolean;
       "wpm": number;
       "latestTourVersion": number;
+      "generateReadingScheduleCollection": boolean;
+      "readingScheduleCollectionKey": string;
     };
   }
 }

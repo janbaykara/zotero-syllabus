@@ -11,6 +11,7 @@ export const PREFS_KEYS: (keyof PluginPrefsMap)[] = [
   "shouldColourSyllabusRows",
   "debugMode",
   "wpm",
+  "generateReadingScheduleCollection",
 ];
 
 const PREFS_PREFIX = config.prefsPrefix;

@@ -34,6 +34,7 @@ import {
 } from "../utils/cache";
 import { getAllCollections } from "../utils/zotero";
 import { formatReadingDate } from "../utils/dates";
+import { getPrefValue } from "../utils/prefs";
 import { generateBibliographicReference } from "../utils/cite";
 import {
   classSubcollectionKeysChanged,
@@ -49,6 +50,17 @@ import {
   parentCollectionForManagedId,
   rememberManagedSubcollections,
 } from "./classSubcollections";
+import {
+  buildReadingScheduleDesiredItems,
+  clearManagedReadingScheduleCollection,
+  enqueueReadingScheduleCollectionSync,
+  handleReadingScheduleCollectionChange,
+  registerReadingSchedulePrefObserver,
+  restoreReadingScheduleCollectionItems,
+  type ReadingScheduleDesiredItems,
+  type ReadingScheduleSource,
+  unregisterReadingSchedulePrefObserver,
+} from "./readingScheduleCollection";
 
 type CollectionIdentifier =
   | number
@@ -1315,6 +1327,13 @@ async function rebuildDocumentIndex(): Promise<void> {
       ztoolkit.log("Error syncing class subcollections:", error);
     }
   }
+  try {
+    await enqueueReadingScheduleCollectionSync(
+      collectDesiredReadingScheduleItems,
+    );
+  } catch (error) {
+    ztoolkit.log("Error syncing reading schedule collection:", error);
+  }
 }
 
 export function getSyllabusCollectionDictionary(): SettingsCollectionDictionaryData {
@@ -1602,6 +1621,11 @@ export async function mutateCollectionDocument(
       } catch (error) {
         ztoolkit.log("Error syncing class subcollection items:", error);
       }
+      enqueueReadingScheduleCollectionSync(
+        collectDesiredReadingScheduleItems,
+      ).catch((error) => {
+        ztoolkit.log("Error syncing reading schedule collection:", error);
+      });
       return next;
     } catch (error) {
       logSyllabusError("Error saving syllabus note:", error);
@@ -1800,18 +1824,47 @@ function parseCollectionItemCollectionId(id: number | string): number | null {
   return Number.isNaN(collectionId) ? null : collectionId;
 }
 
+function collectDesiredReadingScheduleItems(): ReadingScheduleDesiredItems {
+  const libraryID = Zotero.Libraries.userLibraryID;
+  const sources: ReadingScheduleSource[] = [];
+  for (const [ref, entry] of documentCache.entries()) {
+    if (!entry.noteId) {
+      continue;
+    }
+    const colon = ref.indexOf(":");
+    if (colon <= 0) {
+      continue;
+    }
+    const entryLibraryID = parseInt(ref.slice(0, colon), 10);
+    if (Number.isNaN(entryLibraryID) || entryLibraryID !== libraryID) {
+      continue;
+    }
+    const entryKey = ref.slice(colon + 1);
+    if (entryKey && entryKey === getPrefValue("readingScheduleCollectionKey")) {
+      continue;
+    }
+    sources.push({
+      libraryID: entryLibraryID,
+      document: entry.document,
+    });
+  }
+  return buildReadingScheduleDesiredItems(sources);
+}
+
 function restoreManagedSubcollectionItems(collectionId: number): void {
   const parent = parentCollectionForManagedId(collectionId);
-  if (!parent) {
-    return;
+  if (parent) {
+    const document = documentCache.get(
+      collectionRefFromCollection(parent),
+    )?.document;
+    if (document) {
+      enqueueClassSubcollectionItemSync(parent, document);
+    }
   }
-  const document = documentCache.get(
-    collectionRefFromCollection(parent),
-  )?.document;
-  if (!document) {
-    return;
-  }
-  enqueueClassSubcollectionItemSync(parent, document);
+  restoreReadingScheduleCollectionItems(
+    collectionId,
+    collectDesiredReadingScheduleItems,
+  );
 }
 
 function handleManagedCollectionChange(
@@ -2027,6 +2080,11 @@ export function initializeSyllabusNotes(): void {
 
       if (type === "collection") {
         handleManagedCollectionChange(event, ids);
+        handleReadingScheduleCollectionChange(
+          event,
+          ids,
+          collectDesiredReadingScheduleItems,
+        );
       }
     },
   };
@@ -2036,6 +2094,7 @@ export function initializeSyllabusNotes(): void {
     "collection-item",
     "collection",
   ]);
+  registerReadingSchedulePrefObserver(collectDesiredReadingScheduleItems);
   indexReady = rebuildDocumentIndex().catch((error) => {
     ztoolkit.log("Error rebuilding syllabus note index:", error);
   });
@@ -2050,12 +2109,14 @@ export function shutdownSyllabusNotes(): void {
     Zotero.Notifier.unregisterObserver(notifierID);
     notifierID = null;
   }
+  unregisterReadingSchedulePrefObserver();
   documentCache.clear();
   collectionRefByNoteId.clear();
   writeQueues.clear();
   writesInFlight.clear();
   documentListeners.clear();
   clearManagedSubcollections();
+  clearManagedReadingScheduleCollection();
   indexBuilt = false;
   documentGeneration = 0;
   indexReady = Promise.resolve();

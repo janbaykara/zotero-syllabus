@@ -36,3 +36,27 @@ export function formatReadingDate(
   const date = parseReadingDate(isoDate);
   return formatDate(date, month ? "iiii do MMM" : "iiii do");
 }
+
+/** Inclusive lookback for the managed Reading schedule collection. */
+export const READING_SCHEDULE_LOOKBACK_DAYS = 10;
+
+/**
+ * True when the reading date is today, in the future, or within the past
+ * {@link READING_SCHEDULE_LOOKBACK_DAYS} local calendar days.
+ */
+export function isReadingDateInScheduleWindow(
+  isoDate: string,
+  now: Date = new Date(),
+): boolean {
+  const date = parseReadingDate(isoDate);
+  if (Number.isNaN(date.getTime())) {
+    return false;
+  }
+  const today = parseReadingDate(toLocalDateKey(now));
+  const cutoff = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() - READING_SCHEDULE_LOOKBACK_DAYS,
+  );
+  return date.getTime() >= cutoff.getTime();
+}

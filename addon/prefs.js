@@ -6,3 +6,5 @@ pref("shouldColourSyllabusRows", false);
 pref("debugMode", false);
 pref("wpm", 220);
 pref("latestTourVersion", 0);
+pref("generateReadingScheduleCollection", false);
+pref("readingScheduleCollectionKey", "");
