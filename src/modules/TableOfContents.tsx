@@ -1,16 +1,76 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h } from "preact";
 import { useMemo, useRef, useEffect } from "preact/hooks";
-import { SyllabusManager } from "./syllabus";
+import { SyllabusManager, type OutlineNode } from "./syllabus";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { formatReadingDate } from "../utils/dates";
 import { useSyllabusClassGroups } from "./classGroups";
+import { classByNumber } from "../utils/schemas";
 
 interface TableOfContentsProps {
   collectionId: number;
   classGroups: ReturnType<typeof useSyllabusClassGroups>["classGroups"];
   isOpen: boolean;
   onClose: () => void;
+}
+
+type TocEntry =
+  | {
+      kind: "section";
+      id: string;
+      label: string;
+      depth: number;
+    }
+  | {
+      kind: "class";
+      id: string;
+      label: string;
+      depth: number;
+      readingDate?: string | null;
+    };
+
+function buildTocEntries(
+  nodes: OutlineNode[],
+  collectionId: number,
+  sections: Record<string, { title?: string | null } | undefined>,
+  depth: number,
+): TocEntry[] {
+  const entries: TocEntry[] = [];
+  for (const node of nodes) {
+    if (node.type === "section") {
+      const title = (sections[node.sectionId]?.title || "").trim();
+      entries.push({
+        kind: "section",
+        id: `toc-section-${node.sectionId}`,
+        label: title || "Untitled section",
+        depth,
+      });
+      entries.push(
+        ...buildTocEntries(node.children, collectionId, sections, depth + 1),
+      );
+      continue;
+    }
+    const classNumber = SyllabusManager.getClassNumber(
+      collectionId,
+      node.classId,
+    );
+    if (!classNumber) {
+      continue;
+    }
+    const label = SyllabusManager.getClassTitle(collectionId, classNumber, true);
+    const meta = classByNumber(
+      SyllabusManager.getSyllabusMetadata(collectionId),
+      classNumber,
+    );
+    entries.push({
+      kind: "class",
+      id: `toc-class-${classNumber}`,
+      label,
+      depth,
+      readingDate: meta?.readingDate,
+    });
+  }
+  return entries;
 }
 
 export function TableOfContents({
@@ -22,28 +82,32 @@ export function TableOfContents({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [syllabusMetadata] = useZoteroSyllabusMetadata(collectionId);
-  const singularCapitalized = useMemo(() => {
-    const singular = syllabusMetadata.nomenclature || "class";
-    return singular.charAt(0).toUpperCase() + singular.slice(1);
-  }, [syllabusMetadata.nomenclature]);
 
   const tocEntries = useMemo(() => {
+    const outline = syllabusMetadata.outline || [];
+    if (outline.length > 0) {
+      return buildTocEntries(
+        outline,
+        collectionId,
+        syllabusMetadata.sections || {},
+        0,
+      );
+    }
+    // Fallback for documents without outline yet
     return classGroups
       .filter(({ classNumber }) => !!classNumber)
-      .map(({ classNumber, syllabusMetadata }) => {
-        const label = SyllabusManager.getClassTitle(
+      .map(({ classNumber, syllabusMetadata: classMeta }) => ({
+        kind: "class" as const,
+        id: `toc-class-${classNumber}`,
+        label: SyllabusManager.getClassTitle(
           collectionId,
           Number(classNumber),
           true,
-        );
-        return {
-          id: `toc-class-${classNumber}`,
-          label,
-          classNumber,
-          syllabusMetadata,
-        };
-      });
-  }, [classGroups, collectionId, syllabusMetadata, singularCapitalized]);
+        ),
+        depth: 0,
+        readingDate: classMeta?.readingDate,
+      }));
+  }, [classGroups, collectionId, syllabusMetadata]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -151,22 +215,19 @@ export function TableOfContents({
                   e.preventDefault();
                   handleClick(entry.id);
                 }}
-                className="block font-medium decoration-none! text-primary! hover:text-accent-blue hover:bg-quinary rounded-md px-1 hover:underline cursor-pointer py-1"
+                className={
+                  entry.kind === "section"
+                    ? "block font-semibold decoration-none! text-secondary! hover:text-accent-blue hover:bg-quinary rounded-md px-1 hover:underline cursor-pointer py-1"
+                    : "block font-medium decoration-none! text-primary! hover:text-accent-blue hover:bg-quinary rounded-md px-1 hover:underline cursor-pointer py-1"
+                }
+                style={{ paddingLeft: `${4 + entry.depth * 12}px` }}
               >
                 {entry.label}
-                <span className="text-secondary">
-                  {(() => {
-                    const readingDate = entry.syllabusMetadata?.readingDate;
-                    if (!readingDate) {
-                      return "";
-                    }
-                    return (
-                      <span className="ml-2 text-secondary">
-                        {formatReadingDate(readingDate)}
-                      </span>
-                    );
-                  })()}
-                </span>
+                {entry.kind === "class" && entry.readingDate ? (
+                  <span className="ml-2 text-secondary">
+                    {formatReadingDate(entry.readingDate)}
+                  </span>
+                ) : null}
               </a>
             ))
           )}

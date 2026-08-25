@@ -73,11 +73,14 @@ import {
   ListTodo,
   ChevronUp,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-preact";
 import { TableOfContents } from "./TableOfContents";
 import { saveToFile } from "../utils/file";
 import { formatReadingDate } from "../utils/dates";
 import { useSyllabusClassGroups } from "./classGroups";
+import type { OutlineNode, SettingsSectionMetadata } from "./syllabus";
 import { ClassSubcollectionPage } from "./ClassReadingBlock";
 import { getClassSubcollectionContext } from "./syllabusNote";
 import { ReadingScheduleDayPage } from "./ReadingScheduleDayPage";
@@ -2084,31 +2087,59 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
               compactMode ? "gap-10 mt-4" : "gap-12 mt-6",
             )}
           >
-            {classGroups.map((group) => (
-              <ClassGroupComponent
-                key={group.classNumber ?? "null"}
-                classNumber={group.classNumber}
-                itemAssignments={group.itemAssignments}
-                collectionId={collectionId}
-                syllabusMetadata={syllabusMetadata}
-                onClassTitleSave={setClassTitle}
-                onClassDescriptionSave={setClassDescription}
-                onClassReadingDateSave={handleClassReadingDateSave}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                compactMode={compactMode}
-                readerMode={readerMode}
-                isLocked={isLocked}
-                onResetSortOrder={() => setItemOrderVersion((v) => v + 1)}
-                selectedIdentifiers={selectedIdentifiers}
-                onIdentifierClick={handleIdentifierClick}
-                selectedForDrag={selectedForDrag}
-                onPriorityChange={handlePriorityChange}
-                onDelete={handleDelete}
-                onDuplicate={handleDuplicate}
-              />
-            ))}
+            <OutlineTree
+              nodes={syllabusMetadata.outline || []}
+              sections={syllabusMetadata.sections || {}}
+              classGroupsByNumber={new Map(
+                classGroups.map((g) => [g.classNumber ?? null, g]),
+              )}
+              depth={0}
+              collectionId={collectionId}
+              syllabusMetadata={syllabusMetadata}
+              onClassTitleSave={setClassTitle}
+              onClassDescriptionSave={setClassDescription}
+              onClassReadingDateSave={handleClassReadingDateSave}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              compactMode={compactMode}
+              readerMode={readerMode}
+              isLocked={isLocked}
+              onResetSortOrder={() => setItemOrderVersion((v) => v + 1)}
+              selectedIdentifiers={selectedIdentifiers}
+              onIdentifierClick={handleIdentifierClick}
+              selectedForDrag={selectedForDrag}
+              onPriorityChange={handlePriorityChange}
+              onDelete={handleDelete}
+              onDuplicate={handleDuplicate}
+            />
+            {classGroups
+              .filter((g) => g.classNumber == null)
+              .map((group) => (
+                <ClassGroupComponent
+                  key="null"
+                  classNumber={null}
+                  itemAssignments={group.itemAssignments}
+                  collectionId={collectionId}
+                  syllabusMetadata={syllabusMetadata}
+                  onClassTitleSave={setClassTitle}
+                  onClassDescriptionSave={setClassDescription}
+                  onClassReadingDateSave={handleClassReadingDateSave}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  compactMode={compactMode}
+                  readerMode={readerMode}
+                  isLocked={isLocked}
+                  onResetSortOrder={() => setItemOrderVersion((v) => v + 1)}
+                  selectedIdentifiers={selectedIdentifiers}
+                  onIdentifierClick={handleIdentifierClick}
+                  selectedForDrag={selectedForDrag}
+                  onPriorityChange={handlePriorityChange}
+                  onDelete={handleDelete}
+                  onDuplicate={handleDuplicate}
+                />
+              ))}
           </div>
 
           <div className="container-padded">
@@ -2138,6 +2169,19 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                           title={`Add ${singularCapitalized} ${nextClassNumber}`}
                         >
                           Add {singularCapitalized} {nextClassNumber}
+                        </button>
+                        <button
+                          type="button"
+                          className="px-3 py-1.5 rounded-md border border-quinary bg-background text-primary cursor-pointer hover:bg-quinary"
+                          onClick={() => {
+                            void SyllabusManager.addSection(
+                              collectionId,
+                              { title: "" },
+                              "page",
+                            );
+                          }}
+                        >
+                          Add Section
                         </button>
                         <button
                           type="button"
@@ -2177,7 +2221,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   )}
 
                   {!isLocked && !hasNoClasses && (
-                    <div className="syllabus-create-class-control in-[.print]:hidden">
+                    <div className="syllabus-create-class-control in-[.print]:hidden flex flex-wrap gap-2">
                       <button
                         className="syllabus-create-class-button"
                         data-tour="syllabus-add-class"
@@ -2185,6 +2229,19 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                         title={`Add ${singularCapitalized} ${nextClassNumber}`}
                       >
                         Add {singularCapitalized} {nextClassNumber}
+                      </button>
+                      <button
+                        type="button"
+                        className="px-3 py-1.5 rounded-md border border-quinary bg-background text-primary cursor-pointer hover:bg-quinary"
+                        onClick={() => {
+                          void SyllabusManager.addSection(
+                            collectionId,
+                            { title: "" },
+                            "page",
+                          );
+                        }}
+                      >
+                        Add Section
                       </button>
                     </div>
                   )}
@@ -2270,8 +2327,348 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   );
 }
 
+interface OutlineTreeProps {
+  nodes: OutlineNode[];
+  sections: Record<string, SettingsSectionMetadata>;
+  classGroupsByNumber: Map<
+    number | null,
+    {
+      classNumber: number | null;
+      itemAssignments: Array<{
+        item: Zotero.Item;
+        assignment: ItemSyllabusAssignment;
+      }>;
+    }
+  >;
+  depth: number;
+  collectionId: number;
+  syllabusMetadata: SettingsSyllabusMetadata;
+  onClassTitleSave: (classNumber: number, title: string) => void;
+  onClassDescriptionSave: (classNumber: number, description: string) => void;
+  onClassReadingDateSave: (
+    classNumber: number,
+    readingDate: string | undefined,
+  ) => void;
+  onDrop: (
+    e: JSX.TargetedDragEvent<HTMLElement>,
+    classNumber: number | null,
+    targetItemId?: number,
+    insertBefore?: boolean,
+  ) => Promise<void>;
+  onDragOver: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
+  onDragLeave: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
+  compactMode?: boolean;
+  readerMode?: boolean;
+  isLocked?: boolean;
+  onResetSortOrder?: () => void;
+  selectedIdentifiers?: Set<string>;
+  onIdentifierClick?: (
+    item: Zotero.Item,
+    assignmentId: string | undefined,
+    e?: JSX.TargetedMouseEvent<HTMLElement>,
+  ) => void;
+  selectedForDrag?: {
+    assignments: Array<{ itemId: number; assignmentId: string }>;
+    itemIds: number[];
+  };
+  onPriorityChange?: (
+    priority: string | undefined,
+    identifier: { assignmentId?: string; itemId?: number },
+  ) => Promise<void>;
+  onDelete?: (identifier: {
+    assignmentId?: string;
+    itemId?: number;
+  }) => Promise<void>;
+  onDuplicate?: (identifier: {
+    assignmentId?: string;
+    itemId?: number;
+  }) => Promise<void>;
+}
+
+function OutlineTree(props: OutlineTreeProps) {
+  const { nodes, sections, classGroupsByNumber, depth, collectionId } = props;
+
+  // Classes present in metadata but not yet in outline (null bucket etc.)
+  // are rendered via classGroups; outline nodes are the primary tree.
+  return (
+    <>
+      {nodes.map((node) => {
+        if (node.type === "section") {
+          return (
+            <SectionGroupComponent
+              key={node.sectionId}
+              {...props}
+              sectionId={node.sectionId}
+              sectionMeta={sections[node.sectionId]}
+              childrenNodes={node.children}
+              depth={depth}
+            />
+          );
+        }
+        const classNumber = SyllabusManager.getClassNumber(
+          collectionId,
+          node.classId,
+        );
+        const group = classGroupsByNumber.get(classNumber ?? null);
+        return (
+          <ClassGroupComponent
+            key={node.classId}
+            classNumber={classNumber ?? null}
+            classId={node.classId}
+            itemAssignments={group?.itemAssignments || []}
+            collectionId={props.collectionId}
+            syllabusMetadata={props.syllabusMetadata}
+            onClassTitleSave={props.onClassTitleSave}
+            onClassDescriptionSave={props.onClassDescriptionSave}
+            onClassReadingDateSave={props.onClassReadingDateSave}
+            onDrop={props.onDrop}
+            onDragOver={props.onDragOver}
+            onDragLeave={props.onDragLeave}
+            compactMode={props.compactMode}
+            readerMode={props.readerMode}
+            isLocked={props.isLocked}
+            onResetSortOrder={props.onResetSortOrder}
+            selectedIdentifiers={props.selectedIdentifiers}
+            onIdentifierClick={props.onIdentifierClick}
+            selectedForDrag={props.selectedForDrag}
+            onPriorityChange={props.onPriorityChange}
+            onDelete={props.onDelete}
+            onDuplicate={props.onDuplicate}
+            depth={depth}
+          />
+        );
+      })}
+    </>
+  );
+}
+
+interface SectionGroupComponentProps extends OutlineTreeProps {
+  sectionId: string;
+  sectionMeta: SettingsSectionMetadata | undefined;
+  childrenNodes: OutlineNode[];
+}
+
+function SectionGroupComponent({
+  sectionId,
+  sectionMeta,
+  childrenNodes,
+  depth,
+  collectionId,
+  compactMode = false,
+  isLocked = false,
+  ...outlineProps
+}: SectionGroupComponentProps) {
+  const title = sectionMeta?.title || "";
+  const description = sectionMeta?.description || "";
+  const tocId = `toc-section-${sectionId}`;
+  const nextClassNumber =
+    Math.max(0, ...SyllabusManager.getFullClassNumberRange(collectionId)) + 1;
+  const { singularCapitalized } =
+    SyllabusManager.getNomenclatureFormatted(collectionId);
+
+  return (
+    <div
+      id={tocId}
+      data-section-id={sectionId}
+      className={twMerge(
+        "syllabus-section-group in-[.print]:scheme-light",
+        depth > 0 ? "ml-4 border-l border-quinary pl-4" : "",
+      )}
+    >
+      <div
+        className={twMerge(
+          "sticky z-34 bg-background py-1 in-[.print]:static",
+          isZotero8OrLater() ? "md:pt-4" : "pt-4",
+          depth === 0 ? "top-10" : "top-14",
+        )}
+      >
+        <div className="container-padded rounded-xs mb-1">
+          <div className="flex gap-2 items-baseline justify-start w-full relative">
+            <div
+              className={twMerge(
+                "shrink-0 uppercase text-tertiary font-semibold tracking-wide",
+                compactMode ? "text-xs" : "text-sm",
+              )}
+            >
+              Section
+            </div>
+            <div
+              className={twMerge(
+                "w-full font-semibold",
+                compactMode ? "text-lg" : "text-xl",
+              )}
+            >
+              <TextInput
+                elementType="input"
+                initialValue={title}
+                onSave={(value) => {
+                  void SyllabusManager.setSectionTitle(
+                    collectionId,
+                    sectionId,
+                    value,
+                    "page",
+                  );
+                }}
+                className="w-full text-primary"
+                placeholder="Section title..."
+                emptyBehavior="delete"
+                readOnly={isLocked}
+              />
+            </div>
+            {!isLocked && (
+              <div className="ml-auto! shrink-0 inline-flex flex-row items-baseline gap-1 in-[.print]:hidden">
+                <button
+                  className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
+                  onClick={() =>
+                    void SyllabusManager.indentOutlineNode(
+                      collectionId,
+                      { type: "section", sectionId },
+                      "page",
+                    )
+                  }
+                  title="Indent section"
+                  aria-label="Indent section"
+                >
+                  <ChevronRight size={16} />
+                </button>
+                <button
+                  className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
+                  onClick={() =>
+                    void SyllabusManager.outdentOutlineNode(
+                      collectionId,
+                      { type: "section", sectionId },
+                      "page",
+                    )
+                  }
+                  title="Outdent section"
+                  aria-label="Outdent section"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <button
+                  className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
+                  onClick={() =>
+                    void SyllabusManager.moveSection(
+                      collectionId,
+                      sectionId,
+                      "up",
+                      "page",
+                    )
+                  }
+                  title="Move section up"
+                  aria-label="Move section up"
+                >
+                  <ChevronUp size={16} />
+                </button>
+                <button
+                  className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
+                  onClick={() =>
+                    void SyllabusManager.moveSection(
+                      collectionId,
+                      sectionId,
+                      "down",
+                      "page",
+                    )
+                  }
+                  title="Move section down"
+                  aria-label="Move section down"
+                >
+                  <ChevronDown size={16} />
+                </button>
+                <button
+                  className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-red-500/15 text-secondary hover:text-red-400 inline-flex flex-row items-center justify-center w-8 h-8"
+                  onClick={() =>
+                    void SyllabusManager.deleteSection(
+                      collectionId,
+                      sectionId,
+                      "page",
+                    )
+                  }
+                  title="Ungroup section"
+                  aria-label="Ungroup section"
+                >
+                  <div className="text-2xl text-center">×</div>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="container-padded">
+        <div className={twMerge(compactMode ? "text-sm" : "text-base pt-1")}>
+          <TextInput
+            elementType="textarea"
+            initialValue={description || ""}
+            onSave={(desc) => {
+              void SyllabusManager.setSectionDescription(
+                collectionId,
+                sectionId,
+                desc,
+                "page",
+              );
+            }}
+            className="w-full px-0! mx-0! text-primary"
+            placeholder="Add a section description..."
+            emptyBehavior="delete"
+            fieldSizing="content"
+            readOnly={isLocked}
+          />
+        </div>
+      </div>
+      <div
+        className={twMerge(
+          "flex flex-col",
+          compactMode ? "gap-8 mt-2" : "gap-10 mt-4",
+        )}
+      >
+        <OutlineTree
+          {...outlineProps}
+          nodes={childrenNodes}
+          depth={depth + 1}
+          collectionId={collectionId}
+          compactMode={compactMode}
+          isLocked={isLocked}
+        />
+      </div>
+      {!isLocked && (
+        <div className="container-padded in-[.print]:hidden mt-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="text-sm px-2 py-1 rounded border border-quinary bg-background text-secondary cursor-pointer hover:bg-quinary hover:text-primary"
+            onClick={() => {
+              void SyllabusManager.addClass(
+                collectionId,
+                nextClassNumber,
+                "page",
+                sectionId,
+              );
+            }}
+          >
+            Add {singularCapitalized} here
+          </button>
+          <button
+            type="button"
+            className="text-sm px-2 py-1 rounded border border-quinary bg-background text-secondary cursor-pointer hover:bg-quinary hover:text-primary"
+            onClick={() => {
+              void SyllabusManager.addSection(
+                collectionId,
+                { title: "", parentSectionId: sectionId },
+                "page",
+              );
+            }}
+          >
+            Add nested section
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface ClassGroupComponentProps {
   classNumber?: number | null;
+  classId?: string;
+  depth?: number;
   itemAssignments: Array<{
     item: Zotero.Item;
     assignment: ItemSyllabusAssignment;
@@ -2322,6 +2719,8 @@ interface ClassGroupComponentProps {
 
 function ClassGroupComponent({
   classNumber,
+  classId: classIdProp,
+  depth = 0,
   itemAssignments,
   collectionId,
   syllabusMetadata,
@@ -2360,6 +2759,11 @@ function ClassGroupComponent({
   const classIsDone = classNumber
     ? SyllabusManager.getClassStatus(collectionId, classNumber) === "done"
     : false;
+  const classId =
+    classIdProp ||
+    (classNumber != null
+      ? SyllabusManager.getClassIdByNumber(collectionId, classNumber)
+      : undefined);
 
   // Check if there's a manual order for this class
   const hasManualOrder =
@@ -2446,6 +2850,7 @@ function ClassGroupComponent({
       className={twMerge(
         "syllabus-class-group in-[.print]:scheme-light",
         readerMode && classIsDone ? "opacity-40" : "",
+        depth > 0 ? "ml-2" : "",
       )}
     >
       {classNumber && (
@@ -2532,6 +2937,38 @@ function ClassGroupComponent({
                         >
                           <div className="text-lg text-center">⇅</div>
                         </button>
+                      )}
+                      {classId && (
+                        <>
+                          <button
+                            className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
+                            onClick={() =>
+                              void SyllabusManager.indentOutlineNode(
+                                collectionId,
+                                { type: "class", classId },
+                                "page",
+                              )
+                            }
+                            title="Indent into section"
+                            aria-label="Indent into section"
+                          >
+                            <ChevronRight size={16} />
+                          </button>
+                          <button
+                            className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
+                            onClick={() =>
+                              void SyllabusManager.outdentOutlineNode(
+                                collectionId,
+                                { type: "class", classId },
+                                "page",
+                              )
+                            }
+                            title="Outdent from section"
+                            aria-label="Outdent from section"
+                          >
+                            <ChevronLeft size={16} />
+                          </button>
+                        </>
                       )}
                       <button
                         className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-secondary"

@@ -33,7 +33,25 @@ import {
   findClassIdByNumber,
   getClassNumberById,
   shouldCreateSubcollections,
+  type OutlineNode,
+  type SettingsSectionMetadata,
 } from "../utils/schemas";
+import {
+  cloneOutline,
+  collectClassIdsInOutlineOrder,
+  createEmptySection,
+  findClassInOutline,
+  findSectionInOutline,
+  indentOutlineNodeWithSection,
+  insertOutlineNode,
+  moveClassInOutline,
+  moveSectionInOutline,
+  normalizeDocumentOutline,
+  outdentOutlineNode,
+  removeClassFromOutline,
+  sectionPathForClass,
+  ungroupSection,
+} from "../utils/outline";
 import * as z from "zod";
 import { importRDF, getRDFStringForCollection, isRdfFile } from "../utils/rdf";
 import {
@@ -168,8 +186,11 @@ export type {
   SettingsCollectionDictionaryData,
   SettingsSyllabusMetadata,
   SettingsClassMetadata,
+  OutlineNode,
+  SettingsSectionMetadata,
 };
 export { classByNumber } from "../utils/schemas";
+export { sectionPathForClass } from "../utils/outline";
 
 // Export GetByLibraryAndKeyArgs for use in other modules
 export type { GetByLibraryAndKeyArgs };
@@ -2615,7 +2636,10 @@ export class SyllabusManager {
         SyllabusManager.getNomenclatureFormatted(
           collectionId,
         ).singularCapitalized;
-      return `${singularCapitalized} ${classNumber}${title ? `: ${title}` : ""}`;
+      const classId = this.getClassIdByNumber(collectionId, classNumber);
+      const path = this.getSectionPathForClass(collectionId, classId);
+      const pathPrefix = path.length > 0 ? `${path.join(" · ")} · ` : "";
+      return `${pathPrefix}${singularCapitalized} ${classNumber}${title ? `: ${title}` : ""}`;
     }
     return title;
   }
@@ -2782,21 +2806,28 @@ export class SyllabusManager {
   }
 
   /**
-   * Create an additional class (even if empty) to extend the range
-   * This ensures the class appears in the rendered range
+   * Create an additional class (even if empty) to extend the range.
+   * Appends to the outline root, or inside parentSectionId when provided.
    */
   static async addClass(
     collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
     source: "page",
+    parentSectionId?: string | null,
   ): Promise<void> {
     ztoolkit.log("SyllabusManager.addClass", collectionId, classNumber);
     await mutateCollectionDocument(
       collectionId,
       (document) => {
         const classes = { ...(document.classes || {}) };
-        ensureClassRecord(classes, classNumber);
-        return { ...document, classes };
+        const classId = ensureClassRecord(classes, classNumber);
+        const outline = cloneOutline(document.outline);
+        if (!findClassInOutline(outline, classId)) {
+          insertOutlineNode(outline, { type: "class", classId }, {
+            parentSectionId: parentSectionId ?? null,
+          });
+        }
+        return normalizeDocumentOutline({ ...document, classes, outline });
       },
       { createNote: "prompt" },
     );
@@ -2805,7 +2836,7 @@ export class SyllabusManager {
   }
 
   /**
-   * Delete a class: drop its metadata and unassign items from it.
+   * Delete a class: drop its metadata, outline node, and unassign items from it.
    */
   static async deleteClass(
     collectionId: number | GetByLibraryAndKeyArgs,
@@ -2819,6 +2850,9 @@ export class SyllabusManager {
       if (classId) {
         delete classes[classId];
       }
+      const outline = classId
+        ? removeClassFromOutline(document.outline || [], classId)
+        : cloneOutline(document.outline);
       const items: typeof document.items = {};
       for (const [itemKey, assignments] of Object.entries(
         document.items || {},
@@ -2833,15 +2867,14 @@ export class SyllabusManager {
           items[itemKey] = remaining;
         }
       }
-      return { ...document, classes, items };
+      return normalizeDocumentOutline({ ...document, classes, items, outline });
     });
     this.setupPage();
     this.onClassListUpdate();
   }
 
   /**
-   * Swap two classes: only the displayed numbers move. Assignments keep
-   * their classId, so readings and itemOrder stay with the class identity.
+   * Swap two classes in outline order (and thus renumber). Prefer moveClass.
    */
   static async swapClasses(
     collectionId: number | GetByLibraryAndKeyArgs,
@@ -2861,13 +2894,23 @@ export class SyllabusManager {
       const classes = { ...(document.classes || {}) };
       const idA = findClassIdByNumber(classes, classNumberA);
       const idB = findClassIdByNumber(classes, classNumberB);
-      if (idA && classes[idA]) {
-        classes[idA] = { ...classes[idA], number: classNumberB };
+      if (!idA || !idB) {
+        return document;
       }
-      if (idB && classes[idB]) {
-        classes[idB] = { ...classes[idB], number: classNumberA };
+      // Move A toward B's position by repeated adjacent moves in outline order.
+      const ordered = collectClassIdsInOutlineOrder(document.outline);
+      const indexA = ordered.indexOf(idA);
+      const indexB = ordered.indexOf(idB);
+      if (indexA < 0 || indexB < 0) {
+        return document;
       }
-      return { ...document, classes };
+      let outline = cloneOutline(document.outline);
+      const direction = indexA < indexB ? "down" : "up";
+      const steps = Math.abs(indexA - indexB);
+      for (let i = 0; i < steps; i++) {
+        outline = moveClassInOutline(outline, idA, direction);
+      }
+      return normalizeDocumentOutline({ ...document, classes, outline });
     });
     this.setupPage();
     this.onClassListUpdate();
@@ -2879,13 +2922,217 @@ export class SyllabusManager {
     direction: "up" | "down",
     _source: "page",
   ): Promise<void> {
-    const range = this.getFullClassNumberRange(collectionId);
-    const index = range.indexOf(classNumber);
-    const targetIndex = direction === "up" ? index - 1 : index + 1;
-    if (index < 0 || targetIndex < 0 || targetIndex >= range.length) {
-      return;
+    await mutateCollectionDocument(collectionId, (document) => {
+      const classId = findClassIdByNumber(document.classes, classNumber);
+      if (!classId) {
+        return document;
+      }
+      const outline = moveClassInOutline(
+        document.outline || [],
+        classId,
+        direction,
+      );
+      return normalizeDocumentOutline({ ...document, outline });
+    });
+    this.setupPage();
+    this.onClassListUpdate();
+  }
+
+  static async addSection(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    options: {
+      title?: string;
+      parentSectionId?: string | null;
+      afterClassId?: string;
+      afterSectionId?: string;
+    } = {},
+    source: "page" = "page",
+  ): Promise<string | null> {
+    ztoolkit.log("SyllabusManager.addSection", collectionId, options);
+    let createdId: string | null = null;
+    await mutateCollectionDocument(
+      collectionId,
+      (document) => {
+        const created = createEmptySection(options.title || "");
+        createdId = created.sectionId;
+        const sections = {
+          ...(document.sections || {}),
+          [created.sectionId]: created.meta,
+        };
+        const outline = cloneOutline(document.outline);
+        let after: OutlineNode | undefined;
+        if (options.afterSectionId) {
+          const found = findSectionInOutline(outline, options.afterSectionId);
+          after = found?.node;
+        } else if (options.afterClassId) {
+          const found = findClassInOutline(outline, options.afterClassId);
+          after = found?.node;
+        }
+        insertOutlineNode(outline, created.node, {
+          parentSectionId: options.parentSectionId ?? null,
+          after,
+        });
+        return normalizeDocumentOutline({ ...document, sections, outline });
+      },
+      { createNote: "prompt" },
+    );
+    if (source === "page") {
+      this.setupPage();
+      this.onClassListUpdate();
     }
-    await this.swapClasses(collectionId, classNumber, range[targetIndex]);
+    return createdId;
+  }
+
+  static async setSectionTitle(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    sectionId: string,
+    title: string,
+    source: "page" = "page",
+  ): Promise<void> {
+    await mutateCollectionDocument(collectionId, (document) => {
+      const sections = { ...(document.sections || {}) };
+      if (!sections[sectionId]) {
+        sections[sectionId] = { title };
+      } else {
+        sections[sectionId] = { ...sections[sectionId], title };
+      }
+      return { ...document, sections };
+    });
+    if (source === "page") {
+      this.onClassListUpdate();
+    }
+  }
+
+  static async setSectionDescription(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    sectionId: string,
+    description: string | null | undefined,
+    source: "page" = "page",
+  ): Promise<void> {
+    await mutateCollectionDocument(collectionId, (document) => {
+      const sections = { ...(document.sections || {}) };
+      if (!sections[sectionId]) {
+        sections[sectionId] = { title: "", description };
+      } else {
+        sections[sectionId] = { ...sections[sectionId], description };
+      }
+      return { ...document, sections };
+    });
+    if (source === "page") {
+      this.onClassListUpdate();
+    }
+  }
+
+  /** Ungroup: hoist children into parent; do not delete classes. */
+  static async deleteSection(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    sectionId: string,
+    source: "page" = "page",
+  ): Promise<void> {
+    ztoolkit.log("SyllabusManager.deleteSection", collectionId, sectionId);
+    await mutateCollectionDocument(collectionId, (document) => {
+      const outline = ungroupSection(document.outline || [], sectionId);
+      const sections = { ...(document.sections || {}) };
+      delete sections[sectionId];
+      return normalizeDocumentOutline({ ...document, sections, outline });
+    });
+    if (source === "page") {
+      this.setupPage();
+      this.onClassListUpdate();
+    }
+  }
+
+  static async moveSection(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    sectionId: string,
+    direction: "up" | "down",
+    source: "page" = "page",
+  ): Promise<void> {
+    await mutateCollectionDocument(collectionId, (document) => {
+      const outline = moveSectionInOutline(
+        document.outline || [],
+        sectionId,
+        direction,
+      );
+      return normalizeDocumentOutline({ ...document, outline });
+    });
+    if (source === "page") {
+      this.setupPage();
+      this.onClassListUpdate();
+    }
+  }
+
+  static async indentOutlineNode(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    target:
+      | { type: "class"; classId: string }
+      | { type: "section"; sectionId: string },
+    source: "page" = "page",
+  ): Promise<void> {
+    await mutateCollectionDocument(collectionId, (document) => {
+      const predicate =
+        target.type === "class"
+          ? (n: OutlineNode) =>
+              n.type === "class" && n.classId === target.classId
+          : (n: OutlineNode) =>
+              n.type === "section" && n.sectionId === target.sectionId;
+      const { outline, sections } = indentOutlineNodeWithSection(
+        document.outline || [],
+        predicate,
+        document.sections || {},
+      );
+      return normalizeDocumentOutline({ ...document, outline, sections });
+    });
+    if (source === "page") {
+      this.setupPage();
+      this.onClassListUpdate();
+    }
+  }
+
+  static async outdentOutlineNode(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    target:
+      | { type: "class"; classId: string }
+      | { type: "section"; sectionId: string },
+    source: "page" = "page",
+  ): Promise<void> {
+    await mutateCollectionDocument(collectionId, (document) => {
+      const predicate =
+        target.type === "class"
+          ? (n: OutlineNode) =>
+              n.type === "class" && n.classId === target.classId
+          : (n: OutlineNode) =>
+              n.type === "section" && n.sectionId === target.sectionId;
+      const outline = outdentOutlineNode(document.outline || [], predicate);
+      return normalizeDocumentOutline({ ...document, outline });
+    });
+    if (source === "page") {
+      this.setupPage();
+      this.onClassListUpdate();
+    }
+  }
+
+  static getSectionPathForClass(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    classId: string | undefined,
+  ): string[] {
+    if (!classId) {
+      return [];
+    }
+    const document = getCollectionDocument(collectionId);
+    return sectionPathForClass(document.outline, document.sections, classId);
+  }
+
+  static getOutline(
+    collectionId: number | GetByLibraryAndKeyArgs,
+  ): OutlineNode[] {
+    return getCollectionDocument(collectionId).outline || [];
+  }
+
+  static getSections(
+    collectionId: number | GetByLibraryAndKeyArgs,
+  ): Record<string, SettingsSectionMetadata> {
+    return getCollectionDocument(collectionId).sections || {};
   }
 
   /**
@@ -3173,6 +3420,8 @@ export class SyllabusManager {
     const {
       description,
       classes,
+      sections,
+      outline,
       nomenclature,
       priorities,
       locked,
@@ -3199,6 +3448,14 @@ export class SyllabusManager {
           };
         }
       }
+    }
+
+    // Imported outline/sections replace when provided (Talis full tree).
+    if (imported.sections !== undefined) {
+      merged.sections = imported.sections;
+    }
+    if (imported.outline !== undefined) {
+      merged.outline = imported.outline;
     }
 
     // Replace nomenclature if provided

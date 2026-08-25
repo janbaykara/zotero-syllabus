@@ -19,6 +19,7 @@ import {
   classesToNumberKeyed,
   hydrateAssignment,
   mergeNumberKeyedClasses,
+  mergeImportedClasses,
   persistAssignment,
   shouldCreateSubcollections,
   type CollectionSyllabusDocument,
@@ -27,6 +28,7 @@ import {
   type SettingsCollectionDictionaryData,
   type SettingsSyllabusMetadata,
 } from "../utils/schemas";
+import { normalizeDocumentOutline } from "../utils/outline";
 import {
   getCachedCollection,
   getCachedCollectionById,
@@ -141,6 +143,8 @@ export function metadataFromDocument(
   return SettingsSyllabusMetadataSchema.parse({
     ...document,
     classes: classesToNumberKeyed(document.classes),
+    sections: document.sections || {},
+    outline: document.outline || [],
   });
 }
 
@@ -242,12 +246,12 @@ function persistDocument(
       items[itemKey] = persisted;
     }
   }
-  return {
+  return normalizeDocumentOutline({
     ...document,
     version: COLLECTION_SYLLABUS_DOCUMENT_VERSION,
     classes,
     items,
-  };
+  });
 }
 
 function snapshotOf(document: CollectionSyllabusDocument): string {
@@ -319,9 +323,10 @@ function paragraph(text: string | null | undefined): string {
   return trimmed ? `<p>${escapeHtml(trimmed)}</p>` : "";
 }
 
-function heading(level: 1 | 3, text: string): string {
+function heading(level: 1 | 2 | 3 | 4 | 5 | 6, text: string): string {
   const trimmed = text.trim();
-  return trimmed ? `<h${level}>${escapeHtml(trimmed)}</h${level}>` : "";
+  const safe = Math.min(6, Math.max(1, level)) as 1 | 2 | 3 | 4 | 5 | 6;
+  return trimmed ? `<h${safe}>${escapeHtml(trimmed)}</h${safe}>` : "";
 }
 
 function bulletList(items: string[]): string {
@@ -573,14 +578,13 @@ async function renderReadableNoteBody(
   collection?: Zotero.Collection | null,
 ): Promise<string> {
   const titles = itemTitlesByKey(collection);
-  const classes = Object.entries(document.classes || {}).sort(
-    ([, a], [, b]) => (a?.number || 0) - (b?.number || 0),
-  );
+  const sections = document.sections || {};
+  const outline = document.outline || [];
 
-  const classSections: string[] = [];
-  for (const [classId, classMeta] of classes) {
+  async function renderClassBlock(classId: string): Promise<string> {
+    const classMeta = document.classes?.[classId];
     if (!classMeta?.number) {
-      continue;
+      return "";
     }
     const readings = sortReadingsByPriority(
       gatherClassReadings(
@@ -597,23 +601,57 @@ async function renderReadableNoteBody(
     const status = (classMeta.status || "").trim();
     const metaLine = [date, status].filter(Boolean).join(" - ");
     const lines = await readingLines(readings, document, collection, titles);
-    classSections.push(
-      [
-        heading(
-          3,
-          classHeading(
-            document.nomenclature,
-            classMeta.number,
-            classMeta.title,
-          ),
+    return [
+      heading(
+        3,
+        classHeading(
+          document.nomenclature,
+          classMeta.number,
+          classMeta.title,
         ),
-        paragraph(metaLine),
-        paragraph(classMeta.description),
-        bulletList(lines),
-      ]
-        .filter(Boolean)
-        .join(""),
+      ),
+      paragraph(metaLine),
+      paragraph(classMeta.description),
+      bulletList(lines),
+    ]
+      .filter(Boolean)
+      .join("");
+  }
+
+  async function renderOutlineNodes(
+    nodes: NonNullable<CollectionSyllabusDocument["outline"]>,
+    depth: number,
+  ): Promise<string[]> {
+    const parts: string[] = [];
+    for (const node of nodes) {
+      if (node.type === "section") {
+        const meta = sections[node.sectionId];
+        const title = (meta?.title || "").trim() || "Untitled section";
+        const level = Math.min(6, 2 + depth) as 2 | 3 | 4 | 5 | 6;
+        parts.push(heading(level, title));
+        if (meta?.description) {
+          parts.push(paragraph(meta.description));
+        }
+        parts.push(...(await renderOutlineNodes(node.children, depth + 1)));
+        continue;
+      }
+      parts.push(await renderClassBlock(node.classId));
+    }
+    return parts;
+  }
+
+  let bodyParts: string[];
+  if (outline.length > 0) {
+    bodyParts = await renderOutlineNodes(outline, 0);
+  } else {
+    // Legacy flat walk by class number
+    const classes = Object.entries(document.classes || {}).sort(
+      ([, a], [, b]) => (a?.number || 0) - (b?.number || 0),
     );
+    bodyParts = [];
+    for (const [classId] of classes) {
+      bodyParts.push(await renderClassBlock(classId));
+    }
   }
 
   const further = sortReadingsByPriority(
@@ -632,7 +670,7 @@ async function renderReadableNoteBody(
     paragraph(courseByline(document.courseCode, document.institution)),
     paragraph(document.description),
     linksBlock(document.links),
-    ...classSections,
+    ...bodyParts,
     ...(furtherLines.length
       ? [heading(3, "Further reading"), bulletList(furtherLines)]
       : []),
@@ -1686,17 +1724,39 @@ export async function setCollectionDocumentMetadata(
 ): Promise<CollectionSyllabusDocument> {
   return mutateCollectionDocument(
     collectionId,
-    (document) => ({
-      ...document,
-      ...metadata,
-      version: COLLECTION_SYLLABUS_DOCUMENT_VERSION,
-      classes: mergeNumberKeyedClasses(document.classes, metadata.classes),
-      items: document.items,
-      createSubcollections:
-        metadata.createSubcollections !== undefined
-          ? metadata.createSubcollections
-          : document.createSubcollections,
-    }),
+    (document) => {
+      const classes = mergeImportedClasses(
+        document.classes,
+        metadata.classes as Record<string, unknown> | undefined,
+      );
+      const sections =
+        metadata.sections !== undefined
+          ? metadata.sections || {}
+          : document.sections || {};
+      const outline =
+        metadata.outline !== undefined
+          ? metadata.outline || []
+          : document.outline || [];
+      const {
+        classes: _c,
+        sections: _s,
+        outline: _o,
+        ...restMetadata
+      } = metadata;
+      return {
+        ...document,
+        ...restMetadata,
+        version: COLLECTION_SYLLABUS_DOCUMENT_VERSION,
+        classes,
+        sections,
+        outline,
+        items: document.items,
+        createSubcollections:
+          metadata.createSubcollections !== undefined
+            ? metadata.createSubcollections
+            : document.createSubcollections,
+      };
+    },
     { createNote: options.createNote ?? "prompt" },
   );
 }

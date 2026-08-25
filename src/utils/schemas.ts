@@ -40,6 +40,10 @@ export function generateClassId(): string {
   return `class-${uuidv7()}`;
 }
 
+export function generateSectionId(): string {
+  return `section-${uuidv7()}`;
+}
+
 /**
  * ItemSyllabusAssignment schema
  * Version 2: Ensures id is always present
@@ -351,6 +355,9 @@ export const StoredClassMetadataSchema = SettingsClassMetadataSchema.extend({
  */
 export const ExportClassMetadataSchema = SettingsClassMetadataSchema.omit({
   status: true,
+}).extend({
+  /** Present when classes are id-keyed (outline-aware Talis export). */
+  number: z.number().int().min(1).optional(),
 });
 
 /**
@@ -381,6 +388,59 @@ const transformClasses = <T extends z.ZodTypeAny>(classSchema: T) => {
 };
 
 /**
+ * Thematic section metadata (grouping above classes). Parentage lives in outline.
+ */
+export const SettingsSectionMetadataSchema = z.object({
+  title: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
+});
+
+/**
+ * Outline tree: sections nest; class leaves reference stable classId.
+ * Defined with z.lazy for recursive children.
+ */
+export type OutlineNode =
+  | { type: "class"; classId: string }
+  | { type: "section"; sectionId: string; children: OutlineNode[] };
+
+export const OutlineNodeSchema: z.ZodType<OutlineNode> = z.lazy(() =>
+  z.union([
+    z.object({
+      type: z.literal("class"),
+      classId: z.string().min(1),
+    }),
+    z
+      .object({
+        type: z.literal("section"),
+        sectionId: z.string().min(1),
+        children: z.array(OutlineNodeSchema).optional(),
+      })
+      .transform((node) => ({
+        type: "section" as const,
+        sectionId: node.sectionId,
+        children: node.children || [],
+      })),
+  ]),
+) as z.ZodType<OutlineNode>;
+
+const transformSections = (sectionSchema: z.ZodTypeAny) => {
+  return z
+    .record(z.string(), sectionSchema)
+    .default(() => ({}))
+    .transform((sections) => {
+      if (!sections) return {};
+      const filtered: Record<string, z.infer<typeof sectionSchema>> = {};
+      for (const [key, value] of Object.entries(sections)) {
+        if (!value) {
+          continue;
+        }
+        filtered[key] = value;
+      }
+      return Object.keys(filtered).length > 0 ? filtered : {};
+    });
+};
+
+/**
  * Settings Syllabus Metadata schema
  * Automatically filters out null classes, empty itemOrder arrays, and empty class entries during parsing
  */
@@ -389,6 +449,8 @@ export const SettingsSyllabusMetadataSchema = z.object({
   institution: z.string().optional().nullable(),
   courseCode: z.string().optional().nullable(),
   classes: transformClasses(SettingsClassMetadataSchema),
+  sections: transformSections(SettingsSectionMetadataSchema),
+  outline: z.array(OutlineNodeSchema).optional(),
   nomenclature: z.string().optional(),
   priorities: z.array(PrioritySchema).default(DEFAULT_PRIORITIES),
   locked: z.boolean().optional().nullable(),
@@ -415,14 +477,17 @@ export const ExportSyllabusMetadataSchema = SettingsSyllabusMetadataSchema.omit(
     .optional(),
 });
 
-export const COLLECTION_SYLLABUS_DOCUMENT_VERSION = 2 as const;
+export const COLLECTION_SYLLABUS_DOCUMENT_VERSION = 3 as const;
 
 /**
  * Collection syllabus document stored in a top-level collection note.
  * Combines syllabus metadata with per-item assignments keyed by item.key.
  */
 const CollectionSyllabusDocumentV1Schema =
-  SettingsSyllabusMetadataSchema.extend({
+  SettingsSyllabusMetadataSchema.omit({
+    sections: true,
+    outline: true,
+  }).extend({
     version: z.literal(1).default(1),
     items: z
       .record(z.string(), z.array(ItemSyllabusAssignmentEntity.latestSchema))
@@ -434,10 +499,10 @@ const CollectionSyllabusDocumentV1Schema =
  */
 const CollectionSyllabusDocumentV2Schema = SettingsSyllabusMetadataSchema.omit({
   classes: true,
+  sections: true,
+  outline: true,
 }).extend({
-  version: z
-    .literal(COLLECTION_SYLLABUS_DOCUMENT_VERSION)
-    .default(COLLECTION_SYLLABUS_DOCUMENT_VERSION),
+  version: z.literal(2).default(2),
   classes: transformClasses(StoredClassMetadataSchema),
   items: z
     .record(z.string(), z.array(ItemSyllabusAssignmentEntity.latestSchema))
@@ -453,6 +518,42 @@ const CollectionSyllabusDocumentV2Schema = SettingsSyllabusMetadataSchema.omit({
     )
     .optional(),
 });
+
+/**
+ * v3: thematic sections + outline tree (order and nesting).
+ */
+const CollectionSyllabusDocumentV3Schema = SettingsSyllabusMetadataSchema.omit({
+  classes: true,
+}).extend({
+  version: z
+    .literal(COLLECTION_SYLLABUS_DOCUMENT_VERSION)
+    .default(COLLECTION_SYLLABUS_DOCUMENT_VERSION),
+  classes: transformClasses(StoredClassMetadataSchema),
+  sections: transformSections(SettingsSectionMetadataSchema),
+  outline: z.array(OutlineNodeSchema).default(() => []),
+  items: z
+    .record(z.string(), z.array(ItemSyllabusAssignmentEntity.latestSchema))
+    .default(() => ({})),
+  itemIndex: z
+    .record(
+      z.string(),
+      z.object({
+        title: z.string().optional(),
+        doi: z.string().optional().nullable(),
+        isbn: z.string().optional().nullable(),
+      }),
+    )
+    .optional(),
+});
+
+function flatOutlineFromClassMap(
+  classes: Record<string, { number?: number } | undefined> | undefined,
+): OutlineNode[] {
+  return Object.entries(classes || {})
+    .filter(([, meta]) => meta?.number)
+    .sort(([, a], [, b]) => (a?.number || 0) - (b?.number || 0))
+    .map(([classId]) => ({ type: "class" as const, classId }));
+}
 
 function getCollectionSyllabusDocumentVersion(data: unknown): number | null {
   if (typeof data !== "object" || data === null) {
@@ -527,9 +628,21 @@ export const CollectionSyllabusDocumentEntity = createVersionedEntity({
         const { classes, items } = migrateClassesToIds(old.classes, old.items);
         return {
           ...old,
-          version: COLLECTION_SYLLABUS_DOCUMENT_VERSION,
+          version: 2 as const,
           classes,
           items,
+        };
+      },
+    }),
+    3: defineVersion({
+      schema: CollectionSyllabusDocumentV3Schema,
+      initial: false,
+      up: (old: z.infer<typeof CollectionSyllabusDocumentV2Schema>) => {
+        return {
+          ...old,
+          version: COLLECTION_SYLLABUS_DOCUMENT_VERSION,
+          sections: {},
+          outline: flatOutlineFromClassMap(old.classes),
         };
       },
     }),
@@ -682,6 +795,9 @@ export type CollectionSyllabusDocument = z.infer<
   typeof CollectionSyllabusDocumentSchema
 >;
 export type StoredClassMetadata = z.infer<typeof StoredClassMetadataSchema>;
+export type SettingsSectionMetadata = z.infer<
+  typeof SettingsSectionMetadataSchema
+>;
 export type AssignmentStatus = z.infer<typeof AssignmentStatusSchema>;
 export type ClassStatus = z.infer<typeof ClassStatusSchema>;
 
@@ -779,6 +895,54 @@ export function mergeNumberKeyedClasses(
       ...existingMeta,
       ...meta,
       number,
+      ...(existingMeta?.subcollectionKey
+        ? { subcollectionKey: existingMeta.subcollectionKey }
+        : {}),
+    });
+  }
+  return next;
+}
+
+/**
+ * Merge imported classes that may be number-keyed (legacy/Talis) or already
+ * id-keyed with a `number` field (outline-aware Talis export).
+ */
+export function mergeImportedClasses(
+  existing: CollectionSyllabusDocument["classes"] | undefined,
+  incoming: Record<string, unknown> | undefined,
+): NonNullable<CollectionSyllabusDocument["classes"]> {
+  if (!incoming || Object.keys(incoming).length === 0) {
+    return { ...(existing || {}) };
+  }
+
+  const entries = Object.entries(incoming);
+  const looksIdKeyed = entries.some(([key, meta]) => {
+    if (!meta || typeof meta !== "object") return false;
+    const number = (meta as { number?: unknown }).number;
+    return (
+      typeof number === "number" &&
+      (key.startsWith("class-") || Number.isNaN(parseInt(key, 10)))
+    );
+  });
+
+  if (!looksIdKeyed) {
+    return mergeNumberKeyedClasses(
+      existing,
+      incoming as SettingsSyllabusMetadata["classes"],
+    );
+  }
+
+  const next: NonNullable<CollectionSyllabusDocument["classes"]> = {
+    ...(existing || {}),
+  };
+  for (const [classId, meta] of entries) {
+    if (!meta || typeof meta !== "object") continue;
+    const parsed = StoredClassMetadataSchema.safeParse(meta);
+    if (!parsed.success) continue;
+    const existingMeta = next[classId];
+    next[classId] = StoredClassMetadataSchema.parse({
+      ...existingMeta,
+      ...parsed.data,
       ...(existingMeta?.subcollectionKey
         ? { subcollectionKey: existingMeta.subcollectionKey }
         : {}),
