@@ -88,7 +88,11 @@ function isUsableCollection(
     return false;
   }
   try {
-    return !collection.deleted && typeof collection.id === "number" && collection.id > 0;
+    return (
+      !collection.deleted &&
+      typeof collection.id === "number" &&
+      collection.id > 0
+    );
   } catch {
     return false;
   }
@@ -350,7 +354,9 @@ async function selectTourAssignedItem(
       return false;
     }
   });
-  const assigned = items.find((item) => itemIsAssignedToClass(item, collection));
+  const assigned = items.find((item) =>
+    itemIsAssignedToClass(item, collection),
+  );
   const target = assigned || items[0];
   if (!target) {
     return;
@@ -441,7 +447,11 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
 
   guide.addStep({
     title: getString("userGuide-start-title"),
-    description: guideStepDescription("userGuide-start-desc", "classes.png", 340),
+    description: guideStepDescription(
+      "userGuide-start-desc",
+      "classes.png",
+      340,
+    ),
     position: "center",
     showButtons: ["next", "close"],
     closeBtnText: getString("userGuide-start-close"),
@@ -459,9 +469,8 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
     showProgress: true,
     onBeforeRender: async () => {
       win.Zotero_Tabs?.select("zotero-pane");
-      playgroundCollection = await resolvePlaygroundCollection(
-        playgroundCollection,
-      );
+      playgroundCollection =
+        await resolvePlaygroundCollection(playgroundCollection);
     },
   });
 
@@ -477,15 +486,13 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
     showProgress: true,
     onBeforeRender: async () => {
       win.Zotero_Tabs?.select("zotero-pane");
-      playgroundCollection = await resolvePlaygroundCollection(
-        playgroundCollection,
-      );
+      playgroundCollection =
+        await resolvePlaygroundCollection(playgroundCollection);
       await waitForElement(win, "#syllabus-view-mode-syllabus");
     },
     onExit: async () => {
-      playgroundCollection = await resolvePlaygroundCollection(
-        playgroundCollection,
-      );
+      playgroundCollection =
+        await resolvePlaygroundCollection(playgroundCollection);
       await enableSyllabusViewForTour(playgroundCollection);
     },
   });
@@ -513,9 +520,8 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
     // Run on Next (while the tip is still visible), not onExit after hide —
     // otherwise the card vanishes and the action feels like it auto-skipped.
     onNextClick: async () => {
-      playgroundCollection = await resolvePlaygroundCollection(
-        playgroundCollection,
-      );
+      playgroundCollection =
+        await resolvePlaygroundCollection(playgroundCollection);
       await ensureTourClass(playgroundCollection, 1);
     },
   });
@@ -548,9 +554,8 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
       requestTourCloseSettings(win);
       // Ensure class exists from the previous step, but do not assign yet —
       // let the user read this tip and click Next first.
-      playgroundCollection = await resolvePlaygroundCollection(
-        playgroundCollection,
-      );
+      playgroundCollection =
+        await resolvePlaygroundCollection(playgroundCollection);
       await waitForElement(
         win,
         () =>
@@ -560,9 +565,8 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
       await settleTourUi(200);
     },
     onNextClick: async () => {
-      playgroundCollection = await resolvePlaygroundCollection(
-        playgroundCollection,
-      );
+      playgroundCollection =
+        await resolvePlaygroundCollection(playgroundCollection);
       await ensureTourClassAndAssignment(playgroundCollection);
     },
   });
@@ -593,9 +597,8 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
     },
     onBeforeRender: async () => {
       requestTourCloseSettings(win);
-      playgroundCollection = await resolvePlaygroundCollection(
-        playgroundCollection,
-      );
+      playgroundCollection =
+        await resolvePlaygroundCollection(playgroundCollection);
       // Assignment happens on Next of the previous step — only select here.
       await selectTourAssignedItem(playgroundCollection);
       await waitForElement(
@@ -632,9 +635,8 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
         requestTourCloseSettings(win);
       },
       onNextClick: async () => {
-        playgroundCollection = await resolvePlaygroundCollection(
-          playgroundCollection,
-        );
+        playgroundCollection =
+          await resolvePlaygroundCollection(playgroundCollection);
         if (SyllabusManager.getCollectionViewMode() !== "syllabus") {
           await enableSyllabusViewForTour(playgroundCollection);
         } else {
@@ -695,17 +697,13 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
     showProgress: true,
     onBeforeRender: async () => {
       win.Zotero_Tabs?.select("zotero-pane");
-      playgroundCollection = await resolvePlaygroundCollection(
-        playgroundCollection,
-      );
+      playgroundCollection =
+        await resolvePlaygroundCollection(playgroundCollection);
       // Settings live inside Syllabus view — switch back if we left for Items
       // or the Reading Schedule tab.
       await enableSyllabusViewForTour(playgroundCollection);
       requestTourOpenSettings(win);
-      await waitForElement(
-        win,
-        '[data-tour="syllabus-class-subcollections"]',
-      );
+      await waitForElement(win, '[data-tour="syllabus-class-subcollections"]');
     },
   });
 

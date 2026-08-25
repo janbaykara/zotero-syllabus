@@ -82,9 +82,7 @@ export function useSubcollectionTree(collectionId: number) {
   const snapshotJson = useSyncExternalStore(store.subscribe, store.getSnapshot);
 
   return useMemo(() => {
-    const snapshot = SuperJSON.parse(
-      snapshotJson,
-    ) as SubcollectionTreeSnapshot;
+    const snapshot = SuperJSON.parse(snapshotJson) as SubcollectionTreeSnapshot;
     const root = snapshot.root;
     if (!root) {
       return {
@@ -97,7 +95,9 @@ export function useSubcollectionTree(collectionId: number) {
       sortItemsByTitle(
         ids
           .map((id) => getCachedItem(id))
-          .filter((item): item is Zotero.Item => !!item && item.isRegularItem()),
+          .filter(
+            (item): item is Zotero.Item => !!item && item.isRegularItem(),
+          ),
       );
 
     return { root, resolveItems };

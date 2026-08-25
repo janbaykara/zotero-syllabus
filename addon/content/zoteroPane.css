@@ -98,8 +98,11 @@
 }
 
 /* Non-library tabs render data.icon as an item-type; show our calendar instead. */
-#tab-bar-container .tab[data-id="syllabus-reading-list-tab"] .icon-item-type[data-item-type="calendar"] {
-  background: url("chrome://syllabus/content/icons/calendar.svg") no-repeat center / contain !important;
+#tab-bar-container
+  .tab[data-id="syllabus-reading-list-tab"]
+  .icon-item-type[data-item-type="calendar"] {
+  background: url("chrome://syllabus/content/icons/calendar.svg") no-repeat
+    center / contain !important;
   fill: #7b4ddb;
   -moz-context-properties: fill, fill-opacity;
 }

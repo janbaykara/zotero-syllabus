@@ -10,10 +10,7 @@ import {
 } from "./utils/schemas";
 import { zoteroCache } from "./utils/cache";
 import { FEATURE_FLAG } from "./modules/featureFlags";
-import {
-  registerUserGuideHelpMenu,
-  showUserGuide,
-} from "./modules/userGuide";
+import { registerUserGuideHelpMenu, showUserGuide } from "./modules/userGuide";
 
 async function onStartup(rootURI: string) {
   await Promise.all([

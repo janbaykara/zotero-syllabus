@@ -9,10 +9,7 @@ import { isZotero8OrLater } from "../utils/zotero";
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
-import {
-  SubcollectionNode,
-  useSubcollectionTree,
-} from "./subcollectionGroups";
+import { SubcollectionNode, useSubcollectionTree } from "./subcollectionGroups";
 import { SyllabusItemCard } from "./SyllabusPage";
 
 interface SubcollectionsPageProps {
@@ -247,7 +244,9 @@ function SubcollectionSection({
             In this collection
           </div>
           <div className={compactMode ? "space-y-2" : "space-y-4"}>
-            {items.map((item) => renderItemCard(item, `root-${node.collectionId}`))}
+            {items.map((item) =>
+              renderItemCard(item, `root-${node.collectionId}`),
+            )}
           </div>
         </div>
       )}

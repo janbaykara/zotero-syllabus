@@ -425,13 +425,14 @@ export class SyllabusManager {
         const original = bar.setTabs.bind(bar);
         bar._syllabusOriginalSetTabs = original;
         bar._syllabusSetTabsPatched = true;
-        bar.setTabs = (list: Array<{ id?: string; isItemType?: boolean }>) => {
+        bar.setTabs = (list: unknown[]) => {
           original(
-            list.map((tab) =>
-              tab.id === "syllabus-reading-list-tab"
-                ? { ...tab, isItemType: false }
-                : tab,
-            ),
+            list.map((tab) => {
+              const t = tab as { id?: string; isItemType?: boolean };
+              return t.id === "syllabus-reading-list-tab"
+                ? { ...t, isItemType: false }
+                : tab;
+            }),
           );
         };
       }
