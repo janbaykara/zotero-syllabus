@@ -1,7 +1,8 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
-import { useCallback, useMemo } from "preact/hooks";
+import { useMemo, useState } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
+import { Settings } from "lucide-preact";
 import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
 import {
   ClassReadingBlock,
@@ -19,11 +20,8 @@ import {
   startOfWeek,
 } from "date-fns";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
-import { useReadingScheduleCollectionPref } from "./react-zotero-sync/readingScheduleCollectionPref";
 import { useSyllabi } from "./react-zotero-sync/useSyllabi";
 import { getPref } from "../utils/prefs";
-import { getString } from "../utils/locale";
-import { confirmPrompt } from "../utils/window";
 import { isSameWeek } from "date-fns/fp";
 import {
   formatReadingDate,
@@ -31,41 +29,15 @@ import {
   toLocalDateKey,
 } from "../utils/dates";
 import { isZotero8OrLater } from "../utils/zotero";
+import { ReadingScheduleSettingsPage } from "./ReadingScheduleSettingsPage";
 
 setDefaultOptions({
   weekStartsOn: 1,
 });
 
-function confirmReadingScheduleCollectionToggle(enable: boolean): boolean {
-  if (enable) {
-    return confirmPrompt(
-      getString("enable-reading-schedule-collection-title"),
-      getString("enable-reading-schedule-collection-message"),
-    );
-  }
-  return confirmPrompt(
-    getString("disable-reading-schedule-collection-title"),
-    getString("disable-reading-schedule-collection-message"),
-  );
-}
-
 export function ReadingSchedule() {
   const [compactMode] = useZoteroCompactMode();
-  const [generateCollection, setGenerateCollection] =
-    useReadingScheduleCollectionPref();
-
-  const handleGenerateCollectionChange = useCallback(
-    (checked: boolean) => {
-      if (checked === generateCollection) {
-        return;
-      }
-      if (!confirmReadingScheduleCollectionToggle(checked)) {
-        return;
-      }
-      setGenerateCollection(checked);
-    },
-    [generateCollection, setGenerateCollection],
-  );
+  const [showSettings, setShowSettings] = useState(false);
 
   // Get all syllabi data (collections with metadata and items)
   const syllabi = useSyllabi();
@@ -195,17 +167,45 @@ export function ReadingSchedule() {
     selectItemInCollection(item, collectionId);
   };
 
-  const collectionToggle = (
-    <ReadingScheduleCollectionToggle
-      checked={generateCollection}
-      onChange={handleGenerateCollectionChange}
-      compactMode={compactMode}
-    />
+  if (showSettings) {
+    return (
+      <ReadingScheduleSettingsPage onBack={() => setShowSettings(false)} />
+    );
+  }
+
+  const settingsButton = (
+    <div
+      className="grow-0 shrink-0 flex items-center cursor-pointer"
+      title="Edit reading schedule settings"
+      aria-label="Edit reading schedule settings"
+      data-tour="reading-schedule-settings-button"
+      onClick={() => setShowSettings(true)}
+    >
+      <Settings
+        size={20}
+        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+      />
+    </div>
   );
 
   if (sortedWeeks.length === 0) {
     return (
       <div className="syllabus-page overflow-y-auto overflow-x-hidden h-full">
+        <div
+          className={twMerge(
+            "sticky top-0 z-20 bg-background py-1",
+            isZotero8OrLater() ? "pt-4 md:pt-8" : "pt-8",
+          )}
+        >
+          <div className="container-padded bg-background">
+            <div className="flex flex-row items-center gap-2 justify-between">
+              <div className={twMerge("font-semibold text-3xl")}>
+                Reading Schedule
+              </div>
+              {settingsButton}
+            </div>
+          </div>
+        </div>
         <div className="container-padded py-12">
           <div className="text-center text-secondary">
             <div
@@ -219,9 +219,6 @@ export function ReadingSchedule() {
             <p className={twMerge(compactMode ? "text-base" : "text-lg")}>
               Add reading dates to classes to see them here.
             </p>
-            <div className="mt-8 flex justify-center text-left text-primary">
-              {collectionToggle}
-            </div>
             {getPref("debugMode") && (
               <div className="text-secondary text-sm text-left! w-full!">
                 <h3 className="text-2xl mt-4">Debug information</h3>
@@ -254,8 +251,11 @@ export function ReadingSchedule() {
           )}
         >
           <div className="container-padded bg-background">
-            <div className={twMerge("font-semibold text-3xl")}>
-              Reading Schedule
+            <div className="flex flex-row items-center gap-2 justify-between">
+              <div className={twMerge("font-semibold text-3xl")}>
+                Reading Schedule
+              </div>
+              {settingsButton}
             </div>
           </div>
         </div>
@@ -263,8 +263,6 @@ export function ReadingSchedule() {
         <p className="container-padded text-secondary text-lg">
           Add reading dates to classes to see them here.
         </p>
-
-        <div className="container-padded mt-4">{collectionToggle}</div>
 
         <div className={twMerge("flex flex-col gap-8 mt-8")}>
           {sortedWeeks.map((weekStartKey) => {
@@ -347,42 +345,6 @@ export function ReadingSchedule() {
         </div>
       </div>
     </div>
-  );
-}
-
-function ReadingScheduleCollectionToggle({
-  checked,
-  onChange,
-  compactMode,
-}: {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  compactMode: boolean;
-}) {
-  return (
-    <label
-      className={twMerge(
-        "flex items-start gap-3 cursor-pointer max-w-xl",
-        compactMode ? "text-sm" : "text-base",
-      )}
-      data-tour="reading-schedule-generate-collection"
-    >
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.currentTarget.checked)}
-        className="w-4 h-4 mt-1 shrink-0 cursor-pointer accent-accent-green!"
-      />
-      <span>
-        <span className="font-medium text-primary">
-          Generate “Reading schedule” collection
-        </span>
-        <span className="block text-secondary mt-1">
-          Keeps a My Library folder of recent and upcoming reading dates.
-          Turning this off deletes that collection; syllabus items stay.
-        </span>
-      </span>
-    </label>
   );
 }
 
