@@ -101,6 +101,143 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   return <CollectionSyllabusPage collectionId={collectionId} />;
 }
 
+type SyllabusNavEntry = {
+  identifier: string;
+  item: Zotero.Item;
+  isFirstInGroup: boolean;
+};
+
+function getNavigableSyllabusEntries(
+  classGroups: Array<{
+    itemAssignments: Array<{
+      item: Zotero.Item;
+      assignment: ItemSyllabusAssignment;
+    }>;
+  }>,
+  furtherReadingItems: Zotero.Item[],
+): SyllabusNavEntry[] {
+  const entries: SyllabusNavEntry[] = [];
+
+  for (const group of classGroups) {
+    let isFirstInGroup = true;
+    for (const { item, assignment } of group.itemAssignments) {
+      if (!assignment.id) {
+        continue;
+      }
+      entries.push({
+        identifier: `assignment:${assignment.id}`,
+        item,
+        isFirstInGroup,
+      });
+      isFirstInGroup = false;
+    }
+  }
+
+  furtherReadingItems.forEach((item, index) => {
+    entries.push({
+      identifier: `item:${item.id}`,
+      item,
+      isFirstInGroup: index === 0,
+    });
+  });
+
+  return entries;
+}
+
+function getActiveNavIndex(
+  selectedIdentifiers: Set<string>,
+  entries: SyllabusNavEntry[],
+  direction: "up" | "down",
+): number {
+  if (direction === "down") {
+    for (let i = entries.length - 1; i >= 0; i--) {
+      if (selectedIdentifiers.has(entries[i].identifier)) {
+        return i;
+      }
+    }
+  } else {
+    for (let i = 0; i < entries.length; i++) {
+      if (selectedIdentifiers.has(entries[i].identifier)) {
+        return i;
+      }
+    }
+  }
+  return -1;
+}
+
+function isEditableKeyboardTarget(target: EventTarget | null): boolean {
+  if (!target || typeof (target as HTMLElement).closest !== "function") {
+    const tag = ((target as HTMLElement | null)?.tagName || "").toUpperCase();
+    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+  }
+  const el = target as HTMLElement;
+  if (el.isContentEditable) {
+    return true;
+  }
+  return Boolean(
+    el.closest("input, textarea, select, [contenteditable='true']"),
+  );
+}
+
+function isCollectionsPaneTarget(target: EventTarget | null): boolean {
+  if (!target || typeof (target as HTMLElement).closest !== "function") {
+    return false;
+  }
+  return Boolean(
+    (target as HTMLElement).closest(
+      "#zotero-collections-tree, #zotero-collections-pane",
+    ),
+  );
+}
+
+function scrollSyllabusIdentifierIntoView(
+  container: HTMLElement,
+  identifier: string,
+  showGroupHeader: boolean,
+) {
+  const card = container.querySelector(
+    `[data-syllabus-identifier="${identifier}"]`,
+  ) as HTMLElement | null;
+  if (!card) {
+    return;
+  }
+
+  const titleContainer = container.querySelector(
+    "[syllabus-view-title-container]",
+  ) as HTMLElement | null;
+  const titleHeight = titleContainer?.getBoundingClientRect().height ?? 0;
+  const padding = 8;
+  const containerRect = container.getBoundingClientRect();
+  const topBound = containerRect.top + titleHeight + padding;
+  const bottomBound = containerRect.bottom - padding;
+
+  const group = showGroupHeader
+    ? (card.closest(".syllabus-class-group") as HTMLElement | null)
+    : null;
+
+  if (group) {
+    const groupRect = group.getBoundingClientRect();
+    const targetTop =
+      groupRect.top -
+      containerRect.top +
+      container.scrollTop -
+      titleHeight -
+      padding;
+    container.scrollTo({
+      top: Math.max(0, targetTop),
+      behavior: "auto",
+    });
+    return;
+  }
+
+  const cardRect = card.getBoundingClientRect();
+  if (cardRect.top < topBound) {
+    container.scrollTop -= topBound - cardRect.top;
+  } else if (cardRect.bottom > bottomBound) {
+    container.scrollTop += cardRect.bottom - bottomBound;
+  }
+}
+
 function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   // Sync with external Zotero stores using hooks
   const [title, setTitle] = useZoteroCollectionTitle(collectionId);
@@ -179,6 +316,11 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   const [selectedIdentifiers, setSelectedIdentifiers] = useState<Set<string>>(
     new Set(),
   );
+  const syllabusPageRef = useRef<HTMLDivElement>(null);
+  const pendingNavScrollRef = useRef<{
+    identifier: string;
+    showGroupHeader: boolean;
+  } | null>(null);
 
   // Build array of selected assignments and items for drag operations
   const selectedForDrag = useMemo(() => {
@@ -279,6 +421,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       } catch (err) {
         ztoolkit.log("Error selecting item:", err);
       }
+
+      syllabusPageRef.current?.focus({ preventScroll: true });
     },
     [selectedItemIds],
   );
@@ -540,9 +684,6 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     }
   }, [selectedIdentifiers, syllabusItems]);
 
-  // Ref for the syllabus page container to access DOM for printing
-  const syllabusPageRef = useRef<HTMLDivElement>(null);
-
   // Ref for hidden file input for import
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -618,6 +759,99 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     syllabusMetadata,
     itemOrderVersion,
   );
+
+  const navigableEntries = useMemo(
+    () => getNavigableSyllabusEntries(classGroups, furtherReadingItems),
+    [classGroups, furtherReadingItems],
+  );
+
+  const navStateRef = useRef({
+    selectedIdentifiers,
+    navigableEntries,
+  });
+  navStateRef.current = { selectedIdentifiers, navigableEntries };
+
+  const handleSyllabusKeyDown = useCallback((event: Event) => {
+    const e = event as KeyboardEvent;
+    if (e.ctrlKey || e.metaKey || e.altKey) {
+      return;
+    }
+
+    const isDown = e.key === "ArrowDown" || e.key === "Down";
+    const isUp = e.key === "ArrowUp" || e.key === "Up";
+    if (!isDown && !isUp) {
+      return;
+    }
+    if (isEditableKeyboardTarget(e.target)) {
+      return;
+    }
+    if (isCollectionsPaneTarget(e.target)) {
+      return;
+    }
+
+    const { selectedIdentifiers: selected, navigableEntries: entries } =
+      navStateRef.current;
+    if (selected.size === 0 || entries.length === 0) {
+      return;
+    }
+
+    const currentIndex = getActiveNavIndex(
+      selected,
+      entries,
+      isDown ? "down" : "up",
+    );
+    if (currentIndex < 0) {
+      return;
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof e.stopImmediatePropagation === "function") {
+      e.stopImmediatePropagation();
+    }
+
+    const nextIndex = isDown ? currentIndex + 1 : currentIndex - 1;
+    if (nextIndex < 0 || nextIndex >= entries.length) {
+      return;
+    }
+
+    const next = entries[nextIndex];
+    pendingNavScrollRef.current = {
+      identifier: next.identifier,
+      showGroupHeader: isDown && next.isFirstInGroup,
+    };
+    setSelectedIdentifiers(new Set([next.identifier]));
+  }, []);
+
+  useEffect(() => {
+    if (showSettings) {
+      return;
+    }
+
+    const win = Zotero.getMainWindow();
+    const doc = win?.document ?? document;
+    doc.addEventListener("keydown", handleSyllabusKeyDown, true);
+    return () => {
+      doc.removeEventListener("keydown", handleSyllabusKeyDown, true);
+    };
+  }, [handleSyllabusKeyDown, showSettings]);
+
+  useLayoutEffect(() => {
+    const pending = pendingNavScrollRef.current;
+    if (!pending) {
+      return;
+    }
+    pendingNavScrollRef.current = null;
+    const container = syllabusPageRef.current;
+    if (!container) {
+      return;
+    }
+    scrollSyllabusIdentifierIntoView(
+      container,
+      pending.identifier,
+      pending.showGroupHeader,
+    );
+  }, [selectedIdentifiers]);
 
   const handleDrop = async (
     e: JSX.TargetedDragEvent<HTMLElement>,
@@ -1584,11 +1818,13 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       />
       <div
         ref={syllabusPageRef}
+        tabIndex={-1}
         className={twMerge(
-          "syllabus-page overflow-y-auto overflow-x-hidden h-full in-[.print]:scheme-light relative",
+          "syllabus-page overflow-y-auto overflow-x-hidden h-full in-[.print]:scheme-light relative focus:outline-none",
           compactMode && "compact-mode",
           isDraggingFile && "file-drag-over",
         )}
+        onKeyDown={handleSyllabusKeyDown}
         onDragEnter={handleFileDragEnter}
         onDragOver={handleFileDragOver}
         onDragLeave={handleFileDragLeave}
@@ -3245,6 +3481,7 @@ export function SyllabusItemCard({
         className,
       )}
       data-item-id={item.id}
+      data-syllabus-identifier={identifier}
       draggable={!isLocked && !showYoutubeEmbed}
       onClick={(e) => {
         if (customOnClick) {

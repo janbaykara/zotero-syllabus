@@ -1139,6 +1139,10 @@
   .focus\:outline-accent-blue:focus {
     outline-color: var(--color-accent-blue);
   }
+  .focus\:outline-none:focus {
+    --tw-outline-style: none;
+    outline-style: none;
+  }
   .active\:bg-quarternary:active {
     background-color: var(--color-quarternary);
   }
