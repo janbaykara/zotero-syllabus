@@ -13,3 +13,5 @@ pref-debug-mode =
     .label = 开启调试模式
 pref-generate-reading-schedule-collection =
     .label = 生成“阅读日程”分类（由插件自动管理；取消勾选将删除该分类）
+pref-custom-icons =
+    .label = 在分类树和阅读日程标签页中使用自定义图标

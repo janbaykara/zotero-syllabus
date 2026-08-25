@@ -20,6 +20,7 @@ export type FluentMessageId =
   | 'panel-demo-header'
   | 'panel-demo-sidenav'
   | 'pref-compact-mode'
+  | 'pref-custom-icons'
   | 'pref-debug-mode'
   | 'pref-enable'
   | 'pref-generate-reading-schedule-collection'

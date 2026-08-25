@@ -115,8 +115,12 @@ export class TabManager<TParams = any> {
         : this.config.title;
 
     // Determine data
+    const resolvedData =
+      typeof this.config.data === "function"
+        ? this.config.data(params)
+        : this.config.data;
     const data = {
-      ...this.config.data,
+      ...resolvedData,
       params,
     };
 

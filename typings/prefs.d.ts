@@ -17,6 +17,7 @@ declare namespace _ZoteroTypes {
       "latestTourVersion": number;
       "generateReadingScheduleCollection": boolean;
       "readingScheduleCollectionKey": string;
+      "customIcons": boolean;
     };
   }
 }

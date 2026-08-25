@@ -66,10 +66,13 @@ import {
 import { migrateLegacyCollectionMetadataPrefs } from "./migratePrefsToNotes";
 import { isManagedReadingScheduleCollection } from "./readingScheduleCollection";
 import {
-  patchManagedCollectionTree,
+  applyManagedCollectionTree,
+  areCustomIconsEnabled,
   refreshManagedCollectionTrees,
+  registerCustomIconsPrefObserver,
   unpatchManagedCollectionTree,
   unpatchManagedCollectionTreePrototype,
+  unregisterCustomIconsPrefObserver,
 } from "./managedCollectionTree";
 
 enum SyllabusSettingsKey {
@@ -187,7 +190,7 @@ const tabManager = FEATURE_FLAG.READING_SCHEDULE
       type: "reading-list",
       title: "Reading Schedule",
       rootElementIdFactory: () => "reading-list-tab-root",
-      data: { icon: "calendar" },
+      data: () => (areCustomIconsEnabled() ? { icon: "calendar" } : {}),
       componentFactory: () => h(ReadingSchedule, {}),
       getTabId: () => "syllabus-reading-list-tab",
     })
@@ -303,6 +306,11 @@ export class SyllabusManager {
       );
     });
     this.registerPrefs();
+    registerCustomIconsPrefObserver(() => {
+      for (const win of Zotero.getMainWindows() as _ZoteroTypes.MainWindow[]) {
+        this.syncReadingScheduleTabIcon(win);
+      }
+    });
     this.registerNotifier();
     this.registerSyllabusInfoColumn();
     this.registerSyllabusClassInstructionColumn();
@@ -321,10 +329,10 @@ export class SyllabusManager {
     this.setupUI();
     this.setupSyllabusViewTabListener();
     this.setupSyllabusViewReloadListener();
-    patchManagedCollectionTree(win);
+    applyManagedCollectionTree(win);
     this.syncReadingScheduleTabIcon(win);
     void whenSyllabusNotesReady().then(() => {
-      patchManagedCollectionTree(win);
+      applyManagedCollectionTree(win);
       refreshManagedCollectionTrees();
       this.syncReadingScheduleTabIcon(win);
     });
@@ -332,7 +340,7 @@ export class SyllabusManager {
     // Re-render reading list tab if it exists (for hot reload)
     // Use a small delay to ensure tabs are initialized
     Zotero.Promise.delay(100).then(() => {
-      patchManagedCollectionTree(win);
+      applyManagedCollectionTree(win);
       this.syncReadingScheduleTabIcon(win);
       if (this.readingScheduleTab) {
         ztoolkit.log(
@@ -354,6 +362,20 @@ export class SyllabusManager {
           };
         };
       };
+      if (!areCustomIconsEnabled()) {
+        this.unpatchReadingScheduleTabBar(win);
+        try {
+          const existing = tabs._getTab("syllabus-reading-list-tab");
+          if (existing?.tab?.data?.icon === "calendar") {
+            const { icon: _icon, ...rest } = existing.tab.data;
+            existing.tab.data = rest;
+            tabs._update();
+          }
+        } catch {
+          // Reading schedule tab may not exist
+        }
+        return;
+      }
       const bar = tabs._tabBarRef?.current;
       if (bar && !bar._syllabusSetTabsPatched) {
         const original = bar.setTabs.bind(bar);
@@ -474,6 +496,7 @@ export class SyllabusManager {
 
   static onShutdown() {
     ztoolkit.log("SyllabusManager.onShutdown");
+    unregisterCustomIconsPrefObserver();
     this.unregisterNotifier();
     for (const mainWindow of Zotero.getMainWindows() as _ZoteroTypes.MainWindow[]) {
       this.unpatchReadingScheduleTabBar(mainWindow);

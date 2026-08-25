@@ -1,3 +1,4 @@
+import { getPrefKey, getPrefValue } from "../utils/prefs";
 import { getCollectionTreeKind } from "./autoManagedCollection";
 
 const ICON_BY_KIND = {
@@ -48,6 +49,11 @@ let patchedPrototype: CollectionsView | null = null;
 let originalGetIconName:
   | ((this: CollectionsView, index: number) => string | null)
   | null = null;
+let prefObserverID: symbol | null = null;
+
+export function areCustomIconsEnabled(): boolean {
+  return Boolean(getPrefValue("customIcons"));
+}
 
 function collectionIdFromRow(
   row: ReturnType<CollectionsView["getRow"]>,
@@ -59,16 +65,18 @@ function collectionIdFromRow(
 }
 
 function wrapGetIconName(this: CollectionsView, index: number): string | null {
-  try {
-    const collectionId = collectionIdFromRow(this.getRow(index));
-    if (collectionId != null) {
-      const kind = getCollectionTreeKind(collectionId);
-      if (kind) {
-        return ICON_BY_KIND[kind];
+  if (areCustomIconsEnabled()) {
+    try {
+      const collectionId = collectionIdFromRow(this.getRow(index));
+      if (collectionId != null) {
+        const kind = getCollectionTreeKind(collectionId);
+        if (kind) {
+          return ICON_BY_KIND[kind];
+        }
       }
+    } catch (error) {
+      ztoolkit.log("Error resolving collection tree icon:", error);
     }
-  } catch (error) {
-    ztoolkit.log("Error resolving collection tree icon:", error);
   }
   return originalGetIconName!.call(this, index);
 }
@@ -80,7 +88,9 @@ function markCollectionRow(
 ) {
   const collectionId = collectionIdFromRow(view.getRow(index));
   const kind =
-    collectionId != null ? getCollectionTreeKind(collectionId) : null;
+    areCustomIconsEnabled() && collectionId != null
+      ? getCollectionTreeKind(collectionId)
+      : null;
   for (const className of ROW_CLASSES) {
     div.classList.toggle(
       className,
@@ -135,7 +145,29 @@ function patchRenderItem(view: CollectionsView): void {
   view.forceUpdate?.();
 }
 
+function isRenderPatched(view: CollectionsView): boolean {
+  return Boolean(
+    (view as CollectionsView & { [RENDER_PATCH_KEY]?: unknown })[
+      RENDER_PATCH_KEY
+    ],
+  );
+}
+
+function setCustomIconsDocumentClass(
+  win: _ZoteroTypes.MainWindow,
+  enabled: boolean,
+): void {
+  win.document.documentElement.classList.toggle(
+    "syllabus-custom-icons",
+    enabled,
+  );
+}
+
 export function patchManagedCollectionTree(win: _ZoteroTypes.MainWindow): void {
+  if (!areCustomIconsEnabled()) {
+    return;
+  }
+  setCustomIconsDocumentClass(win, true);
   const view = collectionsViewForWindow(win);
   if (!view) {
     return;
@@ -143,6 +175,52 @@ export function patchManagedCollectionTree(win: _ZoteroTypes.MainWindow): void {
   patchPrototype(view);
   patchRenderItem(view);
   view.tree?.invalidate?.();
+}
+
+/** Apply or strip custom tree icons for one window based on the global pref. */
+export function applyManagedCollectionTree(win: _ZoteroTypes.MainWindow): void {
+  if (areCustomIconsEnabled()) {
+    patchManagedCollectionTree(win);
+    return;
+  }
+  const view = collectionsViewForWindow(win);
+  if (view && isRenderPatched(view)) {
+    view.forceUpdate?.();
+    view.tree?.invalidate?.();
+  }
+  unpatchManagedCollectionTree(win);
+  setCustomIconsDocumentClass(win, false);
+}
+
+export function applyManagedCollectionTrees(): void {
+  for (const win of Zotero.getMainWindows() as _ZoteroTypes.MainWindow[]) {
+    applyManagedCollectionTree(win);
+  }
+  if (!areCustomIconsEnabled()) {
+    unpatchManagedCollectionTreePrototype();
+  }
+}
+
+export function registerCustomIconsPrefObserver(onChange?: () => void): void {
+  if (prefObserverID) {
+    return;
+  }
+  prefObserverID = Zotero.Prefs.registerObserver(
+    getPrefKey("customIcons"),
+    () => {
+      applyManagedCollectionTrees();
+      onChange?.();
+    },
+    true,
+  );
+}
+
+export function unregisterCustomIconsPrefObserver(): void {
+  if (!prefObserverID) {
+    return;
+  }
+  Zotero.Prefs.unregisterObserver(prefObserverID);
+  prefObserverID = null;
 }
 
 export function unpatchManagedCollectionTree(
@@ -175,6 +253,9 @@ export function unpatchManagedCollectionTreePrototype(): void {
 
 /** Re-render tree rows so managed icons apply after folders are remembered. */
 export function refreshManagedCollectionTrees(): void {
+  if (!areCustomIconsEnabled()) {
+    return;
+  }
   for (const win of Zotero.getMainWindows() as _ZoteroTypes.MainWindow[]) {
     const view = collectionsViewForWindow(win);
     if (!view) {

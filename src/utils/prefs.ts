@@ -12,6 +12,7 @@ export const PREFS_KEYS: (keyof PluginPrefsMap)[] = [
   "debugMode",
   "wpm",
   "generateReadingScheduleCollection",
+  "customIcons",
 ];
 
 const PREFS_PREFIX = config.prefsPrefix;

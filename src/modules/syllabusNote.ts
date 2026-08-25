@@ -316,12 +316,22 @@ function setCacheEntry(
   noteVersion: number,
   document: CollectionSyllabusDocument,
 ): CachedDocument {
+  const snapshot = snapshotOf(document);
+  const existing = documentCache.get(ref);
+  if (
+    existing &&
+    existing.noteId === noteId &&
+    existing.noteVersion === noteVersion &&
+    existing.snapshot === snapshot
+  ) {
+    return existing;
+  }
   const entry: CachedDocument = {
     collectionRef: ref,
     noteId,
     noteVersion,
     document,
-    snapshot: snapshotOf(document),
+    snapshot,
   };
   documentCache.set(ref, entry);
   if (noteId !== null) {
@@ -750,6 +760,13 @@ function loadDocumentForCollection(
   }
 
   if (cached && !isEmptyCollectionDocument(cached.document)) {
+    return cached;
+  }
+
+  // Confirmed miss: returning a new empty setCacheEntry() here used to bump
+  // documentGeneration on every ItemPane read, which retriggered
+  // useSyllabusDocumentGeneration in a tight loop (100% CPU).
+  if (cached && cached.noteId == null && itemDataReady) {
     return cached;
   }
 
