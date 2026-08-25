@@ -6,6 +6,7 @@ import slugify from "slugify";
 import { getLocaleID, getString } from "../utils/locale";
 import { renderSyllabusPage } from "./SyllabusPage";
 import { renderTagsPage } from "./TagsPage";
+import { renderSubcollectionsPage } from "./SubcollectionsPage";
 import { getSelectedCollection } from "../utils/zotero";
 import { getCurrentTab, confirmPrompt } from "../utils/window";
 import { set } from "lodash-es";
@@ -68,15 +69,25 @@ enum SyllabusSettingsKey {
   COLLECTION_VIEW_MODES = "collectionViewModes",
 }
 
-export type CollectionViewMode = "collection" | "syllabus" | "tags";
+export type CollectionViewMode =
+  | "collection"
+  | "syllabus"
+  | "tags"
+  | "subcollections";
 
 const COLLECTION_VIEW_MODES: CollectionViewMode[] = [
   "collection",
-  "syllabus",
   "tags",
+  "subcollections",
+  "syllabus",
 ];
 
-const CollectionViewModeSchema = z.enum(["collection", "syllabus", "tags"]);
+const CollectionViewModeSchema = z.enum([
+  "collection",
+  "syllabus",
+  "tags",
+  "subcollections",
+]);
 
 /** Coerce legacy boolean prefs and validate string modes. */
 function coerceCollectionViewMode(value: unknown): CollectionViewMode {
@@ -661,15 +672,21 @@ export class SyllabusManager {
 
     const viewModeOptions: {
       mode: CollectionViewMode;
-      label: string;
+      label?: string;
       tooltip: string;
+      icon?: "book" | "tag" | "folder";
     }[] = [
       {
         mode: "collection",
-        label: "Items",
         tooltip: "View as Items",
+        icon: "book",
       },
-      { mode: "tags", label: "Tags", tooltip: "View as Tags" },
+      { mode: "tags", tooltip: "View as Tags", icon: "tag" },
+      {
+        mode: "subcollections",
+        tooltip: "View by Subcollections",
+        icon: "folder",
+      },
       { mode: "syllabus", label: "Syllabus", tooltip: "View as Syllabus" },
     ];
 
@@ -677,15 +694,20 @@ export class SyllabusManager {
     for (const option of viewModeOptions) {
       const button = ztoolkit.UI.createElement(doc, "toolbarbutton", {
         id: `syllabus-view-mode-${option.mode}`,
-        classList: ["syllabus-view-mode-button"],
+        classList: [
+          "syllabus-view-mode-button",
+          ...(option.icon ? ["syllabus-view-mode-button-icon"] : []),
+        ],
         attributes: {
           "data-view-mode": option.mode,
           crop: "none",
+          tooltiptext: option.tooltip,
+          ...(option.icon ? { "data-icon": option.icon } : {}),
         },
         properties: {
           type: "radio",
           group: "syllabus-view-mode",
-          label: option.label,
+          ...(option.label ? { label: option.label } : {}),
           tooltiptext: option.tooltip,
         },
         listeners: [
@@ -884,7 +906,7 @@ export class SyllabusManager {
       }
 
       // Check if we should show custom view
-      // Show if: syllabus or tags view is enabled AND we have a collection
+      // Show if: syllabus, tags, or subcollections view is enabled AND we have a collection
       const viewMode = SyllabusManager.getCollectionViewMode();
       if (
         viewMode === "syllabus" &&
@@ -906,7 +928,9 @@ export class SyllabusManager {
       }
       const resolvedViewMode = SyllabusManager.getCollectionViewMode();
       const shouldShowCustomView =
-        (resolvedViewMode === "syllabus" || resolvedViewMode === "tags") &&
+        (resolvedViewMode === "syllabus" ||
+          resolvedViewMode === "tags" ||
+          resolvedViewMode === "subcollections") &&
         selectedCollection;
 
       // Find or create custom syllabus view container
@@ -955,6 +979,8 @@ export class SyllabusManager {
         if (customView && selectedCollection) {
           if (resolvedViewMode === "tags") {
             renderTagsPage(w, customView, selectedCollection.id);
+          } else if (resolvedViewMode === "subcollections") {
+            renderSubcollectionsPage(w, customView, selectedCollection.id);
           } else {
             renderSyllabusPage(w, customView, selectedCollection.id);
           }

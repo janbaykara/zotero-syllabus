@@ -1,4 +1,4 @@
-/* Segmented Collection / Tags / Syllabus control */
+/* Segmented Items / Tags / Subcollections / Syllabus control */
 .syllabus-view-mode-button {
   fill: currentColor;
   -moz-context-properties: fill, fill-opacity;
@@ -12,13 +12,41 @@
   background: transparent !important;
 }
 
+.syllabus-view-mode-button-icon {
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+
+.syllabus-view-mode-button[data-icon="book"] {
+  list-style-image: url("chrome://zotero/skin/16/universal/book.svg");
+}
+
+.syllabus-view-mode-button[data-icon="tag"] {
+  list-style-image: url("chrome://zotero/skin/16/universal/tag.svg");
+}
+
+.syllabus-view-mode-button[data-icon="folder"] {
+  list-style-image: url("chrome://zotero/skin/16/universal/folder.svg");
+}
+
+.syllabus-view-mode-button-icon .toolbarbutton-icon {
+  width: 16px;
+  height: 16px;
+  margin: 0 !important;
+}
+
+.syllabus-view-mode-button-icon .toolbarbutton-text {
+  display: none !important;
+}
+
 .syllabus-view-mode-button[data-view-mode="collection"] {
   border-start-start-radius: 4px !important;
   border-end-start-radius: 4px !important;
   margin-inline-start: 4px !important;
 }
 
-.syllabus-view-mode-button[data-view-mode="tags"] {
+.syllabus-view-mode-button[data-view-mode="tags"],
+.syllabus-view-mode-button[data-view-mode="subcollections"] {
   border-inline-start: none !important;
 }
 
