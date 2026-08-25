@@ -24,37 +24,43 @@ export function isZotero8OrLater(): boolean {
 type ZoteroPaneSelection = {
   getSelectedCollections?: () => Zotero.Collection[] | false | null | undefined;
   getSelectedCollection?: () => Zotero.Collection | false | null | undefined;
+  collectionsView?: { selectByID: (id: string) => unknown } | false | null;
 };
+
+/** Active collections pane, or undefined if Zotero has no main window yet. */
+function getZoteroPane(): ZoteroPaneSelection | undefined {
+  try {
+    return (
+      Zotero.getActiveZoteroPane() ?? Zotero.getMainWindow()?.ZoteroPane
+    ) as ZoteroPaneSelection | undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * Collections currently selected in the collections pane.
  * Zotero 10 removed the singular getters; use the plural API when present.
  */
 export function getSelectedCollections(): Zotero.Collection[] {
-  const pane = ztoolkit.getGlobal("ZoteroPane") as
-    | ZoteroPaneSelection
-    | undefined;
-  if (!pane) return [];
+  try {
+    const pane = getZoteroPane();
+    if (!pane) return [];
 
-  if (typeof pane.getSelectedCollections === "function") {
-    try {
+    if (typeof pane.getSelectedCollections === "function") {
       const collections = pane.getSelectedCollections();
       return Array.isArray(collections) ? collections : [];
-    } catch {
-      return [];
     }
-  }
 
-  if (typeof pane.getSelectedCollection === "function") {
-    try {
+    if (typeof pane.getSelectedCollection === "function") {
       const collection = pane.getSelectedCollection();
       return collection ? [collection] : [];
-    } catch {
-      return [];
     }
-  }
 
-  return [];
+    return [];
+  } catch {
+    return [];
+  }
 }
 
 /** The selected collection, or null if none or more than one is selected. */
@@ -65,7 +71,7 @@ export function getSelectedCollection(): Zotero.Collection | null {
 
 export function selectZoteroCollection(collectionId: number): boolean {
   try {
-    const pane = ztoolkit.getGlobal("ZoteroPane");
+    const pane = getZoteroPane();
     const collection = getCachedCollectionById(collectionId);
     if (!collection || !pane?.collectionsView) {
       return false;

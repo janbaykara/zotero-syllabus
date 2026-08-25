@@ -11,11 +11,26 @@ describe("startup", function () {
   });
 
   it("getSelectedCollections returns an array", function () {
-    assert.isArray(getSelectedCollections());
+    let result: unknown;
+    try {
+      result = getSelectedCollections();
+    } catch (error) {
+      assert.fail(
+        `getSelectedCollections threw: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    assert.isArray(result);
   });
 
   it("getSelectedCollection does not throw", function () {
-    const collection = getSelectedCollection();
+    let collection: ReturnType<typeof getSelectedCollection>;
+    try {
+      collection = getSelectedCollection();
+    } catch (error) {
+      assert.fail(
+        `getSelectedCollection threw: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
     assert.isTrue(collection === null || typeof collection.id === "number");
   });
 });
