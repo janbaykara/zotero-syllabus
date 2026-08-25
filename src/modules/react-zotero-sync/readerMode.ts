@@ -14,7 +14,7 @@ export function useZoteroReaderMode() {
   const readerMode = __readerMode === "true" || __readerMode === true;
 
   const setReaderMode = useCallback((value: boolean) => {
-    setPref("readerMode", String(value) as any);
+    setPref("readerMode", value);
   }, []);
 
   return [readerMode, setReaderMode] as const;

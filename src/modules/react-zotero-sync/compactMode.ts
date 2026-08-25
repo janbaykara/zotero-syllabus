@@ -17,7 +17,7 @@ export function useZoteroCompactMode() {
   const compactMode = __compactMode === "true" || __compactMode === true;
 
   const setCompactMode = useCallback((value: boolean) => {
-    setPref("compactMode", String(value) as any);
+    setPref("compactMode", value);
   }, []);
 
   return [compactMode, setCompactMode] as const;
