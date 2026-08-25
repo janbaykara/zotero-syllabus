@@ -80,6 +80,8 @@ import { formatReadingDate } from "../utils/dates";
 import { useSyllabusClassGroups } from "./classGroups";
 import { ClassSubcollectionPage } from "./ClassReadingBlock";
 import { getClassSubcollectionContext } from "./syllabusNote";
+import { ReadingScheduleDayPage } from "./ReadingScheduleDayPage";
+import { isManagedReadingScheduleCollection } from "./readingScheduleCollection";
 import { useSyllabusDocumentGeneration } from "./react-zotero-sync/collectionDocument";
 
 interface SyllabusPageProps {
@@ -88,6 +90,9 @@ interface SyllabusPageProps {
 
 export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   useSyllabusDocumentGeneration();
+  if (isManagedReadingScheduleCollection(collectionId)) {
+    return <ReadingScheduleDayPage collectionId={collectionId} />;
+  }
   const classContext = getClassSubcollectionContext(collectionId);
   if (classContext) {
     return (
@@ -2695,7 +2700,7 @@ function ReadingDateInput({
             onSave(isoString);
           }
         }
-      } else if (initialValue !== undefined) {
+      } else if (initialValue) {
         onSave(undefined);
       }
     },

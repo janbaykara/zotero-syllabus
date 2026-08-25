@@ -54,7 +54,9 @@ import {
   buildReadingScheduleDesiredItems,
   clearManagedReadingScheduleCollection,
   enqueueReadingScheduleCollectionSync,
+  getReadingScheduleCollectionContext,
   handleReadingScheduleCollectionChange,
+  isManagedReadingScheduleCollection,
   registerReadingSchedulePrefObserver,
   restoreReadingScheduleCollectionItems,
   type ReadingScheduleDesiredItems,
@@ -1036,6 +1038,10 @@ function resolveCollection(
 
 /** Class folders are not syllabi; reads and writes go to the parent note. */
 function resolveSyllabusRoot(collection: Zotero.Collection): Zotero.Collection {
+  // Reading schedule folders are never syllabi and must not inherit a parent note.
+  if (getReadingScheduleCollectionContext(collection.id)) {
+    return collection;
+  }
   const managedParent = parentCollectionForManagedId(collection.id);
   if (managedParent) {
     return managedParent;
@@ -1419,6 +1425,9 @@ function mayCreateSyllabusNote(
   collection: Zotero.Collection,
   createNote: CreateNotePolicy,
 ): boolean {
+  if (isManagedReadingScheduleCollection(collection.id)) {
+    return false;
+  }
   if (createNote === "never") {
     return false;
   }
@@ -1469,21 +1478,30 @@ async function getSyllabusNoteForWrite(
 export async function ensureSyllabusNoteForUser(
   collectionId: CollectionIdentifier | Zotero.Collection,
 ): Promise<boolean> {
-  const collection = resolveSyllabusCollection(collectionId);
+  const collection = resolveCollection(collectionId);
   if (!collection) {
     return false;
   }
-  if (findSyllabusNoteUncached(collection)) {
+  // Reading schedule folders are not syllabi — Syllabus view renders a day page.
+  // Return true so Syllabus mode can open without creating a note.
+  if (isManagedReadingScheduleCollection(collection.id)) {
     return true;
   }
-  await mutateCollectionDocument(collection, (document) => document, {
+  const syllabusCollection = resolveSyllabusRoot(collection);
+  if (isManagedReadingScheduleCollection(syllabusCollection.id)) {
+    return true;
+  }
+  if (findSyllabusNoteUncached(syllabusCollection)) {
+    return true;
+  }
+  await mutateCollectionDocument(syllabusCollection, (document) => document, {
     createNote: "prompt",
   });
-  if (!findSyllabusNoteUncached(collection)) {
+  if (!findSyllabusNoteUncached(syllabusCollection)) {
     return false;
   }
   try {
-    const items = collection.getChildItems().filter((item) => {
+    const items = syllabusCollection.getChildItems().filter((item) => {
       try {
         return item.isRegularItem();
       } catch {

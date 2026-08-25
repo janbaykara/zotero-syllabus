@@ -73,7 +73,169 @@ export function isReadingScheduleSyncHeld(): boolean {
 export function isManagedReadingScheduleCollection(
   collectionId: number,
 ): boolean {
-  return collectionId === managedRootId || managedDateFolders.has(collectionId);
+  return getReadingScheduleCollectionContext(collectionId) != null;
+}
+
+export type ReadingScheduleCollectionContext = {
+  kind: "root" | "date";
+  root: Zotero.Collection;
+  dateKey: string | null;
+  collection: Zotero.Collection;
+};
+
+/**
+ * Identify the managed Reading schedule root or one of its date folders.
+ * Prefers the stored collection key, then in-memory maps, then the
+ * conventional top-level “Reading schedule” name in My Library.
+ */
+export function getReadingScheduleCollectionContext(
+  collectionId: number,
+): ReadingScheduleCollectionContext | null {
+  const collection =
+    getCachedCollectionById(collectionId) ||
+    Zotero.Collections.get(collectionId) ||
+    null;
+  if (!collection || collection.deleted) {
+    return null;
+  }
+  if (collection.libraryID !== Zotero.Libraries.userLibraryID) {
+    return null;
+  }
+
+  const root = findReadingScheduleRoot(collection);
+  if (!root) {
+    return null;
+  }
+
+  if (collection.id === root.id || collection.key === root.key) {
+    rememberRoot(root);
+    return {
+      kind: "root",
+      root,
+      dateKey: null,
+      collection: root,
+    };
+  }
+
+  if (collection.parentID === root.id) {
+    const dateKey = dateKeyFromFolderName(collection.name);
+    if (dateKey) {
+      rememberRoot(root);
+      rememberDateFolder(collection, dateKey);
+      return {
+        kind: "date",
+        root,
+        dateKey,
+        collection,
+      };
+    }
+  }
+
+  const managed = managedDateFolders.get(collectionId);
+  if (managed && managedRootId === root.id) {
+    rememberRoot(root);
+    rememberDateFolder(collection, managed.dateKey);
+    return {
+      kind: "date",
+      root,
+      dateKey: managed.dateKey,
+      collection,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Resolve the Reading schedule root for a collection (itself or its parent),
+ * adopting a name match when the stored key is missing.
+ */
+function findReadingScheduleRoot(
+  collection: Zotero.Collection,
+): Zotero.Collection | null {
+  const stored = storedRoot();
+  if (stored) {
+    if (collection.id === stored.id || collection.key === stored.key) {
+      return stored;
+    }
+    if (collection.parentID === stored.id) {
+      return stored;
+    }
+  }
+
+  if (managedRootId != null) {
+    const live =
+      getCachedCollectionById(managedRootId) ||
+      Zotero.Collections.get(managedRootId);
+    if (live && !live.deleted) {
+      if (collection.id === live.id || collection.parentID === live.id) {
+        return live;
+      }
+    }
+  }
+
+  if (
+    !collection.parentID &&
+    collection.name === READING_SCHEDULE_COLLECTION_NAME
+  ) {
+    adoptReadingScheduleRootKey(collection);
+    return collection;
+  }
+
+  if (collection.parentID) {
+    const parent =
+      getCachedCollectionById(collection.parentID) ||
+      Zotero.Collections.get(collection.parentID);
+    if (
+      parent &&
+      !parent.deleted &&
+      !parent.parentID &&
+      parent.name === READING_SCHEDULE_COLLECTION_NAME &&
+      parent.libraryID === Zotero.Libraries.userLibraryID
+    ) {
+      adoptReadingScheduleRootKey(parent);
+      return parent;
+    }
+  }
+
+  return null;
+}
+
+function adoptReadingScheduleRootKey(root: Zotero.Collection): void {
+  const existing = trimKey(getPrefValue("readingScheduleCollectionKey"));
+  if (existing === root.key) {
+    rememberRoot(root);
+    return;
+  }
+  // Only adopt when the pref is empty or still points at a missing collection.
+  if (!existing || !storedRoot()) {
+    setPref("readingScheduleCollectionKey", root.key);
+  }
+  rememberRoot(root);
+}
+
+/** Sorted YYYY-MM-DD keys for date subcollections under the Reading schedule root. */
+export function listReadingScheduleDateFolders(
+  root?: Zotero.Collection | null,
+): Array<{ dateKey: string; collection: Zotero.Collection }> {
+  const parent = root || storedRoot();
+  if (!parent) {
+    return [];
+  }
+  const folders: Array<{ dateKey: string; collection: Zotero.Collection }> = [];
+  for (const child of parent.getChildCollections()) {
+    if (child.deleted) {
+      continue;
+    }
+    const dateKey = dateKeyFromFolderName(child.name);
+    if (!dateKey) {
+      continue;
+    }
+    rememberDateFolder(child, dateKey);
+    folders.push({ dateKey, collection: child });
+  }
+  folders.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+  return folders;
 }
 
 export function readingScheduleDateFolderName(dateKey: string): string {

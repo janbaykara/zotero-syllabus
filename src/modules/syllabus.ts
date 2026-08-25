@@ -64,6 +64,7 @@ import {
   ensureSyllabusNoteForUser,
 } from "./syllabusNote";
 import { migrateLegacyCollectionMetadataPrefs } from "./migratePrefsToNotes";
+import { isManagedReadingScheduleCollection } from "./readingScheduleCollection";
 
 enum SyllabusSettingsKey {
   COLLECTION_VIEW_MODES = "collectionViewModes",
@@ -911,6 +912,7 @@ export class SyllabusManager {
       if (
         viewMode === "syllabus" &&
         selectedCollection &&
+        !isManagedReadingScheduleCollection(selectedCollection.id) &&
         !collectionHasSyllabusNote(selectedCollection)
       ) {
         await mutateCollectionDocument(
@@ -2656,8 +2658,9 @@ export class SyllabusManager {
     if (readingDate) {
       classMetadata.readingDate = readingDate;
     } else {
-      // Remove reading date if undefined
-      delete classMetadata.readingDate;
+      // Explicit null so merges overwrite the previous date (omitting the key
+      // leaves the existing value in place via object spread).
+      classMetadata.readingDate = null;
     }
     await SyllabusManager.setClassMetadata(
       collectionId,

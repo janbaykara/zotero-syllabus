@@ -1153,6 +1153,9 @@
   .active\:bg-quarternary:active {
     background-color: var(--color-quarternary);
   }
+  .disabled\:cursor-default:disabled {
+    cursor: default;
+  }
   .disabled\:cursor-not-allowed:disabled {
     cursor: not-allowed;
   }
