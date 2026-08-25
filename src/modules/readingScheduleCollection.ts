@@ -16,13 +16,12 @@ import {
   toLocalDateKey,
 } from "../utils/dates";
 import { getPrefKey, getPrefValue, setPref } from "../utils/prefs";
+import { collectionHasSyllabusNote } from "./syllabusNote";
 
 export const READING_SCHEDULE_COLLECTION_NAME = "Reading schedule";
 
 const DATE_SEPARATOR = " — ";
 const DATE_FOLDER_PREFIX = /^(\d{4}-\d{2}-\d{2})(?:\s|$)/;
-const SYLLABUS_NOTE_TAG = "zotero-syllabus";
-const SYLLABUS_NOTE_PRE_ATTR = "data-zotero-syllabus";
 
 type ManagedDateFolder = {
   key: string;
@@ -379,42 +378,6 @@ async function eraseCollection(collection: Zotero.Collection): Promise<void> {
   } catch (error) {
     ztoolkit.log("Error removing reading schedule collection:", error);
   }
-}
-
-function childNoteLooksLikeSyllabus(item: Zotero.Item): boolean {
-  try {
-    if (!item.isNote() || item.deleted) {
-      return false;
-    }
-  } catch {
-    return false;
-  }
-  try {
-    if (item.hasTag(SYLLABUS_NOTE_TAG)) {
-      return true;
-    }
-  } catch {
-    // Tags often aren't loaded on collection children.
-  }
-  try {
-    const html = item.getNote() || "";
-    return html.includes(SYLLABUS_NOTE_PRE_ATTR);
-  } catch {
-    return false;
-  }
-}
-
-function collectionHasSyllabusNote(collection: Zotero.Collection): boolean {
-  try {
-    for (const item of collection.getChildItems()) {
-      if (childNoteLooksLikeSyllabus(item)) {
-        return true;
-      }
-    }
-  } catch {
-    return false;
-  }
-  return false;
 }
 
 async function syncCollectionItems(

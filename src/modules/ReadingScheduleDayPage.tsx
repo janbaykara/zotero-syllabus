@@ -3,105 +3,21 @@ import { h, Fragment } from "preact";
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
 import { ChevronLeft, ChevronRight } from "lucide-preact";
-import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
+import { SyllabusManager } from "./syllabus";
 import {
   ClassReadingBlock,
   selectCollectionInLibrary,
   selectItemInCollection,
-  type ClassReading,
 } from "./ClassReadingBlock";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
-import { useSyllabi, type SyllabusData } from "./react-zotero-sync/useSyllabi";
-import {
-  formatReadingDate,
-  parseReadingDate,
-  toLocalDateKey,
-} from "../utils/dates";
+import { useSyllabi } from "./react-zotero-sync/useSyllabi";
+import { formatReadingDate, toLocalDateKey } from "../utils/dates";
 import { isZotero8OrLater } from "../utils/zotero";
 import {
   getReadingScheduleCollectionContext,
   listReadingScheduleDateFolders,
 } from "./readingScheduleCollection";
-
-/** Group syllabus class readings by local YYYY-MM-DD date key. */
-export function collectClassReadingsByDate(
-  syllabi: SyllabusData[],
-): Map<string, ClassReading[]> {
-  const result = new Map<string, ClassReading[]>();
-
-  for (const syllabus of syllabi) {
-    const { collection, metadata, items } = syllabus;
-    const collectionId = collection.id;
-    if (!metadata.classes) {
-      continue;
-    }
-
-    for (const [classNumStr, classMetadata] of Object.entries(
-      metadata.classes,
-    )) {
-      if (!classMetadata?.readingDate) continue;
-      const classNumber = parseInt(classNumStr, 10);
-      if (isNaN(classNumber)) continue;
-
-      const readingDate = classMetadata.readingDate;
-      const date = parseReadingDate(readingDate);
-      if (Number.isNaN(date.getTime())) continue;
-      const dateKey = toLocalDateKey(date);
-
-      const classItems: Array<{
-        item: Zotero.Item;
-        assignment: ItemSyllabusAssignment;
-      }> = [];
-
-      for (const { zoteroItem, assignments } of items) {
-        for (const assignment of assignments) {
-          if (
-            (SyllabusManager.getClassNumber(collectionId, assignment.classId) ??
-              assignment.classNumber) === classNumber
-          ) {
-            classItems.push({ item: zoteroItem, assignment });
-          }
-        }
-      }
-
-      const sortedItems = SyllabusManager.sortClassItems(
-        classItems,
-        collectionId,
-        classNumber,
-      );
-
-      const classReading: ClassReading = {
-        collectionId,
-        collectionName: collection.name,
-        classNumber,
-        classTitle:
-          SyllabusManager.getClassTitle(collectionId, classNumber) || "",
-        classDescription:
-          SyllabusManager.getClassDescription(collectionId, classNumber) || "",
-        readingDate,
-        items: sortedItems,
-      };
-
-      if (!result.has(dateKey)) {
-        result.set(dateKey, []);
-      }
-      result.get(dateKey)!.push(classReading);
-    }
-  }
-
-  for (const [dateKey, readings] of result) {
-    readings.sort((a, b) => {
-      const collectionCompare = a.collectionName.localeCompare(
-        b.collectionName,
-      );
-      if (collectionCompare !== 0) return collectionCompare;
-      return a.classNumber - b.classNumber;
-    });
-    result.set(dateKey, readings);
-  }
-
-  return result;
-}
+import { collectClassReadingsByDate } from "./classReadings";
 
 function pickInitialDateKey(
   availableKeys: string[],

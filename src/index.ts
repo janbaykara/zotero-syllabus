@@ -1,7 +1,6 @@
 import { BasicTool } from "zotero-plugin-toolkit";
 import Addon from "./addon";
 import { config } from "../package.json";
-import { FEATURE_FLAG } from "./modules/featureFlags";
 
 const basicTool = new BasicTool();
 

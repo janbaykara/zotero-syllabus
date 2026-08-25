@@ -2,6 +2,7 @@ import { useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
 import SuperJSON from "superjson";
 import { getCachedCollectionById, getCachedItem } from "../utils/cache";
+import { sortItemsByTitle } from "../utils/items";
 import { SyllabusManager } from "./syllabus";
 
 export type SubcollectionNode = {
@@ -14,14 +15,6 @@ export type SubcollectionNode = {
 export type SubcollectionTreeSnapshot = {
   root: SubcollectionNode | null;
 };
-
-function sortItemsByTitle(items: Zotero.Item[]): Zotero.Item[] {
-  return [...items].sort((a, b) => {
-    const titleA = a.getField("title") || "";
-    const titleB = b.getField("title") || "";
-    return titleA.localeCompare(titleB);
-  });
-}
 
 function buildNode(collection: Zotero.Collection): SubcollectionNode {
   let childCollections: Zotero.Collection[] = [];

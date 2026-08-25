@@ -30,9 +30,8 @@ type ZoteroPaneSelection = {
 /** Active collections pane, or undefined if Zotero has no main window yet. */
 function getZoteroPane(): ZoteroPaneSelection | undefined {
   try {
-    return (
-      Zotero.getActiveZoteroPane() ?? Zotero.getMainWindow()?.ZoteroPane
-    ) as ZoteroPaneSelection | undefined;
+    return (Zotero.getActiveZoteroPane() ??
+      Zotero.getMainWindow()?.ZoteroPane) as ZoteroPaneSelection | undefined;
   } catch {
     return undefined;
   }

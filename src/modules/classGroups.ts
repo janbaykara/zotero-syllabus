@@ -5,6 +5,7 @@ import {
   SyllabusManager,
   classByNumber,
 } from "./syllabus";
+import { sortItemsByTitle } from "../utils/items";
 
 export function useSyllabusClassGroups(
   collectionId: number,
@@ -111,20 +112,13 @@ export function useSyllabusClassGroups(
       itemsByClass.set(classNumber, sortedItems);
     }
 
-    // Sort further reading by title
-    furtherReading.sort((a, b) => {
-      const titleA = a.getField("title") || "";
-      const titleB = b.getField("title") || "";
-      return titleA.localeCompare(titleB);
-    });
-
     return {
       classGroups: sortedFinalClassNumbers.map((classNumber) => ({
         classNumber,
         syllabusMetadata: classByNumber(syllabusMetadata, classNumber),
         itemAssignments: itemsByClass.get(classNumber) || [],
       })),
-      furtherReadingItems: furtherReading,
+      furtherReadingItems: sortItemsByTitle(furtherReading),
     };
   }, [syllabusItems, collectionId, syllabusMetadata, itemOrderVersion]);
 }

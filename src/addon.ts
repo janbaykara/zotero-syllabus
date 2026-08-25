@@ -3,7 +3,6 @@ import { ColumnOptions, DialogHelper } from "zotero-plugin-toolkit";
 import hooks from "./hooks";
 import { createZToolkit } from "./utils/ztoolkit";
 import { SyllabusManager } from "./modules/syllabus";
-import { FEATURE_FLAG } from "./modules/featureFlags";
 
 class Addon {
   public data: {

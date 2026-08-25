@@ -4,7 +4,7 @@ import { useMemo } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
 import { ChevronLeft } from "lucide-preact";
 import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
-import { SyllabusItemCard } from "./SyllabusPage";
+import { SyllabusItemCard } from "./SyllabusItemCard";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";

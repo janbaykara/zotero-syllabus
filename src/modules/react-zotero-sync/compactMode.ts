@@ -1,49 +1,5 @@
-import { useCallback, useMemo } from "preact/hooks";
-import { useSyncExternalStore } from "react-dom/src";
-import { getPref, setPref, getPrefKey, getPrefValue } from "../../utils/prefs";
-
-const PREF_KEY = getPrefKey("compactMode");
+import { useBooleanPref } from "./booleanPref";
 
 export function useZoteroCompactMode() {
-  // Create the store once
-  const store = useMemo(() => createCompactModeStore(), []);
-
-  const __compactMode = useSyncExternalStore(
-    store.subscribe,
-    store.getSnapshot,
-  );
-
-  // @ts-expect-error - __compactMode is a string, but we want to compare it to a boolean
-  const compactMode = __compactMode === "true" || __compactMode === true;
-
-  const setCompactMode = useCallback((value: boolean) => {
-    setPref("compactMode", value);
-  }, []);
-
-  return [compactMode, setCompactMode] as const;
-}
-
-export function createCompactModeStore() {
-  function getSnapshot() {
-    return String(getPrefValue("compactMode"));
-  }
-
-  function subscribe(onStoreChange: () => void) {
-    // Use Zotero's built-in preference observer
-    const observerID = Zotero.Prefs.registerObserver(
-      PREF_KEY,
-      () => {
-        ztoolkit.log("Compact mode preference changed");
-        onStoreChange();
-      },
-      true,
-    );
-
-    // Return an unsubscribe fn
-    return () => {
-      Zotero.Prefs.unregisterObserver(observerID);
-    };
-  }
-
-  return { getSnapshot, subscribe };
+  return useBooleanPref("compactMode");
 }

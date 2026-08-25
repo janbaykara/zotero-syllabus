@@ -3,13 +3,12 @@ import { h, Fragment } from "preact";
 import { useMemo, useState } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
 import { Settings } from "lucide-preact";
-import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
 import {
   ClassReadingBlock,
   selectCollectionInLibrary,
   selectItemInCollection,
-  type ClassReading,
 } from "./ClassReadingBlock";
+import { collectClassReadingsByWeek } from "./classReadings";
 import {
   addWeeks,
   differenceInDays,
@@ -42,113 +41,10 @@ export function ReadingSchedule() {
   // Get all syllabi data (collections with metadata and items)
   const syllabi = useSyllabi();
 
-  // Compute readings grouped by week and date
-  const readingsByWeek = useMemo(() => {
-    const result = new Map<
-      string, // ISO date string of week start
-      Map<string, ClassReading[]>
-    >(); // weekStart ISO string -> ISO date string -> ClassReading[]
-
-    for (const syllabus of syllabi) {
-      const { collection, metadata, items } = syllabus;
-      const collectionId = collection.id;
-
-      // Skip if no classes metadata
-      if (!metadata.classes) {
-        continue;
-      }
-
-      // Get all classes with reading dates
-      for (const [classNumStr, classMetadata] of Object.entries(
-        metadata.classes,
-      )) {
-        if (!classMetadata?.readingDate) continue;
-        const classNumber = parseInt(classNumStr, 10);
-        if (isNaN(classNumber)) continue;
-
-        const readingDate = classMetadata.readingDate;
-        if (!readingDate) continue;
-
-        // Group by local week start. Do not use toISOString() here: local
-        // Monday midnight is the previous UTC date east of UTC, which then
-        // fails the "current week onwards" filter.
-        const weekStartDate = startOfWeek(parseReadingDate(readingDate));
-        const weekStartKey = toLocalDateKey(weekStartDate);
-
-        // Get items for this class
-        const classItems: Array<{
-          item: Zotero.Item;
-          assignment: ItemSyllabusAssignment;
-        }> = [];
-
-        for (const { zoteroItem, assignments } of items) {
-          for (const assignment of assignments) {
-            if (
-              (SyllabusManager.getClassNumber(
-                collectionId,
-                assignment.classId,
-              ) ?? assignment.classNumber) === classNumber
-            ) {
-              classItems.push({ item: zoteroItem, assignment });
-            }
-          }
-        }
-
-        // Sort items within class
-        const sortedItems = SyllabusManager.sortClassItems(
-          classItems,
-          collectionId,
-          classNumber,
-        );
-
-        const classTitle = SyllabusManager.getClassTitle(
-          collectionId,
-          classNumber,
-        );
-
-        const classDescription = SyllabusManager.getClassDescription(
-          collectionId,
-          classNumber,
-        );
-
-        const classReading: ClassReading = {
-          collectionId,
-          collectionName: collection.name,
-          classNumber,
-          classTitle: classTitle || "",
-          classDescription: classDescription || "",
-          readingDate,
-          items: sortedItems,
-        };
-
-        // Add to result
-        if (!result.has(weekStartKey)) {
-          result.set(weekStartKey, new Map());
-        }
-        const weekData = result.get(weekStartKey)!;
-
-        // Use ISO date string as key
-        if (!weekData.has(readingDate)) {
-          weekData.set(readingDate, []);
-        }
-        weekData.get(readingDate)!.push(classReading);
-      }
-    }
-
-    // Sort dates within each week
-    for (const [weekStartKey, weekData] of result) {
-      const sortedDates = Array.from(weekData.keys()).sort(
-        (a, b) => parseReadingDate(a).getTime() - parseReadingDate(b).getTime(),
-      );
-      const sortedWeekData = new Map<string, ClassReading[]>();
-      for (const date of sortedDates) {
-        sortedWeekData.set(date, weekData.get(date)!);
-      }
-      result.set(weekStartKey, sortedWeekData);
-    }
-
-    return result;
-  }, [syllabi]);
+  const readingsByWeek = useMemo(
+    () => collectClassReadingsByWeek(syllabi),
+    [syllabi],
+  );
 
   // Convert to sorted array for rendering, filtering out past weeks
   const sortedWeeks = useMemo(() => {
@@ -291,18 +187,6 @@ export function ReadingSchedule() {
                     {sortedDates.map((dateTimestamp) => {
                       const classReadings = weekData.get(dateTimestamp)!;
 
-                      // Sort classes by collection name, then by class number
-                      const sortedClassReadings = [...classReadings].sort(
-                        (a, b) => {
-                          // First sort by collection name
-                          const collectionCompare =
-                            a.collectionName.localeCompare(b.collectionName);
-                          if (collectionCompare !== 0) return collectionCompare;
-                          // Then sort by class number
-                          return a.classNumber - b.classNumber;
-                        },
-                      );
-
                       return (
                         <div key={dateTimestamp}>
                           <div
@@ -315,7 +199,7 @@ export function ReadingSchedule() {
                           </div>
 
                           <div className="space-y-8">
-                            {sortedClassReadings.map((classReading) => (
+                            {classReadings.map((classReading) => (
                               <ClassReadingBlock
                                 key={`${classReading.collectionId}-${classReading.classNumber}`}
                                 classReading={classReading}

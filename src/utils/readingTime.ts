@@ -1,8 +1,5 @@
 import { getPref } from "./prefs";
 
-// ztoolkit is available as a global
-declare const ztoolkit: ZToolkit;
-
 // Sources:
 //
 // Medium — Read-time method (≈265 WPM)
@@ -108,28 +105,6 @@ function getPageCount(item: Zotero.Item): number | null {
 }
 
 /**
- * Extract word count from PDF attachment
- * @param item - Zotero item
- * @returns Promise resolving to word count, or null if not available
- */
-async function getWordCountForItem(item: Zotero.Item): Promise<number | null> {
-  try {
-    const attachmentText = await item.attachmentText;
-    if (attachmentText) {
-      const words = attachmentText
-        .split(/\s+/)
-        .filter((w) => w.length > 0).length;
-      ztoolkit.log("Word count for item:", words, item);
-      return words > 0 ? words : null;
-    }
-  } catch (error) {
-    ztoolkit.log("Error getting word count for item:", error);
-    return null;
-  }
-  return null;
-}
-
-/**
  * Format reading time for display
  * @param minutes - Reading time in minutes
  * @returns Formatted string (e.g., "5 min", "1 hr 30 min", "2 hrs")
@@ -151,45 +126,6 @@ export function formatReadingTime(minutes: number): string {
   }
 
   return `${hours} hrs ${remainingMinutes} min`;
-}
-
-/**
- * Get reading time for an item using a hybrid approach:
- * 1. Try word count from PDF if available
- * 2. Fall back to page-based estimation
- *
- * @param item - Zotero item
- * @param options - Configuration options
- * @returns Promise resolving to reading time in minutes, or null if unable to estimate
- */
-export async function getReadingTime(
-  item: Zotero.Item,
-  options: {
-    roundUp?: boolean;
-  } = {},
-): Promise<number | null> {
-  const { roundUp = false } = options;
-
-  // Try word count from PDF first (most accurate)
-  const wordCount = await getWordCountForItem(item);
-  ztoolkit.log("Word count via PDF:", wordCount, item);
-  if (wordCount !== null) {
-    const minutes = estimateReadingMinutes({ words: wordCount, roundUp });
-    if (minutes !== null) {
-      return minutes;
-    }
-  }
-
-  // Fall back to page-based estimation
-  const pageCount = getPageCount(item);
-  if (pageCount !== null) {
-    const minutes = estimateReadingMinutes({ pages: pageCount, roundUp });
-    if (minutes !== null) {
-      return minutes;
-    }
-  }
-
-  return null;
 }
 
 /**

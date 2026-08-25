@@ -1,17 +1,10 @@
 import { useMemo } from "preact/hooks";
+import { sortItemsByTitle } from "../utils/items";
 
 export type TagGroup = {
   tag: string;
   items: Zotero.Item[];
 };
-
-function sortItemsByTitle(items: Zotero.Item[]): Zotero.Item[] {
-  return [...items].sort((a, b) => {
-    const titleA = a.getField("title") || "";
-    const titleB = b.getField("title") || "";
-    return titleA.localeCompare(titleB);
-  });
-}
 
 /**
  * Group collection items by Zotero tags. An item appears under every tag it has.

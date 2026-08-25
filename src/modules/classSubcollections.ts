@@ -11,14 +11,13 @@ import {
 } from "../utils/schemas";
 import { getCachedCollectionById } from "../utils/cache";
 import { formatReadingDate, parseReadingDate } from "../utils/dates";
+import { collectionHasSyllabusNote } from "./syllabusNote";
 
 const COLLECTION_NAME_MAX = 255;
 const DONE_SUFFIX = " ✅";
 const DATE_SEPARATOR = " — ";
 const DATE_SUFFIX_PATTERN =
   /\s+—\s+(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+\d{1,2}(?:st|nd|rd|th)\s+[A-Z][a-z]{2}\s*$/;
-const SYLLABUS_NOTE_TAG = "zotero-syllabus";
-const SYLLABUS_NOTE_PRE_ATTR = "data-zotero-syllabus";
 
 type ManagedSubcollection = {
   parentId: number;
@@ -317,42 +316,6 @@ async function eraseManagedChild(child: Zotero.Collection): Promise<void> {
   } catch (error) {
     ztoolkit.log("Error removing class subcollection:", error);
   }
-}
-
-function childNoteLooksLikeSyllabus(item: Zotero.Item): boolean {
-  try {
-    if (!item.isNote() || item.deleted) {
-      return false;
-    }
-  } catch {
-    return false;
-  }
-  try {
-    if (item.hasTag(SYLLABUS_NOTE_TAG)) {
-      return true;
-    }
-  } catch {
-    // Tags often aren't loaded on collection children.
-  }
-  try {
-    const html = item.getNote() || "";
-    return html.includes(SYLLABUS_NOTE_PRE_ATTR);
-  } catch {
-    return false;
-  }
-}
-
-function collectionHasSyllabusNote(collection: Zotero.Collection): boolean {
-  try {
-    for (const item of collection.getChildItems()) {
-      if (childNoteLooksLikeSyllabus(item)) {
-        return true;
-      }
-    }
-  } catch {
-    return false;
-  }
-  return false;
 }
 
 async function eraseExtraChildren(

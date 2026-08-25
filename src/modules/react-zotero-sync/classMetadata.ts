@@ -67,9 +67,3 @@ export function useZoteroClassMetadata(
 
   return [metadataFromZotero, setClassMetadata, setClassReadingDate] as const;
 }
-
-export function createClassMetadataStore(
-  collectionId: number | GetByLibraryAndKeyArgs,
-) {
-  return createCollectionDocumentStore(collectionId);
-}
