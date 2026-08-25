@@ -89,6 +89,7 @@ type CachedDocument = {
   noteVersion: number;
   document: CollectionSyllabusDocument;
   snapshot: string;
+  skipReparseUntilVersion?: number;
 };
 
 const documentCache = new Map<string, CachedDocument>();
@@ -1229,7 +1230,11 @@ function loadDocumentForCollection(
     const note =
       getCachedItem(cached.noteId) || Zotero.Items.get(cached.noteId) || null;
     if (note && isLiveSyllabusNote(note, collection)) {
-      if (note.version <= cached.noteVersion) {
+      const cacheIsUsable =
+        note.version <= cached.noteVersion &&
+        (!isEmptyCollectionDocument(cached.document) ||
+          cached.skipReparseUntilVersion === note.version);
+      if (cacheIsUsable) {
         return cached;
       }
       let parsed: CollectionSyllabusDocument | null = null;
@@ -1241,14 +1246,20 @@ function loadDocumentForCollection(
       if (parsed && !isEmptyCollectionDocument(parsed)) {
         return setCacheEntry(ref, note.id, note.version, parsed);
       }
-      // Keep the in-memory document if Zotero rewrote note HTML.
+      // Keep a non-empty in-memory document if Zotero rewrote note HTML.
+      if (!isEmptyCollectionDocument(cached.document)) {
+        cached.noteVersion = note.version;
+        return cached;
+      }
       cached.noteVersion = note.version;
+      cached.skipReparseUntilVersion = note.version;
       return cached;
+    } else {
+      detachNoteFromCache(cached.noteId);
     }
-    detachNoteFromCache(cached.noteId);
   }
 
-  if (cached) {
+  if (cached && !isEmptyCollectionDocument(cached.document)) {
     return cached;
   }
 
