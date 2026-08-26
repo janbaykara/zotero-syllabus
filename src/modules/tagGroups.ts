@@ -1,5 +1,4 @@
 import { useMemo } from "preact/hooks";
-import { sortItemsByTitle } from "../utils/items";
 
 export type TagGroup = {
   tag: string;
@@ -41,12 +40,12 @@ export function useCollectionTagGroups(
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([tag, items]) => ({
         tag,
-        items: sortItemsByTitle(items),
+        items,
       }));
 
     return {
       tagGroups,
-      untaggedItems: sortItemsByTitle(untaggedItems),
+      untaggedItems,
     };
   }, [syllabusItems]);
 }

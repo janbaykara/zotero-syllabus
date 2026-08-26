@@ -77,7 +77,7 @@ function estimateReadingMinutes({
  * @param item - Zotero item
  * @returns Page count, or null if not available
  */
-function getPageCount(item: Zotero.Item): number | null {
+export function getPageCount(item: Zotero.Item): number | null {
   // Try numPages field first
   const numPages = item.getField("numPages");
   if (numPages) {

@@ -1,4 +1,4 @@
-/* Segmented Items / Gallery / Tags / Subcollections / Syllabus control */
+/* Segmented Items / Gallery / Syllabus control */
 .syllabus-view-mode-button {
   fill: currentColor;
   -moz-context-properties: fill, fill-opacity;
@@ -25,14 +25,6 @@
   list-style-image: url("chrome://zotero/skin/16/universal/book.svg");
 }
 
-.syllabus-view-mode-button[data-icon="tag"] {
-  list-style-image: url("chrome://zotero/skin/16/universal/tag.svg");
-}
-
-.syllabus-view-mode-button[data-icon="folder"] {
-  list-style-image: url("chrome://zotero/skin/16/universal/folder.svg");
-}
-
 .syllabus-view-mode-button-icon .toolbarbutton-icon {
   width: 16px;
   height: 16px;
@@ -49,14 +41,8 @@
   margin-inline-start: 4px !important;
 }
 
-.syllabus-view-mode-button[data-view-mode="gallery"],
-.syllabus-view-mode-button[data-view-mode="tags"],
-.syllabus-view-mode-button[data-view-mode="subcollections"] {
+.syllabus-view-mode-button[data-view-mode="gallery"] {
   border-inline-start: none !important;
-}
-
-.syllabus-view-mode-button[data-view-mode="subcollections"][hidden] {
-  display: none !important;
 }
 
 .syllabus-view-mode-button[data-view-mode="syllabus"] {
@@ -86,23 +72,479 @@
   overflow: hidden;
 }
 
+.syllabus-gallery-toolbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.syllabus-gallery-toolbar-cluster {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.syllabus-gallery-groupby-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--fill-secondary, #8c8c8c);
+}
+
+.syllabus-gallery-groupby {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: stretch;
+  isolation: isolate;
+}
+
+.syllabus-gallery-groupby-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0.2rem 0.5rem;
+  border: 0.5px solid var(--fill-secondary);
+  border-radius: 0;
+  background: transparent;
+  color: var(--fill-primary);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.syllabus-gallery-groupby-btn svg {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+}
+
+.syllabus-gallery-groupby-btn + .syllabus-gallery-groupby-btn {
+  border-inline-start: none;
+}
+
+.syllabus-gallery-groupby-btn:first-child {
+  border-start-start-radius: 4px;
+  border-end-start-radius: 4px;
+}
+
+.syllabus-gallery-groupby-btn:last-child {
+  border-start-end-radius: 4px;
+  border-end-end-radius: 4px;
+}
+
+.syllabus-gallery-groupby-btn[aria-checked="true"] {
+  background-color: #7b4ddb;
+  color: #fff;
+  border-color: #7b4ddb;
+}
+
+.syllabus-gallery-groupby-btn:focus-visible {
+  outline: 2px solid #7b4ddb;
+  outline-offset: 2px;
+  z-index: 1;
+}
+
+.syllabus-gallery-section {
+  margin-bottom: 72px;
+}
+
+.syllabus-subcollection-box[data-depth]:not([data-depth="0"]) {
+  margin-bottom: 72px;
+}
+
+.syllabus-gallery-section-title {
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--fill-primary);
+  margin: 0 0 20px;
+}
+
+.syllabus-gallery-class-header {
+  margin: 0 0 20px;
+}
+
+.syllabus-gallery-class-kicker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 0.85rem;
+  margin-bottom: 0.35rem;
+}
+
+.syllabus-gallery-class-label {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fill-secondary, #8c8c8c);
+}
+
+.syllabus-gallery-class-done {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #7b4ddb;
+}
+
+.syllabus-gallery-class-date {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fill-secondary, #8c8c8c);
+}
+
+.syllabus-gallery-class-description {
+  margin: 0.45rem 0 0;
+  max-width: 42rem;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--fill-secondary, #8c8c8c);
+}
+
+.syllabus-gallery-class-header .syllabus-gallery-section-title {
+  margin-bottom: 0;
+}
+
+.syllabus-gallery-class-header + .syllabus-gallery-grid,
+.syllabus-gallery-class-description + .syllabus-gallery-grid,
+.syllabus-gallery-class-header + .syllabus-gallery-cards,
+.syllabus-gallery-class-description + .syllabus-gallery-cards {
+  margin-top: 20px;
+}
+
+.syllabus-gallery-section-title-muted {
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: 0;
+  color: var(--fill-secondary, #8c8c8c);
+}
+
+.syllabus-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  column-gap: 1.25rem;
+  row-gap: 0;
+  grid-auto-rows: auto auto;
+}
+
+.syllabus-gallery-tile {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 2;
+  min-width: 0;
+  margin-bottom: 1.75rem;
+}
+
+.syllabus-gallery-cover-portrait,
+.syllabus-gallery-cover-video,
+.syllabus-gallery-cover-square {
+  align-self: end;
+  width: 100%;
+}
+
+.syllabus-gallery-cover-portrait {
+  aspect-ratio: 2 / 3;
+}
+
+.syllabus-gallery-cover-video {
+  aspect-ratio: 16 / 9;
+}
+
+.syllabus-gallery-cover-square {
+  aspect-ratio: 1 / 1;
+}
+
+.syllabus-gallery-meta {
+  align-self: start;
+  min-width: 0;
+  padding-top: 0.5rem;
+}
+
+.syllabus-gallery-play {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.syllabus-gallery-play-btn {
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 1px 10px rgba(0, 0, 0, 0.28);
+  position: relative;
+}
+
+.syllabus-gallery-play-btn::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 54%;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0.38rem 0 0.38rem 0.62rem;
+  border-color: transparent transparent transparent rgba(255, 255, 255, 0.92);
+  transform: translate(-50%, -50%);
+}
+
+.syllabus-gallery-video-site {
+  position: absolute;
+  top: 0.35rem;
+  left: 0.35rem;
+  z-index: 2;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.42);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
+  pointer-events: none;
+}
+
 /* Faint Apple Books–style hinge on book / book section covers */
 .syllabus-gallery-book-spine {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 1;
-  background:
-    linear-gradient(
-      to right,
-      rgba(0, 0, 0, 0.28) 0,
-      rgba(0, 0, 0, 0.1) 1px,
-      rgba(255, 255, 255, 0.22) 2px,
-      rgba(255, 255, 255, 0.06) 5px,
-      rgba(0, 0, 0, 0.14) 7px,
-      rgba(0, 0, 0, 0.04) 11px,
-      transparent 22%
-    );
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.28) 0,
+    rgba(0, 0, 0, 0.1) 1px,
+    rgba(255, 255, 255, 0.22) 2px,
+    rgba(255, 255, 255, 0.06) 5px,
+    rgba(0, 0, 0, 0.14) 7px,
+    rgba(0, 0, 0, 0.04) 11px,
+    transparent 22%
+  );
+}
+
+/* White journal first-page mockup */
+.syllabus-gallery-journal {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 1.2rem 0.55rem 0.55rem;
+  background: #fff;
+  color: #161616;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+.syllabus-gallery-journal-masthead {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-align: center;
+  text-transform: uppercase;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.syllabus-gallery-journal-edition {
+  margin-top: 0.18rem;
+  font-size: 8px;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+  text-align: center;
+  color: #444;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.syllabus-gallery-journal-rule {
+  flex-shrink: 0;
+  height: 3px;
+  margin: 0.32rem 0 0.4rem;
+  border: 0;
+  border-top: 1px solid #1a1a1a;
+  border-bottom: 0.5px solid #1a1a1a;
+}
+
+.syllabus-gallery-journal-title {
+  flex: 1;
+  min-height: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.28;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  overflow: hidden;
+}
+
+.syllabus-gallery-journal-author {
+  margin-top: 0.35rem;
+  font-size: 10px;
+  font-style: italic;
+  line-height: 1.25;
+  color: #333;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+/* Dog-eared top-right corner on journal articles */
+.syllabus-gallery-page-fold {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 1.35rem;
+  height: 1.35rem;
+  pointer-events: none;
+  z-index: 1;
+  background: linear-gradient(
+    225deg,
+    #e4e4e4 0 40%,
+    #cfcfcf 44%,
+    rgba(0, 0, 0, 0.16) 49%,
+    transparent 55%
+  );
+  filter: drop-shadow(-1px 1px 1px rgba(0, 0, 0, 0.16));
+}
+
+/* Slide/comb binder on reports and documents */
+.syllabus-gallery-placeholder-binder {
+  padding: 0.75rem 0.75rem 0.75rem 1.85rem;
+}
+
+.syllabus-gallery-binder {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0.78rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  align-items: center;
+  padding: 8% 0;
+  pointer-events: none;
+  z-index: 1;
+  background: linear-gradient(
+    to right,
+    rgba(42, 44, 52, 0.92),
+    rgba(78, 82, 96, 0.9) 42%,
+    rgba(36, 38, 46, 0.88)
+  );
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.28);
+  border-right: 0.5px solid rgba(255, 255, 255, 0.14);
+}
+
+.syllabus-gallery-binder-ring {
+  width: 0.36rem;
+  height: 0.36rem;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 32% 30%,
+    rgba(90, 94, 108, 0.95),
+    rgba(14, 14, 18, 0.95) 72%
+  );
+  box-shadow:
+    inset 0 0.5px 0.5px rgba(255, 255, 255, 0.28),
+    0 0 0 0.5px rgba(0, 0, 0, 0.45);
+}
+
+.syllabus-gallery-web-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  padding: 1.75rem 0.55rem 0.5rem;
+  background: linear-gradient(
+    to top,
+    rgba(8, 8, 10, 0.92) 0%,
+    rgba(8, 8, 10, 0.78) 55%,
+    rgba(8, 8, 10, 0) 100%
+  );
+  color: #fff;
+  pointer-events: none;
+}
+
+.syllabus-gallery-web-caption-title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+
+.syllabus-gallery-hostrow {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.15rem;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--fill-secondary, #8c8c8c);
+}
+
+.syllabus-gallery-favicon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  object-fit: contain;
+  border-radius: 2px;
+}
+
+.syllabus-gallery-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.syllabus-gallery-progress-track {
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+}
+
+.syllabus-gallery-progress-fill {
+  height: 4px;
+  border-radius: 999px;
+  background: #7b4ddb;
+}
+
+.syllabus-gallery-progress-pct {
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--fill-secondary, #8c8c8c);
+  font-variant-numeric: tabular-nums;
 }
 
 :root.syllabus-custom-icons .icon-css.icon-calendar,

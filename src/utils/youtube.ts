@@ -106,8 +106,12 @@ export function youtubeWatchUrl(
   return `https://www.youtube.com/watch?${params.toString()}`;
 }
 
-export function youtubeThumbnailUrl(videoId: string): string {
-  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+export function youtubeThumbnailUrl(
+  videoId: string,
+  size: "hq" | "mq" = "hq",
+): string {
+  const file = size === "mq" ? "mqdefault.jpg" : "hqdefault.jpg";
+  return `https://img.youtube.com/vi/${videoId}/${file}`;
 }
 
 export function youtubeUrlFromItem(item: Zotero.Item): string | null {

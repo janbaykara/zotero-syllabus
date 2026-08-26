@@ -1,11 +1,91 @@
 import { getCachedItem } from "./cache";
 
+function itemTitle(item: Zotero.Item): string {
+  try {
+    return item.getField("title") || "";
+  } catch {
+    return "";
+  }
+}
+
 export function sortItemsByTitle(items: Zotero.Item[]): Zotero.Item[] {
+  return [...items].sort((a, b) => itemTitle(a).localeCompare(itemTitle(b)));
+}
+
+/** Publication date as a timestamp. Missing dates are 0. */
+function itemPublicationDate(item: Zotero.Item): number {
+  try {
+    const date = String(item.getField("date") || "").trim();
+    if (!date) {
+      return 0;
+    }
+    const iso = Zotero.Date.strToISO(date);
+    if (iso) {
+      const parsed = Date.parse(iso);
+      if (!Number.isNaN(parsed)) {
+        return parsed;
+      }
+    }
+    const parsed = Date.parse(date);
+    if (!Number.isNaN(parsed)) {
+      return parsed;
+    }
+    const year = date.match(/\d{4}/);
+    if (year) {
+      return Date.UTC(Number(year[0]), 0, 1);
+    }
+  } catch {
+    // Ignore unreadable date fields.
+  }
+  return 0;
+}
+
+function itemDateAdded(item: Zotero.Item): number {
+  try {
+    const added = Date.parse(item.dateAdded);
+    if (!Number.isNaN(added)) {
+      return added;
+    }
+  } catch {
+    // Ignore unreadable dateAdded.
+  }
+  return 0;
+}
+
+/** Newest publication date first; undated items last; title as tiebreaker. */
+export function sortItemsByDate(items: Zotero.Item[]): Zotero.Item[] {
   return [...items].sort((a, b) => {
-    const titleA = a.getField("title") || "";
-    const titleB = b.getField("title") || "";
-    return titleA.localeCompare(titleB);
+    const dateA = itemPublicationDate(a);
+    const dateB = itemPublicationDate(b);
+    if (dateA === 0 && dateB === 0) {
+      const added = itemDateAdded(b) - itemDateAdded(a);
+      if (added !== 0) {
+        return added;
+      }
+      return itemTitle(a).localeCompare(itemTitle(b));
+    }
+    if (dateA === 0) return 1;
+    if (dateB === 0) return -1;
+    if (dateA !== dateB) {
+      return dateB - dateA;
+    }
+    return itemTitle(a).localeCompare(itemTitle(b));
   });
+}
+
+export type ItemSortMode = "auto" | "title" | "date";
+
+export function sortItems(
+  items: Zotero.Item[],
+  mode: ItemSortMode,
+): Zotero.Item[] {
+  if (mode === "date") {
+    return sortItemsByDate(items);
+  }
+  if (mode === "title") {
+    return sortItemsByTitle(items);
+  }
+  return [...items];
 }
 
 /** Open the first viewable attachment, or the item URL if none. */

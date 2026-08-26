@@ -5,9 +5,8 @@ import slugify from "slugify";
 
 import { getLocaleID, getString } from "../utils/locale";
 import { renderSyllabusPage } from "./SyllabusPage";
-import { renderTagsPage } from "./TagsPage";
-import { renderSubcollectionsPage } from "./SubcollectionsPage";
 import { renderGalleryPage } from "./GalleryPage";
+import { setGalleryGroupBy } from "./galleryGroupBy";
 import { getSelectedCollection } from "../utils/zotero";
 import { getCurrentTab, confirmPrompt } from "../utils/window";
 import { renderComponent } from "../utils/react";
@@ -88,25 +87,16 @@ enum SyllabusSettingsKey {
   COLLECTION_VIEW_MODES = "collectionViewModes",
 }
 
-export type CollectionViewMode =
-  | "collection"
-  | "gallery"
-  | "syllabus"
-  | "tags"
-  | "subcollections";
+export type CollectionViewMode = "collection" | "gallery" | "syllabus";
 
 const COLLECTION_VIEW_MODES: CollectionViewMode[] = [
   "collection",
   "gallery",
-  "tags",
-  "subcollections",
   "syllabus",
 ];
 
 const CUSTOM_COLLECTION_VIEW_MODES: CollectionViewMode[] = [
   "gallery",
-  "tags",
-  "subcollections",
   "syllabus",
 ];
 
@@ -114,6 +104,7 @@ const CollectionViewModeSchema = z.enum([
   "collection",
   "gallery",
   "syllabus",
+  // Legacy top-tier modes — coerced to gallery + galleryGroupBy
   "tags",
   "subcollections",
 ]);
@@ -125,7 +116,24 @@ function coerceCollectionViewMode(value: unknown): CollectionViewMode {
     return "collection";
   }
   const parsed = CollectionViewModeSchema.safeParse(value);
-  return parsed.success ? parsed.data : "collection";
+  if (!parsed.success) {
+    return "collection";
+  }
+  if (parsed.data === "tags" || parsed.data === "subcollections") {
+    return "gallery";
+  }
+  return parsed.data;
+}
+
+function migrateLegacyBrowseViewMode(
+  collection: Zotero.Collection,
+  stored: unknown,
+): boolean {
+  if (stored !== "tags" && stored !== "subcollections") {
+    return false;
+  }
+  setGalleryGroupBy(collection.id, stored);
+  return true;
 }
 
 function syllabusViewModeChrome(): { label: string; tooltip: string } | null {
@@ -137,19 +145,6 @@ function syllabusViewModeChrome(): { label: string; tooltip: string } | null {
     return { label: "Checklist", tooltip: "View as Checklist" };
   }
   return { label: "Syllabus", tooltip: "View as Syllabus" };
-}
-
-function shouldHideSubcollectionsRadio(
-  collection?: Zotero.Collection | null,
-): boolean {
-  const selected = collection ?? getSelectedCollection();
-  if (!selected) {
-    return false;
-  }
-  if (isAutoManagedCollection(selected.id)) {
-    return true;
-  }
-  return SyllabusManager.getCreateSubcollections(selected.id);
 }
 
 function confirmEnableSubcollections(
@@ -657,6 +652,12 @@ export class SyllabusManager {
       getCachedPref(prefKey, z.record(z.string(), z.unknown())) || {};
 
     const stored = viewModes[collectionId];
+    if (migrateLegacyBrowseViewMode(selectedCollection, stored)) {
+      viewModes[collectionId] = "gallery";
+      Zotero.Prefs.set(prefKey, JSON.stringify(viewModes), true);
+      zoteroCache.invalidatePref(prefKey);
+      return "gallery";
+    }
     if (stored !== undefined && stored !== null) {
       return SyllabusManager.coerceViewModeForCollection(
         selectedCollection,
@@ -677,17 +678,10 @@ export class SyllabusManager {
   }
 
   static coerceViewModeForCollection(
-    collection: Zotero.Collection,
+    _collection: Zotero.Collection,
     value: unknown,
   ): CollectionViewMode {
-    const mode = coerceCollectionViewMode(value);
-    if (
-      mode === "subcollections" &&
-      shouldHideSubcollectionsRadio(collection)
-    ) {
-      return "collection";
-    }
-    return mode;
+    return coerceCollectionViewMode(value);
   }
 
   static async setCollectionViewMode(mode: CollectionViewMode): Promise<void> {
@@ -725,9 +719,7 @@ export class SyllabusManager {
   }
 
   static async cycleCollectionViewMode(): Promise<CollectionViewMode> {
-    const modes = shouldHideSubcollectionsRadio()
-      ? COLLECTION_VIEW_MODES.filter((mode) => mode !== "subcollections")
-      : COLLECTION_VIEW_MODES;
+    const modes = COLLECTION_VIEW_MODES;
     const current = SyllabusManager.getCollectionViewMode();
     const index = Math.max(0, modes.indexOf(current));
     const next = modes[(index + 1) % modes.length];
@@ -772,7 +764,7 @@ export class SyllabusManager {
       mode: CollectionViewMode;
       label?: string;
       tooltip: string;
-      icon?: "unfiled" | "book" | "tag" | "folder";
+      icon?: "unfiled" | "book";
     }[] = [
       {
         mode: "collection",
@@ -780,12 +772,6 @@ export class SyllabusManager {
         icon: "unfiled",
       },
       { mode: "gallery", tooltip: "View as Gallery", icon: "book" },
-      { mode: "tags", tooltip: "View as Tags", icon: "tag" },
-      {
-        mode: "subcollections",
-        tooltip: "View by Subcollections",
-        icon: "folder",
-      },
       {
         mode: "syllabus",
         ...(syllabusViewModeChrome() ?? {
@@ -796,11 +782,7 @@ export class SyllabusManager {
     ];
 
     const viewModeButtons: XULButtonElement[] = [];
-    const skipSubcollections = shouldHideSubcollectionsRadio();
     for (const option of viewModeOptions) {
-      if (option.mode === "subcollections" && skipSubcollections) {
-        continue;
-      }
       const button = ztoolkit.UI.createElement(doc, "toolbarbutton", {
         id: `syllabus-view-mode-${option.mode}`,
         classList: [
@@ -925,7 +907,6 @@ export class SyllabusManager {
     ) as XULButtonElement[];
 
     const syllabusChrome = syllabusViewModeChrome();
-    const hideSubcollections = shouldHideSubcollectionsRadio();
     for (const button of buttons) {
       const buttonMode = button.getAttribute("data-view-mode");
       const selected = buttonMode === mode;
@@ -939,9 +920,6 @@ export class SyllabusManager {
         button.setAttribute("label", syllabusChrome.label);
         button.setAttribute("tooltiptext", syllabusChrome.tooltip);
         button.label = syllabusChrome.label;
-      }
-      if (buttonMode === "subcollections" && syllabusChrome) {
-        button.hidden = hideSubcollections;
       }
     }
   }
@@ -975,22 +953,10 @@ export class SyllabusManager {
       currentTab?.type === "syllabus" || currentTab?.type === "reading-list";
     const shouldShowReadingSchedule =
       FEATURE_FLAG.READING_SCHEDULE && isInMainLibrary && !isCustomTab;
-    const hideSubcollections =
-      selectedCollection == null
-        ? null
-        : shouldHideSubcollectionsRadio(selectedCollection);
 
     for (const button of viewModeButtons) {
-      const mode = button.getAttribute("data-view-mode");
       if (shouldShowReadingSchedule) {
         button.hidden = true;
-        continue;
-      }
-      if (mode === "subcollections") {
-        if (hideSubcollections == null) {
-          continue;
-        }
-        button.hidden = hideSubcollections;
         continue;
       }
       button.hidden = false;
@@ -1042,7 +1008,7 @@ export class SyllabusManager {
       }
 
       // Check if we should show custom view
-      // Show if: gallery, syllabus, tags, or subcollections is enabled AND we have a collection
+      // Show if: gallery or syllabus is enabled AND we have a collection
       const viewMode = SyllabusManager.getCollectionViewMode();
       if (
         viewMode === "syllabus" &&
@@ -1114,10 +1080,6 @@ export class SyllabusManager {
         if (customView && selectedCollection) {
           if (resolvedViewMode === "gallery") {
             renderGalleryPage(w, customView, selectedCollection.id);
-          } else if (resolvedViewMode === "tags") {
-            renderTagsPage(w, customView, selectedCollection.id);
-          } else if (resolvedViewMode === "subcollections") {
-            renderSubcollectionsPage(w, customView, selectedCollection.id);
           } else {
             renderSyllabusPage(w, customView, selectedCollection.id);
           }

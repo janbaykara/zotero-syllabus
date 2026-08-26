@@ -2,7 +2,6 @@ import { useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
 import SuperJSON from "superjson";
 import { getCachedCollectionById, getCachedItem } from "../utils/cache";
-import { sortItemsByTitle } from "../utils/items";
 import { SyllabusManager } from "./syllabus";
 
 export type SubcollectionNode = {
@@ -35,15 +34,13 @@ function buildNode(collection: Zotero.Collection): SubcollectionNode {
 
   let items: Zotero.Item[] = [];
   try {
-    items = sortItemsByTitle(
-      collection.getChildItems().filter((item) => {
-        try {
-          return item.isRegularItem();
-        } catch {
-          return false;
-        }
-      }),
-    );
+    items = collection.getChildItems().filter((item) => {
+      try {
+        return item.isRegularItem();
+      } catch {
+        return false;
+      }
+    });
   } catch {
     items = [];
   }
@@ -85,13 +82,9 @@ export function useSubcollectionTree(collectionId: number) {
     }
 
     const resolveItems = (ids: number[]) =>
-      sortItemsByTitle(
-        ids
-          .map((id) => getCachedItem(id))
-          .filter(
-            (item): item is Zotero.Item => !!item && item.isRegularItem(),
-          ),
-      );
+      ids
+        .map((id) => getCachedItem(id))
+        .filter((item): item is Zotero.Item => !!item && item.isRegularItem());
 
     return { root, resolveItems };
   }, [snapshotJson]);
