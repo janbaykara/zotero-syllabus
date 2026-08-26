@@ -26,6 +26,7 @@ const WEB_GALLERY_ITEM_TYPES = new Set([
   "webpage",
   "blogPost",
   "newspaperArticle",
+  "encyclopediaArticle",
 ]);
 
 const VIDEO_GALLERY_ITEM_TYPES = new Set(["film", "videoRecording"]);
@@ -196,7 +197,8 @@ export function getItemHostname(item: Zotero.Item): string {
   try {
     return (
       String(item.getField("websiteTitle") || "").trim() ||
-      String(item.getField("publicationTitle") || "").trim()
+      String(item.getField("publicationTitle") || "").trim() ||
+      String(item.getField("encyclopediaTitle") || "").trim()
     );
   } catch {
     return "";

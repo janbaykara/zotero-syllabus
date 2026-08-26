@@ -839,6 +839,19 @@ function GalleryTile({
   );
 }
 
+const PAGE_LIKE_ITEM_TYPES = new Set([
+  "book",
+  "bookSection",
+  "conferencePaper",
+  "document",
+  "journalArticle",
+  "magazineArticle",
+  "manuscript",
+  "preprint",
+  "report",
+  "thesis",
+]);
+
 function GalleryCover({
   item,
   selected,
@@ -900,9 +913,14 @@ function GalleryCover({
     };
   }, [visible, item]);
 
-  const isJournal = item.itemType === "journalArticle";
-  const showSpine = item.itemType === "book" || item.itemType === "bookSection";
-  const useJournalFace = isJournal && cover.kind !== "image";
+  const isJournalLike =
+    item.itemType === "journalArticle" || item.itemType === "conferencePaper";
+  const isBookLike =
+    item.itemType === "book" || item.itemType === "bookSection";
+  const isPageLike = PAGE_LIKE_ITEM_TYPES.has(item.itemType);
+  const isArtwork = item.itemType === "artwork";
+  const showSpine = isBookLike;
+  const useJournalFace = isJournalLike && cover.kind !== "image";
   const showBinder =
     item.itemType === "report" ||
     item.itemType === "document" ||
@@ -912,14 +930,15 @@ function GalleryCover({
   const showWebOverlay = isWeb && cover.kind === "image" && !isVideo;
   const videoSite = isVideo ? getVideoSiteHostname(item) : "";
   const videoFavicon = videoSite ? faviconUrlForHostname(videoSite) : null;
-  const useNaturalAspect = cover.kind === "image" && !isVideo && !isWeb;
+  const useNaturalAspect =
+    cover.kind === "image" && !isVideo && !isWeb && (isPageLike || isArtwork);
   const coverShapeClass = isVideo
     ? "syllabus-gallery-cover-video"
-    : isWeb
-      ? "syllabus-gallery-cover-square"
-      : useNaturalAspect
-        ? "syllabus-gallery-cover-natural"
-        : "syllabus-gallery-cover-portrait";
+    : useNaturalAspect
+      ? "syllabus-gallery-cover-natural"
+      : isPageLike
+        ? "syllabus-gallery-cover-portrait"
+        : "syllabus-gallery-cover-square";
 
   return (
     <div
@@ -931,6 +950,9 @@ function GalleryCover({
           : twMerge(
               "overflow-hidden rounded-[3px] bg-quinary shadow-card transition-shadow group-hover:shadow-card-hover",
               coverShapeClass,
+              isJournalLike &&
+                cover.kind === "image" &&
+                "syllabus-gallery-journal-sheet",
             ),
         selected &&
           "ring-2 ring-[#7b4ddb] ring-offset-2 ring-offset-background",
@@ -949,6 +971,9 @@ function GalleryCover({
             twMerge(
               "syllabus-gallery-cover-face relative min-w-0 flex-1 overflow-hidden rounded-[3px] bg-quinary shadow-card transition-shadow group-hover:shadow-card-hover",
               coverShapeClass,
+              isJournalLike &&
+                cover.kind === "image" &&
+                "syllabus-gallery-journal-sheet",
             ),
         )}
       >
@@ -1001,7 +1026,7 @@ function GalleryCover({
           </div>
         ) : null}
         {showSpine ? <div className="syllabus-gallery-book-spine" /> : null}
-        {useJournalFace ? <div className="syllabus-gallery-page-fold" /> : null}
+        {isJournalLike ? <div className="syllabus-gallery-page-fold" /> : null}
       </div>
     </div>
   );
@@ -1015,18 +1040,101 @@ function itemField(item: Zotero.Item, field: string): string {
   }
 }
 
+/** First-page mockups switch from a classic masthead to a SAGE-like layout. */
+const JOURNAL_CONTEMPORARY_YEAR = 2000;
+
+const JOURNAL_INK = [
+  "#1e3a5f",
+  "#6b2d3c",
+  "#2d4a3e",
+  "#3d4554",
+  "#1a5a56",
+  "#5c4a1f",
+  "#3c2f5c",
+  "#4a3728",
+];
+
+const JOURNAL_STOP_WORDS = new Set([
+  "a",
+  "an",
+  "and",
+  "at",
+  "by",
+  "for",
+  "in",
+  "of",
+  "on",
+  "the",
+  "to",
+  "&",
+]);
+
+function hashString(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash * 31 + value.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+function journalYear(item: Zotero.Item): number | null {
+  const match = itemField(item, "date").match(/\d{4}/);
+  if (!match || match[0] === "0000") {
+    return null;
+  }
+  const year = Number(match[0]);
+  return year >= 1000 && year <= 2100 ? year : null;
+}
+
+function journalInk(journal: string): string {
+  return JOURNAL_INK[hashString(journal || "journal") % JOURNAL_INK.length];
+}
+
+function initialsFromPhrase(value: string): string {
+  return value
+    .split(/[\s,./&+:–—-]+/)
+    .map((word) => word.replace(/[^A-Za-z]/g, ""))
+    .filter(
+      (word) => word.length > 0 && !JOURNAL_STOP_WORDS.has(word.toLowerCase()),
+    )
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 5);
+}
+
+function journalMark(journal: string, abbreviation: string): string {
+  const letters = abbreviation.replace(/[^A-Za-z]/g, "").toUpperCase();
+  if (letters.length >= 2 && letters.length <= 5) {
+    return letters;
+  }
+  const fromAbbr = initialsFromPhrase(abbreviation);
+  if (fromAbbr.length >= 2) {
+    return fromAbbr;
+  }
+  const head = (journal.split(/[:–—]/)[0] || journal).trim();
+  const fromTitle = initialsFromPhrase(head);
+  if (fromTitle.length >= 2) {
+    return fromTitle;
+  }
+  return (head.replace(/[^A-Za-z]/g, "").slice(0, 3) || "J").toUpperCase();
+}
+
 function journalEditionLine(item: Zotero.Item): string {
   const volume = itemField(item, "volume");
   const issue = itemField(item, "issue");
   const pages = itemField(item, "pages");
-  const date = itemField(item, "date");
-  const yearMatch = date.match(/\d{4}/);
-  const year = yearMatch && yearMatch[0] !== "0000" ? yearMatch[0] : "";
+  const year = journalYear(item);
+  const yearText = year ? String(year) : "";
 
   const volIssue = [volume ? `Vol. ${volume}` : "", issue ? `No. ${issue}` : ""]
     .filter(Boolean)
     .join(", ");
-  const head = year ? (volIssue ? `${volIssue} (${year})` : year) : volIssue;
+  const head = yearText
+    ? volIssue
+      ? `${volIssue} (${yearText})`
+      : yearText
+    : volIssue;
   if (pages && head) {
     return `${head} · pp. ${pages}`;
   }
@@ -1036,23 +1144,149 @@ function journalEditionLine(item: Zotero.Item): string {
   return head;
 }
 
+function cleanIssue(issue: string): string {
+  return issue.replace(/^(issues?|no\.?|number)\s+/i, "").trim();
+}
+
+function journalEditionCompact(item: Zotero.Item): string {
+  const volume = itemField(item, "volume");
+  const issue = cleanIssue(itemField(item, "issue"));
+  const year = journalYear(item);
+  const shortIssue = issue.length > 0 && issue.length <= 12;
+  const volIssue =
+    volume && shortIssue
+      ? `${volume}(${issue})`
+      : volume
+        ? `Vol. ${volume}`
+        : shortIssue
+          ? `No. ${issue}`
+          : "";
+  if (volIssue && year) {
+    return `${volIssue} · ${year}`;
+  }
+  if (year) {
+    return String(year);
+  }
+  return volIssue;
+}
+
+function itemAuthorLine(item: Zotero.Item): string {
+  try {
+    const creators = item.getCreators() || [];
+    const authors = creators.filter(
+      (creator) => creator.creatorType === "author",
+    );
+    const list = authors.length > 0 ? authors : creators;
+    const names = list
+      .map((creator) =>
+        `${creator.firstName || ""} ${creator.lastName || ""}`.trim(),
+      )
+      .filter(Boolean);
+    if (names.length === 1) {
+      return names[0];
+    }
+    if (names.length === 2) {
+      return `${names[0]} and ${names[1]}`;
+    }
+    if (names.length > 2) {
+      return `${names[0]} et al.`;
+    }
+  } catch {
+    // Fall through to firstCreator.
+  }
+  try {
+    return (item.firstCreator || itemField(item, "firstCreator")).trim();
+  } catch {
+    return "";
+  }
+}
+
+function itemAbstractSnippet(item: Zotero.Item): string {
+  return itemField(item, "abstractNote")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(
+      /^(?:research highlights(?:\s+and)?\s+)?abstracts?\b[\s:,.\-–—]*/i,
+      "",
+    )
+    .replace(/(?:,\s*){2,}/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function JournalFace({ item }: { item: Zotero.Item }) {
   const journal = useMemo(() => {
     return (
       itemField(item, "publicationTitle") ||
       itemField(item, "journalAbbreviation") ||
+      itemField(item, "proceedingsTitle") ||
+      itemField(item, "conferenceName") ||
       ""
     );
   }, [item]);
-  const edition = useMemo(() => journalEditionLine(item), [item]);
+  const abbreviation = useMemo(
+    () => itemField(item, "journalAbbreviation"),
+    [item],
+  );
+  const year = useMemo(() => journalYear(item), [item]);
+  const contemporary = year === null || year >= JOURNAL_CONTEMPORARY_YEAR;
+  const edition = useMemo(
+    () =>
+      contemporary ? journalEditionCompact(item) : journalEditionLine(item),
+    [item, contemporary],
+  );
   const title = useMemo(() => itemField(item, "title") || "Untitled", [item]);
-  const creator = useMemo(() => {
-    try {
-      return (item.firstCreator || itemField(item, "firstCreator")).trim();
-    } catch {
-      return "";
-    }
-  }, [item]);
+  const creator = useMemo(() => itemAuthorLine(item), [item]);
+  const abstractNote = useMemo(
+    () => (contemporary ? itemAbstractSnippet(item) : ""),
+    [item, contemporary],
+  );
+  const mark = useMemo(
+    () => (journal ? journalMark(journal, abbreviation) : ""),
+    [journal, abbreviation],
+  );
+  const ink = useMemo(() => journalInk(journal), [journal]);
+
+  if (contemporary) {
+    return (
+      <div
+        className={twMerge(
+          "syllabus-gallery-journal is-contemporary",
+          abstractNote && "has-abstract",
+        )}
+        style={{ "--journal-ink": ink } as JSX.CSSProperties}
+      >
+        {journal || edition ? (
+          <div className="syllabus-gallery-journal-head">
+            {mark ? (
+              <div
+                className="syllabus-gallery-journal-mark"
+                data-len={String(mark.length)}
+              >
+                {mark}
+              </div>
+            ) : null}
+            <div className="syllabus-gallery-journal-head-text">
+              {journal ? (
+                <div className="syllabus-gallery-journal-name">{journal}</div>
+              ) : null}
+              {edition ? (
+                <div className="syllabus-gallery-journal-edition">{edition}</div>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+        <div className="syllabus-gallery-journal-title">{title}</div>
+        {creator ? (
+          <div className="syllabus-gallery-journal-author">{creator}</div>
+        ) : null}
+        {abstractNote ? (
+          <div className="syllabus-gallery-journal-abstract">{abstractNote}</div>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="syllabus-gallery-journal">

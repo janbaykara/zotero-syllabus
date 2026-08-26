@@ -413,7 +413,7 @@
   );
 }
 
-/* White journal first-page mockup */
+/* White journal first-page mockup (classic masthead; contemporary after 1999) */
 .syllabus-gallery-journal {
   position: absolute;
   inset: 0;
@@ -462,7 +462,7 @@
 }
 
 .syllabus-gallery-journal-title {
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 12px;
@@ -486,7 +486,134 @@
   overflow: hidden;
 }
 
+.syllabus-gallery-journal.is-contemporary {
+  --journal-ink: #1e3a5f;
+  padding: 0;
+}
+
+.syllabus-gallery-journal.is-contemporary::before {
+  content: "";
+  display: block;
+  flex-shrink: 0;
+  height: 3px;
+  background: var(--journal-ink);
+}
+
+.syllabus-gallery-journal-head {
+  display: flex;
+  flex-shrink: 0;
+  align-items: flex-start;
+  gap: 0.28rem;
+  padding: 0.38rem 1.15rem 0.22rem 0.45rem;
+}
+
+.syllabus-gallery-journal-mark {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 1.2rem;
+  height: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--journal-ink);
+  color: #fff;
+  font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 6.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.syllabus-gallery-journal-mark[data-len="1"],
+.syllabus-gallery-journal-mark[data-len="2"] {
+  font-size: 8px;
+}
+
+.syllabus-gallery-journal-mark[data-len="4"],
+.syllabus-gallery-journal-mark[data-len="5"] {
+  width: 1.45rem;
+  font-size: 5.5px;
+  letter-spacing: 0.01em;
+}
+
+.syllabus-gallery-journal-head-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.syllabus-gallery-journal.is-contemporary .syllabus-gallery-journal-name {
+  font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 7.5px;
+  font-weight: 600;
+  font-style: italic;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-transform: none;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.syllabus-gallery-journal.is-contemporary .syllabus-gallery-journal-edition {
+  margin-top: 0.08rem;
+  font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 7px;
+  font-weight: 500;
+  text-align: left;
+  letter-spacing: 0;
+  color: #5a5a5a;
+  -webkit-line-clamp: 1;
+}
+
+.syllabus-gallery-journal.is-contemporary .syllabus-gallery-journal-title {
+  flex: 0 1 auto;
+  padding: 0.1rem 1.05rem 0 0.45rem;
+  font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  -webkit-line-clamp: 5;
+}
+
+.syllabus-gallery-journal.is-contemporary:not(.has-abstract)
+  .syllabus-gallery-journal-title {
+  -webkit-line-clamp: 8;
+}
+
+.syllabus-gallery-journal.is-contemporary .syllabus-gallery-journal-author {
+  margin-top: 0.18rem;
+  padding: 0 1.05rem 0.2rem 0.45rem;
+  font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 500;
+  color: #3a3a3a;
+}
+
+.syllabus-gallery-journal-abstract {
+  flex: 1;
+  min-height: 0;
+  margin-top: 0.12rem;
+  padding: 0.28rem 1.05rem 0.4rem 0.45rem;
+  border-top: 0.5px solid #e2e2e2;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 7px;
+  line-height: 1.38;
+  color: #4a4a4a;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  overflow: hidden;
+}
+
 /* Dog-eared top-right corner on journal articles */
+.syllabus-gallery-journal-sheet {
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
 .syllabus-gallery-page-fold {
   position: absolute;
   top: 0;
@@ -527,6 +654,11 @@
   flex: 1 1 auto;
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
+}
+
+.syllabus-gallery-cover-with-binder .syllabus-gallery-cover-natural {
+  align-self: end;
+  height: auto;
 }
 
 .syllabus-gallery-binder {
