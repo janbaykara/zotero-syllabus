@@ -919,62 +919,17 @@ function GalleryCover({
     <div
       ref={rootRef}
       className={twMerge(
-        "relative w-full overflow-hidden rounded-[3px] bg-quinary shadow-card transition-shadow group-hover:shadow-card-hover",
-        coverShapeClass,
+        "relative w-full",
+        showBinder
+          ? "syllabus-gallery-cover-with-binder"
+          : twMerge(
+              "overflow-hidden rounded-[3px] bg-quinary shadow-card transition-shadow group-hover:shadow-card-hover",
+              coverShapeClass,
+            ),
         selected &&
           "ring-2 ring-[#7b4ddb] ring-offset-2 ring-offset-background",
       )}
     >
-      {showPageFold ? (
-        <JournalFace item={item} />
-      ) : cover.kind === "image" ? (
-        <img
-          src={cover.src}
-          alt=""
-          className={twMerge(
-            useNaturalAspect
-              ? "relative z-0 block h-auto w-full"
-              : twMerge(
-                  "absolute inset-0 h-full w-full",
-                  cover.fit === "contain"
-                    ? "object-contain bg-white"
-                    : "object-cover",
-                ),
-          )}
-          draggable={false}
-        />
-      ) : (
-        <PlaceholderFace
-          cover={cover}
-          insetForBinder={showBinder}
-          hideText={isVideo}
-        />
-      )}
-      {showWebOverlay ? (
-        <div className="syllabus-gallery-web-caption">
-          <div className="syllabus-gallery-web-caption-title">
-            {placeholder.title}
-          </div>
-        </div>
-      ) : null}
-      {isVideo && videoFavicon ? (
-        <img
-          src={videoFavicon}
-          alt=""
-          className="syllabus-gallery-video-site"
-          referrerPolicy="no-referrer"
-          onError={(e) => {
-            (e.currentTarget as HTMLImageElement).style.display = "none";
-          }}
-        />
-      ) : null}
-      {isVideo ? (
-        <div className="syllabus-gallery-play" aria-hidden="true">
-          <span className="syllabus-gallery-play-btn" />
-        </div>
-      ) : null}
-      {showSpine ? <div className="syllabus-gallery-book-spine" /> : null}
-      {showPageFold ? <div className="syllabus-gallery-page-fold" /> : null}
       {showBinder ? (
         <div className="syllabus-gallery-binder" aria-hidden="true">
           {Array.from({ length: 7 }, (_, i) => (
@@ -982,6 +937,66 @@ function GalleryCover({
           ))}
         </div>
       ) : null}
+      <div
+        className={twMerge(
+          showBinder &&
+            twMerge(
+              "syllabus-gallery-cover-face relative min-w-0 flex-1 overflow-hidden rounded-[3px] bg-quinary shadow-card transition-shadow group-hover:shadow-card-hover",
+              coverShapeClass,
+            ),
+        )}
+      >
+        {showPageFold ? (
+          <JournalFace item={item} />
+        ) : cover.kind === "image" ? (
+          <img
+            src={cover.src}
+            alt=""
+            className={twMerge(
+              useNaturalAspect
+                ? "relative z-0 block h-auto w-full"
+                : twMerge(
+                    "absolute inset-0 h-full w-full",
+                    cover.fit === "contain"
+                      ? "object-contain bg-white"
+                      : "object-cover",
+                  ),
+            )}
+            draggable={false}
+          />
+        ) : (
+          <PlaceholderFace
+            cover={cover}
+            insetForSpine={showSpine}
+            hideText={isVideo}
+          />
+        )}
+        {showWebOverlay ? (
+          <div className="syllabus-gallery-web-caption">
+            <div className="syllabus-gallery-web-caption-title">
+              {placeholder.title}
+            </div>
+          </div>
+        ) : null}
+        {isVideo && videoFavicon ? (
+          <img
+            src={videoFavicon}
+            alt=""
+            className="syllabus-gallery-video-site"
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = "none";
+            }}
+          />
+        ) : null}
+        {isVideo ? (
+          <div className="syllabus-gallery-play" aria-hidden="true">
+            <span className="syllabus-gallery-play-btn" />
+          </div>
+        ) : null}
+        {showSpine ? <div className="syllabus-gallery-book-spine" /> : null}
+        {showPageFold ? <div className="syllabus-gallery-page-fold" /> : null}
+      </div>
     </div>
   );
 }
@@ -1054,18 +1069,18 @@ function JournalFace({ item }: { item: Zotero.Item }) {
 
 function PlaceholderFace({
   cover,
-  insetForBinder = false,
+  insetForSpine = false,
   hideText = false,
 }: {
   cover: Extract<ResolvedCover, { kind: "placeholder" }>;
-  insetForBinder?: boolean;
+  insetForSpine?: boolean;
   hideText?: boolean;
 }) {
   return (
     <div
       className={twMerge(
         "absolute inset-0 flex flex-col justify-between text-white",
-        insetForBinder ? "syllabus-gallery-placeholder-binder" : "p-3",
+        insetForSpine ? "syllabus-gallery-placeholder-spine" : "p-3",
       )}
       style={{
         background: `linear-gradient(165deg, color-mix(in srgb, ${cover.color} 88%, white) 0%, ${cover.color} 55%, color-mix(in srgb, ${cover.color} 72%, black) 100%)`,
