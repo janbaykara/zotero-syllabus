@@ -324,6 +324,22 @@
   width: 100%;
 }
 
+/* Paper edge above cover art (inset shadows sit under descendants). */
+.syllabus-gallery-cover-portrait::after,
+.syllabus-gallery-cover-video::after,
+.syllabus-gallery-cover-square::after,
+.syllabus-gallery-cover-natural::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
 .syllabus-gallery-cover-portrait {
   aspect-ratio: 2 / 3;
 }
@@ -422,7 +438,6 @@
   padding: 0.5rem 1.2rem 0.55rem 0.55rem;
   background: #fff;
   color: #161616;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
 }
 
 .syllabus-gallery-journal-masthead {
@@ -608,10 +623,9 @@
   overflow: hidden;
 }
 
-/* Dog-eared top-right corner on journal articles */
+/* White backing for journal first-page thumbnails */
 .syllabus-gallery-journal-sheet {
   background: #fff;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
 }
 
 .syllabus-gallery-page-fold {
@@ -621,7 +635,7 @@
   width: 1.35rem;
   height: 1.35rem;
   pointer-events: none;
-  z-index: 1;
+  z-index: 2;
   background: linear-gradient(
     225deg,
     #e4e4e4 0 40%,
