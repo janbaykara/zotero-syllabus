@@ -14,6 +14,10 @@ const ISBN_MIN_BYTES = 1000;
 const WEB_THUMB_MIN_BYTES = 1500;
 const WEB_THUMB_MAX_BYTES = 2_500_000;
 const WEB_HTML_HEAD_CHARS = 100_000;
+/** Reject PDF thumbs with fewer than this share of non-near-white pixels. */
+const PDF_BLANK_MIN_NONWHITE = 0.02;
+/** Only re-decode cached PDF thumbs under this size when checking for blanks. */
+const PDF_CACHE_BLANK_CHECK_MAX_BYTES = 16_000;
 
 const WEB_GALLERY_ITEM_TYPES = new Set([
   "webpage",
@@ -348,12 +352,156 @@ function rememberPdfThumb(cacheKey: string, path: string): string {
   return uri;
 }
 
+function canvasLooksBlank(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+): boolean {
+  if (width < 1 || height < 1) {
+    return true;
+  }
+  let data: ImageData;
+  try {
+    data = context.getImageData(0, 0, width, height);
+  } catch {
+    return false;
+  }
+  const pixels = data.data;
+  const total = width * height;
+  const stride = Math.max(1, Math.floor(Math.sqrt(total / 2000)));
+  let sampled = 0;
+  let nonWhite = 0;
+  for (let y = 0; y < height; y += stride) {
+    for (let x = 0; x < width; x += stride) {
+      const i = (y * width + x) * 4;
+      sampled += 1;
+      const r = pixels[i];
+      const g = pixels[i + 1];
+      const b = pixels[i + 2];
+      // Near-white / paper backgrounds don't count as content.
+      if (r < 245 || g < 245 || b < 245) {
+        nonWhite += 1;
+      }
+    }
+  }
+  if (sampled === 0) {
+    return true;
+  }
+  return nonWhite / sampled < PDF_BLANK_MIN_NONWHITE;
+}
+
+async function markPdfThumbBlank(cacheKey: string): Promise<void> {
+  pdfThumbMisses.add(cacheKey);
+  pdfThumbUris.delete(cacheKey);
+  const dir = await ensureThumbDir();
+  const blankPath = joinPath(dir, `${cacheKey}.blank`);
+  const jpgPath = joinPath(dir, `${cacheKey}.jpg`);
+  try {
+    await writeFileBytes(blankPath, new Uint8Array(0));
+  } catch {
+    // Ignore marker write failures.
+  }
+  await removeFile(jpgPath);
+  const index = await loadPdfThumbIndex();
+  index.delete(cacheKey);
+}
+
+async function removeFile(path: string): Promise<void> {
+  try {
+    if (typeof IOUtils !== "undefined" && typeof IOUtils.remove === "function") {
+      await IOUtils.remove(path, { ignoreAbsent: true });
+      return;
+    }
+    const file = Zotero.File.pathToFile(path);
+    if (file.exists()) {
+      file.remove(false);
+    }
+  } catch {
+    // Ignore cleanup failures.
+  }
+}
+
+async function fileSize(path: string): Promise<number> {
+  try {
+    if (typeof IOUtils !== "undefined") {
+      return (await IOUtils.stat(path)).size;
+    }
+    return Zotero.File.pathToFile(path).fileSize;
+  } catch {
+    return 0;
+  }
+}
+
+async function imageFileLooksBlank(path: string): Promise<boolean> {
+  const size = await fileSize(path);
+  if (size <= 0) {
+    return true;
+  }
+  if (size > PDF_CACHE_BLANK_CHECK_MAX_BYTES) {
+    return false;
+  }
+  try {
+    const bytes = await readFileBytes(path);
+    const win = Zotero.getMainWindow() as Window & {
+      createImageBitmap?: (image: Blob) => Promise<ImageBitmap>;
+      Blob?: typeof Blob;
+    };
+    if (typeof win.createImageBitmap !== "function" || !win.Blob) {
+      return size < 4000;
+    }
+    const copy = new Uint8Array(bytes.byteLength);
+    copy.set(bytes);
+    const blob = new win.Blob([copy], { type: "image/jpeg" });
+    const bitmap = await win.createImageBitmap(blob);
+    try {
+      const canvas = win.document.createElement("canvas");
+      canvas.width = Math.max(1, bitmap.width);
+      canvas.height = Math.max(1, bitmap.height);
+      const context = canvas.getContext("2d");
+      if (!context) {
+        return size < 4000;
+      }
+      context.drawImage(bitmap, 0, 0);
+      return canvasLooksBlank(context, canvas.width, canvas.height);
+    } finally {
+      try {
+        bitmap.close();
+      } catch {
+        // Ignore.
+      }
+    }
+  } catch {
+    return size < 4000;
+  }
+}
+
 async function findCachedPdfThumb(cacheKey: string): Promise<string | null> {
-  const exact = joinPath(await ensureThumbDir(), `${cacheKey}.jpg`);
+  const dir = await ensureThumbDir();
+  const blankPath = joinPath(dir, `${cacheKey}.blank`);
+  if (await fileExists(blankPath)) {
+    pdfThumbMisses.add(cacheKey);
+    return null;
+  }
+
+  const exact = joinPath(dir, `${cacheKey}.jpg`);
   if (await fileExists(exact)) {
+    if (await imageFileLooksBlank(exact)) {
+      await markPdfThumbBlank(cacheKey);
+      return null;
+    }
     return exact;
   }
-  return (await loadPdfThumbIndex()).get(cacheKey) || null;
+
+  const legacy = (await loadPdfThumbIndex()).get(cacheKey) || null;
+  if (!legacy) {
+    return null;
+  }
+  if (await imageFileLooksBlank(legacy)) {
+    await markPdfThumbBlank(cacheKey);
+    await removeFile(legacy);
+    return null;
+  }
+  return legacy;
 }
 
 async function loadPdfThumbIndex(): Promise<Map<string, string>> {
@@ -464,7 +612,7 @@ async function renderPdfPageOne(item: Zotero.Item): Promise<string | null> {
         index.set(cacheKey, cachePath);
         return uri;
       }
-      pdfThumbMisses.add(cacheKey);
+      await markPdfThumbBlank(cacheKey);
       return null;
     } catch (error) {
       ztoolkit.log("PDF page-1 render failed:", error);
@@ -501,6 +649,9 @@ async function renderPdfToCache(
       return null;
     }
     await page.render({ canvasContext: context, viewport }).promise;
+    if (canvasLooksBlank(context, canvas.width, canvas.height)) {
+      return null;
+    }
     const jpeg = dataURLToBytes(canvas.toDataURL("image/jpeg", JPEG_QUALITY));
     await writeFileBytes(cachePath, jpeg);
     return Zotero.File.pathToFileURI(cachePath);
