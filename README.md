@@ -4,12 +4,6 @@
 
 A Zotero add-on / plugin that turns your collections into syllabi and course reading lists. Order your items by class, tag things as required / optional reading and pin course information.
 
-![Syllabus view](doc/images/demo.gif)
-
-![Reading schedule view](doc/images/reading.png)
-
-![Gallery view](doc/images/gallery.png)
-
 ## How to install
 
 1. [Download the extension file (.xpi)](https://github.com/janbaykara/zotero-syllabus/releases/latest/download/zotero-syllabus.xpi).
@@ -21,6 +15,12 @@ A Zotero add-on / plugin that turns your collections into syllabi and course rea
 
 > [!NOTE]
 > For best results, use [Zotero 8, 9, or 10](https://www.zotero.org/download/). Zotero 7 works but has some minor styling issues.
+
+![Syllabus view](doc/images/demo.gif)
+
+![Reading schedule view](doc/images/reading.png)
+
+![Gallery view](doc/images/gallery.png)
 
 ## Can YOU spare 15 minutes to tell me how you're using the tool?
 
