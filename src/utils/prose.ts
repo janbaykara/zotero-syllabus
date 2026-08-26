@@ -23,8 +23,9 @@ export function splitProse(text: string | null | undefined): ProseParagraph[] {
 }
 
 /**
- * Escape text and emit HTML paragraphs with &lt;br&gt; soft breaks.
- * For Zotero note HTML (already escaped context).
+ * Escape text and emit HTML for Zotero note bodies.
+ * One &lt;p&gt; per line — Zotero's note schema often drops &lt;br&gt; soft breaks
+ * inside a single paragraph, which collapses multiline prose.
  */
 export function proseToHtml(text: string | null | undefined): string {
   const paragraphs = splitProse(text);
@@ -32,10 +33,7 @@ export function proseToHtml(text: string | null | undefined): string {
     return "";
   }
   return paragraphs
-    .map((lines) => {
-      const inner = lines.map(escapeHtml).join("<br/>");
-      return `<p>${inner}</p>`;
-    })
+    .flatMap((lines) => lines.map((line) => `<p>${escapeHtml(line)}</p>`))
     .join("");
 }
 
