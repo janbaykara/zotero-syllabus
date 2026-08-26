@@ -9,7 +9,9 @@ import {
   useCallback,
 } from "preact/hooks";
 import type { JSX } from "preact";
+import { flushSync } from "preact/compat";
 import { twMerge } from "tailwind-merge";
+import { generateBibliographicReference } from "../utils/cite";
 import { getPref } from "../utils/prefs";
 import { getString } from "../utils/locale";
 import { getCSSUrl } from "../utils/css";
@@ -283,6 +285,11 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
   // Settings view state
   const [showSettings, setShowSettings] = useState(false);
+
+  // Bibliography is print-only: omit it from the live tree until export.
+  const [printBibliography, setPrintBibliography] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     const win = Zotero.getMainWindow();
@@ -1664,6 +1671,18 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       const __prevReaderMode = readerMode;
       setReaderMode(false);
 
+      const bibliographyText =
+        items.length > 0
+          ? (await generateBibliographicReference(
+              items,
+              true,
+              syllabusMetadata.cslStyle || null,
+            )) || ""
+          : "";
+      flushSync(() => {
+        setPrintBibliography(bibliographyText || null);
+      });
+
       // Create HTML content with inline CSS
       const htmlContent = `<!DOCTYPE html>
 <html>
@@ -1714,6 +1733,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 </body>
 </html>`;
 
+      flushSync(() => {
+        setPrintBibliography(null);
+      });
       setLocked(isLocked);
       setReaderMode(readerMode);
 
@@ -1724,6 +1746,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       );
     } catch (err) {
       ztoolkit.log("Error printing syllabus:", err);
+      setPrintBibliography(null);
       setLocked(false);
     }
   };
@@ -2244,11 +2267,12 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
               </div>
             )}
 
-            <Bibliography
-              items={items}
-              compactMode={compactMode}
-              cslStyle={syllabusMetadata.cslStyle || null}
-            />
+            {printBibliography && (
+              <Bibliography
+                text={printBibliography}
+                compactMode={compactMode}
+              />
+            )}
           </div>
         </div>
       </div>
