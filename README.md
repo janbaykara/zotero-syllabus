@@ -144,14 +144,38 @@ Covers come from attached images, EPUB/PDF art, ISBN lookups, or type-specific p
 
 ![Gallery view with book covers and reading progress](doc/images/gallery.png)
 
+### Import a reading list
+
+With the [Zotero Connector](https://www.zotero.org/download/connectors) installed, you can save a supported institutional reading list from the browser. The plugin creates a **new top-level collection** named after the list, turns sections into classes, and maps importance tags (essential / required / recommended / optional, and similar labels) onto syllabus priorities. While saving, it tries each View online / file link in your signed-in browser session and stores any PDFs or EPUBs it can actually download. Remaining items are then looked up the same way **Find Available PDFs** does.
+
+This needs **Zotero 8 or later**. You must already be able to view the list in the browser (including SSO-gated lists). After you save, switch the new collection to **View as Syllabus**.
+
+How to import:
+
+1. Install this plugin and the Zotero Connector (Chrome, Firefox, or Edge).
+2. Open a supported list in the browser and wait until the readings are visible.
+3. Click the Connector button and save the page (choose all items if prompted).
+4. In Zotero, open the new top-level collection and switch to syllabus view.
+
+#### Supported platforms
+
+| Platform | When Connector save works | Notes |
+| --- | --- | --- |
+| **[Talis Aspire](https://www.talis.com)** | List pages on `rl.talis.com` (and a few institutional Talis hosts such as Lincoln and Surrey) whose URL contains `/lists/` | Public lists work without login. Single-item `/items/` pages can also be saved. |
+| **[Ex Libris Leganto](https://exlibrisgroup.com/products/leganto-reading-list-management-system/)** | Pages under `/leganto/` or `*.leganto.exlibrisgroup.com`, typically `/leganto/nui/lists/{id}` | Guest-published lists can be saved without signing in. Institution SSO is required when the list is not shared with “Anyone”. |
+| **[KeyLinks](https://kortext.com/keylinks/)** | `*.keylinks.org` list URLs (`/list/{id}` or `/new-ui/hierarchy/list/{id}`) | Uses the list JSON API. CLA / digitised files and full-text links are downloaded when your browser session can fetch them. Notes are skipped. |
+| **[eReserve Plus](https://www.ereserve.com.au/)** | `ereserve` hosts, `/app/public_lists`, or an LMS LTI reading-list launch | Full import (including files) is most reliable from the **signed-in** student / LMS reading-list view. Public list pages are still useful for browsing and for Connector detection. |
+| **[BLUEcloud Course Lists](https://www.sirsidynix.com/bluecloud-course-lists/)** (SirsiDynix / CloudSource) | Student-view pages whose URL contains `courselists`, `bccl`, or `bluecloudlists`, or whose title is “BLUEcloud Course Lists” | Almost always embedded in Canvas, Blackboard, or Moodle via LTI. Open the list from the LMS; there is no widely published public permalink. |
+
+Live example lists for developers (and anyone who wants to smoke-test without an LMS login) are in [Connector test URLs](#connector-test-urls).
+
 ### Other features
 
 - **Assign an item multiple times** within a syllabus. Useful for breaking down larger readings into smaller chunks.
-- **Print to PDF** — as of right now it gives you a printable HTML page as a file, which you can open in a browser and print to PDF.
+- **Print to PDF** — the printer icon asks where to save a PDF of the syllabus, including a bibliography.
 - **Zotero Reading List compatibility**: if you have the [Zotero Reading List](https://github.com/Dominic-DallOsto/zotero-reading-list) plugin installed, reading status will be displayed in the syllabus view
 - **Customizable priorities** — Define your own priority levels with custom names and colors, or use the defaults (Essential, Recommended, Optional, Course Information).
 - **Customizable nomenclature** — Change the terminology used throughout (e.g., "week", "class", "session", "section") with automatic pluralization.
-- **Import from Talis Aspire or Leganto** — With the [Zotero Connector](https://www.zotero.org/download/connectors) installed, open a Talis or Ex Libris Leganto reading list in your browser and save it. The plugin creates a new top-level collection (named after the list) and puts the imported items there. During import it tries each View online / file link in your signed-in browser session and stores any PDFs or EPUBs it can actually download (instead of only linking the URL). It then also looks up remaining files the same way **Find Available PDFs** does. Sections become classes and importance tags become priorities. You must already be able to view the list in the browser (including SSO-gated lists).
 
 ## Development
 
@@ -199,6 +223,34 @@ Run the plugin in development mode:
 ```bash
 pnpm start
 ```
+
+### Reading-list connectors (developers)
+
+On startup (Zotero 8+), the plugin installs Connector translators from `addon/content/translators/` via `src/utils/translator.ts` (`Zotero.Translators.save`, priority 320, type 4). Saving a list POSTs syllabus JSON to `/syllabus/setTalisMetadata` (alias `/syllabus/setReadingListMetadata`) and any downloaded files to `/syllabus/stashReadingListFile`. Items are tagged with `libraryCatalog` (`Talis Aspire`, `Ex Libris Leganto`, `KeyLinks`, `eReserve Plus`, or `BLUEcloud Course Lists`) plus Extra `syllabus: {…}`. `absorbSyllabusExtraFromItems` then moves them into a **new top-level collection** and attaches stashed PDFs/EPUBs before **Find Available PDFs**.
+
+| Translator file | `libraryCatalog` |
+| --- | --- |
+| `tails-aspire-custom.js` | `Talis Aspire` |
+| `leganto-custom.js` | `Ex Libris Leganto` |
+| `keylinks-custom.js` | `KeyLinks` |
+| `ereserve-plus-custom.js` | `eReserve Plus` |
+| `bluecloud-course-lists-custom.js` | `BLUEcloud Course Lists` |
+
+Gated by `FEATURE_FLAG.TALIS_METADATA` in `src/modules/featureFlags.ts`. End-user behaviour is in [Import a reading list](#import-a-reading-list).
+
+### Connector test URLs
+
+With the [Zotero Connector](https://www.zotero.org/download/connectors) installed and this plugin loaded (`pnpm start`), open a list below in the browser and save it. You must already be able to view the list (including SSO-gated lists). These are live public/guest examples last checked in August 2026 — institutions can unpublish lists at any time.
+
+| Platform | Test list |
+| --- | --- |
+| Talis Aspire | [CPAS0167: Teacher as Author (UCL)](https://rl.talis.com/3/ucl/lists/38afa403-9ebf-4dbe-86b0-a80e564f9777.html) |
+| Leganto | [PI3084: Research Methods in Politics and International Relations (Aberdeen)](https://abdn.leganto.exlibrisgroup.com/leganto/nui/lists/13848239600005941) |
+| KeyLinks | [MDX1234 Example Reading List](https://mdx.keylinks.org/new-ui/hierarchy/list/8875) |
+| eReserve Plus | [MHC6100 Blueprint (Edith Cowan)](https://ereserve.ecu.edu.au/app/public_lists#/unit/4955/list/15619) |
+| BLUEcloud Course Lists | No public student permalink found. Lists are almost always embedded in Canvas, Blackboard, or Moodle via LTI. Open a Course Lists **student view** in an LMS you have access to — the URL typically contains `courselists`, `bccl`, or `bluecloudlists`. Product overview: [CloudSource Course Lists](https://www.cloudsource.net/course-lists/). |
+
+eReserve Plus file download is most reliable from the signed-in LMS/student reading-list view (not only the public Vue page). Leganto’s public catalogue is also a useful entry point: [Aberdeen Find Lists](https://abdn.leganto.exlibrisgroup.com/leganto/public/44ABE_INST/searchlists).
 
 ### Build
 
@@ -320,7 +372,7 @@ Prefix: `extensions.zotero.syllabus`.
 
 ### Item Extra (legacy absorb)
 
-Older builds stored assignments in the item Extra field (`syllabus: {…}`). On item add/modify, `absorbSyllabusExtraFromItems` copies Extra into the collection named by Extra (for Talis/Leganto, a new top-level collection), moves the item there if the Connector saved it elsewhere, and clears Extra. Absorb is skipped for class folders so a child collection never gets its own syllabus note and folder membership cannot write back to the parent document.
+Older builds stored assignments in the item Extra field (`syllabus: {…}`). On item add/modify, `absorbSyllabusExtraFromItems` copies Extra into the collection named by Extra (for reading-list import, a new top-level collection), moves the item there if the Connector saved it elsewhere, and clears Extra. Absorb is skipped for class folders so a child collection never gets its own syllabus note and folder membership cannot write back to the parent document.
 
 ### Class subcollections
 
@@ -343,14 +395,14 @@ Class-folder Syllabus view is a single-class page (same class renderer as the Re
 - Do not call `getNote()` from render/hot paths; use the document cache.
 - The plugin sandbox often has no `structuredClone`; clone documents with JSON.
 - Do not call `mutateCollectionDocument` from inside a class-folder ensure that already runs inside a write (deadlock on the per-collection write queue). Folder create/rename runs in the same write as the note persist; item membership runs after.
-- Do not absorb Extra, or create a syllabus note, on a collection whose parent already has a syllabus. Reading-list import (Talis/Leganto) creates a new top-level collection instead.
+- Do not absorb Extra, or create a syllabus note, on a collection whose parent already has a syllabus. Reading-list import (Talis, Leganto, KeyLinks, eReserve Plus, BLUEcloud) creates a new top-level collection instead.
 
 ## Acknowledgements
 
 Thanks to the following:
 
 - The authors of all syllabi everywhere — [Teacher As Author](https://rl.talis.com/3/ucl/lists/38afa403-9ebf-4dbe-86b0-a80e564f9777.html) — including the project author's own lecturers (Community Education faculty at UWS; the Politics department at SOAS), and those who teach outside formal academic institutions.
-- Academic institutions for sharing their syllabi, and platforms such as [Talis](https://www.talis.com) and [Ex Libris Leganto](https://exlibrisgroup.com/products/leganto-reading-list-management-system/) that make it possible to download this data easily.
+- Academic institutions for sharing their syllabi, and platforms such as [Talis](https://www.talis.com), [Ex Libris Leganto](https://exlibrisgroup.com/products/leganto-reading-list-management-system/), [KeyLinks](https://kortext.com/keylinks/), [eReserve Plus](https://www.ereserve.com.au/), and [BLUEcloud Course Lists](https://www.sirsidynix.com/bluecloud-course-lists/) that make it possible to download this data easily.
 - The [RIS](<https://en.wikipedia.org/wiki/RIS_(file_format)>) (Research Information Systems) format, which makes bibliographic records portable between tools.
 - [Zotero](https://www.zotero.org)'s developers, for building an open platform, and for recent developments that have opened plugin development to contemporary web technologies.
 - The Zotero plugin toolkit community, including [zotero-plugin-template](https://github.com/windingwind/zotero-plugin-template) and [zotero-plugin-toolkit](https://github.com/windingwind/zotero-plugin-toolkit).
