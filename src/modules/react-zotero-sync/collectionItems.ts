@@ -237,8 +237,9 @@ export function createCollectionItemsStore(
     const unsubscribeDocuments =
       subscribeToSyllabusDocumentChanges(onStoreChange);
 
-    let prefObserverID: ReturnType<typeof Zotero.Prefs.registerObserver> | null =
-      null;
+    let prefObserverID: ReturnType<
+      typeof Zotero.Prefs.registerObserver
+    > | null = null;
     if (recursiveMode === "pref") {
       prefObserverID = Zotero.Prefs.registerObserver(
         "recursiveCollections",

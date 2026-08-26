@@ -26,6 +26,9 @@ declare const Components: {
   };
   interfaces: {
     nsIFilePicker: any;
+    nsIZipReader: any;
+    nsIScriptableInputStream: any;
+    nsIBinaryInputStream: any;
   };
   utils: {
     isDeadWrapper: (obj: any) => boolean;
