@@ -51,6 +51,11 @@ prefs-table-detail = 详情
 tabpanel-lib-tab-label = 库标签
 tabpanel-reader-tab-label = 阅读器标签
 menu-toggle-bibliography = 切换参考文献
+managed-folder-banner-title = 由插件管理的文件夹
+managed-folder-banner-class =
+    请勿在此添加或移除条目。此课堂文件夹会与教学大纲同步，手动更改会被覆盖。
+managed-folder-banner-schedule =
+    请勿在此添加或移除条目。此阅读日程文件夹会与各教学大纲同步，手动更改会被覆盖。
 menuHelp-openUserGuide = 打开 Zotero Syllabus 用户指南
 userGuide-start-title = 欢迎使用 Zotero Syllabus
 userGuide-start-desc =

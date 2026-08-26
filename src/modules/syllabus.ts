@@ -74,6 +74,10 @@ import {
   unpatchManagedCollectionTreePrototype,
   unregisterCustomIconsPrefObserver,
 } from "./managedCollectionTree";
+import {
+  removeManagedCollectionBanner,
+  updateManagedCollectionBanner,
+} from "./managedCollectionBanner";
 
 enum SyllabusSettingsKey {
   COLLECTION_VIEW_MODES = "collectionViewModes",
@@ -486,6 +490,7 @@ export class SyllabusManager {
   static onMainWindowUnload(win: _ZoteroTypes.MainWindow) {
     ztoolkit.log("SyllabusManager.onMainWindowUnload", win);
     unpatchManagedCollectionTree(win);
+    removeManagedCollectionBanner(win);
     this.unpatchReadingScheduleTabBar(win);
     this.setupUI();
     this.cleanupSyllabusViewTabListener();
@@ -501,6 +506,7 @@ export class SyllabusManager {
     for (const mainWindow of Zotero.getMainWindows() as _ZoteroTypes.MainWindow[]) {
       this.unpatchReadingScheduleTabBar(mainWindow);
       unpatchManagedCollectionTree(mainWindow);
+      removeManagedCollectionBanner(mainWindow);
     }
     unpatchManagedCollectionTreePrototype();
     shutdownSyllabusNotes();
@@ -707,12 +713,12 @@ export class SyllabusManager {
       mode: CollectionViewMode;
       label?: string;
       tooltip: string;
-      icon?: "book" | "tag" | "folder";
+      icon?: "unfiled" | "tag" | "folder";
     }[] = [
       {
         mode: "collection",
         tooltip: "View as Items",
-        icon: "book",
+        icon: "unfiled",
       },
       { mode: "tags", tooltip: "View as Tags", icon: "tag" },
       {
@@ -1019,6 +1025,11 @@ export class SyllabusManager {
           }
         }
       }
+
+      updateManagedCollectionBanner(w, {
+        collectionId: selectedCollection?.id ?? null,
+        itemsListVisible: !shouldShowCustomView,
+      });
     } catch (e) {
       ztoolkit.log("Error in setupPage:", e);
     }

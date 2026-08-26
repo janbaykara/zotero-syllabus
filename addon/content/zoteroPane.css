@@ -17,8 +17,8 @@
   padding-right: 8px !important;
 }
 
-.syllabus-view-mode-button[data-icon="book"] {
-  list-style-image: url("chrome://zotero/skin/16/universal/book.svg");
+.syllabus-view-mode-button[data-icon="unfiled"] {
+  list-style-image: url("chrome://zotero/skin/16/universal/unfiled.svg");
 }
 
 .syllabus-view-mode-button[data-icon="tag"] {
@@ -138,4 +138,48 @@
   padding-right: 8px !important;
   border: 0.5px solid var(--fill-secondary);
   margin-inline-start: 4px;
+}
+
+.syllabus-managed-folder-banner {
+  -moz-box-flex: 0;
+}
+
+.syllabus-managed-folder-banner[hidden] {
+  display: none !important;
+}
+
+.syllabus-managed-folder-banner-inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--fill-primary, inherit);
+  background-color: color-mix(
+    in srgb,
+    #7b4ddb 12%,
+    var(--material-background, transparent)
+  );
+  border-bottom: 1px solid color-mix(in srgb, #7b4ddb 32%, transparent);
+}
+
+.syllabus-managed-folder-banner-icon {
+  flex: none;
+  margin-top: 1px;
+  color: #7b4ddb;
+}
+
+.syllabus-managed-folder-banner-text {
+  min-width: 0;
+}
+
+.syllabus-managed-folder-banner-title {
+  font-weight: 600;
+}
+
+.syllabus-managed-folder-banner-message {
+  color: var(--fill-secondary, inherit);
 }

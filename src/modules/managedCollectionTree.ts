@@ -1,5 +1,6 @@
 import { getPrefKey, getPrefValue } from "../utils/prefs";
 import { getCollectionTreeKind } from "./autoManagedCollection";
+import { refreshManagedCollectionBanner } from "./managedCollectionBanner";
 
 const ICON_BY_KIND = {
   "reading-schedule-root": "calendar",
@@ -253,6 +254,9 @@ export function unpatchManagedCollectionTreePrototype(): void {
 
 /** Re-render tree rows so managed icons apply after folders are remembered. */
 export function refreshManagedCollectionTrees(): void {
+  for (const win of Zotero.getMainWindows() as _ZoteroTypes.MainWindow[]) {
+    refreshManagedCollectionBanner(win);
+  }
   if (!areCustomIconsEnabled()) {
     return;
   }
