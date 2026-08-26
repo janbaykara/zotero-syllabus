@@ -5,12 +5,13 @@ import {
   type ItemSyllabusAssignment,
   type ItemSyllabusData,
 } from "../utils/schemas";
-import { getCachedCollectionById } from "../utils/cache";
+import { getCachedCollectionByKey } from "../utils/cache";
+import { attachStashedReadingListFiles } from "./readingListFileStash";
 import {
   SYLLABUS_EXTRA_KEY,
   collectionRefFromCollection,
+  getClassSubcollectionContext,
   mergeItemAssignmentsInDocument,
-  resolveSyllabusRoot,
 } from "./syllabusNote";
 
 const extraFieldTool = new ExtraFieldTool();
@@ -19,16 +20,60 @@ function pickAssignmentsFromExtra(
   extraData: ItemSyllabusData,
   collection: Zotero.Collection,
 ): ItemSyllabusAssignment[] | null {
-  const ref = collectionRefFromCollection(collection);
-  if (extraData[ref]?.length) {
-    return extraData[ref];
+  const assignments = extraData[collectionRefFromCollection(collection)];
+  return Array.isArray(assignments) && assignments.length ? assignments : null;
+}
+
+function collectionFromExtraRef(ref: string): Zotero.Collection | undefined {
+  const idx = ref.indexOf(":");
+  if (idx <= 0) {
+    return undefined;
   }
-  const keys = Object.keys(extraData);
-  if (keys.length === 0) {
-    return null;
+  const libraryID = Number(ref.slice(0, idx));
+  const key = ref.slice(idx + 1);
+  if (!Number.isInteger(libraryID) || !key) {
+    return undefined;
   }
-  const first = extraData[keys[0]];
-  return Array.isArray(first) && first.length ? first : null;
+  return getCachedCollectionByKey(libraryID, key);
+}
+
+/** Class folders inherit a parent note; do not absorb Extra into them. */
+function isSyllabusAbsorbTarget(collection: Zotero.Collection): boolean {
+  return getClassSubcollectionContext(collection) == null;
+}
+
+function moveItemIntoCollection(
+  item: Zotero.Item,
+  destination: Zotero.Collection,
+): void {
+  const currentIds = item.getCollections();
+  if (!currentIds.includes(destination.id)) {
+    item.addToCollection(destination.id);
+  }
+  for (const collectionId of currentIds) {
+    if (collectionId !== destination.id) {
+      item.removeFromCollection(collectionId);
+    }
+  }
+}
+
+function extraDestinationCollections(
+  extraData: ItemSyllabusData,
+): Zotero.Collection[] {
+  const destinations: Zotero.Collection[] = [];
+  const seen = new Set<number>();
+  for (const ref of Object.keys(extraData)) {
+    const collection = collectionFromExtraRef(ref);
+    if (!collection || seen.has(collection.id)) {
+      continue;
+    }
+    if (!isSyllabusAbsorbTarget(collection)) {
+      continue;
+    }
+    seen.add(collection.id);
+    destinations.push(collection);
+  }
+  return destinations;
 }
 
 function readSyllabusExtra(item: Zotero.Item): ItemSyllabusData | null {
@@ -61,6 +106,24 @@ async function clearSyllabusExtra(item: Zotero.Item): Promise<void> {
   await extraFieldTool.replaceExtraFields(item, fields);
 }
 
+function citationIdsFromExtra(extraData: ItemSyllabusData): string[] {
+  const ids: string[] = [];
+  for (const assignments of Object.values(extraData)) {
+    if (!Array.isArray(assignments)) {
+      continue;
+    }
+    for (const assignment of assignments) {
+      const id = String(assignment.id || "");
+      if (id.startsWith("assignment-")) {
+        ids.push(id.slice("assignment-".length));
+      } else if (id) {
+        ids.push(id);
+      }
+    }
+  }
+  return ids;
+}
+
 function stripAssignmentStatus(
   assignments: ItemSyllabusAssignment[],
 ): ItemSyllabusAssignment[] {
@@ -75,6 +138,89 @@ function stripAssignmentStatus(
   });
 }
 
+const READING_LIST_CATALOGS = new Set(["Ex Libris Leganto", "Talis Aspire"]);
+const FILE_LOOKUP_DEBOUNCE_MS = 2500;
+const pendingFileLookupIds = new Set<number>();
+let fileLookupTimer: ReturnType<typeof setTimeout> | null = null;
+
+function isReadingListCatalogItem(item: Zotero.Item): boolean {
+  try {
+    return READING_LIST_CATALOGS.has(
+      String(item.getField("libraryCatalog") || ""),
+    );
+  } catch {
+    return false;
+  }
+}
+
+function itemAlreadyHasFile(item: Zotero.Item): boolean {
+  for (const attId of item.getAttachments()) {
+    const att = Zotero.Items.get(attId);
+    if (att?.isPDFAttachment?.() || att?.isEPUBAttachment?.()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function queueAvailableFileLookup(items: Zotero.Item[]): void {
+  for (const item of items) {
+    if (
+      !item?.id ||
+      !isReadingListCatalogItem(item) ||
+      itemAlreadyHasFile(item)
+    ) {
+      continue;
+    }
+    pendingFileLookupIds.add(item.id);
+  }
+  if (!pendingFileLookupIds.size) {
+    return;
+  }
+  if (fileLookupTimer) {
+    clearTimeout(fileLookupTimer);
+  }
+  fileLookupTimer = setTimeout(() => {
+    fileLookupTimer = null;
+    void lookupQueuedAvailableFiles();
+  }, FILE_LOOKUP_DEBOUNCE_MS);
+}
+
+async function lookupQueuedAvailableFiles(): Promise<void> {
+  const ids = Array.from(pendingFileLookupIds);
+  pendingFileLookupIds.clear();
+  const items = ids
+    .map((id) => Zotero.Items.get(id))
+    .filter((item): item is Zotero.Item =>
+      Boolean(item?.isRegularItem?.() && !itemAlreadyHasFile(item)),
+    );
+  if (!items.length) {
+    return;
+  }
+  const attachments = Zotero.Attachments as {
+    addAvailableFiles?: (items: Zotero.Item[]) => Promise<void>;
+    addAvailablePDFs?: (items: Zotero.Item[]) => Promise<void>;
+  };
+  const lookup = attachments.addAvailableFiles || attachments.addAvailablePDFs;
+  if (typeof lookup !== "function") {
+    ztoolkit.log(
+      "Zotero.Attachments.addAvailableFiles is not available; skipping file lookup",
+    );
+    return;
+  }
+  ztoolkit.log("Looking up available files for reading-list import", {
+    count: items.length,
+  });
+  try {
+    await lookup.call(Zotero.Attachments, items);
+  } catch (error) {
+    ztoolkit.log(
+      "Error looking up available files after reading-list import:",
+      error,
+    );
+  }
+}
+
 export async function absorbSyllabusExtraFromItems(
   items: Zotero.Item[],
 ): Promise<void> {
@@ -86,6 +232,7 @@ export async function absorbSyllabusExtraFromItems(
     }
   >();
   const toClear: Zotero.Item[] = [];
+  const pendingFiles: Array<{ item: Zotero.Item; citationIds: string[] }> = [];
 
   for (const item of items) {
     if (!item?.isRegularItem()) {
@@ -96,16 +243,16 @@ export async function absorbSyllabusExtraFromItems(
       continue;
     }
 
-    const collectionIds = item.getCollections();
+    const destinations = extraDestinationCollections(extraData);
+    if (destinations.length === 0) {
+      continue;
+    }
+    for (const destination of destinations) {
+      moveItemIntoCollection(item, destination);
+    }
+
     let absorbed = false;
-    for (const collectionId of collectionIds) {
-      const collection = getCachedCollectionById(collectionId);
-      if (!collection) {
-        continue;
-      }
-      if (resolveSyllabusRoot(collection).id !== collection.id) {
-        continue;
-      }
+    for (const collection of destinations) {
       const assignments = pickAssignmentsFromExtra(extraData, collection);
       if (!assignments) {
         continue;
@@ -121,13 +268,31 @@ export async function absorbSyllabusExtraFromItems(
 
     if (absorbed) {
       toClear.push(item);
+      pendingFiles.push({
+        item,
+        citationIds: citationIdsFromExtra(extraData),
+      });
     }
   }
 
   for (const { collection, updates } of byCollection.values()) {
     await mergeItemAssignmentsInDocument(collection, updates);
   }
+  const queuedIds = new Set(pendingFiles.map((entry) => entry.item.id));
+  for (const item of items) {
+    if (!item?.isRegularItem() || queuedIds.has(item.id)) {
+      continue;
+    }
+    if (!isReadingListCatalogItem(item)) {
+      continue;
+    }
+    pendingFiles.push({ item, citationIds: [] });
+  }
+  for (const { item, citationIds } of pendingFiles) {
+    await attachStashedReadingListFiles(item, citationIds);
+  }
   for (const item of toClear) {
     await clearSyllabusExtra(item);
   }
+  queueAvailableFileLookup(toClear);
 }

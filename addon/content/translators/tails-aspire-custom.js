@@ -92,6 +92,8 @@ function detectWeb(doc, url) {
  * }
  */
 var itemPriorities = {};
+/** listUrl -> item UUID -> http(s) URLs from Talis default_online_resource / uploads */
+var itemOnlineUrls = {};
 
 /**
  * Return a dictionary of item UUIDs and titles from the search results.
@@ -167,6 +169,8 @@ async function getSearchResults(doc, url) {
               // Fallback: use a placeholder if no resource title found
               safeLog("TALIS-ASPIRE-CUSTOM: No title found for item", itemId);
             }
+
+            rememberItemOnlineUrls(url, item, tailsItemsData.included);
           }
         }
 
@@ -202,10 +206,10 @@ async function doWeb(doc, url) {
     // safeLog("TALIS-ASPIRE-CUSTOM: getSearchResults items", items);
     const requestedItems = await Zotero.selectItems(items);
     if (requestedItems && Object.keys(requestedItems).length > 0) {
-      await scrape(url, Object.keys(requestedItems));
+      await scrape(url, Object.keys(requestedItems), doc);
     }
   } else {
-    await scrape(url, [extractSlug(url)]);
+    await scrape(url, [extractSlug(url)], doc);
   }
 
   return Zotero.done();
@@ -239,8 +243,15 @@ var RIS_TRANSLATOR_ID = "32d59d2d-b65a-4da4-b0a3-bdd3cfb979e7";
 /**
  * Extracts RIS data from the URL and scrapes it using the RIS translator.
  */
-async function scrape(syllabusURL, selectedUUIDs) {
+async function scrape(syllabusURL, selectedUUIDs, doc) {
   safeLog("TALIS-ASPIRE-CUSTOM: scraping ", selectedUUIDs.length, " items");
+  if (doc && !itemOnlineUrls[syllabusURL]) {
+    try {
+      await getSearchResults(doc, syllabusURL);
+    } catch (error) {
+      safeLog("TALIS-ASPIRE-CUSTOM: item URL prefetch failed", error);
+    }
+  }
   var metadata = await constructExportSyllabusMetadataFromTalisAPI(syllabusURL);
   // Extract itemSectionTitles before sending to Zotero (it will be stripped by schema validation)
   var itemSectionTitles = metadata._itemSectionTitles || {};
@@ -253,7 +264,16 @@ async function scrape(syllabusURL, selectedUUIDs) {
     selectedUUIDs.map(async (uuid) => {
       try {
         var url = getRISURL(syllabusURL, uuid);
-        var { body: ris } = await ZU.request(url, { responseType: "text" });
+        var risPromise = ZU.request(url, { responseType: "text" });
+        await stashTalisOnlineFiles(
+          uuid,
+          (itemOnlineUrls[syllabusURL] &&
+            (itemOnlineUrls[syllabusURL][uuid] ||
+              itemOnlineUrls[syllabusURL][String(uuid).toLowerCase()] ||
+              itemOnlineUrls[syllabusURL][String(uuid).toUpperCase()])) ||
+            [],
+        );
+        var { body: ris } = await risPromise;
         var classInstruction = getValueFromRIS(ris, "N1") || undefined;
 
         // Import to Zotero
@@ -308,10 +328,7 @@ async function scrape(syllabusURL, selectedUUIDs) {
           }
 
           // safeLog("TALIS-ASPIRE-CUSTOM: got classNumber and priority for item:", { uuid: uuid, classNumber, priority });
-          if (classNumber) {
-            // safeLog("TALIS-ASPIRE-CUSTOM: got classNumber for item:", uuid, classNumber);
-            // Set reading assignment.
-            // One day — merge duplicate items and create multiple assignments with reading instructions instead
+          if (syllabusResponse.collectionAndLibraryKey) {
             var itemSyllabusData = {
               [syllabusResponse.collectionAndLibraryKey]: [
                 {
@@ -322,12 +339,11 @@ async function scrape(syllabusURL, selectedUUIDs) {
                 },
               ],
             };
-            // (M2 is the RIS code that Zotero expects for the `extra` field: https://github.com/zotero/translators/blob/9937224d4a24ccb98ca92a3d8a3683ad3e331199/RIS.js#L476C2-L476C4)
-            // ris = addRowToRIS(ris, 'M2', `syllabus:${JSON.stringify(extraField)}`);
-            // safeLog("TALIS-ASPIRE-CUSTOM: got extraField for item:", uuid, extraField);
             item.extra = `syllabus: ${JSON.stringify(itemSyllabusData)}`;
           }
 
+          item.libraryCatalog = "Talis Aspire";
+          attachTalisFiles(item, syllabusURL, uuid);
           item.complete();
           // safeLog("TALIS-ASPIRE-CUSTOM: itemDone", item);
         });
@@ -339,6 +355,354 @@ async function scrape(syllabusURL, selectedUUIDs) {
       }
     }),
   );
+}
+
+function cleanTalisUrl(url) {
+  if (!url || typeof url !== "string") {
+    return "";
+  }
+  return url.replace(/&amp;/g, "&").trim();
+}
+
+function isHttpUrl(value) {
+  return typeof value === "string" && /^https?:\/\//i.test(value.trim());
+}
+
+function looksLikeFileUrl(url) {
+  return /\.(pdf|epub|docx?|pptx?|txt)(\?|#|$)/i.test(url);
+}
+
+function isClaOrDigitizedUrl(url) {
+  return /contentstore\.cla\.co\.uk|\/link-shib\b|digitool|\/dcs\b/i.test(url);
+}
+
+function headerValue(headers, name) {
+  if (!headers) {
+    return "";
+  }
+  if (typeof headers === "string") {
+    var match = headers.match(new RegExp("^" + name + ":\\s*(.*)$", "im"));
+    return match ? match[1].trim() : "";
+  }
+  var lower = name.toLowerCase();
+  var keys = Object.keys(headers);
+  for (var i = 0; i < keys.length; i++) {
+    if (keys[i].toLowerCase() === lower) {
+      return String(headers[keys[i]] || "").trim();
+    }
+  }
+  return "";
+}
+
+function bytesFromResponseBody(body) {
+  if (!body) {
+    return null;
+  }
+  if (body instanceof ArrayBuffer) {
+    return new Uint8Array(body);
+  }
+  if (body.buffer instanceof ArrayBuffer) {
+    return new Uint8Array(body.buffer, body.byteOffset || 0, body.byteLength);
+  }
+  if (typeof body === "string") {
+    var bytes = new Uint8Array(body.length);
+    for (var i = 0; i < body.length; i++) {
+      bytes[i] = body.charCodeAt(i) & 0xff;
+    }
+    return bytes;
+  }
+  return null;
+}
+
+function looksLikePdfBytes(bytes) {
+  return (
+    bytes &&
+    bytes.length >= 4 &&
+    bytes[0] === 0x25 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x44 &&
+    bytes[3] === 0x46
+  );
+}
+
+function looksLikeHtmlBytes(bytes) {
+  if (!bytes || bytes.length < 5) {
+    return false;
+  }
+  var start = "";
+  var n = Math.min(bytes.length, 32);
+  for (var i = 0; i < n; i++) {
+    start += String.fromCharCode(bytes[i]);
+  }
+  start = start.replace(/^\uFEFF/, "").trim().toLowerCase();
+  return (
+    start.indexOf("<!") === 0 ||
+    start.indexOf("<html") === 0 ||
+    start.indexOf("<head") === 0
+  );
+}
+
+function bytesToBase64(bytes) {
+  var binary = "";
+  var chunk = 0x8000;
+  for (var i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+function filenameFromUrl(url, ext) {
+  try {
+    var path = new URL(url).pathname.split("/").pop() || "";
+    if (/\.(pdf|epub)$/i.test(path)) {
+      return path;
+    }
+  } catch (e) {
+    // Fall through to a generated name.
+  }
+  return "reading." + ext;
+}
+
+async function tryDownloadFile(url, hop, seen) {
+  hop = hop || 0;
+  seen = seen || {};
+  if (hop > 6 || seen[url]) {
+    return null;
+  }
+  seen[url] = true;
+  try {
+    var response = await ZU.request(url, {
+      headers: {
+        Accept:
+          "application/pdf,application/epub+zip,application/octet-stream,text/html,*/*",
+      },
+      timeout: 20000,
+      responseType: "arraybuffer",
+    });
+    var status = response && response.status;
+    if (status && status >= 400) {
+      return null;
+    }
+    var headers = response && (response.headers || response.responseHeaders);
+    var contentType = headerValue(headers, "content-type").toLowerCase();
+    var bytes = bytesFromResponseBody(response && response.body);
+    if (!bytes || bytes.length < 5) {
+      return null;
+    }
+    if (looksLikePdfBytes(bytes) || /pdf/i.test(contentType)) {
+      return {
+        bytes: bytes,
+        contentType: "application/pdf",
+        filename: filenameFromUrl(url, "pdf"),
+      };
+    }
+    if (/epub/i.test(contentType)) {
+      return {
+        bytes: bytes,
+        contentType: "application/epub+zip",
+        filename: filenameFromUrl(url, "epub"),
+      };
+    }
+    var html =
+      looksLikeHtmlBytes(bytes) ||
+      /text\/html|application\/xhtml|application\/json|text\/plain/.test(
+        contentType,
+      )
+        ? (function () {
+            var slice = bytes.length > 200000 ? bytes.subarray(0, 200000) : bytes;
+            try {
+              return new TextDecoder("utf-8").decode(slice);
+            } catch (e) {
+              var text = "";
+              for (var i = 0; i < slice.length; i++) {
+                text += String.fromCharCode(slice[i]);
+              }
+              return text;
+            }
+          })()
+        : "";
+    if (!html) {
+      return null;
+    }
+    var unescapeAttr = function (value) {
+      return String(value || "")
+        .replace(/&amp;/g, "&")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'");
+    };
+    var addUrl = function (into, raw) {
+      if (!raw) {
+        return;
+      }
+      var abs;
+      try {
+        abs = new URL(unescapeAttr(String(raw).trim()), url).href;
+      } catch (e) {
+        return;
+      }
+      if (
+        !isHttpUrl(abs) ||
+        into.indexOf(abs) !== -1 ||
+        (/\/login\b|saml|oauth|microsoftonline/i.test(abs) &&
+          !isClaOrDigitizedUrl(abs))
+      ) {
+        return;
+      }
+      into.push(abs);
+    };
+    var nextUrls = [];
+    var metaRefresh =
+      html.match(
+        /http-equiv\s*=\s*["']?refresh["'][^>]*content\s*=\s*["']?\s*\d*\s*;\s*url\s*=\s*([^"'>\s]+)/i,
+      ) ||
+      html.match(
+        /content\s*=\s*["']?\s*\d+\s*;\s*url\s*=\s*([^"'>]+)["'][^>]*http-equiv\s*=\s*["']?refresh/i,
+      );
+    if (metaRefresh) {
+      addUrl(nextUrls, metaRefresh[1]);
+    }
+    var locRe =
+      /(?:window\.)?location(?:\.href|\.replace)?\s*=\s*["']([^"']+)["']/gi;
+    var locMatch;
+    while ((locMatch = locRe.exec(html))) {
+      addUrl(nextUrls, locMatch[1]);
+    }
+    var replaceRe = /location\.(?:replace|assign)\(\s*["']([^"']+)["']/gi;
+    while ((locMatch = replaceRe.exec(html))) {
+      addUrl(nextUrls, locMatch[1]);
+    }
+    var iframeRe =
+      /<(?:iframe|embed|object)[^>]+(?:src|data)\s*=\s*["']([^"']+)["']/gi;
+    while ((locMatch = iframeRe.exec(html))) {
+      addUrl(nextUrls, locMatch[1]);
+    }
+    var refreshHeader = headerValue(headers, "refresh");
+    if (refreshHeader) {
+      var refreshUrl = refreshHeader.match(/url\s*=\s*([^\s;]+)/i);
+      if (refreshUrl) {
+        addUrl(nextUrls, refreshUrl[1]);
+      }
+    }
+    if (nextUrls.length) {
+      safeLog("TALIS-ASPIRE-CUSTOM: following redirect", url, "->", nextUrls[0]);
+    }
+    for (var n = 0; n < nextUrls.length; n++) {
+      var file = await tryDownloadFile(nextUrls[n], hop + 1, seen);
+      if (file) {
+        return file;
+      }
+    }
+    return null;
+  } catch (error) {
+    safeLog("TALIS-ASPIRE-CUSTOM: download failed", url, error);
+    return null;
+  }
+}
+
+function rankTalisDownloadUrl(url) {
+  if (looksLikeFileUrl(url) || /\/(file|files|download|pdf)\b/i.test(url)) {
+    return 0;
+  }
+  if (/doi\.org\//i.test(url)) {
+    return 3;
+  }
+  if (isResolverUrl(url)) {
+    return 4;
+  }
+  return 1;
+}
+
+async function stashTalisOnlineFiles(citationId, urls) {
+  var ranked = (urls || []).slice().sort(function (left, right) {
+    return rankTalisDownloadUrl(left) - rankTalisDownloadUrl(right);
+  }).slice(0, 10);
+  var stored = 0;
+  for (var i = 0; i < ranked.length && stored < 3; i++) {
+    var file = await tryDownloadFile(ranked[i]);
+    if (!file) {
+      continue;
+    }
+    var stashed = await stashReadingListFile({
+      citationId: citationId,
+      title:
+        file.contentType.indexOf("epub") !== -1
+          ? "Full Text EPUB"
+          : "Full Text PDF",
+      contentType: file.contentType,
+      filename: file.filename,
+      data: bytesToBase64(file.bytes),
+    });
+    if (stashed) {
+      stored++;
+    }
+  }
+  return stored;
+}
+
+function includedById(included) {
+  var map = {};
+  if (!included) {
+    return map;
+  }
+  for (var i = 0; i < included.length; i++) {
+    if (included[i] && included[i].id) {
+      map[included[i].id] = included[i];
+    }
+  }
+  return map;
+}
+
+function pushUniqueUrl(urls, url) {
+  var cleaned = cleanTalisUrl(url);
+  if (!isHttpUrl(cleaned) || urls.indexOf(cleaned) !== -1) {
+    return;
+  }
+  urls.push(cleaned);
+}
+
+function rememberItemOnlineUrls(listUrl, item, included) {
+  if (!itemOnlineUrls[listUrl]) {
+    itemOnlineUrls[listUrl] = {};
+  }
+  var urls = itemOnlineUrls[listUrl][item.id] || [];
+  var online = item.meta && item.meta.default_online_resource;
+  if (online) {
+    pushUniqueUrl(urls, online.original_url);
+    pushUniqueUrl(urls, online.proxied_url);
+  }
+  var contentRef =
+    item.relationships &&
+    item.relationships.content &&
+    item.relationships.content.data;
+  if (contentRef && contentRef.id) {
+    var content = includedById(included)[contentRef.id];
+    if (content) {
+      if (content.links) {
+        pushUniqueUrl(urls, content.links.download || content.links.self);
+      }
+      if (content.attributes) {
+        pushUniqueUrl(urls, content.attributes.url || content.attributes.file_url);
+      }
+    }
+  }
+  itemOnlineUrls[listUrl][item.id] = urls;
+}
+
+function isResolverUrl(url) {
+  return /uresolver|\/link\?url=/i.test(url);
+}
+
+function attachTalisFiles(item, listUrl, uuid) {
+  var urls =
+    (itemOnlineUrls[listUrl] && itemOnlineUrls[listUrl][uuid]) || [];
+  if (!item.url) {
+    for (var j = 0; j < urls.length; j++) {
+      if (!isResolverUrl(urls[j])) {
+        item.url = urls[j];
+        break;
+      }
+    }
+  }
 }
 
 function uuidToAssignmentID(uuid) {
@@ -376,30 +740,39 @@ function getValueFromRIS(text, code) {
   return array[1].trim();
 }
 
-async function callZoteroClientEndpoint(endpoint, method, data) {
+async function postToZoteroLocal(endpoint, body) {
   var baseUrl = "http://127.0.0.1:23119";
   var url = `${baseUrl}${endpoint}`;
-
-  // Use POST with data in request body
-  var payload = data ? JSON.stringify({ metadata: data }) : null;
-  // TODO: Replace this with Zotero.Connector().callMethod(endpoint, data)
   var headers = {
-    // https://github.com/zotero/zotero/blob/47e6a0f7abaae0ad90c9f39c385fe24efd7071bf/chrome/content/zotero/xpcom/server/server.js#L411-L423
-    // https://github.com/zotero/zotero-connectors/blob/3a020fe77a275cc4c1ecf50df77f59ba665c012d/src/common/connector.js#L141-L145
     "X-Zotero-Version": Zotero.version,
     "X-Zotero-Connector-API-Version": 3,
     "Zotero-Allowed-Request": "1",
     "Content-Type": "application/json",
   };
-
-  var { body } = await ZU.request(url, {
+  var { body: responseBody } = await ZU.request(url, {
     method: "POST",
     headers: headers,
-    body: payload,
+    body: JSON.stringify(body),
   });
+  return responseBody;
+}
 
-  // safeLog("TALIS-ASPIRE-CUSTOM.callMethod.response", method);
-  return body;
+async function stashReadingListFile(payload) {
+  try {
+    var body = await postToZoteroLocal(
+      "/syllabus/stashReadingListFile",
+      payload,
+    );
+    var parsed = typeof body === "string" ? JSON.parse(body) : body;
+    return !!(parsed && parsed.ok);
+  } catch (error) {
+    safeLog("TALIS-ASPIRE-CUSTOM: stash POST failed", error);
+    return false;
+  }
+}
+
+async function callZoteroClientEndpoint(endpoint, method, data) {
+  return await postToZoteroLocal(endpoint, data ? { metadata: data } : {});
 }
 
 async function setTalisSyllabusMetadata({ _itemSectionTitles, ...metadata }) {
@@ -1013,7 +1386,7 @@ function getTalisItemAPIUrl(url, offset = null, limit = 200) {
   baseUrl.pathname = `${baseUrl.pathname}/items`;
   // ?include=content,importance,resource,resource.part_of&page%5Blimit%5D=200
   // Note: 'resource' is needed to get titles from the included resources
-  baseUrl.searchParams.set("include", "content,importance,resource.part_of");
+  baseUrl.searchParams.set("include", "content,importance,resource,resource.part_of");
   baseUrl.searchParams.set("page[limit]", String(limit));
   if (offset !== null) {
     baseUrl.searchParams.set("page[offset]", String(offset));

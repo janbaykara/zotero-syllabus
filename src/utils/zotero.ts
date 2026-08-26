@@ -24,6 +24,7 @@ export function isZotero8OrLater(): boolean {
 type ZoteroPaneSelection = {
   getSelectedCollections?: () => Zotero.Collection[] | false | null | undefined;
   getSelectedCollection?: () => Zotero.Collection | false | null | undefined;
+  getSelectedLibraryID?: () => number | false | null | undefined;
   collectionsView?: { selectByID: (id: string) => unknown } | false | null;
 };
 
@@ -81,6 +82,66 @@ export function selectZoteroCollection(collectionId: number): boolean {
     ztoolkit.log("Error selecting collection:", error);
     return false;
   }
+}
+
+const COLLECTION_NAME_MAX = 255;
+
+/** Library to create a reading-list import in: selected collection, else selected library, else My Library. */
+export function libraryIdForNewCollection(): number {
+  const selected = getSelectedCollection();
+  if (selected) {
+    return selected.libraryID;
+  }
+  try {
+    const pane = getZoteroPane();
+    const libraryID = pane?.getSelectedLibraryID?.();
+    if (typeof libraryID === "number" && libraryID > 0) {
+      return libraryID;
+    }
+  } catch {
+    // Fall through to the user library.
+  }
+  return Zotero.Libraries.userLibraryID;
+}
+
+function uniqueTopLevelCollectionName(
+  libraryID: number,
+  baseName: string,
+): string {
+  let base = baseName.trim() || "Imported reading list";
+  if (base.length > COLLECTION_NAME_MAX) {
+    base = base.slice(0, COLLECTION_NAME_MAX);
+  }
+  const existing = new Set(
+    Zotero.Collections.getByLibrary(libraryID)
+      .filter((collection) => !collection.parentID)
+      .map((collection) => collection.name),
+  );
+  if (!existing.has(base)) {
+    return base;
+  }
+  let n = 2;
+  while (true) {
+    const suffix = ` (${n})`;
+    const candidate = `${base.slice(0, COLLECTION_NAME_MAX - suffix.length)}${suffix}`;
+    if (!existing.has(candidate)) {
+      return candidate;
+    }
+    n++;
+  }
+}
+
+/** New top-level collection in `libraryID`, named from `baseName` with a numeric suffix if needed. */
+export async function createUniqueTopLevelCollection(
+  libraryID: number,
+  baseName: string,
+): Promise<Zotero.Collection> {
+  const collection = new Zotero.Collection({
+    name: uniqueTopLevelCollectionName(libraryID, baseName),
+    libraryID,
+  });
+  await collection.saveTx({ skipSelect: true });
+  return collection;
 }
 
 export function getAllCollections(recursive = true) {

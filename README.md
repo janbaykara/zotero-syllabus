@@ -151,6 +151,7 @@ Covers come from attached images, EPUB/PDF art, ISBN lookups, or type-specific p
 - **Zotero Reading List compatibility**: if you have the [Zotero Reading List](https://github.com/Dominic-DallOsto/zotero-reading-list) plugin installed, reading status will be displayed in the syllabus view
 - **Customizable priorities** — Define your own priority levels with custom names and colors, or use the defaults (Essential, Recommended, Optional, Course Information).
 - **Customizable nomenclature** — Change the terminology used throughout (e.g., "week", "class", "session", "section") with automatic pluralization.
+- **Import from Talis Aspire or Leganto** — With the [Zotero Connector](https://www.zotero.org/download/connectors) installed, open a Talis or Ex Libris Leganto reading list in your browser and save it. The plugin creates a new top-level collection (named after the list) and puts the imported items there. During import it tries each View online / file link in your signed-in browser session and stores any PDFs or EPUBs it can actually download (instead of only linking the URL). It then also looks up remaining files the same way **Find Available PDFs** does. Sections become classes and importance tags become priorities. You must already be able to view the list in the browser (including SSO-gated lists).
 
 ## Development
 
@@ -319,7 +320,7 @@ Prefix: `extensions.zotero.syllabus`.
 
 ### Item Extra (legacy absorb)
 
-Older builds stored assignments in the item Extra field (`syllabus: {…}`). On item add/modify, `absorbSyllabusExtraFromItems` copies Extra into the parent collection note and clears Extra. Absorb is skipped for class folders so a child collection never gets its own syllabus note and folder membership cannot write back to the parent document.
+Older builds stored assignments in the item Extra field (`syllabus: {…}`). On item add/modify, `absorbSyllabusExtraFromItems` copies Extra into the collection named by Extra (for Talis/Leganto, a new top-level collection), moves the item there if the Connector saved it elsewhere, and clears Extra. Absorb is skipped for class folders so a child collection never gets its own syllabus note and folder membership cannot write back to the parent document.
 
 ### Class subcollections
 
@@ -342,14 +343,14 @@ Class-folder Syllabus view is a single-class page (same class renderer as the Re
 - Do not call `getNote()` from render/hot paths; use the document cache.
 - The plugin sandbox often has no `structuredClone`; clone documents with JSON.
 - Do not call `mutateCollectionDocument` from inside a class-folder ensure that already runs inside a write (deadlock on the per-collection write queue). Folder create/rename runs in the same write as the note persist; item membership runs after.
-- Do not absorb Extra, or create a syllabus note, on a collection whose parent already has a syllabus.
+- Do not absorb Extra, or create a syllabus note, on a collection whose parent already has a syllabus. Reading-list import (Talis/Leganto) creates a new top-level collection instead.
 
 ## Acknowledgements
 
 Thanks to the following:
 
 - The authors of all syllabi everywhere — [Teacher As Author](https://rl.talis.com/3/ucl/lists/38afa403-9ebf-4dbe-86b0-a80e564f9777.html) — including the project author's own lecturers (Community Education faculty at UWS; the Politics department at SOAS), and those who teach outside formal academic institutions.
-- Academic institutions for sharing their syllabi, and platforms such as [Talis](https://www.talis.com) that make it possible to download this data easily.
+- Academic institutions for sharing their syllabi, and platforms such as [Talis](https://www.talis.com) and [Ex Libris Leganto](https://exlibrisgroup.com/products/leganto-reading-list-management-system/) that make it possible to download this data easily.
 - The [RIS](<https://en.wikipedia.org/wiki/RIS_(file_format)>) (Research Information Systems) format, which makes bibliographic records portable between tools.
 - [Zotero](https://www.zotero.org)'s developers, for building an open platform, and for recent developments that have opened plugin development to contemporary web technologies.
 - The Zotero plugin toolkit community, including [zotero-plugin-template](https://github.com/windingwind/zotero-plugin-template) and [zotero-plugin-toolkit](https://github.com/windingwind/zotero-plugin-toolkit).

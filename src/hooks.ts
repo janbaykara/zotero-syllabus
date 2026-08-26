@@ -3,13 +3,18 @@ import { initLocale } from "./utils/locale";
 import { registerPrefsScripts } from "./modules/preferenceScript";
 import { createZToolkit } from "./utils/ztoolkit";
 import { getCSSUrl } from "./utils/css";
-import { getSelectedCollection } from "./utils/zotero";
+import {
+  createUniqueTopLevelCollection,
+  libraryIdForNewCollection,
+  selectZoteroCollection,
+} from "./utils/zotero";
 import {
   ExportSyllabusMetadataSchema,
   SettingsSyllabusMetadata,
 } from "./utils/schemas";
 import { zoteroCache } from "./utils/cache";
 import { FEATURE_FLAG } from "./modules/featureFlags";
+import { stashReadingListFile } from "./modules/readingListFileStash";
 import { registerUserGuideHelpMenu, showUserGuide } from "./modules/userGuide";
 
 async function onStartup(rootURI: string) {
@@ -24,10 +29,10 @@ async function onStartup(rootURI: string) {
   // Initialize cache system
   zoteroCache.initialize();
 
-  // Install Talis Aspire translator
+  // Install Talis Aspire / Leganto translators
   SyllabusManager.onStartup(rootURI);
 
-  // Register HTTP endpoint for translator to set Talis syllabus metadata
+  // Register HTTP endpoint for translators to set reading-list syllabus metadata
   registerTalisMetadataEndpoint();
 
   // Signal ready before window chrome. The test runner waits only 10s for
@@ -45,17 +50,20 @@ async function onStartup(rootURI: string) {
 }
 
 /**
- * Register HTTP endpoint for translators to set Talis syllabus metadata
- * Endpoint: /syllabus/setTalisMetadata
+ * Register HTTP endpoint for translators to set Talis / Leganto syllabus metadata
+ * Endpoint: /syllabus/setTalisMetadata (alias: /syllabus/setReadingListMetadata)
  * Method: POST
- * Body: { collectionId: number, metadata: { description?, priorities?, nomenclature? } }
+ * Body: { metadata: ExportSyllabusMetadata }
  */
 function registerTalisMetadataEndpoint() {
-  // Only enable Talis features when feature flag is enabled
+  // Only enable reading-list import when feature flag is enabled
   if (!FEATURE_FLAG.TALIS_METADATA) {
-    ztoolkit.log("Talis HTTP endpoints skipped - feature flag disabled", {
-      version: Zotero.version,
-    });
+    ztoolkit.log(
+      "Reading-list HTTP endpoints skipped - feature flag disabled",
+      {
+        version: Zotero.version,
+      },
+    );
     return;
   }
 
@@ -145,29 +153,29 @@ function registerTalisMetadataEndpoint() {
 
         ztoolkit.log("Validated metadata:", validatedMetadataFileContents.data);
 
-        // Get the active collection ID
-        const collection = getSelectedCollection();
-        const collectionId = collection?.id;
-
-        if (!collectionId) {
-          ztoolkit.log("No collection selected");
-          return [
-            400,
-            "application/json",
-            JSON.stringify({ error: "No collection selected" }),
-          ];
-        }
+        const listTitle =
+          validatedMetadataFileContents.data.collectionTitle?.trim() ||
+          "Imported reading list";
+        const libraryID = libraryIdForNewCollection();
+        const destination = await createUniqueTopLevelCollection(
+          libraryID,
+          listTitle,
+        );
+        selectZoteroCollection(destination.id);
 
         ztoolkit.log(
-          "Setting Talis syllabus metadata for collection",
-          collectionId,
-          metadata,
+          "Setting reading-list syllabus metadata for top-level collection",
+          {
+            libraryID,
+            destinationId: destination.id,
+            name: destination.name,
+          },
         );
 
         try {
           const { collectionAndLibraryKey, syllabusData } =
             await SyllabusManager.importSyllabusMetadata(
-              collectionId,
+              destination.id,
               JSON.stringify(validatedMetadataFileContents.data),
               "background",
             );
@@ -206,7 +214,48 @@ function registerTalisMetadataEndpoint() {
   // Register the endpoint
   (Zotero.Server.Endpoints as any)["/syllabus/setTalisMetadata"] =
     SetTalisMetadata;
-  ztoolkit.log("Registered /syllabus/setTalisMetadata endpoint");
+  (Zotero.Server.Endpoints as any)["/syllabus/setReadingListMetadata"] =
+    SetTalisMetadata;
+  ztoolkit.log(
+    "Registered /syllabus/setTalisMetadata and /syllabus/setReadingListMetadata endpoints",
+  );
+
+  const StashReadingListFile = function () {};
+  StashReadingListFile.prototype = {
+    supportedMethods: ["POST"],
+    supportedDataTypes: [
+      "application/x-www-form-urlencoded",
+      "application/json",
+    ],
+    permitBookmarklet: true,
+    allowRequestsFromUnsafeWebContent: true,
+
+    init: async function (req: any) {
+      const payload = req?.data;
+      if (!payload || typeof payload !== "object") {
+        return [
+          400,
+          "application/json",
+          JSON.stringify({ error: "JSON body required" }),
+        ];
+      }
+      const result = stashReadingListFile({
+        citationId: payload.citationId,
+        title: payload.title,
+        contentType: payload.contentType,
+        filename: payload.filename,
+        data: payload.data,
+      });
+      return [
+        result.ok ? 200 : 400,
+        "application/json",
+        JSON.stringify(result),
+      ];
+    },
+  };
+  (Zotero.Server.Endpoints as any)["/syllabus/stashReadingListFile"] =
+    StashReadingListFile;
+  ztoolkit.log("Registered /syllabus/stashReadingListFile endpoint");
 }
 
 function registerStyleSheet(win: _ZoteroTypes.MainWindow) {

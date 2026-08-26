@@ -180,7 +180,7 @@ import type {
   SettingsClassMetadata,
   Priority,
 } from "../utils/schemas";
-import { installTalisAspireTranslator } from "../utils/translator";
+import { installReadingListTranslators } from "../utils/translator";
 import {
   registerSyllabusClassInstructionColumn,
   registerSyllabusStatusColumn,
@@ -353,7 +353,7 @@ export class SyllabusManager {
     this.registerSyllabusItemPaneSection();
 
     Zotero.Promise.delay(10000).then(() => {
-      installTalisAspireTranslator(rootURI);
+      installReadingListTranslators(rootURI);
     });
   }
 
