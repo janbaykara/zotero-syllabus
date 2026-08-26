@@ -8,6 +8,8 @@ A Zotero add-on / plugin that turns your collections into syllabi and course rea
 
 ![Reading schedule view](doc/images/reading.png)
 
+![Gallery view](doc/images/gallery.png)
+
 ## How to install
 
 1. [Download the extension file (.xpi)](https://github.com/janbaykara/zotero-syllabus/releases/latest/download/zotero-syllabus.xpi).
@@ -133,6 +135,14 @@ Right-click an item to re-assign class number or priority.
 #### And keep track of what you've read already
 
 ![Reading schedule view with reading status](doc/images/checkboxes.png)
+
+### Gallery view
+
+Browse a collection as a cover grid. Switch with the **Table / Gallery / Syllabus** control in the items toolbar (managed collections use **Checklist** instead of Syllabus).
+
+Covers come from attached images, EPUB/PDF art, ISBN lookups, or type-specific placeholders. Reading progress shows under each item when available. Use the ⋯ menu to change layout, sort, and grouping (type, tags, subcollections, or classes on a syllabus). If Zotero’s **Show Items from Subcollections** is on, Gallery includes those items too.
+
+![Gallery view with book covers and reading progress](doc/images/gallery.png)
 
 ### Other features
 
