@@ -144,6 +144,89 @@ export async function createUniqueTopLevelCollection(
   return collection;
 }
 
+const READING_LIST_IMPORT_REUSE_MS = 90_000;
+
+type RecentReadingListImport = {
+  listKey: string;
+  collectionId: number;
+  createdAt: number;
+};
+
+const recentReadingListImports: RecentReadingListImport[] = [];
+let readingListImportGate: Promise<unknown> = Promise.resolve();
+
+function readingListImportKey(
+  links: unknown,
+  title: string,
+): string {
+  const urls = Array.isArray(links) ? links : [];
+  for (const link of urls) {
+    const raw = String(link || "").trim();
+    if (!raw) {
+      continue;
+    }
+    try {
+      const parsed = new URL(raw);
+      parsed.hash = "";
+      parsed.search = "";
+      return `url:${parsed.toString().replace(/\/$/, "")}`;
+    } catch {
+      return `url:${raw.split("#")[0].replace(/\/$/, "")}`;
+    }
+  }
+  const trimmed = title.trim();
+  return trimmed ? `title:${trimmed}` : "";
+}
+
+/**
+ * One top-level collection per reading-list import. Connector translators can
+ * POST metadata more than once for the same list (iframes / retries); reuse
+ * the collection created for that URL in the last 90s instead of making
+ * extras that only hold a duplicate syllabus note.
+ */
+export async function collectionForReadingListImport(options: {
+  title: string;
+  links?: unknown;
+}): Promise<Zotero.Collection> {
+  const title = options.title.trim() || "Imported reading list";
+  const listKey = readingListImportKey(options.links, title);
+  const work = readingListImportGate.then(async () => {
+    const now = Date.now();
+    if (listKey) {
+      const hit = recentReadingListImports.find(
+        (entry) =>
+          entry.listKey === listKey &&
+          now - entry.createdAt < READING_LIST_IMPORT_REUSE_MS,
+      );
+      if (hit) {
+        const existing =
+          getCachedCollectionById(hit.collectionId) ||
+          Zotero.Collections.get(hit.collectionId);
+        if (existing && !existing.deleted) {
+          return existing;
+        }
+      }
+    }
+    const destination = await createUniqueTopLevelCollection(
+      libraryIdForNewCollection(),
+      title,
+    );
+    if (listKey) {
+      recentReadingListImports.push({
+        listKey,
+        collectionId: destination.id,
+        createdAt: now,
+      });
+    }
+    return destination;
+  });
+  readingListImportGate = work.then(
+    () => undefined,
+    () => undefined,
+  );
+  return work;
+}
+
 export function getAllCollections(recursive = true) {
   const libraries = Array.from(Zotero.Libraries.getAll());
   const collections: Zotero.Collection[] = [];

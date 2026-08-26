@@ -1444,7 +1444,7 @@ async function doWeb(doc, url) {
 var testCases = [
   {
     type: "web",
-    url: "https://uws-uk.leganto.exlibrisgroup.com/leganto/nui/lists/11705785220003931?institute=44PAI_INST&auth=guest",
+    url: "https://abdn.leganto.exlibrisgroup.com/leganto/nui/lists/13848239600005941",
     defer: true,
     items: "multiple",
   },

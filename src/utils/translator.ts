@@ -23,11 +23,30 @@ const READING_LIST_TRANSLATORS: ReadingListTranslator[] = [
     label: "Leganto for Zotero Syllabus",
     lastUpdated: "2026-08-26 13:45:00",
   },
+  {
+    relativePath: "translators/keylinks-custom.js",
+    translatorID: "a4f8c2e1-6b39-4d7a-9e21-5c8f0a3b7d14",
+    label: "KeyLinks for Zotero Syllabus",
+    lastUpdated: "2026-08-26 14:00:00",
+  },
+  {
+    relativePath: "translators/ereserve-plus-custom.js",
+    translatorID: "b5e9d3f2-7c4a-4e8b-a032-6d9e1b4c8f25",
+    label: "eReserve Plus for Zotero Syllabus",
+    lastUpdated: "2026-08-26 14:00:00",
+  },
+  {
+    relativePath: "translators/bluecloud-course-lists-custom.js",
+    translatorID: "c6f0e4a3-8d5b-4f9c-b143-7e0f2c5d9a36",
+    label: "BLUEcloud Course Lists for Zotero Syllabus",
+    lastUpdated: "2026-08-26 14:00:00",
+  },
 ];
 
 /**
- * Installs reading-list translators (Talis Aspire and Leganto) into Zotero's
- * data directory so the Connector can use them like any other translator.
+ * Installs reading-list translators (Talis Aspire, Leganto, KeyLinks,
+ * eReserve Plus, BLUEcloud Course Lists) into Zotero's data directory so the
+ * Connector can use them like any other translator.
  */
 export async function installReadingListTranslators(
   rootURI: string,
@@ -89,11 +108,11 @@ export async function installReadingListTranslators(
       closeTime: 6000,
     })
       .createLine({
-        text: "✅ Reading-list scrapers installed (Talis Aspire and Leganto)",
+        text: "✅ Reading-list scrapers installed (Talis, Leganto, KeyLinks, eReserve Plus, BLUEcloud)",
         type: "success",
       })
       .createLine({
-        text: `Open a Talis or Leganto list in your browser with the Zotero Connector to save it as a syllabus.\n(Using port ${PORT}.)`,
+        text: `Open a supported reading list in your browser with the Zotero Connector to save it as a syllabus.\n(Using port ${PORT}.)`,
         type: "default",
       })
       .show();

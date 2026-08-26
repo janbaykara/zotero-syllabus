@@ -1094,6 +1094,12 @@ function extractSlug(url) {
 var testCases = [
   {
     type: "web",
+    url: "https://rl.talis.com/3/ucl/lists/38afa403-9ebf-4dbe-86b0-a80e564f9777.html",
+    defer: true,
+    items: "multiple",
+  },
+  {
+    type: "web",
     url: "https://rl.talis.com/3/lincoln/items/FEB50B30-652C-55B2-08F8-F2D399BF308A.html",
     defer: true,
     items: [

@@ -9,6 +9,7 @@ import { getCachedCollectionByKey } from "../utils/cache";
 import { attachStashedReadingListFiles } from "./readingListFileStash";
 import {
   SYLLABUS_EXTRA_KEY,
+  SYLLABUS_NOTE_TAG,
   collectionRefFromCollection,
   getClassSubcollectionContext,
   mergeItemAssignmentsInDocument,
@@ -138,7 +139,13 @@ function stripAssignmentStatus(
   });
 }
 
-const READING_LIST_CATALOGS = new Set(["Ex Libris Leganto", "Talis Aspire"]);
+const READING_LIST_CATALOGS = new Set([
+  "Ex Libris Leganto",
+  "Talis Aspire",
+  "KeyLinks",
+  "eReserve Plus",
+  "BLUEcloud Course Lists",
+]);
 const FILE_LOOKUP_DEBOUNCE_MS = 2500;
 const pendingFileLookupIds = new Set<number>();
 let fileLookupTimer: ReturnType<typeof setTimeout> | null = null;
@@ -294,5 +301,57 @@ export async function absorbSyllabusExtraFromItems(
   for (const item of toClear) {
     await clearSyllabusExtra(item);
   }
+  for (const { collection } of byCollection.values()) {
+    await trashDuplicateEmptyImportCollections(collection);
+  }
   queueAvailableFileLookup(toClear);
+}
+
+/**
+ * Connector translators sometimes POST list metadata more than once, which
+ * used to leave extra top-level collections that only contain a duplicate
+ * syllabus note. Remove those leftovers after items have been absorbed.
+ */
+async function trashDuplicateEmptyImportCollections(
+  destination: Zotero.Collection,
+): Promise<void> {
+  const siblings = Zotero.Collections.getByLibrary(destination.libraryID).filter(
+    (collection) =>
+      !collection.parentID &&
+      collection.id !== destination.id &&
+      !collection.deleted &&
+      collection.name === destination.name,
+  );
+  for (const sibling of siblings) {
+    let children: Zotero.Item[] = [];
+    try {
+      children = sibling.getChildItems();
+    } catch {
+      continue;
+    }
+    const live = children.filter((item) => !item.deleted);
+    if (live.some((item) => item.isRegularItem())) {
+      continue;
+    }
+    const notes = live.filter((item) => item.isNote());
+    if (!notes.length) {
+      continue;
+    }
+    if (!notes.every((note) => note.hasTag(SYLLABUS_NOTE_TAG))) {
+      continue;
+    }
+    ztoolkit.log("Trashing duplicate empty reading-list import collection", {
+      destinationId: destination.id,
+      siblingId: sibling.id,
+      name: sibling.name,
+    });
+    try {
+      await sibling.eraseTx({ deleteItems: true });
+    } catch (error) {
+      ztoolkit.log(
+        "Could not trash duplicate reading-list import collection:",
+        error,
+      );
+    }
+  }
 }

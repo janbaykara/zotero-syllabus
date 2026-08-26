@@ -4,8 +4,7 @@ import { registerPrefsScripts } from "./modules/preferenceScript";
 import { createZToolkit } from "./utils/ztoolkit";
 import { getCSSUrl } from "./utils/css";
 import {
-  createUniqueTopLevelCollection,
-  libraryIdForNewCollection,
+  collectionForReadingListImport,
   selectZoteroCollection,
 } from "./utils/zotero";
 import {
@@ -29,7 +28,7 @@ async function onStartup(rootURI: string) {
   // Initialize cache system
   zoteroCache.initialize();
 
-  // Install Talis Aspire / Leganto translators
+  // Install reading-list translators (Talis, Leganto, KeyLinks, eReserve, BLUEcloud)
   SyllabusManager.onStartup(rootURI);
 
   // Register HTTP endpoint for translators to set reading-list syllabus metadata
@@ -50,7 +49,7 @@ async function onStartup(rootURI: string) {
 }
 
 /**
- * Register HTTP endpoint for translators to set Talis / Leganto syllabus metadata
+ * Register HTTP endpoint for translators to set reading-list syllabus metadata
  * Endpoint: /syllabus/setTalisMetadata (alias: /syllabus/setReadingListMetadata)
  * Method: POST
  * Body: { metadata: ExportSyllabusMetadata }
@@ -156,17 +155,16 @@ function registerTalisMetadataEndpoint() {
         const listTitle =
           validatedMetadataFileContents.data.collectionTitle?.trim() ||
           "Imported reading list";
-        const libraryID = libraryIdForNewCollection();
-        const destination = await createUniqueTopLevelCollection(
-          libraryID,
-          listTitle,
-        );
+        const destination = await collectionForReadingListImport({
+          title: listTitle,
+          links: validatedMetadataFileContents.data.links,
+        });
         selectZoteroCollection(destination.id);
 
         ztoolkit.log(
           "Setting reading-list syllabus metadata for top-level collection",
           {
-            libraryID,
+            libraryID: destination.libraryID,
             destinationId: destination.id,
             name: destination.name,
           },
