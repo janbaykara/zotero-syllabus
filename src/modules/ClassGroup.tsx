@@ -208,7 +208,7 @@ export function ClassGroupComponent({
                 // compactMode ? "py-0.5" : "py-1",
               )}
             >
-              <div className="flex gap-2 items-baseline justify-start w-full relative">
+              <div className="syllabus-class-heading flex gap-2 items-baseline justify-start w-full relative">
                 {readerMode && (
                   <input
                     type="checkbox"

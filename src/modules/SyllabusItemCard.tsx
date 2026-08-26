@@ -492,7 +492,7 @@ export function SyllabusItemCard({
     <div
       style={colors}
       className={twMerge(
-        "in-[.print]:scheme-light",
+        "syllabus-item-card in-[.print]:scheme-light",
         "rounded-lg flex shrink-0",
         showYoutubeEmbed ? "flex-col" : "flex-row items-start justify-between",
         "bg-background-sidepane text-primary",

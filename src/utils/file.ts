@@ -26,6 +26,42 @@ function getDefaultDownloadPath(): string | null {
 }
 
 /**
+ * Opens a save file picker and returns the chosen path, or null if cancelled.
+ * Defaults to the user's Downloads folder on Mac and Windows.
+ */
+export async function pickSavePath(
+  filename: string,
+  dialogTitle: string = "Save File",
+  filters?: [string, string][],
+): Promise<string | null> {
+  if (!isZotero8OrLater()) {
+    const tempDir = Zotero.getTempDirectory();
+    const tempFile = tempDir.clone();
+    tempFile.append(filename);
+    tempFile.createUnique(0, 0o666);
+    return tempFile.path;
+  }
+
+  const defaultPath = getDefaultDownloadPath();
+  const filePath = await new FilePickerHelper(
+    dialogTitle,
+    "save",
+    filters,
+    filename,
+    Zotero.getMainWindow(),
+    filters?.length ? undefined : "all",
+    defaultPath ?? undefined,
+  ).open();
+
+  if (!filePath || typeof filePath !== "string") {
+    ztoolkit.log("File save cancelled by user");
+    return null;
+  }
+
+  return filePath;
+}
+
+/**
  * Opens a file picker dialog to let the user select where to save a file,
  * then saves the provided text content to that location.
  * Defaults to the user's Downloads folder on Mac and Windows.

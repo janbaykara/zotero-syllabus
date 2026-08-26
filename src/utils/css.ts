@@ -13,6 +13,7 @@ export function getCSSHash(): string | null {
     // Use XMLHttpRequest to read the JSON file synchronously
     const xhr = new XMLHttpRequest();
     xhr.open("GET", hashUrl, false); // synchronous
+    xhr.overrideMimeType("text/plain;charset=utf-8");
     xhr.send(null);
 
     if (xhr.status === 200 || xhr.status === 0) {

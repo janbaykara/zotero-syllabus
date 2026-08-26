@@ -9,12 +9,10 @@ import {
   useCallback,
 } from "preact/hooks";
 import type { JSX } from "preact";
-import { flushSync } from "preact/compat";
 import { twMerge } from "tailwind-merge";
-import { generateBibliographicReference } from "../utils/cite";
+import { generateBibliographyForPrint } from "../utils/cite";
 import { getPref } from "../utils/prefs";
 import { getString } from "../utils/locale";
-import { getCSSUrl } from "../utils/css";
 import {
   showUserGuide,
   TOUR_EVENT_CLOSE_SETTINGS,
@@ -52,6 +50,11 @@ import {
 } from "lucide-preact";
 import { TableOfContents } from "./TableOfContents";
 import { saveToFile } from "../utils/file";
+import {
+  buildPrintableHtml,
+  openSyllabusPrintDialog,
+  serializeSyllabusForPrint,
+} from "../utils/printSyllabus";
 import { useSyllabusClassGroups } from "./classGroups";
 import { ClassSubcollectionPage } from "./ClassReadingBlock";
 import { getClassSubcollectionContext } from "./syllabusNote";
@@ -61,7 +64,7 @@ import { getReadingScheduleCollectionContext } from "./readingScheduleCollection
 import { useSyllabusDocumentGeneration } from "./react-zotero-sync/collectionDocument";
 import { TextInput } from "./syllabusInputs";
 import { SyllabusItemCard } from "./SyllabusItemCard";
-import { Bibliography } from "./Bibliography";
+import { bibliographyToHtml } from "./Bibliography";
 import { LinksSection } from "./LinksSection";
 import { ClassGroupComponent } from "./ClassGroup";
 
@@ -285,11 +288,6 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
   // Settings view state
   const [showSettings, setShowSettings] = useState(false);
-
-  // Bibliography is print-only: omit it from the live tree until export.
-  const [printBibliography, setPrintBibliography] = useState<string | null>(
-    null,
-  );
 
   useEffect(() => {
     const win = Zotero.getMainWindow();
@@ -1627,127 +1625,74 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   };
 
   const handlePrint = async () => {
+    const syllabusPageElement = syllabusPageRef.current;
+    if (!syllabusPageElement) {
+      ztoolkit.log("Syllabus page element not found");
+      return;
+    }
+
+    const progress = new ztoolkit.ProgressWindow("Zotero Syllabus", {
+      closeOnClick: false,
+      closeTime: -1,
+    })
+      .createLine({
+        text: "Preparing syllabus for print…",
+        type: "default",
+      })
+      .show();
+
     try {
-      // Get the syllabus page element
-      const syllabusPageElement = syllabusPageRef.current;
-      if (!syllabusPageElement) {
-        ztoolkit.log("Syllabus page element not found");
-        return;
-      }
-
-      // Read CSS files
-      const readCSS = (url: string): Promise<string> => {
-        return new Promise((resolve) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open("GET", url, true);
-          xhr.onload = () => {
-            if (xhr.status === 200 || xhr.status === 0) {
-              resolve(xhr.responseText);
-            } else {
-              ztoolkit.log(`Failed to load CSS from ${url}: ${xhr.status}`);
-              resolve(""); // Return empty string on error
-            }
-          };
-          xhr.onerror = () => {
-            ztoolkit.log(`Error loading CSS from ${url}`);
-            resolve(""); // Return empty string on error
-          };
-          xhr.send();
-        });
-      };
-
-      // Get CSS URLs (use getCSSUrl for Tailwind to include cache busting)
-      const tailwindCSSUrl = getCSSUrl();
-      const zoteroCSSUrl = `chrome://${addon.data.config.addonRef}/content/zoteroPane.css`;
-
-      // Read both CSS files
-      const [tailwindCSS, zoteroCSS] = await Promise.all([
-        readCSS(tailwindCSSUrl),
-        readCSS(zoteroCSSUrl),
-      ]);
-
-      const __prevLocked = isLocked;
-      setLocked(true);
-      const __prevReaderMode = readerMode;
-      setReaderMode(false);
-
-      const bibliographyText =
-        items.length > 0
-          ? (await generateBibliographicReference(
-              items,
-              true,
-              syllabusMetadata.cslStyle || null,
-            )) || ""
-          : "";
-      flushSync(() => {
-        setPrintBibliography(bibliographyText || null);
+      const bibliography = await generateBibliographyForPrint(
+        items,
+        syllabusMetadata.cslStyle || null,
+      );
+      ztoolkit.log(
+        "Print bibliography:",
+        bibliography
+          ? `${bibliography.isHtml ? "html" : "text"} ${bibliography.content.length} chars from ${items.length} items`
+          : `none (${items.length} items)`,
+      );
+      const bibliographyHtml = bibliography
+        ? bibliographyToHtml(
+            bibliography.content,
+            compactMode,
+            bibliography.isHtml,
+          )
+        : "";
+      const innerHTML = serializeSyllabusForPrint(syllabusPageElement);
+      ztoolkit.log(
+        "Print clone",
+        syllabusPageElement.querySelectorAll(".syllabus-class-group").length,
+        "class groups,",
+        innerHTML.length,
+        "chars",
+      );
+      const htmlContent = await buildPrintableHtml({
+        title: title || "Syllabus",
+        innerHTML,
+        bibliographyHtml,
       });
-
-      // Create HTML content with inline CSS
-      const htmlContent = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>${(title || "Syllabus").replace(/"/g, "&quot;")}</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      padding: 20px;
-      color: #000;
-      background: #fff;
-    }
-    @media print {
-      body { margin: 0; padding: 10px; }
-      .syllabus-page { overflow: visible !important; }
-      /* Force browsers to print background colors and images */
-      * {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-        color-adjust: exact !important;
-      }
-    }
-    /* Apply print styles when .print class is present */
-    body.print {
-      margin: 0 !important;
-      padding: 10px !important;
-    }
-    body.print .syllabus-page {
-      overflow: visible !important;
-    }
-    /* Force browsers to print background colors and images */
-    body.print * {
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-      color-adjust: exact !important;
-    }
-    ${tailwindCSS ? `/* Tailwind CSS */\n${tailwindCSS}` : ""}
-    ${zoteroCSS ? `/* Zotero CSS */\n${zoteroCSS}` : ""}
-  </style>
-  <script>
-    // Always apply .print class to enable print styles in browser view
-    document.body.classList.add('print');
-  </script>
-</head>
-<body class="print">
-  ${syllabusPageElement.innerHTML}
-</body>
-</html>`;
-
-      flushSync(() => {
-        setPrintBibliography(null);
-      });
-      setLocked(isLocked);
-      setReaderMode(readerMode);
-
-      await saveToFile(
-        `printable-syllabus--${slugify(title) || "syllabus"}.html`,
-        htmlContent,
-        "Save Printable Syllabus",
+      const filename = `syllabus-${
+        slugify(title || "syllabus", {
+          lower: true,
+          strict: true,
+        }) || "syllabus"
+      }.pdf`;
+      await openSyllabusPrintDialog(htmlContent, filename, () =>
+        progress.close(),
       );
     } catch (err) {
       ztoolkit.log("Error printing syllabus:", err);
-      setPrintBibliography(null);
-      setLocked(false);
+      progress.close();
+      new ztoolkit.ProgressWindow("Zotero Syllabus", {
+        closeOnClick: true,
+        closeTime: 5000,
+      })
+        .createLine({
+          text: "Could not save the syllabus PDF",
+          type: "fail",
+        })
+        .show();
     }
   };
 
@@ -2046,7 +1991,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                 compactMode ? "text-base" : "text-lg",
               )}
             >
-              <div className="flex flex-0! flex-row gap-2 items-center">
+              <div className="syllabus-masthead-meta flex flex-0! flex-row gap-2 items-center">
                 <TextInput
                   elementType="input"
                   initialValue={syllabusMetadata.courseCode || ""}
@@ -2089,7 +2034,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
           <div
             className={twMerge(
-              "flex flex-col mb-12",
+              "syllabus-class-groups flex flex-col mb-12",
               compactMode ? "gap-10 mt-4" : "gap-12 mt-6",
             )}
           >
@@ -2265,13 +2210,6 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   )}
                 </pre>
               </div>
-            )}
-
-            {printBibliography && (
-              <Bibliography
-                text={printBibliography}
-                compactMode={compactMode}
-              />
             )}
           </div>
         </div>

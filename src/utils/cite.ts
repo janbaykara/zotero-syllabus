@@ -159,6 +159,76 @@ export async function generateBibliographicReference(
   return fallback ? generateFallbackBibliographicReference(item) : null;
 }
 
+/**
+ * HTML (preferred) or plain text bibliography for the syllabus PDF.
+ */
+export async function generateBibliographyForPrint(
+  items: Zotero.Item[],
+  styleUrl?: string | null,
+): Promise<{ content: string; isHtml: boolean } | null> {
+  const regularItems = items.filter((item) => {
+    try {
+      return typeof item.isRegularItem !== "function" || item.isRegularItem();
+    } catch {
+      return true;
+    }
+  });
+  if (!regularItems.length) {
+    return null;
+  }
+
+  const fromQuickCopy = async (
+    url: string,
+  ): Promise<{ content: string; isHtml: boolean } | null> => {
+    try {
+      const result = await Zotero.QuickCopy.getContentFromItems(
+        regularItems,
+        `bibliography=${url}`,
+      );
+      const html = String(result?.html || "").trim();
+      if (html) {
+        return { content: html, isHtml: true };
+      }
+      const text = String(result?.text || "").trim();
+      if (text) {
+        return { content: text, isHtml: false };
+      }
+    } catch (error) {
+      ztoolkit.log(
+        `Error generating print bibliography with style ${url}:`,
+        error,
+      );
+    }
+    return null;
+  };
+
+  const urls: string[] = [];
+  if (styleUrl) {
+    urls.push(styleUrl);
+  }
+  const quickCopyStyle = getQuickCopyStyle();
+  if (quickCopyStyle && !urls.includes(quickCopyStyle)) {
+    urls.push(quickCopyStyle);
+  }
+  const styles = Zotero.Styles.getVisible() as Array<{ url: string }>;
+  if (styles.length) {
+    const last = styles[styles.length - 1].url;
+    if (last && !urls.includes(last)) {
+      urls.push(last);
+    }
+  }
+
+  for (const url of urls) {
+    const result = await fromQuickCopy(url);
+    if (result) {
+      return result;
+    }
+  }
+
+  const fallback = generateFallbackBibliographicReference(regularItems).trim();
+  return fallback ? { content: fallback, isHtml: false } : null;
+}
+
 export function generateFallbackBibliographicReference(
   item: Zotero.Item | Zotero.Item[],
 ): string {
