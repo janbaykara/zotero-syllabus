@@ -149,7 +149,9 @@ export function TextInput({
 
   function save(next: string) {
     onSaveRef.current(
-      emptyBehaviorRef.current === "reset" ? next || initialValueRef.current : next,
+      emptyBehaviorRef.current === "reset"
+        ? next || initialValueRef.current
+        : next,
     );
   }
 

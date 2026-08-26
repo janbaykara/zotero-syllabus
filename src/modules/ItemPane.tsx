@@ -255,11 +255,7 @@ function ItemPaneContent({
   );
 
   const handleInstructionChange = useCallback(
-    async (
-      assignmentId: string,
-      collectionId: number,
-      instruction: string,
-    ) => {
+    async (assignmentId: string, collectionId: number, instruction: string) => {
       if (!assignmentId) {
         ztoolkit.log("Error: Assignment ID missing");
         return;

@@ -19,7 +19,9 @@ export function ProseText({
   }
 
   return (
-    <div className={className ? `syllabus-prose ${className}` : "syllabus-prose"}>
+    <div
+      className={className ? `syllabus-prose ${className}` : "syllabus-prose"}
+    >
       {paragraphs.map((lines, pi) => (
         <p key={pi}>
           {lines.map((line, li) => (
