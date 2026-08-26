@@ -18,6 +18,7 @@ import {
   LayoutGrid,
   LayoutList,
   ListOrdered,
+  MoreHorizontal,
   Shapes,
   Tags,
 } from "lucide-preact";
@@ -35,6 +36,7 @@ import {
   type ResolvedCover,
 } from "../utils/itemCover";
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
+import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import { SlimSyllabusItemCard, useItemIdentifierSelection } from "./browsePage";
@@ -71,6 +73,7 @@ interface GalleryPageProps {
 }
 
 export function GalleryPage({ collectionId }: GalleryPageProps) {
+  const [title] = useZoteroCollectionTitle(collectionId);
   const syllabusItems = useZoteroCollectionItems(collectionId);
   const isSyllabus = collectionHasSyllabusNote(collectionId);
   const [groupBy, setGroupBy] = useGalleryGroupBy(collectionId, isSyllabus);
@@ -213,10 +216,11 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
       <div
         className={twMerge(
           "px-6 pb-10",
-          isZotero8OrLater() ? "md:pt-6 pt-4" : "pt-6",
+          isZotero8OrLater() ? "md:pt-8 pt-6" : "pt-8",
         )}
       >
-        <GalleryViewToolbar
+        <GalleryPageHeader
+          title={title || "Untitled"}
           groupBy={groupBy}
           onGroupBy={setGroupBy}
           showClasses={isSyllabus}
@@ -540,7 +544,8 @@ type GallerySegmentOption<T extends string> = {
   Icon: typeof LayoutGrid;
 };
 
-function GalleryViewToolbar({
+function GalleryPageHeader({
+  title,
   groupBy,
   onGroupBy,
   showClasses,
@@ -549,6 +554,7 @@ function GalleryViewToolbar({
   layout,
   onLayout,
 }: {
+  title: string;
   groupBy: GalleryGroupBy;
   onGroupBy: (mode: GalleryGroupBy) => void;
   showClasses: boolean;
@@ -557,33 +563,83 @@ function GalleryViewToolbar({
   layout: GalleryLayout;
   onLayout: (mode: GalleryLayout) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const onPointerDown = (event: MouseEvent) => {
+      const root = rootRef.current;
+      if (!root || !(event.target instanceof Node)) {
+        return;
+      }
+      if (!root.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+    const win = Zotero.getMainWindow();
+    win.document.addEventListener("mousedown", onPointerDown, true);
+    win.document.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      win.document.removeEventListener("mousedown", onPointerDown, true);
+      win.document.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [open]);
+
   const groupByOptions = showClasses
     ? GALLERY_GROUP_BY_OPTIONS
     : GALLERY_GROUP_BY_OPTIONS.filter((option) => option.mode !== "classes");
 
   return (
-    <div className="syllabus-gallery-toolbar">
-      <GallerySegmentedControl
-        label="View"
-        ariaLabel="Gallery item layout"
-        value={layout}
-        onChange={onLayout}
-        options={GALLERY_LAYOUT_OPTIONS}
-      />
-      <GallerySegmentedControl
-        label="Sort"
-        ariaLabel="Sort gallery items"
-        value={sortBy}
-        onChange={onSortBy}
-        options={GALLERY_SORT_OPTIONS}
-      />
-      <GallerySegmentedControl
-        label="Group by"
-        ariaLabel="Group gallery items"
-        value={groupBy}
-        onChange={onGroupBy}
-        options={groupByOptions}
-      />
+    <div className="syllabus-gallery-header">
+      <h1 className="syllabus-gallery-title">{title}</h1>
+      <div className="syllabus-gallery-menu" ref={rootRef}>
+        <button
+          type="button"
+          className="syllabus-gallery-menu-btn"
+          aria-label="Gallery view options"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          title="View options"
+          onClick={() => setOpen((value) => !value)}
+        >
+          <MoreHorizontal size={18} strokeWidth={2} aria-hidden="true" />
+        </button>
+        {open ? (
+          <div className="syllabus-gallery-popover" role="menu">
+            <div className="syllabus-gallery-toolbar">
+              <GallerySegmentedControl
+                label="View"
+                ariaLabel="Gallery item layout"
+                value={layout}
+                onChange={onLayout}
+                options={GALLERY_LAYOUT_OPTIONS}
+              />
+              <GallerySegmentedControl
+                label="Sort"
+                ariaLabel="Sort gallery items"
+                value={sortBy}
+                onChange={onSortBy}
+                options={GALLERY_SORT_OPTIONS}
+              />
+              <GallerySegmentedControl
+                label="Group by"
+                ariaLabel="Group gallery items"
+                value={groupBy}
+                onChange={onGroupBy}
+                options={groupByOptions}
+              />
+            </div>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

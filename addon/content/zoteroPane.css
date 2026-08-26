@@ -72,21 +72,90 @@
   overflow: hidden;
 }
 
-.syllabus-gallery-toolbar {
+.syllabus-gallery-header {
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 2.5rem;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+.syllabus-gallery-title {
+  margin: 0;
+  min-width: 0;
+  flex: 1;
+  font-size: 1.875rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--fill-primary);
+}
+
+.syllabus-gallery-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.syllabus-gallery-menu-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 1.25rem;
+  width: 2rem;
+  height: 2rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fill-secondary, #8c8c8c);
+  cursor: pointer;
+}
+
+.syllabus-gallery-menu-btn:hover {
+  color: var(--fill-primary);
+  background: var(--fill-quinary, rgba(0, 0, 0, 0.06));
+}
+
+.syllabus-gallery-menu-btn:focus-visible {
+  outline: 2px solid #7b4ddb;
+  outline-offset: 2px;
+}
+
+.syllabus-gallery-menu-btn[aria-expanded="true"] {
+  color: var(--fill-primary);
+  background: var(--fill-quinary, rgba(0, 0, 0, 0.06));
+}
+
+.syllabus-gallery-popover {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 50;
+  min-width: 16rem;
+  padding: 0.75rem;
+  border: 0.5px solid var(--fill-quinary, #d9d9d9);
+  border-radius: 8px;
+  background: var(--material-background, var(--color-background, #fff));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.syllabus-gallery-toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  margin: 0;
 }
 
 .syllabus-gallery-toolbar-cluster {
-  display: inline-flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
 }
 
 .syllabus-gallery-groupby-label {
