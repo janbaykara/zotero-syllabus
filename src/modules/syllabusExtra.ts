@@ -315,7 +315,9 @@ export async function absorbSyllabusExtraFromItems(
 async function trashDuplicateEmptyImportCollections(
   destination: Zotero.Collection,
 ): Promise<void> {
-  const siblings = Zotero.Collections.getByLibrary(destination.libraryID).filter(
+  const siblings = Zotero.Collections.getByLibrary(
+    destination.libraryID,
+  ).filter(
     (collection) =>
       !collection.parentID &&
       collection.id !== destination.id &&

@@ -434,7 +434,10 @@ function looksLikeHtmlBytes(bytes) {
   for (var i = 0; i < n; i++) {
     start += String.fromCharCode(bytes[i]);
   }
-  start = start.replace(/^\uFEFF/, "").trim().toLowerCase();
+  start = start
+    .replace(/^\uFEFF/, "")
+    .trim()
+    .toLowerCase();
   return (
     start.indexOf("<!") === 0 ||
     start.indexOf("<html") === 0 ||
@@ -509,7 +512,8 @@ async function tryDownloadFile(url, hop, seen) {
         contentType,
       )
         ? (function () {
-            var slice = bytes.length > 200000 ? bytes.subarray(0, 200000) : bytes;
+            var slice =
+              bytes.length > 200000 ? bytes.subarray(0, 200000) : bytes;
             try {
               return new TextDecoder("utf-8").decode(slice);
             } catch (e) {
@@ -584,7 +588,12 @@ async function tryDownloadFile(url, hop, seen) {
       }
     }
     if (nextUrls.length) {
-      safeLog("TALIS-ASPIRE-CUSTOM: following redirect", url, "->", nextUrls[0]);
+      safeLog(
+        "TALIS-ASPIRE-CUSTOM: following redirect",
+        url,
+        "->",
+        nextUrls[0],
+      );
     }
     for (var n = 0; n < nextUrls.length; n++) {
       var file = await tryDownloadFile(nextUrls[n], hop + 1, seen);
@@ -613,9 +622,12 @@ function rankTalisDownloadUrl(url) {
 }
 
 async function stashTalisOnlineFiles(citationId, urls) {
-  var ranked = (urls || []).slice().sort(function (left, right) {
-    return rankTalisDownloadUrl(left) - rankTalisDownloadUrl(right);
-  }).slice(0, 10);
+  var ranked = (urls || [])
+    .slice()
+    .sort(function (left, right) {
+      return rankTalisDownloadUrl(left) - rankTalisDownloadUrl(right);
+    })
+    .slice(0, 10);
   var stored = 0;
   for (var i = 0; i < ranked.length && stored < 3; i++) {
     var file = await tryDownloadFile(ranked[i]);
@@ -681,7 +693,10 @@ function rememberItemOnlineUrls(listUrl, item, included) {
         pushUniqueUrl(urls, content.links.download || content.links.self);
       }
       if (content.attributes) {
-        pushUniqueUrl(urls, content.attributes.url || content.attributes.file_url);
+        pushUniqueUrl(
+          urls,
+          content.attributes.url || content.attributes.file_url,
+        );
       }
     }
   }
@@ -693,8 +708,7 @@ function isResolverUrl(url) {
 }
 
 function attachTalisFiles(item, listUrl, uuid) {
-  var urls =
-    (itemOnlineUrls[listUrl] && itemOnlineUrls[listUrl][uuid]) || [];
+  var urls = (itemOnlineUrls[listUrl] && itemOnlineUrls[listUrl][uuid]) || [];
   if (!item.url) {
     for (var j = 0; j < urls.length; j++) {
       if (!isResolverUrl(urls[j])) {
@@ -1392,7 +1406,10 @@ function getTalisItemAPIUrl(url, offset = null, limit = 200) {
   baseUrl.pathname = `${baseUrl.pathname}/items`;
   // ?include=content,importance,resource,resource.part_of&page%5Blimit%5D=200
   // Note: 'resource' is needed to get titles from the included resources
-  baseUrl.searchParams.set("include", "content,importance,resource,resource.part_of");
+  baseUrl.searchParams.set(
+    "include",
+    "content,importance,resource,resource.part_of",
+  );
   baseUrl.searchParams.set("page[limit]", String(limit));
   if (offset !== null) {
     baseUrl.searchParams.set("page[offset]", String(offset));

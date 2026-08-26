@@ -61,9 +61,13 @@ function dataset(node, name) {
     return String(node.dataset[name]);
   }
   return (
-    attr(node, "data-" + name.replace(/[A-Z]/g, function (ch) {
-      return "-" + ch.toLowerCase();
-    })) || ""
+    attr(
+      node,
+      "data-" +
+        name.replace(/[A-Z]/g, function (ch) {
+          return "-" + ch.toLowerCase();
+        }),
+    ) || ""
   );
 }
 
@@ -83,7 +87,12 @@ function isEreserveUrl(url, doc) {
     return true;
   }
   var config = doc.getElementById && doc.getElementById("frontend-config");
-  if (config && /ereserve/i.test(dataset(config, "gqlEndpoint") || attr(config, "data-gql-endpoint"))) {
+  if (
+    config &&
+    /ereserve/i.test(
+      dataset(config, "gqlEndpoint") || attr(config, "data-gql-endpoint"),
+    )
+  ) {
     return true;
   }
   return false;
@@ -102,9 +111,7 @@ function getListId(url, doc) {
   }
   if (doc && doc.getElementById) {
     var listEl = doc.getElementById("selected_reading_list");
-    var fromDom =
-      dataset(listEl, "listId") ||
-      attr(listEl, "data-list-id");
+    var fromDom = dataset(listEl, "listId") || attr(listEl, "data-list-id");
     if (fromDom) {
       return fromDom;
     }
@@ -146,7 +153,9 @@ function originFromUrl(url) {
 }
 
 function mapItemType(kind) {
-  var type = String(kind || "").toLowerCase().replace(/_/g, "-");
+  var type = String(kind || "")
+    .toLowerCase()
+    .replace(/_/g, "-");
   var map = {
     book: "book",
     chapter: "bookSection",
@@ -177,7 +186,11 @@ function addCreator(item, name) {
     return;
   }
   try {
-    var creator = ZU.cleanAuthor(cleaned, "author", cleaned.indexOf(",") !== -1);
+    var creator = ZU.cleanAuthor(
+      cleaned,
+      "author",
+      cleaned.indexOf(",") !== -1,
+    );
     if (creator && (creator.lastName || creator.firstName)) {
       item.creators.push(creator);
     }
@@ -202,14 +215,19 @@ function groupTitle(groupEl) {
     groupEl.querySelector &&
     (groupEl.querySelector(".group-header") ||
       groupEl.querySelector(".accordion-heading") ||
-      groupEl.querySelector("h2, h3, h4, .group-name, .reading_list_group_name"));
-  return textContent(heading) || textContent(groupEl).split("\n")[0] || "Readings";
+      groupEl.querySelector(
+        "h2, h3, h4, .group-name, .reading_list_group_name",
+      ));
+  return (
+    textContent(heading) || textContent(groupEl).split("\n")[0] || "Readings"
+  );
 }
 
 function scrapeListFromDom(doc, pageUrl) {
   var listEl =
     (doc.getElementById && doc.getElementById("selected_reading_list")) ||
-    (doc.querySelector && doc.querySelector(".reading-list, #grouped_readings"));
+    (doc.querySelector &&
+      doc.querySelector(".reading-list, #grouped_readings"));
   var listId =
     dataset(listEl, "listId") ||
     attr(listEl, "data-list-id") ||
@@ -241,7 +259,11 @@ function scrapeListFromDom(doc, pageUrl) {
   for (var i = 0; i < groups.length; i++) {
     var group = groups[i];
     var itemEls = queryAll(group, ".reading_list_item");
-    if (!itemEls.length && group.classList && group.classList.contains("reading_list_item")) {
+    if (
+      !itemEls.length &&
+      group.classList &&
+      group.classList.contains("reading_list_item")
+    ) {
       itemEls = [group];
     }
     var citations = [];
@@ -263,13 +285,9 @@ function scrapeListFromDom(doc, pageUrl) {
         attr(el, "data-reading-document-kind") ||
         "";
       var title =
-        dataset(el, "readingTitle") ||
-        attr(el, "data-reading-title") ||
-        "";
+        dataset(el, "readingTitle") || attr(el, "data-reading-title") || "";
       var authors =
-        dataset(el, "readingAuthors") ||
-        attr(el, "data-reading-authors") ||
-        "";
+        dataset(el, "readingAuthors") || attr(el, "data-reading-authors") || "";
       var citeEl =
         (doc.getElementById && doc.getElementById("item_citation_" + id)) ||
         (el.querySelector && el.querySelector(".csl-entry, .citation"));
@@ -288,8 +306,7 @@ function scrapeListFromDom(doc, pageUrl) {
       continue;
     }
     var genericContainer =
-      group === doc.body ||
-      (group.id && group.id === "selected_reading_list");
+      group === doc.body || (group.id && group.id === "selected_reading_list");
     sections.push({
       title: genericContainer ? "Readings" : groupTitle(group),
       citations: citations,
@@ -475,7 +492,11 @@ function populateFromCsl(item, csl, fallback) {
   if (!item.title && fallback && fallback.title) {
     item.title = fallback.title;
   }
-  if ((!item.creators || !item.creators.length) && fallback && fallback.authors) {
+  if (
+    (!item.creators || !item.creators.length) &&
+    fallback &&
+    fallback.authors
+  ) {
     var names = String(fallback.authors).split(/\s*;\s*|\s*\|\s*/);
     for (var i = 0; i < names.length; i++) {
       addCreator(item, names[i]);
@@ -554,7 +575,10 @@ function looksLikeHtmlBytes(bytes) {
   for (var i = 0; i < n; i++) {
     start += String.fromCharCode(bytes[i]);
   }
-  start = start.replace(/^\uFEFF/, "").trim().toLowerCase();
+  start = start
+    .replace(/^\uFEFF/, "")
+    .trim()
+    .toLowerCase();
   return start.indexOf("<!") === 0 || start.indexOf("<html") === 0;
 }
 
@@ -611,12 +635,14 @@ function extractRedirectUrls(html, baseUrl) {
   if (meta) {
     add(meta[1]);
   }
-  var locRe = /(?:window\.)?location(?:\.href|\.replace)?\s*=\s*["']([^"']+)["']/gi;
+  var locRe =
+    /(?:window\.)?location(?:\.href|\.replace)?\s*=\s*["']([^"']+)["']/gi;
   var match;
   while ((match = locRe.exec(html))) {
     add(match[1]);
   }
-  var iframeRe = /<(?:iframe|embed|object)[^>]+(?:src|data)\s*=\s*["']([^"']+)["']/gi;
+  var iframeRe =
+    /<(?:iframe|embed|object)[^>]+(?:src|data)\s*=\s*["']([^"']+)["']/gi;
   while ((match = iframeRe.exec(html))) {
     add(match[1]);
   }
@@ -671,7 +697,10 @@ async function tryDownloadFile(url, hop, seen) {
     if (asFile) {
       return asFile;
     }
-    if (looksLikeHtmlBytes(bytes) || /text\/html|application\/xhtml/.test(contentType)) {
+    if (
+      looksLikeHtmlBytes(bytes) ||
+      /text\/html|application\/xhtml/.test(contentType)
+    ) {
       var next = extractRedirectUrls(bytesToUtf8(bytes), url);
       for (var i = 0; i < next.length; i++) {
         var file = await tryDownloadFile(next[i], hop + 1, seen);
@@ -703,7 +732,10 @@ async function postToZoteroLocal(endpoint, body) {
 
 async function stashReadingListFile(payload) {
   try {
-    var body = await postToZoteroLocal("/syllabus/stashReadingListFile", payload);
+    var body = await postToZoteroLocal(
+      "/syllabus/stashReadingListFile",
+      payload,
+    );
     var parsed = typeof body === "string" ? JSON.parse(body) : body;
     return !!(parsed && parsed.ok);
   } catch (error) {

@@ -303,7 +303,9 @@ function isNoteCitation(citation) {
 function visibleCitations(section) {
   var citations = (section && section.citations) || [];
   return citations.filter(function (citation) {
-    return citation && citation.id && !citation.hide && !isNoteCitation(citation);
+    return (
+      citation && citation.id && !citation.hide && !isNoteCitation(citation)
+    );
   });
 }
 
@@ -323,7 +325,12 @@ function noteTexts(section) {
   return notes;
 }
 
-function constructExportSyllabusMetadata(pageUrl, list, additional, publicTags) {
+function constructExportSyllabusMetadata(
+  pageUrl,
+  list,
+  additional,
+  publicTags,
+) {
   var metadata = {
     collectionTitle: list.name || undefined,
     description: list.description || undefined,
@@ -350,11 +357,9 @@ function constructExportSyllabusMetadata(pageUrl, list, additional, publicTags) 
     metadata.priorities = priorities;
   }
 
-  var sections = (list.sections || [])
-    .slice()
-    .sort(function (a, b) {
-      return (a.order || 0) - (b.order || 0);
-    });
+  var sections = (list.sections || []).slice().sort(function (a, b) {
+    return (a.order || 0) - (b.order || 0);
+  });
   var classNumber = 1;
   for (var i = 0; i < sections.length; i++) {
     var section = sections[i];
@@ -365,7 +370,9 @@ function constructExportSyllabusMetadata(pageUrl, list, additional, publicTags) 
     });
     var description = section.description || "";
     if (notes.length) {
-      description = [description, notes.join("\n")].filter(Boolean).join("\n\n");
+      description = [description, notes.join("\n")]
+        .filter(Boolean)
+        .join("\n\n");
     }
     if (!section.name && !itemOrder.length) {
       continue;
@@ -393,11 +400,9 @@ function constructExportSyllabusMetadata(pageUrl, list, additional, publicTags) 
 async function getSearchResults(pageUrl) {
   var list = await fetchListJson(pageUrl);
   var items = {};
-  var sections = (list.sections || [])
-    .slice()
-    .sort(function (a, b) {
-      return (a.order || 0) - (b.order || 0);
-    });
+  var sections = (list.sections || []).slice().sort(function (a, b) {
+    return (a.order || 0) - (b.order || 0);
+  });
   for (var i = 0; i < sections.length; i++) {
     var section = sections[i];
     var citations = visibleCitations(section);
@@ -464,7 +469,11 @@ function addCreator(item, name, creatorType) {
       item.creators.push(creator);
     }
   } catch (e) {
-    item.creators.push({ lastName: cleaned, creatorType: creatorType || "author", fieldMode: 1 });
+    item.creators.push({
+      lastName: cleaned,
+      creatorType: creatorType || "author",
+      fieldMode: 1,
+    });
   }
 }
 
@@ -541,11 +550,9 @@ function classInstructionForCitation(citation) {
 }
 
 function findClassNumber(list, citationId) {
-  var sections = (list.sections || [])
-    .slice()
-    .sort(function (a, b) {
-      return (a.order || 0) - (b.order || 0);
-    });
+  var sections = (list.sections || []).slice().sort(function (a, b) {
+    return (a.order || 0) - (b.order || 0);
+  });
   var classNumber = 1;
   for (var i = 0; i < sections.length; i++) {
     var citations = visibleCitations(sections[i]);
@@ -653,7 +660,11 @@ function populateItem(item, citation, pageUrl, itemType) {
   if (url && /^https?:\/\//i.test(url) && url.indexOf("uresolver") === -1) {
     item.url = url;
   } else if (pageUrl) {
-    item.url = pageUrl.replace(/[?#].*$/, "") + (pageUrl.indexOf("?") === -1 ? "?" : "&") + "citationId=" + citation.id;
+    item.url =
+      pageUrl.replace(/[?#].*$/, "") +
+      (pageUrl.indexOf("?") === -1 ? "?" : "&") +
+      "citationId=" +
+      citation.id;
   }
   if (dc.language) {
     item.language = dc.language;
@@ -817,7 +828,10 @@ async function fetchCitationDetails(pageUrl, citationId) {
   for (var i = 0; i < paths.length; i++) {
     try {
       var data = await requestJson(apiUrl(pageUrl, paths[i]));
-      if (data && (data.object || data.id || data.file_link || data.link_to_pdf)) {
+      if (
+        data &&
+        (data.object || data.id || data.file_link || data.link_to_pdf)
+      ) {
         return data.object || data;
       }
     } catch (error) {
@@ -885,7 +899,10 @@ function looksLikeHtmlBytes(bytes) {
   for (var i = 0; i < n; i++) {
     start += String.fromCharCode(bytes[i]);
   }
-  start = start.replace(/^\uFEFF/, "").trim().toLowerCase();
+  start = start
+    .replace(/^\uFEFF/, "")
+    .trim()
+    .toLowerCase();
   return (
     start.indexOf("<!") === 0 ||
     start.indexOf("<html") === 0 ||
@@ -1263,13 +1280,7 @@ async function attachCitationFiles(
     item.attachments = [];
   }
   var citationId = String((citation && citation.id) || "");
-  var urls = citationCandidateUrls(
-    pageUrl,
-    citation,
-    additional,
-    details,
-    doc,
-  );
+  var urls = citationCandidateUrls(pageUrl, citation, additional, details, doc);
   safeLog(
     "LEGANTO-CUSTOM: trying",
     urls.length,

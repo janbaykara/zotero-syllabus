@@ -1172,14 +1172,16 @@ function journalEditionCompact(item: Zotero.Item): string {
 
 function itemAuthorLine(item: Zotero.Item): string {
   try {
-    const creators = item.getCreators() || [];
+    const creators = item.getCreatorsJSON() || [];
     const authors = creators.filter(
       (creator) => creator.creatorType === "author",
     );
     const list = authors.length > 0 ? authors : creators;
     const names = list
       .map((creator) =>
-        `${creator.firstName || ""} ${creator.lastName || ""}`.trim(),
+        (
+          creator.name || `${creator.firstName || ""} ${creator.lastName || ""}`
+        ).trim(),
       )
       .filter(Boolean);
     if (names.length === 1) {
@@ -1272,7 +1274,9 @@ function JournalFace({ item }: { item: Zotero.Item }) {
                 <div className="syllabus-gallery-journal-name">{journal}</div>
               ) : null}
               {edition ? (
-                <div className="syllabus-gallery-journal-edition">{edition}</div>
+                <div className="syllabus-gallery-journal-edition">
+                  {edition}
+                </div>
               ) : null}
             </div>
           </div>
@@ -1282,7 +1286,9 @@ function JournalFace({ item }: { item: Zotero.Item }) {
           <div className="syllabus-gallery-journal-author">{creator}</div>
         ) : null}
         {abstractNote ? (
-          <div className="syllabus-gallery-journal-abstract">{abstractNote}</div>
+          <div className="syllabus-gallery-journal-abstract">
+            {abstractNote}
+          </div>
         ) : null}
       </div>
     );

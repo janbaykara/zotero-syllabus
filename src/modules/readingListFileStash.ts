@@ -49,7 +49,9 @@ function looksLikePdf(bytes: Uint8Array): boolean {
 }
 
 function sanitizeFilename(name: string, contentType: string): string {
-  const fallback = contentType.includes("epub") ? "reading.epub" : "reading.pdf";
+  const fallback = contentType.includes("epub")
+    ? "reading.epub"
+    : "reading.pdf";
   const cleaned = name.replace(/[^A-Za-z0-9._-]+/g, "_").slice(0, 80);
   return cleaned || fallback;
 }
@@ -168,7 +170,10 @@ async function writeTempFile(
 
 async function removeTempFile(path: string): Promise<void> {
   try {
-    if (typeof IOUtils !== "undefined" && typeof IOUtils.remove === "function") {
+    if (
+      typeof IOUtils !== "undefined" &&
+      typeof IOUtils.remove === "function"
+    ) {
       await IOUtils.remove(path, { ignoreAbsent: true });
     }
   } catch {
@@ -176,7 +181,9 @@ async function removeTempFile(path: string): Promise<void> {
   }
 }
 
-async function removePlaceholderUrlAttachments(item: Zotero.Item): Promise<void> {
+async function removePlaceholderUrlAttachments(
+  item: Zotero.Item,
+): Promise<void> {
   const linked = Zotero.Attachments.LINK_MODE_LINKED_URL;
   for (const attId of item.getAttachments()) {
     const att = Zotero.Items.get(attId);

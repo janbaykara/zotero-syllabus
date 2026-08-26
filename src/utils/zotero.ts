@@ -155,10 +155,7 @@ type RecentReadingListImport = {
 const recentReadingListImports: RecentReadingListImport[] = [];
 let readingListImportGate: Promise<unknown> = Promise.resolve();
 
-function readingListImportKey(
-  links: unknown,
-  title: string,
-): string {
+function readingListImportKey(links: unknown, title: string): string {
   const urls = Array.isArray(links) ? links : [];
   for (const link of urls) {
     const raw = String(link || "").trim();

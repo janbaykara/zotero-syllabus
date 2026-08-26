@@ -66,8 +66,9 @@ function isBluecloudUrl(url, doc) {
 function getListId(url) {
   var text = String(url || "");
   var match =
-    text.match(/\/(?:course[-_]?lists?|lists?|student)\/(?:view\/)?(\d+|[A-Za-z0-9-]{6,})/i) ||
-    text.match(/[?#&](?:list|listId|list_id|id)=([A-Za-z0-9-]{1,80})/i);
+    text.match(
+      /\/(?:course[-_]?lists?|lists?|student)\/(?:view\/)?(\d+|[A-Za-z0-9-]{6,})/i,
+    ) || text.match(/[?#&](?:list|listId|list_id|id)=([A-Za-z0-9-]{1,80})/i);
   return match ? match[1] : null;
 }
 
@@ -155,7 +156,11 @@ function addCreator(item, name) {
     return;
   }
   try {
-    var creator = ZU.cleanAuthor(cleaned, "author", cleaned.indexOf(",") !== -1);
+    var creator = ZU.cleanAuthor(
+      cleaned,
+      "author",
+      cleaned.indexOf(",") !== -1,
+    );
     if (creator && (creator.lastName || creator.firstName)) {
       item.creators.push(creator);
     }
@@ -229,7 +234,12 @@ function normalizeListPayload(data, pageUrl) {
           "Untitled",
         authors: entry.authors || entry.author || entry.creator,
         type: entry.type || entry.resourceType || entry.format,
-        url: firstString(entry.url, entry.link, entry.href, entry.electronicUrl),
+        url: firstString(
+          entry.url,
+          entry.link,
+          entry.href,
+          entry.electronicUrl,
+        ),
         isbn: entry.isbn || entry.ISBN,
         doi: entry.doi || entry.DOI,
         date: entry.date || entry.year || entry.publicationDate,
@@ -249,7 +259,12 @@ function normalizeListPayload(data, pageUrl) {
       itemsById[id] = citation;
     }
     mapped.push({
-      title: firstString(section.title, section.name, section.week, "Section " + (i + 1)),
+      title: firstString(
+        section.title,
+        section.name,
+        section.week,
+        "Section " + (i + 1),
+      ),
       citations: citations,
     });
   }
@@ -309,7 +324,8 @@ function queryAll(doc, selector) {
 function scrapeListFromDom(doc, pageUrl) {
   var heading =
     (doc.querySelector &&
-      (doc.querySelector("h1") || doc.querySelector("[class*='list-title']"))) ||
+      (doc.querySelector("h1") ||
+        doc.querySelector("[class*='list-title']"))) ||
     null;
   var collectionTitle = textContent(heading) || (doc.title || "").trim();
   var sectionEls = queryAll(
@@ -335,8 +351,7 @@ function scrapeListFromDom(doc, pageUrl) {
         continue;
       }
       var titleEl =
-        card.querySelector &&
-        (card.querySelector("h2, h3, h4, .title, a"));
+        card.querySelector && card.querySelector("h2, h3, h4, .title, a");
       var title = textContent(titleEl);
       if (!title || title.length < 3) {
         continue;
@@ -350,7 +365,8 @@ function scrapeListFromDom(doc, pageUrl) {
       id = String(id || "dom-" + i + "-" + j).replace(/[^A-Za-z0-9._-]/g, "");
       var href =
         (titleEl && titleEl.href) ||
-        (card.querySelector && card.querySelector("a[href]") &&
+        (card.querySelector &&
+          card.querySelector("a[href]") &&
           card.querySelector("a[href]").href) ||
         "";
       var badge = textContent(
@@ -374,8 +390,13 @@ function scrapeListFromDom(doc, pageUrl) {
       continue;
     }
     var sectionTitle =
-      textContent(sectionEl.querySelector && sectionEl.querySelector("h2, h3, .section-title, .week-title")) ||
-      (sectionEls.length === 1 ? "Readings" : "Section " + (sections.length + 1));
+      textContent(
+        sectionEl.querySelector &&
+          sectionEl.querySelector("h2, h3, .section-title, .week-title"),
+      ) ||
+      (sectionEls.length === 1
+        ? "Readings"
+        : "Section " + (sections.length + 1));
     sections.push({ title: sectionTitle, citations: citations });
   }
   if (!Object.keys(itemsById).length) {
@@ -499,7 +520,10 @@ function populateItem(item, citation) {
       var name =
         typeof authors[i] === "string"
           ? authors[i]
-          : [authors[i].lastName || authors[i].family, authors[i].firstName || authors[i].given]
+          : [
+              authors[i].lastName || authors[i].family,
+              authors[i].firstName || authors[i].given,
+            ]
               .filter(Boolean)
               .join(", ");
       addCreator(item, name);
@@ -662,7 +686,10 @@ async function postToZoteroLocal(endpoint, body) {
 
 async function stashReadingListFile(payload) {
   try {
-    var body = await postToZoteroLocal("/syllabus/stashReadingListFile", payload);
+    var body = await postToZoteroLocal(
+      "/syllabus/stashReadingListFile",
+      payload,
+    );
     var parsed = typeof body === "string" ? JSON.parse(body) : body;
     return !!(parsed && parsed.ok);
   } catch (error) {

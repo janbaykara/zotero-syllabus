@@ -254,7 +254,9 @@ function constructExportSyllabusMetadata(pageUrl, list, configs) {
       classObj.title = section.title;
     }
     if (section.note) {
-      classObj.description = String(section.note).replace(/<[^>]+>/g, "").trim();
+      classObj.description = String(section.note)
+        .replace(/<[^>]+>/g, "")
+        .trim();
     }
     if (itemOrder.length) {
       classObj.itemOrder = itemOrder;
@@ -384,9 +386,7 @@ function authorsFromMaterial(material) {
     } else if (blobs[i] && blobs[i].literal) {
       names.push(blobs[i].literal);
     } else if (blobs[i] && (blobs[i].family || blobs[i].given)) {
-      names.push(
-        [blobs[i].family, blobs[i].given].filter(Boolean).join(", "),
-      );
+      names.push([blobs[i].family, blobs[i].given].filter(Boolean).join(", "));
     }
   }
   return names;
@@ -415,7 +415,9 @@ function populateItem(item, material, pageUrl) {
     if (Array.isArray(year)) {
       year = year[0];
     }
-    item.date = String(year).replace(/T.*$/, "").replace(/-01-01.*$/, "");
+    item.date = String(year)
+      .replace(/T.*$/, "")
+      .replace(/-01-01.*$/, "");
   }
   if (material.publisher || meta.publisher) {
     item.publisher = material.publisher || meta.publisher;
@@ -520,7 +522,11 @@ function isSkippableDownloadUrl(url) {
   if (/google-analytics|doubleclick|facebook\.com|twitter\.com/i.test(url)) {
     return true;
   }
-  if (/primo\.exlibrisgroup\.com|\/discovery\/(search|fulldisplay|openurl)/i.test(url)) {
+  if (
+    /primo\.exlibrisgroup\.com|\/discovery\/(search|fulldisplay|openurl)/i.test(
+      url,
+    )
+  ) {
     return true;
   }
   return false;
@@ -656,7 +662,10 @@ function looksLikeHtmlBytes(bytes) {
   for (var i = 0; i < n; i++) {
     start += String.fromCharCode(bytes[i]);
   }
-  start = start.replace(/^\uFEFF/, "").trim().toLowerCase();
+  start = start
+    .replace(/^\uFEFF/, "")
+    .trim()
+    .toLowerCase();
   return (
     start.indexOf("<!") === 0 ||
     start.indexOf("<html") === 0 ||
@@ -845,7 +854,10 @@ async function postToZoteroLocal(endpoint, body) {
 
 async function stashReadingListFile(payload) {
   try {
-    var body = await postToZoteroLocal("/syllabus/stashReadingListFile", payload);
+    var body = await postToZoteroLocal(
+      "/syllabus/stashReadingListFile",
+      payload,
+    );
     var parsed = typeof body === "string" ? JSON.parse(body) : body;
     return !!(parsed && parsed.ok);
   } catch (error) {

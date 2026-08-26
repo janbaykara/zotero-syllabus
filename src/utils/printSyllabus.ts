@@ -176,8 +176,13 @@ type FormField = Element & {
   checked?: boolean;
 };
 
-function asFormField(el: Element): FormField {
-  return el as FormField;
+function asElement(node: Node | Element | null): Element | null {
+  return node instanceof Element ? node : null;
+}
+
+function asFormField(node: Node | Element | null): FormField | null {
+  const el = asElement(node);
+  return el ? (el as FormField) : null;
 }
 
 function copyFormValues(source: HTMLElement, clone: HTMLElement): void {
@@ -188,17 +193,17 @@ function copyFormValues(source: HTMLElement, clone: HTMLElement): void {
   }
   srcEls.forEach((src, i) => {
     const dst = dstEls[i];
-    if (src.tagName !== dst.tagName) {
-      return;
-    }
     const from = asFormField(src);
     const to = asFormField(dst);
+    if (!from || !to || from.tagName !== to.tagName) {
+      return;
+    }
     to.value = from.value;
     to.setAttribute("value", from.value);
-    if (src.tagName === "INPUT") {
+    if (from.tagName === "INPUT") {
       to.checked = from.checked;
     }
-    if (src.tagName === "TEXTAREA") {
+    if (from.tagName === "TEXTAREA") {
       to.textContent = from.value;
     }
   });
@@ -207,12 +212,16 @@ function copyFormValues(source: HTMLElement, clone: HTMLElement): void {
 function syncPrintOnlyTextFromInputs(root: ParentNode): void {
   [...root.querySelectorAll("input, textarea")].forEach((node) => {
     const el = asFormField(node);
+    if (!el) {
+      return;
+    }
     const parent = el.parentElement;
     if (!parent || !el.value) {
       return;
     }
-    [...parent.children].forEach((child) => {
-      if (child !== el && isPrintOnly(child)) {
+    [...parent.children].forEach((node) => {
+      const child = asElement(node);
+      if (child && child !== el && isPrintOnly(child)) {
         child.textContent = el.value;
       }
     });
@@ -222,7 +231,14 @@ function syncPrintOnlyTextFromInputs(root: ParentNode): void {
 function replaceFormControlsWithText(root: ParentNode): void {
   [...root.querySelectorAll("input, textarea")].forEach((node) => {
     const el = asFormField(node);
-    if (el.type === "checkbox" || el.type === "hidden" || el.type === "button") {
+    if (!el) {
+      return;
+    }
+    if (
+      el.type === "checkbox" ||
+      el.type === "hidden" ||
+      el.type === "button"
+    ) {
       el.remove();
       return;
     }
@@ -238,8 +254,9 @@ function replaceFormControlsWithText(root: ParentNode): void {
 }
 
 function removeScreenOnlyElements(root: ParentNode): void {
-  [...root.querySelectorAll("*")].forEach((el) => {
-    if (isPrintOnly(el)) {
+  [...root.querySelectorAll("*")].forEach((node) => {
+    const el = asElement(node);
+    if (!el || isPrintOnly(el)) {
       return;
     }
     if (
@@ -553,7 +570,7 @@ function withTimeout<T>(
   ms: number,
   message: string,
 ): Promise<T> {
-  let timeoutId = 0;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => reject(new Error(message)), ms);
   });
@@ -775,11 +792,17 @@ async function loadHtmlInHiddenBrowser(html: string): Promise<{
 }> {
   const { HiddenBrowser } = ChromeUtils.importESModule(
     "chrome://zotero/content/HiddenBrowser.mjs",
-  ) as { HiddenBrowser: new (options: { useHiddenFrame: boolean }) => HiddenBrowserHandle };
+  ) as {
+    HiddenBrowser: new (options: {
+      useHiddenFrame: boolean;
+    }) => HiddenBrowserHandle;
+  };
 
   const temp = await writeTempPrintHtml(html);
 
-  const tryLoad = async (source: string): Promise<HiddenBrowserHandle | null> => {
+  const tryLoad = async (
+    source: string,
+  ): Promise<HiddenBrowserHandle | null> => {
     const browser = new HiddenBrowser({ useHiddenFrame: false });
     try {
       await browser._createdPromise;
