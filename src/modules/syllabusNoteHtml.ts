@@ -7,8 +7,6 @@ import {
   type CollectionSyllabusDocument,
   type ItemSyllabusAssignment,
 } from "../utils/schemas";
-import { getCachedItem } from "../utils/cache";
-import { formatReadingDate } from "../utils/dates";
 import { generateBibliographicReference } from "../utils/cite";
 import { classSubcollectionName } from "./classSubcollections";
 import { SYLLABUS_NOTE_PRE_ATTR, SYLLABUS_NOTE_TITLE } from "./syllabusNote";
@@ -16,6 +14,11 @@ import { proseToHtml } from "../utils/prose";
 
 export const PLUGIN_JSON_HEADING = "Plugin data (do not edit)";
 export const PLUGIN_REPO_URL = "https://github.com/janbaykara/zotero-syllabus";
+/** Human-readable envelope. Independent of document.version. */
+export const READABLE_NOTE_FORMAT_VERSION = 2;
+export const READABLE_NOTE_ATTR = "data-readable";
+export const READING_DONE_MARK = "✅";
+export const READING_TODO_MARK = "☐";
 
 function escapeHtml(text: string): string {
   return text
@@ -47,13 +50,11 @@ function heading(level: 1 | 3, text: string): string {
   return trimmed ? `<h${level}>${escapeHtml(trimmed)}</h${level}>` : "";
 }
 
-function bulletList(items: string[]): string {
+function htmlList(items: string[]): string {
   if (items.length === 0) {
     return "";
   }
-  const lis = items
-    .map((item) => `<li><p>${escapeHtml(item)}</p></li>`)
-    .join("");
+  const lis = items.map((item) => `<li><p>${item}</p></li>`).join("");
   return `<ul>${lis}</ul>`;
 }
 
@@ -95,6 +96,12 @@ function getCollectionItem(
 type ClassReading = {
   itemKey: string;
   assignment: ItemSyllabusAssignment;
+};
+
+type PriorityGroup = {
+  id: string | null;
+  name: string | null;
+  readings: ClassReading[];
 };
 
 function gatherClassReadings(
@@ -193,20 +200,114 @@ function sortReadingsByPriority(
   });
 }
 
-function formatReadingLine(
-  priorityName: string,
+function groupReadingsByPriority(
+  readings: ClassReading[],
+  document: CollectionSyllabusDocument,
+): PriorityGroup[] {
+  const groups: PriorityGroup[] = [];
+  for (const row of sortReadingsByPriority(readings, document)) {
+    const meta = priorityMeta(document, row.assignment.priority);
+    const id = meta?.id || null;
+    const last = groups[groups.length - 1];
+    if (last && last.id === id) {
+      last.readings.push(row);
+    } else {
+      groups.push({
+        id,
+        name: meta?.name || null,
+        readings: [row],
+      });
+    }
+  }
+  return groups;
+}
+
+function fallbackTitle(
+  itemKey: string,
+  titles: Map<string, string>,
+  document: CollectionSyllabusDocument,
+): string {
+  return titles.get(itemKey) || document.itemIndex?.[itemKey]?.title || itemKey;
+}
+
+function doiForReading(
+  item: Zotero.Item | null,
+  itemKey: string,
+  document: CollectionSyllabusDocument,
+): string {
+  let fromItem = "";
+  try {
+    fromItem = item ? String(item.getField("DOI") || "").trim() : "";
+  } catch {
+    fromItem = "";
+  }
+  const fromIndex = (document.itemIndex?.[itemKey]?.doi || "").trim();
+  return fromItem || fromIndex;
+}
+
+function urlForReading(item: Zotero.Item | null): string {
+  if (!item) {
+    return "";
+  }
+  try {
+    return String(item.getField("url") || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function doiHref(doi: string): string {
+  const trimmed = doi.trim().replace(/^doi:\s*/i, "");
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  return `https://doi.org/${trimmed}`;
+}
+
+function readingLinks(
+  item: Zotero.Item | null,
+  itemKey: string,
+  document: CollectionSyllabusDocument,
+): { href: string; label: string }[] {
+  const links: { href: string; label: string }[] = [];
+  const seen = new Set<string>();
+  const add = (href: string, label: string) => {
+    const key = href.replace(/\/+$/, "").toLowerCase();
+    if (!href || seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    links.push({ href, label });
+  };
+
+  const doi = doiForReading(item, itemKey, document);
+  if (doi) {
+    add(doiHref(doi), "DOI");
+  }
+  const url = urlForReading(item);
+  if (url) {
+    add(url, "Link");
+  }
+  return links;
+}
+
+function formatReadingHtml(
+  done: boolean,
   citation: string,
   instruction: string,
+  links: { href: string; label: string }[],
 ): string {
-  const parts: string[] = [];
-  if (priorityName) {
-    parts.push(`[${priorityName}]`);
+  const mark = done ? READING_DONE_MARK : READING_TODO_MARK;
+  const parts = [`${mark} ${escapeHtml(citation)}`];
+  const instr = instruction.replace(/\s+/g, " ").trim();
+  if (instr) {
+    parts.push(escapeHtml(instr));
   }
-  parts.push(citation);
-  if (instruction) {
-    parts.push(instruction.replace(/\s+/g, " ").trim());
+  let html = parts.join(" — ");
+  for (const link of links) {
+    html += ` <a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a>`;
   }
-  return parts.join(" - ");
+  return html;
 }
 
 async function citationForItem(
@@ -226,7 +327,7 @@ async function citationForItem(
   }
 }
 
-async function readingLines(
+async function readingHtmlLines(
   readings: ClassReading[],
   document: CollectionSyllabusDocument,
   collection: Zotero.Collection | null | undefined,
@@ -238,26 +339,40 @@ async function readingLines(
       const item = getCollectionItem(collection, row.itemKey);
       const citation = await citationForItem(
         item,
-        titles.get(row.itemKey) || row.itemKey,
+        fallbackTitle(row.itemKey, titles, document),
         style,
       );
-      const priorityName =
-        priorityMeta(document, row.assignment.priority)?.name || "";
-      return formatReadingLine(
-        priorityName,
+      return formatReadingHtml(
+        row.assignment.status === "done",
         citation,
         (row.assignment.classInstruction || "").trim(),
+        readingLinks(item, row.itemKey, document),
       );
     }),
   );
 }
 
-function classHeading(
-  nomenclature: string | undefined,
-  number: number,
-  title: string | null | undefined,
-): string {
-  return classSubcollectionName(nomenclature, number, title);
+async function renderReadingGroups(
+  readings: ClassReading[],
+  document: CollectionSyllabusDocument,
+  collection: Zotero.Collection | null | undefined,
+  titles: Map<string, string>,
+): Promise<string> {
+  const groups = groupReadingsByPriority(readings, document);
+  const chunks: string[] = [];
+  for (const group of groups) {
+    const lines = await readingHtmlLines(
+      group.readings,
+      document,
+      collection,
+      titles,
+    );
+    if (group.name) {
+      chunks.push(`<p><strong>${escapeHtml(group.name)}</strong></p>`);
+    }
+    chunks.push(htmlList(lines));
+  }
+  return chunks.filter(Boolean).join("");
 }
 
 function pluginJsonBlock(document: CollectionSyllabusDocument): string {
@@ -265,6 +380,9 @@ function pluginJsonBlock(document: CollectionSyllabusDocument): string {
   const repoHref = escapeHtml(PLUGIN_REPO_URL);
   return [
     heading(3, PLUGIN_JSON_HEADING),
+    paragraph(
+      "You can stop reading here. The rest is for the Zotero Syllabus plugin on desktop.",
+    ),
     `<p>This JSON is the machine-readable syllabus used by the <a href="${repoHref}">Zotero Syllabus</a> plugin. Do not edit it: the plugin treats it as the source of truth and will overwrite the readable text above.</p>`,
     `<pre ${SYLLABUS_NOTE_PRE_ATTR}="1" data-version="${document.version || COLLECTION_SYLLABUS_DOCUMENT_VERSION}">${escapeHtml(json)}</pre>`,
   ].join("");
@@ -291,6 +409,26 @@ function linksBlock(links: string[] | undefined): string {
   return `<ul>${items}</ul>`;
 }
 
+function wrapNoteHtml(body: string): string {
+  const attr = `${READABLE_NOTE_ATTR}="${READABLE_NOTE_FORMAT_VERSION}"`;
+  if (typeof Zotero !== "undefined" && Zotero.Notes?.notePrefix) {
+    const prefix = Zotero.Notes.notePrefix.replace(
+      /<div\b([^>]*)>/i,
+      (match, attrs: string) => {
+        if (new RegExp(`\\b${READABLE_NOTE_ATTR}=`, "i").test(attrs)) {
+          return match.replace(
+            new RegExp(`\\b${READABLE_NOTE_ATTR}="[^"]*"`, "i"),
+            attr,
+          );
+        }
+        return `<div${attrs} ${attr}>`;
+      },
+    );
+    return `${prefix}${body}${Zotero.Notes.noteSuffix || ""}`;
+  }
+  return `<div data-schema-version="9" ${attr}>${body}</div>`;
+}
+
 async function renderReadableNoteBody(
   document: CollectionSyllabusDocument,
   collection?: Zotero.Collection | null,
@@ -305,50 +443,38 @@ async function renderReadableNoteBody(
     if (!classMeta?.number) {
       continue;
     }
-    const readings = sortReadingsByPriority(
-      gatherClassReadings(
-        classId,
-        classMeta.number,
-        classMeta.itemOrder,
-        document,
-      ),
+    const readings = gatherClassReadings(
+      classId,
+      classMeta.number,
+      classMeta.itemOrder,
       document,
     );
-    const date = classMeta.readingDate
-      ? formatReadingDate(classMeta.readingDate)
-      : "";
-    const status = (classMeta.status || "").trim();
-    const metaLine = [date, status].filter(Boolean).join(" - ");
-    const lines = await readingLines(readings, document, collection, titles);
     classSections.push(
       [
         heading(
           3,
-          classHeading(
+          classSubcollectionName(
             document.nomenclature,
             classMeta.number,
             classMeta.title,
+            {
+              done: classMeta.status === "done",
+              readingDate: classMeta.readingDate,
+            },
           ),
         ),
-        paragraph(metaLine),
         proseToHtml(classMeta.description),
-        bulletList(lines),
+        await renderReadingGroups(readings, document, collection, titles),
       ]
         .filter(Boolean)
         .join(""),
     );
   }
 
-  const further = sortReadingsByPriority(
-    gatherFurtherReadings(document),
-    document,
-  );
-  const furtherLines = await readingLines(
-    further,
-    document,
-    collection,
-    titles,
-  );
+  const further = gatherFurtherReadings(document);
+  const furtherHtml = further.length
+    ? await renderReadingGroups(further, document, collection, titles)
+    : "";
 
   return [
     heading(1, collection?.name || SYLLABUS_NOTE_TITLE),
@@ -356,9 +482,7 @@ async function renderReadableNoteBody(
     proseToHtml(document.description),
     linksBlock(document.links),
     ...classSections,
-    ...(furtherLines.length
-      ? [heading(3, "Further reading"), bulletList(furtherLines)]
-      : []),
+    ...(furtherHtml ? [heading(3, "Further reading"), furtherHtml] : []),
     pluginJsonBlock(document),
   ]
     .filter(Boolean)
@@ -380,6 +504,14 @@ export function getSyllabusNoteFormatVersion(html: string): number | null {
   }
   // Original envelope used data-zotero-syllabus="1" as a marker, not a version.
   return 1;
+}
+
+export function getReadableNoteFormatVersion(html: string): number | null {
+  const match = html.match(/\bdata-readable="(\d+)"/i);
+  if (!match) {
+    return null;
+  }
+  return parseInt(match[1], 10);
 }
 
 export function isUnsupportedFutureNote(html: string): boolean {
@@ -411,6 +543,9 @@ export function noteNeedsFormatPatch(
 ): boolean {
   if (isUnsupportedFutureNote(html)) {
     return false;
+  }
+  if (getReadableNoteFormatVersion(html) !== READABLE_NOTE_FORMAT_VERSION) {
+    return true;
   }
   const envelopeVersion = getSyllabusNoteFormatVersion(html);
   if (envelopeVersion !== COLLECTION_SYLLABUS_DOCUMENT_VERSION) {
@@ -446,10 +581,7 @@ export async function serializeSyllabusNote(
   collection?: Zotero.Collection | null,
 ): Promise<string> {
   const body = await renderReadableNoteBody(document, collection);
-  if (typeof Zotero !== "undefined" && Zotero.Notes?.notePrefix) {
-    return `${Zotero.Notes.notePrefix}${body}${Zotero.Notes.noteSuffix}`;
-  }
-  return `<div data-schema-version="9">${body}</div>`;
+  return wrapNoteHtml(body);
 }
 
 function extractJsonPayload(html: string): string | null {
