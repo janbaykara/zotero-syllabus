@@ -319,7 +319,8 @@
 
 .syllabus-gallery-cover-portrait,
 .syllabus-gallery-cover-video,
-.syllabus-gallery-cover-square {
+.syllabus-gallery-cover-square,
+.syllabus-gallery-cover-natural {
   align-self: end;
   width: 100%;
 }
@@ -334,6 +335,12 @@
 
 .syllabus-gallery-cover-square {
   aspect-ratio: 1 / 1;
+}
+
+/* Height comes from the image itself (intrinsic aspect ratio). */
+.syllabus-gallery-cover-natural {
+  aspect-ratio: auto;
+  height: auto;
 }
 
 .syllabus-gallery-meta {

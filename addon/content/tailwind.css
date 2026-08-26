@@ -109,6 +109,9 @@
   .left-1\/2 {
     left: calc(1 / 2 * 100%);
   }
+  .z-0 {
+    z-index: 0;
+  }
   .z-10 {
     z-index: 10;
   }
@@ -323,6 +326,9 @@
   }
   .h-12 {
     height: calc(var(--spacing) * 12);
+  }
+  .h-auto {
+    height: auto;
   }
   .h-full {
     height: 100%;

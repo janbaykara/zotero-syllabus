@@ -902,21 +902,25 @@ function GalleryCover({
     item.itemType === "document" ||
     item.itemType === "thesis";
   const isVideo = isVideoGalleryItem(item);
-  const showWebOverlay =
-    isWebGalleryItem(item) && cover.kind === "image" && !isVideo;
+  const isWeb = isWebGalleryItem(item);
+  const showWebOverlay = isWeb && cover.kind === "image" && !isVideo;
   const videoSite = isVideo ? getVideoSiteHostname(item) : "";
   const videoFavicon = videoSite ? faviconUrlForHostname(videoSite) : null;
+  const useNaturalAspect = cover.kind === "image" && !isVideo && !isWeb;
+  const coverShapeClass = isVideo
+    ? "syllabus-gallery-cover-video"
+    : isWeb
+      ? "syllabus-gallery-cover-square"
+      : useNaturalAspect
+        ? "syllabus-gallery-cover-natural"
+        : "syllabus-gallery-cover-portrait";
 
   return (
     <div
       ref={rootRef}
       className={twMerge(
         "relative w-full overflow-hidden rounded-[3px] bg-quinary shadow-card transition-shadow group-hover:shadow-card-hover",
-        isVideo
-          ? "syllabus-gallery-cover-video"
-          : isWebGalleryItem(item)
-            ? "syllabus-gallery-cover-square"
-            : "syllabus-gallery-cover-portrait",
+        coverShapeClass,
         selected &&
           "ring-2 ring-[#7b4ddb] ring-offset-2 ring-offset-background",
       )}
@@ -928,10 +932,14 @@ function GalleryCover({
           src={cover.src}
           alt=""
           className={twMerge(
-            "absolute inset-0 h-full w-full",
-            cover.fit === "contain"
-              ? "object-contain bg-white"
-              : "object-cover",
+            useNaturalAspect
+              ? "relative z-0 block h-auto w-full"
+              : twMerge(
+                  "absolute inset-0 h-full w-full",
+                  cover.fit === "contain"
+                    ? "object-contain bg-white"
+                    : "object-cover",
+                ),
           )}
           draggable={false}
         />
