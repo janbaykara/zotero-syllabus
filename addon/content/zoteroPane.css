@@ -1,4 +1,4 @@
-/* Segmented Items / Tags / Subcollections / Syllabus control */
+/* Segmented Items / Gallery / Tags / Subcollections / Syllabus control */
 .syllabus-view-mode-button {
   fill: currentColor;
   -moz-context-properties: fill, fill-opacity;
@@ -19,6 +19,10 @@
 
 .syllabus-view-mode-button[data-icon="unfiled"] {
   list-style-image: url("chrome://zotero/skin/16/universal/unfiled.svg");
+}
+
+.syllabus-view-mode-button[data-icon="book"] {
+  list-style-image: url("chrome://zotero/skin/16/universal/book.svg");
 }
 
 .syllabus-view-mode-button[data-icon="tag"] {
@@ -45,6 +49,7 @@
   margin-inline-start: 4px !important;
 }
 
+.syllabus-view-mode-button[data-view-mode="gallery"],
 .syllabus-view-mode-button[data-view-mode="tags"],
 .syllabus-view-mode-button[data-view-mode="subcollections"] {
   border-inline-start: none !important;
@@ -73,6 +78,31 @@
 .syllabus-view-mode-button[checked="true"] {
   background-color: #7b4ddb !important;
   color: #fff !important;
+}
+
+#syllabus-custom-view {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Faint Apple Books–style hinge on book / book section covers */
+.syllabus-gallery-book-spine {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0.28) 0,
+      rgba(0, 0, 0, 0.1) 1px,
+      rgba(255, 255, 255, 0.22) 2px,
+      rgba(255, 255, 255, 0.06) 5px,
+      rgba(0, 0, 0, 0.14) 7px,
+      rgba(0, 0, 0, 0.04) 11px,
+      transparent 22%
+    );
 }
 
 :root.syllabus-custom-icons .icon-css.icon-calendar,

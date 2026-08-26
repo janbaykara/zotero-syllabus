@@ -7,6 +7,7 @@ import { getLocaleID, getString } from "../utils/locale";
 import { renderSyllabusPage } from "./SyllabusPage";
 import { renderTagsPage } from "./TagsPage";
 import { renderSubcollectionsPage } from "./SubcollectionsPage";
+import { renderGalleryPage } from "./GalleryPage";
 import { getSelectedCollection } from "../utils/zotero";
 import { getCurrentTab, confirmPrompt } from "../utils/window";
 import { renderComponent } from "../utils/react";
@@ -89,12 +90,21 @@ enum SyllabusSettingsKey {
 
 export type CollectionViewMode =
   | "collection"
+  | "gallery"
   | "syllabus"
   | "tags"
   | "subcollections";
 
 const COLLECTION_VIEW_MODES: CollectionViewMode[] = [
   "collection",
+  "gallery",
+  "tags",
+  "subcollections",
+  "syllabus",
+];
+
+const CUSTOM_COLLECTION_VIEW_MODES: CollectionViewMode[] = [
+  "gallery",
   "tags",
   "subcollections",
   "syllabus",
@@ -102,6 +112,7 @@ const COLLECTION_VIEW_MODES: CollectionViewMode[] = [
 
 const CollectionViewModeSchema = z.enum([
   "collection",
+  "gallery",
   "syllabus",
   "tags",
   "subcollections",
@@ -761,13 +772,14 @@ export class SyllabusManager {
       mode: CollectionViewMode;
       label?: string;
       tooltip: string;
-      icon?: "unfiled" | "tag" | "folder";
+      icon?: "unfiled" | "book" | "tag" | "folder";
     }[] = [
       {
         mode: "collection",
         tooltip: "View as Items",
         icon: "unfiled",
       },
+      { mode: "gallery", tooltip: "View as Gallery", icon: "book" },
       { mode: "tags", tooltip: "View as Tags", icon: "tag" },
       {
         mode: "subcollections",
@@ -816,7 +828,7 @@ export class SyllabusManager {
                 await SyllabusManager.setCollectionViewMode(option.mode);
                 SyllabusManager.updateViewModeButtons();
                 SyllabusManager.updateButtonVisibility();
-                SyllabusManager.setupPage();
+                await SyllabusManager.setupPage();
               })();
             },
           },
@@ -1030,7 +1042,7 @@ export class SyllabusManager {
       }
 
       // Check if we should show custom view
-      // Show if: syllabus, tags, or subcollections view is enabled AND we have a collection
+      // Show if: gallery, syllabus, tags, or subcollections is enabled AND we have a collection
       const viewMode = SyllabusManager.getCollectionViewMode();
       if (
         viewMode === "syllabus" &&
@@ -1053,10 +1065,8 @@ export class SyllabusManager {
       }
       const resolvedViewMode = SyllabusManager.getCollectionViewMode();
       const shouldShowCustomView =
-        (resolvedViewMode === "syllabus" ||
-          resolvedViewMode === "tags" ||
-          resolvedViewMode === "subcollections") &&
-        selectedCollection;
+        !!selectedCollection &&
+        CUSTOM_COLLECTION_VIEW_MODES.includes(resolvedViewMode);
 
       // Find or create custom syllabus view container
       let customView = doc.getElementById(
@@ -1102,7 +1112,9 @@ export class SyllabusManager {
 
         // Insert the master template
         if (customView && selectedCollection) {
-          if (resolvedViewMode === "tags") {
+          if (resolvedViewMode === "gallery") {
+            renderGalleryPage(w, customView, selectedCollection.id);
+          } else if (resolvedViewMode === "tags") {
             renderTagsPage(w, customView, selectedCollection.id);
           } else if (resolvedViewMode === "subcollections") {
             renderSubcollectionsPage(w, customView, selectedCollection.id);

@@ -56,3 +56,29 @@ declare const Ci: {
   nsIFile: any;
   [key: string]: any;
 };
+
+declare const ChromeUtils: {
+  importESModule: (
+    path: string,
+    options?: { global?: string },
+  ) => Record<string, any>;
+};
+
+declare const PathUtils: {
+  join: (...parts: string[]) => string;
+};
+
+declare const IOUtils: {
+  exists: (path: string) => Promise<boolean>;
+  makeDirectory: (
+    path: string,
+    options?: { createAncestors?: boolean; ignoreExisting?: boolean },
+  ) => Promise<void>;
+  read: (path: string) => Promise<Uint8Array>;
+  write: (
+    path: string,
+    data: Uint8Array,
+    options?: { tmpPath?: string },
+  ) => Promise<void>;
+  stat: (path: string) => Promise<{ lastModified: number; size: number }>;
+};
