@@ -881,7 +881,7 @@ function GalleryCover({
   }, []);
 
   useEffect(() => {
-    if (!visible || item.itemType === "journalArticle") {
+    if (!visible) {
       return;
     }
     let cancelled = false;
@@ -895,8 +895,9 @@ function GalleryCover({
     };
   }, [visible, item]);
 
+  const isJournal = item.itemType === "journalArticle";
   const showSpine = item.itemType === "book" || item.itemType === "bookSection";
-  const showPageFold = item.itemType === "journalArticle";
+  const useJournalFace = isJournal && cover.kind !== "image";
   const showBinder =
     item.itemType === "report" ||
     item.itemType === "document" ||
@@ -946,9 +947,7 @@ function GalleryCover({
             ),
         )}
       >
-        {showPageFold ? (
-          <JournalFace item={item} />
-        ) : cover.kind === "image" ? (
+        {cover.kind === "image" ? (
           <img
             src={cover.src}
             alt=""
@@ -964,6 +963,8 @@ function GalleryCover({
             )}
             draggable={false}
           />
+        ) : useJournalFace ? (
+          <JournalFace item={item} />
         ) : (
           <PlaceholderFace
             cover={cover}
@@ -995,7 +996,9 @@ function GalleryCover({
           </div>
         ) : null}
         {showSpine ? <div className="syllabus-gallery-book-spine" /> : null}
-        {showPageFold ? <div className="syllabus-gallery-page-fold" /> : null}
+        {useJournalFace ? (
+          <div className="syllabus-gallery-page-fold" />
+        ) : null}
       </div>
     </div>
   );

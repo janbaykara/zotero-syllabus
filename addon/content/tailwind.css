@@ -390,9 +390,6 @@
   .flex-1 {
     flex: 1;
   }
-  .flex-shrink {
-    flex-shrink: 1;
-  }
   .shrink {
     flex-shrink: 1;
   }
@@ -989,10 +986,6 @@
   }
   .ring-offset-background {
     --tw-ring-offset-color: var(--color-background);
-  }
-  .outline {
-    outline-style: var(--tw-outline-style);
-    outline-width: 1px;
   }
   .outline-2\! {
     outline-style: var(--tw-outline-style) !important;
