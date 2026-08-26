@@ -36,6 +36,7 @@ import {
   type ResolvedCover,
 } from "../utils/itemCover";
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
+import { useZoteroItemsViewRegularItemIds } from "./react-zotero-sync/itemsViewItems";
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { ProseText } from "./ProseText";
@@ -72,9 +73,17 @@ interface GalleryPageProps {
 
 export function GalleryPage({ collectionId }: GalleryPageProps) {
   const [title] = useZoteroCollectionTitle(collectionId);
-  const syllabusItems = useZoteroCollectionItems(collectionId, {
+  const allItems = useZoteroCollectionItems(collectionId, {
     recursive: "pref",
   });
+  const matchingIds = useZoteroItemsViewRegularItemIds(collectionId);
+  const isFiltered = matchingIds != null;
+  const syllabusItems = useMemo(() => {
+    if (!matchingIds) {
+      return allItems;
+    }
+    return allItems.filter(({ zoteroItem }) => matchingIds.has(zoteroItem.id));
+  }, [allItems, matchingIds]);
   const isSyllabus = collectionHasSyllabusNote(collectionId);
   const [groupBy, setGroupBy] = useGalleryGroupBy(collectionId, isSyllabus);
   const [sortBy, setSortBy] = useGallerySortBy(collectionId);
@@ -91,8 +100,17 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
     useItemIdentifierSelection();
   const { tagGroups, untaggedItems } = useCollectionTagGroups(syllabusItems);
   const { typeGroups } = useCollectionItemTypeGroups(syllabusItems);
-  const { root: subcollectionRoot, resolveItems: resolveSubcollectionItems } =
-    useSubcollectionTree(collectionId);
+  const {
+    root: unfilteredSubcollectionRoot,
+    resolveItems: resolveSubcollectionItems,
+  } = useSubcollectionTree(collectionId);
+  const subcollectionRoot = useMemo(
+    () => filterSubcollectionNode(unfilteredSubcollectionRoot, matchingIds),
+    [unfilteredSubcollectionRoot, matchingIds],
+  );
+  const emptyMessage = isFiltered
+    ? "No matching items."
+    : "No items in this collection.";
 
   const handleClick = useCallback(
     (item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) => {
@@ -232,9 +250,7 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
 
         {groupBy === "none" &&
           (syllabusItems.length === 0 ? (
-            <p className="text-secondary text-lg">
-              No items in this collection.
-            </p>
+            <p className="text-secondary text-lg">{emptyMessage}</p>
           ) : (
             renderItems(
               syllabusItems.map(({ zoteroItem }) => zoteroItem),
@@ -244,9 +260,7 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
 
         {groupBy === "type" &&
           (typeGroups.length === 0 ? (
-            <p className="text-secondary text-lg">
-              No items in this collection.
-            </p>
+            <p className="text-secondary text-lg">{emptyMessage}</p>
           ) : (
             typeGroups.map(({ itemType, label, items }) => (
               <section key={itemType} className="syllabus-gallery-section">
@@ -258,9 +272,7 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
 
         {groupBy === "tags" &&
           (tagGroups.length === 0 && untaggedItems.length === 0 ? (
-            <p className="text-secondary text-lg">
-              No items in this collection.
-            </p>
+            <p className="text-secondary text-lg">{emptyMessage}</p>
           ) : (
             <>
               {tagGroups.map(({ tag, items }) => (
@@ -284,7 +296,9 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
         {groupBy === "subcollections" &&
           (!subcollectionRoot || !subtreeHasContent(subcollectionRoot) ? (
             <p className="text-secondary text-lg">
-              No subcollections or items in this collection.
+              {isFiltered
+                ? emptyMessage
+                : "No subcollections or items in this collection."}
             </p>
           ) : (
             <GallerySubcollectionSection
@@ -299,15 +313,13 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
         {groupBy === "classes" &&
           (classGroups.every((group) => group.itemAssignments.length === 0) &&
           furtherReadingItems.length === 0 ? (
-            <p className="text-secondary text-lg">
-              No items in this collection.
-            </p>
+            <p className="text-secondary text-lg">{emptyMessage}</p>
           ) : (
             <>
               {classGroups.map((group) => {
                 if (
                   group.itemAssignments.length === 0 &&
-                  group.classNumber == null
+                  (isFiltered || group.classNumber == null)
                 ) {
                   return null;
                 }
@@ -350,6 +362,26 @@ function subtreeHasContent(node: SubcollectionNode): boolean {
     return true;
   }
   return node.children.some(subtreeHasContent);
+}
+
+function filterSubcollectionNode(
+  node: SubcollectionNode | null,
+  matchingIds: Set<number> | null,
+): SubcollectionNode | null {
+  if (!node || !matchingIds) {
+    return node;
+  }
+  const next: SubcollectionNode = {
+    ...node,
+    itemIds: node.itemIds.filter((id) => matchingIds.has(id)),
+    children: node.children
+      .map((child) => filterSubcollectionNode(child, matchingIds))
+      .filter(
+        (child): child is SubcollectionNode =>
+          child != null && subtreeHasContent(child),
+      ),
+  };
+  return next;
 }
 
 function GallerySubcollectionSection({
