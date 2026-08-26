@@ -124,6 +124,7 @@ function writeCsv(filePath, rows) {
 /**
  * Fetch releases from GitHub API
  */
+// https://api.github.com/repos/janbaykara/zotero-syllabus/releases
 function fetchReleases(owner, repo, token) {
   return new Promise((resolve, reject) => {
     const url = `https://api.github.com/repos/${owner}/${repo}/releases`;

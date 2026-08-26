@@ -264,6 +264,24 @@
   color: var(--fill-secondary, #8c8c8c);
 }
 
+.syllabus-prose {
+  margin: 0;
+}
+
+.syllabus-prose p {
+  margin: 0 0 0.65em;
+  line-height: 1.45;
+}
+
+.syllabus-prose p:last-child {
+  margin-bottom: 0;
+}
+
+.syllabus-item-description .syllabus-prose {
+  font-size: inherit;
+  color: inherit;
+}
+
 .syllabus-gallery-class-header .syllabus-gallery-section-title {
   margin-bottom: 0;
 }

@@ -12,6 +12,7 @@ import { formatReadingDate } from "../utils/dates";
 import { generateBibliographicReference } from "../utils/cite";
 import { classSubcollectionName } from "./classSubcollections";
 import { SYLLABUS_NOTE_PRE_ATTR, SYLLABUS_NOTE_TITLE } from "./syllabusNote";
+import { proseToHtml } from "../utils/prose";
 
 export const PLUGIN_JSON_HEADING = "Plugin data (do not edit)";
 export const PLUGIN_REPO_URL = "https://github.com/janbaykara/zotero-syllabus";
@@ -203,7 +204,7 @@ function formatReadingLine(
   }
   parts.push(citation);
   if (instruction) {
-    parts.push(instruction);
+    parts.push(instruction.replace(/\s+/g, " ").trim());
   }
   return parts.join(" - ");
 }
@@ -330,7 +331,7 @@ async function renderReadableNoteBody(
           ),
         ),
         paragraph(metaLine),
-        paragraph(classMeta.description),
+        proseToHtml(classMeta.description),
         bulletList(lines),
       ]
         .filter(Boolean)
@@ -352,7 +353,7 @@ async function renderReadableNoteBody(
   return [
     heading(1, collection?.name || SYLLABUS_NOTE_TITLE),
     paragraph(courseByline(document.courseCode, document.institution)),
-    paragraph(document.description),
+    proseToHtml(document.description),
     linksBlock(document.links),
     ...classSections,
     ...(furtherLines.length

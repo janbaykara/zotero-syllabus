@@ -56,6 +56,7 @@ import {
   buildItemIndex,
   remapDocumentItemKeys,
   setCollectionDocumentMetadata,
+  patchCollectionDocumentMetadata,
   setItemAssignmentsInDocument,
   shutdownSyllabusNotes,
   getClassSubcollectionContext,
@@ -1913,16 +1914,10 @@ export class SyllabusManager {
     itemIds: string[],
     source: "page" | "item-pane" = "page",
   ): Promise<void> {
-    const classMetadata = SyllabusManager.getClassMetadata(
-      collectionId,
-      classNumber,
-    );
-    const classKey = classNumber === null ? "null" : String(classNumber);
-    classMetadata.itemOrder = itemIds;
     await this.setClassMetadata(
       collectionId,
       classNumber,
-      classMetadata,
+      { itemOrder: itemIds },
       source,
     );
   }
@@ -1943,6 +1938,7 @@ export class SyllabusManager {
   /**
    * Set collection metadata in the collection syllabus note.
    * Assignment data on the note is preserved.
+   * Prefer {@link patchCollectionMetadata} for single-field updates.
    */
   static async setCollectionMetadata(
     collectionId: number | GetByLibraryAndKeyArgs,
@@ -1955,6 +1951,24 @@ export class SyllabusManager {
       return;
     }
     await setCollectionDocumentMetadata(collectionId, parsed.data, {
+      createNote: source === "background" ? "always" : "prompt",
+    });
+    if (source !== "page") {
+      this.setupPage();
+    }
+    this.onClassListUpdate();
+  }
+
+  /**
+   * Apply a partial metadata patch against the live document (queued write).
+   * Only provided fields are updated — safe for concurrent single-field edits.
+   */
+  static async patchCollectionMetadata(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    patch: Partial<SettingsSyllabusMetadata>,
+    source: "page" | "item-pane" | "background",
+  ): Promise<void> {
+    await patchCollectionDocumentMetadata(collectionId, patch, {
       createNote: source === "background" ? "always" : "prompt",
     });
     if (source !== "page") {
@@ -1981,11 +1995,9 @@ export class SyllabusManager {
     description: string,
     source: "page" | "background",
   ): Promise<void> {
-    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
-    syllabusMetadata.description = description.trim();
-    await SyllabusManager.setCollectionMetadata(
+    await SyllabusManager.patchCollectionMetadata(
       collectionId,
-      syllabusMetadata,
+      { description: description.trim() },
       source,
     );
   }
@@ -2006,11 +2018,9 @@ export class SyllabusManager {
     institution: string,
     source: "page" | "background",
   ): Promise<void> {
-    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
-    syllabusMetadata.institution = institution.trim();
-    await SyllabusManager.setCollectionMetadata(
+    await SyllabusManager.patchCollectionMetadata(
       collectionId,
-      syllabusMetadata,
+      { institution: institution.trim() },
       source,
     );
   }
@@ -2031,11 +2041,9 @@ export class SyllabusManager {
     courseCode: string,
     source: "page" | "background",
   ): Promise<void> {
-    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
-    syllabusMetadata.courseCode = courseCode.trim();
-    await SyllabusManager.setCollectionMetadata(
+    await SyllabusManager.patchCollectionMetadata(
       collectionId,
-      syllabusMetadata,
+      { courseCode: courseCode.trim() },
       source,
     );
   }
@@ -2048,11 +2056,9 @@ export class SyllabusManager {
     nomenclature: string,
     source: "page",
   ): Promise<void> {
-    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
-    syllabusMetadata.nomenclature = nomenclature.trim().toLowerCase();
-    await SyllabusManager.setCollectionMetadata(
+    await SyllabusManager.patchCollectionMetadata(
       collectionId,
-      syllabusMetadata,
+      { nomenclature: nomenclature.trim().toLowerCase() },
       source,
     );
   }
@@ -2075,11 +2081,9 @@ export class SyllabusManager {
     links: string[],
     source: "page",
   ): Promise<void> {
-    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
-    syllabusMetadata.links = links.map((link) => link.trim()).filter(Boolean);
-    await SyllabusManager.setCollectionMetadata(
+    await SyllabusManager.patchCollectionMetadata(
       collectionId,
-      syllabusMetadata,
+      { links: links.map((link) => link.trim()).filter(Boolean) },
       source,
     );
   }
@@ -2092,11 +2096,9 @@ export class SyllabusManager {
     priorities: Priority[],
     source: "page" | "background",
   ): Promise<void> {
-    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
-    syllabusMetadata.priorities = priorities;
-    await SyllabusManager.setCollectionMetadata(
+    await SyllabusManager.patchCollectionMetadata(
       collectionId,
-      syllabusMetadata,
+      { priorities },
       source,
     );
   }
@@ -2117,11 +2119,9 @@ export class SyllabusManager {
     locked: boolean,
     source: "page",
   ): Promise<void> {
-    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
-    syllabusMetadata.locked = locked;
-    await SyllabusManager.setCollectionMetadata(
+    await SyllabusManager.patchCollectionMetadata(
       collectionId,
-      syllabusMetadata,
+      { locked },
       source,
     );
   }
@@ -2148,11 +2148,9 @@ export class SyllabusManager {
     ) {
       return;
     }
-    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
-    syllabusMetadata.createSubcollections = createSubcollections;
-    await SyllabusManager.setCollectionMetadata(
+    await SyllabusManager.patchCollectionMetadata(
       collectionId,
-      syllabusMetadata,
+      { createSubcollections },
       source,
     );
     SyllabusManager.setupToggleButton();
@@ -2176,11 +2174,9 @@ export class SyllabusManager {
     cslStyle: string | null,
     source: "page",
   ): Promise<void> {
-    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
-    syllabusMetadata.cslStyle = cslStyle?.trim() || null;
-    await SyllabusManager.setCollectionMetadata(
+    await SyllabusManager.patchCollectionMetadata(
       collectionId,
-      syllabusMetadata,
+      { cslStyle: cslStyle?.trim() || null },
       source,
     );
   }
@@ -2273,19 +2269,14 @@ export class SyllabusManager {
     metadata: Partial<SettingsClassMetadata>,
     source: "page" | "item-pane",
   ): Promise<void> {
-    const syllabusMetadata = SyllabusManager.getSyllabusMetadata(collectionId);
-    if (!syllabusMetadata.classes[classNumber]) {
-      syllabusMetadata.classes[classNumber] = SettingsClassMetadataSchema.parse(
-        {},
-      );
+    const parsed = SettingsClassMetadataSchema.partial().safeParse(metadata);
+    if (!parsed.success) {
+      ztoolkit.log("Error validating class metadata:", parsed.error);
+      return;
     }
-    syllabusMetadata.classes[classNumber] = {
-      ...syllabusMetadata.classes[classNumber],
-      ...metadata,
-    };
-    await SyllabusManager.setCollectionMetadata(
+    await SyllabusManager.patchCollectionMetadata(
       collectionId,
-      syllabusMetadata,
+      { classes: { [String(classNumber)]: parsed.data } },
       source,
     );
   }
@@ -2299,15 +2290,10 @@ export class SyllabusManager {
     title: string | null | undefined,
     source: "page" | "item-pane",
   ): Promise<void> {
-    const classMetadata = SyllabusManager.getClassMetadata(
-      collectionId,
-      classNumber,
-    );
-    classMetadata.title = title;
     await SyllabusManager.setClassMetadata(
       collectionId,
       classNumber,
-      classMetadata,
+      { title },
       source,
     );
   }
@@ -2335,15 +2321,10 @@ export class SyllabusManager {
     description: string | null | undefined,
     source: "page",
   ): Promise<void> {
-    const classMetadata = SyllabusManager.getClassMetadata(
-      collectionId,
-      classNumber,
-    );
-    classMetadata.description = description;
     await SyllabusManager.setClassMetadata(
       collectionId,
       classNumber,
-      classMetadata,
+      { description },
       source,
     );
   }
@@ -2373,21 +2354,12 @@ export class SyllabusManager {
     readingDate: string | null | undefined,
     source: "page" | "item-pane",
   ): Promise<void> {
-    const classMetadata = SyllabusManager.getClassMetadata(
-      collectionId,
-      classNumber,
-    );
-    if (readingDate) {
-      classMetadata.readingDate = readingDate;
-    } else {
-      // Explicit null so merges overwrite the previous date (omitting the key
-      // leaves the existing value in place via object spread).
-      classMetadata.readingDate = null;
-    }
     await SyllabusManager.setClassMetadata(
       collectionId,
       classNumber,
-      classMetadata,
+      // Explicit null so merges overwrite the previous date (omitting the key
+      // leaves the existing value in place via object spread).
+      { readingDate: readingDate || null },
       source,
     );
   }
@@ -2415,15 +2387,10 @@ export class SyllabusManager {
     status: ClassStatus,
     source: "page" | "item-pane",
   ): Promise<void> {
-    const classMetadata = SyllabusManager.getClassMetadata(
-      collectionId,
-      classNumber,
-    );
-    classMetadata.status = status;
     await SyllabusManager.setClassMetadata(
       collectionId,
       classNumber,
-      classMetadata,
+      { status },
       source,
     );
   }

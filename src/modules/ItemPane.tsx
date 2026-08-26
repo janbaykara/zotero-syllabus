@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
-import { useState, useCallback, useRef, useMemo } from "preact/hooks";
+import { useState, useCallback, useMemo } from "preact/hooks";
 import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
 import { Square, SquareCheck } from "lucide-preact";
 import { twMerge } from "tailwind-merge";
@@ -15,6 +15,7 @@ import {
 import { useZoteroClassMetadata } from "./react-zotero-sync/classMetadata";
 import { useSyllabusDocumentGeneration } from "./react-zotero-sync/collectionDocument";
 import { formatReadingDate } from "../utils/dates";
+import { TextInput } from "./syllabusInputs";
 
 interface ItemPaneProps {
   editable: boolean;
@@ -253,38 +254,25 @@ function ItemPaneContent({
     [itemVersion, handleSave],
   );
 
-  // Store debounce timeouts per assignment ID
-  const instructionTimeouts = useRef<
-    Map<string, ReturnType<typeof setTimeout>>
-  >(new Map());
-
   const handleInstructionChange = useCallback(
-    (assignmentId: string, collectionId: number, instruction: string) => {
+    async (
+      assignmentId: string,
+      collectionId: number,
+      instruction: string,
+    ) => {
       if (!assignmentId) {
         ztoolkit.log("Error: Assignment ID missing");
         return;
       }
 
-      // Clear existing timeout for this assignment
-      const existingTimeout = instructionTimeouts.current.get(assignmentId);
-      if (existingTimeout) {
-        clearTimeout(existingTimeout);
-      }
-
-      // Set new timeout
-      const timeout = setTimeout(async () => {
-        await SyllabusManager.updateClassAssignment(
-          itemVersion.item,
-          collectionId,
-          assignmentId,
-          { classInstruction: instruction },
-          "item-pane",
-        );
-        await handleSave();
-        instructionTimeouts.current.delete(assignmentId);
-      }, 500);
-
-      instructionTimeouts.current.set(assignmentId, timeout);
+      await SyllabusManager.updateClassAssignment(
+        itemVersion.item,
+        collectionId,
+        assignmentId,
+        { classInstruction: instruction },
+        "item-pane",
+      );
+      await handleSave();
     },
     [itemVersion, handleSave],
   );
@@ -684,19 +672,20 @@ function AssignmentEditor({
         </div>
       </div>
 
-      {/* Instructions */}
+      {/* Instructions — local-state TextInput so document sync cannot erase typing */}
       <div className="flex flex-row gap-2">
         <label className="w-1/4 shrink-0 grow-0">Instructions</label>
-        <textarea
-          disabled={!editable || isSaving}
-          rows={3}
-          value={assignment.classInstruction || ""}
-          onChange={(e) => {
-            const target = e.target as HTMLTextAreaElement;
-            onInstructionChange(assignment.id!, collectionId, target.value);
-          }}
+        <TextInput
+          elementType="textarea"
+          initialValue={assignment.classInstruction || ""}
+          onSave={(instruction) =>
+            onInstructionChange(assignment.id!, collectionId, instruction)
+          }
           placeholder="Add instructions for this assignment..."
-          className="-my-2 p-2 w-full border border-transparent rounded-md bg-background text-primary resize-vertical font-inherit min-h-15 transition-border-color duration-150 box-border hover:not-focus:bg-quinary hover:not-focus:cursor-pointer"
+          emptyBehavior="delete"
+          fieldSizing="fixed"
+          readOnly={!editable}
+          className="-my-2 p-2 w-full border border-transparent rounded-md bg-background text-primary resize-vertical font-inherit min-h-15 transition-border-color duration-150 box-border hover:not-focus:bg-quinary hover:not-focus:cursor-pointer field-sizing-fixed!"
         />
       </div>
 

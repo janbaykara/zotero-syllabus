@@ -5,6 +5,7 @@ import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
 import { SettingsClassMetadata } from "./syllabus";
 import { useDebouncedEffect } from "../utils/react/useDebouncedEffect";
+import { ProseText } from "./ProseText";
 
 export function ReadingDateInput({
   initialValue,
@@ -136,9 +137,20 @@ export function TextInput({
   const [value, setValue] = useState(initialValue);
   const focusedRef = useRef(false);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+  const valueRef = useRef(value);
+  const initialValueRef = useRef(initialValue);
+  const onSaveRef = useRef(onSave);
+  const emptyBehaviorRef = useRef(emptyBehavior);
+
+  valueRef.current = value;
+  initialValueRef.current = initialValue;
+  onSaveRef.current = onSave;
+  emptyBehaviorRef.current = emptyBehavior;
 
   function save(next: string) {
-    onSave(emptyBehavior === "reset" ? next || initialValue : next);
+    onSaveRef.current(
+      emptyBehaviorRef.current === "reset" ? next || initialValueRef.current : next,
+    );
   }
 
   useEffect(() => {
@@ -157,6 +169,19 @@ export function TextInput({
     [initialValue, value],
     500,
   );
+
+  // Flush pending edits if the field unmounts before debounce/blur fires
+  useEffect(() => {
+    return () => {
+      const pending = valueRef.current;
+      const committed = initialValueRef.current;
+      if (pending !== committed) {
+        onSaveRef.current(
+          emptyBehaviorRef.current === "reset" ? pending || committed : pending,
+        );
+      }
+    };
+  }, []);
 
   useLayoutEffect(() => {
     if (
@@ -191,6 +216,8 @@ export function TextInput({
   if (readOnly && !value && !initialValue) {
     return null;
   }
+
+  const displayValue = value || initialValue || "";
 
   const el = (
     <>
@@ -253,21 +280,33 @@ export function TextInput({
         className: twMerge(
           "bg-transparent border-none focus:outline-3 focus:outline-accent-blue focus:rounded-xs focus:outline-offset-2 field-sizing-content in-[.print]:hidden",
           readOnly && "cursor-default select-none",
+          readOnly && elementType === "textarea" && "hidden",
           className,
         ),
         style: {
           "--color-focus-border": "var(--color-accent-blue)",
         },
       })}
-      {/* Print-only div that shows the value */}
-      <div
-        className="hidden in-[.print]:block"
-        style={{
-          whiteSpace: elementType === "textarea" ? "pre-wrap" : "normal",
-        }}
-      >
-        {value || initialValue || ""}
-      </div>
+      {elementType === "textarea" && readOnly ? (
+        <div className="syllabus-prose">
+          <ProseText text={displayValue} />
+        </div>
+      ) : (
+        <div
+          className="hidden in-[.print]:block"
+          style={{
+            whiteSpace: elementType === "textarea" ? undefined : "normal",
+          }}
+        >
+          {elementType === "textarea" ? (
+            <div className="syllabus-prose">
+              <ProseText text={displayValue} />
+            </div>
+          ) : (
+            displayValue
+          )}
+        </div>
+      )}
     </>
   );
 

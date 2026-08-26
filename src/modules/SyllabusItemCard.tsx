@@ -15,6 +15,7 @@ import {
   youtubeUrlFromItem,
   youtubeVideoIdFromUrl,
 } from "../utils/youtube";
+import { ProseText } from "./ProseText";
 import {
   getItemReadStatusName,
   getReadStatusMetadata,
@@ -630,7 +631,7 @@ export function SyllabusItemCard({
               </div>
               {classInstruction && (
                 <div className="syllabus-item-description">
-                  {classInstruction}
+                  <ProseText text={classInstruction} />
                 </div>
               )}
             </>
@@ -681,7 +682,7 @@ export function SyllabusItemCard({
               )}
               {classInstruction && (
                 <div className="syllabus-item-description">
-                  {classInstruction}
+                  <ProseText text={classInstruction} />
                 </div>
               )}
             </>

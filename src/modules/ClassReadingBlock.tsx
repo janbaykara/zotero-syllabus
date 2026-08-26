@@ -15,6 +15,7 @@ import { isZotero8OrLater, selectZoteroCollection } from "../utils/zotero";
 import { getCachedCollectionById } from "../utils/cache";
 import { TabManager } from "../utils/tabManager";
 import { classByNumber } from "../utils/schemas";
+import { ProseText } from "./ProseText";
 
 export type ClassReading = {
   collectionId: number;
@@ -162,7 +163,9 @@ export function ClassReadingBlock({
           </div>
         </div>
         {classReading.classDescription && (
-          <div className="text-base mb-1">{classReading.classDescription}</div>
+          <div className="text-base mb-1">
+            <ProseText text={classReading.classDescription} />
+          </div>
         )}
       </div>
       <div

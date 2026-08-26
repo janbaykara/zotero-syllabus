@@ -1270,6 +1270,61 @@ export async function setCollectionDocumentMetadata(
   );
 }
 
+/**
+ * Apply a partial metadata patch against the queued current document.
+ * Only provided fields are written — avoids stale full-snapshot overwrites.
+ */
+export async function patchCollectionDocumentMetadata(
+  collectionId: CollectionIdentifier | Zotero.Collection,
+  patch: Partial<SettingsSyllabusMetadata>,
+  options: { createNote?: CreateNotePolicy } = {},
+): Promise<CollectionSyllabusDocument> {
+  return mutateCollectionDocument(
+    collectionId,
+    (document) => {
+      const next: CollectionSyllabusDocument = {
+        ...document,
+        version: COLLECTION_SYLLABUS_DOCUMENT_VERSION,
+        items: document.items,
+      };
+
+      if (patch.description !== undefined) {
+        next.description = patch.description;
+      }
+      if (patch.institution !== undefined) {
+        next.institution = patch.institution;
+      }
+      if (patch.courseCode !== undefined) {
+        next.courseCode = patch.courseCode;
+      }
+      if (patch.nomenclature !== undefined) {
+        next.nomenclature = patch.nomenclature;
+      }
+      if (patch.priorities !== undefined) {
+        next.priorities = patch.priorities;
+      }
+      if (patch.locked !== undefined) {
+        next.locked = patch.locked;
+      }
+      if (patch.links !== undefined) {
+        next.links = patch.links;
+      }
+      if (patch.cslStyle !== undefined) {
+        next.cslStyle = patch.cslStyle;
+      }
+      if (patch.createSubcollections !== undefined) {
+        next.createSubcollections = patch.createSubcollections;
+      }
+      if (patch.classes !== undefined) {
+        next.classes = mergeNumberKeyedClasses(document.classes, patch.classes);
+      }
+
+      return next;
+    },
+    { createNote: options.createNote ?? "prompt" },
+  );
+}
+
 export async function setItemAssignmentsInDocument(
   collectionId: CollectionIdentifier | Zotero.Collection,
   itemKey: string,

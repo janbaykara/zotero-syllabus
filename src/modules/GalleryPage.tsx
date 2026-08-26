@@ -38,6 +38,7 @@ import {
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
+import { ProseText } from "./ProseText";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import { SlimSyllabusItemCard, useItemIdentifierSelection } from "./browsePage";
 import { SyllabusItemCard } from "./SyllabusItemCard";
@@ -466,7 +467,9 @@ function GalleryClassHeading({
         <h2 className="syllabus-gallery-section-title">{title}</h2>
       ) : null}
       {description ? (
-        <p className="syllabus-gallery-class-description">{description}</p>
+        <div className="syllabus-gallery-class-description">
+          <ProseText text={description} />
+        </div>
       ) : null}
     </header>
   );
