@@ -666,15 +666,19 @@ export class SyllabusManager {
     }
     const classContext = getClassSubcollectionContext(selectedCollection);
     if (classContext) {
-      return SyllabusManager.coerceViewModeForCollection(
-        selectedCollection,
-        viewModes[String(classContext.parent.id)],
-      );
+      const parentStored = viewModes[String(classContext.parent.id)];
+      if (parentStored !== undefined && parentStored !== null) {
+        return SyllabusManager.coerceViewModeForCollection(
+          selectedCollection,
+          parentStored,
+        );
+      }
     }
-    return SyllabusManager.coerceViewModeForCollection(
-      selectedCollection,
-      stored,
-    );
+    // Class folders and reading-schedule collections open as Checklist.
+    if (isAutoManagedCollection(selectedCollection.id)) {
+      return "syllabus";
+    }
+    return "collection";
   }
 
   static coerceViewModeForCollection(
