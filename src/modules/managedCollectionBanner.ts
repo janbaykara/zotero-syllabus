@@ -51,8 +51,8 @@ function createLockIcon(doc: Document): SVGSVGElement {
 function createBanner(doc: Document): HTMLElement {
   // XUL vbox so the items tree flexes around this notice instead of overlaying it.
   const banner = (
-    doc as Document & { createXULElement: (tag: string) => HTMLElement }
-  ).createXULElement("vbox");
+    doc as Document & { createXULElement: (tag: string) => Element }
+  ).createXULElement("vbox") as HTMLElement;
   banner.id = BANNER_ID;
   banner.classList.add("syllabus-managed-folder-banner");
   banner.setAttribute("flex", "0");

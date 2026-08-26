@@ -48,10 +48,7 @@ import { useGallerySortBy, type GallerySortBy } from "./gallerySort";
 import { collectionHasSyllabusNote } from "./syllabusNote";
 import { useCollectionTagGroups } from "./tagGroups";
 import { useCollectionItemTypeGroups } from "./typeGroups";
-import {
-  SubcollectionNode,
-  useSubcollectionTree,
-} from "./subcollectionGroups";
+import { SubcollectionNode, useSubcollectionTree } from "./subcollectionGroups";
 import {
   SyllabusManager,
   classByNumber,
@@ -900,7 +897,10 @@ function GalleryCover({
 
   const showSpine = item.itemType === "book" || item.itemType === "bookSection";
   const showPageFold = item.itemType === "journalArticle";
-  const showBinder = item.itemType === "report" || item.itemType === "document" || item.itemType === "thesis";
+  const showBinder =
+    item.itemType === "report" ||
+    item.itemType === "document" ||
+    item.itemType === "thesis";
   const isVideo = isVideoGalleryItem(item);
   const showWebOverlay =
     isWebGalleryItem(item) && cover.kind === "image" && !isVideo;

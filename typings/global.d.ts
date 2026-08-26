@@ -74,10 +74,7 @@ declare const IOUtils: {
     path: string,
     options?: { createAncestors?: boolean; ignoreExisting?: boolean },
   ) => Promise<void>;
-  read: (
-    path: string,
-    options?: { maxBytes?: number },
-  ) => Promise<Uint8Array>;
+  read: (path: string, options?: { maxBytes?: number }) => Promise<Uint8Array>;
   write: (
     path: string,
     data: Uint8Array,

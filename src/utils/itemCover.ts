@@ -1,5 +1,9 @@
 import { getCachedItem } from "./cache";
-import { youtubeThumbnailUrl, youtubeUrlFromItem, youtubeVideoIdFromUrl } from "./youtube";
+import {
+  youtubeThumbnailUrl,
+  youtubeUrlFromItem,
+  youtubeVideoIdFromUrl,
+} from "./youtube";
 
 const THUMB_DIR_NAME = "syllabus-gallery-thumbs";
 const THUMB_WIDTH = 280;
@@ -197,9 +201,7 @@ function hostIsVideoSite(hostname: string): boolean {
     .replace(/^www\./i, "")
     .replace(/^m\./i, "")
     .toLowerCase();
-  return VIDEO_HOSTS.some(
-    (site) => host === site || host.endsWith(`.${site}`),
-  );
+  return VIDEO_HOSTS.some((site) => host === site || host.endsWith(`.${site}`));
 }
 
 export function isVideoGalleryItem(item: Zotero.Item): boolean {
@@ -383,9 +385,7 @@ async function indexPdfThumbs(): Promise<Map<string, string>> {
     }
     const key = match[1];
     const path =
-      child.includes("/") || child.includes("\\")
-        ? child
-        : joinPath(dir, name);
+      child.includes("/") || child.includes("\\") ? child : joinPath(dir, name);
     if (name === `${key}.jpg` || !index.has(key)) {
       index.set(key, path);
     }
@@ -633,8 +633,7 @@ function parseOgImage(html: string, baseUrl: string): string | null {
     ];
     for (const selector of selectors) {
       const el = doc.querySelector(selector);
-      const raw =
-        el?.getAttribute("content") || el?.getAttribute("href") || "";
+      const raw = el?.getAttribute("content") || el?.getAttribute("href") || "";
       const resolved = resolveHttpUrl(raw, baseUrl);
       if (resolved) {
         return resolved;
