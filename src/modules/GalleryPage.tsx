@@ -3,6 +3,7 @@ import { h, Fragment } from "preact";
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -45,6 +46,14 @@ import { SlimSyllabusItemCard, useItemIdentifierSelection } from "./browsePage";
 import { SyllabusItemCard } from "./SyllabusItemCard";
 import { useSyllabusClassGroups } from "./classGroups";
 import { useGalleryGroupBy, type GalleryGroupBy } from "./galleryGroupBy";
+import {
+  findGalleryNavIndex,
+  getActiveGalleryIndex,
+  getGalleryNavElements,
+  isEditableKeyboardTarget,
+  isGalleryKeyboardIgnoredTarget,
+  parseGalleryNavKey,
+} from "./galleryKeyboardNav";
 import { useGalleryLayout, type GalleryLayout } from "./galleryLayout";
 import { useGallerySortBy, type GallerySortBy } from "./gallerySort";
 import { collectionHasSyllabusNote } from "./syllabusNote";
@@ -56,6 +65,7 @@ import {
   classByNumber,
   type ItemSyllabusAssignment,
 } from "./syllabus";
+import { getCachedItem } from "../utils/cache";
 import { formatReadingDate } from "../utils/dates";
 import type { SettingsSyllabusMetadata } from "../utils/schemas";
 import {
@@ -98,6 +108,9 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
   );
   const { selectedIdentifiers, selectedItemIds, handleIdentifierClick } =
     useItemIdentifierSelection();
+  const pageRef = useRef<HTMLDivElement>(null);
+  const navStateRef = useRef({ selectedItemIds });
+  navStateRef.current = { selectedItemIds };
   const { tagGroups, untaggedItems } = useCollectionTagGroups(syllabusItems);
   const { typeGroups } = useCollectionItemTypeGroups(syllabusItems);
   const {
@@ -112,25 +125,165 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
     ? "No matching items."
     : "No items in this collection.";
 
+  const selectGalleryItem = useCallback((item: Zotero.Item) => {
+    try {
+      const pane = ztoolkit.getGlobal("ZoteroPane");
+      pane.selectItem(item.id);
+    } catch (err) {
+      ztoolkit.log("Error selecting gallery item:", err);
+    }
+  }, []);
+
   const handleClick = useCallback(
     (item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) => {
       if (e.shiftKey) {
         handleIdentifierClick(item, undefined, e);
         return;
       }
-      try {
-        const pane = ztoolkit.getGlobal("ZoteroPane");
-        pane.selectItem(item.id);
-      } catch (err) {
-        ztoolkit.log("Error selecting gallery item:", err);
-      }
+      selectGalleryItem(item);
     },
-    [handleIdentifierClick],
+    [handleIdentifierClick, selectGalleryItem],
   );
 
   const handleDoubleClick = useCallback((item: Zotero.Item) => {
     openItemBestAttachment(item);
   }, []);
+
+  const handleGalleryKeyDown = useCallback(
+    (event: Event) => {
+      const e = event as KeyboardEvent;
+      if (e.ctrlKey || e.metaKey || e.altKey) {
+        return;
+      }
+      if (isEditableKeyboardTarget(e.target)) {
+        return;
+      }
+      if (isGalleryKeyboardIgnoredTarget(e.target)) {
+        return;
+      }
+
+      const container = pageRef.current;
+      if (!container) {
+        return;
+      }
+      const els = getGalleryNavElements(container);
+      if (els.length === 0) {
+        return;
+      }
+
+      const isEnter = e.key === "Enter";
+      const navKey = parseGalleryNavKey(e.key);
+      if (!navKey && !isEnter) {
+        return;
+      }
+
+      const { selectedItemIds: selected } = navStateRef.current;
+      const currentIndex = getActiveGalleryIndex(
+        els,
+        selected,
+        e.target,
+        navKey ?? "down",
+      );
+
+      if (isEnter) {
+        const currentEl = currentIndex >= 0 ? els[currentIndex] : null;
+        const itemId = Number(currentEl?.dataset.itemId);
+        const item = itemId
+          ? getCachedItem(itemId) || Zotero.Items.get(itemId)
+          : null;
+        if (!item) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === "function") {
+          e.stopImmediatePropagation();
+        }
+        handleDoubleClick(item);
+        return;
+      }
+
+      if (!navKey) {
+        return;
+      }
+
+      const rects = els.map((el) => {
+        const rect = el.getBoundingClientRect();
+        return {
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+        };
+      });
+      const currentRect = currentIndex >= 0 ? rects[currentIndex] : null;
+      const pageRows = currentRect
+        ? Math.max(
+            1,
+            Math.floor(container.clientHeight / currentRect.height) - 1,
+          )
+        : 1;
+      const nextIndex = findGalleryNavIndex(rects, currentIndex, navKey, {
+        pageRows,
+      });
+      if (nextIndex < 0 || nextIndex === currentIndex) {
+        if (currentIndex < 0) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === "function") {
+          e.stopImmediatePropagation();
+        }
+        return;
+      }
+
+      const nextEl = els[nextIndex];
+      const itemId = Number(nextEl?.dataset.itemId);
+      const item = itemId
+        ? getCachedItem(itemId) || Zotero.Items.get(itemId)
+        : null;
+      if (!item) {
+        return;
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof e.stopImmediatePropagation === "function") {
+        e.stopImmediatePropagation();
+      }
+
+      nextEl.scrollIntoView({ block: "nearest", inline: "nearest" });
+      if (typeof nextEl.focus === "function") {
+        nextEl.focus({ preventScroll: true });
+      }
+      selectGalleryItem(item);
+    },
+    [handleDoubleClick, selectGalleryItem],
+  );
+
+  useEffect(() => {
+    const win = Zotero.getMainWindow();
+    const doc = win?.document ?? document;
+    doc.addEventListener("keydown", handleGalleryKeyDown, true);
+    return () => {
+      doc.removeEventListener("keydown", handleGalleryKeyDown, true);
+    };
+  }, [handleGalleryKeyDown]);
+
+  useLayoutEffect(() => {
+    const container = pageRef.current;
+    if (!container) {
+      return;
+    }
+    const els = getGalleryNavElements(container);
+    const selected = new Set(selectedItemIds ?? []);
+    const tabStop =
+      els.find((el) => selected.has(Number(el.dataset.itemId))) ?? els[0];
+    for (const el of els) {
+      el.tabIndex = el === tabStop ? 0 : -1;
+    }
+  });
 
   const renderCovers = (items: Zotero.Item[], keyPrefix: string) => (
     <div className="syllabus-gallery-grid">
@@ -226,8 +379,10 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
 
   return (
     <div
+      ref={pageRef}
+      tabIndex={-1}
       className={twMerge(
-        "syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background",
+        "syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background focus:outline-none",
         compactMode && "compact-mode",
       )}
     >
@@ -809,16 +964,12 @@ function GalleryTile({
   return (
     <div
       role="button"
-      tabIndex={0}
+      tabIndex={-1}
+      data-item-id={item.id}
       className="syllabus-gallery-tile group min-w-0 cursor-pointer outline-none select-none"
       title={title}
       onClick={(e) => onClick(item, e)}
       onDblClick={() => onDoubleClick(item)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          onDoubleClick(item);
-        }
-      }}
     >
       <GalleryCover item={item} selected={selected} />
       <div className="syllabus-gallery-meta min-w-0 px-0.5">
