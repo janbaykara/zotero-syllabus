@@ -766,16 +766,19 @@ export class SyllabusManager {
 
     const viewModeOptions: {
       mode: CollectionViewMode;
-      label?: string;
+      label: string;
       tooltip: string;
-      icon?: "unfiled" | "book";
     }[] = [
       {
         mode: "collection",
-        tooltip: "View as Items",
-        icon: "unfiled",
+        label: "Table",
+        tooltip: "View as Table",
       },
-      { mode: "gallery", tooltip: "View as Gallery", icon: "book" },
+      {
+        mode: "gallery",
+        label: "Gallery",
+        tooltip: "View as Gallery",
+      },
       {
         mode: "syllabus",
         ...(syllabusViewModeChrome() ?? {
@@ -789,20 +792,16 @@ export class SyllabusManager {
     for (const option of viewModeOptions) {
       const button = ztoolkit.UI.createElement(doc, "toolbarbutton", {
         id: `syllabus-view-mode-${option.mode}`,
-        classList: [
-          "syllabus-view-mode-button",
-          ...(option.icon ? ["syllabus-view-mode-button-icon"] : []),
-        ],
+        classList: ["syllabus-view-mode-button"],
         attributes: {
           "data-view-mode": option.mode,
           crop: "none",
           tooltiptext: option.tooltip,
-          ...(option.icon ? { "data-icon": option.icon } : {}),
         },
         properties: {
           type: "radio",
           group: "syllabus-view-mode",
-          ...(option.label ? { label: option.label } : {}),
+          label: option.label,
           tooltiptext: option.tooltip,
         },
         listeners: [

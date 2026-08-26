@@ -416,7 +416,10 @@ async function markPdfThumbBlank(cacheKey: string): Promise<void> {
 
 async function removeFile(path: string): Promise<void> {
   try {
-    if (typeof IOUtils !== "undefined" && typeof IOUtils.remove === "function") {
+    if (
+      typeof IOUtils !== "undefined" &&
+      typeof IOUtils.remove === "function"
+    ) {
       await IOUtils.remove(path, { ignoreAbsent: true });
       return;
     }
@@ -679,9 +682,7 @@ async function renderPdfToCache(
       if (canvasLooksBlank(context, canvas.width, canvas.height)) {
         continue;
       }
-      const jpeg = dataURLToBytes(
-        canvas.toDataURL("image/jpeg", JPEG_QUALITY),
-      );
+      const jpeg = dataURLToBytes(canvas.toDataURL("image/jpeg", JPEG_QUALITY));
       await writeFileBytes(cachePath, jpeg);
       return Zotero.File.pathToFileURI(cachePath);
     }
@@ -1257,8 +1258,12 @@ function readEpubCoverBytes(epubPath: string): Uint8Array | null {
     }
     if (!coverEntry) {
       coverEntry =
-        entries.find((entry) => /(?:^|\/)cover\.(jpe?g|png|webp|gif)$/i.test(entry)) ||
-        entries.find((entry) => /(?:^|\/)Images\/0\.(jpe?g|png)$/i.test(entry)) ||
+        entries.find((entry) =>
+          /(?:^|\/)cover\.(jpe?g|png|webp|gif)$/i.test(entry),
+        ) ||
+        entries.find((entry) =>
+          /(?:^|\/)Images\/0\.(jpe?g|png)$/i.test(entry),
+        ) ||
         null;
     }
     if (!coverEntry || !zipReader.hasEntry(coverEntry)) {
@@ -1279,7 +1284,8 @@ function findEpubOpfPath(
   entries: string[],
 ): string | null {
   const containerPath = entries.find(
-    (entry) => entry.replace(/\\/g, "/").toLowerCase() === "meta-inf/container.xml",
+    (entry) =>
+      entry.replace(/\\/g, "/").toLowerCase() === "meta-inf/container.xml",
   );
   if (!containerPath || !zipReader.hasEntry(containerPath)) {
     return null;

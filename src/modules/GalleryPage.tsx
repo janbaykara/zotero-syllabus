@@ -71,7 +71,9 @@ interface GalleryPageProps {
 
 export function GalleryPage({ collectionId }: GalleryPageProps) {
   const [title] = useZoteroCollectionTitle(collectionId);
-  const syllabusItems = useZoteroCollectionItems(collectionId);
+  const syllabusItems = useZoteroCollectionItems(collectionId, {
+    recursive: "pref",
+  });
   const isSyllabus = collectionHasSyllabusNote(collectionId);
   const [groupBy, setGroupBy] = useGalleryGroupBy(collectionId, isSyllabus);
   const [sortBy, setSortBy] = useGallerySortBy(collectionId);
@@ -996,9 +998,7 @@ function GalleryCover({
           </div>
         ) : null}
         {showSpine ? <div className="syllabus-gallery-book-spine" /> : null}
-        {useJournalFace ? (
-          <div className="syllabus-gallery-page-fold" />
-        ) : null}
+        {useJournalFace ? <div className="syllabus-gallery-page-fold" /> : null}
       </div>
     </div>
   );

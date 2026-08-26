@@ -45,8 +45,7 @@ function pluralizeItemTypeLabel(singular: string): string {
 
 function localizedItemTypePlural(itemType: string): string {
   try {
-    const singular =
-      Zotero.ItemTypes.getLocalizedString(itemType) || itemType;
+    const singular = Zotero.ItemTypes.getLocalizedString(itemType) || itemType;
     return pluralizeItemTypeLabel(singular);
   } catch {
     return pluralizeItemTypeLabel(itemType);

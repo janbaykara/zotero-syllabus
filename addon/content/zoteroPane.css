@@ -1,4 +1,4 @@
-/* Segmented Items / Gallery / Syllabus control */
+/* Segmented Table / Gallery / Syllabus control */
 .syllabus-view-mode-button {
   fill: currentColor;
   -moz-context-properties: fill, fill-opacity;
@@ -10,29 +10,6 @@
   border: 0.5px solid var(--fill-secondary) !important;
   border-radius: 0 !important;
   background: transparent !important;
-}
-
-.syllabus-view-mode-button-icon {
-  padding-left: 8px !important;
-  padding-right: 8px !important;
-}
-
-.syllabus-view-mode-button[data-icon="unfiled"] {
-  list-style-image: url("chrome://zotero/skin/16/universal/unfiled.svg");
-}
-
-.syllabus-view-mode-button[data-icon="book"] {
-  list-style-image: url("chrome://zotero/skin/16/universal/book.svg");
-}
-
-.syllabus-view-mode-button-icon .toolbarbutton-icon {
-  width: 16px;
-  height: 16px;
-  margin: 0 !important;
-}
-
-.syllabus-view-mode-button-icon .toolbarbutton-text {
-  display: none !important;
 }
 
 .syllabus-view-mode-button[data-view-mode="collection"] {
@@ -58,6 +35,10 @@
   overflow: visible !important;
   text-overflow: clip !important;
   padding-inline: 0 !important;
+}
+
+.syllabus-view-mode-button .toolbarbutton-icon {
+  display: none !important;
 }
 
 .syllabus-view-mode-button[data-selected="true"],

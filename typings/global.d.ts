@@ -80,9 +80,6 @@ declare const IOUtils: {
     data: Uint8Array,
     options?: { tmpPath?: string },
   ) => Promise<void>;
-  remove: (
-    path: string,
-    options?: { ignoreAbsent?: boolean },
-  ) => Promise<void>;
+  remove: (path: string, options?: { ignoreAbsent?: boolean }) => Promise<void>;
   stat: (path: string) => Promise<{ lastModified: number; size: number }>;
 };

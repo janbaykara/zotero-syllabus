@@ -25,13 +25,71 @@ export type CollectionItemsSnapshot = {
   documentGeneration: number;
 };
 
+export type CollectionItemsOptions = {
+  /**
+   * Include items from descendant collections.
+   * `"pref"` follows Zotero's `recursiveCollections` ("Show Items from Subcollections").
+   */
+  recursive?: boolean | "pref";
+};
+
+function shouldIncludeSubcollections(
+  recursive: CollectionItemsOptions["recursive"],
+): boolean {
+  if (recursive === true) {
+    return true;
+  }
+  if (recursive === "pref") {
+    try {
+      return !!Zotero.Prefs.get("recursiveCollections");
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+function collectRegularItems(
+  collection: Zotero.Collection,
+  recursive: boolean,
+): Zotero.Item[] {
+  if (!recursive) {
+    return collection.getChildItems().filter((item) => item.isRegularItem());
+  }
+
+  const seen = new Set<number>();
+  const items: Zotero.Item[] = [];
+  const walk = (col: Zotero.Collection) => {
+    for (const item of col.getChildItems()) {
+      if (!item.isRegularItem() || seen.has(item.id)) {
+        continue;
+      }
+      seen.add(item.id);
+      items.push(item);
+    }
+    let children: Zotero.Collection[] = [];
+    try {
+      children = col.getChildCollections();
+    } catch {
+      children = [];
+    }
+    for (const child of children) {
+      walk(child);
+    }
+  };
+  walk(collection);
+  return items;
+}
+
 export function useZoteroCollectionItems(
   collectionId: number | GetByLibraryAndKeyArgs,
+  options?: CollectionItemsOptions,
 ) {
-  // Create the store once per ID
+  const recursive = options?.recursive ?? false;
+  // Create the store once per ID + recursive mode
   const store = useMemo(
-    () => createCollectionItemsStore(collectionId),
-    [collectionId],
+    () => createCollectionItemsStore(collectionId, { recursive }),
+    [collectionId, recursive],
   );
 
   const __itemsFromZotero = useSyncExternalStore(
@@ -70,7 +128,10 @@ export function useZoteroCollectionItems(
 
 export function createCollectionItemsStore(
   collectionId: number | GetByLibraryAndKeyArgs,
+  options?: CollectionItemsOptions,
 ) {
+  const recursiveMode = options?.recursive ?? false;
+
   function getSnapshot() {
     // Read directly from Zotero
     const collection =
@@ -78,15 +139,15 @@ export function createCollectionItemsStore(
     if (!collection) {
       return SuperJSON.stringify({ items: [] });
     }
-    const items: ItemID[] = collection
-      .getChildItems()
-      .filter((item) => item.isRegularItem())
-      .map((item) => {
+    const recursive = shouldIncludeSubcollections(recursiveMode);
+    const items: ItemID[] = collectRegularItems(collection, recursive).map(
+      (item) => {
         return {
           id: item.id,
           ...item.toJSON(),
         };
-      });
+      },
+    );
     return SuperJSON.stringify({
       items,
       documentGeneration: getDocumentGeneration(),
@@ -99,7 +160,7 @@ export function createCollectionItemsStore(
         event: string,
         type: string,
         ids: (number | string)[],
-        extraData: any,
+        _extraData: any,
       ) {
         let shouldUpdate = false;
 
@@ -112,7 +173,6 @@ export function createCollectionItemsStore(
           type === "item" &&
           (event === "add" || event === "modify" || event === "delete")
         ) {
-          // Check if the item belongs to our collection
           const itemIds = ids as number[];
           for (const itemId of itemIds) {
             const item = getCachedItem(itemId);
@@ -121,6 +181,15 @@ export function createCollectionItemsStore(
               const collection =
                 SyllabusManager.getCollectionFromIdentifier(collectionId);
               if (collection && collections.includes(collection.id)) {
+                shouldUpdate = true;
+                break;
+              }
+              // When listing subcollections, also refresh for items in descendants.
+              if (
+                collection &&
+                shouldIncludeSubcollections(recursiveMode) &&
+                itemInCollectionTree(item, collection)
+              ) {
                 shouldUpdate = true;
                 break;
               }
@@ -134,11 +203,22 @@ export function createCollectionItemsStore(
         // Listen to collection modify/refresh events
         else if (
           type === "collection" &&
-          (event === "modify" || event === "refresh")
+          (event === "modify" ||
+            event === "refresh" ||
+            event === "add" ||
+            event === "delete")
         ) {
           const collection =
             SyllabusManager.getCollectionFromIdentifier(collectionId);
           if (collection && ids.includes(collection.id)) {
+            shouldUpdate = true;
+          } else if (
+            collection &&
+            shouldIncludeSubcollections(recursiveMode) &&
+            (ids as number[]).some((id) =>
+              collectionIsDescendantOf(id, collection),
+            )
+          ) {
             shouldUpdate = true;
           }
         }
@@ -157,11 +237,72 @@ export function createCollectionItemsStore(
     const unsubscribeDocuments =
       subscribeToSyllabusDocumentChanges(onStoreChange);
 
+    let prefObserverID: ReturnType<typeof Zotero.Prefs.registerObserver> | null =
+      null;
+    if (recursiveMode === "pref") {
+      prefObserverID = Zotero.Prefs.registerObserver(
+        "recursiveCollections",
+        () => {
+          onStoreChange();
+        },
+        true,
+      );
+    }
+
     return () => {
       unsubscribeDocuments();
       Zotero.Notifier.unregisterObserver(notifierId);
+      if (prefObserverID != null) {
+        Zotero.Prefs.unregisterObserver(prefObserverID);
+      }
     };
   }
 
   return { getSnapshot, subscribe };
+}
+
+function itemInCollectionTree(
+  item: Zotero.Item,
+  root: Zotero.Collection,
+): boolean {
+  const ids = new Set(item.getCollections());
+  if (ids.has(root.id)) {
+    return true;
+  }
+  const walk = (col: Zotero.Collection): boolean => {
+    let children: Zotero.Collection[] = [];
+    try {
+      children = col.getChildCollections();
+    } catch {
+      return false;
+    }
+    for (const child of children) {
+      if (ids.has(child.id) || walk(child)) {
+        return true;
+      }
+    }
+    return false;
+  };
+  return walk(root);
+}
+
+function collectionIsDescendantOf(
+  collectionId: number,
+  root: Zotero.Collection,
+): boolean {
+  const walk = (col: Zotero.Collection): boolean => {
+    let children: Zotero.Collection[] = [];
+    try {
+      children = col.getChildCollections();
+    } catch {
+      return false;
+    }
+    for (const child of children) {
+      if (child.id === collectionId || walk(child)) {
+        return true;
+      }
+    }
+    return false;
+  };
+  return walk(root);
 }
