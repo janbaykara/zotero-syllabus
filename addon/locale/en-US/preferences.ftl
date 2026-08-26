@@ -12,6 +12,6 @@ pref-help = { $name } Build { $version } { $time }
 pref-debug-mode =
     .label = Enable debug mode
 pref-generate-reading-schedule-collection =
-    .label = Generate a “Reading schedule” collection (auto-managed; removed when unchecked)
+    .label = Generate a “Reading Schedule” collection (auto-managed; removed when unchecked)
 pref-custom-icons =
     .label = Use custom icons in the collection tree and reading schedule tab

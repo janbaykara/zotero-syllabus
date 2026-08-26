@@ -50,6 +50,10 @@
   border-inline-start: none !important;
 }
 
+.syllabus-view-mode-button[data-view-mode="subcollections"][hidden] {
+  display: none !important;
+}
+
 .syllabus-view-mode-button[data-view-mode="syllabus"] {
   border-inline-start: none !important;
   border-start-end-radius: 4px !important;

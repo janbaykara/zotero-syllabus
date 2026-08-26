@@ -53,8 +53,9 @@ import { saveToFile } from "../utils/file";
 import { useSyllabusClassGroups } from "./classGroups";
 import { ClassSubcollectionPage } from "./ClassReadingBlock";
 import { getClassSubcollectionContext } from "./syllabusNote";
+import { ReadingSchedule } from "./ReadingSchedule";
 import { ReadingScheduleDayPage } from "./ReadingScheduleDayPage";
-import { isManagedReadingScheduleCollection } from "./readingScheduleCollection";
+import { getReadingScheduleCollectionContext } from "./readingScheduleCollection";
 import { useSyllabusDocumentGeneration } from "./react-zotero-sync/collectionDocument";
 import { TextInput } from "./syllabusInputs";
 import { SyllabusItemCard } from "./SyllabusItemCard";
@@ -71,7 +72,11 @@ interface SyllabusPageProps {
 
 export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   useSyllabusDocumentGeneration();
-  if (isManagedReadingScheduleCollection(collectionId)) {
+  const readingSchedule = getReadingScheduleCollectionContext(collectionId);
+  if (readingSchedule?.kind === "root") {
+    return <ReadingSchedule />;
+  }
+  if (readingSchedule) {
     return <ReadingScheduleDayPage collectionId={collectionId} />;
   }
   const classContext = getClassSubcollectionContext(collectionId);

@@ -133,7 +133,7 @@ export function ReadingScheduleDayPage({
     return (
       <div className="syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background">
         <div className="container-padded py-12 text-secondary">
-          This collection is not part of the Reading schedule.
+          This collection is not part of the Reading Schedule.
         </div>
       </div>
     );
@@ -154,14 +154,14 @@ export function ReadingScheduleDayPage({
                 type="button"
                 onClick={openRoot}
                 className="flex items-center gap-1 text-secondary hover:text-primary bg-transparent! border-none p-0 cursor-pointer text-base in-[.print]:hidden"
-                title="Open Reading schedule"
+                title="Open Reading Schedule"
               >
                 <ChevronLeft size={18} />
-                <span className="font-semibold">Reading schedule</span>
+                <span className="font-semibold">Reading Schedule</span>
               </button>
             ) : (
               <div className={twMerge("font-semibold text-3xl")}>
-                Reading schedule
+                Reading Schedule
               </div>
             )}
             <p className="text-sm text-secondary mt-1 in-[.print]:hidden">

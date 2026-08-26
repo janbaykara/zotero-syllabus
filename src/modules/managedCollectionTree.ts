@@ -17,7 +17,7 @@ const ROW_CLASS_BY_KIND = {
 } as const;
 
 const TOOLTIP_BY_KIND = {
-  "reading-schedule-root": "Reading schedule (auto-managed)",
+  "reading-schedule-root": "Reading Schedule (auto-managed)",
   "calendar-date": "Auto-managed by Zotero Syllabus",
   "class-folder": "Auto-managed by Zotero Syllabus",
   syllabus: "Syllabus",

@@ -80,7 +80,7 @@ export function ReadingScheduleSettingsPage({
           >
             <h2 className="text-2xl font-semibold">Library collection</h2>
             <p className="text-secondary">
-              Off by default. When enabled, a top-level “Reading schedule”
+              Off by default. When enabled, a top-level “Reading Schedule”
               collection is kept in My Library with a folder for each recent and
               upcoming reading date. Folders are created, renamed, and filled
               automatically. Turning this off deletes that collection; syllabus
@@ -101,7 +101,7 @@ export function ReadingScheduleSettingsPage({
                 className="w-4 h-4 cursor-pointer accent-accent-green!"
               />
               <span className="font-medium">
-                Generate “Reading schedule” collection?
+                Generate “Reading Schedule” collection?
               </span>
             </label>
           </section>

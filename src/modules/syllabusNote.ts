@@ -1075,8 +1075,9 @@ export async function ensureSyllabusNoteForUser(
   if (!collection) {
     return false;
   }
-  // Reading schedule folders are not syllabi — Syllabus view renders a day page.
-  // Return true so Syllabus mode can open without creating a note.
+  // Reading schedule folders are not syllabi — Checklist view renders the
+  // schedule (root) or a day page (date folder). Return true so that mode
+  // can open without creating a note.
   if (isManagedReadingScheduleCollection(collection.id)) {
     return true;
   }

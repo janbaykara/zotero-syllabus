@@ -18,7 +18,15 @@ import {
 import { getPrefKey, getPrefValue, setPref } from "../utils/prefs";
 import { collectionHasSyllabusNote } from "./syllabusNote";
 
-export const READING_SCHEDULE_COLLECTION_NAME = "Reading schedule";
+export const READING_SCHEDULE_COLLECTION_NAME = "Reading Schedule";
+const LEGACY_READING_SCHEDULE_COLLECTION_NAME = "Reading schedule";
+
+function isReadingScheduleRootName(name: string): boolean {
+  return (
+    name === READING_SCHEDULE_COLLECTION_NAME ||
+    name === LEGACY_READING_SCHEDULE_COLLECTION_NAME
+  );
+}
 
 const DATE_SEPARATOR = " — ";
 const DATE_FOLDER_PREFIX = /^(\d{4}-\d{2}-\d{2})(?:\s|$)/;
@@ -85,7 +93,7 @@ export type ReadingScheduleCollectionContext = {
 /**
  * Identify the managed Reading schedule root or one of its date folders.
  * Prefers the stored collection key, then in-memory maps, then the
- * conventional top-level “Reading schedule” name in My Library.
+ * conventional top-level “Reading Schedule” name in My Library.
  */
 export function getReadingScheduleCollectionContext(
   collectionId: number,
@@ -173,10 +181,7 @@ function findReadingScheduleRoot(
     }
   }
 
-  if (
-    !collection.parentID &&
-    collection.name === READING_SCHEDULE_COLLECTION_NAME
-  ) {
+  if (!collection.parentID && isReadingScheduleRootName(collection.name)) {
     adoptReadingScheduleRootKey(collection);
     return collection;
   }
@@ -189,7 +194,7 @@ function findReadingScheduleRoot(
       parent &&
       !parent.deleted &&
       !parent.parentID &&
-      parent.name === READING_SCHEDULE_COLLECTION_NAME &&
+      isReadingScheduleRootName(parent.name) &&
       parent.libraryID === Zotero.Libraries.userLibraryID
     ) {
       adoptReadingScheduleRootKey(parent);

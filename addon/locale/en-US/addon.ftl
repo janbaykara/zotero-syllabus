@@ -21,9 +21,9 @@ enable-subcollections-message =
     Turning this off later stops managing folders; existing folders are left in place.
 
     Continue?
-enable-reading-schedule-collection-title = Generate Reading schedule collection?
+enable-reading-schedule-collection-title = Generate Reading Schedule collection?
 enable-reading-schedule-collection-message =
-    Turning this on creates a top-level “Reading schedule” collection in My Library with a folder for each reading date (from 10 days ago onward).
+    Turning this on creates a top-level “Reading Schedule” collection in My Library with a folder for each reading date (from 10 days ago onward).
 
     What happens:
 
@@ -35,12 +35,12 @@ enable-reading-schedule-collection-message =
 
     • Group-library syllabi are not included (items cannot cross libraries).
 
-    Turning this off later deletes the “Reading schedule” collection and its date folders. Your syllabus items stay in place.
+    Turning this off later deletes the “Reading Schedule” collection and its date folders. Your syllabus items stay in place.
 
     Continue?
-disable-reading-schedule-collection-title = Remove Reading schedule collection?
+disable-reading-schedule-collection-title = Remove Reading Schedule collection?
 disable-reading-schedule-collection-message =
-    Turning this off deletes the managed “Reading schedule” collection and its date folders.
+    Turning this off deletes the managed “Reading Schedule” collection and its date folders.
 
     Items are not deleted from your library; they remain in their original syllabus collections.
 

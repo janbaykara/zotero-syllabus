@@ -64,7 +64,11 @@ import {
   whenSyllabusNotesReady,
 } from "./syllabusNote";
 import { migrateLegacyCollectionMetadataPrefs } from "./migratePrefsToNotes";
-import { isManagedReadingScheduleCollection } from "./readingScheduleCollection";
+import {
+  getReadingScheduleCollectionContext,
+  isManagedReadingScheduleCollection,
+} from "./readingScheduleCollection";
+import { isAutoManagedCollection } from "./autoManagedCollection";
 import {
   applyManagedCollectionTree,
   areCustomIconsEnabled,
@@ -113,9 +117,28 @@ function coerceCollectionViewMode(value: unknown): CollectionViewMode {
   return parsed.success ? parsed.data : "collection";
 }
 
-function nextCollectionViewMode(mode: CollectionViewMode): CollectionViewMode {
-  const index = COLLECTION_VIEW_MODES.indexOf(mode);
-  return COLLECTION_VIEW_MODES[(index + 1) % COLLECTION_VIEW_MODES.length];
+function syllabusViewModeChrome(): { label: string; tooltip: string } | null {
+  const collection = getSelectedCollection();
+  if (!collection) {
+    return null;
+  }
+  if (isAutoManagedCollection(collection.id)) {
+    return { label: "Checklist", tooltip: "View as Checklist" };
+  }
+  return { label: "Syllabus", tooltip: "View as Syllabus" };
+}
+
+function shouldHideSubcollectionsRadio(
+  collection?: Zotero.Collection | null,
+): boolean {
+  const selected = collection ?? getSelectedCollection();
+  if (!selected) {
+    return false;
+  }
+  if (isAutoManagedCollection(selected.id)) {
+    return true;
+  }
+  return SyllabusManager.getCreateSubcollections(selected.id);
 }
 
 function confirmEnableSubcollections(
@@ -339,6 +362,7 @@ export class SyllabusManager {
       applyManagedCollectionTree(win);
       refreshManagedCollectionTrees();
       this.syncReadingScheduleTabIcon(win);
+      this.setupToggleButton();
     });
 
     // Re-render reading list tab if it exists (for hot reload)
@@ -623,15 +647,36 @@ export class SyllabusManager {
 
     const stored = viewModes[collectionId];
     if (stored !== undefined && stored !== null) {
-      return coerceCollectionViewMode(stored);
+      return SyllabusManager.coerceViewModeForCollection(
+        selectedCollection,
+        stored,
+      );
     }
     const classContext = getClassSubcollectionContext(selectedCollection);
     if (classContext) {
-      return coerceCollectionViewMode(
+      return SyllabusManager.coerceViewModeForCollection(
+        selectedCollection,
         viewModes[String(classContext.parent.id)],
       );
     }
-    return coerceCollectionViewMode(stored);
+    return SyllabusManager.coerceViewModeForCollection(
+      selectedCollection,
+      stored,
+    );
+  }
+
+  static coerceViewModeForCollection(
+    collection: Zotero.Collection,
+    value: unknown,
+  ): CollectionViewMode {
+    const mode = coerceCollectionViewMode(value);
+    if (
+      mode === "subcollections" &&
+      shouldHideSubcollectionsRadio(collection)
+    ) {
+      return "collection";
+    }
+    return mode;
   }
 
   static async setCollectionViewMode(mode: CollectionViewMode): Promise<void> {
@@ -669,9 +714,12 @@ export class SyllabusManager {
   }
 
   static async cycleCollectionViewMode(): Promise<CollectionViewMode> {
-    const next = nextCollectionViewMode(
-      SyllabusManager.getCollectionViewMode(),
-    );
+    const modes = shouldHideSubcollectionsRadio()
+      ? COLLECTION_VIEW_MODES.filter((mode) => mode !== "subcollections")
+      : COLLECTION_VIEW_MODES;
+    const current = SyllabusManager.getCollectionViewMode();
+    const index = Math.max(0, modes.indexOf(current));
+    const next = modes[(index + 1) % modes.length];
     await SyllabusManager.setCollectionViewMode(next);
     return SyllabusManager.getCollectionViewMode();
   }
@@ -726,11 +774,21 @@ export class SyllabusManager {
         tooltip: "View by Subcollections",
         icon: "folder",
       },
-      { mode: "syllabus", label: "Syllabus", tooltip: "View as Syllabus" },
+      {
+        mode: "syllabus",
+        ...(syllabusViewModeChrome() ?? {
+          label: "Syllabus",
+          tooltip: "View as Syllabus",
+        }),
+      },
     ];
 
     const viewModeButtons: XULButtonElement[] = [];
+    const skipSubcollections = shouldHideSubcollectionsRadio();
     for (const option of viewModeOptions) {
+      if (option.mode === "subcollections" && skipSubcollections) {
+        continue;
+      }
       const button = ztoolkit.UI.createElement(doc, "toolbarbutton", {
         id: `syllabus-view-mode-${option.mode}`,
         classList: [
@@ -854,6 +912,8 @@ export class SyllabusManager {
       doc.querySelectorAll(".syllabus-view-mode-button"),
     ) as XULButtonElement[];
 
+    const syllabusChrome = syllabusViewModeChrome();
+    const hideSubcollections = shouldHideSubcollectionsRadio();
     for (const button of buttons) {
       const buttonMode = button.getAttribute("data-view-mode");
       const selected = buttonMode === mode;
@@ -862,6 +922,14 @@ export class SyllabusManager {
         button.setAttribute("checked", "true");
       } else {
         button.removeAttribute("checked");
+      }
+      if (buttonMode === "syllabus" && syllabusChrome) {
+        button.setAttribute("label", syllabusChrome.label);
+        button.setAttribute("tooltiptext", syllabusChrome.tooltip);
+        button.label = syllabusChrome.label;
+      }
+      if (buttonMode === "subcollections" && syllabusChrome) {
+        button.hidden = hideSubcollections;
       }
     }
   }
@@ -888,37 +956,55 @@ export class SyllabusManager {
 
     if (!viewModeButtons.length) return;
 
-    // If reading schedule feature is disabled, hide all reading schedule buttons
-    if (!FEATURE_FLAG.READING_SCHEDULE) {
-      if (readingScheduleButton) readingScheduleButton.hidden = true;
-      if (collectionReadingScheduleButton)
-        collectionReadingScheduleButton.hidden = true;
-      return;
-    }
-
-    if (!readingScheduleButton || !collectionReadingScheduleButton) return;
-
     const selectedCollection = getSelectedCollection();
     const currentTab = getCurrentTab();
-
-    // Check if we're in Main Library and in a collection tab (not a custom tab)
-    // Collection tabs are the default tabs (type is undefined or not a custom type)
-    // Custom tabs have types like "syllabus" or "reading-list"
     const isInMainLibrary = !selectedCollection;
     const isCustomTab =
       currentTab?.type === "syllabus" || currentTab?.type === "reading-list";
-    const isInCollectionTab = !isCustomTab;
-    const shouldShowReadingSchedule = isInMainLibrary && isInCollectionTab;
-    const isInCollection = !!selectedCollection;
+    const shouldShowReadingSchedule =
+      FEATURE_FLAG.READING_SCHEDULE && isInMainLibrary && !isCustomTab;
+    const hideSubcollections =
+      selectedCollection == null
+        ? null
+        : shouldHideSubcollectionsRadio(selectedCollection);
 
-    // Hide/show buttons based on conditions
     for (const button of viewModeButtons) {
-      button.hidden = shouldShowReadingSchedule;
+      const mode = button.getAttribute("data-view-mode");
+      if (shouldShowReadingSchedule) {
+        button.hidden = true;
+        continue;
+      }
+      if (mode === "subcollections") {
+        if (hideSubcollections == null) {
+          continue;
+        }
+        button.hidden = hideSubcollections;
+        continue;
+      }
+      button.hidden = false;
     }
-    readingScheduleButton.hidden = !shouldShowReadingSchedule;
-    // Show "Reading Schedule" button when viewing a collection, hide it in Main Library
-    collectionReadingScheduleButton.hidden =
-      !isInCollection || shouldShowReadingSchedule;
+
+    if (!FEATURE_FLAG.READING_SCHEDULE) {
+      if (readingScheduleButton) readingScheduleButton.hidden = true;
+      if (collectionReadingScheduleButton) {
+        collectionReadingScheduleButton.hidden = true;
+      }
+      return;
+    }
+
+    if (readingScheduleButton) {
+      readingScheduleButton.hidden = !shouldShowReadingSchedule;
+    }
+    if (collectionReadingScheduleButton) {
+      const isReadingScheduleRoot =
+        selectedCollection != null &&
+        getReadingScheduleCollectionContext(selectedCollection.id)?.kind ===
+          "root";
+      collectionReadingScheduleButton.hidden =
+        !selectedCollection ||
+        shouldShowReadingSchedule ||
+        isReadingScheduleRoot;
+    }
   }
 
   // Function to render a completely custom syllabus view
@@ -2092,6 +2178,7 @@ export class SyllabusManager {
       syllabusMetadata,
       source,
     );
+    SyllabusManager.setupToggleButton();
   }
 
   /**
