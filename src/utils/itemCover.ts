@@ -18,6 +18,9 @@ const WEB_HTML_HEAD_CHARS = 100_000;
 const PDF_BLANK_MIN_NONWHITE = 0.02;
 /** Only re-decode cached PDF thumbs under this size when checking for blanks. */
 const PDF_CACHE_BLANK_CHECK_MAX_BYTES = 16_000;
+/** Try this many leading PDF pages when page 1 is blank (common for scanned books). */
+const PDF_COVER_MAX_PAGES = 5;
+const EPUB_COVER_MIN_BYTES = 1500;
 
 const WEB_GALLERY_ITEM_TYPES = new Set([
   "webpage",
@@ -299,6 +302,11 @@ async function resolveItemCoverUncached(
     }
   }
 
+  const epubSrc = await extractEpubCover(item);
+  if (epubSrc) {
+    return { kind: "image", src: epubSrc, fit: "cover" };
+  }
+
   const pdfSrc = await renderPdfPageOne(item);
   if (pdfSrc) {
     return { kind: "image", src: pdfSrc, fit: "contain" };
@@ -478,9 +486,9 @@ async function imageFileLooksBlank(path: string): Promise<boolean> {
 async function findCachedPdfThumb(cacheKey: string): Promise<string | null> {
   const dir = await ensureThumbDir();
   const blankPath = joinPath(dir, `${cacheKey}.blank`);
+  // Older builds marked blank after page 1 only; clear so multi-page retry can run.
   if (await fileExists(blankPath)) {
-    pdfThumbMisses.add(cacheKey);
-    return null;
+    await removeFile(blankPath);
   }
 
   const exact = joinPath(dir, `${cacheKey}.jpg`);
@@ -584,12 +592,9 @@ async function renderPdfPageOne(item: Zotero.Item): Promise<string | null> {
   }
   const pdfPath = path;
 
-  const pdfjs = await loadPdfjs();
-  if (!pdfjs) {
-    return null;
-  }
-
   const cachePath = joinPath(await ensureThumbDir(), `${cacheKey}.jpg`);
+  const pdfjs = await loadPdfjs();
+
   return withPdfSlot(async () => {
     const queued = pdfThumbUris.get(cacheKey);
     if (queued) {
@@ -599,26 +604,44 @@ async function renderPdfPageOne(item: Zotero.Item): Promise<string | null> {
     if (queuedPath) {
       return rememberPdfThumb(cacheKey, queuedPath);
     }
-    try {
-      const uri = await Promise.race([
-        renderPdfToCache(pdfjs, pdfPath, cachePath),
-        new Promise<null>((_, reject) => {
-          setTimeout(() => reject(new Error("PDF thumb timed out")), 12000);
-        }),
-      ]);
-      if (uri) {
-        pdfThumbUris.set(cacheKey, uri);
-        const index = await loadPdfThumbIndex();
-        index.set(cacheKey, cachePath);
-        return uri;
+
+    const remember = async (uri: string | null) => {
+      if (!uri) {
+        return null;
       }
-      await markPdfThumbBlank(cacheKey);
-      return null;
-    } catch (error) {
-      ztoolkit.log("PDF page-1 render failed:", error);
-      pdfThumbMisses.add(cacheKey);
-      return null;
+      pdfThumbUris.set(cacheKey, uri);
+      const index = await loadPdfThumbIndex();
+      index.set(cacheKey, cachePath);
+      return uri;
+    };
+
+    if (pdfjs) {
+      try {
+        const uri = await Promise.race([
+          renderPdfToCache(pdfjs, pdfPath, cachePath),
+          new Promise<null>((_, reject) => {
+            setTimeout(() => reject(new Error("PDF thumb timed out")), 12000);
+          }),
+        ]);
+        if (uri) {
+          return remember(uri);
+        }
+      } catch (error) {
+        ztoolkit.log("PDF page render failed:", error);
+      }
     }
+
+    try {
+      const qlUri = await renderPdfViaQuickLook(pdfPath, cachePath);
+      if (qlUri) {
+        return remember(qlUri);
+      }
+    } catch (error) {
+      ztoolkit.log("Quick Look PDF thumb failed:", error);
+    }
+
+    await markPdfThumbBlank(cacheKey);
+    return null;
   });
 }
 
@@ -637,19 +660,154 @@ async function renderPdfToCache(
   });
   const pdf = await loadingTask.promise;
   try {
-    const page = await pdf.getPage(1);
-    const unscaled = page.getViewport({ scale: 1 });
-    const scale = THUMB_WIDTH / Math.max(unscaled.width, 1);
-    const viewport = page.getViewport({ scale });
+    const pageCount =
+      typeof pdf.numPages === "number" ? pdf.numPages : PDF_COVER_MAX_PAGES;
+    const lastPage = Math.min(PDF_COVER_MAX_PAGES, Math.max(1, pageCount));
+    for (let pageNumber = 1; pageNumber <= lastPage; pageNumber++) {
+      const page = await pdf.getPage(pageNumber);
+      const unscaled = page.getViewport({ scale: 1 });
+      const scale = THUMB_WIDTH / Math.max(unscaled.width, 1);
+      const viewport = page.getViewport({ scale });
+      const canvas = win.document.createElement("canvas");
+      canvas.width = Math.max(1, Math.floor(viewport.width));
+      canvas.height = Math.max(1, Math.floor(viewport.height));
+      const context = canvas.getContext("2d");
+      if (!context) {
+        continue;
+      }
+      await page.render({ canvasContext: context, viewport }).promise;
+      if (canvasLooksBlank(context, canvas.width, canvas.height)) {
+        continue;
+      }
+      const jpeg = dataURLToBytes(
+        canvas.toDataURL("image/jpeg", JPEG_QUALITY),
+      );
+      await writeFileBytes(cachePath, jpeg);
+      return Zotero.File.pathToFileURI(cachePath);
+    }
+    return null;
+  } finally {
+    try {
+      await pdf.destroy?.();
+    } catch {
+      // Ignore worker cleanup errors.
+    }
+  }
+}
+
+/**
+ * macOS Quick Look fallback for PDFs that pdf.js paints as blank
+ * (common with some image-heavy publisher PDFs).
+ */
+async function renderPdfViaQuickLook(
+  pdfPath: string,
+  cachePath: string,
+): Promise<string | null> {
+  if (!Zotero.isMac) {
+    return null;
+  }
+  const exec = (Zotero.Utilities as any)?.Internal?.exec;
+  if (typeof exec !== "function") {
+    return null;
+  }
+
+  const tmpDir = joinPath(
+    await ensureThumbDir(),
+    `.ql-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+  );
+  try {
+    if (typeof IOUtils !== "undefined") {
+      await IOUtils.makeDirectory(tmpDir, {
+        createAncestors: true,
+        ignoreExisting: true,
+      });
+    } else {
+      await Zotero.File.createDirectoryIfMissingAsync(tmpDir);
+    }
+
+    await exec("/usr/bin/qlmanage", [
+      "-t",
+      "-s",
+      String(Math.max(THUMB_WIDTH, 280)),
+      "-o",
+      tmpDir,
+      pdfPath,
+    ]);
+
+    let children: string[] = [];
+    try {
+      const getChildren = (
+        IOUtils as { getChildren?: (path: string) => Promise<string[]> }
+      ).getChildren;
+      if (typeof getChildren === "function") {
+        children = await getChildren(tmpDir);
+      }
+    } catch {
+      children = [];
+    }
+    const pngPath =
+      children.find((child) => /\.png$/i.test(child)) ||
+      children
+        .map((child) =>
+          child.includes("/") || child.includes("\\")
+            ? child
+            : joinPath(tmpDir, child),
+        )
+        .find((child) => /\.png$/i.test(child));
+    if (!pngPath) {
+      return null;
+    }
+    const resolvedPng =
+      pngPath.includes("/") || pngPath.includes("\\")
+        ? pngPath
+        : joinPath(tmpDir, pngPath);
+
+    const jpegUri = await rasterImageFileToJpegCache(resolvedPng, cachePath);
+    return jpegUri;
+  } catch (error) {
+    ztoolkit.log("Quick Look PDF thumb failed:", error);
+    return null;
+  } finally {
+    await removeFileTree(tmpDir);
+  }
+}
+
+async function rasterImageFileToJpegCache(
+  imagePath: string,
+  cachePath: string,
+): Promise<string | null> {
+  const bytes = await readFileBytes(imagePath);
+  if (bytes.byteLength < EPUB_COVER_MIN_BYTES) {
+    return null;
+  }
+  const win = Zotero.getMainWindow() as Window & {
+    createImageBitmap?: (image: Blob) => Promise<ImageBitmap>;
+    Blob?: typeof Blob;
+  };
+  if (typeof win.createImageBitmap !== "function" || !win.Blob) {
+    // Store the PNG bytes under the jpg cache name as a last resort.
+    await writeFileBytes(cachePath, bytes);
+    return Zotero.File.pathToFileURI(cachePath);
+  }
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  const blob = new win.Blob([copy]);
+  const bitmap = await win.createImageBitmap(blob);
+  try {
+    const scale = THUMB_WIDTH / Math.max(bitmap.width, 1);
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
     const canvas = win.document.createElement("canvas");
-    canvas.width = Math.max(1, Math.floor(viewport.width));
-    canvas.height = Math.max(1, Math.floor(viewport.height));
+    canvas.width = width;
+    canvas.height = height;
     const context = canvas.getContext("2d");
     if (!context) {
       return null;
     }
-    await page.render({ canvasContext: context, viewport }).promise;
-    if (canvasLooksBlank(context, canvas.width, canvas.height)) {
+    context.fillStyle = "#fff";
+    context.fillRect(0, 0, width, height);
+    context.drawImage(bitmap, 0, 0, width, height);
+    if (canvasLooksBlank(context, width, height)) {
       return null;
     }
     const jpeg = dataURLToBytes(canvas.toDataURL("image/jpeg", JPEG_QUALITY));
@@ -657,10 +815,35 @@ async function renderPdfToCache(
     return Zotero.File.pathToFileURI(cachePath);
   } finally {
     try {
-      await pdf.destroy?.();
+      bitmap.close();
     } catch {
-      // Ignore worker cleanup errors.
+      // Ignore.
     }
+  }
+}
+
+async function removeFileTree(path: string): Promise<void> {
+  try {
+    if (typeof IOUtils !== "undefined") {
+      const remove = (
+        IOUtils as {
+          remove?: (
+            path: string,
+            options?: { recursive?: boolean; ignoreAbsent?: boolean },
+          ) => Promise<void>;
+        }
+      ).remove;
+      if (typeof remove === "function") {
+        await remove(path, { recursive: true, ignoreAbsent: true });
+        return;
+      }
+    }
+    const file = Zotero.File.pathToFile(path);
+    if (file.exists()) {
+      file.remove(true);
+    }
+  } catch {
+    // Ignore cleanup failures.
   }
 }
 
@@ -887,63 +1070,327 @@ async function readFileBytesLimited(
 }
 
 async function fetchIsbnCover(item: Zotero.Item): Promise<string | null> {
-  const isbn = cleanIsbn(item);
-  if (!isbn || isbnMisses.has(isbn)) {
+  const isbns = listIsbns(item);
+  if (isbns.length === 0) {
     return null;
   }
 
-  const cachePath = joinPath(await ensureThumbDir(), `isbn-${isbn}.jpg`);
-  const missPath = joinPath(await ensureThumbDir(), `isbn-${isbn}.missing`);
-  if (await fileExists(cachePath)) {
-    return Zotero.File.pathToFileURI(cachePath);
-  }
-  if (await fileExists(missPath)) {
-    isbnMisses.add(isbn);
-    return null;
-  }
-
-  const url = `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg?default=false`;
-  try {
-    const xhr = await Zotero.HTTP.request("GET", url, {
-      responseType: "arraybuffer",
-      successCodes: [200, 404],
-      timeout: 8000,
-    });
-    const buffer = xhr.response as ArrayBuffer | null;
-    if (xhr.status !== 200 || !buffer || buffer.byteLength < ISBN_MIN_BYTES) {
-      isbnMisses.add(isbn);
-      await writeFileBytes(missPath, new Uint8Array(0));
-      return null;
+  for (const isbn of isbns) {
+    if (isbnMisses.has(isbn)) {
+      continue;
     }
-    await writeFileBytes(cachePath, new Uint8Array(buffer));
-    return Zotero.File.pathToFileURI(cachePath);
-  } catch (error) {
-    ztoolkit.log("ISBN cover fetch failed:", error);
-    isbnMisses.add(isbn);
-    return null;
+
+    const cachePath = joinPath(await ensureThumbDir(), `isbn-${isbn}.jpg`);
+    const missPath = joinPath(await ensureThumbDir(), `isbn-${isbn}.missing`);
+    if (await fileExists(cachePath)) {
+      return Zotero.File.pathToFileURI(cachePath);
+    }
+    if (await fileExists(missPath)) {
+      isbnMisses.add(isbn);
+      continue;
+    }
+
+    const url = `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg?default=false`;
+    try {
+      const xhr = await Zotero.HTTP.request("GET", url, {
+        responseType: "arraybuffer",
+        successCodes: false,
+        timeout: 8000,
+      });
+      const buffer = xhr.response as ArrayBuffer | null;
+      const status = Number(xhr.status);
+      if (
+        status < 200 ||
+        status >= 300 ||
+        !buffer ||
+        buffer.byteLength < ISBN_MIN_BYTES
+      ) {
+        isbnMisses.add(isbn);
+        await writeFileBytes(missPath, new Uint8Array(0));
+        continue;
+      }
+      await writeFileBytes(cachePath, new Uint8Array(buffer));
+      return Zotero.File.pathToFileURI(cachePath);
+    } catch (error) {
+      ztoolkit.log("ISBN cover fetch failed:", error);
+      isbnMisses.add(isbn);
+      continue;
+    }
   }
+  return null;
 }
 
-function cleanIsbn(item: Zotero.Item): string | null {
+function listIsbns(item: Zotero.Item): string[] {
   let raw = "";
   try {
     raw = String(item.getField("ISBN") || "");
   } catch {
-    return null;
+    return [];
   }
   if (!raw.trim()) {
+    return [];
+  }
+
+  const found: string[] = [];
+  const seen = new Set<string>();
+  const push = (value: string | null | undefined) => {
+    if (!value) {
+      return;
+    }
+    const digits = value.replace(/[^0-9Xx]/g, "");
+    if (digits.length !== 10 && digits.length !== 13) {
+      return;
+    }
+    if (seen.has(digits)) {
+      return;
+    }
+    seen.add(digits);
+    found.push(digits);
+  };
+
+  try {
+    const cleaned = (Zotero.Utilities as any).cleanISBN?.(raw);
+    push(typeof cleaned === "string" ? cleaned : null);
+  } catch {
+    // Fall through to regex splits.
+  }
+
+  for (const part of raw.split(/[\s,;|/]+/)) {
+    push(part);
+  }
+
+  // Catch concatenated digits that cleanISBN skipped after the first ISBN.
+  const digitRuns = raw.match(/(?:97[89][-\s]?)?(?:\d[-\s]?){9}[\dXx]/g) || [];
+  for (const run of digitRuns) {
+    push(run);
+  }
+
+  return found;
+}
+
+async function extractEpubCover(item: Zotero.Item): Promise<string | null> {
+  let attachment: Zotero.Item | null = null;
+  for (const attId of item.getAttachments()) {
+    const att = getCachedItem(attId);
+    if (!att || !att.isAttachment()) {
+      continue;
+    }
+    if (att.isEPUBAttachment?.()) {
+      attachment = att;
+      break;
+    }
+    const contentType = (att.attachmentContentType || "").toLowerCase();
+    if (
+      contentType === "application/epub+zip" ||
+      contentType === "application/epub"
+    ) {
+      attachment = att;
+      break;
+    }
+  }
+  if (!attachment) {
+    return null;
+  }
+
+  const cacheKey = `epub-${attachment.libraryID}-${attachment.key}`;
+  const cachePath = joinPath(await ensureThumbDir(), `${cacheKey}.jpg`);
+  const missPath = joinPath(await ensureThumbDir(), `${cacheKey}.missing`);
+  if (await fileExists(cachePath)) {
+    return Zotero.File.pathToFileURI(cachePath);
+  }
+  if (await fileExists(missPath)) {
+    return null;
+  }
+
+  let path: string | false | undefined;
+  try {
+    path = await attachment.getFilePathAsync();
+  } catch {
+    path = false;
+  }
+  if (!path) {
+    try {
+      path = attachment.getFilePath();
+    } catch {
+      path = false;
+    }
+  }
+  if (!path) {
+    return null;
+  }
+
+  try {
+    const bytes = readEpubCoverBytes(path);
+    if (!bytes || bytes.byteLength < EPUB_COVER_MIN_BYTES) {
+      await writeFileBytes(missPath, new Uint8Array(0));
+      return null;
+    }
+    await writeFileBytes(cachePath, bytes);
+    return Zotero.File.pathToFileURI(cachePath);
+  } catch (error) {
+    ztoolkit.log("EPUB cover extract failed:", error);
+    await writeFileBytes(missPath, new Uint8Array(0));
+    return null;
+  }
+}
+
+function readEpubCoverBytes(epubPath: string): Uint8Array | null {
+  const zipReader = Components.classes[
+    "@mozilla.org/libjar/zip-reader;1"
+  ].createInstance(Components.interfaces.nsIZipReader);
+  zipReader.open(Zotero.File.pathToFile(epubPath));
+  try {
+    const entries: string[] = [];
+    const enumerator = zipReader.findEntries("*");
+    while (enumerator.hasMore()) {
+      entries.push(enumerator.getNext());
+    }
+
+    const opfPath =
+      findEpubOpfPath(zipReader, entries) ||
+      entries.find((entry) => /\.opf$/i.test(entry)) ||
+      null;
+    let coverEntry: string | null = null;
+    if (opfPath) {
+      const opfXml = readZipEntryText(zipReader, opfPath);
+      coverEntry = resolveEpubCoverEntry(opfXml, opfPath, entries);
+    }
+    if (!coverEntry) {
+      coverEntry =
+        entries.find((entry) => /(?:^|\/)cover\.(jpe?g|png|webp|gif)$/i.test(entry)) ||
+        entries.find((entry) => /(?:^|\/)Images\/0\.(jpe?g|png)$/i.test(entry)) ||
+        null;
+    }
+    if (!coverEntry || !zipReader.hasEntry(coverEntry)) {
+      return null;
+    }
+    return readZipEntryBytes(zipReader, coverEntry);
+  } finally {
+    try {
+      zipReader.close();
+    } catch {
+      // Ignore.
+    }
+  }
+}
+
+function findEpubOpfPath(
+  zipReader: { hasEntry: (name: string) => boolean },
+  entries: string[],
+): string | null {
+  const containerPath = entries.find(
+    (entry) => entry.replace(/\\/g, "/").toLowerCase() === "meta-inf/container.xml",
+  );
+  if (!containerPath || !zipReader.hasEntry(containerPath)) {
     return null;
   }
   try {
-    const cleaned = (Zotero.Utilities as any).cleanISBN?.(raw);
-    if (typeof cleaned === "string" && cleaned.length >= 10) {
-      return cleaned.replace(/[^0-9Xx]/g, "");
-    }
+    const xml = readZipEntryText(zipReader as any, containerPath);
+    const match = xml.match(/full-path=["']([^"']+)["']/i);
+    return match?.[1]?.replace(/\\/g, "/") || null;
   } catch {
-    // Fall through to a local cleanup.
+    return null;
   }
-  const digits = raw.replace(/[^0-9Xx]/g, "");
-  return digits.length === 10 || digits.length === 13 ? digits : null;
+}
+
+function resolveEpubCoverEntry(
+  opfXml: string,
+  opfPath: string,
+  entries: string[],
+): string | null {
+  const opfDir = opfPath.includes("/")
+    ? opfPath.slice(0, opfPath.lastIndexOf("/") + 1)
+    : "";
+
+  const resolveHref = (href: string): string | null => {
+    const cleaned = href.trim().replace(/^\.\//, "");
+    if (!cleaned) {
+      return null;
+    }
+    const joined = `${opfDir}${cleaned}`.replace(/\\/g, "/");
+    if (entries.includes(joined)) {
+      return joined;
+    }
+    const matched = entries.find(
+      (entry) => entry.replace(/\\/g, "/") === joined,
+    );
+    return matched || null;
+  };
+
+  const itemHrefById = new Map<string, string>();
+  const itemTagRe = /<item\b[^>]*>/gi;
+  let itemMatch: RegExpExecArray | null;
+  while ((itemMatch = itemTagRe.exec(opfXml))) {
+    const tag = itemMatch[0];
+    const id = tag.match(/\bid=["']([^"']+)["']/i)?.[1];
+    const href = tag.match(/\bhref=["']([^"']+)["']/i)?.[1];
+    if (id && href) {
+      itemHrefById.set(id, href);
+    }
+    if (/\bproperties=["'][^"']*\bcover-image\b[^"']*["']/i.test(tag) && href) {
+      const resolved = resolveHref(href);
+      if (resolved) {
+        return resolved;
+      }
+    }
+  }
+
+  const coverMeta =
+    opfXml.match(
+      /<meta\b[^>]*\bname=["']cover["'][^>]*\bcontent=["']([^"']+)["'][^>]*\/?>/i,
+    ) ||
+    opfXml.match(
+      /<meta\b[^>]*\bcontent=["']([^"']+)["'][^>]*\bname=["']cover["'][^>]*\/?>/i,
+    );
+  if (coverMeta?.[1]) {
+    const href = itemHrefById.get(coverMeta[1]) || coverMeta[1];
+    const resolved = resolveHref(href);
+    if (resolved) {
+      return resolved;
+    }
+  }
+
+  return null;
+}
+
+function readZipEntryText(
+  zipReader: {
+    getInputStream: (name: string) => unknown;
+  },
+  entryName: string,
+): string {
+  const stream = zipReader.getInputStream(entryName) as {
+    available: () => number;
+  };
+  const sis = Components.classes[
+    "@mozilla.org/scriptableinputstream;1"
+  ].createInstance(Components.interfaces.nsIScriptableInputStream);
+  sis.init(stream);
+  try {
+    return sis.read(stream.available());
+  } finally {
+    try {
+      sis.close();
+    } catch {
+      // Ignore.
+    }
+  }
+}
+
+function readZipEntryBytes(
+  zipReader: {
+    getInputStream: (name: string) => unknown;
+  },
+  entryName: string,
+): Uint8Array {
+  const stream = zipReader.getInputStream(entryName);
+  const bis = Components.classes[
+    "@mozilla.org/binaryinputstream;1"
+  ].createInstance(Components.interfaces.nsIBinaryInputStream);
+  bis.setInputStream(stream);
+  const size = bis.available();
+  const values = bis.readByteArray(size) as number[];
+  return Uint8Array.from(values);
 }
 
 async function loadPdfjs(): Promise<PdfjsModule | null> {
