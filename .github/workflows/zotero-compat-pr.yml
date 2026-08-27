@@ -1,0 +1,105 @@
+# Label zotero-compat PRs, resume the Cursor agent once if CI fails,
+# and publish a plugin patch release when a labeled PR is merged.
+
+name: Zotero compat PR
+
+on:
+  pull_request:
+    types: [opened, closed]
+    branches: [main]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+concurrency:
+  group: zotero-compat-pr-${{ github.event.pull_request.number || github.event.workflow_run.id || github.run_id }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: read
+  checks: read
+
+jobs:
+  label:
+    if: github.event_name == 'pull_request' && github.event.action == 'opened' && contains(github.event.pull_request.body, 'zotero-compat')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure label and apply it
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh label create zotero-compat \
+            --repo "${{ github.repository }}" \
+            --description "Zotero major compatibility bump" \
+            --color "0DB8D8" \
+            --force
+          gh pr edit "$PR_NUMBER" \
+            --repo "${{ github.repository }}" \
+            --add-label zotero-compat
+
+  ci-retry:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Resume Cursor agent with failed CI logs
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: node scripts/zotero-compat/ci-retry.mjs
+
+  confirm-version-bump:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged && (contains(join(github.event.pull_request.labels.*.name, ','), 'zotero-compat') || contains(github.event.pull_request.body, 'zotero-compat'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout merge commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+
+      - name: Fetch tags
+        run: git fetch --tags --force
+
+      - name: Confirm package.json is newer than the latest tag
+        run: |
+          set -euo pipefail
+          latest="$(git tag -l 'v*' --sort=-v:refname | head -n1 | sed 's/^v//')"
+          current="$(node --input-type=module -e "import { readFileSync } from 'node:fs'; console.log(JSON.parse(readFileSync('package.json','utf8')).version)")"
+          echo "Latest tag: ${latest:-none}"
+          echo "package.json: $current"
+          if [ -z "$latest" ]; then
+            echo "No v* tags; version $current is acceptable."
+            exit 0
+          fi
+          if [ "$current" = "$latest" ]; then
+            echo "package.json version $current was not bumped past tag v$latest"
+            exit 1
+          fi
+          newest="$(printf '%s\n%s\n' "$latest" "$current" | sort -V | tail -n1)"
+          if [ "$newest" != "$current" ]; then
+            echo "package.json version $current is not newer than tag v$latest"
+            exit 1
+          fi
+
+  release:
+    needs: confirm-version-bump
+    uses: zotero-plugin-dev/workflows/.github/workflows/release-plugin.yml@main
+    with:
+      build: "npm run build"
+      release: "npm run release"
+    secrets: inherit

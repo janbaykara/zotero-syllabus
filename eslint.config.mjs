@@ -13,11 +13,13 @@ export default zotero({
       },
     },
     {
-      files: ["scripts/**/*.js"],
+      files: ["scripts/**/*.{js,mjs}"],
       languageOptions: {
         globals: {
           console: "readonly",
           process: "readonly",
+          fetch: "readonly",
+          URL: "readonly",
         },
       },
     },

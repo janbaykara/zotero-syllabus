@@ -1,0 +1,71 @@
+# Bump max compatible Zotero version when a new major ships.
+#
+# Requires repo secret CURSOR_API_KEY and Cursor GitHub access for this repo.
+# The cloud agent must pass pnpm lint:fix, pnpm build, and pnpm test before
+# opening a PR. Merging a zotero-compat PR publishes a patch release.
+
+name: Zotero compat
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      major:
+        description: "Target Zotero major (default: latest release channel)"
+        required: false
+        type: string
+      force:
+        description: Launch even if already compatible with this major
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: zotero-compat
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  detect-and-launch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Detect new Zotero major
+        id: detect
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force || false }}
+          MAJOR: ${{ github.event_name == 'workflow_dispatch' && inputs.major || '' }}
+          CHANGELOG_PATH: ${{ runner.temp }}/zotero-changelog.md
+        run: node scripts/zotero-compat/detect.mjs
+
+      - name: Skip summary
+        if: steps.detect.outputs.should_run != 'true'
+        run: |
+          echo "No Zotero compat agent needed: ${{ steps.detect.outputs.skip_reason }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Current max: ${{ steps.detect.outputs.current_max }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Release: ${{ steps.detect.outputs.release_version }}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Launch Cursor agent
+        if: steps.detect.outputs.should_run == 'true'
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          MAJOR: ${{ steps.detect.outputs.major }}
+          RELEASE_VERSION: ${{ steps.detect.outputs.release_version }}
+          CHANGELOG_PATH: ${{ steps.detect.outputs.changelog_path }}
+          AGENT_PROMPT: ${{ github.workspace }}/.github/prompts/zotero-major-compat.md
+          STARTING_REF: ${{ github.event.repository.default_branch }}
+        run: node scripts/zotero-compat/launch-agent.mjs
