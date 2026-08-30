@@ -50,6 +50,7 @@ import {
   findGalleryNavIndex,
   getActiveGalleryIndex,
   getGalleryNavElements,
+  isCustomCollectionViewActive,
   isEditableKeyboardTarget,
   isGalleryKeyboardIgnoredTarget,
   parseGalleryNavKey,
@@ -152,6 +153,9 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
   const handleGalleryKeyDown = useCallback(
     (event: Event) => {
       const e = event as KeyboardEvent;
+      if (!isCustomCollectionViewActive()) {
+        return;
+      }
       if (e.ctrlKey || e.metaKey || e.altKey) {
         return;
       }

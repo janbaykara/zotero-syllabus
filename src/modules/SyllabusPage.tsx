@@ -67,6 +67,7 @@ import { SyllabusItemCard } from "./SyllabusItemCard";
 import { bibliographyToHtml } from "./Bibliography";
 import { LinksSection } from "./LinksSection";
 import { ClassGroupComponent } from "./ClassGroup";
+import { isCustomCollectionViewActive } from "./galleryKeyboardNav";
 
 export { SyllabusItemCard } from "./SyllabusItemCard";
 export { Bibliography } from "./Bibliography";
@@ -769,6 +770,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
   const handleSyllabusKeyDown = useCallback((event: Event) => {
     const e = event as KeyboardEvent;
+    if (!isCustomCollectionViewActive()) {
+      return;
+    }
     if (e.ctrlKey || e.metaKey || e.altKey) {
       return;
     }

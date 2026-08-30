@@ -9,7 +9,7 @@ import { renderGalleryPage } from "./GalleryPage";
 import { setGalleryGroupBy } from "./galleryGroupBy";
 import { getSelectedCollection } from "../utils/zotero";
 import { getCurrentTab, confirmPrompt } from "../utils/window";
-import { renderComponent } from "../utils/react";
+import { renderComponent, unmountComponent } from "../utils/react";
 import { ItemPane } from "./ItemPane";
 import { h } from "preact";
 import { uuidv7 } from "uuidv7";
@@ -1047,7 +1047,9 @@ export class SyllabusManager {
       ) as HTMLElement | null;
 
       if (!shouldShowCustomView) {
-        // Hide custom view and show default tree
+        // Hide custom view and show default tree. Unmount so Gallery/Syllabus
+        // document keydown listeners cannot intercept native list navigation.
+        unmountComponent(w, "syllabus-custom-view");
         if (customView) {
           customView.style.display = "none";
         }

@@ -263,3 +263,12 @@ export function isGalleryKeyboardIgnoredTarget(
     ),
   );
 }
+
+/** True only while Gallery/Syllabus is showing (not native Table). */
+export function isCustomCollectionViewActive(): boolean {
+  const win = typeof Zotero !== "undefined" ? Zotero.getMainWindow() : null;
+  const customView = (win?.document ?? document).getElementById(
+    "syllabus-custom-view",
+  ) as HTMLElement | null;
+  return !!customView && customView.style.display !== "none";
+}

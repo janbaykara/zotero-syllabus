@@ -61,3 +61,23 @@ export function renderComponent(
   // Return the ID so callers can use it for cleanup if needed
   return id;
 }
+
+/** Tear down a Preact root so its document listeners cannot outlive the view. */
+export function unmountComponent(win: _ZoteroTypes.MainWindow, rootId: string) {
+  const unmountMap = (win as any).__preactUnmountMap as
+    | Map<string, () => void>
+    | undefined;
+  if (!unmountMap) {
+    return;
+  }
+  const unmountFn = unmountMap.get(rootId);
+  if (!unmountFn) {
+    return;
+  }
+  try {
+    unmountFn();
+  } catch (e) {
+    ztoolkit.log(`Error during unmount for root ${rootId}:`, e);
+  }
+  unmountMap.delete(rootId);
+}
