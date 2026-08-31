@@ -185,6 +185,78 @@ describe("remapDocumentItemKeys", function () {
     const result = remapDocumentItemKeys(document, [item]);
     assert.equal(Object.keys(result.items)[0], item.key);
   });
+
+  it("matches a pubmed URL to a PMID in the item index", async function () {
+    const item = new Zotero.Item("journalArticle");
+    item.libraryID = Zotero.Libraries.userLibraryID;
+    item.setField("title", "PMID remap");
+    item.setField("url", "https://pubmed.ncbi.nlm.nih.gov/12345678/");
+    await item.saveTx();
+    items.push(item);
+
+    const document = CollectionSyllabusDocumentSchema.parse({
+      version: 2,
+      classes: {
+        "class-1": { number: 1, title: "Intro", status: null },
+      },
+      items: {
+        oldKey: [{ id: "a1", classId: "class-1", priority: "essential" }],
+      },
+      itemIndex: {
+        oldKey: { title: "PMID remap", pmid: "12345678" },
+      },
+    });
+    const result = remapDocumentItemKeys(document, [item]);
+    assert.equal(Object.keys(result.items)[0], item.key);
+  });
+
+  it("matches Extra arXiv to an abs URL on the item", async function () {
+    const item = new Zotero.Item("journalArticle");
+    item.libraryID = Zotero.Libraries.userLibraryID;
+    item.setField("title", "arXiv remap");
+    item.setField("url", "https://arxiv.org/abs/2301.12345v2");
+    await item.saveTx();
+    items.push(item);
+
+    const document = CollectionSyllabusDocumentSchema.parse({
+      version: 2,
+      classes: {
+        "class-1": { number: 1, title: "Intro", status: null },
+      },
+      items: {
+        oldKey: [{ id: "a1", classId: "class-1", priority: "essential" }],
+      },
+      itemIndex: {
+        oldKey: { title: "arXiv remap", arxiv: "2301.12345" },
+      },
+    });
+    const result = remapDocumentItemKeys(document, [item]);
+    assert.equal(Object.keys(result.items)[0], item.key);
+  });
+
+  it("matches Extra PMID on the item to a stored pmid", async function () {
+    const item = new Zotero.Item("journalArticle");
+    item.libraryID = Zotero.Libraries.userLibraryID;
+    item.setField("title", "Local copy");
+    item.setField("extra", "PMID: 12345678");
+    await item.saveTx();
+    items.push(item);
+
+    const document = CollectionSyllabusDocumentSchema.parse({
+      version: 2,
+      classes: {
+        "class-1": { number: 1, title: "Intro", status: null },
+      },
+      items: {
+        oldKey: [{ id: "a1", classId: "class-1", priority: "essential" }],
+      },
+      itemIndex: {
+        oldKey: { title: "Imported title", pmid: "12345678" },
+      },
+    });
+    const result = remapDocumentItemKeys(document, [item]);
+    assert.equal(Object.keys(result.items)[0], item.key);
+  });
 });
 
 describe("documentForWrite", function () {

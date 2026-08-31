@@ -449,6 +449,9 @@ const CollectionSyllabusDocumentV2Schema = SettingsSyllabusMetadataSchema.omit({
         title: z.string().optional(),
         doi: z.string().optional().nullable(),
         isbn: z.string().optional().nullable(),
+        pmid: z.string().optional().nullable(),
+        pmcid: z.string().optional().nullable(),
+        arxiv: z.string().optional().nullable(),
       }),
     )
     .optional(),

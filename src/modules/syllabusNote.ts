@@ -33,11 +33,15 @@ import {
   getAllCollections,
 } from "../utils/zotero";
 import {
+  getItemField,
   getItemTitle,
   isSyllabusMemberItem,
   readItemNote,
 } from "../utils/items";
-import { normalizeDoi, normalizeIsbn } from "../utils/identifiers";
+import {
+  identifiersFromFields,
+  type ItemLookupIds,
+} from "../utils/identifiers";
 import {
   classFolderNameMatches,
   classSubcollectionKeysChanged,
@@ -201,6 +205,30 @@ export function getHydratedItemAssignments(
   );
 }
 
+function lookupIdsFromItem(item: Zotero.Item): ItemLookupIds {
+  return identifiersFromFields({
+    doi: getItemField(item, "DOI"),
+    isbn: getItemField(item, "ISBN"),
+    extra: getItemField(item, "extra"),
+    url: getItemField(item, "url"),
+    archiveID: getItemField(item, "archiveID"),
+  });
+}
+
+function indexEntryFromIds(
+  title: string,
+  ids: ItemLookupIds,
+): NonNullable<CollectionSyllabusDocument["itemIndex"]>[string] {
+  return {
+    title,
+    ...(ids.doi ? { doi: ids.doi } : {}),
+    ...(ids.isbn ? { isbn: ids.isbn } : {}),
+    ...(ids.pmid ? { pmid: ids.pmid } : {}),
+    ...(ids.pmcid ? { pmcid: ids.pmcid } : {}),
+    ...(ids.arxiv ? { arxiv: ids.arxiv } : {}),
+  };
+}
+
 export function buildItemIndex(
   collection: Zotero.Collection,
   document: CollectionSyllabusDocument,
@@ -211,13 +239,10 @@ export function buildItemIndex(
     if (!item || !isSyllabusMemberItem(item)) {
       continue;
     }
-    const doi = normalizeDoi(item.getField("DOI"));
-    const isbn = normalizeIsbn(item.getField("ISBN"));
-    index[itemKey] = {
-      title: getItemTitle(item),
-      ...(doi ? { doi } : {}),
-      ...(isbn ? { isbn } : {}),
-    };
+    index[itemKey] = indexEntryFromIds(
+      getItemTitle(item),
+      lookupIdsFromItem(item),
+    );
   }
   return index;
 }
@@ -235,18 +260,29 @@ export function remapDocumentItemKeys(
   });
   const byDoi = new Map<string, string>();
   const byIsbn = new Map<string, string>();
+  const byPmid = new Map<string, string>();
+  const byPmcid = new Map<string, string>();
+  const byArxiv = new Map<string, string>();
   const byTitle = new Map<string, string>();
   const existingKeys = new Set<string>();
   for (const item of regularItems) {
     existingKeys.add(item.key);
-    const doi = normalizeDoi(item.getField("DOI"));
-    const isbn = normalizeIsbn(item.getField("ISBN"));
+    const ids = lookupIdsFromItem(item);
     const title = getItemTitle(item).toLowerCase();
-    if (doi) {
-      byDoi.set(doi, item.key);
+    if (ids.doi) {
+      byDoi.set(ids.doi, item.key);
     }
-    if (isbn) {
-      byIsbn.set(isbn, item.key);
+    if (ids.isbn) {
+      byIsbn.set(ids.isbn, item.key);
+    }
+    if (ids.pmid) {
+      byPmid.set(ids.pmid, item.key);
+    }
+    if (ids.pmcid) {
+      byPmcid.set(ids.pmcid, item.key);
+    }
+    if (ids.arxiv) {
+      byArxiv.set(ids.arxiv, item.key);
     }
     if (title && !byTitle.has(title)) {
       byTitle.set(title, item.key);
@@ -257,12 +293,20 @@ export function remapDocumentItemKeys(
   const itemsOut: CollectionSyllabusDocument["items"] = {};
   for (const [oldKey, assignments] of Object.entries(document.items || {})) {
     const meta = itemIndex[oldKey];
-    const doi = normalizeDoi(meta?.doi);
-    const isbn = normalizeIsbn(meta?.isbn);
+    const indexed = identifiersFromFields({
+      doi: meta?.doi,
+      isbn: meta?.isbn,
+      pmid: meta?.pmid,
+      pmcid: meta?.pmcid,
+      arxiv: meta?.arxiv,
+    });
     const title = meta?.title?.trim().toLowerCase();
     const newKey =
-      (doi && byDoi.get(doi)) ||
-      (isbn && byIsbn.get(isbn)) ||
+      (indexed.doi && byDoi.get(indexed.doi)) ||
+      (indexed.isbn && byIsbn.get(indexed.isbn)) ||
+      (indexed.pmid && byPmid.get(indexed.pmid)) ||
+      (indexed.pmcid && byPmcid.get(indexed.pmcid)) ||
+      (indexed.arxiv && byArxiv.get(indexed.arxiv)) ||
       (title && byTitle.get(title)) ||
       (existingKeys.has(oldKey) ? oldKey : undefined) ||
       oldKey;
