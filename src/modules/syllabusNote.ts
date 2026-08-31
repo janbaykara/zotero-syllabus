@@ -26,6 +26,7 @@ import {
   getCachedCollectionByKey,
   getCachedItem,
 } from "../utils/cache";
+import { pruneStaleCollectionPrefs } from "../utils/collectionPrefs";
 import { getAllCollections } from "../utils/zotero";
 import { getItemTitle, isSyllabusMemberItem, readItemNote } from "../utils/items";
 import { normalizeDoi, normalizeIsbn } from "../utils/identifiers";
@@ -1335,6 +1336,11 @@ function ensureIndex(): void {
 
 async function rebuildDocumentIndex(): Promise<void> {
   await waitForLibraryItemData();
+  try {
+    pruneStaleCollectionPrefs();
+  } catch (error) {
+    ztoolkit.log("Error pruning stale collection prefs:", error);
+  }
   const notesToPatch: Zotero.Collection[] = [];
   for (const collection of getAllCollections()) {
     try {
@@ -2180,6 +2186,9 @@ export function initializeSyllabusNotes(): void {
       }
 
       if (type === "collection") {
+        if (event === "trash" || event === "delete") {
+          pruneStaleCollectionPrefs(ids);
+        }
         handleManagedCollectionChange(event, ids);
         handleReadingScheduleCollectionChange(
           event,
