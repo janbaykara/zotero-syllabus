@@ -1,6 +1,10 @@
 import { assert } from "chai";
 import { CollectionSyllabusDocumentSchema } from "../src/utils/schemas";
-import { remapDocumentItemKeysByMap } from "../src/modules/syllabusNote";
+import {
+  libraryIDFromDocumentCacheRef,
+  remapDocumentItemKeysByMap,
+  selectItemKeyRemapForDocument,
+} from "../src/modules/syllabusNote";
 
 function sampleDocument() {
   return CollectionSyllabusDocumentSchema.parse({
@@ -68,5 +72,28 @@ describe("remapDocumentItemKeysByMap", function () {
     assert.isUndefined(result.items.oldKeyA);
     assert.equal(result.itemIndex?.keepKey?.title, "Stays");
     assert.isUndefined(result.itemIndex?.oldKeyA);
+  });
+});
+
+describe("selectItemKeyRemapForDocument", function () {
+  const keyMap = { oldKeyA: "newKey", other: "kept" };
+
+  it("parses libraryID from a cache ref", function () {
+    assert.equal(libraryIDFromDocumentCacheRef("1:ABC12345"), 1);
+    assert.equal(libraryIDFromDocumentCacheRef("12:XYZ"), 12);
+    assert.isNull(libraryIDFromDocumentCacheRef("ABC12345"));
+    assert.isNull(libraryIDFromDocumentCacheRef(""));
+  });
+
+  it("applies remaps only to notes in the merge library", function () {
+    const keys = ["oldKeyA", "keepKey"];
+    assert.deepEqual(
+      selectItemKeyRemapForDocument("1:ABC12345", 1, keys, keyMap),
+      { oldKeyA: "newKey" },
+    );
+    assert.isNull(selectItemKeyRemapForDocument("2:ABC12345", 1, keys, keyMap));
+    assert.isNull(
+      selectItemKeyRemapForDocument("1:ABC12345", 1, ["keepKey"], keyMap),
+    );
   });
 });

@@ -447,6 +447,9 @@ async function survivorFromCollectionMates(
   const collections: Zotero.Collection[] = [];
   const seen = new Set<number>();
   for (const [ref, entry] of documentCache.entries()) {
+    if (libraryIDFromDocumentCacheRef(ref) !== item.libraryID) {
+      continue;
+    }
     if (!(item.key in (entry.document.items || {}))) {
       continue;
     }
@@ -465,7 +468,11 @@ async function survivorFromCollectionMates(
       const collection =
         getCachedCollectionById(collectionId) ||
         Zotero.Collections.get(collectionId);
-      if (!collection) {
+      if (
+        !collection ||
+        collection.libraryID !== item.libraryID ||
+        seen.has(collection.id)
+      ) {
         continue;
       }
       seen.add(collection.id);
@@ -531,8 +538,14 @@ async function afterDatabaseTransaction(): Promise<void> {
   }
 }
 
-function anyCachedDocumentHasItemKey(itemKey: string): boolean {
-  for (const entry of documentCache.values()) {
+function anyCachedDocumentHasItemKey(
+  itemKey: string,
+  libraryID: number,
+): boolean {
+  for (const [ref, entry] of documentCache.entries()) {
+    if (libraryIDFromDocumentCacheRef(ref) !== libraryID) {
+      continue;
+    }
     if (itemKey in (entry.document.items || {})) {
       return true;
     }
@@ -540,14 +553,52 @@ function anyCachedDocumentHasItemKey(itemKey: string): boolean {
   return false;
 }
 
-function collectionFromCacheRef(ref: string): Zotero.Collection | null {
+/**
+ * Parse `libraryID` from a document cache ref (`libraryID:collectionKey`).
+ * Item and collection keys are unique per library, not globally.
+ */
+export function libraryIDFromDocumentCacheRef(ref: string): number | null {
   const colon = ref.indexOf(":");
   if (colon <= 0) {
     return null;
   }
   const libraryID = parseInt(ref.slice(0, colon), 10);
-  const key = ref.slice(colon + 1);
-  if (Number.isNaN(libraryID) || !key) {
+  return Number.isNaN(libraryID) ? null : libraryID;
+}
+
+/**
+ * Keys to remap in one cached syllabus note. Returns null when the note is in
+ * a different library than the merge, or when none of the old keys are present.
+ */
+export function selectItemKeyRemapForDocument(
+  documentCacheRef: string,
+  mergeLibraryID: number,
+  documentItemKeys: Iterable<string>,
+  keyMap: Record<string, string>,
+): Record<string, string> | null {
+  if (libraryIDFromDocumentCacheRef(documentCacheRef) !== mergeLibraryID) {
+    return null;
+  }
+  const present = new Set(documentItemKeys);
+  const map: Record<string, string> = {};
+  for (const [oldKey, newKey] of Object.entries(keyMap)) {
+    if (!oldKey || !newKey || oldKey === newKey) {
+      continue;
+    }
+    if (present.has(oldKey)) {
+      map[oldKey] = newKey;
+    }
+  }
+  return Object.keys(map).length ? map : null;
+}
+
+function collectionFromCacheRef(ref: string): Zotero.Collection | null {
+  const libraryID = libraryIDFromDocumentCacheRef(ref);
+  if (libraryID == null) {
+    return null;
+  }
+  const key = ref.slice(ref.indexOf(":") + 1);
+  if (!key) {
     return null;
   }
   return (
@@ -559,6 +610,7 @@ function collectionFromCacheRef(ref: string): Zotero.Collection | null {
 
 async function applyItemKeyRemapToCachedDocuments(
   keyMap: Record<string, string>,
+  libraryID: number,
 ): Promise<void> {
   const remaps = Object.entries(keyMap).filter(
     ([oldKey, newKey]) => oldKey && newKey && oldKey !== newKey,
@@ -568,17 +620,17 @@ async function applyItemKeyRemapToCachedDocuments(
   }
 
   for (const [ref, entry] of documentCache.entries()) {
-    const map: Record<string, string> = {};
-    for (const [oldKey, newKey] of remaps) {
-      if (oldKey in (entry.document.items || {})) {
-        map[oldKey] = newKey;
-      }
-    }
-    if (!Object.keys(map).length) {
+    const map = selectItemKeyRemapForDocument(
+      ref,
+      libraryID,
+      Object.keys(entry.document.items || {}),
+      keyMap,
+    );
+    if (!map) {
       continue;
     }
     const collection = collectionFromCacheRef(ref);
-    if (!collection) {
+    if (!collection || collection.libraryID !== libraryID) {
       continue;
     }
     const remapped = remapDocumentItemKeysByMap(entry.document, map);
@@ -602,7 +654,19 @@ async function remapMergedKeysFromItemIds(
   ids: number[],
   event: string,
 ): Promise<void> {
-  const keyMap: Record<string, string> = {};
+  const keyMapsByLibrary = new Map<number, Record<string, string>>();
+  const addRemap = (
+    libraryID: number,
+    oldKey: string,
+    newKey: string,
+  ): void => {
+    if (!oldKey || !newKey || oldKey === newKey) {
+      return;
+    }
+    const map = keyMapsByLibrary.get(libraryID) || {};
+    map[oldKey] = newKey;
+    keyMapsByLibrary.set(libraryID, map);
+  };
   try {
     for (const id of ids) {
       let item: Zotero.Item | false | undefined;
@@ -626,7 +690,7 @@ async function remapMergedKeysFromItemIds(
       }
 
       if (event === "trash" || item.deleted) {
-        if (!anyCachedDocumentHasItemKey(item.key)) {
+        if (!anyCachedDocumentHasItemKey(item.key, item.libraryID)) {
           continue;
         }
         const uri = itemUriForLibraryAndKey(item.libraryID, item.key, item);
@@ -636,10 +700,14 @@ async function remapMergedKeysFromItemIds(
         const survivor =
           (await survivorForReplacedUri(uri)) ||
           (await survivorFromCollectionMates(item, uri));
-        if (!survivor || survivor.key === item.key) {
+        if (
+          !survivor ||
+          survivor.key === item.key ||
+          survivor.libraryID !== item.libraryID
+        ) {
           continue;
         }
-        keyMap[item.key] = survivor.key;
+        addRemap(item.libraryID, item.key, survivor.key);
         continue;
       }
 
@@ -653,17 +721,19 @@ async function remapMergedKeysFromItemIds(
       }
       const replacedKeys = replacedItemKeysFromItem(item);
       for (const oldKey of replacedKeys) {
-        if (!anyCachedDocumentHasItemKey(oldKey)) {
+        if (!anyCachedDocumentHasItemKey(oldKey, item.libraryID)) {
           continue;
         }
-        keyMap[oldKey] = item.key;
+        addRemap(item.libraryID, oldKey, item.key);
       }
     }
 
-    if (!Object.keys(keyMap).length) {
-      return;
+    for (const [libraryID, keyMap] of keyMapsByLibrary) {
+      if (!Object.keys(keyMap).length) {
+        continue;
+      }
+      await applyItemKeyRemapToCachedDocuments(keyMap, libraryID);
     }
-    await applyItemKeyRemapToCachedDocuments(keyMap);
   } catch (error) {
     ztoolkit.log("Error remapping merged item keys in syllabus notes:", error);
     throw error;
@@ -698,7 +768,11 @@ async function mergedKeyMapForOrphanedKeys(
     const survivor =
       (await survivorForReplacedUri(uri)) ||
       (item ? await survivorFromCollectionMates(item, uri) : null);
-    if (survivor && survivor.key !== itemKey) {
+    if (
+      survivor &&
+      survivor.key !== itemKey &&
+      survivor.libraryID === libraryID
+    ) {
       keyMap[itemKey] = survivor.key;
     }
   }
