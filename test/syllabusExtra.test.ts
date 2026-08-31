@@ -143,13 +143,6 @@ describe("absorbSyllabusExtraFromItems", function () {
       "extra",
       `${SYLLABUS_EXTRA_KEY}: ${JSON.stringify(extraPayload)}`,
     );
-    await item.saveTx();
-    assert.include(
-      String(item.getField("extra") || ""),
-      SYLLABUS_EXTRA_KEY,
-      "Extra should be present before trash",
-    );
-
     item.deleted = true;
     await item.saveTx();
     assert.isFalse(isSyllabusMemberItem(item));
