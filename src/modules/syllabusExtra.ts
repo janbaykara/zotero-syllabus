@@ -6,6 +6,7 @@ import {
   type ItemSyllabusData,
 } from "../utils/schemas";
 import { getCachedCollectionByKey } from "../utils/cache";
+import { isSyllabusMemberItem } from "../utils/items";
 import { attachStashedReadingListFiles } from "./readingListFileStash";
 import {
   SYLLABUS_EXTRA_KEY,
@@ -271,7 +272,9 @@ export async function absorbSyllabusExtraFromItems(
   const pendingFiles: Array<{ item: Zotero.Item; citationIds: string[] }> = [];
 
   for (const item of items) {
-    if (!item?.isRegularItem()) {
+    // Sync can fire modify for items already in the trash (Better BibTeX
+    // #2401 / #2676). Do not write Extra or the collection note for those.
+    if (!isSyllabusMemberItem(item)) {
       continue;
     }
     const extraData = readSyllabusExtra(item);
@@ -314,7 +317,7 @@ export async function absorbSyllabusExtraFromItems(
   }
   const queuedIds = new Set(pendingFiles.map((entry) => entry.item.id));
   for (const item of items) {
-    if (!item?.isRegularItem() || queuedIds.has(item.id)) {
+    if (!isSyllabusMemberItem(item) || queuedIds.has(item.id)) {
       continue;
     }
     if (!isReadingListCatalogItem(item)) {

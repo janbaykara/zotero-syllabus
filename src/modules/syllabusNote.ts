@@ -2132,7 +2132,10 @@ export function initializeSyllabusNotes(): void {
             handleNoteChange(item, event);
             continue;
           }
-          if (item.isRegularItem() && (event === "add" || event === "modify")) {
+          if (
+            isSyllabusMemberItem(item) &&
+            (event === "add" || event === "modify")
+          ) {
             extrasToAbsorb.push(item);
           }
         }
@@ -2156,7 +2159,7 @@ export function initializeSyllabusNotes(): void {
           }
           if (item.isNote()) {
             handleNoteChange(item, event);
-          } else if (item.isRegularItem()) {
+          } else if (isSyllabusMemberItem(item)) {
             extrasToAbsorb.push(item);
           }
         }
