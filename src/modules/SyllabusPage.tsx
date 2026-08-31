@@ -1955,15 +1955,16 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                     className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
                     title={isLocked ? "Unlock syllabus" : "Lock syllabus"}
                     aria-label={isLocked ? "Unlock syllabus" : "Lock syllabus"}
+                    aria-pressed={isLocked}
                     onClick={() => setLocked(!isLocked)}
                   >
                     {isLocked ? (
-                      <Unlock
+                      <Lock
                         size={20}
-                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                        className="text-primary hover:text-primary hover:bg-quinary rounded p-1"
                       />
                     ) : (
-                      <Lock
+                      <Unlock
                         size={20}
                         className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
                       />
