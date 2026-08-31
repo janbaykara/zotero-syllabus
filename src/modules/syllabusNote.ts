@@ -31,7 +31,6 @@ import { createReentrantSerialQueue } from "../utils/serialQueue";
 import { collectionLibraryIsEditable, getAllCollections } from "../utils/zotero";
 import { getItemTitle, isSyllabusMemberItem, readItemNote } from "../utils/items";
 import { normalizeDoi, normalizeIsbn } from "../utils/identifiers";
-import { getPrefValue } from "../utils/prefs";
 import {
   classFolderNameMatches,
   classSubcollectionKeysChanged,
@@ -47,15 +46,15 @@ import {
   rememberManagedSubcollections,
 } from "./classSubcollections";
 import {
-  buildReadingScheduleDesiredItems,
+  buildReadingScheduleDesiredByLibrary,
   clearManagedReadingScheduleCollection,
   enqueueReadingScheduleCollectionSync,
   getReadingScheduleCollectionContext,
   handleReadingScheduleCollectionChange,
   isManagedReadingScheduleCollection,
+  isManagedReadingScheduleRootKey,
   registerReadingSchedulePrefObserver,
   restoreReadingScheduleCollectionItems,
-  type ReadingScheduleDesiredItems,
   type ReadingScheduleSource,
   unregisterReadingSchedulePrefObserver,
 } from "./readingScheduleCollection";
@@ -1969,8 +1968,9 @@ function parseCollectionItemCollectionId(id: number | string): number | null {
   return Number.isNaN(collectionId) ? null : collectionId;
 }
 
-function collectDesiredReadingScheduleItems(): ReadingScheduleDesiredItems {
-  const libraryID = Zotero.Libraries.userLibraryID;
+function collectDesiredReadingScheduleItems(): ReturnType<
+  typeof buildReadingScheduleDesiredByLibrary
+> {
   const sources: ReadingScheduleSource[] = [];
   for (const [ref, entry] of documentCache.entries()) {
     if (!entry.noteId) {
@@ -1981,11 +1981,11 @@ function collectDesiredReadingScheduleItems(): ReadingScheduleDesiredItems {
       continue;
     }
     const entryLibraryID = parseInt(ref.slice(0, colon), 10);
-    if (Number.isNaN(entryLibraryID) || entryLibraryID !== libraryID) {
+    if (Number.isNaN(entryLibraryID)) {
       continue;
     }
     const entryKey = ref.slice(colon + 1);
-    if (entryKey && entryKey === getPrefValue("readingScheduleCollectionKey")) {
+    if (entryKey && isManagedReadingScheduleRootKey(entryLibraryID, entryKey)) {
       continue;
     }
     sources.push({
@@ -1993,7 +1993,7 @@ function collectDesiredReadingScheduleItems(): ReadingScheduleDesiredItems {
       document: entry.document,
     });
   }
-  return buildReadingScheduleDesiredItems(sources);
+  return buildReadingScheduleDesiredByLibrary(sources);
 }
 
 function restoreManagedSubcollectionItems(collectionId: number): void {

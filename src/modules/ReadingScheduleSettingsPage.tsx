@@ -81,10 +81,11 @@ export function ReadingScheduleSettingsPage({
             <h2 className="text-2xl font-semibold">Library collection</h2>
             <p className="text-secondary">
               Off by default. When enabled, a top-level “Reading Schedule”
-              collection is kept in My Library with a folder for each recent and
-              upcoming reading date. Folders are created, renamed, and filled
-              automatically. Turning this off deletes that collection; syllabus
-              items stay in place.
+              collection is kept in each library that has a syllabus, with a
+              folder for each recent and upcoming reading date. Group syllabi
+              get their own schedule because items cannot cross libraries.
+              Folders are created, renamed, and filled automatically. Turning
+              this off deletes those collections; syllabus items stay in place.
             </p>
             <label
               className={twMerge(
