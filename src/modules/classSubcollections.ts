@@ -11,14 +11,37 @@ import {
 } from "../utils/schemas";
 import { getCachedCollectionById } from "../utils/cache";
 import { formatReadingDate, parseReadingDate } from "../utils/dates";
+import { getAppLocale } from "../utils/locale";
 import { collectionLibraryIsEditable } from "../utils/zotero";
 import { collectionHasSyllabusNote } from "./syllabusNote";
 
 const COLLECTION_NAME_MAX = 255;
 const DONE_SUFFIX = " ✅";
 const DATE_SEPARATOR = " — ";
-const DATE_SUFFIX_PATTERN =
-  /\s+—\s+(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+\d{1,2}(?:st|nd|rd|th)\s+[A-Z][a-z]{2}\s*$/;
+/** Locales we ship; used to recognize dated folder names after a locale change. */
+const FOLDER_DATE_LOCALES = [
+  "en-US",
+  "de",
+  "fr-FR",
+  "es-ES",
+  "pt-BR",
+  "pt-PT",
+  "zh-CN",
+  "zh-TW",
+  "ja-JP",
+  "ar",
+  "it-IT",
+  "nl-NL",
+  "ko-KR",
+  "ru-RU",
+  "pl-PL",
+  "tr-TR",
+  "uk-UA",
+  "vi-VN",
+  "id-ID",
+];
+
+let weekdayNameCache: string[] | null = null;
 
 type ManagedSubcollection = {
   parentId: number;
@@ -108,10 +131,55 @@ function formatDeadlineForName(
 }
 
 export function classSubcollectionNameBase(name: string): string {
-  return name
-    .replace(/\s*✅\s*$/u, "")
-    .replace(DATE_SUFFIX_PATTERN, "")
-    .trimEnd();
+  const strippedDone = name.replace(/\s*✅\s*$/u, "").trimEnd();
+  const idx = strippedDone.lastIndexOf(DATE_SEPARATOR);
+  if (idx === -1) {
+    return strippedDone;
+  }
+  const suffix = strippedDone.slice(idx + DATE_SEPARATOR.length);
+  if (suffixLooksLikeReadingDate(suffix)) {
+    return strippedDone.slice(0, idx).trimEnd();
+  }
+  return strippedDone;
+}
+
+function suffixLooksLikeReadingDate(suffix: string): boolean {
+  const text = suffix.trim();
+  if (!text || !/\d/.test(text)) {
+    return false;
+  }
+  const lower = text.toLowerCase();
+  return weekdayNames().some((day) => lower.includes(day.toLowerCase()));
+}
+
+function weekdayNames(): string[] {
+  if (weekdayNameCache) {
+    return weekdayNameCache;
+  }
+  const names = new Set<string>();
+  const locales = new Set<string>([getAppLocale(), ...FOLDER_DATE_LOCALES]);
+  const sunday = new Date(2024, 0, 7);
+  for (const locale of locales) {
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(
+        sunday.getFullYear(),
+        sunday.getMonth(),
+        sunday.getDate() + i,
+      );
+      try {
+        const long = new Intl.DateTimeFormat(locale, {
+          weekday: "long",
+        }).format(date);
+        if (long) {
+          names.add(long);
+        }
+      } catch {
+        // Unknown locale tag.
+      }
+    }
+  }
+  weekdayNameCache = [...names];
+  return weekdayNameCache;
 }
 
 /** True when a folder name matches a class, including dated / done suffixes. */
@@ -123,7 +191,6 @@ export function classFolderNameMatches(
   if (!meta?.number) {
     return false;
   }
-  const base = classSubcollectionNameBase(collectionName);
   const withoutDate = classSubcollectionName(
     document.nomenclature,
     meta.number,
@@ -135,11 +202,14 @@ export function classFolderNameMatches(
     meta.title,
     { done: meta.status === "done", readingDate: meta.readingDate },
   );
+  const strippedDone = collectionName.replace(/\s*✅\s*$/u, "").trimEnd();
+  const base = classSubcollectionNameBase(collectionName);
   return (
     collectionName === withDate ||
     collectionName === withoutDate ||
     base === withoutDate ||
-    base === withDate
+    strippedDone === withoutDate ||
+    strippedDone.startsWith(`${withoutDate}${DATE_SEPARATOR}`)
   );
 }
 
