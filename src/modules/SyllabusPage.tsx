@@ -41,6 +41,7 @@ import {
 } from "./furtherReadingSort";
 import { formatDate } from "date-fns";
 import {
+  ArrowUpDown,
   Printer,
   Settings,
   Lock,
@@ -2173,7 +2174,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   )}
                 >
                   Further reading
-                  <label className="ml-auto shrink-0 inline-flex items-baseline gap-1.5 in-[.print]:hidden font-normal text-sm text-secondary">
+                  <label className="ml-auto shrink-0 inline-flex items-center gap-1.5 in-[.print]:hidden font-normal text-sm text-secondary">
+                    <ArrowUpDown size={12} strokeWidth={2} aria-hidden="true" />
                     <span>Sort</span>
                     <select
                       value={furtherReadingSortBy}
