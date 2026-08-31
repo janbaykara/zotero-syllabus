@@ -914,6 +914,60 @@ export function documentForWrite(
   return cachedDoc || emptyCollectionDocument();
 }
 
+export type IncomingNoteCache = {
+  noteId: number | null;
+  noteVersion: number;
+  document: CollectionSyllabusDocument;
+};
+
+export type IncomingNoteDecision = "apply" | "ignore" | "keep-cache";
+
+/**
+ * Whether a note `modify` should replace the in-memory document.
+ *
+ * Better Notes treats both-sides-edited notes as a conflict instead of
+ * dropping the incoming side (wiki: Note Synchronization). We cannot show a
+ * merge UI, but we must not ignore a strictly newer parseable note while a
+ * local write is in flight — that is how a sync-in edit disappears.
+ *
+ * During a write we still ignore empty/unparseable payloads so an echo of
+ * our own saveTx cannot bump `noteVersion` and then hide the real note.
+ */
+export function shouldAdoptIncomingNote(options: {
+  writeInFlight: boolean;
+  cached: IncomingNoteCache | undefined;
+  itemId: number;
+  itemVersion: number;
+  parsed: CollectionSyllabusDocument | null;
+}): IncomingNoteDecision {
+  const { writeInFlight, cached, itemId, itemVersion, parsed } = options;
+  if (
+    cached &&
+    cached.noteId === itemId &&
+    cached.noteVersion >= itemVersion
+  ) {
+    return "ignore";
+  }
+  const parsedUsable = Boolean(
+    parsed &&
+      !(
+        isEmptyCollectionDocument(parsed) &&
+        cached &&
+        !isEmptyCollectionDocument(cached.document)
+      ),
+  );
+  if (writeInFlight) {
+    if (parsedUsable && (!cached || itemVersion > cached.noteVersion)) {
+      return "apply";
+    }
+    return "ignore";
+  }
+  if (!parsedUsable) {
+    return "keep-cache";
+  }
+  return "apply";
+}
+
 function collectionNoteCandidates(
   collection: Zotero.Collection,
   includeDeleted = false,
@@ -1658,6 +1712,36 @@ function endWrite(ref: string): void {
   }
 }
 
+/** Pick up a note version that landed while mutateCollectionDocument was running. */
+function reconcileCachedNoteWithLive(ref: string, note: Zotero.Item): void {
+  const live = (note.id && Zotero.Items.get(note.id)) || note;
+  let parsed: CollectionSyllabusDocument | null = null;
+  try {
+    parsed = parseSyllabusNote(readItemNote(live));
+  } catch (error) {
+    ztoolkit.log("Error re-reading syllabus note after write:", error);
+  }
+  const cached = documentCache.get(ref);
+  if (
+    shouldAdoptIncomingNote({
+      writeInFlight: true,
+      cached,
+      itemId: live.id,
+      itemVersion: live.version,
+      parsed,
+    }) !== "apply" ||
+    !parsed
+  ) {
+    return;
+  }
+  ztoolkit.log(
+    "Adopting a newer syllabus note that landed during write",
+    ref,
+    live.version,
+  );
+  setCacheEntry(ref, live.id, live.version, parsed);
+}
+
 function enqueueWrite<T>(key: string, task: () => Promise<T>): Promise<T> {
   const previous = writeQueues.get(key) || Promise.resolve();
   const next = previous
@@ -1777,6 +1861,7 @@ export async function mutateCollectionDocument(
       ).catch((error) => {
         ztoolkit.log("Error syncing reading schedule collection:", error);
       });
+      reconcileCachedNoteWithLive(ref, saved);
       return next;
     } catch (error) {
       logSyllabusError("Error saving syllabus note:", error);
@@ -2054,23 +2139,18 @@ function handleNoteChange(item: Zotero.Item, event: string): void {
       continue;
     }
     const ref = collectionRefFromCollection(collection);
-    if (isDocumentWriteInFlight(ref)) {
-      continue;
-    }
     const cached = documentCache.get(ref);
-    if (
-      cached &&
-      cached.noteId === item.id &&
-      cached.noteVersion >= item.version
-    ) {
+    const decision = shouldAdoptIncomingNote({
+      writeInFlight: isDocumentWriteInFlight(ref),
+      cached,
+      itemId: item.id,
+      itemVersion: item.version,
+      parsed,
+    });
+    if (decision === "ignore") {
       continue;
     }
-    if (
-      !parsed ||
-      (isEmptyCollectionDocument(parsed) &&
-        cached &&
-        !isEmptyCollectionDocument(cached.document))
-    ) {
+    if (decision === "keep-cache") {
       if (cached?.document) {
         cached.noteId = item.id;
         cached.noteVersion = item.version;
@@ -2078,7 +2158,9 @@ function handleNoteChange(item: Zotero.Item, event: string): void {
       }
       continue;
     }
-    setCacheEntry(ref, item.id, item.version, parsed);
+    if (parsed) {
+      setCacheEntry(ref, item.id, item.version, parsed);
+    }
   }
 }
 

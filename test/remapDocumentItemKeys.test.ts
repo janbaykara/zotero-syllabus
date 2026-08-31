@@ -2,10 +2,12 @@ import { assert } from "chai";
 import { CollectionSyllabusDocumentSchema } from "../src/utils/schemas";
 import {
   documentForWrite,
+  emptyCollectionDocument,
   libraryIDFromDocumentCacheRef,
   remapDocumentItemKeys,
   remapDocumentItemKeysByMap,
   selectItemKeyRemapForDocument,
+  shouldAdoptIncomingNote,
 } from "../src/modules/syllabusNote";
 
 function sampleDocument() {
@@ -202,5 +204,101 @@ describe("documentForWrite", function () {
     });
     const result = documentForWrite(null, cached);
     assert.equal(result.classes["class-1"]?.title, "Cached");
+  });
+});
+
+describe("shouldAdoptIncomingNote", function () {
+  const cachedDoc = CollectionSyllabusDocumentSchema.parse({
+    version: 2,
+    courseCode: "LOCAL",
+    classes: { "class-1": { number: 1, title: "Local", status: null } },
+    items: {},
+  });
+  const remoteDoc = CollectionSyllabusDocumentSchema.parse({
+    version: 2,
+    courseCode: "REMOTE",
+    classes: { "class-1": { number: 1, title: "Remote", status: null } },
+    items: {},
+  });
+  const emptyDoc = emptyCollectionDocument();
+  const cached = {
+    noteId: 10,
+    noteVersion: 5,
+    document: cachedDoc,
+  };
+
+  it("ignores an echo of the version already in cache", function () {
+    assert.equal(
+      shouldAdoptIncomingNote({
+        writeInFlight: true,
+        cached,
+        itemId: 10,
+        itemVersion: 5,
+        parsed: remoteDoc,
+      }),
+      "ignore",
+    );
+  });
+
+  it("applies a newer parseable note even while a write is in flight", function () {
+    assert.equal(
+      shouldAdoptIncomingNote({
+        writeInFlight: true,
+        cached,
+        itemId: 10,
+        itemVersion: 6,
+        parsed: remoteDoc,
+      }),
+      "apply",
+    );
+  });
+
+  it("does not bump version on an empty payload during a write", function () {
+    assert.equal(
+      shouldAdoptIncomingNote({
+        writeInFlight: true,
+        cached,
+        itemId: 10,
+        itemVersion: 6,
+        parsed: emptyDoc,
+      }),
+      "ignore",
+    );
+    assert.equal(
+      shouldAdoptIncomingNote({
+        writeInFlight: true,
+        cached,
+        itemId: 10,
+        itemVersion: 6,
+        parsed: null,
+      }),
+      "ignore",
+    );
+  });
+
+  it("keeps a non-empty cache when a later idle modify does not parse", function () {
+    assert.equal(
+      shouldAdoptIncomingNote({
+        writeInFlight: false,
+        cached,
+        itemId: 10,
+        itemVersion: 6,
+        parsed: emptyDoc,
+      }),
+      "keep-cache",
+    );
+  });
+
+  it("applies a newer note when no write is in flight", function () {
+    assert.equal(
+      shouldAdoptIncomingNote({
+        writeInFlight: false,
+        cached,
+        itemId: 10,
+        itemVersion: 6,
+        parsed: remoteDoc,
+      }),
+      "apply",
+    );
   });
 });
