@@ -1,5 +1,6 @@
 import { assert } from "chai";
 import {
+  getItemCreatorLine,
   getItemField,
   getItemTitle,
   isSyllabusMemberItem,
@@ -187,5 +188,42 @@ describe("readItemNote", function () {
     await note.saveTx();
     items.push(note);
     assert.include(readItemNote(note), "Week 1 reading");
+  });
+});
+
+describe("getItemCreatorLine", function () {
+  this.timeout(30_000);
+
+  const items: Zotero.Item[] = [];
+
+  afterEach(async function () {
+    const ids = items.map((item) => item.id).filter(Boolean);
+    items.length = 0;
+    if (ids.length) {
+      try {
+        await Zotero.Items.erase(ids);
+      } catch {
+        /* profile is discarded after the run */
+      }
+    }
+  });
+
+  it("uses the item type’s primary creator, not a hardcoded author", async function () {
+    const patent = new Zotero.Item("patent");
+    patent.libraryID = Zotero.Libraries.userLibraryID;
+    patent.setField("title", "Analytical Engine");
+    patent.setCreators([
+      {
+        firstName: "Ada",
+        lastName: "Lovelace",
+        creatorType: "inventor",
+      },
+    ]);
+    await patent.saveTx();
+    items.push(patent);
+
+    const line = getItemCreatorLine(patent);
+    assert.equal(line, String(patent.firstCreator || "").trim());
+    assert.match(line, /Lovelace/);
   });
 });

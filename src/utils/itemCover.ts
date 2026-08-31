@@ -1,5 +1,5 @@
 import { getCachedItem } from "./cache";
-import { getItemTitle } from "./items";
+import { getItemCreatorLine, getItemTitle } from "./items";
 import { getString } from "./locale";
 import {
   youtubeThumbnailUrl,
@@ -144,14 +144,6 @@ function itemTitle(item: Zotero.Item): string {
   return getItemTitle(item) || getString("untitled");
 }
 
-function itemCreator(item: Zotero.Item): string {
-  try {
-    return (item.firstCreator || item.getField("firstCreator") || "").trim();
-  } catch {
-    return "";
-  }
-}
-
 export function isWebGalleryItem(item: Zotero.Item): boolean {
   return WEB_GALLERY_ITEM_TYPES.has(item.itemType);
 }
@@ -264,7 +256,7 @@ export function getPlaceholderCover(
     kind: "placeholder",
     color,
     title,
-    creator: itemCreator(item),
+    creator: getItemCreatorLine(item),
   };
 }
 

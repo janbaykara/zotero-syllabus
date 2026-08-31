@@ -14,6 +14,23 @@ export function getItemTitle(item: Zotero.Item): string {
 }
 
 /**
+ * Localized primary-creator line from Zotero (`firstCreator`). Uses the
+ * item type’s primary creator (inventor, director, interviewee, …), not
+ * a hardcoded author filter or English “and” / “et al.”
+ */
+export function getItemCreatorLine(item: Zotero.Item): string {
+  try {
+    const fromProp = String(item.firstCreator || "").trim();
+    if (fromProp) {
+      return fromProp;
+    }
+    return String(item.getField("firstCreator") || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+/**
  * Field value with Zotero base-field mapping. `getField("date")` is empty for
  * types that store it under another name (case → dateDecided, statute →
  * dateEnacted, patent → issueDate); same for publicationTitle, publisher, pages.

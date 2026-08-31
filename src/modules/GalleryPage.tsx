@@ -26,6 +26,7 @@ import {
 import { renderComponent } from "../utils/react";
 import { isZotero8OrLater } from "../utils/zotero";
 import {
+  getItemCreatorLine,
   getItemField,
   getItemTitle,
   openItemBestAttachment,
@@ -946,13 +947,7 @@ function GalleryTile({
     () => getItemTitle(item) || getString("untitled"),
     [item],
   );
-  const creator = useMemo(() => {
-    try {
-      return (item.firstCreator || item.getField("firstCreator") || "").trim();
-    } catch {
-      return "";
-    }
-  }, [item]);
+  const creator = useMemo(() => getItemCreatorLine(item), [item]);
   const hostname = useMemo(() => {
     if (isVideoGalleryItem(item)) {
       return getVideoSiteHostname(item);
@@ -1377,39 +1372,6 @@ function journalEditionCompact(item: Zotero.Item): string {
   return volIssue;
 }
 
-function itemAuthorLine(item: Zotero.Item): string {
-  try {
-    const creators = item.getCreatorsJSON() || [];
-    const authors = creators.filter(
-      (creator) => creator.creatorType === "author",
-    );
-    const list = authors.length > 0 ? authors : creators;
-    const names = list
-      .map((creator) =>
-        (
-          creator.name || `${creator.firstName || ""} ${creator.lastName || ""}`
-        ).trim(),
-      )
-      .filter(Boolean);
-    if (names.length === 1) {
-      return names[0];
-    }
-    if (names.length === 2) {
-      return `${names[0]} and ${names[1]}`;
-    }
-    if (names.length > 2) {
-      return `${names[0]} et al.`;
-    }
-  } catch {
-    // Fall through to firstCreator.
-  }
-  try {
-    return (item.firstCreator || itemField(item, "firstCreator")).trim();
-  } catch {
-    return "";
-  }
-}
-
 function itemAbstractSnippet(item: Zotero.Item): string {
   return itemField(item, "abstractNote")
     .replace(/<[^>]+>/g, " ")
@@ -1449,7 +1411,7 @@ function JournalFace({ item }: { item: Zotero.Item }) {
     () => itemField(item, "title") || getString("untitled"),
     [item],
   );
-  const creator = useMemo(() => itemAuthorLine(item), [item]);
+  const creator = useMemo(() => getItemCreatorLine(item), [item]);
   const abstractNote = useMemo(
     () => (contemporary ? itemAbstractSnippet(item) : ""),
     [item, contemporary],
