@@ -23,7 +23,7 @@ enable-subcollections-message =
     要继续吗？
 enable-reading-schedule-collection-title = 生成“阅读日程”分类？
 enable-reading-schedule-collection-message =
-    开启后，将在“我的文库”中创建顶层“阅读日程”分类，并为每个阅读日期（从 10 天前起）各建一个子分类。
+    开启后，将在每个有教学大纲的文献库中创建顶层“阅读日程”分类，并为每个阅读日期（从 10 天前起）各建一个子分类。群组教学大纲会有自己的日程（条目不能跨库）。
 
     具体行为：
 
@@ -33,9 +33,7 @@ enable-reading-schedule-collection-message =
 
     • 在此设置开启期间，若你删除该分类或某个日期文件夹，插件会重新创建。
 
-    • 群组文库中的教学大纲不会纳入（条目不能跨库）。
-
-    之后关闭此选项将删除“阅读日程”分类及其日期子分类。教学大纲中的条目会保留。
+    之后关闭此选项将删除这些“阅读日程”分类及其日期子分类。教学大纲中的条目会保留。
 
     要继续吗？
 disable-reading-schedule-collection-title = 删除“阅读日程”分类？
