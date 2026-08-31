@@ -31,6 +31,24 @@ export function getItemField(item: Zotero.Item, field: string): string {
 }
 
 /**
+ * Note HTML, or "" if this is not a note. Zotero 9 throws
+ * `getNote() can only be called on notes and attachments` when the item is a
+ * book (Better BibTeX #3541, Zotero 9.0.5).
+ */
+export function readItemNote(
+  item: Zotero.Item | false | null | undefined,
+): string {
+  try {
+    if (!item || typeof item.isNote !== "function" || !item.isNote()) {
+      return "";
+    }
+    return String(item.getNote() || "");
+  } catch {
+    return "";
+  }
+}
+
+/**
  * Regular library items that belong on a syllabus. Skips notes, attachments,
  * annotations, deleted items, and feed items (BBT: feeds are not user library
  * members even when isRegularItem() is true on some versions).

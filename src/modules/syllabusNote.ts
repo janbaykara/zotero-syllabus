@@ -27,7 +27,7 @@ import {
   getCachedItem,
 } from "../utils/cache";
 import { getAllCollections } from "../utils/zotero";
-import { getItemTitle, isSyllabusMemberItem } from "../utils/items";
+import { getItemTitle, isSyllabusMemberItem, readItemNote } from "../utils/items";
 import { normalizeDoi, normalizeIsbn } from "../utils/identifiers";
 import { getPrefValue } from "../utils/prefs";
 import {
@@ -956,15 +956,11 @@ function looksLikeSyllabusNote(item: Zotero.Item): boolean {
     } catch {
       // Title isn't required if the tag already matched.
     }
-    try {
-      const html = item.getNote() || "";
-      return (
-        html.includes(SYLLABUS_NOTE_PRE_ATTR) ||
-        html.includes(PLUGIN_JSON_HEADING)
-      );
-    } catch {
-      return false;
-    }
+    const html = readItemNote(item);
+    return (
+      html.includes(SYLLABUS_NOTE_PRE_ATTR) ||
+      html.includes(PLUGIN_JSON_HEADING)
+    );
   } catch {
     return false;
   }
@@ -993,7 +989,7 @@ export function peekPersistedSyllabusDocument(
     return null;
   }
   try {
-    return parseSyllabusNote(note.getNote());
+    return parseSyllabusNote(readItemNote(note));
   } catch (error) {
     ztoolkit.log("Error peeking persisted syllabus note:", error);
     return null;
@@ -1202,7 +1198,9 @@ function parseDocumentFromNote(
 ): CollectionSyllabusDocument {
   try {
     return (
-      parseSyllabusNote(note.getNote()) || fallback || emptyCollectionDocument()
+      parseSyllabusNote(readItemNote(note)) ||
+      fallback ||
+      emptyCollectionDocument()
     );
   } catch (error) {
     ztoolkit.log("Error parsing syllabus note during cache load:", error);
@@ -1244,7 +1242,7 @@ function loadDocumentForCollection(
       }
       let parsed: CollectionSyllabusDocument | null = null;
       try {
-        parsed = parseSyllabusNote(note.getNote());
+        parsed = parseSyllabusNote(readItemNote(note));
       } catch (error) {
         ztoolkit.log("Error re-reading syllabus note:", error);
       }
@@ -1344,12 +1342,7 @@ async function rebuildDocumentIndex(): Promise<void> {
       if (!note) {
         continue;
       }
-      let html = "";
-      try {
-        html = note.getNote() || "";
-      } catch {
-        html = "";
-      }
+      const html = readItemNote(note);
       let parsed: CollectionSyllabusDocument | null = null;
       try {
         parsed = parseSyllabusNote(html);
@@ -1709,7 +1702,7 @@ export async function mutateCollectionDocument(
       let fromNote: CollectionSyllabusDocument | null = null;
       if (!created) {
         try {
-          const existingHtml = note.getNote();
+          const existingHtml = readItemNote(note);
           if (isUnsupportedFutureNote(existingHtml)) {
             ztoolkit.log(
               "Refusing to overwrite a newer syllabus note format",
@@ -2038,7 +2031,7 @@ function handleNoteChange(item: Zotero.Item, event: string): void {
   }
   let parsed: CollectionSyllabusDocument | null = null;
   try {
-    parsed = parseSyllabusNote(item.getNote());
+    parsed = parseSyllabusNote(readItemNote(item));
   } catch (error) {
     ztoolkit.log("Error parsing syllabus note from notifier:", error);
   }

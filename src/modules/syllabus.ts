@@ -64,7 +64,7 @@ import {
   ensureSyllabusNoteForUser,
   whenSyllabusNotesReady,
 } from "./syllabusNote";
-import { getItemTitle } from "../utils/items";
+import { getItemTitle, readItemNote } from "../utils/items";
 import { migrateLegacyCollectionMetadataPrefs } from "./migratePrefsToNotes";
 import {
   getReadingScheduleCollectionContext,
@@ -2850,14 +2850,7 @@ export class SyllabusManager {
       if (!item) {
         continue;
       }
-      let noteHtml = "";
-      try {
-        if (item.isNote()) {
-          noteHtml = item.getNote() || "";
-        }
-      } catch {
-        // Ignore items that cannot be inspected yet.
-      }
+      const noteHtml = readItemNote(item);
       if (noteHtml && parseSyllabusNote(noteHtml)) {
         syllabusNotes.push(item);
       } else {
@@ -2871,7 +2864,7 @@ export class SyllabusManager {
     }
 
     let importedDocument = syllabusNotes
-      .map((note) => parseSyllabusNote(note.getNote()))
+      .map((note) => parseSyllabusNote(readItemNote(note)))
       .find((document) => document);
     if (importedDocument) {
       importedDocument = remapDocumentItemKeys(importedDocument, otherItems);

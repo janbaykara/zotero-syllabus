@@ -3,6 +3,7 @@ import {
   getItemField,
   getItemTitle,
   isSyllabusMemberItem,
+  readItemNote,
 } from "../src/utils/items";
 
 async function createItem(
@@ -154,5 +155,37 @@ describe("getItemField", function () {
       getItemField(section, "publicationTitle"),
       "The Structure of Scientific Revolutions",
     );
+  });
+});
+
+describe("readItemNote", function () {
+  this.timeout(30_000);
+
+  const items: Zotero.Item[] = [];
+
+  afterEach(async function () {
+    const ids = items.map((item) => item.id).filter(Boolean);
+    items.length = 0;
+    if (ids.length) {
+      try {
+        await Zotero.Items.erase(ids);
+      } catch {
+        /* profile is discarded after the run */
+      }
+    }
+  });
+
+  it("returns note HTML and does not throw on books", async function () {
+    const book = await createItem("book", { title: "Not a note" });
+    items.push(book);
+    assert.equal(readItemNote(book), "");
+    assert.equal(readItemNote(null), "");
+
+    const note = new Zotero.Item("note");
+    note.libraryID = Zotero.Libraries.userLibraryID;
+    note.setNote("<p>Week 1 reading</p>");
+    await note.saveTx();
+    items.push(note);
+    assert.include(readItemNote(note), "Week 1 reading");
   });
 });
