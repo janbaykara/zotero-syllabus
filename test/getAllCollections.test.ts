@@ -1,5 +1,8 @@
 import { assert } from "chai";
-import { dedupeCollectionsByLibraryAndKey } from "../src/utils/zotero";
+import {
+  dedupeCollectionsByLibraryAndKey,
+  libraryIsEditable,
+} from "../src/utils/zotero";
 
 describe("dedupeCollectionsByLibraryAndKey", function () {
   it("keeps collections that share a key across libraries", function () {
@@ -19,5 +22,15 @@ describe("dedupeCollectionsByLibraryAndKey", function () {
     const result = dedupeCollectionsByLibraryAndKey([first, copy]);
     assert.lengthOf(result, 1);
     assert.equal(result[0].name, "copy");
+  });
+});
+
+describe("libraryIsEditable", function () {
+  this.timeout(30_000);
+
+  it("is true for My Library and false for missing libraries", function () {
+    assert.isTrue(libraryIsEditable(Zotero.Libraries.userLibraryID));
+    assert.isFalse(libraryIsEditable(99999999));
+    assert.isFalse(libraryIsEditable(null));
   });
 });

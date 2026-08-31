@@ -11,6 +11,7 @@ import {
 } from "../utils/schemas";
 import { getCachedCollectionById } from "../utils/cache";
 import { formatReadingDate, parseReadingDate } from "../utils/dates";
+import { collectionLibraryIsEditable } from "../utils/zotero";
 import { collectionHasSyllabusNote } from "./syllabusNote";
 
 const COLLECTION_NAME_MAX = 255;
@@ -241,15 +242,6 @@ function forgetManaged(child: Zotero.Collection): void {
 
 export function forgetManagedSubcollection(collectionId: number): void {
   managedByCollectionId.delete(collectionId);
-}
-
-function collectionLibraryIsEditable(collection: Zotero.Collection): boolean {
-  try {
-    const library = Zotero.Libraries.get(collection.libraryID);
-    return Boolean(library && library.editable);
-  } catch {
-    return false;
-  }
 }
 
 function childByKey(

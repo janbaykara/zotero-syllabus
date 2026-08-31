@@ -238,6 +238,33 @@ export function dedupeCollectionsByLibraryAndKey<
   return Array.from(collectionMap.values());
 }
 
+/**
+ * False for read-only group libraries. Writing item fields there throws
+ * (Better BibTeX #3430, #3469).
+ */
+export function libraryIsEditable(
+  libraryID: number | null | undefined,
+): boolean {
+  if (libraryID == null) {
+    return false;
+  }
+  try {
+    const library = Zotero.Libraries.get(libraryID);
+    return Boolean(library && library.editable);
+  } catch {
+    return false;
+  }
+}
+
+export function collectionLibraryIsEditable(
+  collection: Zotero.Collection | null | undefined,
+): boolean {
+  if (!collection) {
+    return false;
+  }
+  return libraryIsEditable(collection.libraryID);
+}
+
 export function getAllCollections(recursive = true) {
   const libraries = Array.from(Zotero.Libraries.getAll());
   const collections: Zotero.Collection[] = [];

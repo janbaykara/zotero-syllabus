@@ -27,7 +27,7 @@ import {
   getCachedItem,
 } from "../utils/cache";
 import { pruneStaleCollectionPrefs } from "../utils/collectionPrefs";
-import { getAllCollections } from "../utils/zotero";
+import { collectionLibraryIsEditable, getAllCollections } from "../utils/zotero";
 import { getItemTitle, isSyllabusMemberItem, readItemNote } from "../utils/items";
 import { normalizeDoi, normalizeIsbn } from "../utils/identifiers";
 import { getPrefValue } from "../utils/prefs";
@@ -1689,6 +1689,13 @@ export async function mutateCollectionDocument(
     return emptyCollectionDocument();
   }
   const ref = collectionRefFromCollection(collection);
+  if (!collectionLibraryIsEditable(collection)) {
+    ztoolkit.log(
+      "Skipping syllabus write; library is not editable",
+      collection.id,
+    );
+    return documentCache.get(ref)?.document || emptyCollectionDocument();
+  }
 
   return enqueueWrite(ref, async () => {
     try {

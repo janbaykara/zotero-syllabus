@@ -7,6 +7,7 @@ import {
 } from "../utils/schemas";
 import { getCachedCollectionByKey } from "../utils/cache";
 import { isSyllabusMemberItem } from "../utils/items";
+import { collectionLibraryIsEditable } from "../utils/zotero";
 import { attachStashedReadingListFiles } from "./readingListFileStash";
 import {
   SYLLABUS_EXTRA_KEY,
@@ -99,6 +100,9 @@ function extraDestinationCollections(
       continue;
     }
     if (!isSyllabusAbsorbTarget(collection)) {
+      continue;
+    }
+    if (!collectionLibraryIsEditable(collection)) {
       continue;
     }
     seen.add(collection.id);

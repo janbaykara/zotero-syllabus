@@ -16,6 +16,7 @@ import {
   toLocalDateKey,
 } from "../utils/dates";
 import { getPrefKey, getPrefValue, setPref } from "../utils/prefs";
+import { libraryIsEditable } from "../utils/zotero";
 import { collectionHasSyllabusNote } from "./syllabusNote";
 
 export const READING_SCHEDULE_COLLECTION_NAME = "Reading Schedule";
@@ -318,12 +319,7 @@ export function buildReadingScheduleDesiredItems(
 }
 
 function userLibraryIsEditable(): boolean {
-  try {
-    const library = Zotero.Libraries.get(Zotero.Libraries.userLibraryID);
-    return Boolean(library && library.editable);
-  } catch {
-    return false;
-  }
+  return libraryIsEditable(Zotero.Libraries.userLibraryID);
 }
 
 function storedRoot(): Zotero.Collection | null {
