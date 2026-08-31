@@ -12,6 +12,24 @@ export function getItemTitle(item: Zotero.Item): string {
   }
 }
 
+/**
+ * Field value with Zotero base-field mapping. `getField("date")` is empty for
+ * types that store it under another name (case → dateDecided, statute →
+ * dateEnacted, patent → issueDate); same for publicationTitle, publisher, pages.
+ * Title still goes through `getDisplayTitle` so untitled letters/interviews
+ * keep their synthesized names.
+ */
+export function getItemField(item: Zotero.Item, field: string): string {
+  if (field === "title") {
+    return getItemTitle(item);
+  }
+  try {
+    return String(item.getField(field, false, true) || "").trim();
+  } catch {
+    return "";
+  }
+}
+
 export function sortItemsByTitle(items: Zotero.Item[]): Zotero.Item[] {
   return [...items].sort((a, b) =>
     getItemTitle(a).localeCompare(getItemTitle(b)),
@@ -21,7 +39,7 @@ export function sortItemsByTitle(items: Zotero.Item[]): Zotero.Item[] {
 /** Publication date as a timestamp. Missing dates are 0. */
 function itemPublicationDate(item: Zotero.Item): number {
   try {
-    const date = String(item.getField("date") || "").trim();
+    const date = getItemField(item, "date");
     if (!date) {
       return 0;
     }

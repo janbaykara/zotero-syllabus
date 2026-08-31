@@ -1,4 +1,4 @@
-import { getItemTitle } from "./items";
+import { getItemField, getItemTitle } from "./items";
 
 /**
  * Get all available CSL styles
@@ -250,25 +250,25 @@ export function buildFallbackBibliographicReference(item: Zotero.Item): string {
     .getCreators()
     .map((creator) => creator.lastName)
     .join(", ");
-  const date = item.getField("date");
+  const date = getItemField(item, "date");
   const title = getItemTitle(item);
-  const publicationName = item.getField("publicationTitle");
+  const publicationName = getItemField(item, "publicationTitle");
 
   const citationParts: string[] = [];
   if (author) citationParts.push(author);
   if (date) {
-    const year = date.substring(0, 4);
+    const year = date.match(/\d{4}/)?.[0];
     if (year && year !== "0000") citationParts.push(`(${year})`);
   }
   if (title) citationParts.push(title);
   if (publicationName) citationParts.push(`In ${publicationName}`);
 
   // Add additional citation details
-  const volume = item.getField("volume");
-  const issue = item.getField("issue");
-  const pages = item.getField("pages");
-  const publisher = item.getField("publisher");
-  const place = item.getField("place");
+  const volume = getItemField(item, "volume");
+  const issue = getItemField(item, "issue");
+  const pages = getItemField(item, "pages");
+  const publisher = getItemField(item, "publisher");
+  const place = getItemField(item, "place");
 
   if (volume) {
     citationParts.push(`Vol. ${volume}`);

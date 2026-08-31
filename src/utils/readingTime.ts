@@ -1,4 +1,5 @@
 import { getPref } from "./prefs";
+import { getItemField } from "./items";
 
 // Sources:
 //
@@ -79,7 +80,7 @@ function estimateReadingMinutes({
  */
 export function getPageCount(item: Zotero.Item): number | null {
   // Try numPages field first
-  const numPages = item.getField("numPages");
+  const numPages = getItemField(item, "numPages");
   if (numPages) {
     const pages = parseInt(String(numPages), 10);
     if (!isNaN(pages) && pages > 0) {
@@ -88,7 +89,7 @@ export function getPageCount(item: Zotero.Item): number | null {
   }
 
   // Try pages field (e.g., "1-10" or "10")
-  const pagesField = item.getField("pages");
+  const pagesField = getItemField(item, "pages");
   if (pagesField) {
     // Try to extract page count from range (e.g., "1-10" -> 10)
     const pageMatch = pagesField.match(/(\d+)(?:\s*-\s*(\d+))?/);

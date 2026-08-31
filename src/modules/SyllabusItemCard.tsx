@@ -21,7 +21,7 @@ import {
   getReadStatusMetadata,
 } from "../zotero-reading-list/compat";
 import { getReadingTimeSync, formatReadingTime } from "../utils/readingTime";
-import { getItemTitle } from "../utils/items";
+import { getItemField, getItemTitle } from "../utils/items";
 import { YoutubePlayer } from "./YoutubePlayer";
 
 export function SyllabusItemCard({
@@ -111,9 +111,8 @@ export function SyllabusItemCard({
     (creator && typeof creator !== "boolean"
       ? `${creator.firstName || ""} ${creator.lastName || ""}`.trim()
       : "");
-  const date = item.getField("date") || "";
-  const publicationName =
-    item.getField("publicationTitle") || item.getField("bookTitle") || "";
+  const date = getItemField(item, "date");
+  const publicationName = getItemField(item, "publicationTitle");
   const url = item.getField("url") || "";
   const youtubeSourceUrl = useMemo(() => youtubeUrlFromItem(item), [item]);
   const youtubeVideoId = youtubeVideoIdFromUrl(youtubeSourceUrl);

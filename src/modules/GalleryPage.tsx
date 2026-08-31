@@ -26,6 +26,7 @@ import {
 import { renderComponent } from "../utils/react";
 import { isZotero8OrLater } from "../utils/zotero";
 import {
+  getItemField,
   getItemTitle,
   openItemBestAttachment,
   sortItems,
@@ -1218,14 +1219,7 @@ function GalleryCover({
 }
 
 function itemField(item: Zotero.Item, field: string): string {
-  try {
-    if (field === "title") {
-      return getItemTitle(item);
-    }
-    return String(item.getField(field as any) || "").trim();
-  } catch {
-    return "";
-  }
+  return getItemField(item, field);
 }
 
 /** First-page mockups switch from a classic masthead to a SAGE-like layout. */
