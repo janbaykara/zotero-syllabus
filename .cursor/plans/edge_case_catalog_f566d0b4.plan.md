@@ -68,6 +68,15 @@ todos:
   - id: creator-type-display
     content: "Done: gallery and cards use Zotero’s localized firstCreator (182d5d4)"
     status: completed
+  - id: import-title-unique
+    content: "Done: import title-match only when the title is unique (416f808)"
+    status: completed
+  - id: class-folder-locale-dates
+    content: "Done: adopt class folders with localized date suffixes (1335675)"
+    status: completed
+  - id: merge-flash
+    content: "Done: show merged-item assignments from dc:replaces before the note remaps (d4155fe)"
+    status: completed
 isProject: false
 ---
 
@@ -129,7 +138,7 @@ Zotero only maps base fields if you pass `includeBaseMapped`: `getField(field, f
 - **Date / publication / publisher / pages** — **Done** (`bc802db`).
 - `**runningTime` / page ranges** — **Done** (`30a2876`). [parseRunningTimeMinutes](src/utils/readingTime.ts), [pageCountFromPagesField](src/utils/readingTime.ts).
 - **Creators** — **Done** (`182d5d4`). [getItemCreatorLine](src/utils/items.ts) uses Zotero `firstCreator` (primary type, localized) on gallery tiles and cards.
-- **Letters/interviews** — untitled items get synthesized titles from `getDisplayTitle`. Import title-match can false-positive on “Letter to Smith”.
+- **Letters/interviews** — untitled items get synthesized titles from `getDisplayTitle`. **Title-only first-wins** — **Done** (`416f808`). Import remap keeps a live key and title-matches only when that title is unique.
 
 ---
 
@@ -138,7 +147,7 @@ Zotero only maps base fields if you pass `includeBaseMapped`: `getField(field, f
 ### Merges (follow-up to `ec21c7d`)
 
 - **Library-unscoped remap** — **Done** (`d2e065f`). [selectItemKeyRemapForDocument](src/modules/syllabusNote.ts) requires the merge library.
-- Merge flash (Further reading, then jump back).
+- **Merge flash** — **Done** (`d4155fe`). [getHydratedItemAssignments](src/modules/syllabusNote.ts) includes rows from `dc:replaces` keys so the survivor stays on its class until the note remaps.
 - Restore loser / Duplicate Item / copy-to-group: new or restored key, no `dc:replaces`.
 - Duplicate Collection: same items, possibly a shared or copied syllabus note.
 - Same item in two syllabi; 3-way merge; loser assigned and winner not yet in the collection.
@@ -158,7 +167,7 @@ Zotero only maps base fields if you pass `includeBaseMapped`: `getField(field, f
 
 ### Import matching (`remapDocumentItemKeys`)
 
-DOI URL vs bare; ISBN-10 vs 13 — **Done** (`c85b039`). PMID / PMCID / arXiv (Extra, URL, archiveID) — **Done** (`8722e12`). Still open: title-only first-wins.
+DOI URL vs bare; ISBN-10 vs 13 — **Done** (`c85b039`). PMID / PMCID / arXiv (Extra, URL, archiveID) — **Done** (`8722e12`). Title-only first-wins — **Done** (`416f808`); title-match only when unique.
 
 ---
 
@@ -186,7 +195,7 @@ DOI URL vs bare; ISBN-10 vs 13 — **Done** (`c85b039`). PMID / PMCID / arXiv (E
 
 ## E. Class folders and reading schedule
 
-Class folders: rename races, name-pattern adoption, extras erased when turning on. **255-char names** — **Done** (`9d867ed`). [classSubcollectionName](src/modules/classSubcollections.ts) clamps the final folder name.
+Class folders: rename races, extras erased when turning on. **255-char names** — **Done** (`9d867ed`). **Name-pattern adoption** — **Done** (`1335675`). [classSubcollectionNameBase](src/modules/classSubcollections.ts) strips localized weekday date suffixes.
 
 Reading schedule: **per library** — **Done** (`80261b4`). Inverse of Notero [#706](https://github.com/dvanoni/notero/issues/706). Group syllabi get their own “Reading Schedule” tree because items cannot cross libraries.
 
@@ -216,5 +225,7 @@ Connector ports, print HiddenBrowser, gallery keyboard, item pane vs class folde
 **Done (follow-up):** write-inflight adopt of a newer note (Better Notes both-sides-edited, `eef4e58`); reentrant write queue (`be018c4`); reading schedule per library (Notero #706 inverse, `80261b4`).
 
 **Done (hygiene):** orphan keys after plain delete (`cafad74`); localeCompare uses the UI locale (`559e0b1`); class-folder 255-char names (`9d867ed`); PMID/PMCID/arXiv import match (`8722e12`); creator-type display (`182d5d4`).
+
+**Done (follow-on):** unique-title import remap (`416f808`); localized class-folder date adoption (`1335675`); merge flash (`d4155fe`).
 
 **Product / policy:** collapse same-class rows after merge; whether Duplicate Item should copy assignments.
