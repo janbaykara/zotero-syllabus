@@ -28,8 +28,15 @@ import {
 } from "../utils/cache";
 import { pruneStaleCollectionPrefs } from "../utils/collectionPrefs";
 import { createReentrantSerialQueue } from "../utils/serialQueue";
-import { collectionLibraryIsEditable, getAllCollections } from "../utils/zotero";
-import { getItemTitle, isSyllabusMemberItem, readItemNote } from "../utils/items";
+import {
+  collectionLibraryIsEditable,
+  getAllCollections,
+} from "../utils/zotero";
+import {
+  getItemTitle,
+  isSyllabusMemberItem,
+  readItemNote,
+} from "../utils/items";
 import { normalizeDoi, normalizeIsbn } from "../utils/identifiers";
 import {
   classFolderNameMatches,
@@ -313,6 +320,57 @@ export function remapDocumentItemKeysByMap(
   return itemIndex
     ? { ...document, items: itemsOut, itemIndex }
     : { ...document, items: itemsOut };
+}
+
+/**
+ * Remove assignment rows (and itemIndex) for keys that are no longer in the
+ * library. Used after a plain delete — merges remap via dc:replaces first.
+ */
+export function omitDocumentItemKeys(
+  document: CollectionSyllabusDocument,
+  keys: Iterable<string>,
+): CollectionSyllabusDocument {
+  const gone = new Set<string>();
+  for (const key of keys) {
+    if (key && key in (document.items || {})) {
+      gone.add(key);
+    }
+  }
+  if (!gone.size) {
+    return document;
+  }
+  const items: CollectionSyllabusDocument["items"] = {
+    ...(document.items || {}),
+  };
+  for (const key of gone) {
+    delete items[key];
+  }
+  const itemIndex = document.itemIndex ? { ...document.itemIndex } : undefined;
+  if (itemIndex) {
+    for (const key of gone) {
+      delete itemIndex[key];
+    }
+  }
+  return itemIndex ? { ...document, items, itemIndex } : { ...document, items };
+}
+
+export function missingDocumentItemKeys(
+  document: CollectionSyllabusDocument,
+  libraryID: number,
+): string[] {
+  const missing: string[] = [];
+  for (const key of Object.keys(document.items || {})) {
+    let item: Zotero.Item | false | undefined;
+    try {
+      item = Zotero.Items.getByLibraryAndKey(libraryID, key);
+    } catch {
+      item = false;
+    }
+    if (!item) {
+      missing.push(key);
+    }
+  }
+  return missing;
 }
 
 function replacedItemPredicate(): string {
@@ -737,6 +795,36 @@ async function remapMergedKeysFromItemIds(
   }
 }
 
+async function dropMissingItemKeysFromCachedDocuments(): Promise<void> {
+  for (const collection of getAllCollections()) {
+    const ref = collectionRefFromCollection(collection);
+    const entry = documentCache.get(ref);
+    if (!entry?.noteId || isDocumentWriteInFlight(ref)) {
+      continue;
+    }
+    const missing = missingDocumentItemKeys(
+      entry.document,
+      collection.libraryID,
+    );
+    if (!missing.length) {
+      continue;
+    }
+    try {
+      await mutateCollectionDocument(collection, (document) =>
+        omitDocumentItemKeys(
+          document,
+          missingDocumentItemKeys(document, collection.libraryID),
+        ),
+      );
+    } catch (error) {
+      ztoolkit.log(
+        "Error dropping deleted item keys from syllabus note:",
+        error,
+      );
+    }
+  }
+}
+
 async function mergedKeyMapForOrphanedKeys(
   libraryID: number,
   document: CollectionSyllabusDocument,
@@ -940,20 +1028,16 @@ export function shouldAdoptIncomingNote(options: {
   parsed: CollectionSyllabusDocument | null;
 }): IncomingNoteDecision {
   const { writeInFlight, cached, itemId, itemVersion, parsed } = options;
-  if (
-    cached &&
-    cached.noteId === itemId &&
-    cached.noteVersion >= itemVersion
-  ) {
+  if (cached && cached.noteId === itemId && cached.noteVersion >= itemVersion) {
     return "ignore";
   }
   const parsedUsable = Boolean(
     parsed &&
-      !(
-        isEmptyCollectionDocument(parsed) &&
-        cached &&
-        !isEmptyCollectionDocument(cached.document)
-      ),
+    !(
+      isEmptyCollectionDocument(parsed) &&
+      cached &&
+      !isEmptyCollectionDocument(cached.document)
+    ),
   );
   if (writeInFlight) {
     if (parsedUsable && (!cached || itemVersion > cached.noteVersion)) {
@@ -1454,10 +1538,16 @@ async function rebuildDocumentIndex(): Promise<void> {
         collection.libraryID,
         entry.document,
       );
-      if (!Object.keys(keyMap).length) {
+      const missing = missingDocumentItemKeys(
+        entry.document,
+        collection.libraryID,
+      );
+      if (!Object.keys(keyMap).length && !missing.length) {
         continue;
       }
-      mergeKeyMaps.set(collection.id, keyMap);
+      if (Object.keys(keyMap).length) {
+        mergeKeyMaps.set(collection.id, keyMap);
+      }
       if (!notesToPatch.some((candidate) => candidate.id === collection.id)) {
         notesToPatch.push(collection);
       }
@@ -1469,9 +1559,15 @@ async function rebuildDocumentIndex(): Promise<void> {
   for (const collection of notesToPatch) {
     try {
       const keyMap = mergeKeyMaps.get(collection.id);
-      await mutateCollectionDocument(collection, (document) =>
-        keyMap ? remapDocumentItemKeysByMap(document, keyMap) : document,
-      );
+      await mutateCollectionDocument(collection, (document) => {
+        const remapped = keyMap
+          ? remapDocumentItemKeysByMap(document, keyMap)
+          : document;
+        return omitDocumentItemKeys(
+          remapped,
+          missingDocumentItemKeys(remapped, collection.libraryID),
+        );
+      });
     } catch (error) {
       ztoolkit.log("Error patching syllabus note format:", error);
     }
@@ -2169,6 +2265,7 @@ export function initializeSyllabusNotes(): void {
           const deletedIds = [...numericIds];
           afterDatabaseTransaction()
             .then(() => remapMergedKeysFromItemIds(deletedIds, "trash"))
+            .then(() => dropMissingItemKeysFromCachedDocuments())
             .catch((error) => {
               ztoolkit.log(
                 "Error remapping merged item keys in syllabus notes:",

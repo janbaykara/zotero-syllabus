@@ -4,6 +4,7 @@ import {
   documentForWrite,
   emptyCollectionDocument,
   libraryIDFromDocumentCacheRef,
+  omitDocumentItemKeys,
   remapDocumentItemKeys,
   remapDocumentItemKeysByMap,
   selectItemKeyRemapForDocument,
@@ -76,6 +77,23 @@ describe("remapDocumentItemKeysByMap", function () {
     assert.isUndefined(result.items.oldKeyA);
     assert.equal(result.itemIndex?.keepKey?.title, "Stays");
     assert.isUndefined(result.itemIndex?.oldKeyA);
+  });
+});
+
+describe("omitDocumentItemKeys", function () {
+  it("drops assignments and itemIndex for keys that are gone", function () {
+    const document = sampleDocument();
+    const result = omitDocumentItemKeys(document, ["oldKeyA", "missing"]);
+    assert.notStrictEqual(result, document);
+    assert.isUndefined(result.items.oldKeyA);
+    assert.equal(result.items.keepKey?.[0]?.id, "k1");
+    assert.isUndefined(result.itemIndex?.oldKeyA);
+    assert.equal(result.itemIndex?.keepKey?.title, "Stays");
+  });
+
+  it("is a no-op when none of the keys are present", function () {
+    const document = sampleDocument();
+    assert.strictEqual(omitDocumentItemKeys(document, ["nope"]), document);
   });
 });
 
