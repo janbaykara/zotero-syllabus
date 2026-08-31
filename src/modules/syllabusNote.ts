@@ -264,6 +264,7 @@ export function remapDocumentItemKeys(
   const byPmcid = new Map<string, string>();
   const byArxiv = new Map<string, string>();
   const byTitle = new Map<string, string>();
+  const ambiguousTitles = new Set<string>();
   const existingKeys = new Set<string>();
   for (const item of regularItems) {
     existingKeys.add(item.key);
@@ -284,8 +285,14 @@ export function remapDocumentItemKeys(
     if (ids.arxiv) {
       byArxiv.set(ids.arxiv, item.key);
     }
-    if (title && !byTitle.has(title)) {
-      byTitle.set(title, item.key);
+    if (title) {
+      const prior = byTitle.get(title);
+      if (ambiguousTitles.has(title) || (prior && prior !== item.key)) {
+        byTitle.delete(title);
+        ambiguousTitles.add(title);
+      } else if (!prior) {
+        byTitle.set(title, item.key);
+      }
     }
   }
 
@@ -307,8 +314,8 @@ export function remapDocumentItemKeys(
       (indexed.pmid && byPmid.get(indexed.pmid)) ||
       (indexed.pmcid && byPmcid.get(indexed.pmcid)) ||
       (indexed.arxiv && byArxiv.get(indexed.arxiv)) ||
-      (title && byTitle.get(title)) ||
       (existingKeys.has(oldKey) ? oldKey : undefined) ||
+      (title && byTitle.get(title)) ||
       oldKey;
     itemsOut[newKey] = [...(itemsOut[newKey] || []), ...assignments];
   }

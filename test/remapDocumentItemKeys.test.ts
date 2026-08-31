@@ -257,6 +257,92 @@ describe("remapDocumentItemKeys", function () {
     const result = remapDocumentItemKeys(document, [item]);
     assert.equal(Object.keys(result.items)[0], item.key);
   });
+
+  it("does not steal assignments when two items share a title", async function () {
+    const first = new Zotero.Item("letter");
+    first.libraryID = Zotero.Libraries.userLibraryID;
+    first.setField("title", "Letter to Smith");
+    await first.saveTx();
+    items.push(first);
+
+    const second = new Zotero.Item("letter");
+    second.libraryID = Zotero.Libraries.userLibraryID;
+    second.setField("title", "Letter to Smith");
+    await second.saveTx();
+    items.push(second);
+
+    const document = CollectionSyllabusDocumentSchema.parse({
+      version: 2,
+      classes: {
+        "class-1": { number: 1, title: "Intro", status: null },
+      },
+      items: {
+        oldKey: [{ id: "a1", classId: "class-1", priority: "essential" }],
+      },
+      itemIndex: {
+        oldKey: { title: "Letter to Smith" },
+      },
+    });
+    const result = remapDocumentItemKeys(document, [first, second]);
+    assert.equal(Object.keys(result.items)[0], "oldKey");
+    assert.isUndefined(result.items[first.key]);
+    assert.isUndefined(result.items[second.key]);
+  });
+
+  it("still remaps a unique title when the old key is gone", async function () {
+    const item = new Zotero.Item("book");
+    item.libraryID = Zotero.Libraries.userLibraryID;
+    item.setField("title", "Only Copy of This Title");
+    await item.saveTx();
+    items.push(item);
+
+    const document = CollectionSyllabusDocumentSchema.parse({
+      version: 2,
+      classes: {
+        "class-1": { number: 1, title: "Intro", status: null },
+      },
+      items: {
+        oldKey: [{ id: "a1", classId: "class-1", priority: "essential" }],
+      },
+      itemIndex: {
+        oldKey: { title: "Only Copy of This Title" },
+      },
+    });
+    const result = remapDocumentItemKeys(document, [item]);
+    assert.equal(Object.keys(result.items)[0], item.key);
+  });
+
+  it("keeps a live key even when another item shares the title", async function () {
+    const original = new Zotero.Item("letter");
+    original.libraryID = Zotero.Libraries.userLibraryID;
+    original.setField("title", "Letter to Smith");
+    await original.saveTx();
+    items.push(original);
+
+    const copy = new Zotero.Item("letter");
+    copy.libraryID = Zotero.Libraries.userLibraryID;
+    copy.setField("title", "Letter to Smith");
+    await copy.saveTx();
+    items.push(copy);
+
+    const document = CollectionSyllabusDocumentSchema.parse({
+      version: 2,
+      classes: {
+        "class-1": { number: 1, title: "Intro", status: null },
+      },
+      items: {
+        [original.key]: [
+          { id: "a1", classId: "class-1", priority: "essential" },
+        ],
+      },
+      itemIndex: {
+        [original.key]: { title: "Letter to Smith" },
+      },
+    });
+    const result = remapDocumentItemKeys(document, [original, copy]);
+    assert.equal(Object.keys(result.items)[0], original.key);
+    assert.isUndefined(result.items[copy.key]);
+  });
 });
 
 describe("documentForWrite", function () {
