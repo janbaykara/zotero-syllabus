@@ -899,22 +899,18 @@ function isEmptyCollectionDocument(
   return snapshotOf(document) === snapshotOf(emptyCollectionDocument());
 }
 
-/** Prefer the note when it parses; keep in-flight cache fields the note lacks. */
-function documentForWrite(
+/** Prefer the note when it parses. Do not union classes/items with the cache
+ *  or a two-device edit can resurrect classes the note already deleted. */
+export function documentForWrite(
   fromNote: CollectionSyllabusDocument | null,
   cached: CollectionSyllabusDocument | undefined,
 ): CollectionSyllabusDocument {
+  if (fromNote) {
+    return fromNote;
+  }
   const cachedDoc =
     cached && !isEmptyCollectionDocument(cached) ? cached : null;
-  if (fromNote && cachedDoc) {
-    return {
-      ...fromNote,
-      ...cachedDoc,
-      classes: { ...(fromNote.classes || {}), ...(cachedDoc.classes || {}) },
-      items: { ...(fromNote.items || {}), ...(cachedDoc.items || {}) },
-    };
-  }
-  return fromNote || cachedDoc || emptyCollectionDocument();
+  return cachedDoc || emptyCollectionDocument();
 }
 
 function collectionNoteCandidates(

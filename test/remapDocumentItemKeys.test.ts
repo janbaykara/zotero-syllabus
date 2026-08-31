@@ -1,6 +1,7 @@
 import { assert } from "chai";
 import { CollectionSyllabusDocumentSchema } from "../src/utils/schemas";
 import {
+  documentForWrite,
   libraryIDFromDocumentCacheRef,
   remapDocumentItemKeys,
   remapDocumentItemKeysByMap,
@@ -163,5 +164,43 @@ describe("remapDocumentItemKeys", function () {
     });
     const result = remapDocumentItemKeys(document, [item]);
     assert.equal(Object.keys(result.items)[0], item.key);
+  });
+});
+
+describe("documentForWrite", function () {
+  it("does not resurrect classes that the live note already dropped", function () {
+    const fromNote = CollectionSyllabusDocumentSchema.parse({
+      version: 2,
+      classes: {
+        "class-1": { number: 1, title: "Kept", status: null },
+      },
+      items: {},
+    });
+    const cached = CollectionSyllabusDocumentSchema.parse({
+      version: 2,
+      classes: {
+        "class-1": { number: 1, title: "Kept", status: null },
+        "class-gone": { number: 2, title: "Deleted elsewhere", status: null },
+      },
+      items: {
+        oldKey: [{ id: "a1", classId: "class-gone", priority: "essential" }],
+      },
+    });
+    const result = documentForWrite(fromNote, cached);
+    assert.strictEqual(result, fromNote);
+    assert.isUndefined(result.classes["class-gone"]);
+    assert.isUndefined(result.items.oldKey);
+  });
+
+  it("falls back to a non-empty cache when the note did not parse", function () {
+    const cached = CollectionSyllabusDocumentSchema.parse({
+      version: 2,
+      classes: {
+        "class-1": { number: 1, title: "Cached", status: null },
+      },
+      items: {},
+    });
+    const result = documentForWrite(null, cached);
+    assert.equal(result.classes["class-1"]?.title, "Cached");
   });
 });
