@@ -79,7 +79,6 @@ function estimateReadingMinutes({
  * @returns Page count, or null if not available
  */
 export function getPageCount(item: Zotero.Item): number | null {
-  // Try numPages field first
   const numPages = getItemField(item, "numPages");
   if (numPages) {
     const pages = parseInt(String(numPages), 10);
@@ -88,20 +87,71 @@ export function getPageCount(item: Zotero.Item): number | null {
     }
   }
 
-  // Try pages field (e.g., "1-10" or "10")
-  const pagesField = getItemField(item, "pages");
-  if (pagesField) {
-    // Try to extract page count from range (e.g., "1-10" -> 10)
-    const pageMatch = pagesField.match(/(\d+)(?:\s*-\s*(\d+))?/);
-    if (pageMatch) {
-      const startPage = parseInt(pageMatch[1], 10);
-      const endPage = pageMatch[2] ? parseInt(pageMatch[2], 10) : startPage;
-      if (!isNaN(startPage) && !isNaN(endPage) && endPage >= startPage) {
-        return endPage - startPage + 1;
-      }
+  return pageCountFromPagesField(getItemField(item, "pages"));
+}
+
+/** "12-24", "iv, 1–200", or a single number. Prefers the last numeric range. */
+export function pageCountFromPagesField(
+  pagesField: string | null | undefined,
+): number | null {
+  const raw = String(pagesField || "").trim();
+  if (!raw) {
+    return null;
+  }
+  const ranges = [...raw.matchAll(/(\d+)\s*[-–—]\s*(\d+)/g)];
+  const range = ranges[ranges.length - 1];
+  if (range) {
+    const startPage = parseInt(range[1], 10);
+    const endPage = parseInt(range[2], 10);
+    if (!isNaN(startPage) && !isNaN(endPage) && endPage >= startPage) {
+      return endPage - startPage + 1;
     }
   }
+  const singles = [...raw.matchAll(/\d+/g)];
+  const last = singles[singles.length - 1];
+  if (last) {
+    const pages = parseInt(last[0], 10);
+    if (!isNaN(pages) && pages > 0) {
+      return pages;
+    }
+  }
+  return null;
+}
 
+/**
+ * Film/audio runningTime to minutes. "1:30:00" and "1:30" are hours:minutes,
+ * not parseInt's "1".
+ */
+export function parseRunningTimeMinutes(
+  raw: string | null | undefined,
+): number | null {
+  const value = String(raw || "").trim();
+  if (!value) {
+    return null;
+  }
+  const hms = value.match(/^(\d+):(\d{1,2})(?::(\d{1,2}))?$/);
+  if (hms) {
+    const hours = parseInt(hms[1], 10);
+    const minutes = parseInt(hms[2], 10);
+    const seconds = hms[3] ? parseInt(hms[3], 10) : 0;
+    if (Number.isNaN(hours) || Number.isNaN(minutes) || Number.isNaN(seconds)) {
+      return null;
+    }
+    const total = hours * 60 + minutes + seconds / 60;
+    return total > 0 ? Math.round(total) : null;
+  }
+  const hoursPart = value.match(/(\d+(?:\.\d+)?)\s*(?:hours?|hrs?|h)\b/i);
+  const minutesPart = value.match(/(\d+(?:\.\d+)?)\s*(?:minutes?|mins?|m)\b/i);
+  if (hoursPart || minutesPart) {
+    const hours = hoursPart ? parseFloat(hoursPart[1]) : 0;
+    const minutes = minutesPart ? parseFloat(minutesPart[1]) : 0;
+    const total = hours * 60 + minutes;
+    return total > 0 ? Math.round(total) : null;
+  }
+  if (/^\d+$/.test(value)) {
+    const bare = parseInt(value, 10);
+    return bare > 0 ? bare : null;
+  }
   return null;
 }
 
@@ -144,12 +194,9 @@ export function getReadingTimeSync(
   const { roundUp = false } = options;
 
   // For video, audio
-  const duration = item.getField("runningTime");
-  if (duration) {
-    const minutes = parseInt(String(duration), 10);
-    if (!isNaN(minutes) && minutes > 0) {
-      return minutes;
-    }
+  const duration = parseRunningTimeMinutes(item.getField("runningTime"));
+  if (duration !== null) {
+    return duration;
   }
 
   // Try page-based estimation (synchronous)
