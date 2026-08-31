@@ -586,12 +586,22 @@ export async function serializeSyllabusNote(
 }
 
 function extractJsonPayload(html: string): string | null {
-  const preMatch =
-    html.match(
-      /<pre[^>]*\bdata-zotero-syllabus(?:="[^"]*")?[^>]*>([\s\S]*?)<\/pre>/i,
-    ) || html.match(/<pre[^>]*>([\s\S]*?)<\/pre>/i);
-  if (preMatch) {
-    return unescapeHtml(preMatch[1]).trim();
+  const taggedPre = html.match(
+    /<pre[^>]*\bdata-zotero-syllabus(?:="[^"]*")?[^>]*>([\s\S]*?)<\/pre>/i,
+  );
+  if (taggedPre) {
+    const tagged = unescapeHtml(taggedPre[1]).trim();
+    if (tagged) {
+      return tagged;
+    }
+  }
+
+  const genericPres = html.matchAll(/<pre[^>]*>([\s\S]*?)<\/pre>/gi);
+  for (const match of genericPres) {
+    const candidate = unescapeHtml(match[1]).trim();
+    if (looksLikeSyllabusDocumentPayload(candidate)) {
+      return candidate;
+    }
   }
 
   const stripped = unescapeHtml(html)
@@ -603,7 +613,34 @@ function extractJsonPayload(html: string): string | null {
   if (start === -1 || end <= start) {
     return null;
   }
-  return stripped.slice(start, end + 1).trim();
+  const braced = stripped.slice(start, end + 1).trim();
+  return looksLikeSyllabusDocumentPayload(braced) ? braced : null;
+}
+
+/** True when a JSON string is a syllabus document, not a citation or other object. */
+export function looksLikeSyllabusDocumentPayload(text: string): boolean {
+  try {
+    const parsed = JSON.parse(text) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return false;
+    }
+    if (typeof parsed.version !== "number") {
+      return false;
+    }
+    const hasClasses =
+      parsed.classes !== undefined &&
+      typeof parsed.classes === "object" &&
+      parsed.classes !== null &&
+      !Array.isArray(parsed.classes);
+    const hasItems =
+      parsed.items !== undefined &&
+      typeof parsed.items === "object" &&
+      parsed.items !== null &&
+      !Array.isArray(parsed.items);
+    return hasClasses || hasItems;
+  } catch {
+    return false;
+  }
 }
 
 export function parseSyllabusNote(

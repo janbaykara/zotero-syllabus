@@ -7,6 +7,7 @@ import {
   READING_DONE_MARK,
   READING_TODO_MARK,
   getReadableNoteFormatVersion,
+  looksLikeSyllabusDocumentPayload,
   noteNeedsFormatPatch,
   parseSyllabusNote,
   serializeSyllabusNote,
@@ -105,5 +106,22 @@ describe("syllabus note readable HTML", function () {
     const document = sampleDocument();
     const html = await serializeSyllabusNote(document);
     assert.isFalse(noteNeedsFormatPatch(html, document));
+  });
+
+  it("ignores a citation object and a generic pre that is not syllabus JSON", function () {
+    const citation = `<p>See { "title": "Not a syllabus" }</p><pre>console.log(1)</pre>`;
+    assert.isFalse(
+      looksLikeSyllabusDocumentPayload('{ "title": "Not a syllabus" }'),
+    );
+    assert.isNull(parseSyllabusNote(citation));
+  });
+
+  it("still reads the tagged plugin pre when earlier braces exist", async function () {
+    const document = sampleDocument();
+    const body = await serializeSyllabusNote(document);
+    const html = `<p>Cited as {Smith 2020}</p>${body}`;
+    const parsed = parseSyllabusNote(html);
+    assert.isNotNull(parsed);
+    assert.equal(parsed!.courseCode, "EDU101");
   });
 });
