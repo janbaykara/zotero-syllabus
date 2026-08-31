@@ -1,6 +1,6 @@
 ---
 name: Edge case catalog
-overview: Robustness catalog for Zotero Syllabus. Implementation waves done. Remaining is product/policy and hygiene.
+overview: Robustness catalog for Zotero Syllabus. Implementation waves and hygiene done. Remaining is product/policy.
 todos:
   - id: item-field-helper
     content: "Done: getItemField(includeBaseMapped) for date, publicationTitle, publisher, pages (bc802db)"
@@ -53,6 +53,21 @@ todos:
   - id: reading-schedule-groups
     content: "Done: Reading Schedule per library so group syllabi appear (80261b4); Notero #706 inverse"
     status: completed
+  - id: orphan-keys-delete
+    content: "Done: drop syllabus assignments when an item is permanently deleted (cafad74)"
+    status: completed
+  - id: localecompare-locale
+    content: "Done: sort titles, names, and tags with Zotero’s UI locale (559e0b1)"
+    status: completed
+  - id: class-folder-255
+    content: "Done: clamp class-folder names to 255 characters (9d867ed)"
+    status: completed
+  - id: import-pmid-arxiv
+    content: "Done: match PMID, PMCID, and arXiv in import remap (8722e12)"
+    status: completed
+  - id: creator-type-display
+    content: "Done: gallery and cards use Zotero’s localized firstCreator (182d5d4)"
+    status: completed
 isProject: false
 ---
 
@@ -71,7 +86,7 @@ flowchart TD
     merge[dc:replaces library scoped]
     collKey[collection.key done]
     extraMove[Extra destinations done]
-    doiIsbn[DOI ISBN import]
+    doiIsbn[DOI ISBN PMID arXiv done]
     readonly[read-only groups done]
   end
   subgraph events [Notifiers and cache]
@@ -99,7 +114,7 @@ These are bugs other Zotero plugins already filed and fixed. Third-wave work map
 | Prefs list still shows deleted collections               | Notero [#775](https://github.com/dvanoni/notero/issues/775) (fixed in 1.2.2): deleted collections lingered in sync prefs.                                                                                                                                                          | **Done** (`03c3517`). [pruneStaleCollectionPrefs](src/utils/collectionPrefs.ts) on trash/delete and index rebuild.                                                             |
 | Writes fail in read-only group libraries                 | Better BibTeX [#3430](https://github.com/retorquere/zotero-better-bibtex/issues/3430), [#3469](https://github.com/retorquere/zotero-better-bibtex/issues/3469): cannot set citation keys when `library.editable` is false.                                                         | **Done** (`08c91fc`). [libraryIsEditable](src/utils/zotero.ts) gates note persist and Extra destinations.                                                                      |
 | Feed items look like regular items                       | Better BibTeX skips `isFeedItem`.                                                                                                                                                                                                                                                  | **Done** (`e0e4a23`).                                                                                                                                                          |
-| Identity keyed by the wrong id; My Library vs collection | Notero [#706](https://github.com/dvanoni/notero/issues/706) and related.                                                                                                                                                                                                           | **Done** (`80261b4`). Reading schedule is per library ([readingScheduleCollection.ts](src/modules/readingScheduleCollection.ts)).     |
+| Identity keyed by the wrong id; My Library vs collection | Notero [#706](https://github.com/dvanoni/notero/issues/706) and related.                                                                                                                                                                                                           | **Done** (`80261b4`). Reading schedule is per library ([readingScheduleCollection.ts](src/modules/readingScheduleCollection.ts)).                                              |
 | Prefs do not sync between machines                       | zotero-reading-list [#83](https://github.com/Dominic-DallOsto/zotero-reading-list/issues/83).                                                                                                                                                                                      | Gallery / view-mode prefs stay in `Zotero.Prefs`, not the collection note.                                                                                                     |
 | Plugin JSON inside notes; both-sides-edited sync         | Better Notes (windingwind): [Note Synchronization](https://github.com/windingwind/zotero-better-notes/wiki/4.9-Note-Synchronization-Sycn.en) detects both-sides-edited notes and merges instead of dropping the incoming side.                                                     | **Done** (`eef4e58`). [shouldAdoptIncomingNote](src/modules/syllabusNote.ts) applies a strictly newer parseable note even while a write is in flight; reconcile after persist. |
 | Capture `libraryID` at notify time                       | Zotlit (aidenlx): the item may already be gone.                                                                                                                                                                                                                                    | Merge remap already scopes by `libraryID` (`d2e065f`).                                                                                                                         |
@@ -113,7 +128,7 @@ Zotero only maps base fields if you pass `includeBaseMapped`: `getField(field, f
 
 - **Date / publication / publisher / pages** — **Done** (`bc802db`).
 - `**runningTime` / page ranges** — **Done** (`30a2876`). [parseRunningTimeMinutes](src/utils/readingTime.ts), [pageCountFromPagesField](src/utils/readingTime.ts).
-- **Creators** — Gallery [itemAuthorLine](src/modules/GalleryPage.tsx) prefers `author`; patents/films/interviews/podcasts disagree with cards (`firstCreator`).
+- **Creators** — **Done** (`182d5d4`). [getItemCreatorLine](src/utils/items.ts) uses Zotero `firstCreator` (primary type, localized) on gallery tiles and cards.
 - **Letters/interviews** — untitled items get synthesized titles from `getDisplayTitle`. Import title-match can false-positive on “Letter to Smith”.
 
 ---
@@ -128,6 +143,7 @@ Zotero only maps base fields if you pass `includeBaseMapped`: `getField(field, f
 - Duplicate Collection: same items, possibly a shared or copied syllabus note.
 - Same item in two syllabi; 3-way merge; loser assigned and winner not yet in the collection.
 - [collectionItems.ts](src/modules/react-zotero-sync/collectionItems.ts) **trash/restore** — **Done** (`07be04d`).
+- **Orphan keys after plain delete** — **Done** (`cafad74`). [omitDocumentItemKeys](src/modules/syllabusNote.ts) drops assignments when `getByLibraryAndKey` no longer finds the item.
 
 ### Collection keys
 
@@ -142,7 +158,7 @@ Zotero only maps base fields if you pass `includeBaseMapped`: `getField(field, f
 
 ### Import matching (`remapDocumentItemKeys`)
 
-DOI URL vs bare; ISBN-10 vs 13 — **Done** (`c85b039`). Still open: no PMID/PMCID/arXiv; title-only first-wins.
+DOI URL vs bare; ISBN-10 vs 13 — **Done** (`c85b039`). PMID / PMCID / arXiv (Extra, URL, archiveID) — **Done** (`8722e12`). Still open: title-only first-wins.
 
 ---
 
@@ -170,7 +186,7 @@ DOI URL vs bare; ISBN-10 vs 13 — **Done** (`c85b039`). Still open: no PMID/PMC
 
 ## E. Class folders and reading schedule
 
-Class folders: rename races, name-pattern adoption, extras erased when turning on.
+Class folders: rename races, name-pattern adoption, extras erased when turning on. **255-char names** — **Done** (`9d867ed`). [classSubcollectionName](src/modules/classSubcollections.ts) clamps the final folder name.
 
 Reading schedule: **per library** — **Done** (`80261b4`). Inverse of Notero [#706](https://github.com/dvanoni/notero/issues/706). Group syllabi get their own “Reading Schedule” tree because items cannot cross libraries.
 
@@ -199,6 +215,6 @@ Connector ports, print HiddenBrowser, gallery keyboard, item pane vs class folde
 
 **Done (follow-up):** write-inflight adopt of a newer note (Better Notes both-sides-edited, `eef4e58`); reentrant write queue (`be018c4`); reading schedule per library (Notero #706 inverse, `80261b4`).
 
-**Product / policy:** collapse same-class rows after merge; whether Duplicate Item should copy assignments.
+**Done (hygiene):** orphan keys after plain delete (`cafad74`); localeCompare uses the UI locale (`559e0b1`); class-folder 255-char names (`9d867ed`); PMID/PMCID/arXiv import match (`8722e12`); creator-type display (`182d5d4`).
 
-**Hygiene:** orphan keys after plain delete; localeCompare locale; class-folder 255-char names; PMID/arXiv import; creator-type display.
+**Product / policy:** collapse same-class rows after merge; whether Duplicate Item should copy assignments.
