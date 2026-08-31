@@ -1,6 +1,6 @@
 ---
 name: Edge case catalog
-overview: "Robustness catalog for Zotero Syllabus. Two waves done. Remaining: write-queue deadlock, inflight note skip, getNote() on non-notes, reading schedule groups."
+overview: "Robustness catalog for Zotero Syllabus. Three waves done. Remaining: write-queue deadlock, inflight note skip, reading schedule groups."
 todos:
   - id: item-field-helper
     content: "Done: getItemField(includeBaseMapped) for date, publicationTitle, publisher, pages (bc802db)"
@@ -32,6 +32,18 @@ todos:
   - id: skip-feed-items
     content: "Done: skip feed items and deleted items on syllabus membership (e0e4a23)"
     status: completed
+  - id: getnote-non-note
+    content: "Done: readItemNote checks isNote() before getNote() (1243dbd); BBT #3541"
+    status: completed
+  - id: extra-deleted-modify
+    content: "Done: skip Extra absorb on trashed items (392c64a); BBT #2401 / #2676"
+    status: completed
+  - id: stale-collection-prefs
+    content: "Done: prune collectionViewModes / gallery prefs on trash (03c3517); Notero #775"
+    status: completed
+  - id: readonly-library-writes
+    content: "Done: skip note and Extra writes when library.editable is false (08c91fc); BBT #3430 / #3469"
+    status: completed
 isProject: false
 ---
 
@@ -51,13 +63,34 @@ flowchart TD
     collKey[collection.key done]
     extraMove[Extra destinations done]
     doiIsbn[DOI ISBN import]
+    readonly[read-only groups done]
   end
   subgraph events [Notifiers and cache]
     trash[trash restore done]
+    deletedModify[modify-on-trash done]
+    prefs[stale collection prefs done]
     writeQ[write queue]
     noteMerge[note vs cache union]
   end
 ```
+
+---
+
+## Grounding in other plugins
+
+These are bugs other Zotero plugins already filed and fixed. Third-wave work maps onto them:
+
+| Category | Seen in the wild | Our analogue |
+| --- | --- | --- |
+| `getNote()` on a book throws in Zotero 9 | Better BibTeX [#3541](https://github.com/retorquere/zotero-better-bibtex/issues/3541) (`getNote() can only be called on notes and attachments (… is a book)`). Fix: [947c3f4](https://github.com/retorquere/zotero-better-bibtex/commit/947c3f4c515c11a54bf00ae91f4ff5b0b07becb0). | **Done** (`1243dbd`). [readItemNote](src/utils/items.ts). |
+| Sync sends `modify` for items already in the trash | Better BibTeX [#2401](https://github.com/retorquere/zotero-better-bibtex/issues/2401), [#2676](https://github.com/retorquere/zotero-better-bibtex/issues/2676): regenerating keys on those events reinstated trash. | **Done** (`392c64a`). Extra absorb and the item notifier skip anything that is not a live [isSyllabusMemberItem](src/utils/items.ts). |
+| Prefs list still shows deleted collections | Notero [#775](https://github.com/dvanoni/notero/issues/775) (fixed in 1.2.2): deleted collections lingered in sync prefs. | **Done** (`03c3517`). [pruneStaleCollectionPrefs](src/utils/collectionPrefs.ts) on trash/delete and index rebuild. |
+| Writes fail in read-only group libraries | Better BibTeX [#3430](https://github.com/retorquere/zotero-better-bibtex/issues/3430), [#3469](https://github.com/retorquere/zotero-better-bibtex/issues/3469): cannot set citation keys when `library.editable` is false. | **Done** (`08c91fc`). [libraryIsEditable](src/utils/zotero.ts) gates note persist and Extra destinations. |
+| Feed items look like regular items | Better BibTeX skips `isFeedItem`. | **Done** (`e0e4a23`). |
+| Identity keyed by the wrong id; My Library vs collection | Notero [#706](https://github.com/dvanoni/notero/issues/706) and related. | Reading schedule is still **My Library only** ([readingScheduleCollection.ts](src/modules/readingScheduleCollection.ts)). |
+| Prefs do not sync between machines | zotero-reading-list [#83](https://github.com/Dominic-DallOsto/zotero-reading-list/issues/83). | Gallery / view-mode prefs stay in `Zotero.Prefs`, not the collection note. |
+| Plugin JSON inside notes; both-sides-edited sync | Better Notes (windingwind): note is the store; inflight local write vs remote modify. | **Write-inflight skip** still drops a sync-in note while `isDocumentWriteInFlight`. |
+| Capture `libraryID` at notify time | Zotlit (aidenlx): the item may already be gone. | Merge remap already scopes by `libraryID` (`d2e065f`). |
 
 ---
 
@@ -66,7 +99,7 @@ flowchart TD
 Zotero only maps base fields if you pass `includeBaseMapped`: `getField(field, false, true)`. Title uses `getDisplayTitle()`.
 
 - **Date / publication / publisher / pages** — **Done** (`bc802db`).
-- **`runningTime` / page ranges** — **Done** (`30a2876`). [parseRunningTimeMinutes](src/utils/readingTime.ts), [pageCountFromPagesField](src/utils/readingTime.ts).
+- `**runningTime` / page ranges** — **Done** (`30a2876`). [parseRunningTimeMinutes](src/utils/readingTime.ts), [pageCountFromPagesField](src/utils/readingTime.ts).
 - **Creators** — Gallery [itemAuthorLine](src/modules/GalleryPage.tsx) prefers `author`; patents/films/interviews/podcasts disagree with cards (`firstCreator`).
 - **Letters/interviews** — untitled items get synthesized titles from `getDisplayTitle`. Import title-match can false-positive on “Letter to Smith”.
 
@@ -85,12 +118,13 @@ Zotero only maps base fields if you pass `includeBaseMapped`: `getField(field, f
 
 ### Collection keys
 
-- **`getAllCollections` key-only dedupe** — **Done** (`d2b9d8c`). [dedupeCollectionsByLibraryAndKey](src/utils/zotero.ts).
-- `collectionViewModes` still keyed by collection **id** (stale after recreate). Notero analogue: [#775](https://github.com/dvanoni/notero/issues/775).
+- `**getAllCollections` key-only dedupe** — **Done** (`d2b9d8c`). [dedupeCollectionsByLibraryAndKey](src/utils/zotero.ts).
+- **Stale collection-id prefs** — **Done** (`03c3517`). Notero [#775](https://github.com/dvanoni/notero/issues/775): deleted collections lingered in prefs. [pruneStaleCollectionPrefs](src/utils/collectionPrefs.ts) drops `collectionViewModes` / gallery maps on trash, delete, and index rebuild. Recreate-with-new-id still will not inherit the old mode (by design).
 
 ### Extra absorb
 
 - **Last-destination-wins** — **Done** (`563c126`). [placeItemInSyllabusDestinations](src/modules/syllabusExtra.ts): one dest still moves; several dests add to each.
+- **Modify-on-trash Extra absorb** — **Done** (`392c64a`). Better BibTeX [#2401](https://github.com/retorquere/zotero-better-bibtex/issues/2401) / [#2676](https://github.com/retorquere/zotero-better-bibtex/issues/2676).
 - Stale Extra ref → Extra never cleared, retries forever. Connector double-POST leftovers. Absorb skipped on class folders (Extra may linger).
 
 ### Import matching (`remapDocumentItemKeys`)
@@ -102,12 +136,12 @@ DOI URL vs bare; ISBN-10 vs 13 — **Done** (`c85b039`). Still open: no PMID/PMC
 ## C. Notifiers, cache, write queue (BBT / Zotlit)
 
 - **Item cache trash/restore** — **Done** (`07be04d`). [OBJECT_LIFECYCLE_EVENTS](src/utils/cache.ts).
-- BBT ignores `modify` when `item.deleted`. Worth checking note/Extra handlers.
+- **Modify when `item.deleted`** — **Done** (`392c64a`). BBT [#2401](https://github.com/retorquere/zotero-better-bibtex/issues/2401).
 - BBT skips `isFeedItem`. **Done** (`e0e4a23`) via [isSyllabusMemberItem](src/utils/items.ts).
-- **Write-inflight skip** — `handleNoteChange` skips reparse while a local write is in flight.
+- **`getNote()` on a non-note** — **Done** (`1243dbd`). BBT [#3541](https://github.com/retorquere/zotero-better-bibtex/issues/3541). [readItemNote](src/utils/items.ts).
+- **Write-inflight skip** — `handleNoteChange` skips reparse while a local write is in flight (Better Notes both-sides-edited).
 - **documentForWrite** — **Done** (`b57abac`). Parsed note wins; cache only if the note is unreadable.
 - **enqueueWrite** nested `mutateCollectionDocument` from class-folder ensure = deadlock.
-- `getNote()` on a non-note throws in Zotero 9 (BBT [#3541](https://github.com/retorquere/zotero-better-bibtex/commit/947c3f4c515c11a54bf00ae91f4ff5b0b07becb0)).
 
 ---
 
@@ -123,21 +157,22 @@ DOI URL vs bare; ISBN-10 vs 13 — **Done** (`c85b039`). Still open: no PMID/PMC
 
 ## E. Class folders and reading schedule
 
-Class folders: rename races, name-pattern adoption, read-only groups, extras erased when turning on.
+Class folders: rename races, name-pattern adoption, extras erased when turning on.
 
-Reading schedule: **My Library only**. Group-only syllabi never appear.
+Reading schedule: **My Library only** (inverse of Notero [#706](https://github.com/dvanoni/notero/issues/706) — they assumed My Library and missed collections; we assume My Library and miss groups). Group-only syllabi never appear.
 
 ---
 
 ## F. Groups, permissions, Zotero majors
 
-Read-only group write UI; joining a synced group (new keys); prefs (gallery/view mode) do not sync; Zotero 7 silent skip of schedule/translators; Reading List Extra is read-only.
+- **Read-only group writes** — **Done** (`08c91fc`). BBT [#3430](https://github.com/retorquere/zotero-better-bibtex/issues/3430), [#3469](https://github.com/retorquere/zotero-better-bibtex/issues/3469). [libraryIsEditable](src/utils/zotero.ts).
+- Joining a synced group (new keys); prefs (gallery/view mode) do not sync ([Reading List #83](https://github.com/Dominic-DallOsto/zotero-reading-list/issues/83)); Zotero 7 silent skip of schedule/translators; Reading List Extra is read-only.
 
 ---
 
 ## G. Import, translators, print, gallery, chrome
 
-Connector ports, print HiddenBrowser, gallery keyboard, item pane vs class folder, tree icon patches, TabManager index pairing, prefs migration stale numeric ids, standalone attachments.
+Connector ports, print HiddenBrowser, gallery keyboard, item pane vs class folder, tree icon patches, TabManager index pairing, standalone attachments.
 
 ---
 
@@ -147,12 +182,13 @@ Connector ports, print HiddenBrowser, gallery keyboard, item pane vs class folde
 
 **Done (second wave):** DOI/ISBN import match; runningTime/pages parse; note JSON extract; documentForWrite note-wins; skip feed/deleted members.
 
+**Done (third wave, grounded):** `getNote()` on non-notes (BBT #3541); Extra absorb on trashed modify (BBT #2401); stale collection prefs (Notero #775); read-only group writes (BBT #3430 / #3469).
+
 **Still likely user-visible:**
 
 1. Nested write-queue deadlock if an ensure path regresses
-2. Write-inflight skip dropping a sync-in note
-3. `getNote()` on a non-note (Zotero 9)
-4. Reading schedule My Library only
+2. Write-inflight skip dropping a sync-in note (Better Notes both-sides-edited)
+3. Reading schedule My Library only (Notero #706 inverse)
 
 **Product / policy:** reading schedule for group libraries; collapse same-class rows after merge; whether Duplicate Item should copy assignments.
 
