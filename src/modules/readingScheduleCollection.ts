@@ -186,7 +186,7 @@ function findReadingScheduleRoot(
     }
   }
 
-  if (!collection.parentID && isReadingScheduleRootName(collection.name)) {
+  if (isReadingScheduleRootName(collection.name)) {
     adoptReadingScheduleRootKey(collection);
     return collection;
   }
@@ -198,7 +198,6 @@ function findReadingScheduleRoot(
     if (
       parent &&
       !parent.deleted &&
-      !parent.parentID &&
       isReadingScheduleRootName(parent.name) &&
       parent.libraryID === collection.libraryID
     ) {
@@ -218,8 +217,8 @@ function adoptReadingScheduleRootKey(root: Zotero.Collection): void {
   }
   if (!existing || !storedRoot(root.libraryID)) {
     setRootKey(root.libraryID, root.key);
+    rememberRoot(root);
   }
-  rememberRoot(root);
 }
 
 /** Sorted YYYY-MM-DD keys for date subcollections under the Reading schedule root. */
@@ -339,33 +338,40 @@ export function buildReadingScheduleDesiredByLibrary(
  * `{ libraryID: collectionKey }`.
  */
 export function parseReadingScheduleRootKeys(
-  raw: string,
+  raw: unknown,
   userLibraryID: number,
 ): Record<string, string> {
-  const trimmed = (raw || "").trim();
-  if (!trimmed) {
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    return normalizeRootKeyMap(raw as Record<string, unknown>);
+  }
+  const trimmed = String(raw ?? "").trim();
+  if (!trimmed || trimmed === "[object Object]") {
     return {};
   }
   if (trimmed.startsWith("{")) {
     try {
       const parsed = JSON.parse(trimmed) as unknown;
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        const out: Record<string, string> = {};
-        for (const [id, key] of Object.entries(
-          parsed as Record<string, unknown>,
-        )) {
-          const value = String(key || "").trim();
-          if (value) {
-            out[id] = value;
-          }
-        }
-        return out;
+        return normalizeRootKeyMap(parsed as Record<string, unknown>);
       }
     } catch {
       return {};
     }
   }
   return { [String(userLibraryID)]: trimmed };
+}
+
+function normalizeRootKeyMap(
+  parsed: Record<string, unknown>,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [id, key] of Object.entries(parsed)) {
+    const value = String(key || "").trim();
+    if (value && value !== "[object Object]") {
+      out[id] = value;
+    }
+  }
+  return out;
 }
 
 export function isManagedReadingScheduleRootKey(
@@ -377,7 +383,7 @@ export function isManagedReadingScheduleRootKey(
 
 function readRootKeyMap(): Record<string, string> {
   return parseReadingScheduleRootKeys(
-    String(getPrefValue("readingScheduleCollectionKey") || ""),
+    getPrefValue("readingScheduleCollectionKey"),
     Zotero.Libraries.userLibraryID,
   );
 }
@@ -521,17 +527,91 @@ async function syncCollectionItems(
   });
 }
 
+async function waitForLibraryCollections(libraryID: number): Promise<void> {
+  try {
+    const library = Zotero.Libraries.get(libraryID);
+    if (library && typeof library.waitForDataLoad === "function") {
+      await library.waitForDataLoad("collection");
+    }
+  } catch {
+    // Library may not exist.
+  }
+}
+
+function namedReadingScheduleCollections(
+  libraryID: number,
+): Zotero.Collection[] {
+  return Zotero.Collections.getByLibrary(libraryID).filter(
+    (collection) =>
+      !collection.deleted && isReadingScheduleRootName(collection.name),
+  );
+}
+
+function dateChildCount(collection: Zotero.Collection): number {
+  return collection
+    .getChildCollections()
+    .filter((child) => dateKeyFromFolderName(child.name) != null).length;
+}
+
+function pickCanonicalRoot(libraryID: number): Zotero.Collection | null {
+  const stored = storedRoot(libraryID);
+  const named = namedReadingScheduleCollections(libraryID);
+  const candidates = [...named];
+  if (
+    stored &&
+    stored.libraryID === libraryID &&
+    !candidates.some((collection) => collection.id === stored.id)
+  ) {
+    candidates.push(stored);
+  }
+  if (!candidates.length) {
+    return stored && stored.libraryID === libraryID ? stored : null;
+  }
+  const topLevel = candidates.filter((collection) => !collection.parentID);
+  const pool = topLevel.length ? topLevel : candidates;
+  const storedId = stored?.id;
+  pool.sort((a, b) => {
+    const byDates = dateChildCount(b) - dateChildCount(a);
+    if (byDates !== 0) {
+      return byDates;
+    }
+    if (storedId != null) {
+      if (a.id === storedId) {
+        return -1;
+      }
+      if (b.id === storedId) {
+        return 1;
+      }
+    }
+    return a.id - b.id;
+  });
+  return pool[0];
+}
+
+async function collapseDuplicateRoots(
+  libraryID: number,
+  canonical: Zotero.Collection,
+): Promise<void> {
+  for (const extra of namedReadingScheduleCollections(libraryID)) {
+    if (extra.id === canonical.id) {
+      continue;
+    }
+    forgetCollection(extra.id);
+    await eraseCollection(extra);
+  }
+}
+
 async function ensureRootCollection(
   libraryID: number,
 ): Promise<Zotero.Collection> {
-  let root = storedRoot(libraryID);
+  await waitForLibraryCollections(libraryID);
+  let root = pickCanonicalRoot(libraryID);
   if (!root) {
     root = new Zotero.Collection({
       name: READING_SCHEDULE_COLLECTION_NAME,
       libraryID,
     });
     await saveCollection(root);
-    setRootKey(libraryID, root.key);
   }
 
   let dirty = false;
@@ -546,7 +626,15 @@ async function ensureRootCollection(
   if (dirty) {
     await saveCollection(root);
   }
+  if (root.libraryID !== libraryID) {
+    ztoolkit.log(
+      "Reading schedule root is in a different library than requested",
+      { requested: libraryID, actual: root.libraryID, key: root.key },
+    );
+  }
+  setRootKey(root.libraryID, root.key);
   rememberRoot(root);
+  await collapseDuplicateRoots(root.libraryID, root);
   return root;
 }
 
@@ -670,6 +758,15 @@ async function ensureReadingScheduleCollection(
     ...desiredByLibrary.keys(),
     ...Object.keys(readRootKeyMap()).map(Number),
   ]);
+  for (const library of Zotero.Libraries.getAll()) {
+    const libraryID = library.libraryID;
+    if (typeof libraryID !== "number" || !libraryIsEditable(libraryID)) {
+      continue;
+    }
+    if (namedReadingScheduleCollections(libraryID).length) {
+      libraryIDs.add(libraryID);
+    }
+  }
 
   holdSync();
   try {
@@ -679,7 +776,12 @@ async function ensureReadingScheduleCollection(
       }
       const desired = desiredByLibrary.get(libraryID) || new Map();
       const isUserLibrary = libraryID === Zotero.Libraries.userLibraryID;
-      if (!isUserLibrary && desired.size === 0 && !storedRoot(libraryID)) {
+      if (
+        !isUserLibrary &&
+        desired.size === 0 &&
+        !storedRoot(libraryID) &&
+        namedReadingScheduleCollections(libraryID).length === 0
+      ) {
         continue;
       }
       await syncLibraryReadingSchedule(libraryID, desired);

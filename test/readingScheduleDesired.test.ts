@@ -39,6 +39,13 @@ describe("parseReadingScheduleRootKeys", function () {
     );
   });
 
+  it("reads an already-parsed pref object", function () {
+    assert.deepEqual(
+      parseReadingScheduleRootKeys({ "1": "AAAAAAAA", "5": "CCCCCCCC" }, 1),
+      { "1": "AAAAAAAA", "5": "CCCCCCCC" },
+    );
+  });
+
   it("returns an empty map for a blank pref", function () {
     assert.deepEqual(parseReadingScheduleRootKeys("", 1), {});
   });

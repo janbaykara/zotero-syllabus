@@ -17,7 +17,10 @@ import {
   getReadingScheduleCollectionContext,
   listReadingScheduleDateFolders,
 } from "./readingScheduleCollection";
-import { collectClassReadingsByDate } from "./classReadings";
+import {
+  collectClassReadingsByDate,
+  filterSyllabiByLibrary,
+} from "./classReadings";
 import { getString, getUiDir } from "../utils/locale";
 
 function pickInitialDateKey(
@@ -47,10 +50,15 @@ export function ReadingScheduleDayPage({
   collectionId: number;
 }) {
   const [compactMode] = useZoteroCompactMode();
-  const syllabi = useSyllabi();
+  const allSyllabi = useSyllabi();
   const context = useMemo(
     () => getReadingScheduleCollectionContext(collectionId),
     [collectionId],
+  );
+  const syllabi = useMemo(
+    () =>
+      context ? filterSyllabiByLibrary(allSyllabi, context.root.libraryID) : [],
+    [allSyllabi, context],
   );
 
   const dateFolders = useMemo(

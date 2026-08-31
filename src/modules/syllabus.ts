@@ -235,7 +235,7 @@ const tabManager = FEATURE_FLAG.READING_SCHEDULE
       title: () => getString("view-tab-reading-schedule"),
       rootElementIdFactory: () => "reading-list-tab-root",
       data: () => (areCustomIconsEnabled() ? { icon: "calendar" } : {}),
-      componentFactory: () => h(ReadingSchedule, {}),
+      componentFactory: () => h(ReadingSchedule, { libraryID: undefined }),
       getTabId: () => "syllabus-reading-list-tab",
     })
   : null;
@@ -654,6 +654,10 @@ export class SyllabusManager {
       return "collection";
     }
 
+    if (getReadingScheduleCollectionContext(selectedCollection.id)) {
+      return "syllabus";
+    }
+
     const collectionId = String(selectedCollection.id);
     const prefKey = SyllabusManager.getPreferenceKey(
       SyllabusSettingsKey.COLLECTION_VIEW_MODES,
@@ -967,9 +971,12 @@ export class SyllabusManager {
       currentTab?.type === "syllabus" || currentTab?.type === "reading-list";
     const shouldShowReadingSchedule =
       FEATURE_FLAG.READING_SCHEDULE && isInMainLibrary && !isCustomTab;
+    const readingScheduleContext = selectedCollection
+      ? getReadingScheduleCollectionContext(selectedCollection.id)
+      : null;
 
     for (const button of viewModeButtons) {
-      if (shouldShowReadingSchedule) {
+      if (shouldShowReadingSchedule || readingScheduleContext) {
         button.hidden = true;
         continue;
       }
@@ -988,14 +995,10 @@ export class SyllabusManager {
       readingScheduleButton.hidden = !shouldShowReadingSchedule;
     }
     if (collectionReadingScheduleButton) {
-      const isReadingScheduleRoot =
-        selectedCollection != null &&
-        getReadingScheduleCollectionContext(selectedCollection.id)?.kind ===
-          "root";
       collectionReadingScheduleButton.hidden =
         !selectedCollection ||
         shouldShowReadingSchedule ||
-        isReadingScheduleRoot;
+        readingScheduleContext?.kind === "root";
     }
   }
 

@@ -225,6 +225,25 @@ export async function collectionForReadingListImport(options: {
 }
 
 /**
+ * Internal library id for items and collections.
+ * On group libraries `library.id` is the groupID; `getByLibrary` needs `libraryID`.
+ */
+export function zoteroLibraryID(
+  library: { libraryID?: number; id?: number } | null | undefined,
+): number | null {
+  if (!library) {
+    return null;
+  }
+  if (typeof library.libraryID === "number" && library.libraryID > 0) {
+    return library.libraryID;
+  }
+  if (typeof library.id === "number" && library.id > 0) {
+    return library.id;
+  }
+  return null;
+}
+
+/**
  * Collections are unique by libraryID + key, not by key alone.
  * A group library can reuse an 8-character key from My Library.
  */
@@ -269,7 +288,11 @@ export function getAllCollections(recursive = true) {
   const libraries = Array.from(Zotero.Libraries.getAll());
   const collections: Zotero.Collection[] = [];
   for (const library of libraries) {
-    const libraryCollections = Zotero.Collections.getByLibrary(library.id);
+    const libraryID = zoteroLibraryID(library);
+    if (libraryID == null) {
+      continue;
+    }
+    const libraryCollections = Zotero.Collections.getByLibrary(libraryID);
     collections.push(...libraryCollections);
   }
   if (recursive) {

@@ -86,7 +86,7 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   useSyllabusDocumentGeneration();
   const readingSchedule = getReadingScheduleCollectionContext(collectionId);
   if (readingSchedule?.kind === "root") {
-    return <ReadingSchedule />;
+    return <ReadingSchedule libraryID={readingSchedule.root.libraryID} />;
   }
   if (readingSchedule) {
     return <ReadingScheduleDayPage collectionId={collectionId} />;

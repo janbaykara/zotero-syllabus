@@ -4,6 +4,19 @@ import type { ClassReading } from "./ClassReadingBlock";
 import type { SyllabusData } from "./react-zotero-sync/useSyllabi";
 import { parseReadingDate, toLocalDateKey } from "../utils/dates";
 
+/** Restrict a syllabus list to one library, or keep all when `libraryID` is omitted. */
+export function filterSyllabiByLibrary(
+  syllabi: SyllabusData[],
+  libraryID: number | undefined,
+): SyllabusData[] {
+  if (libraryID == null) {
+    return syllabi;
+  }
+  return syllabi.filter(
+    (syllabus) => syllabus.collection.libraryID === libraryID,
+  );
+}
+
 export function buildClassReadings(syllabi: SyllabusData[]): ClassReading[] {
   const readings: ClassReading[] = [];
 

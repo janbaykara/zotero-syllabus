@@ -8,7 +8,10 @@ import {
   selectCollectionInLibrary,
   selectItemInCollection,
 } from "./ClassReadingBlock";
-import { collectClassReadingsByWeek } from "./classReadings";
+import {
+  collectClassReadingsByWeek,
+  filterSyllabiByLibrary,
+} from "./classReadings";
 import {
   addWeeks,
   differenceInDays,
@@ -35,12 +38,15 @@ setDefaultOptions({
   weekStartsOn: 1,
 });
 
-export function ReadingSchedule() {
+export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
   const [compactMode] = useZoteroCompactMode();
   const [showSettings, setShowSettings] = useState(false);
 
-  // Get all syllabi data (collections with metadata and items)
-  const syllabi = useSyllabi();
+  const allSyllabi = useSyllabi();
+  const syllabi = useMemo(
+    () => filterSyllabiByLibrary(allSyllabi, libraryID),
+    [allSyllabi, libraryID],
+  );
 
   const readingsByWeek = useMemo(
     () => collectClassReadingsByWeek(syllabi),
