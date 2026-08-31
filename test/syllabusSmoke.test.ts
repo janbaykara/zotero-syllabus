@@ -231,4 +231,103 @@ describe("syllabus smoke", function () {
     assert.include(book.getCollections(), collection.id);
     assert.include(book.getCollections(), folder.id);
   });
+
+  it("remaps class assignments onto the surviving item after a merge", async function () {
+    collection = await createCollection("Smoke Syllabus Merge");
+    const master = await createBook(collection, "Merge Master Book");
+    const loser = await createBook(collection, "Merge Loser Book");
+    items.push(master, loser);
+
+    await mutateCollectionDocument(
+      collection,
+      (document) => ({
+        ...document,
+        nomenclature: "week",
+        classes: {
+          [CLASS_ID]: {
+            number: 1,
+            title: "Seminar",
+            status: null,
+          },
+        },
+        items: {
+          [loser.key]: [
+            {
+              classId: CLASS_ID,
+              priority: "essential",
+              classInstruction: "Read before class",
+            },
+          ],
+        },
+      }),
+      { createNote: "always" },
+    );
+
+    const masterKey = master.key;
+    const loserKey = loser.key;
+    assert.isFunction(Zotero.Items.merge);
+
+    try {
+      // Items.merge starts its own DB transaction; do not wrap in executeTransaction.
+      await Zotero.Items.merge(master, [loser]);
+    } catch (error) {
+      assert.fail(
+        `Zotero.Items.merge threw: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+
+    const noteId = getSyllabusNoteId(collection);
+    assert.isNumber(noteId);
+
+    const deadline = Date.now() + 15_000;
+    let document = getCollectionDocument(collection);
+    while (Date.now() < deadline) {
+      try {
+        const note = Zotero.Items.get(noteId!);
+        const parsed = parseSyllabusNote(note.getNote());
+        if (parsed) {
+          document = parsed;
+        }
+      } catch {
+        document = getCollectionDocument(collection);
+      }
+      if (
+        (document.items[masterKey] || []).length > 0 &&
+        document.items[loserKey] == null
+      ) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
+    let replaced: string[] = [];
+    try {
+      await master.loadDataType("relation");
+      replaced = master.getRelationsByPredicate("dc:replaces") || [];
+    } catch {
+      replaced = [];
+    }
+    const loserDeleted = (() => {
+      try {
+        return !!(Zotero.Items.get(loser.id) || loser).deleted;
+      } catch {
+        return true;
+      }
+    })();
+    assert.isUndefined(
+      document.items[loserKey],
+      `loser key ${loserKey} still in note; keys=${Object.keys(document.items || {}).join(",")}; loserDeleted=${loserDeleted}; dc:replaces=${JSON.stringify(replaced)}`,
+    );
+    const assignments = getHydratedItemAssignments(document, masterKey);
+    assert.lengthOf(
+      assignments,
+      1,
+      `master key ${masterKey} assignments=${JSON.stringify(assignments)}; keys=${Object.keys(document.items || {}).join(",")}`,
+    );
+    assert.equal(assignments[0]?.classId, CLASS_ID);
+    assert.equal(assignments[0]?.priority, "essential");
+    assert.equal(assignments[0]?.classInstruction, "Read before class");
+  });
 });

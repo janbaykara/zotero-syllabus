@@ -23,6 +23,7 @@ import {
 import {
   getCachedCollection,
   getCachedCollectionById,
+  getCachedCollectionByKey,
   getCachedItem,
 } from "../utils/cache";
 import { getAllCollections } from "../utils/zotero";
@@ -265,6 +266,442 @@ export function remapDocumentItemKeys(
 
   const { itemIndex: _itemIndex, ...rest } = document;
   return { ...rest, items: itemsOut };
+}
+
+const REPLACED_ITEM_PREDICATE = "dc:replaces";
+
+/**
+ * Move assignment arrays from merged-away item keys onto surviving keys.
+ * Concatenates when the survivor already has assignments. Returns the same
+ * document object when none of the old keys are present.
+ */
+export function remapDocumentItemKeysByMap(
+  document: CollectionSyllabusDocument,
+  keyMap: Record<string, string>,
+): CollectionSyllabusDocument {
+  const remaps: Array<[string, string]> = [];
+  for (const [oldKey, newKey] of Object.entries(keyMap)) {
+    if (!oldKey || !newKey || oldKey === newKey) {
+      continue;
+    }
+    if (!(oldKey in (document.items || {}))) {
+      continue;
+    }
+    remaps.push([oldKey, newKey]);
+  }
+  if (!remaps.length) {
+    return document;
+  }
+
+  const itemsOut: CollectionSyllabusDocument["items"] = {
+    ...(document.items || {}),
+  };
+  const itemIndex = document.itemIndex ? { ...document.itemIndex } : undefined;
+
+  for (const [oldKey, newKey] of remaps) {
+    const assignments = itemsOut[oldKey];
+    delete itemsOut[oldKey];
+    if (assignments?.length) {
+      itemsOut[newKey] = [...(itemsOut[newKey] || []), ...assignments];
+    }
+    if (itemIndex && oldKey in itemIndex) {
+      if (!(newKey in itemIndex)) {
+        itemIndex[newKey] = itemIndex[oldKey];
+      }
+      delete itemIndex[oldKey];
+    }
+  }
+
+  return itemIndex
+    ? { ...document, items: itemsOut, itemIndex }
+    : { ...document, items: itemsOut };
+}
+
+function replacedItemPredicate(): string {
+  try {
+    const predicate = (
+      Zotero as typeof Zotero & {
+        Relations?: { replacedItemPredicate?: string };
+      }
+    ).Relations?.replacedItemPredicate;
+    if (typeof predicate === "string" && predicate) {
+      return predicate;
+    }
+  } catch {
+    // Relations API may be unavailable in tests.
+  }
+  return REPLACED_ITEM_PREDICATE;
+}
+
+function itemKeyFromUri(uri: string): string | null {
+  const match = String(uri).match(/\/items\/([^/?#]+)/i);
+  const key = match?.[1]?.trim();
+  return key || null;
+}
+
+function itemUriForLibraryAndKey(
+  libraryID: number,
+  key: string,
+  item?: Zotero.Item | false | null,
+): string | null {
+  if (item) {
+    try {
+      const uri = Zotero.URI.getItemURI(item);
+      if (uri) {
+        return uri;
+      }
+    } catch {
+      // Fall through to library URI.
+    }
+  }
+  try {
+    const libraryURI = Zotero.URI.getLibraryURI(libraryID);
+    if (libraryURI) {
+      return `${String(libraryURI).replace(/\/$/, "")}/items/${key}`;
+    }
+  } catch {
+    // URI helpers may be unavailable.
+  }
+  return null;
+}
+
+async function survivorForReplacedUri(
+  uri: string,
+): Promise<Zotero.Item | null> {
+  try {
+    const relations = (
+      Zotero as typeof Zotero & {
+        Relations?: {
+          getByPredicateAndObject?: (
+            objectType: string,
+            predicate: string,
+            object: string,
+          ) => Promise<Zotero.Item[]>;
+        };
+      }
+    ).Relations;
+    const getByPredicateAndObject = relations?.getByPredicateAndObject;
+    if (typeof getByPredicateAndObject !== "function") {
+      return null;
+    }
+    const replacers = await getByPredicateAndObject(
+      "item",
+      replacedItemPredicate(),
+      uri,
+    );
+    if (!Array.isArray(replacers)) {
+      return null;
+    }
+    return (
+      replacers.find((candidate) => {
+        try {
+          return candidate && !candidate.deleted && candidate.isRegularItem();
+        } catch {
+          return false;
+        }
+      }) || null
+    );
+  } catch (error) {
+    ztoolkit.log("Error looking up dc:replaces survivor:", error);
+    return null;
+  }
+}
+
+function relationObjectUris(item: Zotero.Item): string[] {
+  const predicate = replacedItemPredicate() as _ZoteroTypes.RelationsPredicate;
+  try {
+    if (typeof item.getRelationsByPredicate === "function") {
+      return item.getRelationsByPredicate(predicate) || [];
+    }
+  } catch {
+    // Fall through to getRelations().
+  }
+  try {
+    const relations = item.getRelations?.() || {};
+    const value = (relations as Record<string, string | string[]>)[predicate];
+    if (!value) {
+      return [];
+    }
+    return Array.isArray(value) ? value : [value];
+  } catch {
+    return [];
+  }
+}
+
+function replacedItemKeysFromItem(item: Zotero.Item): string[] {
+  const keys: string[] = [];
+  for (const uri of relationObjectUris(item)) {
+    const key = itemKeyFromUri(uri);
+    if (key && key !== item.key) {
+      keys.push(key);
+    }
+  }
+  return keys;
+}
+
+async function survivorFromCollectionMates(
+  item: Zotero.Item,
+  uri: string,
+): Promise<Zotero.Item | null> {
+  const collections: Zotero.Collection[] = [];
+  const seen = new Set<number>();
+  for (const [ref, entry] of documentCache.entries()) {
+    if (!(item.key in (entry.document.items || {}))) {
+      continue;
+    }
+    const collection = collectionFromCacheRef(ref);
+    if (!collection || seen.has(collection.id)) {
+      continue;
+    }
+    seen.add(collection.id);
+    collections.push(collection);
+  }
+  try {
+    for (const collectionId of item.getCollections() || []) {
+      if (seen.has(collectionId)) {
+        continue;
+      }
+      const collection =
+        getCachedCollectionById(collectionId) ||
+        Zotero.Collections.get(collectionId);
+      if (!collection) {
+        continue;
+      }
+      seen.add(collection.id);
+      collections.push(collection);
+    }
+  } catch {
+    // Trashed items may already be removed from collections.
+  }
+  for (const collection of collections) {
+    let children: Zotero.Item[] = [];
+    try {
+      const raw = collection.getChildItems();
+      children = Array.isArray(raw) ? raw : [];
+    } catch {
+      continue;
+    }
+    for (const candidate of children) {
+      try {
+        if (
+          !candidate ||
+          candidate.id === item.id ||
+          candidate.deleted ||
+          !candidate.isRegularItem()
+        ) {
+          continue;
+        }
+        try {
+          await candidate.loadDataType("relation");
+        } catch {
+          // Relations may already be loaded.
+        }
+        const uris = relationObjectUris(candidate);
+        if (
+          uris.includes(uri) ||
+          uris.some((objectUri) => itemKeyFromUri(objectUri) === item.key)
+        ) {
+          return candidate;
+        }
+      } catch {
+        continue;
+      }
+    }
+  }
+  return null;
+}
+
+function delayMs(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function afterDatabaseTransaction(): Promise<void> {
+  for (let i = 0; i < 200; i++) {
+    try {
+      if (!Zotero.DB.inTransaction()) {
+        return;
+      }
+    } catch {
+      return;
+    }
+    await delayMs(10);
+  }
+}
+
+function anyCachedDocumentHasItemKey(itemKey: string): boolean {
+  for (const entry of documentCache.values()) {
+    if (itemKey in (entry.document.items || {})) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function collectionFromCacheRef(ref: string): Zotero.Collection | null {
+  const colon = ref.indexOf(":");
+  if (colon <= 0) {
+    return null;
+  }
+  const libraryID = parseInt(ref.slice(0, colon), 10);
+  const key = ref.slice(colon + 1);
+  if (Number.isNaN(libraryID) || !key) {
+    return null;
+  }
+  return (
+    getCachedCollectionByKey(libraryID, key) ||
+    Zotero.Collections.getByLibraryAndKey(libraryID, key) ||
+    null
+  );
+}
+
+async function applyItemKeyRemapToCachedDocuments(
+  keyMap: Record<string, string>,
+): Promise<void> {
+  const remaps = Object.entries(keyMap).filter(
+    ([oldKey, newKey]) => oldKey && newKey && oldKey !== newKey,
+  );
+  if (!remaps.length) {
+    return;
+  }
+
+  for (const [ref, entry] of documentCache.entries()) {
+    const map: Record<string, string> = {};
+    for (const [oldKey, newKey] of remaps) {
+      if (oldKey in (entry.document.items || {})) {
+        map[oldKey] = newKey;
+      }
+    }
+    if (!Object.keys(map).length) {
+      continue;
+    }
+    const collection = collectionFromCacheRef(ref);
+    if (!collection) {
+      continue;
+    }
+    const remapped = remapDocumentItemKeysByMap(entry.document, map);
+    if (remapped === entry.document) {
+      continue;
+    }
+    try {
+      await mutateCollectionDocument(collection, (document) =>
+        remapDocumentItemKeysByMap(document, map),
+      );
+    } catch (error) {
+      ztoolkit.log(
+        "Error persisting merged item keys in syllabus note:",
+        error,
+      );
+    }
+  }
+}
+
+async function remapMergedKeysFromItemIds(
+  ids: number[],
+  event: string,
+): Promise<void> {
+  const keyMap: Record<string, string> = {};
+  try {
+    for (const id of ids) {
+      let item: Zotero.Item | false | undefined;
+      try {
+        item = Zotero.Items.get(id);
+      } catch {
+        item = undefined;
+      }
+      if (!item) {
+        item = getCachedItem(id);
+      }
+      if (!item) {
+        continue;
+      }
+      try {
+        if (item.isNote() || !item.isRegularItem()) {
+          continue;
+        }
+      } catch {
+        continue;
+      }
+
+      if (event === "trash" || item.deleted) {
+        if (!anyCachedDocumentHasItemKey(item.key)) {
+          continue;
+        }
+        const uri = itemUriForLibraryAndKey(item.libraryID, item.key, item);
+        if (!uri) {
+          continue;
+        }
+        const survivor =
+          (await survivorForReplacedUri(uri)) ||
+          (await survivorFromCollectionMates(item, uri));
+        if (!survivor || survivor.key === item.key) {
+          continue;
+        }
+        keyMap[item.key] = survivor.key;
+        continue;
+      }
+
+      if (event !== "modify") {
+        continue;
+      }
+      try {
+        await item.loadDataType("relation");
+      } catch {
+        // Relations may already be loaded.
+      }
+      const replacedKeys = replacedItemKeysFromItem(item);
+      for (const oldKey of replacedKeys) {
+        if (!anyCachedDocumentHasItemKey(oldKey)) {
+          continue;
+        }
+        keyMap[oldKey] = item.key;
+      }
+    }
+
+    if (!Object.keys(keyMap).length) {
+      return;
+    }
+    await applyItemKeyRemapToCachedDocuments(keyMap);
+  } catch (error) {
+    ztoolkit.log("Error remapping merged item keys in syllabus notes:", error);
+    throw error;
+  }
+}
+
+async function mergedKeyMapForOrphanedKeys(
+  libraryID: number,
+  document: CollectionSyllabusDocument,
+): Promise<Record<string, string>> {
+  const keyMap: Record<string, string> = {};
+  for (const itemKey of Object.keys(document.items || {})) {
+    let item: Zotero.Item | false | undefined;
+    try {
+      item = Zotero.Items.getByLibraryAndKey(libraryID, itemKey);
+    } catch {
+      item = false;
+    }
+    if (item && !item.deleted) {
+      try {
+        if (item.isRegularItem()) {
+          continue;
+        }
+      } catch {
+        continue;
+      }
+    }
+    const uri = itemUriForLibraryAndKey(libraryID, itemKey, item || undefined);
+    if (!uri) {
+      continue;
+    }
+    const survivor =
+      (await survivorForReplacedUri(uri)) ||
+      (item ? await survivorFromCollectionMates(item, uri) : null);
+    if (survivor && survivor.key !== itemKey) {
+      keyMap[itemKey] = survivor.key;
+    }
+  }
+  return keyMap;
 }
 
 function persistDocument(
@@ -885,10 +1322,36 @@ async function rebuildDocumentIndex(): Promise<void> {
   indexBuilt = true;
   documentGeneration++;
   notifyDocumentListeners();
+  const mergeKeyMaps = new Map<number, Record<string, string>>();
+  for (const collection of getAllCollections()) {
+    const ref = collectionRefFromCollection(collection);
+    const entry = documentCache.get(ref);
+    if (!entry?.noteId || isDocumentWriteInFlight(ref)) {
+      continue;
+    }
+    try {
+      const keyMap = await mergedKeyMapForOrphanedKeys(
+        collection.libraryID,
+        entry.document,
+      );
+      if (!Object.keys(keyMap).length) {
+        continue;
+      }
+      mergeKeyMaps.set(collection.id, keyMap);
+      if (!notesToPatch.some((candidate) => candidate.id === collection.id)) {
+        notesToPatch.push(collection);
+      }
+    } catch (error) {
+      ztoolkit.log("Error resolving merged item keys in syllabus note:", error);
+    }
+  }
   const patchedIds = new Set(notesToPatch.map((collection) => collection.id));
   for (const collection of notesToPatch) {
     try {
-      await mutateCollectionDocument(collection, (document) => document);
+      const keyMap = mergeKeyMaps.get(collection.id);
+      await mutateCollectionDocument(collection, (document) =>
+        keyMap ? remapDocumentItemKeysByMap(document, keyMap) : document,
+      );
     } catch (error) {
       ztoolkit.log("Error patching syllabus note format:", error);
     }
@@ -1565,14 +2028,36 @@ export function initializeSyllabusNotes(): void {
       _extraData: { [key: string]: unknown },
     ) {
       if (type === "item") {
-        const numericIds = ids.filter(
-          (id): id is number => typeof id === "number",
-        );
+        const numericIds = ids
+          .map((id) => (typeof id === "number" ? id : parseInt(String(id), 10)))
+          .filter((id) => !Number.isNaN(id));
         if (event === "delete") {
+          const deletedIds = [...numericIds];
+          afterDatabaseTransaction()
+            .then(() => remapMergedKeysFromItemIds(deletedIds, "trash"))
+            .catch((error) => {
+              ztoolkit.log(
+                "Error remapping merged item keys in syllabus notes:",
+                error,
+              );
+            });
           for (const id of numericIds) {
             detachNoteFromCache(id);
           }
           return;
+        }
+
+        if (event === "trash" || event === "modify") {
+          const queuedIds = [...numericIds];
+          const queuedEvent = event;
+          afterDatabaseTransaction()
+            .then(() => remapMergedKeysFromItemIds(queuedIds, queuedEvent))
+            .catch((error) => {
+              ztoolkit.log(
+                "Error remapping merged item keys in syllabus notes:",
+                error,
+              );
+            });
         }
 
         const extrasToAbsorb: Zotero.Item[] = [];
