@@ -16,7 +16,7 @@ A Zotero add-on / plugin that turns your collections into syllabi and course rea
 > [!NOTE]
 > For best results, use [Zotero 8, 9, or 10](https://www.zotero.org/download/). Zotero 7 works but has some minor styling issues.
 
-![Syllabus view](doc/images/demo.gif)
+![Syllabus view](doc/images/Aug-31-2026%2014-56-18.gif)
 
 ![Reading schedule view](doc/images/reading.png)
 
