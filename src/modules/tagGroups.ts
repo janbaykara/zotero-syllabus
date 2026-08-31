@@ -1,4 +1,5 @@
 import { useMemo } from "preact/hooks";
+import { compareLocale } from "../utils/locale";
 
 export type TagGroup = {
   tag: string;
@@ -37,7 +38,7 @@ export function useCollectionTagGroups(
     }
 
     const tagGroups: TagGroup[] = Array.from(itemsByTag.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
+      .sort(([a], [b]) => compareLocale(a, b))
       .map(([tag, items]) => ({
         tag,
         items,

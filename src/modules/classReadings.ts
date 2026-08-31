@@ -3,6 +3,7 @@ import { SyllabusManager } from "./syllabus";
 import type { ClassReading } from "./ClassReadingBlock";
 import type { SyllabusData } from "./react-zotero-sync/useSyllabi";
 import { parseReadingDate, toLocalDateKey } from "../utils/dates";
+import { compareLocale } from "../utils/locale";
 
 /** Restrict a syllabus list to one library, or keep all when `libraryID` is omitted. */
 export function filterSyllabiByLibrary(
@@ -81,7 +82,7 @@ export function buildClassReadings(syllabi: SyllabusData[]): ClassReading[] {
 
 export function sortClassReadings(readings: ClassReading[]): ClassReading[] {
   return [...readings].sort((a, b) => {
-    const collectionCompare = a.collectionName.localeCompare(b.collectionName);
+    const collectionCompare = compareLocale(a.collectionName, b.collectionName);
     if (collectionCompare !== 0) return collectionCompare;
     return a.classNumber - b.classNumber;
   });

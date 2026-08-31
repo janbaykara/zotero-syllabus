@@ -3,7 +3,7 @@ import { useSyncExternalStore } from "react-dom/src";
 import SuperJSON from "superjson";
 import { getCachedCollectionById, getCachedItem } from "../utils/cache";
 import { SyllabusManager } from "./syllabus";
-import { getString } from "../utils/locale";
+import { getString, compareLocale } from "../utils/locale";
 
 export type SubcollectionNode = {
   collectionId: number;
@@ -28,7 +28,7 @@ function buildNode(collection: Zotero.Collection): SubcollectionNode {
           return false;
         }
       })
-      .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+      .sort((a, b) => compareLocale(a.name || "", b.name || ""));
   } catch {
     childCollections = [];
   }

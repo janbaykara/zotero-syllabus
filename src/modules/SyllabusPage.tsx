@@ -12,7 +12,7 @@ import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
 import { generateBibliographyForPrint } from "../utils/cite";
 import { getPref } from "../utils/prefs";
-import { getString, getUiDir } from "../utils/locale";
+import { getString, getUiDir, compareLocale } from "../utils/locale";
 import {
   showUserGuide,
   TOUR_EVENT_CLOSE_SETTINGS,
@@ -1056,7 +1056,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
               if (assignmentA && assignmentB) {
                 const itemA = assignmentA.zoteroItem;
                 const itemB = assignmentB.zoteroItem;
-                return getItemTitle(itemA).localeCompare(getItemTitle(itemB));
+                return compareLocale(getItemTitle(itemA), getItemTitle(itemB));
               }
               return 0;
             });
@@ -1182,7 +1182,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           if (assignmentA && assignmentB) {
             const itemA = assignmentA.zoteroItem;
             const itemB = assignmentB.zoteroItem;
-            return getItemTitle(itemA).localeCompare(getItemTitle(itemB));
+            return compareLocale(getItemTitle(itemA), getItemTitle(itemB));
           }
           return 0;
         });

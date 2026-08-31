@@ -1,4 +1,5 @@
 import { getItemField, getItemTitle } from "./items";
+import { compareLocale } from "./locale";
 
 /**
  * Get all available CSL styles
@@ -237,9 +238,10 @@ export function generateFallbackBibliographicReference(
   const itemArray = Array.isArray(item) ? item : [item];
   return itemArray
     .sort((a, b) =>
-      a
-        .getCreators()?.[0]
-        ?.lastName.localeCompare(b.getCreators()?.[0]?.lastName || ""),
+      compareLocale(
+        a.getCreators()?.[0]?.lastName || "",
+        b.getCreators()?.[0]?.lastName || "",
+      ),
     )
     .map(buildFallbackBibliographicReference)
     .join("\n\n");

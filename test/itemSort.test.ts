@@ -5,6 +5,7 @@ import {
   sortItemsByDate,
   sortItemsByTitle,
 } from "../src/utils/items";
+import { compareLocale } from "../src/utils/locale";
 
 async function createBook(
   title: string,
@@ -31,6 +32,14 @@ async function createBook(
   await item.saveTx();
   return item;
 }
+
+describe("compareLocale", function () {
+  it("orders Latin titles without throwing", function () {
+    assert.isBelow(compareLocale("Apple", "Zebra"), 0);
+    assert.isAbove(compareLocale("Zebra", "Apple"), 0);
+    assert.equal(compareLocale("Same", "Same"), 0);
+  });
+});
 
 describe("item sort", function () {
   this.timeout(30_000);

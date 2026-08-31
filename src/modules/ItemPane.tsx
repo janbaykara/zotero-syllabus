@@ -15,7 +15,7 @@ import {
 import { useZoteroClassMetadata } from "./react-zotero-sync/classMetadata";
 import { useSyllabusDocumentGeneration } from "./react-zotero-sync/collectionDocument";
 import { formatReadingDate } from "../utils/dates";
-import { getString, getUiDir } from "../utils/locale";
+import { getString, getUiDir, compareLocale } from "../utils/locale";
 import { TextInput } from "./syllabusInputs";
 
 interface ItemPaneProps {
@@ -201,7 +201,7 @@ function ItemPaneContent({
     collectionsWithAssignments.sort((a, b) => {
       if (a.collectionId === currentCollectionId) return -1;
       if (b.collectionId === currentCollectionId) return 1;
-      return a.collectionName.localeCompare(b.collectionName);
+      return compareLocale(a.collectionName, b.collectionName);
     });
 
     return collectionsWithAssignments;

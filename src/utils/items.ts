@@ -1,4 +1,5 @@
 import { getCachedItem } from "./cache";
+import { compareLocale } from "./locale";
 
 /**
  * Display title for any item type. `getField("title")` is empty for types that
@@ -79,7 +80,7 @@ export function isSyllabusMemberItem(
 
 export function sortItemsByTitle(items: Zotero.Item[]): Zotero.Item[] {
   return [...items].sort((a, b) =>
-    getItemTitle(a).localeCompare(getItemTitle(b)),
+    compareLocale(getItemTitle(a), getItemTitle(b)),
   );
 }
 
@@ -108,15 +109,15 @@ export function sortItemsByCreator(items: Zotero.Item[]): Zotero.Item[] {
     const creatorA = itemCreatorSortKey(a);
     const creatorB = itemCreatorSortKey(b);
     if (!creatorA && !creatorB) {
-      return getItemTitle(a).localeCompare(getItemTitle(b));
+      return compareLocale(getItemTitle(a), getItemTitle(b));
     }
     if (!creatorA) return 1;
     if (!creatorB) return -1;
-    const byCreator = creatorA.localeCompare(creatorB);
+    const byCreator = compareLocale(creatorA, creatorB);
     if (byCreator !== 0) {
       return byCreator;
     }
-    return getItemTitle(a).localeCompare(getItemTitle(b));
+    return compareLocale(getItemTitle(a), getItemTitle(b));
   });
 }
 
@@ -170,14 +171,14 @@ export function sortItemsByDate(items: Zotero.Item[]): Zotero.Item[] {
       if (added !== 0) {
         return added;
       }
-      return getItemTitle(a).localeCompare(getItemTitle(b));
+      return compareLocale(getItemTitle(a), getItemTitle(b));
     }
     if (dateA === 0) return 1;
     if (dateB === 0) return -1;
     if (dateA !== dateB) {
       return dateB - dateA;
     }
-    return getItemTitle(a).localeCompare(getItemTitle(b));
+    return compareLocale(getItemTitle(a), getItemTitle(b));
   });
 }
 

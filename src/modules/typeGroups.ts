@@ -1,4 +1,5 @@
 import { useMemo } from "preact/hooks";
+import { compareLocale } from "../utils/locale";
 
 export type ItemTypeGroup = {
   itemType: string;
@@ -79,7 +80,7 @@ export function useCollectionItemTypeGroups(
         label: localizedItemTypePlural(itemType),
         items,
       }))
-      .sort((a, b) => a.label.localeCompare(b.label));
+      .sort((a, b) => compareLocale(a.label, b.label));
 
     return { typeGroups };
   }, [syllabusItems]);

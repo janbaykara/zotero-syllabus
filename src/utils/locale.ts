@@ -8,6 +8,7 @@ export {
   getAppLocale,
   isRtlLocale,
   getUiDir,
+  compareLocale,
 };
 
 const RTL_LANGS = new Set(["ar", "fa", "he", "ur"]);
@@ -51,6 +52,16 @@ function isRtlLocale(): boolean {
 
 function getUiDir(): "rtl" | "ltr" {
   return isRtlLocale() ? "rtl" : "ltr";
+}
+
+/** Sort strings with Zotero’s UI locale instead of the runtime default. */
+function compareLocale(a: string, b: string): number {
+  const locale = getAppLocale();
+  try {
+    return a.localeCompare(b, locale);
+  } catch {
+    return a.localeCompare(b);
+  }
 }
 
 /**

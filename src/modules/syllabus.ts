@@ -3,7 +3,7 @@ import slugify from "slugify";
  * Syllabus Manager - Core functionality for syllabus view and metadata
  */
 
-import { getLocaleID, getString } from "../utils/locale";
+import { getLocaleID, getString, compareLocale } from "../utils/locale";
 import type { FluentMessageId } from "../../typings/i10n";
 import { renderSyllabusPage } from "./SyllabusPage";
 import { renderGalleryPage } from "./GalleryPage";
@@ -1763,7 +1763,7 @@ export class SyllabusManager {
 
       // Sort unordered items by title only (manual order takes precedence, so no priority sorting)
       unorderedItems.sort((a, b) => {
-        return getItemTitle(a.item).localeCompare(getItemTitle(b.item));
+        return compareLocale(getItemTitle(a.item), getItemTitle(b.item));
       });
 
       return [...orderedItems, ...unorderedItems];
@@ -1793,7 +1793,7 @@ export class SyllabusManager {
         }
 
         // Then by title
-        return getItemTitle(a.item).localeCompare(getItemTitle(b.item));
+        return compareLocale(getItemTitle(a.item), getItemTitle(b.item));
       });
     }
   }
