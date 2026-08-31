@@ -58,6 +58,35 @@ function moveItemIntoCollection(
   }
 }
 
+function addItemToCollection(
+  item: Zotero.Item,
+  destination: Zotero.Collection,
+): void {
+  if (!item.getCollections().includes(destination.id)) {
+    item.addToCollection(destination.id);
+  }
+}
+
+/**
+ * One Extra destination is a reading-list import: move the item there.
+ * Several destinations are several syllabi: add to each, don't strip the others.
+ */
+export function placeItemInSyllabusDestinations(
+  item: Zotero.Item,
+  destinations: Zotero.Collection[],
+): void {
+  if (destinations.length === 0) {
+    return;
+  }
+  if (destinations.length === 1) {
+    moveItemIntoCollection(item, destinations[0]);
+    return;
+  }
+  for (const destination of destinations) {
+    addItemToCollection(item, destination);
+  }
+}
+
 function extraDestinationCollections(
   extraData: ItemSyllabusData,
 ): Zotero.Collection[] {
@@ -254,9 +283,7 @@ export async function absorbSyllabusExtraFromItems(
     if (destinations.length === 0) {
       continue;
     }
-    for (const destination of destinations) {
-      moveItemIntoCollection(item, destination);
-    }
+    placeItemInSyllabusDestinations(item, destinations);
 
     let absorbed = false;
     for (const collection of destinations) {
