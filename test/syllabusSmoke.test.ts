@@ -232,6 +232,56 @@ describe("syllabus smoke", function () {
     assert.include(book.getCollections(), folder.id);
   });
 
+  it("removing a class folder during ensure does not deadlock the write queue", async function () {
+    collection = await createCollection("Smoke Syllabus Folder Remove");
+    const book = await createBook(collection, "Folder Remove Book");
+    items.push(book);
+    const extraClassId = generateClassId();
+
+    await mutateCollectionDocument(
+      collection,
+      (document) => ({
+        ...document,
+        nomenclature: "week",
+        createSubcollections: true,
+        classes: {
+          [CLASS_ID]: { number: 1, title: "Keep", status: null },
+          [extraClassId]: { number: 2, title: "Drop", status: null },
+        },
+        items: {
+          [book.key]: [{ classId: CLASS_ID, priority: "essential" }],
+        },
+      }),
+      { createNote: "always" },
+    );
+
+    const saved = await Promise.race([
+      mutateCollectionDocument(
+        collection,
+        (document) => ({
+          ...document,
+          classes: {
+            [CLASS_ID]: document.classes?.[CLASS_ID] || {
+              number: 1,
+              title: "Keep",
+              status: null,
+            },
+          },
+          items: document.items,
+        }),
+      ),
+      new Promise<never>((_, reject) => {
+        setTimeout(
+          () => reject(new Error("write queue deadlock removing class folder")),
+          15_000,
+        );
+      }),
+    ]);
+
+    assert.property(saved.classes, CLASS_ID);
+    assert.notProperty(saved.classes, extraClassId);
+  });
+
   it("remaps class assignments onto the surviving item after a merge", async function () {
     collection = await createCollection("Smoke Syllabus Merge");
     const master = await createBook(collection, "Merge Master Book");

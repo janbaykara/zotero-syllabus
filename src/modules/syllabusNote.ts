@@ -27,6 +27,7 @@ import {
   getCachedItem,
 } from "../utils/cache";
 import { pruneStaleCollectionPrefs } from "../utils/collectionPrefs";
+import { createReentrantSerialQueue } from "../utils/serialQueue";
 import { collectionLibraryIsEditable, getAllCollections } from "../utils/zotero";
 import { getItemTitle, isSyllabusMemberItem, readItemNote } from "../utils/items";
 import { normalizeDoi, normalizeIsbn } from "../utils/identifiers";
@@ -101,8 +102,7 @@ type CachedDocument = {
 
 const documentCache = new Map<string, CachedDocument>();
 const collectionRefByNoteId = new Map<number, string>();
-const writeQueues = new Map<string, Promise<unknown>>();
-const writesInFlight = new Map<string, number>();
+const documentWrites = createReentrantSerialQueue();
 const documentListeners = new Set<() => void>();
 
 let indexBuilt = false;
@@ -1696,20 +1696,7 @@ export async function ensureSyllabusNoteForUser(
 }
 
 function isDocumentWriteInFlight(ref: string): boolean {
-  return (writesInFlight.get(ref) || 0) > 0;
-}
-
-function beginWrite(ref: string): void {
-  writesInFlight.set(ref, (writesInFlight.get(ref) || 0) + 1);
-}
-
-function endWrite(ref: string): void {
-  const depth = (writesInFlight.get(ref) || 1) - 1;
-  if (depth <= 0) {
-    writesInFlight.delete(ref);
-  } else {
-    writesInFlight.set(ref, depth);
-  }
+  return documentWrites.isInFlight(ref);
 }
 
 /** Pick up a note version that landed while mutateCollectionDocument was running. */
@@ -1743,23 +1730,7 @@ function reconcileCachedNoteWithLive(ref: string, note: Zotero.Item): void {
 }
 
 function enqueueWrite<T>(key: string, task: () => Promise<T>): Promise<T> {
-  const previous = writeQueues.get(key) || Promise.resolve();
-  const next = previous
-    .catch(() => undefined)
-    .then(() => {
-      beginWrite(key);
-      return Promise.resolve()
-        .then(task)
-        .finally(() => endWrite(key));
-    });
-  writeQueues.set(
-    key,
-    next.then(
-      () => undefined,
-      () => undefined,
-    ),
-  );
-  return next;
+  return documentWrites.enqueue(key, task);
 }
 
 export async function mutateCollectionDocument(
@@ -2055,9 +2026,17 @@ function handleManagedCollectionChange(
       if (!parent) {
         continue;
       }
-      const cached = documentCache.get(
-        collectionRefFromCollection(parent),
-      )?.document;
+      const parentRef = collectionRefFromCollection(parent);
+      if (
+        isClassFolderSyncHeld(parent.id) ||
+        isDocumentWriteInFlight(parentRef)
+      ) {
+        // We deleted this folder from ensureClassSubcollections. Nested
+        // mutateCollectionDocument would wait on the in-flight write.
+        forgetManagedSubcollection(collectionId);
+        continue;
+      }
+      const cached = documentCache.get(parentRef)?.document;
       if (!cached || !shouldCreateSubcollections(cached)) {
         forgetManagedSubcollection(collectionId);
         continue;
@@ -2167,8 +2146,7 @@ function handleNoteChange(item: Zotero.Item, event: string): void {
 export function initializeSyllabusNotes(): void {
   // Hot reload can leave a hung write promise in this map. Always drop it so
   // Add Class / Create assignment are not queued behind a dead lock.
-  writeQueues.clear();
-  writesInFlight.clear();
+  documentWrites.clear();
   if (notifierID) {
     indexReady = rebuildDocumentIndex().catch((error) => {
       ztoolkit.log("Error rebuilding syllabus note index:", error);
@@ -2311,8 +2289,7 @@ export function shutdownSyllabusNotes(): void {
   unregisterReadingSchedulePrefObserver();
   documentCache.clear();
   collectionRefByNoteId.clear();
-  writeQueues.clear();
-  writesInFlight.clear();
+  documentWrites.clear();
   documentListeners.clear();
   clearManagedSubcollections();
   clearManagedReadingScheduleCollection();
