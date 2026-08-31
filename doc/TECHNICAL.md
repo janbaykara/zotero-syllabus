@@ -2,6 +2,8 @@
 
 This document is for people changing the plugin. End-user behaviour is in [README.md](../README.md).
 
+Contents: [collection note](#collection-note) · [item merges](#item-merges) · [preferences](#preferences) · [Extra absorb](#item-extra-legacy-absorb) · [class folders](#class-subcollections) · [practical rules](#practical-rules) · [reading-list connectors](#reading-list-connectors) · [local development](#local-development) · [project structure](#project-structure) · [references](#references)
+
 A **syllabus is one Zotero collection** that you have turned into a syllabus (or that had a legacy `collectionMetadata` preference). Items in that collection are the membership. Everything else — classes, assignments, course metadata — is stored in a **collection note** so it syncs with the library. Plugin **prefs** hold UI chrome only (and leftover legacy data). **Class subcollections** are a derived, one-way view of the note.
 
 ```
@@ -117,3 +119,70 @@ Class-folder Syllabus view is a single-class page (same class renderer as the Re
 - Do not call `mutateCollectionDocument` from inside a class-folder ensure that already runs inside a write (deadlock on the per-collection write queue). Folder create/rename runs in the same write as the note persist; item membership runs after.
 - Do not absorb Extra, or create a syllabus note, on a collection whose parent already has a syllabus. Reading-list import (Talis, Leganto, KeyLinks, eReserve Plus, BLUEcloud) creates a new top-level collection instead.
 - When remapping item merges, never write the syllabus note on the merge/notifier call stack; queue like Extra absorb. Do not treat item `trash` as a merge unless `dc:replaces` names a live survivor.
+
+## Reading-list connectors
+
+On startup (Zotero 8+), the plugin installs Connector translators from [`addon/content/translators/`](../addon/content/translators/) via [`src/utils/translator.ts`](../src/utils/translator.ts) (`Zotero.Translators.save`, priority 320, type 4). Saving a list POSTs syllabus JSON to `/syllabus/setTalisMetadata` (alias `/syllabus/setReadingListMetadata`) and any downloaded files to `/syllabus/stashReadingListFile`. Items are tagged with `libraryCatalog` (`Talis Aspire`, `Ex Libris Leganto`, `KeyLinks`, `eReserve Plus`, or `BLUEcloud Course Lists`) plus Extra `syllabus: {…}`. `absorbSyllabusExtraFromItems` then moves them into a **new top-level collection** and attaches stashed PDFs/EPUBs before **Find Available PDFs**.
+
+| Translator file                    | `libraryCatalog`         |
+| ---------------------------------- | ------------------------ |
+| `tails-aspire-custom.js`           | `Talis Aspire`           |
+| `leganto-custom.js`                | `Ex Libris Leganto`      |
+| `keylinks-custom.js`               | `KeyLinks`               |
+| `ereserve-plus-custom.js`          | `eReserve Plus`          |
+| `bluecloud-course-lists-custom.js` | `BLUEcloud Course Lists` |
+
+Gated by `FEATURE_FLAG.TALIS_METADATA` in [`src/modules/featureFlags.ts`](../src/modules/featureFlags.ts). End-user behaviour is in the [README import section](../README.md#import-a-reading-list).
+
+## Local development
+
+Requires Zotero 7+ (8–10 recommended), Node.js LTS, Git, and pnpm. Built on the [Zotero Plugin Template](https://github.com/windingwind/zotero-plugin-template).
+
+```bash
+git clone https://github.com/janbaykara/zotero-syllabus.git
+cd zotero-syllabus
+pnpm install
+cp .env.example .env   # set your Zotero installation path
+pnpm start
+```
+
+| Command              | Purpose                                      |
+| -------------------- | -------------------------------------------- |
+| `pnpm start`         | Run in development mode                      |
+| `pnpm run build`     | Production build                             |
+| `pnpm test`          | Test suite (launches Zotero)                 |
+| `pnpm run lint:check` / `lint:fix` | Format and lint                    |
+| `pnpm run release`   | Build the `.xpi` and prepare a distribution  |
+
+## Project structure
+
+```
+src/
+├── addon.ts
+├── hooks.ts
+├── index.ts
+├── modules/
+│   ├── syllabus.ts              # Manager, view modes, columns, menus
+│   ├── syllabusNote.ts          # Collection note: parse/save + in-memory cache
+│   ├── classSubcollections.ts   # One-way class folders
+│   ├── migratePrefsToNotes.ts   # Legacy collectionMetadata → notes
+│   ├── SyllabusPage.tsx         # Syllabus (and class-folder) view
+│   └── ReadingSchedule.tsx
+└── utils/
+    ├── schemas.ts               # CollectionSyllabusDocument and related types
+    ├── prefs.ts                 # UI / plugin prefs
+    └── cache.ts
+```
+
+## References
+
+- `zotero-plugin-toolkit`
+  - README: https://github.com/windingwind/zotero-plugin-toolkit
+  - Docs: https://windingwind.github.io/zotero-plugin-toolkit/
+- Zotero 7 plugin development guide: https://gist.github.com/EwoutH/04c8df5a97963b5b46cec9f392ceb103#file-zotero_7_plugin_dev_guide-md
+- Zotero 7 plugin technical notes: https://www.zotero.org/support/dev/zotero_7_for_developers#plugin_changes
+- Zotero 10 plugin technical notes: https://www.zotero.org/support/dev/zotero_10_for_developers
+- https://www.zotero.org/support/kb/connector_zotero_unavailable
+- Translator code API: https://github.com/zotero/translators/blob/master/index.d.ts
+- Zotero server code: https://github.com/zotero/zotero/blob/47e6a0f7abaae0ad90c9f39c385fe24efd7071bf/chrome/content/zotero/xpcom/server/server_connector.js#L927
+- All Zotero icons: https://github.com/zotero/zotero/tree/b3ef63859d2dbeaf595f7482a4de3d586535c10e/chrome/skin/default/zotero/16/universal

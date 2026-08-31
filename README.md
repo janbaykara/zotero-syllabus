@@ -4,6 +4,8 @@
 
 A Zotero add-on / plugin that turns your collections into syllabi and course reading lists. Order your items by class, tag things as required / optional reading and pin course information.
 
+Changing the plugin? Architecture, storage, and local development are in **[doc/TECHNICAL.md](doc/TECHNICAL.md)**.
+
 ## How to install
 
 1. [Download the extension file (.xpi)](https://github.com/janbaykara/zotero-syllabus/releases/latest/download/zotero-syllabus.xpi).
@@ -159,90 +161,9 @@ How to import:
 3. Click the Connector button and save the page (choose all items if prompted).
 4. In Zotero, open the new top-level collection and switch to syllabus view.
 
-#### Supported platforms
+#### Try it without an LMS login
 
-| Platform                                                                                                    | When Connector save works                                                                                                    | Notes                                                                                                                                                                               |
-| ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **[Talis Aspire](https://www.talis.com)**                                                                   | List pages on `rl.talis.com` (and a few institutional Talis hosts such as Lincoln and Surrey) whose URL contains `/lists/`   | Public lists work without login. Single-item `/items/` pages can also be saved.                                                                                                     |
-| **[Ex Libris Leganto](https://exlibrisgroup.com/products/leganto-reading-list-management-system/)**         | Pages under `/leganto/` or `*.leganto.exlibrisgroup.com`, typically `/leganto/nui/lists/{id}`                                | Guest-published lists can be saved without signing in. Institution SSO is required when the list is not shared with “Anyone”.                                                       |
-| **[KeyLinks](https://kortext.com/keylinks/)**                                                               | `*.keylinks.org` list URLs (`/list/{id}` or `/new-ui/hierarchy/list/{id}`)                                                   | Uses the list JSON API. CLA / digitised files and full-text links are downloaded when your browser session can fetch them. Notes are skipped.                                       |
-| **[eReserve Plus](https://www.ereserve.com.au/)**                                                           | `ereserve` hosts, `/app/public_lists`, or an LMS LTI reading-list launch                                                     | Full import (including files) is most reliable from the **signed-in** student / LMS reading-list view. Public list pages are still useful for browsing and for Connector detection. |
-| **[BLUEcloud Course Lists](https://www.sirsidynix.com/bluecloud-course-lists/)** (SirsiDynix / CloudSource) | Student-view pages whose URL contains `courselists`, `bccl`, or `bluecloudlists`, or whose title is “BLUEcloud Course Lists” | Almost always embedded in Canvas, Blackboard, or Moodle via LTI. Open the list from the LMS; there is no widely published public permalink.                                         |
-
-Live example lists for developers (and anyone who wants to smoke-test without an LMS login) are in [Connector test URLs](#connector-test-urls).
-
-### Other features
-
-- **Assign an item multiple times** within a syllabus. Useful for breaking down larger readings into smaller chunks.
-- **Print to PDF** — the printer icon asks where to save a PDF of the syllabus, including a bibliography.
-- **Zotero Reading List compatibility**: if you have the [Zotero Reading List](https://github.com/Dominic-DallOsto/zotero-reading-list) plugin installed, reading status will be displayed in the syllabus view
-- **Customizable priorities** — Define your own priority levels with custom names and colors, or use the defaults (Essential, Recommended, Optional, Course Information).
-- **Customizable nomenclature** — Change the terminology used throughout (e.g., "week", "class", "session", "section") with automatic pluralization.
-
-## Development
-
-This plugin is built using the [Zotero Plugin Template](https://github.com/windingwind/zotero-plugin-template).
-
-A syllabus is an organised view of one Zotero collection. The collection’s items are the membership; class metadata, assignments, and related state live in a collection note (not on the items). Clone and build instructions are below. The storage model, class folders, and how item merges remap syllabus notes are in [doc/TECHNICAL.md](doc/TECHNICAL.md).
-
-### Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-### Requirements
-
-- Zotero 7 or later (8–10 recommended)
-- Node.js (LTS version)
-- Git
-- pnpm
-
-### Setup
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/janbaykara/zotero-syllabus.git
-   cd zotero-syllabus
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   pnpm install
-   ```
-
-3. Configure environment:
-
-   ```bash
-   cp .env.example .env
-   # Edit .env with your Zotero installation path
-   ```
-
-### Start development
-
-Run the plugin in development mode:
-
-```bash
-pnpm start
-```
-
-### Reading-list connectors (developers)
-
-On startup (Zotero 8+), the plugin installs Connector translators from `addon/content/translators/` via `src/utils/translator.ts` (`Zotero.Translators.save`, priority 320, type 4). Saving a list POSTs syllabus JSON to `/syllabus/setTalisMetadata` (alias `/syllabus/setReadingListMetadata`) and any downloaded files to `/syllabus/stashReadingListFile`. Items are tagged with `libraryCatalog` (`Talis Aspire`, `Ex Libris Leganto`, `KeyLinks`, `eReserve Plus`, or `BLUEcloud Course Lists`) plus Extra `syllabus: {…}`. `absorbSyllabusExtraFromItems` then moves them into a **new top-level collection** and attaches stashed PDFs/EPUBs before **Find Available PDFs**.
-
-| Translator file                    | `libraryCatalog`         |
-| ---------------------------------- | ------------------------ |
-| `tails-aspire-custom.js`           | `Talis Aspire`           |
-| `leganto-custom.js`                | `Ex Libris Leganto`      |
-| `keylinks-custom.js`               | `KeyLinks`               |
-| `ereserve-plus-custom.js`          | `eReserve Plus`          |
-| `bluecloud-course-lists-custom.js` | `BLUEcloud Course Lists` |
-
-Gated by `FEATURE_FLAG.TALIS_METADATA` in `src/modules/featureFlags.ts`. End-user behaviour is in [Import a reading list](#import-a-reading-list).
-
-### Connector test URLs
-
-With the [Zotero Connector](https://www.zotero.org/download/connectors) installed and this plugin loaded (`pnpm start`), open a list below in the browser and save it. You must already be able to view the list (including SSO-gated lists). These are live public/guest examples last checked in August 2026 — institutions can unpublish lists at any time.
+These are live public/guest lists last checked in August 2026 — institutions can unpublish them at any time. You must already be able to view the list in the browser. With the Connector and this plugin installed, open a list and save it.
 
 | Platform               | Test list                                                                                                                                                                                                                                                                                                                                         |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -254,78 +175,33 @@ With the [Zotero Connector](https://www.zotero.org/download/connectors) installe
 
 eReserve Plus file download is most reliable from the signed-in LMS/student reading-list view (not only the public Vue page). Leganto’s public catalogue is also a useful entry point: [Aberdeen Find Lists](https://abdn.leganto.exlibrisgroup.com/leganto/public/44ABE_INST/searchlists).
 
-### Build
+#### Supported platforms
 
-Build the plugin for production:
+| Platform                                                                                                    | When Connector save works                                                                                                    | Notes                                                                                                                                                                               |
+| ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[Talis Aspire](https://www.talis.com)**                                                                   | List pages on `rl.talis.com` (and a few institutional Talis hosts such as Lincoln and Surrey) whose URL contains `/lists/`   | Public lists work without login. Single-item `/items/` pages can also be saved.                                                                                                     |
+| **[Ex Libris Leganto](https://exlibrisgroup.com/products/leganto-reading-list-management-system/)**         | Pages under `/leganto/` or `*.leganto.exlibrisgroup.com`, typically `/leganto/nui/lists/{id}`                                | Guest-published lists can be saved without signing in. Institution SSO is required when the list is not shared with “Anyone”.                                                       |
+| **[KeyLinks](https://kortext.com/keylinks/)**                                                               | `*.keylinks.org` list URLs (`/list/{id}` or `/new-ui/hierarchy/list/{id}`)                                                   | Uses the list JSON API. CLA / digitised files and full-text links are downloaded when your browser session can fetch them. Notes are skipped.                                       |
+| **[eReserve Plus](https://www.ereserve.com.au/)**                                                           | `ereserve` hosts, `/app/public_lists`, or an LMS LTI reading-list launch                                                     | Full import (including files) is most reliable from the **signed-in** student / LMS reading-list view. Public list pages are still useful for browsing and for Connector detection. |
+| **[BLUEcloud Course Lists](https://www.sirsidynix.com/bluecloud-course-lists/)** (SirsiDynix / CloudSource) | Student-view pages whose URL contains `courselists`, `bccl`, or `bluecloudlists`, or whose title is “BLUEcloud Course Lists” | Almost always embedded in Canvas, Blackboard, or Moodle via LTI. Open the list from the LMS; there is no widely published public permalink.                                         |
 
-```bash
-pnpm run build
-```
+### Other features
 
-### Release
+- **Assign an item multiple times** within a syllabus. Useful for breaking down larger readings into smaller chunks.
+- **Print to PDF** — the printer icon asks where to save a PDF of the syllabus, including a bibliography.
+- **Zotero Reading List compatibility**: if you have the [Zotero Reading List](https://github.com/Dominic-DallOsto/zotero-reading-list) plugin installed, reading status will be displayed in the syllabus view
+- **Customizable priorities** — Define your own priority levels with custom names and colors, or use the defaults (Essential, Recommended, Optional, Course Information).
+- **Customizable nomenclature** — Change the terminology used throughout (e.g., "week", "class", "session", "section") with automatic pluralization.
 
-Create a new release:
+## Development
 
-```bash
-pnpm run release
-```
+Contributions are welcome — please open a Pull Request.
 
-This will build the plugin, create the .xpi file, and prepare it for distribution.
+How the plugin stores syllabi, handles item merges, class folders, reading-list translators, and the rest of the architecture is in **[doc/TECHNICAL.md](doc/TECHNICAL.md)**. That file also has build, test, lint, and release commands.
 
-### Testing
+To run locally: clone the repo, `pnpm install`, copy `.env.example` to `.env` (set your Zotero path), then `pnpm start`. Requires Zotero 7+ (8–10 recommended), Node.js LTS, Git, and pnpm.
 
-Run the test suite:
-
-```bash
-pnpm test
-```
-
-### Code Quality
-
-Check code quality:
-
-```bash
-pnpm run lint:check
-```
-
-Fix code quality issues:
-
-```bash
-pnpm run lint:fix
-```
-
-### Project Structure
-
-```
-src/
-├── addon.ts
-├── hooks.ts
-├── index.ts
-├── modules/
-│   ├── syllabus.ts              # Manager, view modes, columns, menus
-│   ├── syllabusNote.ts          # Collection note: parse/save + in-memory cache
-│   ├── classSubcollections.ts   # One-way class folders
-│   ├── migratePrefsToNotes.ts   # Legacy collectionMetadata → notes
-│   ├── SyllabusPage.tsx         # Syllabus (and class-folder) view
-│   └── ReadingSchedule.tsx
-└── utils/
-    ├── schemas.ts               # CollectionSyllabusDocument and related types
-    ├── prefs.ts                 # UI / plugin prefs
-    └── cache.ts
-```
-
-### Technical references
-
-- `zotero-plugin-toolkit`
-  - README: https://github.com/windingwind/zotero-plugin-toolkit
-  - Docs: https://windingwind.github.io/zotero-plugin-toolkit/
-- Zotero 7 plugin development guide: https://gist.github.com/EwoutH/04c8df5a97963b5b46cec9f392ceb103#file-zotero_7_plugin_dev_guide-md
-- Zotero 7 plugin technical notes: https://www.zotero.org/support/dev/zotero_7_for_developers#plugin_changes
-- Zotero 10 plugin technical notes: https://www.zotero.org/support/dev/zotero_10_for_developers
-- https://www.zotero.org/support/kb/connector_zotero_unavailable
-- Translator code API: https://github.com/zotero/translators/blob/master/index.d.ts
-- Zotero server code: https://github.com/zotero/zotero/blob/47e6a0f7abaae0ad90c9f39c385fe24efd7071bf/chrome/content/zotero/xpcom/server/server_connector.js#L927
-- All Zotero icons: https://github.com/zotero/zotero/tree/b3ef63859d2dbeaf595f7482a4de3d586535c10e/chrome/skin/default/zotero/16/universal
+This plugin is built using the [Zotero Plugin Template](https://github.com/windingwind/zotero-plugin-template).
 
 ## Acknowledgements
 
@@ -338,3 +214,5 @@ Thanks to the following:
 - The Zotero plugin toolkit community, including [zotero-plugin-template](https://github.com/windingwind/zotero-plugin-template) and [zotero-plugin-toolkit](https://github.com/windingwind/zotero-plugin-toolkit).
 - The authors of the open-source libraries this plugin relies on, among them [Preact](https://preactjs.com), [React](https://react.dev), [Zod](https://zod.dev), [Tailwind CSS](https://tailwindcss.com), and [esbuild](https://esbuild.github.io).
 - Early users, for a steer and encouraging words.
+
+Changing the plugin? See **[doc/TECHNICAL.md](doc/TECHNICAL.md)**.
