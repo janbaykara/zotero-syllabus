@@ -1,5 +1,4 @@
 import { assert } from "chai";
-import { ExtraFieldTool } from "zotero-plugin-toolkit";
 import {
   absorbSyllabusExtraFromItems,
   placeItemInSyllabusDestinations,
@@ -10,8 +9,7 @@ import {
   mutateCollectionDocument,
   peekPersistedSyllabusDocument,
 } from "../src/modules/syllabusNote";
-
-const extraFieldTool = new ExtraFieldTool();
+import { isSyllabusMemberItem } from "../src/utils/items";
 
 async function createCollection(name: string): Promise<Zotero.Collection> {
   const collection = new Zotero.Collection();
@@ -141,18 +139,25 @@ describe("absorbSyllabusExtraFromItems", function () {
         },
       ],
     };
-    await extraFieldTool.setExtraField(
-      item,
+    item.setField(
+      "extra",
+      `${SYLLABUS_EXTRA_KEY}: ${JSON.stringify(extraPayload)}`,
+    );
+    await item.saveTx();
+    assert.include(
+      String(item.getField("extra") || ""),
       SYLLABUS_EXTRA_KEY,
-      JSON.stringify(extraPayload),
+      "Extra should be present before trash",
     );
 
     item.deleted = true;
     await item.saveTx();
+    assert.isFalse(isSyllabusMemberItem(item));
+    const extraAfterTrash = String(item.getField("extra") || "");
 
     await absorbSyllabusExtraFromItems([item]);
 
-    assert.include(String(item.getField("extra") || ""), SYLLABUS_EXTRA_KEY);
+    assert.equal(String(item.getField("extra") || ""), extraAfterTrash);
     const document = peekPersistedSyllabusDocument(collection);
     assert.notProperty(document?.items || {}, item.key);
   });
