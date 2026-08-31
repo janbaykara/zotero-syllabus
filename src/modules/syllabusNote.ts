@@ -199,10 +199,29 @@ export function metadataFromDocument(
 export function getHydratedItemAssignments(
   document: CollectionSyllabusDocument,
   itemKey: string,
+  item?: Zotero.Item | null,
 ): ItemSyllabusAssignment[] {
-  return (document.items[itemKey] || []).map((assignment) =>
-    hydrateAssignment(assignment, document.classes),
-  );
+  const keys: string[] = [itemKey];
+  if (item) {
+    for (const oldKey of replacedItemKeysFromItem(item)) {
+      if (oldKey && !keys.includes(oldKey)) {
+        keys.push(oldKey);
+      }
+    }
+  }
+  const rows: ItemSyllabusAssignment[] = [];
+  const seen = new Set<string>();
+  for (const key of keys) {
+    for (const assignment of document.items[key] || []) {
+      const id = assignment.id || `${key}:${rows.length}`;
+      if (seen.has(id)) {
+        continue;
+      }
+      seen.add(id);
+      rows.push(hydrateAssignment(assignment, document.classes));
+    }
+  }
+  return rows;
 }
 
 function lookupIdsFromItem(item: Zotero.Item): ItemLookupIds {
@@ -714,6 +733,71 @@ function collectionFromCacheRef(ref: string): Zotero.Collection | null {
   );
 }
 
+function patchCachedDocumentsWithKeyMap(
+  keyMap: Record<string, string>,
+  libraryID: number,
+): void {
+  let changed = false;
+  for (const [ref, entry] of documentCache.entries()) {
+    const map = selectItemKeyRemapForDocument(
+      ref,
+      libraryID,
+      Object.keys(entry.document.items || {}),
+      keyMap,
+    );
+    if (!map) {
+      continue;
+    }
+    const remapped = remapDocumentItemKeysByMap(entry.document, map);
+    if (remapped === entry.document) {
+      continue;
+    }
+    entry.document = remapped;
+    entry.snapshot = snapshotOf(remapped);
+    changed = true;
+  }
+  if (changed) {
+    documentGeneration++;
+    notifyDocumentListeners();
+  }
+}
+
+function patchCachedDocumentsFromModifyIds(ids: number[]): void {
+  const keyMapsByLibrary = new Map<number, Record<string, string>>();
+  for (const id of ids) {
+    let item: Zotero.Item | false | undefined;
+    try {
+      item = Zotero.Items.get(id) || getCachedItem(id);
+    } catch {
+      item = getCachedItem(id);
+    }
+    if (!item) {
+      continue;
+    }
+    try {
+      if (item.deleted || item.isNote() || !item.isRegularItem()) {
+        continue;
+      }
+    } catch {
+      continue;
+    }
+    for (const oldKey of replacedItemKeysFromItem(item)) {
+      if (!oldKey || oldKey === item.key) {
+        continue;
+      }
+      if (!anyCachedDocumentHasItemKey(oldKey, item.libraryID)) {
+        continue;
+      }
+      const map = keyMapsByLibrary.get(item.libraryID) || {};
+      map[oldKey] = item.key;
+      keyMapsByLibrary.set(item.libraryID, map);
+    }
+  }
+  for (const [libraryID, keyMap] of keyMapsByLibrary) {
+    patchCachedDocumentsWithKeyMap(keyMap, libraryID);
+  }
+}
+
 async function applyItemKeyRemapToCachedDocuments(
   keyMap: Record<string, string>,
   libraryID: number,
@@ -725,27 +809,37 @@ async function applyItemKeyRemapToCachedDocuments(
     return;
   }
 
+  const persist: Zotero.Collection[] = [];
+  const seen = new Set<number>();
   for (const [ref, entry] of documentCache.entries()) {
-    const map = selectItemKeyRemapForDocument(
-      ref,
-      libraryID,
-      Object.keys(entry.document.items || {}),
-      keyMap,
+    if (libraryIDFromDocumentCacheRef(ref) !== libraryID) {
+      continue;
+    }
+    const keys = new Set(Object.keys(entry.document.items || {}));
+    const involved = remaps.some(
+      ([oldKey, newKey]) => keys.has(oldKey) || keys.has(newKey),
     );
-    if (!map) {
+    if (!involved) {
       continue;
     }
     const collection = collectionFromCacheRef(ref);
-    if (!collection || collection.libraryID !== libraryID) {
+    if (
+      !collection ||
+      collection.libraryID !== libraryID ||
+      seen.has(collection.id)
+    ) {
       continue;
     }
-    const remapped = remapDocumentItemKeysByMap(entry.document, map);
-    if (remapped === entry.document) {
-      continue;
-    }
+    seen.add(collection.id);
+    persist.push(collection);
+  }
+
+  patchCachedDocumentsWithKeyMap(keyMap, libraryID);
+
+  for (const collection of persist) {
     try {
       await mutateCollectionDocument(collection, (document) =>
-        remapDocumentItemKeysByMap(document, map),
+        remapDocumentItemKeysByMap(document, keyMap),
       );
     } catch (error) {
       ztoolkit.log(
@@ -2332,6 +2426,9 @@ export function initializeSyllabusNotes(): void {
         if (event === "trash" || event === "modify") {
           const queuedIds = [...numericIds];
           const queuedEvent = event;
+          if (event === "modify") {
+            patchCachedDocumentsFromModifyIds(queuedIds);
+          }
           afterDatabaseTransaction()
             .then(() => remapMergedKeysFromItemIds(queuedIds, queuedEvent))
             .catch((error) => {

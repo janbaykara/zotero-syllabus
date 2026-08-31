@@ -63,7 +63,7 @@ export function useSyllabi(): SyllabusData[] {
             }
             return {
               zoteroItem: item,
-              assignments: getHydratedItemAssignments(document, item.key),
+              assignments: getHydratedItemAssignments(document, item.key, item),
             };
           })
           .filter(Boolean) as Array<{

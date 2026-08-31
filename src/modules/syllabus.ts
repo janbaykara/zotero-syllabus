@@ -1453,6 +1453,7 @@ export class SyllabusManager {
       const assignments = getHydratedItemAssignments(
         getCollectionDocument(collection),
         item.key,
+        item,
       );
       if (assignments.length > 0) {
         data[collectionKeyStr] = assignments;
@@ -1469,6 +1470,7 @@ export class SyllabusManager {
     return getHydratedItemAssignments(
       getCollectionDocument(collectionId),
       item.key,
+      item,
     );
   }
 

@@ -3,6 +3,7 @@ import { CollectionSyllabusDocumentSchema } from "../src/utils/schemas";
 import {
   documentForWrite,
   emptyCollectionDocument,
+  getHydratedItemAssignments,
   libraryIDFromDocumentCacheRef,
   omitDocumentItemKeys,
   remapDocumentItemKeys,
@@ -77,6 +78,37 @@ describe("remapDocumentItemKeysByMap", function () {
     assert.isUndefined(result.items.oldKeyA);
     assert.equal(result.itemIndex?.keepKey?.title, "Stays");
     assert.isUndefined(result.itemIndex?.oldKeyA);
+  });
+});
+
+describe("getHydratedItemAssignments", function () {
+  it("reads rows from keys the surviving item replaces", function () {
+    const document = sampleDocument();
+    const item = {
+      key: "newKey",
+      getRelationsByPredicate: () => [
+        "http://zotero.org/users/0/items/oldKeyA",
+      ],
+    } as unknown as Zotero.Item;
+    const rows = getHydratedItemAssignments(document, "newKey", item);
+    assert.lengthOf(rows, 1);
+    assert.equal(rows[0]?.id, "a1");
+    assert.equal(rows[0]?.classId, "class-1");
+  });
+
+  it("does not duplicate rows after the note has been remapped", function () {
+    const remapped = remapDocumentItemKeysByMap(sampleDocument(), {
+      oldKeyA: "newKey",
+    });
+    const item = {
+      key: "newKey",
+      getRelationsByPredicate: () => [
+        "http://zotero.org/users/0/items/oldKeyA",
+      ],
+    } as unknown as Zotero.Item;
+    const rows = getHydratedItemAssignments(remapped, "newKey", item);
+    assert.lengthOf(rows, 1);
+    assert.equal(rows[0]?.id, "a1");
   });
 });
 

@@ -41,6 +41,7 @@ export function useZoteroItemAssignments(
     return getHydratedItemAssignments(
       getCollectionDocument(collectionId),
       item.key,
+      item,
     );
   }, [snapshot, itemId, collectionId]);
 }

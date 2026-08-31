@@ -118,6 +118,7 @@ export function useZoteroCollectionItems(
         const assignments = getHydratedItemAssignments(
           document,
           zoteroItem.key,
+          zoteroItem,
         );
         return {
           zoteroItem,
