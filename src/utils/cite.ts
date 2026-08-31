@@ -1,3 +1,5 @@
+import { getItemTitle } from "./items";
+
 /**
  * Get all available CSL styles
  * @returns Array of style objects with name and url
@@ -249,7 +251,7 @@ export function buildFallbackBibliographicReference(item: Zotero.Item): string {
     .map((creator) => creator.lastName)
     .join(", ");
   const date = item.getField("date");
-  const title = item.getField("title");
+  const title = getItemTitle(item);
   const publicationName = item.getField("publicationTitle");
 
   const citationParts: string[] = [];

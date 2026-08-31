@@ -27,6 +27,7 @@ import {
   getCachedItem,
 } from "../utils/cache";
 import { getAllCollections } from "../utils/zotero";
+import { getItemTitle } from "../utils/items";
 import { getPrefValue } from "../utils/prefs";
 import {
   classFolderNameMatches,
@@ -205,7 +206,7 @@ export function buildItemIndex(
     const doi = String(item.getField("DOI") || "").trim();
     const isbn = String(item.getField("ISBN") || "").trim();
     index[itemKey] = {
-      title: item.getDisplayTitle() || "",
+      title: getItemTitle(item),
       ...(doi ? { doi } : {}),
       ...(isbn ? { isbn } : {}),
     };
@@ -236,7 +237,7 @@ export function remapDocumentItemKeys(
     const isbn = String(item.getField("ISBN") || "")
       .replace(/[-\s]/g, "")
       .toLowerCase();
-    const title = (item.getDisplayTitle() || "").trim().toLowerCase();
+    const title = getItemTitle(item).toLowerCase();
     if (doi) {
       byDoi.set(doi, item.key);
     }

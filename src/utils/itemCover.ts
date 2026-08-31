@@ -1,4 +1,5 @@
 import { getCachedItem } from "./cache";
+import { getItemTitle } from "./items";
 import {
   youtubeThumbnailUrl,
   youtubeUrlFromItem,
@@ -139,11 +140,7 @@ function hashString(value: string): number {
 }
 
 function itemTitle(item: Zotero.Item): string {
-  try {
-    return (item.getField("title") || "").trim() || "Untitled";
-  } catch {
-    return "Untitled";
-  }
+  return getItemTitle(item) || "Untitled";
 }
 
 function itemCreator(item: Zotero.Item): string {

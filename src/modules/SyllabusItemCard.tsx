@@ -21,6 +21,7 @@ import {
   getReadStatusMetadata,
 } from "../zotero-reading-list/compat";
 import { getReadingTimeSync, formatReadingTime } from "../utils/readingTime";
+import { getItemTitle } from "../utils/items";
 import { YoutubePlayer } from "./YoutubePlayer";
 
 export function SyllabusItemCard({
@@ -102,7 +103,7 @@ export function SyllabusItemCard({
   // const is
 
   const classInstruction = assignment?.classInstruction || "";
-  const title = item.getField("title") || "Untitled";
+  const title = getItemTitle(item) || "Untitled";
   const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(item.itemType);
   const creator = item.getCreators().length > 0 ? item.getCreator(0) : null;
   const author =

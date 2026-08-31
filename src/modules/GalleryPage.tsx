@@ -25,7 +25,11 @@ import {
 } from "lucide-preact";
 import { renderComponent } from "../utils/react";
 import { isZotero8OrLater } from "../utils/zotero";
-import { openItemBestAttachment, sortItems } from "../utils/items";
+import {
+  getItemTitle,
+  openItemBestAttachment,
+  sortItems,
+} from "../utils/items";
 import {
   faviconUrlForHostname,
   getItemHostname,
@@ -917,13 +921,7 @@ function GalleryTile({
   onClick: (item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) => void;
   onDoubleClick: (item: Zotero.Item) => void;
 }) {
-  const title = useMemo(() => {
-    try {
-      return item.getField("title") || "Untitled";
-    } catch {
-      return "Untitled";
-    }
-  }, [item]);
+  const title = useMemo(() => getItemTitle(item) || "Untitled", [item]);
   const creator = useMemo(() => {
     try {
       return (item.firstCreator || item.getField("firstCreator") || "").trim();
@@ -1221,6 +1219,9 @@ function GalleryCover({
 
 function itemField(item: Zotero.Item, field: string): string {
   try {
+    if (field === "title") {
+      return getItemTitle(item);
+    }
     return String(item.getField(field as any) || "").trim();
   } catch {
     return "";

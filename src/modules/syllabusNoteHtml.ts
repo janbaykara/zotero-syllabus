@@ -8,6 +8,7 @@ import {
   type ItemSyllabusAssignment,
 } from "../utils/schemas";
 import { generateBibliographicReference } from "../utils/cite";
+import { getItemTitle } from "../utils/items";
 import { classSubcollectionName } from "./classSubcollections";
 import { SYLLABUS_NOTE_PRE_ATTR, SYLLABUS_NOTE_TITLE } from "./syllabusNote";
 import { proseToHtml } from "../utils/prose";
@@ -67,7 +68,7 @@ function itemTitlesByKey(
   }
   try {
     for (const item of collection.getChildItems()) {
-      titles.set(item.key, item.getDisplayTitle() || "");
+      titles.set(item.key, getItemTitle(item));
     }
   } catch {
     // Collection children are display-only; missing titles still show keys.

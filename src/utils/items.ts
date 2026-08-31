@@ -1,15 +1,21 @@
 import { getCachedItem } from "./cache";
 
-function itemTitle(item: Zotero.Item): string {
+/**
+ * Display title for any item type. `getField("title")` is empty for types that
+ * map title to another field (case → caseName, statute → nameOfAct, email → subject).
+ */
+export function getItemTitle(item: Zotero.Item): string {
   try {
-    return item.getField("title") || "";
+    return String(item.getDisplayTitle() || "").trim();
   } catch {
     return "";
   }
 }
 
 export function sortItemsByTitle(items: Zotero.Item[]): Zotero.Item[] {
-  return [...items].sort((a, b) => itemTitle(a).localeCompare(itemTitle(b)));
+  return [...items].sort((a, b) =>
+    getItemTitle(a).localeCompare(getItemTitle(b)),
+  );
 }
 
 /** Publication date as a timestamp. Missing dates are 0. */
@@ -62,14 +68,14 @@ export function sortItemsByDate(items: Zotero.Item[]): Zotero.Item[] {
       if (added !== 0) {
         return added;
       }
-      return itemTitle(a).localeCompare(itemTitle(b));
+      return getItemTitle(a).localeCompare(getItemTitle(b));
     }
     if (dateA === 0) return 1;
     if (dateB === 0) return -1;
     if (dateA !== dateB) {
       return dateB - dateA;
     }
-    return itemTitle(a).localeCompare(itemTitle(b));
+    return getItemTitle(a).localeCompare(getItemTitle(b));
   });
 }
 

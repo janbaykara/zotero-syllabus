@@ -32,6 +32,7 @@ import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import { useZoteroReaderMode } from "./react-zotero-sync/readerMode";
 import { isZotero8OrLater } from "../utils/zotero";
+import { getItemTitle } from "../utils/items";
 import slugify from "slugify";
 import { SettingsPage } from "./SettingsPage";
 import { formatDate } from "date-fns";
@@ -1041,9 +1042,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
               if (assignmentA && assignmentB) {
                 const itemA = assignmentA.zoteroItem;
                 const itemB = assignmentB.zoteroItem;
-                const titleA = itemA.getField("title") || "";
-                const titleB = itemB.getField("title") || "";
-                return titleA.localeCompare(titleB);
+                return getItemTitle(itemA).localeCompare(getItemTitle(itemB));
               }
               return 0;
             });
@@ -1169,9 +1168,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           if (assignmentA && assignmentB) {
             const itemA = assignmentA.zoteroItem;
             const itemB = assignmentB.zoteroItem;
-            const titleA = itemA.getField("title") || "";
-            const titleB = itemB.getField("title") || "";
-            return titleA.localeCompare(titleB);
+            return getItemTitle(itemA).localeCompare(getItemTitle(itemB));
           }
           return 0;
         });

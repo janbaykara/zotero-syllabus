@@ -64,6 +64,7 @@ import {
   ensureSyllabusNoteForUser,
   whenSyllabusNotesReady,
 } from "./syllabusNote";
+import { getItemTitle } from "../utils/items";
 import { migrateLegacyCollectionMetadataPrefs } from "./migratePrefsToNotes";
 import {
   getReadingScheduleCollectionContext,
@@ -1741,9 +1742,7 @@ export class SyllabusManager {
 
       // Sort unordered items by title only (manual order takes precedence, so no priority sorting)
       unorderedItems.sort((a, b) => {
-        const titleA = a.item.getField("title") || "";
-        const titleB = b.item.getField("title") || "";
-        return titleA.localeCompare(titleB);
+        return getItemTitle(a.item).localeCompare(getItemTitle(b.item));
       });
 
       return [...orderedItems, ...unorderedItems];
@@ -1773,9 +1772,7 @@ export class SyllabusManager {
         }
 
         // Then by title
-        const titleA = a.item.getField("title") || "";
-        const titleB = b.item.getField("title") || "";
-        return titleA.localeCompare(titleB);
+        return getItemTitle(a.item).localeCompare(getItemTitle(b.item));
       });
     }
   }
