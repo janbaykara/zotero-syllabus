@@ -146,13 +146,13 @@ cp .env.example .env   # set your Zotero installation path
 pnpm start
 ```
 
-| Command              | Purpose                                      |
-| -------------------- | -------------------------------------------- |
-| `pnpm start`         | Run in development mode                      |
-| `pnpm run build`     | Production build                             |
-| `pnpm test`          | Test suite (launches Zotero)                 |
-| `pnpm run lint:check` / `lint:fix` | Format and lint                    |
-| `pnpm run release`   | Build the `.xpi` and prepare a distribution  |
+| Command                            | Purpose                                     |
+| ---------------------------------- | ------------------------------------------- |
+| `pnpm start`                       | Run in development mode                     |
+| `pnpm run build`                   | Production build                            |
+| `pnpm test`                        | Test suite (launches Zotero)                |
+| `pnpm run lint:check` / `lint:fix` | Format and lint                             |
+| `pnpm run release`                 | Build the `.xpi` and prepare a distribution |
 
 ## Project structure
 
