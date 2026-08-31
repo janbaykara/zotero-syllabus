@@ -2,7 +2,9 @@ import { assert } from "chai";
 import {
   buildReadingScheduleDesiredByLibrary,
   buildReadingScheduleDesiredItems,
+  dateKeyFromFolderName,
   parseReadingScheduleRootKeys,
+  planDateFolderReconcile,
 } from "../src/modules/readingScheduleCollection";
 import { CollectionSyllabusDocumentSchema } from "../src/utils/schemas";
 import { toLocalDateKey } from "../src/utils/dates";
@@ -24,6 +26,43 @@ function datedDocument(itemKey: string) {
     },
   });
 }
+
+describe("dateKeyFromFolderName", function () {
+  it("reads the calendar day from spaced, dashed, and tight names", function () {
+    assert.equal(
+      dateKeyFromFolderName("2026-09-01 — Monday 1st Sep"),
+      "2026-09-01",
+    );
+    assert.equal(
+      dateKeyFromFolderName("2026-09-01 - Monday 1st Sep"),
+      "2026-09-01",
+    );
+    assert.equal(dateKeyFromFolderName("2026-09-01Monday"), "2026-09-01");
+    assert.isNull(dateKeyFromFolderName("Week 1"));
+  });
+});
+
+describe("planDateFolderReconcile", function () {
+  it("keeps existing dates and only creates or erases the delta", function () {
+    const plan = planDateFolderReconcile(
+      ["2026-09-01", "2026-09-02", "2026-09-03"],
+      ["2026-09-02", "2026-09-03", "2026-09-04"],
+    );
+    assert.deepEqual(plan.keep.sort(), ["2026-09-02", "2026-09-03"]);
+    assert.deepEqual(plan.create, ["2026-09-04"]);
+    assert.deepEqual(plan.erase, ["2026-09-01"]);
+  });
+
+  it("is a no-op when the date set is unchanged", function () {
+    const plan = planDateFolderReconcile(
+      ["2026-09-01", "2026-09-02"],
+      ["2026-09-02", "2026-09-01"],
+    );
+    assert.deepEqual(plan.keep.sort(), ["2026-09-01", "2026-09-02"]);
+    assert.deepEqual(plan.create, []);
+    assert.deepEqual(plan.erase, []);
+  });
+});
 
 describe("parseReadingScheduleRootKeys", function () {
   it("treats a bare key as My Library", function () {

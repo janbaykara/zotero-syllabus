@@ -12,7 +12,10 @@ import {
 import { getCachedCollectionById } from "../utils/cache";
 import { formatReadingDate, parseReadingDate } from "../utils/dates";
 import { getAppLocale } from "../utils/locale";
-import { collectionLibraryIsEditable } from "../utils/zotero";
+import {
+  collectionLibraryIsEditable,
+  itemBelongsInCollection,
+} from "../utils/zotero";
 import { collectionHasSyllabusNote } from "./syllabusNote";
 
 const COLLECTION_NAME_MAX = 255;
@@ -536,6 +539,9 @@ async function syncItemsForChild(
     if (!item || !item.isRegularItem() || item.deleted) {
       continue;
     }
+    if (!itemBelongsInCollection(item, child)) {
+      continue;
+    }
     desiredIds.push(item.id);
   }
   const desiredIdSet = new Set(desiredIds);
@@ -588,7 +594,7 @@ export async function syncClassSubcollectionItems(
 
   for (const [classId, meta] of Object.entries(document.classes || {})) {
     const child = childByKey(parent, meta?.subcollectionKey);
-    if (!child) {
+    if (!child || child.libraryID !== parent.libraryID) {
       continue;
     }
     rememberManaged(child, parent);

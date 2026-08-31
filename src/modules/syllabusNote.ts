@@ -83,6 +83,7 @@ import {
   parseSyllabusNote,
   serializeSyllabusNote,
   serializeSyllabusNoteFallback,
+  withUnrecognizedDocumentFields,
 } from "./syllabusNoteHtml";
 
 export { absorbSyllabusExtraFromItems } from "./syllabusExtra";
@@ -1752,6 +1753,7 @@ async function rebuildDocumentIndex(): Promise<void> {
   try {
     await enqueueReadingScheduleCollectionSync(
       collectDesiredReadingScheduleItems,
+      { immediate: true },
     );
   } catch (error) {
     ztoolkit.log("Error syncing reading schedule collection:", error);
@@ -2011,30 +2013,36 @@ export async function mutateCollectionDocument(
       if (!created) {
         try {
           const existingHtml = readItemNote(note);
-          if (isUnsupportedFutureNote(existingHtml)) {
+          fromNote = parseSyllabusNote(existingHtml);
+          if (!fromNote && isUnsupportedFutureNote(existingHtml)) {
             ztoolkit.log(
-              "Refusing to overwrite a newer syllabus note format",
+              "Refusing to overwrite a newer syllabus note that this plugin cannot parse",
               collection.id,
             );
             return (
               documentCache.get(ref)?.document || emptyCollectionDocument()
             );
           }
-          fromNote = parseSyllabusNote(existingHtml);
         } catch (error) {
           ztoolkit.log("Error reading existing syllabus note:", error);
         }
       }
       const current = documentForWrite(fromNote, cached?.document);
       const mutated = persistDocument(mutator(cloneDocument(current)));
-      const nextResult = CollectionSyllabusDocumentSchema.safeParse(mutated);
+      const nextResult = CollectionSyllabusDocumentSchema.safeParse({
+        ...mutated,
+        version: COLLECTION_SYLLABUS_DOCUMENT_VERSION,
+      });
       if (!nextResult.success) {
         ztoolkit.log(
           "Invalid syllabus document after mutation:",
           nextResult.error,
         );
       }
-      let next = nextResult.success ? nextResult.data : mutated;
+      let next = withUnrecognizedDocumentFields(
+        nextResult.success ? nextResult.data : mutated,
+        current,
+      );
       if (created && next.createSubcollections === undefined) {
         next = { ...next, createSubcollections: false };
       }
@@ -2045,6 +2053,9 @@ export async function mutateCollectionDocument(
         );
         if (ensured) {
           next = ensured;
+          if (classSubcollectionKeysChanged(current, ensured)) {
+            refreshManagedCollectionTrees();
+          }
         }
         rememberManagedSubcollections(collection, next);
         setCacheEntry(ref, note.id || null, note.version || 0, next);
@@ -2061,7 +2072,6 @@ export async function mutateCollectionDocument(
         fallbackHtml,
       );
       setCacheEntry(ref, saved.id, saved.version, next);
-      refreshManagedCollectionTrees();
       try {
         await enqueueClassSubcollectionItemSync(collection, next);
       } catch (error) {

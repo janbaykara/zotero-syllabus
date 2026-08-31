@@ -1111,18 +1111,6 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           );
         }
 
-        // Save all items
-        for (const itemId of itemIds) {
-          const item = getCachedItem(itemId);
-          if (item) {
-            try {
-              await item.saveTx();
-            } catch (err) {
-              ztoolkit.log("Error saving item:", err);
-            }
-          }
-        }
-
         setItemOrderVersion((v) => v + 1);
         return;
       } catch (err) {
@@ -1386,7 +1374,6 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         );
 
         // After creating assignment, get its ID and add to manual order if it exists
-        await draggedItem.saveTx();
         const newAssignment = classAssignments.find((a) => {
           const item = syllabusItems.find((item) =>
             item.assignments.some((assignment) => assignment.id === a.id),
@@ -1428,11 +1415,6 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           "Dropping unassigned item to further reading - no action needed",
         );
       }
-    }
-
-    // Only save if we haven't already saved (for new assignment case)
-    if (sourceAssignmentId) {
-      await draggedItem.saveTx();
     }
   };
 

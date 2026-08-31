@@ -7,7 +7,10 @@ import {
 } from "../utils/schemas";
 import { getCachedCollectionByKey } from "../utils/cache";
 import { isSyllabusMemberItem } from "../utils/items";
-import { collectionLibraryIsEditable } from "../utils/zotero";
+import {
+  collectionLibraryIsEditable,
+  itemBelongsInCollection,
+} from "../utils/zotero";
 import { attachStashedReadingListFiles } from "./readingListFileStash";
 import {
   SYLLABUS_EXTRA_KEY,
@@ -49,6 +52,9 @@ function moveItemIntoCollection(
   item: Zotero.Item,
   destination: Zotero.Collection,
 ): void {
+  if (!itemBelongsInCollection(item, destination)) {
+    return;
+  }
   const currentIds = item.getCollections();
   if (!currentIds.includes(destination.id)) {
     item.addToCollection(destination.id);
@@ -64,6 +70,9 @@ function addItemToCollection(
   item: Zotero.Item,
   destination: Zotero.Collection,
 ): void {
+  if (!itemBelongsInCollection(item, destination)) {
+    return;
+  }
   if (!item.getCollections().includes(destination.id)) {
     item.addToCollection(destination.id);
   }
@@ -91,6 +100,7 @@ export function placeItemInSyllabusDestinations(
 
 function extraDestinationCollections(
   extraData: ItemSyllabusData,
+  item: Zotero.Item,
 ): Zotero.Collection[] {
   const destinations: Zotero.Collection[] = [];
   const seen = new Set<number>();
@@ -103,6 +113,9 @@ function extraDestinationCollections(
       continue;
     }
     if (!collectionLibraryIsEditable(collection)) {
+      continue;
+    }
+    if (!itemBelongsInCollection(item, collection)) {
       continue;
     }
     seen.add(collection.id);
@@ -286,7 +299,7 @@ export async function absorbSyllabusExtraFromItems(
       continue;
     }
 
-    const destinations = extraDestinationCollections(extraData);
+    const destinations = extraDestinationCollections(extraData, item);
     if (destinations.length === 0) {
       continue;
     }

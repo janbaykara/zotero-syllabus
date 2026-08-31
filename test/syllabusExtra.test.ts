@@ -109,6 +109,23 @@ describe("placeItemInSyllabusDestinations", function () {
     assert.notInclude(ids, source.id);
     assert.include(ids, destination.id);
   });
+
+  it("does not add an item to a collection in another library", async function () {
+    const collection = await createCollection("Syllabus Extra Home");
+    collections.push(collection);
+    const item = await createBook(collection, "Group reading");
+    items.push(item);
+    const otherLibrary = {
+      id: collection.id,
+      libraryID: collection.libraryID + 1,
+      deleted: false,
+    } as Zotero.Collection;
+
+    placeItemInSyllabusDestinations(item, [otherLibrary]);
+    await item.saveTx();
+
+    assert.include(item.getCollections(), collection.id);
+  });
 });
 
 describe("absorbSyllabusExtraFromItems", function () {

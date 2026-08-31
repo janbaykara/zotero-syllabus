@@ -311,6 +311,24 @@ export function collectionLibraryIsEditable(
   return libraryIsEditable(collection.libraryID);
 }
 
+/** Items cannot be added to a collection in another library (Zotero FK). */
+export function itemBelongsInCollection(
+  item: Zotero.Item | null | undefined,
+  collection: Zotero.Collection | null | undefined,
+): boolean {
+  if (!item || !collection) {
+    return false;
+  }
+  try {
+    if (item.deleted || collection.deleted) {
+      return false;
+    }
+    return item.libraryID === collection.libraryID;
+  } catch {
+    return false;
+  }
+}
+
 export function getAllCollections(recursive = true) {
   const libraries = Array.from(Zotero.Libraries.getAll());
   const collections: Zotero.Collection[] = [];

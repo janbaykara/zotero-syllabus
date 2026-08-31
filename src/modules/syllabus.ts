@@ -8,7 +8,10 @@ import type { FluentMessageId } from "../../typings/i10n";
 import { renderSyllabusPage } from "./SyllabusPage";
 import { renderGalleryPage } from "./GalleryPage";
 import { setGalleryGroupBy } from "./galleryGroupBy";
-import { getSelectedCollection } from "../utils/zotero";
+import {
+  getSelectedCollection,
+  itemBelongsInCollection,
+} from "../utils/zotero";
 import { getCurrentTab, confirmPrompt } from "../utils/window";
 import { renderComponent, unmountComponent } from "../utils/react";
 import { ItemPane } from "./ItemPane";
@@ -1522,6 +1525,15 @@ export class SyllabusManager {
     assignments: ItemSyllabusAssignment[],
     source: "page" | "item-pane" | "context-menu" | "background",
   ): Promise<void> {
+    const collection = this.getCollectionFromIdentifier(collectionId);
+    if (collection && !itemBelongsInCollection(item, collection)) {
+      ztoolkit.log(
+        "Skipping syllabus assignment; item and collection are in different libraries",
+        item.id,
+        collection.id,
+      );
+      return;
+    }
     await setItemAssignmentsInDocument(collectionId, item.key, assignments);
     this.onItemUpdate(item, source);
   }
@@ -2891,6 +2903,9 @@ export class SyllabusManager {
     }
 
     for (const item of otherItems) {
+      if (!itemBelongsInCollection(item, targetCollection)) {
+        continue;
+      }
       item.addToCollection(targetCollection.id);
       await item.saveTx();
     }
@@ -3008,6 +3023,9 @@ export class SyllabusManager {
               importedItems,
             );
             for (const item of importedItems) {
+              if (!itemBelongsInCollection(item, targetCollection)) {
+                continue;
+              }
               item.addToCollection(targetCollection.id);
               await item.saveTx();
             }

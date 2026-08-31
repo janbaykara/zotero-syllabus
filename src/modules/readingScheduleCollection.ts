@@ -18,8 +18,7 @@ import {
   toLocalDateKey,
 } from "../utils/dates";
 import { getPrefKey, getPrefValue, setPref } from "../utils/prefs";
-import { libraryIsEditable } from "../utils/zotero";
-import { collectionHasSyllabusNote } from "./syllabusNote";
+import { itemBelongsInCollection, libraryIsEditable } from "../utils/zotero";
 
 export const READING_SCHEDULE_COLLECTION_NAME = "Reading Schedule";
 const LEGACY_READING_SCHEDULE_COLLECTION_NAME = "Reading schedule";
@@ -32,7 +31,10 @@ function isReadingScheduleRootName(name: string): boolean {
 }
 
 const DATE_SEPARATOR = " — ";
-const DATE_FOLDER_PREFIX = /^(\d{4}-\d{2}-\d{2})(?:\s|$)/;
+/** Leading calendar day; the rest of the name may use any separator. */
+const DATE_FOLDER_PREFIX = /^(\d{4}-\d{2}-\d{2})/;
+const SYNC_DEBOUNCE_MS = 250;
+const SYNC_HOLD_RELEASE_MS = 100;
 
 type ManagedDateFolder = {
   key: string;
@@ -43,9 +45,12 @@ const managedDateFolders = new Map<number, ManagedDateFolder>();
 const managedRootByLibrary = new Map<number, number>();
 let syncChain: Promise<void> = Promise.resolve();
 let syncHoldDepth = 0;
-/** Stays true until the next macrotask after depth hits 0, covering deferred notifiers. */
+/** Stays true after depth hits 0 long enough to cover deferred Zotero notifiers. */
 let syncHoldLatched = false;
 let prefObserverID: symbol | null = null;
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingGetDesired: (() => ReadingScheduleDesiredByLibrary) | null = null;
+let debounceWaiters: Array<() => void> = [];
 
 export type ReadingScheduleDesiredItems = Map<string, number[]>;
 export type ReadingScheduleDesiredByLibrary = Map<
@@ -77,7 +82,7 @@ function releaseSync(): void {
     if (syncHoldDepth === 0) {
       syncHoldLatched = false;
     }
-  }, 0);
+  }, SYNC_HOLD_RELEASE_MS);
 }
 
 export function isReadingScheduleSyncHeld(): boolean {
@@ -254,6 +259,30 @@ export function dateKeyFromFolderName(name: string): string | null {
   return match ? match[1] : null;
 }
 
+export function planDateFolderReconcile(
+  existingDateKeys: Iterable<string>,
+  desiredDateKeys: Iterable<string>,
+): { keep: string[]; create: string[]; erase: string[] } {
+  const existing = new Set(existingDateKeys);
+  const desired = new Set(desiredDateKeys);
+  const keep: string[] = [];
+  const create: string[] = [];
+  const erase: string[] = [];
+  for (const dateKey of desired) {
+    if (existing.has(dateKey)) {
+      keep.push(dateKey);
+    } else {
+      create.push(dateKey);
+    }
+  }
+  for (const dateKey of existing) {
+    if (!desired.has(dateKey)) {
+      erase.push(dateKey);
+    }
+  }
+  return { keep, create, erase };
+}
+
 export function buildReadingScheduleDesiredItems(
   sources: ReadingScheduleSource[],
 ): ReadingScheduleDesiredItems {
@@ -407,6 +436,9 @@ function rootKeyForLibrary(libraryID: number): string | undefined {
 }
 
 function setRootKey(libraryID: number, key: string): void {
+  if (rootKeyForLibrary(libraryID) === key) {
+    return;
+  }
   const map = readRootKeyMap();
   map[String(libraryID)] = key;
   writeRootKeyMap(map);
@@ -471,6 +503,16 @@ function forgetManagedMaps(): void {
 }
 
 export function clearManagedReadingScheduleCollection(): void {
+  if (debounceTimer != null) {
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
+  }
+  pendingGetDesired = null;
+  const waiters = debounceWaiters;
+  debounceWaiters = [];
+  for (const resolve of waiters) {
+    resolve();
+  }
   forgetManagedMaps();
   syncHoldDepth = 0;
   syncHoldLatched = false;
@@ -512,7 +554,13 @@ async function syncCollectionItems(
       toRemove.push(item.id);
     }
   }
-  const toAdd = desiredIds.filter((id) => !currentIds.has(id));
+  const toAdd = desiredIds.filter((id) => {
+    if (currentIds.has(id)) {
+      return false;
+    }
+    const item = Zotero.Items.get(id);
+    return itemBelongsInCollection(item, collection);
+  });
   if (!toAdd.length && !toRemove.length) {
     return;
   }
@@ -634,93 +682,98 @@ async function ensureRootCollection(
   }
   setRootKey(root.libraryID, root.key);
   rememberRoot(root);
-  await collapseDuplicateRoots(root.libraryID, root);
+  const extras = namedReadingScheduleCollections(root.libraryID).filter(
+    (collection) => collection.id !== root.id,
+  );
+  if (extras.length) {
+    await collapseDuplicateRoots(root.libraryID, root);
+  }
   return root;
 }
 
-function adoptableDateChild(
-  parent: Zotero.Collection,
-  dateKey: string,
-  usedKeys: Set<string>,
-): Zotero.Collection | null {
+function indexDateChildren(parent: Zotero.Collection): {
+  byDate: Map<string, Zotero.Collection>;
+  duplicates: Zotero.Collection[];
+} {
+  const byDate = new Map<string, Zotero.Collection>();
+  const duplicates: Zotero.Collection[] = [];
   for (const child of parent.getChildCollections()) {
-    if (usedKeys.has(child.key) || child.deleted) {
+    if (child.deleted) {
       continue;
     }
-    if (dateKeyFromFolderName(child.name) !== dateKey) {
+    const dateKey = dateKeyFromFolderName(child.name);
+    if (!dateKey) {
       continue;
     }
-    return child;
+    const existing = byDate.get(dateKey);
+    if (!existing) {
+      byDate.set(dateKey, child);
+      continue;
+    }
+    if (child.id < existing.id) {
+      duplicates.push(existing);
+      byDate.set(dateKey, child);
+    } else {
+      duplicates.push(child);
+    }
   }
-  return null;
+  return { byDate, duplicates };
+}
+
+function regularItemIds(collection: Zotero.Collection): number[] {
+  const ids: number[] = [];
+  for (const item of collection.getChildItems()) {
+    try {
+      if (!item.isRegularItem()) {
+        continue;
+      }
+    } catch {
+      continue;
+    }
+    ids.push(item.id);
+  }
+  return ids;
+}
+
+function itemIdsMatch(currentIds: number[], desiredIds: number[]): boolean {
+  if (currentIds.length !== desiredIds.length) {
+    return false;
+  }
+  const desired = new Set(desiredIds);
+  return currentIds.every((id) => desired.has(id));
 }
 
 async function ensureDateChild(
   parent: Zotero.Collection,
   dateKey: string,
-  usedKeys: Set<string>,
-): Promise<Zotero.Collection> {
+  existing: Zotero.Collection | undefined,
+): Promise<{ child: Zotero.Collection; mutated: boolean }> {
   const name = readingScheduleDateFolderName(dateKey);
-  let child: Zotero.Collection | null = null;
-  for (const [collectionId, managed] of managedDateFolders) {
-    if (managed.dateKey !== dateKey || usedKeys.has(managed.key)) {
-      continue;
-    }
-    const existing =
-      getCachedCollectionById(collectionId) ||
-      Zotero.Collections.getByLibraryAndKey(parent.libraryID, managed.key);
-    if (
-      existing &&
-      !existing.deleted &&
-      existing.libraryID === parent.libraryID
-    ) {
-      child = existing;
-      break;
-    }
-  }
-  if (!child) {
-    child = adoptableDateChild(parent, dateKey, usedKeys);
-  }
-  if (!child) {
-    child = new Zotero.Collection({
+  if (!existing) {
+    const child = new Zotero.Collection({
       name,
       libraryID: parent.libraryID,
       parentID: parent.id,
     });
     await saveCollection(child);
+    rememberDateFolder(child, dateKey);
+    return { child, mutated: true };
   }
 
   let dirty = false;
-  if (child.name !== name) {
-    child.name = name;
+  if (existing.name !== name) {
+    existing.name = name;
     dirty = true;
   }
-  if (child.parentID !== parent.id) {
-    child.parentID = parent.id;
+  if (existing.parentID !== parent.id) {
+    existing.parentID = parent.id;
     dirty = true;
   }
   if (dirty) {
-    await saveCollection(child);
+    await saveCollection(existing);
   }
-  usedKeys.add(child.key);
-  rememberDateFolder(child, dateKey);
-  return child;
-}
-
-async function eraseExtraChildren(
-  parent: Zotero.Collection,
-  usedKeys: Set<string>,
-): Promise<void> {
-  for (const child of parent.getChildCollections()) {
-    if (child.deleted || usedKeys.has(child.key)) {
-      continue;
-    }
-    if (collectionHasSyllabusNote(child)) {
-      continue;
-    }
-    forgetCollection(child.id);
-    await eraseCollection(child);
-  }
+  rememberDateFolder(existing, dateKey);
+  return { child: existing, mutated: dirty };
 }
 
 async function eraseStoredTree(): Promise<void> {
@@ -794,15 +847,82 @@ async function ensureReadingScheduleCollection(
 async function syncLibraryReadingSchedule(
   libraryID: number,
   desired: ReadingScheduleDesiredItems,
-): Promise<void> {
+): Promise<boolean> {
   const root = await ensureRootCollection(libraryID);
-  const usedKeys = new Set<string>();
-  const childrenByDate = new Map<string, Zotero.Collection>();
+  const { byDate, duplicates } = indexDateChildren(root);
+  const plan = planDateFolderReconcile(byDate.keys(), desired.keys());
+  const foldersNeedWork =
+    duplicates.length > 0 || plan.create.length > 0 || plan.erase.length > 0;
+  const namesNeedWork = plan.keep.some((dateKey) => {
+    const child = byDate.get(dateKey);
+    return (
+      !child ||
+      child.name !== readingScheduleDateFolderName(dateKey) ||
+      child.parentID !== root.id
+    );
+  });
+  const itemsNeedWork =
+    !itemIdsMatch(regularItemIds(root), []) ||
+    Array.from(desired.entries()).some(([dateKey, itemIds]) => {
+      const child = byDate.get(dateKey);
+      return !child || !itemIdsMatch(regularItemIds(child), itemIds);
+    });
 
-  for (const dateKey of desired.keys()) {
+  if (!foldersNeedWork && !namesNeedWork && !itemsNeedWork) {
+    rememberRoot(root);
+    for (const [dateKey, child] of byDate) {
+      rememberDateFolder(child, dateKey);
+    }
+    return false;
+  }
+
+  let foldersMutated = false;
+
+  for (const extra of duplicates) {
+    forgetCollection(extra.id);
+    await eraseCollection(extra);
+    foldersMutated = true;
+  }
+
+  for (const dateKey of plan.erase) {
+    const child = byDate.get(dateKey);
+    if (!child) {
+      continue;
+    }
+    forgetCollection(child.id);
+    await eraseCollection(child);
+    byDate.delete(dateKey);
+    foldersMutated = true;
+  }
+
+  for (const dateKey of plan.create) {
     try {
-      const child = await ensureDateChild(root, dateKey, usedKeys);
-      childrenByDate.set(dateKey, child);
+      const { child, mutated } = await ensureDateChild(
+        root,
+        dateKey,
+        undefined,
+      );
+      byDate.set(dateKey, child);
+      if (mutated) {
+        foldersMutated = true;
+      }
+    } catch (error) {
+      ztoolkit.log(
+        "Error ensuring reading schedule date folder:",
+        dateKey,
+        error,
+      );
+    }
+  }
+
+  for (const dateKey of plan.keep) {
+    const existing = byDate.get(dateKey);
+    try {
+      const { child, mutated } = await ensureDateChild(root, dateKey, existing);
+      byDate.set(dateKey, child);
+      if (mutated) {
+        foldersMutated = true;
+      }
     } catch (error) {
       ztoolkit.log(
         "Error ensuring reading schedule date folder:",
@@ -813,18 +933,12 @@ async function syncLibraryReadingSchedule(
   }
 
   try {
-    await eraseExtraChildren(root, usedKeys);
-  } catch (error) {
-    ztoolkit.log("Error removing extra reading schedule folders:", error);
-  }
-
-  try {
     await syncCollectionItems(root, []);
   } catch (error) {
     ztoolkit.log("Error clearing reading schedule root items:", error);
   }
 
-  for (const [dateKey, child] of childrenByDate) {
+  for (const [dateKey, child] of byDate) {
     try {
       await syncCollectionItems(child, desired.get(dateKey) || []);
     } catch (error) {
@@ -835,16 +949,55 @@ async function syncLibraryReadingSchedule(
       );
     }
   }
+
+  return foldersMutated;
 }
 
 export function enqueueReadingScheduleCollectionSync(
   getDesired: () => ReadingScheduleDesiredByLibrary,
+  options: { immediate?: boolean } = {},
 ): Promise<void> {
+  pendingGetDesired = getDesired;
+  if (options.immediate) {
+    return flushReadingScheduleCollectionSync();
+  }
+  return new Promise((resolve) => {
+    debounceWaiters.push(resolve);
+    if (debounceTimer != null) {
+      clearTimeout(debounceTimer);
+    }
+    debounceTimer = setTimeout(() => {
+      debounceTimer = null;
+      flushReadingScheduleCollectionSync();
+    }, SYNC_DEBOUNCE_MS);
+  });
+}
+
+function flushReadingScheduleCollectionSync(): Promise<void> {
+  if (debounceTimer != null) {
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
+  }
+  const getDesired = pendingGetDesired;
+  const waiters = debounceWaiters;
+  debounceWaiters = [];
+  pendingGetDesired = null;
+  if (!getDesired) {
+    for (const resolve of waiters) {
+      resolve();
+    }
+    return syncChain;
+  }
   const next = syncChain
     .catch(() => undefined)
     .then(() => ensureReadingScheduleCollection(getDesired))
     .catch((error) => {
       ztoolkit.log("Error syncing reading schedule collection:", error);
+    })
+    .then(() => {
+      for (const resolve of waiters) {
+        resolve();
+      }
     });
   syncChain = next;
   return next;
@@ -920,7 +1073,9 @@ export function registerReadingSchedulePrefObserver(
   prefObserverID = Zotero.Prefs.registerObserver(
     getPrefKey("generateReadingScheduleCollection"),
     () => {
-      enqueueReadingScheduleCollectionSync(getDesired).catch((error) => {
+      enqueueReadingScheduleCollectionSync(getDesired, {
+        immediate: true,
+      }).catch((error) => {
         ztoolkit.log(
           "Error syncing reading schedule collection after pref change:",
           error,

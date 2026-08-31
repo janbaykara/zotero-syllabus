@@ -656,14 +656,15 @@ export function parseSyllabusNote(
   }
 
   try {
-    const parsed = coerceDocumentJson(JSON.parse(jsonText));
+    const raw = JSON.parse(jsonText) as unknown;
+    const parsed = coerceDocumentJson(raw);
     const result = CollectionSyllabusDocumentEntity.safeParse(parsed);
     if (result.type === "ok") {
-      return result.value;
+      return restoreUnrecognizedFields(result.value, raw);
     }
     const fallback = CollectionSyllabusDocumentSchema.safeParse(parsed);
     if (fallback.success) {
-      return fallback.data;
+      return restoreUnrecognizedFields(fallback.data, raw);
     }
     if (isUnsupportedFutureNote(html)) {
       ztoolkit.log(
@@ -677,6 +678,68 @@ export function parseSyllabusNote(
     ztoolkit.log("Error parsing syllabus note JSON:", error);
     return null;
   }
+}
+
+/** True when the note is a future format we cannot parse, so writes would clobber it. */
+export function shouldRefuseNoteOverwrite(html: string): boolean {
+  return !parseSyllabusNote(html) && isUnsupportedFutureNote(html);
+}
+
+export function keepDocumentVersion(version: unknown): number {
+  if (
+    typeof version === "number" &&
+    Number.isInteger(version) &&
+    version > COLLECTION_SYLLABUS_DOCUMENT_VERSION
+  ) {
+    return version;
+  }
+  return COLLECTION_SYLLABUS_DOCUMENT_VERSION;
+}
+
+/** Top-level fields this schema version does not model (e.g. section-branch outline). */
+export function unrecognizedDocumentFields(
+  source: object,
+): Record<string, unknown> {
+  const coerced = {
+    ...(source as Record<string, unknown>),
+    version: COLLECTION_SYLLABUS_DOCUMENT_VERSION,
+  };
+  const stripped = CollectionSyllabusDocumentSchema.safeParse(coerced);
+  const known = new Set(stripped.success ? Object.keys(stripped.data) : []);
+  known.add("version");
+  const extra: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(
+    source as Record<string, unknown>,
+  )) {
+    if (!known.has(key)) {
+      extra[key] = value;
+    }
+  }
+  return extra;
+}
+
+export function withUnrecognizedDocumentFields(
+  document: CollectionSyllabusDocument,
+  source: object,
+): CollectionSyllabusDocument {
+  const extra = unrecognizedDocumentFields(source);
+  const version = keepDocumentVersion(
+    (source as { version?: unknown }).version,
+  );
+  if (Object.keys(extra).length === 0 && version === document.version) {
+    return document;
+  }
+  return { ...document, ...extra, version } as CollectionSyllabusDocument;
+}
+
+function restoreUnrecognizedFields(
+  document: CollectionSyllabusDocument,
+  raw: unknown,
+): CollectionSyllabusDocument {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return document;
+  }
+  return withUnrecognizedDocumentFields(document, raw);
 }
 
 /** Read notes written with a newer document.version by keeping known fields. */
