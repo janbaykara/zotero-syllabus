@@ -1,6 +1,6 @@
 ---
 name: Edge case catalog
-overview: "Robustness catalog for Zotero Syllabus. First wave is done (mapped fields, library-scoped merges, collection keys, Extra destinations, trash/restore). Remaining: import IDs, note parse, documentForWrite, feeds, reading time, sync/queue."
+overview: "Robustness catalog for Zotero Syllabus. Two waves done. Remaining: write-queue deadlock, inflight note skip, getNote() on non-notes, reading schedule groups."
 todos:
   - id: item-field-helper
     content: "Done: getItemField(includeBaseMapped) for date, publicationTitle, publisher, pages (bc802db)"
@@ -18,20 +18,20 @@ todos:
     content: "Done: cache and collectionItems refresh on trash/restore (07be04d)"
     status: completed
   - id: import-id-normalize
-    content: "Normalize DOI URLs and ISBN-10/13 in import remap"
-    status: pending
+    content: "Done: normalize DOI URLs and ISBN-10/13 in import remap (c85b039)"
+    status: completed
   - id: running-time-pages
-    content: "Parse runningTime (H:MM:SS) and page ranges like iv, 1-200"
-    status: pending
+    content: "Done: parse runningTime (H:MM:SS) and page ranges like iv, 1-200 (30a2876)"
+    status: completed
   - id: note-json-extract
-    content: "Do not treat the first {…} in note HTML as syllabus JSON"
-    status: pending
+    content: "Done: do not treat the first {…} in note HTML as syllabus JSON (da61cf4)"
+    status: completed
   - id: document-for-write
-    content: "documentForWrite must not resurrect classes deleted in the live note"
-    status: pending
+    content: "Done: documentForWrite prefers the parsed note (b57abac)"
+    status: completed
   - id: skip-feed-items
-    content: "Skip feed items (and deleted items) on syllabus membership"
-    status: pending
+    content: "Done: skip feed items and deleted items on syllabus membership (e0e4a23)"
+    status: completed
 isProject: false
 ---
 
@@ -65,8 +65,8 @@ flowchart TD
 
 Zotero only maps base fields if you pass `includeBaseMapped`: `getField(field, false, true)`. Title uses `getDisplayTitle()`.
 
-- **Date / publication / publisher / pages** — **Done** (`bc802db`). `getItemField` in [items.ts](src/utils/items.ts). Cases, statutes, patents, book sections covered by tests in [test/itemTitle.test.ts](test/itemTitle.test.ts).
-- **`runningTime` via `parseInt`** — still turns `"1:30:00"` into `1`. Page field `"iv, 1–200"` still parses the first digits.
+- **Date / publication / publisher / pages** — **Done** (`bc802db`).
+- **`runningTime` / page ranges** — **Done** (`30a2876`). [parseRunningTimeMinutes](src/utils/readingTime.ts), [pageCountFromPagesField](src/utils/readingTime.ts).
 - **Creators** — Gallery [itemAuthorLine](src/modules/GalleryPage.tsx) prefers `author`; patents/films/interviews/podcasts disagree with cards (`firstCreator`).
 - **Letters/interviews** — untitled items get synthesized titles from `getDisplayTitle`. Import title-match can false-positive on “Letter to Smith”.
 
@@ -95,7 +95,7 @@ Zotero only maps base fields if you pass `includeBaseMapped`: `getField(field, f
 
 ### Import matching (`remapDocumentItemKeys`)
 
-DOI URL vs bare; ISBN-10 vs 13; no PMID/PMCID/arXiv; title-only first-wins.
+DOI URL vs bare; ISBN-10 vs 13 — **Done** (`c85b039`). Still open: no PMID/PMCID/arXiv; title-only first-wins.
 
 ---
 
@@ -103,9 +103,9 @@ DOI URL vs bare; ISBN-10 vs 13; no PMID/PMCID/arXiv; title-only first-wins.
 
 - **Item cache trash/restore** — **Done** (`07be04d`). [OBJECT_LIFECYCLE_EVENTS](src/utils/cache.ts).
 - BBT ignores `modify` when `item.deleted`. Worth checking note/Extra handlers.
-- BBT skips `isFeedItem`. We filter `isRegularItem()`; feeds may still sneak in.
+- BBT skips `isFeedItem`. **Done** (`e0e4a23`) via [isSyllabusMemberItem](src/utils/items.ts).
 - **Write-inflight skip** — `handleNoteChange` skips reparse while a local write is in flight.
-- **documentForWrite** unions note + cache. Two devices editing different classes can resurrect deleted classes.
+- **documentForWrite** — **Done** (`b57abac`). Parsed note wins; cache only if the note is unreadable.
 - **enqueueWrite** nested `mutateCollectionDocument` from class-folder ensure = deadlock.
 - `getNote()` on a non-note throws in Zotero 9 (BBT [#3541](https://github.com/retorquere/zotero-better-bibtex/commit/947c3f4c515c11a54bf00ae91f4ff5b0b07becb0)).
 
@@ -113,7 +113,7 @@ DOI URL vs bare; ISBN-10 vs 13; no PMID/PMCID/arXiv; title-only first-wins.
 
 ## D. Notes as source of truth (Better Notes)
 
-- User edits readable prose / breaks `<pre>` → fallback grabs the first `{`…`}` (could be a citation).
+- User edits readable prose / breaks `<pre>` → fallback grabs the first `{`…`}` — **Done** (`da61cf4`); tagged pre + syllabus-shaped JSON only.
 - Newer plugin writes a future `version` → older plugin refuses writes but coerce-downgrade may still parse elsewhere.
 - Startup format-patch rewrite vs unsynced local edits → Zotero sync conflict.
 - Large notes: rewrite whole HTML on every mutate.
@@ -145,14 +145,15 @@ Connector ports, print HiddenBrowser, gallery keyboard, item pane vs class folde
 
 **Done (first wave):** collection key collision; library-scoped merge remap; Extra last-destination; cache/list trash; mapped dates/publication.
 
+**Done (second wave):** DOI/ISBN import match; runningTime/pages parse; note JSON extract; documentForWrite note-wins; skip feed/deleted members.
+
 **Still likely user-visible:**
 
-1. `documentForWrite` resurrecting deleted classes on two-device sync
-2. Nested write-queue deadlock if an ensure path regresses
-3. Note HTML first-`{` extract
-4. DOI/ISBN import mismatch
-5. Feed items on the syllabus
+1. Nested write-queue deadlock if an ensure path regresses
+2. Write-inflight skip dropping a sync-in note
+3. `getNote()` on a non-note (Zotero 9)
+4. Reading schedule My Library only
 
 **Product / policy:** reading schedule for group libraries; collapse same-class rows after merge; whether Duplicate Item should copy assignments.
 
-**Hygiene:** orphan keys after plain delete; `runningTime` parse; localeCompare locale; class-folder 255-char names.
+**Hygiene:** orphan keys after plain delete; localeCompare locale; class-folder 255-char names; PMID/arXiv import; creator-type display.
