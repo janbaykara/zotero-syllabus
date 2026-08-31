@@ -2448,7 +2448,6 @@ export class SyllabusManager {
       },
       { createNote: "prompt" },
     );
-    this.setupPage();
     this.onClassListUpdate();
   }
 
@@ -2483,7 +2482,6 @@ export class SyllabusManager {
       }
       return { ...document, classes, items };
     });
-    this.setupPage();
     this.onClassListUpdate();
   }
 
@@ -2517,7 +2515,6 @@ export class SyllabusManager {
       }
       return { ...document, classes };
     });
-    this.setupPage();
     this.onClassListUpdate();
   }
 
