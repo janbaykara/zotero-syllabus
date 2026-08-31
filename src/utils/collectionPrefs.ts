@@ -10,6 +10,7 @@ export const COLLECTION_ID_PREF_KEYS = [
   `${config.prefsPrefix}.collectionViewModes`,
   `${config.prefsPrefix}.galleryGroupBy`,
   `${config.prefsPrefix}.gallerySort`,
+  `${config.prefsPrefix}.furtherReadingSort`,
 ] as const;
 
 /**

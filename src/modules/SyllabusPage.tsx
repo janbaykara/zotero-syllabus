@@ -32,9 +32,13 @@ import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import { useZoteroReaderMode } from "./react-zotero-sync/readerMode";
 import { isZotero8OrLater } from "../utils/zotero";
-import { getItemTitle } from "../utils/items";
+import { getItemTitle, sortItems } from "../utils/items";
 import slugify from "slugify";
 import { SettingsPage } from "./SettingsPage";
+import {
+  useFurtherReadingSortBy,
+  type FurtherReadingSortBy,
+} from "./furtherReadingSort";
 import { formatDate } from "date-fns";
 import {
   Printer,
@@ -749,13 +753,22 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     setItemOrderVersion((v) => v + 1);
   }, [syllabusMetadata]);
 
+  const [furtherReadingSortBy, setFurtherReadingSortBy] =
+    useFurtherReadingSortBy(collectionId);
+
   // Compute class groups and further reading items from synced items
   // Re-compute when items change or item order changes
-  const { classGroups, furtherReadingItems } = useSyllabusClassGroups(
-    collectionId,
-    syllabusItems,
-    syllabusMetadata,
-    itemOrderVersion,
+  const { classGroups, furtherReadingItems: unsortedFurtherReading } =
+    useSyllabusClassGroups(
+      collectionId,
+      syllabusItems,
+      syllabusMetadata,
+      itemOrderVersion,
+    );
+
+  const furtherReadingItems = useMemo(
+    () => sortItems(unsortedFurtherReading, furtherReadingSortBy),
+    [unsortedFurtherReading, furtherReadingSortBy],
   );
 
   const navigableEntries = useMemo(
@@ -2155,11 +2168,28 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
               >
                 <div
                   className={twMerge(
-                    "font-semibold",
+                    "flex flex-row items-baseline gap-2 font-semibold",
                     compactMode ? "text-xl mt-8 mb-2" : "text-2xl mt-12 mb-4",
                   )}
                 >
                   Further reading
+                  <label className="ml-auto shrink-0 inline-flex items-baseline gap-1.5 in-[.print]:hidden font-normal text-sm text-secondary">
+                    <span>Sort</span>
+                    <select
+                      value={furtherReadingSortBy}
+                      onChange={(e) =>
+                        setFurtherReadingSortBy(
+                          e.currentTarget.value as FurtherReadingSortBy,
+                        )
+                      }
+                      aria-label="Sort further reading"
+                      className="text-sm text-primary bg-background border border-quinary rounded px-1.5 py-0.5 cursor-pointer"
+                    >
+                      <option value="title">Title</option>
+                      <option value="creator">Creator</option>
+                      <option value="date">Date</option>
+                    </select>
+                  </label>
                 </div>
                 {!compactMode && (
                   <p className="text-secondary text-lg">
