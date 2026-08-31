@@ -83,11 +83,14 @@ export function classSubcollectionName(
   const suffix = `${dateLabel ? `${DATE_SEPARATOR}${dateLabel}` : ""}${
     options.done ? DONE_SUFFIX : ""
   }`;
-  const maxBase = COLLECTION_NAME_MAX - suffix.length;
-  if (base.length <= maxBase) {
-    return `${base}${suffix}`;
+  const clampedSuffix = suffix.slice(0, COLLECTION_NAME_MAX);
+  const maxBase = COLLECTION_NAME_MAX - clampedSuffix.length;
+  let body = base;
+  if (body.length > maxBase) {
+    const ellipsis = maxBase >= 3 ? "..." : "";
+    body = `${body.slice(0, Math.max(0, maxBase - ellipsis.length))}${ellipsis}`;
   }
-  return `${base.slice(0, Math.max(0, maxBase - 3))}...${suffix}`;
+  return `${body}${clampedSuffix}`.slice(0, COLLECTION_NAME_MAX);
 }
 
 function formatDeadlineForName(
