@@ -224,6 +224,20 @@ export async function collectionForReadingListImport(options: {
   return work;
 }
 
+/**
+ * Collections are unique by libraryID + key, not by key alone.
+ * A group library can reuse an 8-character key from My Library.
+ */
+export function dedupeCollectionsByLibraryAndKey<
+  T extends { libraryID: number; key: string },
+>(collections: T[]): T[] {
+  const collectionMap = new Map<string, T>();
+  for (const collection of collections) {
+    collectionMap.set(`${collection.libraryID}:${collection.key}`, collection);
+  }
+  return Array.from(collectionMap.values());
+}
+
 export function getAllCollections(recursive = true) {
   const libraries = Array.from(Zotero.Libraries.getAll());
   const collections: Zotero.Collection[] = [];
@@ -243,9 +257,5 @@ export function getAllCollections(recursive = true) {
       });
     }
   }
-  const collectionMap = new Map<string, Zotero.Collection>();
-  for (const collection of collections) {
-    collectionMap.set(collection.key, collection);
-  }
-  return Array.from(collectionMap.values());
+  return dedupeCollectionsByLibraryAndKey(collections);
 }
