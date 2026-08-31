@@ -295,6 +295,7 @@ schedule-day-empty = На цей день читань не запланован
 schedule-window-empty = У вікні графіка ще немає читань. Додайте дати читання до занять, щоб побачити їх тут.
 schedule-no-dates = Немає дат
 schedule-of-collection = з { $name }
+schedule-of-collection-in-library = з { $collection } ({ $library })
 schedule-open-syllabus = Відкрити силабус: { $title }
 class-folder-managed-banner = Керується автоматично на основі цього силабуса. Зміни в цій теці буде перезаписано.
 

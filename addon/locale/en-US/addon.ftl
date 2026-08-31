@@ -293,6 +293,7 @@ schedule-day-empty = No readings scheduled for this day.
 schedule-window-empty = No readings in the schedule window yet. Add reading dates to classes to see them here.
 schedule-no-dates = No dates
 schedule-of-collection = of { $name }
+schedule-of-collection-in-library = of { $collection } ({ $library })
 schedule-open-syllabus = Open syllabus for { $title }
 class-folder-managed-banner = Auto-managed from this syllabus. Edits in this folder are overwritten.
 

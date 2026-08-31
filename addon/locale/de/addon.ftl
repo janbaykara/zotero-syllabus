@@ -295,6 +295,7 @@ schedule-day-empty = Für diesen Tag ist keine Lektüre geplant.
 schedule-window-empty = Im Planungszeitraum ist noch keine Lektüre. Fügen Sie Sitzungen Lesedaten hinzu, um sie hier zu sehen.
 schedule-no-dates = Keine Daten
 schedule-of-collection = von { $name }
+schedule-of-collection-in-library = von { $collection } ({ $library })
 schedule-open-syllabus = Lehrplan für { $title } öffnen
 class-folder-managed-banner = Automatisch aus diesem Lehrplan verwaltet. Änderungen in diesem Ordner werden überschrieben.
 

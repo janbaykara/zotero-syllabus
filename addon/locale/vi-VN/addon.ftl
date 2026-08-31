@@ -295,6 +295,7 @@ schedule-day-empty = Không có bài đọc được lên lịch cho ngày này.
 schedule-window-empty = Chưa có bài đọc trong cửa sổ lịch. Thêm ngày đọc vào các buổi học để xem chúng tại đây.
 schedule-no-dates = Không có ngày
 schedule-of-collection = của { $name }
+schedule-of-collection-in-library = của { $collection } ({ $library })
 schedule-open-syllabus = Mở đề cương { $title }
 class-folder-managed-banner = Tự quản lý từ đề cương này. Chỉnh sửa trong thư mục này sẽ bị ghi đè.
 

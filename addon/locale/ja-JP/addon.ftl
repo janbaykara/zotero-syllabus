@@ -295,6 +295,7 @@ schedule-day-empty = この日に予定された読書はありません。
 schedule-window-empty = スケジュール期間内にまだ読書がありません。授業に読書日を追加すると、ここに表示されます。
 schedule-no-dates = 日付なし
 schedule-of-collection = { $name } の
+schedule-of-collection-in-library = { $collection }（{ $library }）の
 schedule-open-syllabus = { $title } のシラバスを開く
 class-folder-managed-banner = このシラバスから自動管理されています。このフォルダ内の編集は上書きされます。
 

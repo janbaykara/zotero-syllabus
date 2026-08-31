@@ -195,6 +195,7 @@ export type FluentMessageId =
   | 'schedule-next-week'
   | 'schedule-no-dates'
   | 'schedule-of-collection'
+  | 'schedule-of-collection-in-library'
   | 'schedule-open-syllabus'
   | 'schedule-settings-back'
   | 'schedule-settings-checkbox'

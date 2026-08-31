@@ -295,6 +295,7 @@ schedule-day-empty = Brak lektur zaplanowanych na ten dzień.
 schedule-window-empty = W oknie harmonogramu nie ma jeszcze lektur. Dodaj terminy lektur do zajęć, aby zobaczyć je tutaj.
 schedule-no-dates = Brak dat
 schedule-of-collection = z { $name }
+schedule-of-collection-in-library = z { $collection } ({ $library })
 schedule-open-syllabus = Otwórz sylabus: { $title }
 class-folder-managed-banner = Zarządzane automatycznie na podstawie tego sylabusa. Zmiany w tym folderze zostaną nadpisane.
 

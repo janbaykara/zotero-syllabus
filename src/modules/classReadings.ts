@@ -17,6 +17,13 @@ export function filterSyllabiByLibrary(
   );
 }
 
+export function syllabiSpanMultipleLibraries(syllabi: SyllabusData[]): boolean {
+  const libraryIDs = new Set(
+    syllabi.map((syllabus) => syllabus.collection.libraryID),
+  );
+  return libraryIDs.size > 1;
+}
+
 export function buildClassReadings(syllabi: SyllabusData[]): ClassReading[] {
   const readings: ClassReading[] = [];
 
@@ -53,6 +60,7 @@ export function buildClassReadings(syllabi: SyllabusData[]): ClassReading[] {
       readings.push({
         collectionId,
         collectionName: collection.name,
+        libraryID: collection.libraryID,
         classNumber,
         classTitle:
           SyllabusManager.getClassTitle(collectionId, classNumber) || "",

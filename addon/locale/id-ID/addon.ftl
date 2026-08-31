@@ -295,6 +295,7 @@ schedule-day-empty = Tidak ada bacaan terjadwal untuk hari ini.
 schedule-window-empty = Belum ada bacaan dalam jendela jadwal. Tambahkan tanggal bacaan ke kelas agar tampil di sini.
 schedule-no-dates = Tidak ada tanggal
 schedule-of-collection = dari { $name }
+schedule-of-collection-in-library = dari { $collection } ({ $library })
 schedule-open-syllabus = Buka silabus { $title }
 class-folder-managed-banner = Dikelola otomatis dari silabus ini. Suntingan di folder ini akan ditimpa.
 

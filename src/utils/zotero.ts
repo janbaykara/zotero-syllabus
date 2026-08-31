@@ -243,6 +243,33 @@ export function zoteroLibraryID(
   return null;
 }
 
+/** True when the client has more than My Library (groups, not feeds). */
+export function hasMultipleNonFeedLibraries(): boolean {
+  let count = 0;
+  for (const library of Zotero.Libraries.getAll()) {
+    if (library.libraryType === "feed") {
+      continue;
+    }
+    count += 1;
+    if (count > 1) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function libraryDisplayName(libraryID: number): string {
+  try {
+    const library = Zotero.Libraries.get(libraryID);
+    if (!library) {
+      return "";
+    }
+    return library.name || "";
+  } catch {
+    return "";
+  }
+}
+
 /**
  * Collections are unique by libraryID + key, not by key alone.
  * A group library can reuse an 8-character key from My Library.

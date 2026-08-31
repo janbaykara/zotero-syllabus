@@ -295,6 +295,7 @@ schedule-day-empty = 이 날에 예정된 읽기가 없습니다.
 schedule-window-empty = 일정 구간에 아직 읽기가 없습니다. 수업에 읽기 날짜를 추가하면 여기에 표시됩니다.
 schedule-no-dates = 날짜 없음
 schedule-of-collection = { $name }의
+schedule-of-collection-in-library = { $collection } ({ $library })의
 schedule-open-syllabus = { $title } 강의계획서 열기
 class-folder-managed-banner = 이 강의계획서에서 자동 관리됩니다. 이 폴더의 편집은 덮어쓰입니다.
 

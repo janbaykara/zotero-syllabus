@@ -295,6 +295,7 @@ schedule-day-empty = Geen lectuur ingepland voor deze dag.
 schedule-window-empty = Nog geen lectuur in het schemavenster. Voeg leesdata toe aan bijeenkomsten om ze hier te zien.
 schedule-no-dates = Geen data
 schedule-of-collection = van { $name }
+schedule-of-collection-in-library = van { $collection } ({ $library })
 schedule-open-syllabus = Syllabus van { $title } openen
 class-folder-managed-banner = Automatisch beheerd vanuit deze syllabus. Wijzigingen in deze map worden overschreven.
 

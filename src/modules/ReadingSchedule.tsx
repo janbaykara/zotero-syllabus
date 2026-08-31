@@ -11,6 +11,7 @@ import {
 import {
   collectClassReadingsByWeek,
   filterSyllabiByLibrary,
+  syllabiSpanMultipleLibraries,
 } from "./classReadings";
 import {
   addWeeks,
@@ -30,7 +31,7 @@ import {
   parseReadingDate,
   toLocalDateKey,
 } from "../utils/dates";
-import { isZotero8OrLater } from "../utils/zotero";
+import { hasMultipleNonFeedLibraries, isZotero8OrLater } from "../utils/zotero";
 import { getString, getUiDir } from "../utils/locale";
 import { ReadingScheduleSettingsPage } from "./ReadingScheduleSettingsPage";
 
@@ -69,6 +70,11 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
   const handleItemClick = (item: Zotero.Item, collectionId: number) => {
     selectItemInCollection(item, collectionId);
   };
+
+  const showLibrarySource =
+    libraryID == null &&
+    hasMultipleNonFeedLibraries() &&
+    syllabiSpanMultipleLibraries(syllabi);
 
   if (showSettings) {
     return (
@@ -217,6 +223,7 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
                                 key={`${classReading.collectionId}-${classReading.classNumber}`}
                                 classReading={classReading}
                                 compactMode={compactMode}
+                                showLibraryName={showLibrarySource}
                                 onCollectionClick={() =>
                                   handleCollectionClick(
                                     classReading.collectionId,

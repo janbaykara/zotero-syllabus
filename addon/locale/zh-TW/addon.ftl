@@ -295,6 +295,7 @@ schedule-day-empty = 當天沒有安排閱讀。
 schedule-window-empty = 日程範圍內尚無閱讀。為課堂新增閱讀日期即可在此查看。
 schedule-no-dates = 無日期
 schedule-of-collection = 屬於 { $name }
+schedule-of-collection-in-library = 屬於 { $collection }（{ $library }）
 schedule-open-syllabus = 開啟 { $title } 的教學大綱
 class-folder-managed-banner = 由此教學大綱自動管理。此資料夾中的變更會被覆寫。
 

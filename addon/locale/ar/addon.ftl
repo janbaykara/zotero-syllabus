@@ -295,6 +295,7 @@ schedule-day-empty = لا توجد قراءات مجدولة لهذا اليوم
 schedule-window-empty = لا توجد قراءات في نافذة الجدول بعد. أضف تواريخ قراءة إلى المحاضرات لعرضها هنا.
 schedule-no-dates = لا توجد تواريخ
 schedule-of-collection = من { $name }
+schedule-of-collection-in-library = من { $collection } ({ $library })
 schedule-open-syllabus = فتح منهاج { $title }
 class-folder-managed-banner = يُدار تلقائيًا من هذا المنهاج. تُستبدل التعديلات في هذا المجلد.
 

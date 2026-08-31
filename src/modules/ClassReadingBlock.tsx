@@ -11,7 +11,11 @@ import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata"
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
 import { useSyllabusClassGroups } from "./classGroups";
 import { formatReadingDate } from "../utils/dates";
-import { isZotero8OrLater, selectZoteroCollection } from "../utils/zotero";
+import {
+  isZotero8OrLater,
+  libraryDisplayName,
+  selectZoteroCollection,
+} from "../utils/zotero";
 import { getCachedCollectionById } from "../utils/cache";
 import { TabManager } from "../utils/tabManager";
 import { classByNumber } from "../utils/schemas";
@@ -21,6 +25,7 @@ import { ProseText } from "./ProseText";
 export type ClassReading = {
   collectionId: number;
   collectionName: string;
+  libraryID: number;
   classNumber: number;
   classTitle: string;
   classDescription: string;
@@ -80,12 +85,14 @@ export function ClassReadingBlock({
   classReading,
   compactMode,
   showCollectionLink = true,
+  showLibraryName = false,
   onCollectionClick,
   onItemClick,
 }: {
   classReading: ClassReading;
   compactMode: boolean;
   showCollectionLink?: boolean;
+  showLibraryName?: boolean;
   onCollectionClick?: () => void;
   onItemClick?: (item: Zotero.Item) => void;
 }) {
@@ -162,9 +169,7 @@ export function ClassReadingBlock({
             {showCollectionLink ? (
               <span className="text-secondary">
                 {" "}
-                {getString("schedule-of-collection", {
-                  args: { name: classReading.collectionName },
-                })}
+                {classReadingSourceLabel(classReading, showLibraryName)}
               </span>
             ) : null}
           </div>
@@ -206,6 +211,26 @@ export function ClassReadingBlock({
   );
 }
 
+function classReadingSourceLabel(
+  classReading: ClassReading,
+  showLibraryName: boolean,
+): string {
+  if (showLibraryName) {
+    const library = libraryDisplayName(classReading.libraryID);
+    if (library) {
+      return getString("schedule-of-collection-in-library", {
+        args: {
+          collection: classReading.collectionName,
+          library,
+        },
+      });
+    }
+  }
+  return getString("schedule-of-collection", {
+    args: { name: classReading.collectionName },
+  });
+}
+
 export function ClassSubcollectionPage({
   parentCollectionId,
   classCollectionId,
@@ -240,6 +265,9 @@ export function ClassSubcollectionPage({
       ? {
           collectionId: parentCollectionId,
           collectionName: parentTitle || "",
+          libraryID:
+            getCachedCollectionById(parentCollectionId)?.libraryID ??
+            Zotero.Libraries.userLibraryID,
           classNumber,
           classTitle: classMeta?.title || "",
           classDescription: classMeta?.description || "",

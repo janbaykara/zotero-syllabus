@@ -293,6 +293,7 @@ schedule-day-empty = 当天没有安排阅读。
 schedule-window-empty = 日程范围内尚无阅读。为课堂添加阅读日期即可在此查看。
 schedule-no-dates = 无日期
 schedule-of-collection = 属于 { $name }
+schedule-of-collection-in-library = 属于 { $collection }（{ $library }）
 schedule-open-syllabus = 打开 { $title } 的教学大纲
 class-folder-managed-banner = 由此教学大纲自动管理。此文件夹中的更改会被覆盖。
 

@@ -295,6 +295,7 @@ schedule-day-empty = Bu gün için planlanmış okuma yok.
 schedule-window-empty = Takvim penceresinde henüz okuma yok. Burada görmek için derslere okuma tarihleri ekleyin.
 schedule-no-dates = Tarih yok
 schedule-of-collection = { $name } koleksiyonundan
+schedule-of-collection-in-library = { $collection } koleksiyonundan ({ $library })
 schedule-open-syllabus = { $title } izlencesini aç
 class-folder-managed-banner = Bu izlenceden otomatik yönetilir. Bu klasördeki düzenlemelerin üzerine yazılır.
 

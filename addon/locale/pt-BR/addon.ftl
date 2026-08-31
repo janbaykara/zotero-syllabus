@@ -295,6 +295,7 @@ schedule-day-empty = Nenhuma leitura agendada para este dia.
 schedule-window-empty = Ainda não há leituras na janela do cronograma. Adicione datas de leitura às aulas para vê-las aqui.
 schedule-no-dates = Sem datas
 schedule-of-collection = de { $name }
+schedule-of-collection-in-library = de { $collection } ({ $library })
 schedule-open-syllabus = Abrir programa de { $title }
 class-folder-managed-banner = Gerenciado automaticamente a partir deste programa. Edições nesta pasta são sobrescritas.
 
