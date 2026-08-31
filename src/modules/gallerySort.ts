@@ -2,11 +2,10 @@ import { useCallback, useEffect, useState } from "preact/hooks";
 import * as z from "zod";
 import { config } from "../../package.json";
 import { getCachedPref, zoteroCache } from "../utils/cache";
-import type { ItemSortMode } from "../utils/items";
 
 export const GALLERY_SORT_MODES = ["auto", "title", "date"] as const;
 
-export type GallerySortBy = ItemSortMode;
+export type GallerySortBy = (typeof GALLERY_SORT_MODES)[number];
 
 const GallerySortBySchema = z.enum(GALLERY_SORT_MODES);
 const GallerySortByMapSchema = z.record(z.string(), z.unknown());

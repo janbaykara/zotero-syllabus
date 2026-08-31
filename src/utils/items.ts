@@ -83,6 +83,43 @@ export function sortItemsByTitle(items: Zotero.Item[]): Zotero.Item[] {
   );
 }
 
+/** First creator last name then given name. Empty if the item has no creator. */
+function itemCreatorSortKey(item: Zotero.Item): string {
+  try {
+    const creators = item.getCreators();
+    if (creators && creators.length > 0) {
+      const first = creators[0];
+      const last = String(first.lastName || "").trim();
+      const given = String(first.firstName || "").trim();
+      const key = `${last} ${given}`.trim();
+      if (key) {
+        return key;
+      }
+    }
+    return String(item.firstCreator || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+/** A–Z by first creator; items with no creator last; title as tiebreaker. */
+export function sortItemsByCreator(items: Zotero.Item[]): Zotero.Item[] {
+  return [...items].sort((a, b) => {
+    const creatorA = itemCreatorSortKey(a);
+    const creatorB = itemCreatorSortKey(b);
+    if (!creatorA && !creatorB) {
+      return getItemTitle(a).localeCompare(getItemTitle(b));
+    }
+    if (!creatorA) return 1;
+    if (!creatorB) return -1;
+    const byCreator = creatorA.localeCompare(creatorB);
+    if (byCreator !== 0) {
+      return byCreator;
+    }
+    return getItemTitle(a).localeCompare(getItemTitle(b));
+  });
+}
+
 /** Publication date as a timestamp. Missing dates are 0. */
 function itemPublicationDate(item: Zotero.Item): number {
   try {
@@ -144,7 +181,7 @@ export function sortItemsByDate(items: Zotero.Item[]): Zotero.Item[] {
   });
 }
 
-export type ItemSortMode = "auto" | "title" | "date";
+export type ItemSortMode = "auto" | "title" | "creator" | "date";
 
 export function sortItems(
   items: Zotero.Item[],
@@ -152,6 +189,9 @@ export function sortItems(
 ): Zotero.Item[] {
   if (mode === "date") {
     return sortItemsByDate(items);
+  }
+  if (mode === "creator") {
+    return sortItemsByCreator(items);
   }
   if (mode === "title") {
     return sortItemsByTitle(items);
