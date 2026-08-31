@@ -161,29 +161,17 @@ How to import:
 3. Click the Connector button and save the page (choose all items if prompted).
 4. In Zotero, open the new top-level collection and switch to syllabus view.
 
-#### Try it without an LMS login
-
-These are live public/guest lists last checked in August 2026 — institutions can unpublish them at any time. You must already be able to view the list in the browser. With the Connector and this plugin installed, open a list and save it.
-
-| Platform               | Test list                                                                                                                                                                                                                                                                                                                                         |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Talis Aspire           | [CPAS0167: Teacher as Author (UCL)](https://rl.talis.com/3/ucl/lists/38afa403-9ebf-4dbe-86b0-a80e564f9777.html)                                                                                                                                                                                                                                   |
-| Leganto                | [PI3084: Research Methods in Politics and International Relations (Aberdeen)](https://abdn.leganto.exlibrisgroup.com/leganto/nui/lists/13848239600005941)                                                                                                                                                                                         |
-| KeyLinks               | [MDX1234 Example Reading List](https://mdx.keylinks.org/new-ui/hierarchy/list/8875)                                                                                                                                                                                                                                                               |
-| eReserve Plus          | [MHC6100 Blueprint (Edith Cowan)](https://ereserve.ecu.edu.au/app/public_lists#/unit/4955/list/15619)                                                                                                                                                                                                                                             |
-| BLUEcloud Course Lists | No public student permalink found. Lists are almost always embedded in Canvas, Blackboard, or Moodle via LTI. Open a Course Lists **student view** in an LMS you have access to — the URL typically contains `courselists`, `bccl`, or `bluecloudlists`. Product overview: [CloudSource Course Lists](https://www.cloudsource.net/course-lists/). |
-
-eReserve Plus file download is most reliable from the signed-in LMS/student reading-list view (not only the public Vue page). Leganto’s public catalogue is also a useful entry point: [Aberdeen Find Lists](https://abdn.leganto.exlibrisgroup.com/leganto/public/44ABE_INST/searchlists).
-
 #### Supported platforms
 
-| Platform                                                                                                    | When Connector save works                                                                                                    | Notes                                                                                                                                                                               |
-| ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **[Talis Aspire](https://www.talis.com)**                                                                   | List pages on `rl.talis.com` (and a few institutional Talis hosts such as Lincoln and Surrey) whose URL contains `/lists/`   | Public lists work without login. Single-item `/items/` pages can also be saved.                                                                                                     |
-| **[Ex Libris Leganto](https://exlibrisgroup.com/products/leganto-reading-list-management-system/)**         | Pages under `/leganto/` or `*.leganto.exlibrisgroup.com`, typically `/leganto/nui/lists/{id}`                                | Guest-published lists can be saved without signing in. Institution SSO is required when the list is not shared with “Anyone”.                                                       |
-| **[KeyLinks](https://kortext.com/keylinks/)**                                                               | `*.keylinks.org` list URLs (`/list/{id}` or `/new-ui/hierarchy/list/{id}`)                                                   | Uses the list JSON API. CLA / digitised files and full-text links are downloaded when your browser session can fetch them. Notes are skipped.                                       |
-| **[eReserve Plus](https://www.ereserve.com.au/)**                                                           | `ereserve` hosts, `/app/public_lists`, or an LMS LTI reading-list launch                                                     | Full import (including files) is most reliable from the **signed-in** student / LMS reading-list view. Public list pages are still useful for browsing and for Connector detection. |
-| **[BLUEcloud Course Lists](https://www.sirsidynix.com/bluecloud-course-lists/)** (SirsiDynix / CloudSource) | Student-view pages whose URL contains `courselists`, `bccl`, or `bluecloudlists`, or whose title is “BLUEcloud Course Lists” | Almost always embedded in Canvas, Blackboard, or Moodle via LTI. Open the list from the LMS; there is no widely published public permalink.                                         |
+Example lists were last checked in August 2026 — institutions can unpublish them at any time.
+
+| Platform | Example list | When Connector save works |
+| -------- | ------------ | ------------------------- |
+| **[Talis Aspire](https://www.talis.com)** | [CPAS0167: Teacher as Author (UCL)](https://rl.talis.com/3/ucl/lists/38afa403-9ebf-4dbe-86b0-a80e564f9777.html) | List pages on `rl.talis.com` (and hosts such as Lincoln and Surrey) whose URL contains `/lists/`. Public lists work without login. Single-item `/items/` pages can also be saved. |
+| **[Ex Libris Leganto](https://exlibrisgroup.com/products/leganto-reading-list-management-system/)** | [PI3084: Research Methods in Politics and International Relations (Aberdeen)](https://abdn.leganto.exlibrisgroup.com/leganto/nui/lists/13848239600005941) | Pages under `/leganto/` or `*.leganto.exlibrisgroup.com`. Guest-published lists can be saved without signing in; institution SSO is required when the list is not shared with “Anyone”. Catalogue: [Aberdeen Find Lists](https://abdn.leganto.exlibrisgroup.com/leganto/public/44ABE_INST/searchlists). |
+| **[KeyLinks](https://kortext.com/keylinks/)** | [MDX1234 Example Reading List](https://mdx.keylinks.org/new-ui/hierarchy/list/8875) | `*.keylinks.org` list URLs (`/list/{id}` or `/new-ui/hierarchy/list/{id}`). CLA / digitised files and full-text links download when your browser session can fetch them. Notes are skipped. |
+| **[eReserve Plus](https://www.ereserve.com.au/)** | [MHC6100 Blueprint (Edith Cowan)](https://ereserve.ecu.edu.au/app/public_lists#/unit/4955/list/15619) | `ereserve` hosts, `/app/public_lists`, or an LMS LTI launch. Full import (including files) is most reliable from the **signed-in** student / LMS reading-list view, not only the public Vue page. |
+| **[BLUEcloud Course Lists](https://www.sirsidynix.com/bluecloud-course-lists/)** (SirsiDynix / CloudSource) | No public permalink — open a student view from Canvas, Blackboard, or Moodle | URLs containing `courselists`, `bccl`, or `bluecloudlists`, or a page titled “BLUEcloud Course Lists”. Product overview: [CloudSource Course Lists](https://www.cloudsource.net/course-lists/). |
 
 ### Other features
 
@@ -197,7 +185,7 @@ eReserve Plus file download is most reliable from the signed-in LMS/student read
 
 Contributions are welcome — please open a Pull Request.
 
-How the plugin stores syllabi, handles item merges, class folders, reading-list translators, and the rest of the architecture is in **[doc/TECHNICAL.md](doc/TECHNICAL.md)**. That file also has build, test, lint, and release commands.
+See **[doc/TECHNICAL.md](doc/TECHNICAL.md)** for how the plugin stores syllabi, handles item merges, class folders, reading-list translators, and the rest of the architecture, as well as build, test, lint, and release commands.
 
 To run locally: clone the repo, `pnpm install`, copy `.env.example` to `.env` (set your Zotero path), then `pnpm start`. Requires Zotero 7+ (8–10 recommended), Node.js LTS, Git, and pnpm.
 
@@ -214,5 +202,3 @@ Thanks to the following:
 - The Zotero plugin toolkit community, including [zotero-plugin-template](https://github.com/windingwind/zotero-plugin-template) and [zotero-plugin-toolkit](https://github.com/windingwind/zotero-plugin-toolkit).
 - The authors of the open-source libraries this plugin relies on, among them [Preact](https://preactjs.com), [React](https://react.dev), [Zod](https://zod.dev), [Tailwind CSS](https://tailwindcss.com), and [esbuild](https://esbuild.github.io).
 - Early users, for a steer and encouraging words.
-
-Changing the plugin? See **[doc/TECHNICAL.md](doc/TECHNICAL.md)**.
