@@ -1,0 +1,17 @@
+pref-title = Zotero Syllabus
+pref-enable =
+    .label = 有効にする
+pref-show-bibliography =
+    .label = 参考文献を表示
+pref-should-colour-syllabus-rows =
+    .label = 授業番号で行に色を付ける
+pref-compact-mode =
+    .label = コンパクトレイアウトを使う
+pref-input = 入力
+pref-help = { $name } Build { $version } { $time }
+pref-debug-mode =
+    .label = デバッグモードを有効にする
+pref-generate-reading-schedule-collection =
+    .label = 「読書スケジュール」コレクションを生成する（自動管理。チェックを外すと削除されます）
+pref-custom-icons =
+    .label = コレクションツリーと読書スケジュールタブでカスタムアイコンを使う

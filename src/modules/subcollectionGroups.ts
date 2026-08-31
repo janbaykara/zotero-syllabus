@@ -3,6 +3,7 @@ import { useSyncExternalStore } from "react-dom/src";
 import SuperJSON from "superjson";
 import { getCachedCollectionById, getCachedItem } from "../utils/cache";
 import { SyllabusManager } from "./syllabus";
+import { getString } from "../utils/locale";
 
 export type SubcollectionNode = {
   collectionId: number;
@@ -47,7 +48,7 @@ function buildNode(collection: Zotero.Collection): SubcollectionNode {
 
   return {
     collectionId: collection.id,
-    name: collection.name || "Untitled",
+    name: collection.name || getString("untitled"),
     itemIds: items.map((item) => item.id),
     children: childCollections.map(buildNode),
   };

@@ -1,0 +1,17 @@
+pref-title = Zotero Syllabus
+pref-enable =
+    .label = Inschakelen
+pref-show-bibliography =
+    .label = Bibliografie tonen
+pref-should-colour-syllabus-rows =
+    .label = Rijen kleuren op bijeenkomstnummer
+pref-compact-mode =
+    .label = Compacte indeling gebruiken
+pref-input = Invoer
+pref-help = { $name } Build { $version } { $time }
+pref-debug-mode =
+    .label = Foutopsporingsmodus inschakelen
+pref-generate-reading-schedule-collection =
+    .label = Een collectie “Leesschema” genereren (automatisch beheerd; verwijderd als uitgevinkt)
+pref-custom-icons =
+    .label = Aangepaste pictogrammen gebruiken in de collectiestructuur en het leesschema-tabblad

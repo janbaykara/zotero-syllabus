@@ -5,6 +5,7 @@ import { SyllabusManager } from "./syllabus";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { formatReadingDate } from "../utils/dates";
 import { useSyllabusClassGroups } from "./classGroups";
+import { getString } from "../utils/locale";
 
 interface TableOfContentsProps {
   collectionId: number;
@@ -135,12 +136,12 @@ export function TableOfContents({
     >
       <div className="p-4">
         <div className="text-sm font-semibold mb-3 text-secondary">
-          Table of Contents
+          {getString("page-toc-title")}
         </div>
         <nav className="space-y-1">
           {tocEntries.length === 0 ? (
             <div className="text-sm text-secondary py-2">
-              No classes available
+              {getString("toc-empty")}
             </div>
           ) : (
             tocEntries.map((entry) => (

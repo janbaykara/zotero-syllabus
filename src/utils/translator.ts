@@ -1,4 +1,5 @@
 import { FEATURE_FLAG } from "../modules/featureFlags";
+import { getString } from "./locale";
 
 const PROD_PORT = 23119;
 const DEV_PORT = 23124;
@@ -107,12 +108,12 @@ export async function installReadingListTranslators(
   }
 
   if (failed.length > 0 && installed.length === 0) {
-    const popup = new ztoolkit.ProgressWindow("Zotero Syllabus", {
+    const popup = new ztoolkit.ProgressWindow(getString("app-name"), {
       closeOnClick: true,
       closeTime: 4000,
     });
     popup.createLine({
-      text: "❌ Error installing reading-list scrapers",
+      text: getString("progress-translator-install-error"),
       type: "fail",
     });
     for (const item of failed) {

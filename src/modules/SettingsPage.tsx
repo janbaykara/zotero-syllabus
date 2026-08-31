@@ -3,6 +3,7 @@ import { h, Fragment } from "preact";
 import { useState, useEffect, useCallback, useMemo } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
 import { isZotero8OrLater } from "../utils/zotero";
+import { getString, getUiDir } from "../utils/locale";
 import { SyllabusManager } from "./syllabus";
 import pluralize from "pluralize";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
@@ -109,7 +110,7 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
     if (!priorities) return;
     const newPriority: Priority = PrioritySchema.parse({
       id: `custom-${uuidv7()}`,
-      name: "New Priority",
+      name: getString("settings-new-priority-name"),
       color: "#808080",
       order: priorities.length + 1,
     });
@@ -151,7 +152,10 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
   );
 
   return (
-    <div className="syllabus-page overflow-y-auto overflow-x-hidden h-full">
+    <div
+      className="syllabus-page overflow-y-auto overflow-x-hidden h-full"
+      dir={getUiDir()}
+    >
       <div className="pb-12">
         <div
           className={twMerge(
@@ -162,15 +166,15 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
           <div className="container-padded bg-background">
             <div className="flex flex-row items-center gap-4 justify-between">
               <div className="flex-1 text-3xl font-semibold">
-                Syllabus Settings
+                {getString("settings-title")}
               </div>
               <div className="inline-flex items-center gap-2 shrink grow-0">
                 <button
                   onClick={onBack}
-                  title="Back to syllabus view"
-                  aria-label="Back to syllabus view"
+                  title={getString("settings-back")}
+                  aria-label={getString("settings-back")}
                 >
-                  ← Back
+                  ← {getString("nav-back")}
                 </button>
               </div>
             </div>
@@ -180,14 +184,15 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
         <div className="container-padded mt-8 space-y-8">
           {/* Nomenclature Section */}
           <section className="space-y-4">
-            <h2 className="text-2xl font-semibold">Nomenclature</h2>
+            <h2 className="text-2xl font-semibold">
+              {getString("settings-nomenclature")}
+            </h2>
             <p className="text-secondary">
-              Choose the term used to refer to individual sessions (e.g.,
-              "week", "class", "session", "section").
+              {getString("settings-nomenclature-desc")}
             </p>
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-secondary">
-                Singular form
+                {getString("settings-singular")}
               </label>
               <input
                 type="text"
@@ -195,11 +200,12 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
                 onChange={(e) =>
                   handleNomenclatureChange(e.currentTarget.value)
                 }
-                placeholder="e.g., week, class, session, section"
+                placeholder={getString("settings-nomenclature-placeholder")}
                 className="px-4 py-2 border border-quinary rounded-md bg-background text-primary focus:outline-3 focus:outline-accent-blue focus:outline-offset-2"
               />
               <p className="text-sm text-secondary">
-                Plural form: <strong>{pluralNomenclature}</strong>
+                {getString("settings-plural-label")}{" "}
+                <strong>{pluralNomenclature}</strong>
               </p>
             </div>
           </section>
@@ -209,12 +215,11 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
             className="space-y-4"
             data-tour="syllabus-class-subcollections"
           >
-            <h2 className="text-2xl font-semibold">Class subcollections</h2>
+            <h2 className="text-2xl font-semibold">
+              {getString("settings-subcollections")}
+            </h2>
             <p className="text-secondary">
-              Off by default. When enabled, each class gets a folder under this
-              collection. Folders are created, renamed, and removed to match the
-              syllabus — including existing child collections, which can be
-              deleted. Turning this off leaves folders in place.
+              {getString("settings-subcollections-desc")}
             </p>
             <label className="flex items-center gap-3 cursor-pointer">
               <input
@@ -226,21 +231,22 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
                 className="w-4 h-4 cursor-pointer accent-accent-green!"
               />
               <span className="text-sm font-medium">
-                Create subcollections?
+                {getString("settings-subcollections-checkbox")}
               </span>
             </label>
           </section>
 
           {/* CSL Style Section */}
           <section className="space-y-4">
-            <h2 className="text-2xl font-semibold">Bibliography Style</h2>
+            <h2 className="text-2xl font-semibold">
+              {getString("settings-bib-style")}
+            </h2>
             <p className="text-secondary">
-              Choose a CSL (Citation Style Language) style for bibliographic
-              references. If not set, the user default style will be used.
+              {getString("settings-bib-style-desc")}
             </p>
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-secondary">
-                Citation Style
+                {getString("settings-citation-style")}
               </label>
               <select
                 value={currentStyle || ""}
@@ -249,8 +255,10 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
               >
                 <option value="">
                   {defaultStyleName
-                    ? `User default: ${defaultStyleName}`
-                    : "User default"}
+                    ? getString("settings-user-default-named", {
+                        args: { name: defaultStyleName },
+                      })
+                    : getString("settings-user-default")}
                 </option>
                 {availableStyles.map((style) => (
                   <option key={style.url} value={style.url}>
@@ -265,17 +273,19 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-semibold">Priorities</h2>
+                <h2 className="text-2xl font-semibold">
+                  {getString("settings-priorities")}
+                </h2>
                 <p className="text-secondary mt-1">
-                  Customize priority names, colors, and sort order.
+                  {getString("settings-priorities-desc")}
                 </p>
               </div>
               <button
                 onClick={handleAddPriority}
-                title="Add new priority"
-                aria-label="Add new priority"
+                title={getString("settings-add-priority")}
+                aria-label={getString("settings-add-priority")}
               >
-                + Add Priority
+                + {getString("settings-add-priority-button")}
               </button>
             </div>
 
@@ -339,8 +349,8 @@ function PriorityEditor({
                 ? "text-tertiary cursor-not-allowed"
                 : "text-primary hover:bg-quaternary",
             )}
-            title="Move up"
-            aria-label="Move up"
+            title={getString("settings-priority-move-up")}
+            aria-label={getString("settings-priority-move-up")}
           >
             ↑
           </button>
@@ -353,8 +363,8 @@ function PriorityEditor({
                 ? "text-tertiary cursor-not-allowed"
                 : "text-primary hover:bg-quaternary",
             )}
-            title="Move down"
-            aria-label="Move down"
+            title={getString("settings-priority-move-down")}
+            aria-label={getString("settings-priority-move-down")}
           >
             ↓
           </button>
@@ -367,22 +377,22 @@ function PriorityEditor({
             value={priority.color || "#CCC"}
             onChange={(e) => onUpdate({ color: e.currentTarget.value })}
             className="w-12 h-12 rounded border border-quinary cursor-pointer"
-            title="Priority color"
-            aria-label="Priority color"
+            title={getString("settings-priority-color")}
+            aria-label={getString("settings-priority-color")}
           />
         </div>
 
         {/* Name Input */}
         <div className="flex">
           <label className="text-sm font-medium text-secondary block mb-1">
-            Name
+            {getString("settings-priority-name-label")}
           </label>
           <input
             type="text"
             value={priority.name}
             onChange={(e) => onUpdate({ name: e.currentTarget.value })}
             className="m-0 px-3 py-2 border border-quinary rounded-md bg-background text-primary focus:outline-3 focus:outline-accent-blue focus:outline-offset-2"
-            placeholder="Priority name"
+            placeholder={getString("settings-priority-name-placeholder")}
           />
         </div>
 
@@ -391,10 +401,10 @@ function PriorityEditor({
           <button
             onClick={onDelete}
             className="text-red-500! justify-self-end"
-            title="Delete priority"
-            aria-label="Delete priority"
+            title={getString("settings-priority-delete")}
+            aria-label={getString("settings-priority-delete")}
           >
-            Delete
+            {getString("settings-priority-delete")}
           </button>
         )}
       </div>
@@ -402,7 +412,9 @@ function PriorityEditor({
       {/* Preview */}
       <div className="mt-4 pt-4 border-t border-quinary">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-secondary">Preview:</span>
+          <span className="text-sm text-secondary">
+            {getString("settings-priority-preview")}
+          </span>
           <span className="uppercase font-semibold tracking-wide flex flex-row gap-1.5 items-baseline">
             <span
               className="w-3 h-3 rounded-full inline-block"

@@ -8,6 +8,7 @@ import { isZotero8OrLater } from "../utils/zotero";
 import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import { SyllabusItemCard } from "./SyllabusItemCard";
+import { getString, getUiDir } from "../utils/locale";
 
 export function useItemIdentifierSelection() {
   const selectedItemIds = useZoteroSelectedItemIds();
@@ -97,6 +98,7 @@ export function BrowsePageLayout({
         "syllabus-page overflow-y-auto overflow-x-hidden h-full in-[.print]:scheme-light relative",
         compactMode && "compact-mode",
       )}
+      dir={getUiDir()}
     >
       <div className="pb-12">
         <div
@@ -109,16 +111,20 @@ export function BrowsePageLayout({
           <div className="container-padded bg-background">
             <div className="flex flex-row items-center gap-2 justify-between">
               <div className="flex-1 text-3xl font-semibold grow shrink-0 text-primary">
-                {title || "Untitled"}
+                {title || getString("untitled")}
               </div>
               <div className="inline-flex items-center gap-2.5 shrink grow-0">
                 <div
                   className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
                   title={
-                    compactMode ? "Disable compact mode" : "Enable compact mode"
+                    compactMode
+                      ? getString("page-compact-disable")
+                      : getString("page-compact-enable")
                   }
                   aria-label={
-                    compactMode ? "Disable compact mode" : "Enable compact mode"
+                    compactMode
+                      ? getString("page-compact-disable")
+                      : getString("page-compact-enable")
                   }
                   onClick={onToggleCompact}
                 >

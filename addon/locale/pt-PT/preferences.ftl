@@ -1,0 +1,17 @@
+pref-title = Zotero Syllabus
+pref-enable =
+    .label = Ativar
+pref-show-bibliography =
+    .label = Mostrar bibliografia
+pref-should-colour-syllabus-rows =
+    .label = Codificar as linhas por cores segundo o número da aula
+pref-compact-mode =
+    .label = Utilizar disposição compacta
+pref-input = Entrada
+pref-help = { $name } Build { $version } { $time }
+pref-debug-mode =
+    .label = Ativar o modo de depuração
+pref-generate-reading-schedule-collection =
+    .label = Gerar uma coleção «Calendário de leituras» (gestão automática; eliminada ao desmarcar)
+pref-custom-icons =
+    .label = Utilizar ícones personalizados na árvore de coleções e no separador do calendário de leituras

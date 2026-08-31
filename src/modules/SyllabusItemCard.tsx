@@ -23,6 +23,7 @@ import {
 import { getReadingTimeSync, formatReadingTime } from "../utils/readingTime";
 import { getItemField, getItemTitle } from "../utils/items";
 import { YoutubePlayer } from "./YoutubePlayer";
+import { getString } from "../utils/locale";
 
 export function SyllabusItemCard({
   className,
@@ -103,7 +104,7 @@ export function SyllabusItemCard({
   // const is
 
   const classInstruction = assignment?.classInstruction || "";
-  const title = getItemTitle(item) || "Untitled";
+  const title = getItemTitle(item) || getString("untitled");
   const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(item.itemType);
   const creator = item.getCreators().length > 0 ? item.getCreator(0) : null;
   const author =
@@ -249,7 +250,9 @@ export function SyllabusItemCard({
     author,
     date,
     slim ? itemTypeLabel : undefined,
-    publicationName ? `in ${publicationName}` : undefined,
+    publicationName
+      ? getString("item-in-publication", { args: { name: publicationName } })
+      : undefined,
     readingTime ? formatReadingTime(readingTime) : undefined,
   ].filter(Boolean);
 
@@ -345,7 +348,7 @@ export function SyllabusItemCard({
         normalizedUrls.add(normalized);
         urls.push({
           url: snapshotUrl,
-          label: "URL",
+          label: getString("attachment-url"),
           onClick: handleSnapshotUrlClick,
         });
       }
@@ -358,7 +361,7 @@ export function SyllabusItemCard({
         normalizedUrls.add(normalized);
         urls.push({
           url: url,
-          label: "URL",
+          label: getString("attachment-url"),
           onClick: handleUrlClick,
         });
       }
@@ -541,10 +544,14 @@ export function SyllabusItemCard({
             isZotero8OrLater() ? "md:mr-2!" : "mr-2!",
           )}
           title={
-            assignmentStatus === "done" ? "Mark as not done" : "Mark as done"
+            assignmentStatus === "done"
+              ? getString("mark-not-done")
+              : getString("mark-done")
           }
           aria-label={
-            assignmentStatus === "done" ? "Mark as not done" : "Mark as done"
+            assignmentStatus === "done"
+              ? getString("mark-not-done")
+              : getString("mark-done")
           }
           onClick={(e) => e.stopPropagation()}
         />
@@ -625,7 +632,13 @@ export function SyllabusItemCard({
                   {itemTypeLabel && (
                     <span className="text-secondary">{itemTypeLabel}</span>
                   )}
-                  {publicationName && <span>in {publicationName}</span>}
+                  {publicationName && (
+                    <span>
+                      {getString("item-in-publication", {
+                        args: { name: publicationName },
+                      })}
+                    </span>
+                  )}
                   {readingTime && <span>{formatReadingTime(readingTime)}</span>}
                 </span>
               </div>
@@ -708,23 +721,23 @@ export function SyllabusItemCard({
               ) => {
                 switch (type) {
                   case "pdf":
-                    return "PDF";
+                    return getString("attachment-pdf");
                   case "snapshot":
-                    return "Snapshot";
+                    return getString("attachment-snapshot");
                   case "epub":
-                    return "EPUB";
+                    return getString("attachment-epub");
                   case "html":
-                    return "HTML";
+                    return getString("attachment-html");
                   case "doc":
-                    return "DOC";
+                    return getString("attachment-doc");
                   case "txt":
-                    return "TXT";
+                    return getString("attachment-txt");
                   case "zip":
-                    return "ZIP";
+                    return getString("attachment-zip");
                   case "file":
-                    return "File";
+                    return getString("attachment-file");
                   default:
-                    return "View";
+                    return getString("attachment-view");
                 }
               };
 
@@ -770,13 +783,19 @@ export function SyllabusItemCard({
                   <button
                     className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
                     onClick={() => handleAttachmentClick(viewableAttachment)}
-                    title={`Open ${attachmentLabel}`}
-                    aria-label={`Open ${attachmentLabel}`}
+                    title={getString("attachment-open", {
+                      args: { label: attachmentLabel },
+                    })}
+                    aria-label={getString("attachment-open", {
+                      args: { label: attachmentLabel },
+                    })}
                   >
                     <span
                       className="syllabus-action-icon icon icon-css icon-attachment-type"
                       data-item-type={iconType}
-                      aria-label={`Open ${attachmentLabel}`}
+                      aria-label={getString("attachment-open", {
+                        args: { label: attachmentLabel },
+                      })}
                     />
                     <span className="syllabus-action-label">
                       {attachmentLabel}
@@ -794,13 +813,19 @@ export function SyllabusItemCard({
                 <button
                   className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
                   onClick={urlInfo.onClick}
-                  title={`Open ${urlInfo.label}`}
-                  aria-label={`Open ${urlInfo.label}`}
+                  title={getString("attachment-open", {
+                    args: { label: urlInfo.label },
+                  })}
+                  aria-label={getString("attachment-open", {
+                    args: { label: urlInfo.label },
+                  })}
                 >
                   <span
                     className="syllabus-action-icon icon icon-css icon-attachment-type"
                     data-item-type="attachmentLink"
-                    aria-label={`Open ${urlInfo.label}`}
+                    aria-label={getString("attachment-open", {
+                      args: { label: urlInfo.label },
+                    })}
                   />
                   <span className="syllabus-action-label">{urlInfo.label}</span>
                 </button>
@@ -867,8 +892,8 @@ export function SyllabusItemCard({
                         ztoolkit.log("Error duplicating assignment:", err);
                       }
                     }}
-                    title="Create duplicate assignment"
-                    aria-label="Create duplicate assignment"
+                    title={getString("assignment-duplicate")}
+                    aria-label={getString("assignment-duplicate")}
                   >
                     <span
                       className="syllabus-action-icon"
@@ -879,7 +904,9 @@ export function SyllabusItemCard({
                     >
                       ⧉
                     </span>
-                    <span className="syllabus-action-label">Duplicate</span>
+                    <span className="syllabus-action-label">
+                      {getString("assignment-duplicate-label")}
+                    </span>
                   </button>
                 </div>
                 <div className="focus-states-target">
@@ -902,13 +929,13 @@ export function SyllabusItemCard({
                     }}
                     title={
                       classNumber !== null && classNumber !== undefined
-                        ? "Remove from class"
-                        : "Remove from syllabus"
+                        ? getString("assignment-unassign-class")
+                        : getString("assignment-unassign-syllabus")
                     }
                     aria-label={
                       classNumber !== null && classNumber !== undefined
-                        ? "Remove from class"
-                        : "Remove from syllabus"
+                        ? getString("assignment-unassign-class")
+                        : getString("assignment-unassign-syllabus")
                     }
                   >
                     <span
@@ -921,7 +948,9 @@ export function SyllabusItemCard({
                     >
                       ×
                     </span>
-                    <span className="syllabus-action-label">Unassign</span>
+                    <span className="syllabus-action-label">
+                      {getString("assignment-unassign-label")}
+                    </span>
                   </button>
                 </div>
                 &middot;
@@ -955,8 +984,12 @@ export function SyllabusItemCard({
                             ztoolkit.log("Error setting priority:", err);
                           }
                         }}
-                        title={`Set priority to ${priorityOption.name}`}
-                        aria-label={`Set priority to ${priorityOption.name}`}
+                        title={getString("priority-set-to", {
+                          args: { name: priorityOption.name },
+                        })}
+                        aria-label={getString("priority-set-to", {
+                          args: { name: priorityOption.name },
+                        })}
                       >
                         <span
                           className="syllabus-action-icon inline-block mt-1 -mb-1 w-3 h-3 rounded-full"
@@ -989,10 +1022,12 @@ export function SyllabusItemCard({
                         ztoolkit.log("Error clearing priority:", err);
                       }
                     }}
-                    title="Clear priority"
-                    aria-label="Clear priority"
+                    title={getString("priority-clear")}
+                    aria-label={getString("priority-clear")}
                   >
-                    <span className="syllabus-action-label">(None)</span>
+                    <span className="syllabus-action-label">
+                      {getString("menu-none")}
+                    </span>
                   </button>
                 </div>,
               ];

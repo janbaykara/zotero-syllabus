@@ -1,0 +1,17 @@
+pref-title = Zotero Syllabus
+pref-enable =
+    .label = Увімкнути
+pref-show-bibliography =
+    .label = Показувати бібліографію
+pref-should-colour-syllabus-rows =
+    .label = Розфарбовувати рядки за номером заняття
+pref-compact-mode =
+    .label = Використовувати компактне компонування
+pref-input = Ввід
+pref-help = { $name } Build { $version } { $time }
+pref-debug-mode =
+    .label = Увімкнути режим налагодження
+pref-generate-reading-schedule-collection =
+    .label = Створювати колекцію «Графік читання» (керується автоматично; вилучається після зняття позначки)
+pref-custom-icons =
+    .label = Використовувати власні піктограми в дереві колекцій і на вкладці графіка читання

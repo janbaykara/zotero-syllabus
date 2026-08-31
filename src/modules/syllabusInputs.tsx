@@ -6,6 +6,7 @@ import { twMerge } from "tailwind-merge";
 import { SettingsClassMetadata } from "./syllabus";
 import { useDebouncedEffect } from "../utils/react/useDebouncedEffect";
 import { ProseText } from "./ProseText";
+import { getString } from "../utils/locale";
 
 export function ReadingDateInput({
   initialValue,
@@ -79,10 +80,10 @@ export function ReadingDateInput({
             onClick={clear}
             className="underline text-secondary cursor-pointer"
           >
-            Clear due date
+            {getString("due-date-clear")}
           </span>
         ) : (
-          <span>Add a due date</span>
+          <span>{getString("due-date-add")}</span>
         )}
       </label>
       <input
@@ -94,7 +95,7 @@ export function ReadingDateInput({
           "px-2 py-1 border border-quinary rounded-md bg-background text-secondary focus:outline-3 focus:outline-accent-blue focus:outline-offset-2",
           compactMode ? "text-sm" : "text-base",
         )}
-        placeholder="Select date"
+        placeholder={getString("placeholder-select-date")}
       />
     </div>
   );

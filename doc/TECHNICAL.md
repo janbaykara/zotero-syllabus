@@ -2,7 +2,7 @@
 
 This document is for people changing the plugin. End-user behaviour is in [README.md](../README.md).
 
-Contents: [collection note](#collection-note) · [item merges](#item-merges) · [preferences](#preferences) · [Extra absorb](#item-extra-legacy-absorb) · [class folders](#class-subcollections) · [practical rules](#practical-rules) · [reading-list connectors](#reading-list-connectors) · [local development](#local-development) · [project structure](#project-structure) · [references](#references)
+Contents: [collection note](#collection-note) · [item merges](#item-merges) · [preferences](#preferences) · [Extra absorb](#item-extra-legacy-absorb) · [class folders](#class-subcollections) · [practical rules](#practical-rules) · [localization](#localization) · [reading-list connectors](#reading-list-connectors) · [local development](#local-development) · [project structure](#project-structure) · [references](#references)
 
 A **syllabus is one Zotero collection** that you have turned into a syllabus (or that had a legacy `collectionMetadata` preference). Items in that collection are the membership. Everything else — classes, assignments, course metadata — is stored in a **collection note** so it syncs with the library. Plugin **prefs** hold UI chrome only (and leftover legacy data). **Class subcollections** are a derived, one-way view of the note.
 
@@ -119,6 +119,23 @@ Class-folder Syllabus view is a single-class page (same class renderer as the Re
 - Do not call `mutateCollectionDocument` from inside a class-folder ensure that already runs inside a write (deadlock on the per-collection write queue). Folder create/rename runs in the same write as the note persist; item membership runs after.
 - Do not absorb Extra, or create a syllabus note, on a collection whose parent already has a syllabus. Reading-list import (Talis, Leganto, KeyLinks, eReserve Plus, BLUEcloud) creates a new top-level collection instead.
 - When remapping item merges, never write the syllabus note on the merge/notifier call stack; queue like Extra absorb. Do not treat item `trash` as a merge unless `dc:replaces` names a live survivor.
+
+## Localization
+
+User-visible UI copy lives in Mozilla Fluent files under [`addon/locale/`](../addon/locale/). Zotero picks the folder that matches the app language (`de`, `pt-BR`, `es-ES`, `fr-FR`, `ar`, …). Missing strings fall back to `en-US`.
+
+**Never hardcode labels, placeholders, tooltips, aria-text, menus, empty states, or progress copy.** Add a kebab-case key to `addon/locale/en-US/addon.ftl` (the bundle `getString` loads), copy that key into **every** other locale folder, then look it up:
+
+```ts
+getString("page-lock");
+getString("page-add-class", { args: { nomenclature, number } });
+```
+
+That works in Preact TSX (render, `title`, `placeholder`, `aria-label`) and in plain TS. Call `getString` at use/render time, not at module load — `initLocale()` in [`src/utils/locale.ts`](../src/utils/locale.ts) has not run yet.
+
+Prefs XHTML uses `data-l10n-id` against `preferences.ftl`. Keep `{ $vars }` and Fluent attributes (`.label`) unchanged when translating.
+
+Do **not** localize stored library identifiers: syllabus note title `Syllabus`, managed collection `Reading Schedule`, playground `Syllabus Tour`, or the “Plugin data (do not edit)” note heading. Display chrome for those concepts still goes through Fluent. The product name **Zotero Syllabus** is not translated.
 
 ## Reading-list connectors
 

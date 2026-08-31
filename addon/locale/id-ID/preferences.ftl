@@ -1,0 +1,17 @@
+pref-title = Zotero Syllabus
+pref-enable =
+    .label = Aktifkan
+pref-show-bibliography =
+    .label = Tampilkan bibliografi
+pref-should-colour-syllabus-rows =
+    .label = Warnai baris menurut nomor kelas
+pref-compact-mode =
+    .label = Gunakan tata letak ringkas
+pref-input = Masukan
+pref-help = { $name } Build { $version } { $time }
+pref-debug-mode =
+    .label = Aktifkan mode awakutu
+pref-generate-reading-schedule-collection =
+    .label = Buat koleksi “Jadwal Bacaan” (dikelola otomatis; dihapus jika tidak dicentang)
+pref-custom-icons =
+    .label = Gunakan ikon kustom pada pohon koleksi dan tab jadwal bacaan

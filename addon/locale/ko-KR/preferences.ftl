@@ -1,0 +1,17 @@
+pref-title = Zotero Syllabus
+pref-enable =
+    .label = 사용
+pref-show-bibliography =
+    .label = 참고문헌 표시
+pref-should-colour-syllabus-rows =
+    .label = 수업 번호로 행에 색 입히기
+pref-compact-mode =
+    .label = 컴팩트 레이아웃 사용
+pref-input = 입력
+pref-help = { $name } Build { $version } { $time }
+pref-debug-mode =
+    .label = 디버그 모드 사용
+pref-generate-reading-schedule-collection =
+    .label = “읽기 일정” 컬렉션 생성(자동 관리, 선택 해제 시 제거)
+pref-custom-icons =
+    .label = 컬렉션 트리와 읽기 일정 탭에서 사용자 지정 아이콘 사용

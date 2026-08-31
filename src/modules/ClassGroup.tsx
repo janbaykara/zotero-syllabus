@@ -12,6 +12,7 @@ import {
 import { FEATURE_FLAG } from "./featureFlags";
 import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
 import { formatReadingDate } from "../utils/dates";
+import { getString } from "../utils/locale";
 import { isZotero8OrLater } from "../utils/zotero";
 import { TextInput, ReadingDateInput } from "./syllabusInputs";
 import { SyllabusItemCard } from "./SyllabusItemCard";
@@ -91,7 +92,7 @@ export function ClassGroupComponent({
   const selectedItemIds = useZoteroSelectedItemIds();
 
   // Get nomenclature for this collection
-  const { singularCapitalized } =
+  const { singular, singularCapitalized } =
     SyllabusManager.getNomenclatureFormatted(collectionId);
 
   // Get class title, description, reading date, and status from metadata
@@ -218,9 +219,15 @@ export function ClassGroupComponent({
                       "mt-1! absolute right-full mr-1 w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden",
                       isZotero8OrLater() ? "md:mr-2!" : "mr-2!",
                     )}
-                    title={classIsDone ? "Mark as not done" : "Mark as done"}
+                    title={
+                      classIsDone
+                        ? getString("mark-not-done")
+                        : getString("mark-done")
+                    }
                     aria-label={
-                      classIsDone ? "Mark as not done" : "Mark as done"
+                      classIsDone
+                        ? getString("mark-not-done")
+                        : getString("mark-done")
                     }
                   />
                 )}
@@ -243,7 +250,7 @@ export function ClassGroupComponent({
                     initialValue={classTitle}
                     onSave={(title) => onClassTitleSave(classNumber, title)}
                     className="w-full text-primary"
-                    placeholder="Add a title..."
+                    placeholder={getString("placeholder-add-title")}
                     emptyBehavior="delete"
                     readOnly={isLocked}
                   />
@@ -261,7 +268,9 @@ export function ClassGroupComponent({
                   )}
                   {FEATURE_FLAG.READING_SCHEDULE && isLocked && readingDate && (
                     <div className={twMerge("text-secondary")}>
-                      <span className="text-tertiary">Due date: </span>
+                      <span className="text-tertiary">
+                        {getString("class-due-date-label")}{" "}
+                      </span>
                       <span className="text-secondary">
                         {formatReadingDate(readingDate)}
                       </span>
@@ -273,8 +282,8 @@ export function ClassGroupComponent({
                         <button
                           className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
                           onClick={handleResetSortOrder}
-                          title="Reset sort order"
-                          aria-label="Reset sort order"
+                          title={getString("class-reset-sort")}
+                          aria-label={getString("class-reset-sort")}
                         >
                           <div className="text-lg text-center">⇅</div>
                         </button>
@@ -283,8 +292,12 @@ export function ClassGroupComponent({
                         className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-secondary"
                         onClick={() => handleMoveClass("up")}
                         disabled={!canMoveUp}
-                        title={`Move ${SyllabusManager.getNomenclatureFormatted(collectionId).singular} up`}
-                        aria-label={`Move ${SyllabusManager.getNomenclatureFormatted(collectionId).singular} up`}
+                        title={getString("class-move-up", {
+                          args: { nomenclature: singular },
+                        })}
+                        aria-label={getString("class-move-up", {
+                          args: { nomenclature: singular },
+                        })}
                       >
                         <ChevronUp size={16} />
                       </button>
@@ -292,16 +305,24 @@ export function ClassGroupComponent({
                         className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-secondary"
                         onClick={() => handleMoveClass("down")}
                         disabled={!canMoveDown}
-                        title={`Move ${SyllabusManager.getNomenclatureFormatted(collectionId).singular} down`}
-                        aria-label={`Move ${SyllabusManager.getNomenclatureFormatted(collectionId).singular} down`}
+                        title={getString("class-move-down", {
+                          args: { nomenclature: singular },
+                        })}
+                        aria-label={getString("class-move-down", {
+                          args: { nomenclature: singular },
+                        })}
                       >
                         <ChevronDown size={16} />
                       </button>
                       <button
                         className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-red-500/15 text-secondary hover:text-red-400 inline-flex flex-row items-center justify-center w-8 h-8"
                         onClick={handleDeleteClass}
-                        title={`Delete ${SyllabusManager.getNomenclatureFormatted(collectionId).singular}`}
-                        aria-label={`Delete ${SyllabusManager.getNomenclatureFormatted(collectionId).singular}`}
+                        title={getString("class-delete", {
+                          args: { nomenclature: singular },
+                        })}
+                        aria-label={getString("class-delete", {
+                          args: { nomenclature: singular },
+                        })}
                       >
                         <div className="text-2xl text-center">×</div>
                       </button>
@@ -320,7 +341,7 @@ export function ClassGroupComponent({
                 initialValue={classDescription}
                 onSave={(desc) => onClassDescriptionSave(classNumber, desc)}
                 className="w-full px-0! mx-0! text-primary"
-                placeholder="Add a description..."
+                placeholder={getString("placeholder-add-description")}
                 emptyBehavior="delete"
                 fieldSizing="content"
                 readOnly={isLocked}
@@ -350,7 +371,12 @@ export function ClassGroupComponent({
                 compactMode ? "p-4" : "p-8",
               )}
             >
-              Drag items to {singularCapitalized} {classNumber}
+              {getString("class-dropzone-hint", {
+                args: {
+                  nomenclature: singularCapitalized,
+                  number: classNumber,
+                },
+              })}
             </div>
           ) : itemAssignments.length > 0 ? (
             itemAssignments.map(({ item, assignment }) => {

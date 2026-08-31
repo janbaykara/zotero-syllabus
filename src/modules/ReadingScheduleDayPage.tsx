@@ -18,6 +18,7 @@ import {
   listReadingScheduleDateFolders,
 } from "./readingScheduleCollection";
 import { collectClassReadingsByDate } from "./classReadings";
+import { getString, getUiDir } from "../utils/locale";
 
 function pickInitialDateKey(
   availableKeys: string[],
@@ -131,7 +132,10 @@ export function ReadingScheduleDayPage({
 
   if (!context) {
     return (
-      <div className="syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background">
+      <div
+        className="syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background"
+        dir={getUiDir()}
+      >
         <div className="container-padded py-12 text-secondary">
           This collection is not part of the Reading Schedule.
         </div>
@@ -140,7 +144,10 @@ export function ReadingScheduleDayPage({
   }
 
   return (
-    <div className="syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background">
+    <div
+      className="syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background"
+      dir={getUiDir()}
+    >
       <div className="pb-12">
         <div
           className={twMerge(
@@ -154,18 +161,20 @@ export function ReadingScheduleDayPage({
                 type="button"
                 onClick={openRoot}
                 className="flex items-center gap-1 text-secondary hover:text-primary bg-transparent! border-none p-0 cursor-pointer text-base in-[.print]:hidden"
-                title="Open Reading Schedule"
+                title={getString("toolbar-reading-schedule-open")}
               >
                 <ChevronLeft size={18} />
-                <span className="font-semibold">Reading Schedule</span>
+                <span className="font-semibold">
+                  {getString("view-tab-reading-schedule")}
+                </span>
               </button>
             ) : (
               <div className={twMerge("font-semibold text-3xl")}>
-                Reading Schedule
+                {getString("view-tab-reading-schedule")}
               </div>
             )}
             <p className="text-sm text-secondary mt-1 in-[.print]:hidden">
-              Auto-managed from your syllabi. Edits here are overwritten.
+              {getString("schedule-day-managed-banner")}
             </p>
           </div>
         </div>
@@ -183,8 +192,8 @@ export function ReadingScheduleDayPage({
           {classReadings.length === 0 ? (
             <p className="text-secondary text-lg mt-8">
               {activeDateKey
-                ? "No readings scheduled for this day."
-                : "No readings in the schedule window yet. Add reading dates to classes to see them here."}
+                ? getString("schedule-day-empty")
+                : getString("schedule-window-empty")}
             </p>
           ) : (
             <div className="space-y-8 mt-8">
@@ -237,7 +246,7 @@ function DayNavHeader({
         title={prevDateKey ? formatReadingDate(prevDateKey) : undefined}
       >
         <ChevronLeft size={18} />
-        <span>Previous</span>
+        <span>{getString("nav-previous")}</span>
       </button>
 
       <div
@@ -246,7 +255,7 @@ function DayNavHeader({
           compactMode ? "text-xl" : "text-2xl",
         )}
       >
-        {dateKey ? formatReadingDate(dateKey) : "No dates"}
+        {dateKey ? formatReadingDate(dateKey) : getString("schedule-no-dates")}
       </div>
 
       <button
@@ -259,7 +268,7 @@ function DayNavHeader({
         )}
         title={nextDateKey ? formatReadingDate(nextDateKey) : undefined}
       >
-        <span>Next</span>
+        <span>{getString("nav-next")}</span>
         <ChevronRight size={18} />
       </button>
     </div>

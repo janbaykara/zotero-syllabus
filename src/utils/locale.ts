@@ -1,7 +1,57 @@
 import { config } from "../../package.json";
 import { FluentMessageId } from "../../typings/i10n";
 
-export { initLocale, getString, getLocaleID };
+export {
+  initLocale,
+  getString,
+  getLocaleID,
+  getAppLocale,
+  isRtlLocale,
+  getUiDir,
+};
+
+const RTL_LANGS = new Set(["ar", "fa", "he", "ur"]);
+
+function getAppLocale(): string {
+  try {
+    const services =
+      typeof Services !== "undefined"
+        ? Services
+        : ztoolkit.getGlobal("Services");
+    const appLocale = services?.locale?.appLocaleAsBCP47;
+    if (appLocale) {
+      return appLocale;
+    }
+  } catch {
+    // fall through
+  }
+  try {
+    return Zotero.locale || "en-US";
+  } catch {
+    return "en-US";
+  }
+}
+
+function isRtlLocale(): boolean {
+  const locale = getAppLocale();
+  try {
+    const loc = new Intl.Locale(locale) as Intl.Locale & {
+      textInfo?: { direction?: string };
+      getTextInfo?: () => { direction?: string };
+    };
+    const direction = loc.textInfo?.direction || loc.getTextInfo?.()?.direction;
+    if (direction) {
+      return direction === "rtl";
+    }
+  } catch {
+    // fall through to language-tag check
+  }
+  return RTL_LANGS.has(locale.split("-")[0] || "");
+}
+
+function getUiDir(): "rtl" | "ltr" {
+  return isRtlLocale() ? "rtl" : "ltr";
+}
 
 /**
  * Initialize locale data

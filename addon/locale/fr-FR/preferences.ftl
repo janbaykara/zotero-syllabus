@@ -1,0 +1,17 @@
+pref-title = Zotero Syllabus
+pref-enable =
+    .label = Activer
+pref-show-bibliography =
+    .label = Afficher la bibliographie
+pref-should-colour-syllabus-rows =
+    .label = Colorer les lignes selon le numéro de séance
+pref-compact-mode =
+    .label = Utiliser la mise en page compacte
+pref-input = Saisie
+pref-help = { $name } Build { $version } { $time }
+pref-debug-mode =
+    .label = Activer le mode débogage
+pref-generate-reading-schedule-collection =
+    .label = Générer une collection « Planning des lectures » (gérée automatiquement ; supprimée si décochée)
+pref-custom-icons =
+    .label = Utiliser des icônes personnalisées dans l’arbre des collections et l’onglet du planning des lectures

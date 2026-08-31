@@ -1,0 +1,17 @@
+pref-title = Zotero Syllabus
+pref-enable =
+    .label = Etkinleştir
+pref-show-bibliography =
+    .label = Kaynakçayı göster
+pref-should-colour-syllabus-rows =
+    .label = Satırları ders numarasına göre renklendir
+pref-compact-mode =
+    .label = Sıkışık düzen kullan
+pref-input = Girdi
+pref-help = { $name } Build { $version } { $time }
+pref-debug-mode =
+    .label = Hata ayıklama kipini etkinleştir
+pref-generate-reading-schedule-collection =
+    .label = “Okuma Takvimi” koleksiyonu oluştur (otomatik yönetilir; işaret kaldırılınca silinir)
+pref-custom-icons =
+    .label = Koleksiyon ağacında ve okuma takvimi sekmesinde özel simgeler kullan

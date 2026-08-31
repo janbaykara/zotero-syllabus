@@ -1,0 +1,17 @@
+pref-title = Zotero Syllabus
+pref-enable =
+    .label = Aktivieren
+pref-show-bibliography =
+    .label = Bibliografie anzeigen
+pref-should-colour-syllabus-rows =
+    .label = Zeilen nach Sitzungsnummer einfärben
+pref-compact-mode =
+    .label = Kompaktes Layout verwenden
+pref-input = Eingabe
+pref-help = { $name } Build { $version } { $time }
+pref-debug-mode =
+    .label = Debug-Modus aktivieren
+pref-generate-reading-schedule-collection =
+    .label = Sammlung „Lektüreplan“ erzeugen (automatisch verwaltet; wird beim Deaktivieren entfernt)
+pref-custom-icons =
+    .label = Eigene Symbole in der Sammlungsstruktur und im Lektüreplan-Tab verwenden

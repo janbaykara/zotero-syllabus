@@ -3,6 +3,7 @@ import { h, Fragment } from "preact";
 import { useState, useEffect, useRef } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
 import { Pencil, Plus, ExternalLink, Trash2 } from "lucide-preact";
+import { getString } from "../utils/locale";
 
 export function LinksSection({
   links,
@@ -111,7 +112,7 @@ export function LinksSection({
                       type="text"
                       inputMode="url"
                       value={draft.value}
-                      placeholder="https://"
+                      placeholder={getString("placeholder-url")}
                       className={twMerge(
                         "flex-1 w-full bg-transparent border-none px-0 py-1",
                         "focus:outline-3 focus:outline-accent-blue focus:rounded-xs focus:outline-offset-2",
@@ -146,8 +147,8 @@ export function LinksSection({
                           handleDeleteLink(draft.index);
                         }
                       }}
-                      title="Delete link"
-                      aria-label="Delete link"
+                      title={getString("links-delete")}
+                      aria-label={getString("links-delete")}
                     />
                   </>
                 ) : "url" in row ? (
@@ -176,8 +177,8 @@ export function LinksSection({
                               value: row.url,
                             });
                           }}
-                          title="Edit link"
-                          aria-label="Edit link"
+                          title={getString("links-edit")}
+                          aria-label={getString("links-edit")}
                         />
                         <Trash2
                           size={16}
@@ -186,8 +187,8 @@ export function LinksSection({
                             e.stopPropagation();
                             handleDeleteLink(row.index);
                           }}
-                          title="Delete link"
-                          aria-label="Delete link"
+                          title={getString("links-delete")}
+                          aria-label={getString("links-delete")}
                         />
                       </>
                     )}
@@ -200,11 +201,11 @@ export function LinksSection({
             <button
               onClick={handleAddLink}
               className="flex items-center gap-2 text-secondary hover:text-primary cursor-pointer self-start in-[.print]:hidden"
-              title="Add link"
-              aria-label="Add link"
+              title={getString("links-add")}
+              aria-label={getString("links-add")}
             >
               <Plus size={16} />
-              <span>Add link</span>
+              <span>{getString("links-add")}</span>
             </button>
           )}
         </div>

@@ -2,6 +2,7 @@
 import { h, Fragment } from "preact";
 import type { JSX } from "preact";
 import { youtubeThumbnailUrl, youtubeWatchUrl } from "../utils/youtube";
+import { getString } from "../utils/locale";
 
 export function YoutubePlayer({
   videoId,
@@ -50,8 +51,8 @@ export function YoutubePlayer({
         draggable={false}
         onClick={play}
         onDblClick={play}
-        title={`Play ${title} on YouTube`}
-        aria-label={`Play ${title} on YouTube`}
+        title={getString("youtube-play", { args: { title } })}
+        aria-label={getString("youtube-play", { args: { title } })}
       >
         <span
           className="flex items-center justify-center text-white shadow-md"

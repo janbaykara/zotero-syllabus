@@ -15,6 +15,7 @@ import {
 import { useZoteroClassMetadata } from "./react-zotero-sync/classMetadata";
 import { useSyllabusDocumentGeneration } from "./react-zotero-sync/collectionDocument";
 import { formatReadingDate } from "../utils/dates";
+import { getString, getUiDir } from "../utils/locale";
 import { TextInput } from "./syllabusInputs";
 
 interface ItemPaneProps {
@@ -65,15 +66,21 @@ export function ItemPane({ editable }: ItemPaneProps) {
 
   // If item doesn't exist or was deleted, don't render anything
   if (!selectedItemIds) {
-    return <div>Item not found</div>;
+    return <div>{getString("item-pane-not-found")}</div>;
   }
 
   if (selectedItemIds.length === 0) {
-    return <div>No items selected</div>;
+    return <div>{getString("item-pane-none-selected")}</div>;
   }
 
   if (selectedItemIds.length > 1) {
-    return <div>{selectedItemIds.length} items selected</div>;
+    return (
+      <div>
+        {getString("item-pane-n-selected", {
+          args: { count: selectedItemIds.length },
+        })}
+      </div>
+    );
   }
 
   // Render assignments for each selected item
@@ -95,7 +102,7 @@ function ItemPaneData({
     item.version === undefined ||
     item.version === null
   ) {
-    return <div>Item not found</div>;
+    return <div>{getString("item-pane-not-found")}</div>;
   }
 
   return (
@@ -371,12 +378,16 @@ function ItemPaneContent({
       color: p.color,
     }));
     // Add "(None)" option
-    options.push({ value: "", label: "(None)", color: "" });
+    options.push({ value: "", label: getString("menu-none"), color: "" });
     return options;
   }, []);
 
   return (
-    <div className="flex flex-col gap-2 pb-2" data-tour="syllabus-item-pane">
+    <div
+      className="flex flex-col gap-2 pb-2"
+      data-tour="syllabus-item-pane"
+      dir={getUiDir()}
+    >
       {allAssignmentsByCollection.map((group) => {
         const isCurrentCollection = group.collectionId === currentCollectionId;
         return (
@@ -389,7 +400,9 @@ function ItemPaneContent({
               )}
             >
               <span className="text-xs font-normal text-secondary uppercase tracking-wide">
-                {isCurrentCollection ? "current view" : "also assigned to"}
+                {isCurrentCollection
+                  ? getString("item-pane-current-view")
+                  : getString("item-pane-also-assigned")}
               </span>
               <div
                 className={twMerge(
@@ -508,21 +521,31 @@ function AssignmentEditor({
           {assignment.classNumber !== undefined ? (
             <div>
               <div>
-                Assignment #{assignmentIndex + 1}{" "}
+                {getString("item-pane-assignment-n", {
+                  args: { number: assignmentIndex + 1 },
+                })}{" "}
                 {classTitle ? (
                   <span>
-                    for <span>{classTitle}</span>
+                    {getString("item-pane-assignment-for", {
+                      args: { title: classTitle },
+                    })}
                   </span>
                 ) : null}
               </div>
               {assignmentClass?.readingDate ? (
                 <div className="mt-1 text-sm text-secondary">
-                  Due {formatReadingDate(assignmentClass.readingDate)}
+                  {getString("item-pane-due", {
+                    args: {
+                      date: formatReadingDate(assignmentClass.readingDate),
+                    },
+                  })}
                 </div>
               ) : null}
             </div>
           ) : (
-            <div className="self-baseline">Reference material</div>
+            <div className="self-baseline">
+              {getString("item-pane-reference-material")}
+            </div>
           )}
         </div>
         {editable && (
@@ -556,16 +579,17 @@ function AssignmentEditor({
                 ? "var(--fill-quinary)"
                 : "transparent";
             }}
-            title={isDone ? "Mark as not done" : "Mark as done"}
+            title={isDone ? getString("mark-not-done") : getString("mark-done")}
           >
             {isDone ? (
               <span className="flex items-center gap-2">
-                Done
+                {getString("status-done")}
                 <SquareCheck className="w-5 h-5" />
               </span>
             ) : (
               <span className="flex items-center gap-2">
-                Mark done <Square className="w-5 h-5" />
+                {getString("item-pane-mark-done")}{" "}
+                <Square className="w-5 h-5" />
               </span>
             )}
           </button>
@@ -580,7 +604,7 @@ function AssignmentEditor({
           min="1"
           step="1"
           disabled={!editable || isSaving}
-          placeholder="e.g., 1, 2, 3..."
+          placeholder={getString("placeholder-class-number")}
           value={assignment.classNumber}
           onChange={(e) => {
             const inputRef = e.target as HTMLInputElement;
@@ -604,7 +628,9 @@ function AssignmentEditor({
 
       {/* Priority - Dropdown and Quick Buttons */}
       <div className="flex flex-row gap-2">
-        <label className="w-1/4 shrink-0 grow-0">Priority</label>
+        <label className="w-1/4 shrink-0 grow-0">
+          {getString("field-priority")}
+        </label>
         <div className="flex flex-col gap-1 -my-1">
           {/* Quick Priority Buttons */}
           {editable && (
@@ -659,9 +685,9 @@ function AssignmentEditor({
                     ? "opacity-30 cursor-not-allowed"
                     : "opacity-100 cursor-pointer",
                 )}
-                title="Clear priority"
+                title={getString("priority-clear")}
               >
-                Clear
+                {getString("priority-clear")}
               </button>
             </div>
           )}
@@ -670,14 +696,16 @@ function AssignmentEditor({
 
       {/* Instructions — local-state TextInput so document sync cannot erase typing */}
       <div className="flex flex-row gap-2">
-        <label className="w-1/4 shrink-0 grow-0">Instructions</label>
+        <label className="w-1/4 shrink-0 grow-0">
+          {getString("field-instructions")}
+        </label>
         <TextInput
           elementType="textarea"
           initialValue={assignment.classInstruction || ""}
           onSave={(instruction) =>
             onInstructionChange(assignment.id!, collectionId, instruction)
           }
-          placeholder="Add instructions for this assignment..."
+          placeholder={getString("placeholder-instructions")}
           emptyBehavior="delete"
           fieldSizing="fixed"
           readOnly={!editable}
@@ -698,10 +726,12 @@ function AssignmentEditor({
               "px-2 py-1 text-xs font-medium",
               "inline-flex flex-row gap-2 items-center flex-nowrap",
             )}
-            title="Duplicate assignment"
+            title={getString("assignment-duplicate")}
           >
             <span className="text-2xl leading-none">⧉</span>
-            <span className="text-sm">Duplicate</span>
+            <span className="text-sm">
+              {getString("assignment-duplicate-label")}
+            </span>
           </button>
           <button
             type="button"
@@ -714,10 +744,10 @@ function AssignmentEditor({
                 ? "opacity-30 cursor-not-allowed"
                 : "opacity-100 cursor-pointer",
             )}
-            title="Delete assignment"
+            title={getString("assignment-delete")}
           >
             <span className="text-2xl leading-none">×</span>
-            <span className="text-sm">Delete</span>
+            <span className="text-sm">{getString("assignment-delete")}</span>
           </button>
         </div>
       )}

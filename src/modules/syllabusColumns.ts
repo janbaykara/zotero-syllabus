@@ -1,6 +1,7 @@
 import { getSelectedCollection } from "../utils/zotero";
 import { getPref } from "../utils/prefs";
 import { getReadingTimeSync, formatReadingTime } from "../utils/readingTime";
+import { getString } from "../utils/locale";
 import { SyllabusManager } from "./syllabus";
 
 export async function registerSyllabusClassInstructionColumn() {
@@ -8,7 +9,7 @@ export async function registerSyllabusClassInstructionColumn() {
   await Zotero.ItemTreeManager.registerColumns({
     pluginID: addon.data.config.addonID,
     dataKey: field,
-    label: "Reading Instructions",
+    label: getString("column-reading-instructions"),
     dataProvider: (item: Zotero.Item, dataKey: string) => {
       const selectedCollection = getSelectedCollection();
 
@@ -32,7 +33,7 @@ export async function registerSyllabusStatusColumn() {
   await Zotero.ItemTreeManager.registerColumns({
     pluginID: addon.data.config.addonID,
     dataKey: field,
-    label: "Status",
+    label: getString("column-status"),
     // iconLabel: "chrome://zotero/skin/16/universal/checkmark.svg",
     iconPath: "chrome://zotero/skin/16/universal/tick.svg",
     width: "100px",
@@ -77,7 +78,7 @@ export async function registerReadingTimeColumn() {
   await Zotero.ItemTreeManager.registerColumns({
     pluginID: addon.data.config.addonID,
     dataKey: field,
-    label: "Reading Time",
+    label: getString("column-reading-time"),
     // width: "100px",
     // fixedWidth: true,
     dataProvider: (item: Zotero.Item, dataKey: string) => {
@@ -122,7 +123,7 @@ export async function registerSyllabusInfoColumn() {
   await Zotero.ItemTreeManager.registerColumns({
     pluginID: addon.data.config.addonID,
     dataKey: field,
-    label: "Syllabus Info",
+    label: getString("column-syllabus-info"),
     dataProvider: (item: Zotero.Item, dataKey: string) => {
       const selectedCollection = getSelectedCollection();
 
@@ -202,7 +203,9 @@ export async function registerSyllabusInfoColumn() {
         // Display class number if available
         if (classNumber) {
           const classNumberSpan = doc.createElement("span");
-          classNumberSpan.textContent = `#${classNumber}`;
+          classNumberSpan.textContent = getString("column-class-hash", {
+            args: { number: classNumber },
+          });
           classNumberSpan.style.fontWeight = "500";
           container.appendChild(classNumberSpan);
         }
@@ -251,7 +254,9 @@ export async function registerSyllabusInfoColumn() {
         // Display class number if available
         if (classNumber) {
           const classNumberSpan = doc.createElement("span");
-          classNumberSpan.textContent = `#${classNumber}`;
+          classNumberSpan.textContent = getString("column-class-hash", {
+            args: { number: classNumber },
+          });
           classNumberSpan.style.fontWeight = "500";
           container.appendChild(classNumberSpan);
         }

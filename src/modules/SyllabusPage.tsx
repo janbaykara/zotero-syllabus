@@ -12,7 +12,7 @@ import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
 import { generateBibliographyForPrint } from "../utils/cite";
 import { getPref } from "../utils/prefs";
-import { getString } from "../utils/locale";
+import { getString, getUiDir } from "../utils/locale";
 import {
   showUserGuide,
   TOUR_EVENT_CLOSE_SETTINGS,
@@ -1475,7 +1475,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         strict: true,
       });
       const filename = `${titleSlug}-${dateStr}.syllabus`;
-      await saveToFile(filename, rdf, "Save Syllabus Export");
+      await saveToFile(filename, rdf, getString("dialog-save-export"));
     } catch (err) {
       ztoolkit.log("Error exporting syllabus metadata:", err);
     }
@@ -1517,17 +1517,17 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       ztoolkit.log("Successfully imported and merged syllabus metadata");
 
       // Show success message
-      new ztoolkit.ProgressWindow("Import Success", {
+      new ztoolkit.ProgressWindow(getString("progress-import-success-title"), {
         closeOnClick: true,
         closeTime: 3000,
       })
         .createLine({
-          text: "Successfully imported and merged syllabus metadata",
+          text: getString("progress-import-success-text"),
           type: "success",
         })
         .show();
     } catch (error) {
-      new ztoolkit.ProgressWindow("Import Error", {
+      new ztoolkit.ProgressWindow(getString("progress-import-error-title"), {
         closeOnClick: true,
         closeTime: 5000,
       })
@@ -1626,12 +1626,12 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         await processFile(syllabusFile);
       } else if (files.length > 0) {
         // Show error if file doesn't have .syllabus extension
-        new ztoolkit.ProgressWindow("Import Error", {
+        new ztoolkit.ProgressWindow(getString("progress-import-error-title"), {
           closeOnClick: true,
           closeTime: 5000,
         })
           .createLine({
-            text: "Please drop a .syllabus file",
+            text: getString("progress-import-bad-file"),
             type: "fail",
           })
           .show();
@@ -1646,12 +1646,12 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       return;
     }
 
-    const progress = new ztoolkit.ProgressWindow("Zotero Syllabus", {
+    const progress = new ztoolkit.ProgressWindow(getString("app-name"), {
       closeOnClick: false,
       closeTime: -1,
     })
       .createLine({
-        text: "Preparing syllabus for print…",
+        text: getString("progress-print-preparing"),
         type: "default",
       })
       .show();
@@ -1699,12 +1699,12 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     } catch (err) {
       ztoolkit.log("Error printing syllabus:", err);
       progress.close();
-      new ztoolkit.ProgressWindow("Zotero Syllabus", {
+      new ztoolkit.ProgressWindow(getString("app-name"), {
         closeOnClick: true,
         closeTime: 5000,
       })
         .createLine({
-          text: "Could not save the syllabus PDF",
+          text: getString("progress-print-failed"),
           type: "fail",
         })
         .show();
@@ -1798,6 +1798,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           compactMode && "compact-mode",
           isDraggingFile && "file-drag-over",
         )}
+        dir={getUiDir()}
         onKeyDown={handleSyllabusKeyDown}
         onDragEnter={handleFileDragEnter}
         onDragOver={handleFileDragOver}
@@ -1811,7 +1812,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
               <div className="flex flex-col items-center gap-4">
                 <Upload size={48} className="text-accent-blue" />
                 <div className="text-xl font-semibold text-accent-blue">
-                  Drop .syllabus file to import
+                  {getString("page-drop-import-file")}
                 </div>
               </div>
             </div>
@@ -1847,8 +1848,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                         setShowTOC(true);
                       }}
                       className="text-secondary hover:text-primary p-1 rounded hover:bg-quinary transition-colors bg-transparent! border-none"
-                      title="Table of Contents"
-                      aria-label="Table of Contents"
+                      title={getString("page-toc-title")}
+                      aria-label={getString("page-toc-title")}
                       data-toc-button="true"
                     >
                       <List size={20} />
@@ -1868,7 +1869,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                       initialValue={title || ""}
                       onSave={setTitle}
                       emptyBehavior="reset"
-                      placeholder="Add a title..."
+                      placeholder={getString("placeholder-add-title")}
                       className="w-full px-0! mx-0! text-primary! disabled:text-primary!"
                       readOnly={isLocked}
                     />
@@ -1881,13 +1882,13 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                         className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
                         title={
                           compactMode
-                            ? "Disable compact mode"
-                            : "Enable compact mode"
+                            ? getString("page-compact-disable")
+                            : getString("page-compact-enable")
                         }
                         aria-label={
                           compactMode
-                            ? "Disable compact mode"
-                            : "Enable compact mode"
+                            ? getString("page-compact-disable")
+                            : getString("page-compact-enable")
                         }
                         onClick={toggleCompactMode}
                       >
@@ -1907,13 +1908,13 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                         className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
                         title={
                           readerMode
-                            ? "Disable reader mode"
-                            : "Enable reader mode"
+                            ? getString("page-reader-disable")
+                            : getString("page-reader-enable")
                         }
                         aria-label={
                           readerMode
-                            ? "Disable reader mode"
-                            : "Enable reader mode"
+                            ? getString("page-reader-disable")
+                            : getString("page-reader-enable")
                         }
                         onClick={toggleReaderMode}
                       >
@@ -1931,8 +1932,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                       </div>
                       <div
                         className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                        title="Export syllabus file"
-                        aria-label="Export syllabus file"
+                        title={getString("page-export")}
+                        aria-label={getString("page-export")}
                         onClick={handleExport}
                       >
                         <Upload
@@ -1942,8 +1943,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                       </div>
                       <div
                         className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                        title="Import syllabus file"
-                        aria-label="Import syllabus file"
+                        title={getString("page-import")}
+                        aria-label={getString("page-import")}
                         onClick={handleImport}
                       >
                         <Download
@@ -1953,8 +1954,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                       </div>
                       <div
                         className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                        title="Edit syllabus settings"
-                        aria-label="Edit syllabus settings"
+                        title={getString("page-edit-settings")}
+                        aria-label={getString("page-edit-settings")}
                         data-tour="syllabus-settings-button"
                         onClick={() => setShowSettings(true)}
                       >
@@ -1967,8 +1968,16 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   )}
                   <div
                     className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                    title={isLocked ? "Unlock syllabus" : "Lock syllabus"}
-                    aria-label={isLocked ? "Unlock syllabus" : "Lock syllabus"}
+                    title={
+                      isLocked
+                        ? getString("page-unlock")
+                        : getString("page-lock")
+                    }
+                    aria-label={
+                      isLocked
+                        ? getString("page-unlock")
+                        : getString("page-lock")
+                    }
                     aria-pressed={isLocked}
                     onClick={() => setLocked(!isLocked)}
                   >
@@ -1986,8 +1995,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   </div>
                   <div
                     className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                    title="Print the list in Syllabus view as a PDF"
-                    aria-label="Print the list in Syllabus view as a PDF"
+                    title={getString("page-print")}
+                    aria-label={getString("page-print")}
                     onClick={handlePrint}
                   >
                     <Printer
@@ -2013,7 +2022,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   initialValue={syllabusMetadata.courseCode || ""}
                   onSave={setCourseCode}
                   className="w-[90px] overflow-hidden text-ellipsis whitespace-nowrap px-0! mx-0! text-primary cursor-pointer shrink-0! grow-0!"
-                  placeholder="Course Code"
+                  placeholder={getString("placeholder-course-code")}
                   emptyBehavior="delete"
                   readOnly={isLocked}
                 />
@@ -2022,7 +2031,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   initialValue={syllabusMetadata.institution || ""}
                   onSave={setInstitution}
                   className="px-0! mx-0! text-primary cursor-pointer grow shrink-0"
-                  placeholder="Institution"
+                  placeholder={getString("placeholder-institution")}
                   emptyBehavior="delete"
                   readOnly={isLocked}
                 />
@@ -2033,7 +2042,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                 onSave={setDescription}
                 syllabus-collection-description
                 className="w-full px-0! mx-0! text-primary"
-                placeholder="Add a description..."
+                placeholder={getString("placeholder-add-description")}
                 emptyBehavior="delete"
                 fieldSizing="content"
                 readOnly={isLocked}
@@ -2087,6 +2096,13 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                 SyllabusManager.getNomenclatureFormatted(collectionId);
               const hasNoClasses = classGroups.length === 0;
 
+              const addClassLabel = getString("page-add-class", {
+                args: {
+                  nomenclature: singularCapitalized,
+                  number: nextClassNumber,
+                },
+              });
+
               return (
                 <>
                   {!isLocked && hasNoClasses && (
@@ -2105,9 +2121,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                           className="syllabus-create-class-button"
                           data-tour="syllabus-add-class"
                           onClick={addClass}
-                          title={`Add ${singularCapitalized} ${nextClassNumber}`}
+                          title={addClassLabel}
                         >
-                          Add {singularCapitalized} {nextClassNumber}
+                          {addClassLabel}
                         </button>
                         <button
                           type="button"
@@ -2129,7 +2145,12 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                     <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
                       <div className="syllabus-class-header-container">
                         <div className="syllabus-class-header">
-                          Add to {singularCapitalized} {nextClassNumber}
+                          {getString("page-add-to-class", {
+                            args: {
+                              nomenclature: singularCapitalized,
+                              number: nextClassNumber,
+                            },
+                          })}
                         </div>
                       </div>
                       <div
@@ -2139,8 +2160,12 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                         onDragLeave={handleDragLeave}
                       >
                         <div className="syllabus-add-class-dropzone-placeholder bg-quinary rounded-md p-16 text-secondary border-2 border-dashed border-secondary">
-                          Drop item here to create {singularCapitalized}{" "}
-                          {nextClassNumber}
+                          {getString("page-drop-create-class", {
+                            args: {
+                              nomenclature: singularCapitalized,
+                              number: nextClassNumber,
+                            },
+                          })}
                         </div>
                       </div>
                     </div>
@@ -2152,9 +2177,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                         className="syllabus-create-class-button"
                         data-tour="syllabus-add-class"
                         onClick={addClass}
-                        title={`Add ${singularCapitalized} ${nextClassNumber}`}
+                        title={addClassLabel}
                       >
-                        Add {singularCapitalized} {nextClassNumber}
+                        {addClassLabel}
                       </button>
                     </div>
                   )}
@@ -2173,10 +2198,10 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                     compactMode ? "text-xl mt-8 mb-2" : "text-2xl mt-12 mb-4",
                   )}
                 >
-                  Further reading
+                  {getString("further-reading-heading")}
                   <label className="ml-auto shrink-0 inline-flex items-center gap-1.5 in-[.print]:hidden font-normal text-sm text-secondary">
                     <ArrowUpDown size={12} strokeWidth={2} aria-hidden="true" />
-                    <span>Sort</span>
+                    <span>{getString("sort-label")}</span>
                     <select
                       value={furtherReadingSortBy}
                       onChange={(e) =>
@@ -2184,18 +2209,22 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                           e.currentTarget.value as FurtherReadingSortBy,
                         )
                       }
-                      aria-label="Sort further reading"
+                      aria-label={getString("further-reading-sort-aria")}
                       className="text-sm text-primary bg-background border border-quinary rounded px-1.5 py-0.5 cursor-pointer"
                     >
-                      <option value="title">Title</option>
-                      <option value="creator">Creator</option>
-                      <option value="date">Date</option>
+                      <option value="title">
+                        {getString("sort-by-title")}
+                      </option>
+                      <option value="creator">
+                        {getString("sort-by-creator")}
+                      </option>
+                      <option value="date">{getString("sort-by-date")}</option>
                     </select>
                   </label>
                 </div>
                 {!compactMode && (
                   <p className="text-secondary text-lg">
-                    Items in this section have not been assigned to any class.
+                    {getString("further-reading-empty-desc")}
                   </p>
                 )}
                 <div

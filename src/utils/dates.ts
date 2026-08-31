@@ -29,12 +29,35 @@ export function toLocalDateKey(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-export function formatReadingDate(
+/** English ordinal format used in stored Reading Schedule folder names. */
+export function formatReadingDateStored(
   isoDate: string,
   month: boolean = true,
 ): string {
   const date = parseReadingDate(isoDate);
   return formatDate(date, month ? "iiii do MMM" : "iiii do");
+}
+
+/** UI display dates follow Zotero’s locale. Do not use for stored folder names. */
+export function formatReadingDate(
+  isoDate: string,
+  month: boolean = true,
+): string {
+  const date = parseReadingDate(isoDate);
+  const locale =
+    typeof Zotero !== "undefined" ? Zotero.locale || "en-US" : "en-US";
+  const options: Intl.DateTimeFormatOptions = {
+    weekday: "long",
+    day: "numeric",
+  };
+  if (month) {
+    options.month = "short";
+  }
+  try {
+    return new Intl.DateTimeFormat(locale, options).format(date);
+  } catch {
+    return formatReadingDateStored(isoDate, month);
+  }
 }
 
 /** Inclusive lookback for the managed Reading schedule collection. */

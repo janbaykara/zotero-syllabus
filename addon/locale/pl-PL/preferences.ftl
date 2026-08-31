@@ -1,0 +1,17 @@
+pref-title = Zotero Syllabus
+pref-enable =
+    .label = Włącz
+pref-show-bibliography =
+    .label = Pokaż bibliografię
+pref-should-colour-syllabus-rows =
+    .label = Koloruj wiersze według numeru zajęć
+pref-compact-mode =
+    .label = Użyj układu zwartego
+pref-input = Dane wejściowe
+pref-help = { $name } Build { $version } { $time }
+pref-debug-mode =
+    .label = Włącz tryb diagnostyczny
+pref-generate-reading-schedule-collection =
+    .label = Generuj kolekcję „Harmonogram lektur” (zarządzana automatycznie; usuwana po odznaczeniu)
+pref-custom-icons =
+    .label = Użyj własnych ikon w drzewie kolekcji i na karcie harmonogramu lektur

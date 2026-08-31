@@ -1,4 +1,5 @@
 import { pickSavePath } from "./file";
+import { getString } from "./locale";
 
 type PrintBrowsingContext = {
   print: (settings: unknown) => Promise<unknown>;
@@ -868,20 +869,22 @@ export async function openSyllabusPrintDialog(
   }
 
   onReady?.();
-  const chosenPath = await pickSavePath(defaultFilename, "Save Syllabus PDF", [
-    ["PDF", "*.pdf"],
-  ]);
+  const chosenPath = await pickSavePath(
+    defaultFilename,
+    getString("dialog-save-pdf"),
+    [[getString("file-filter-pdf"), "*.pdf"]],
+  );
   if (!chosenPath) {
     return false;
   }
   const pdfPath = withPdfExtension(chosenPath);
 
-  const saving = new ztoolkit.ProgressWindow("Zotero Syllabus", {
+  const saving = new ztoolkit.ProgressWindow(getString("app-name"), {
     closeOnClick: false,
     closeTime: -1,
   })
     .createLine({
-      text: "Saving PDF…",
+      text: getString("progress-saving-pdf"),
       type: "default",
     })
     .show();

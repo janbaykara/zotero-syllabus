@@ -10,7 +10,7 @@ import {
 } from "../utils/schemas";
 import { getCachedCollectionById } from "../utils/cache";
 import {
-  formatReadingDate,
+  formatReadingDateStored,
   isReadingDateInScheduleWindow,
   parseReadingDate,
   toLocalDateKey,
@@ -244,7 +244,7 @@ export function listReadingScheduleDateFolders(
 }
 
 export function readingScheduleDateFolderName(dateKey: string): string {
-  return `${dateKey}${DATE_SEPARATOR}${formatReadingDate(dateKey)}`;
+  return `${dateKey}${DATE_SEPARATOR}${formatReadingDateStored(dateKey)}`;
 }
 
 export function dateKeyFromFolderName(name: string): string | null {

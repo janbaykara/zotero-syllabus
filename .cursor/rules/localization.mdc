@@ -1,0 +1,32 @@
+---
+description: Never hardcode user-visible UI text; use Fluent via getString
+globs: "**/*.{ts,tsx,ftl,xhtml}"
+alwaysApply: true
+---
+
+# Localization
+
+Do not add hardcoded user-visible English (labels, titles, placeholders, aria-text, tooltips, progress copy, empty states, menu items). Put the string in Fluent and look it up.
+
+```tsx
+// ❌ BAD
+<button title="Lock syllabus">Lock</button>
+
+// ✅ GOOD
+<button title={getString("page-lock")}>{getString("page-lock")}</button>
+```
+
+```ftl
+# addon/locale/en-US/addon.ftl — then the same key in every locale folder
+page-lock = Lock syllabus
+```
+
+- **Keys:** kebab-case in `addon/locale/en-US/addon.ftl` (this is the bundle `getString` loads). Copy the key into **every** `addon/locale/<code>/addon.ftl`. Do **not** start ids with `syllabus-` — the build already prefixes them, and a double prefix looks up nothing.
+- **JS/TSX:** `getString("key")` or `getString("key", { args: { name } })`. Safe in Preact render.
+- **Prefs XHTML:** `data-l10n-id` + `preferences.ftl`.
+- **Variables:** `{ $name }` in FTL, never concatenate sentences in code.
+- **Call `getString` at render/use time**, not at module load (`initLocale` has not run yet).
+- **Do not translate stored identifiers:** note title `"Syllabus"`, collection `"Reading Schedule"`, playground `"Syllabus Tour"`, plugin JSON heading. Display labels for those concepts still go through Fluent.
+- **Product name** `Zotero Syllabus` stays untranslated.
+- Locale folders match Zotero: `de` not `de-DE`; `ar` not `ar-SA`; `pt-BR`, `es-ES`, `fr-FR`, …
+- Details: `doc/TECHNICAL.md` (Localization) and `AGENTS.md`.

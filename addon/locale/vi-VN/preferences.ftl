@@ -1,0 +1,17 @@
+pref-title = Zotero Syllabus
+pref-enable =
+    .label = Bật
+pref-show-bibliography =
+    .label = Hiện thư mục tài liệu
+pref-should-colour-syllabus-rows =
+    .label = Tô màu hàng theo số buổi học
+pref-compact-mode =
+    .label = Dùng bố cục gọn
+pref-input = Đầu vào
+pref-help = { $name } Build { $version } { $time }
+pref-debug-mode =
+    .label = Bật chế độ gỡ lỗi
+pref-generate-reading-schedule-collection =
+    .label = Tạo bộ sưu tập “Lịch đọc” (tự quản lý; bị xóa khi bỏ chọn)
+pref-custom-icons =
+    .label = Dùng biểu tượng tùy chỉnh trong cây bộ sưu tập và thẻ lịch đọc

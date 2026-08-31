@@ -6,6 +6,7 @@
  */
 
 import { config } from "../../package.json";
+import { getString } from "../utils/locale";
 import {
   COLLECTION_SYLLABUS_DOCUMENT_VERSION,
   classesToNumberKeyed,
@@ -78,9 +79,7 @@ async function runMigration(): Promise<void> {
   );
 
   const progress = createProgress(
-    `Migrating ${resolvableCount} syllabus${
-      resolvableCount === 1 ? "" : "es"
-    } to collection notes…`,
+    getString("progress-migrate-start", { args: { count: resolvableCount } }),
   );
 
   let migrated = 0;
@@ -94,7 +93,9 @@ async function runMigration(): Promise<void> {
       updateProgress(
         progress,
         Math.round(((i + 1) / keys.length) * 100),
-        `Migrating ${i + 1} of ${keys.length}…`,
+        getString("progress-migrate-item", {
+          args: { current: i + 1, total: keys.length },
+        }),
       );
 
       const collection = resolveCollectionFromPrefKey(prefKey);
@@ -338,7 +339,7 @@ function createProgress(text: string): {
   startCloseTimer: (ms: number) => void;
 } | null {
   try {
-    return new ztoolkit.ProgressWindow("Zotero Syllabus", {
+    return new ztoolkit.ProgressWindow(getString("app-name"), {
       closeOnClick: true,
       closeTime: -1,
     })
@@ -377,22 +378,32 @@ function closeProgress(
   clearedEmpty: number,
   remaining: number,
 ): void {
-  const parts = [`Migrated ${migrated} syllabus${migrated === 1 ? "" : "es"}`];
+  const parts = [
+    getString("progress-migrate-done", { args: { count: migrated } }),
+  ];
   if (clearedEmpty) {
     parts.push(
-      `${clearedEmpty} empty pref${clearedEmpty === 1 ? "" : "s"} cleared`,
+      getString("progress-migrate-empty-cleared", {
+        args: { count: clearedEmpty },
+      }),
     );
   }
   if (skippedMissing) {
     parts.push(
-      `${skippedMissing} collection${skippedMissing === 1 ? "" : "s"} not found`,
+      getString("progress-migrate-not-found", {
+        args: { count: skippedMissing },
+      }),
     );
   }
   if (failed) {
-    parts.push(`${failed} failed`);
+    parts.push(
+      getString("progress-migrate-failed", { args: { count: failed } }),
+    );
   }
   if (remaining) {
-    parts.push(`${remaining} left in preferences`);
+    parts.push(
+      getString("progress-migrate-remaining", { args: { count: remaining } }),
+    );
   }
 
   ztoolkit.log("collectionMetadata migration finished:", {

@@ -1,0 +1,17 @@
+pref-title = Zotero Syllabus
+pref-enable =
+    .label = تمكين
+pref-show-bibliography =
+    .label = إظهار قائمة المراجع
+pref-should-colour-syllabus-rows =
+    .label = تلوين الصفوف حسب رقم المحاضرة
+pref-compact-mode =
+    .label = استخدام تخطيط مضغوط
+pref-input = إدخال
+pref-help = { $name } Build { $version } { $time }
+pref-debug-mode =
+    .label = تمكين وضع التنقيح
+pref-generate-reading-schedule-collection =
+    .label = إنشاء مجموعة «جدول القراءات» (تُدار تلقائيًا؛ تُحذف عند إلغاء التحديد)
+pref-custom-icons =
+    .label = استخدام أيقونات مخصصة في شجرة المجموعات وفي تبويب جدول القراءات

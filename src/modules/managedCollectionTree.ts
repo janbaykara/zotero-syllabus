@@ -1,5 +1,9 @@
 import { getPrefKey, getPrefValue } from "../utils/prefs";
-import { getCollectionTreeKind } from "./autoManagedCollection";
+import { getString } from "../utils/locale";
+import {
+  getCollectionTreeKind,
+  type CollectionTreeKind,
+} from "./autoManagedCollection";
 import { refreshManagedCollectionBanner } from "./managedCollectionBanner";
 
 const ICON_BY_KIND = {
@@ -16,16 +20,17 @@ const ROW_CLASS_BY_KIND = {
   syllabus: "syllabus-tree-syllabus",
 } as const;
 
-const TOOLTIP_BY_KIND = {
-  "reading-schedule-root": "Reading Schedule (auto-managed)",
-  "calendar-date": "Auto-managed by Zotero Syllabus",
-  "class-folder": "Auto-managed by Zotero Syllabus",
-  syllabus: "Syllabus",
-} as const;
-
 const ROW_CLASSES = Object.values(ROW_CLASS_BY_KIND);
-const TOOLTIPS = Object.values(TOOLTIP_BY_KIND);
 const RENDER_PATCH_KEY = "_syllabusManagedRenderOriginal";
+
+function getTooltipByKind(): Record<CollectionTreeKind, string> {
+  return {
+    "reading-schedule-root": getString("tree-tooltip-reading-schedule"),
+    "calendar-date": getString("tree-tooltip-auto-managed"),
+    "class-folder": getString("tree-tooltip-auto-managed"),
+    syllabus: getString("tree-tooltip-syllabus"),
+  };
+}
 
 type CollectionsView = {
   getIconName: (index: number) => string | null;
@@ -98,9 +103,10 @@ function markCollectionRow(
       kind != null && ROW_CLASS_BY_KIND[kind] === className,
     );
   }
+  const tooltipByKind = getTooltipByKind();
   if (kind) {
-    div.title = TOOLTIP_BY_KIND[kind];
-  } else if (TOOLTIPS.includes(div.title as (typeof TOOLTIPS)[number])) {
+    div.title = tooltipByKind[kind];
+  } else if ((Object.values(tooltipByKind) as string[]).includes(div.title)) {
     div.title = "";
   }
 }

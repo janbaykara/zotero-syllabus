@@ -28,6 +28,7 @@ import {
   toLocalDateKey,
 } from "../utils/dates";
 import { isZotero8OrLater } from "../utils/zotero";
+import { getString, getUiDir } from "../utils/locale";
 import { ReadingScheduleSettingsPage } from "./ReadingScheduleSettingsPage";
 
 setDefaultOptions({
@@ -72,8 +73,8 @@ export function ReadingSchedule() {
   const settingsButton = (
     <div
       className="grow-0 shrink-0 flex items-center cursor-pointer"
-      title="Edit reading schedule settings"
-      aria-label="Edit reading schedule settings"
+      title={getString("schedule-edit-settings")}
+      aria-label={getString("schedule-edit-settings")}
       data-tour="reading-schedule-settings-button"
       onClick={() => setShowSettings(true)}
     >
@@ -86,7 +87,10 @@ export function ReadingSchedule() {
 
   if (sortedWeeks.length === 0) {
     return (
-      <div className="syllabus-page overflow-y-auto overflow-x-hidden h-full">
+      <div
+        className="syllabus-page overflow-y-auto overflow-x-hidden h-full"
+        dir={getUiDir()}
+      >
         <div
           className={twMerge(
             "sticky top-0 z-20 bg-background py-1",
@@ -96,7 +100,7 @@ export function ReadingSchedule() {
           <div className="container-padded bg-background">
             <div className="flex flex-row items-center gap-2 justify-between">
               <div className={twMerge("font-semibold text-3xl")}>
-                Reading Schedule
+                {getString("view-tab-reading-schedule")}
               </div>
               {settingsButton}
             </div>
@@ -110,10 +114,10 @@ export function ReadingSchedule() {
                 compactMode ? "text-xl" : "text-2xl",
               )}
             >
-              No readings scheduled
+              {getString("schedule-empty-title")}
             </div>
             <p className={twMerge(compactMode ? "text-base" : "text-lg")}>
-              Add reading dates to classes to see them here.
+              {getString("schedule-empty-desc")}
             </p>
             {getPref("debugMode") && (
               <div className="text-secondary text-sm text-left! w-full!">
@@ -138,7 +142,10 @@ export function ReadingSchedule() {
   }
 
   return (
-    <div className="syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background">
+    <div
+      className="syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background"
+      dir={getUiDir()}
+    >
       <div className="pb-12">
         <div
           className={twMerge(
@@ -149,7 +156,7 @@ export function ReadingSchedule() {
           <div className="container-padded bg-background">
             <div className="flex flex-row items-center gap-2 justify-between">
               <div className={twMerge("font-semibold text-3xl")}>
-                Reading Schedule
+                {getString("view-tab-reading-schedule")}
               </div>
               {settingsButton}
             </div>
@@ -157,7 +164,7 @@ export function ReadingSchedule() {
         </div>
 
         <p className="container-padded text-secondary text-lg">
-          Add reading dates to classes to see them here.
+          {getString("schedule-empty-desc")}
         </p>
 
         <div className={twMerge("flex flex-col gap-8 mt-8")}>
@@ -237,11 +244,13 @@ function WeekHeader({ weekStartDate }: { weekStartDate: Date }) {
   let str = "";
   ztoolkit.log("WeekHeader: start:", differenceInDays(start, new Date()));
   if (isThisWeek(start)) {
-    str = "This week";
+    str = getString("schedule-this-week");
   } else if (isSameWeek(start, addWeeks(new Date(), 1))) {
-    str = "Next week";
+    str = getString("schedule-next-week");
   } else {
-    const long = new Intl.RelativeTimeFormat("en-us", { style: "long" });
+    const long = new Intl.RelativeTimeFormat(Zotero.locale || "en-US", {
+      style: "long",
+    });
     const diff = differenceInWeeks(startOfWeek(start), startOfWeek(new Date()));
     str = long.format(diff, "week");
   }

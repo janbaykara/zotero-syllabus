@@ -2,6 +2,7 @@
 import { h, Fragment } from "preact";
 import { twMerge } from "tailwind-merge";
 import { escapeHtml } from "../utils/printSyllabus";
+import { getString } from "../utils/locale";
 
 function styleBibliographyEntries(html: string): string {
   try {
@@ -50,7 +51,7 @@ export function bibliographyToHtml(
     ? styleBibliographyEntries(content)
     : escapeHtml(content).replace(/\r\n|\n/g, "<br>");
   return `<section class="syllabus-print-bibliography" style="color:#111;padding-top:4px">
-  <h2 class="syllabus-print-bibliography-heading" style="font-size:20px;font-weight:700;margin:0 0 16px;letter-spacing:-0.02em">Bibliography</h2>
+  <h2 class="syllabus-print-bibliography-heading" style="font-size:20px;font-weight:700;margin:0 0 16px;letter-spacing:-0.02em">${getString("bibliography-heading")}</h2>
   <div class="syllabus-print-bibliography-body" style="color:#111;font-size:12.5px;line-height:1.45">${body}</div>
 </section>`;
 }
@@ -71,7 +72,7 @@ export function Bibliography({
             compactMode ? "text-xl" : "text-2xl",
           )}
         >
-          Bibliography
+          {getString("bibliography-heading")}
         </div>
       </header>
       <div className="syllabus-print-bibliography-body flex flex-col gap-3">

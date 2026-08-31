@@ -3,7 +3,7 @@ import { h, Fragment } from "preact";
 import { useCallback } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
 import { isZotero8OrLater } from "../utils/zotero";
-import { getString } from "../utils/locale";
+import { getString, getUiDir } from "../utils/locale";
 import { confirmPrompt } from "../utils/window";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import { useReadingScheduleCollectionPref } from "./react-zotero-sync/readingScheduleCollectionPref";
@@ -46,7 +46,10 @@ export function ReadingScheduleSettingsPage({
   );
 
   return (
-    <div className="syllabus-page overflow-y-auto overflow-x-hidden h-full">
+    <div
+      className="syllabus-page overflow-y-auto overflow-x-hidden h-full"
+      dir={getUiDir()}
+    >
       <div className="pb-12">
         <div
           className={twMerge(
@@ -57,16 +60,16 @@ export function ReadingScheduleSettingsPage({
           <div className="container-padded bg-background">
             <div className="flex flex-row items-center gap-4 justify-between">
               <div className="flex-1 text-3xl font-semibold">
-                Reading Schedule Settings
+                {getString("schedule-settings-title")}
               </div>
               <div className="inline-flex items-center gap-2 shrink grow-0">
                 <button
                   type="button"
                   onClick={onBack}
-                  title="Back to reading schedule"
-                  aria-label="Back to reading schedule"
+                  title={getString("schedule-settings-back")}
+                  aria-label={getString("schedule-settings-back")}
                 >
-                  ← Back
+                  ← {getString("nav-back")}
                 </button>
               </div>
             </div>
@@ -78,13 +81,11 @@ export function ReadingScheduleSettingsPage({
             className="space-y-4"
             data-tour="reading-schedule-generate-collection"
           >
-            <h2 className="text-2xl font-semibold">Library collection</h2>
+            <h2 className="text-2xl font-semibold">
+              {getString("schedule-settings-library")}
+            </h2>
             <p className="text-secondary">
-              Off by default. When enabled, a top-level “Reading Schedule”
-              collection is kept in My Library with a folder for each recent and
-              upcoming reading date. Folders are created, renamed, and filled
-              automatically. Turning this off deletes that collection; syllabus
-              items stay in place.
+              {getString("schedule-settings-desc")}
             </p>
             <label
               className={twMerge(
@@ -101,7 +102,7 @@ export function ReadingScheduleSettingsPage({
                 className="w-4 h-4 cursor-pointer accent-accent-green!"
               />
               <span className="font-medium">
-                Generate “Reading Schedule” collection?
+                {getString("schedule-settings-checkbox")}
               </span>
             </label>
           </section>

@@ -1,5 +1,6 @@
 import { getPref } from "./prefs";
 import { getItemField } from "./items";
+import { getString } from "./locale";
 
 // Sources:
 //
@@ -162,21 +163,19 @@ export function parseRunningTimeMinutes(
  */
 export function formatReadingTime(minutes: number): string {
   if (minutes < 60) {
-    return `${minutes} min`;
+    return getString("reading-time-minutes", { args: { minutes } });
   }
 
   const hours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
 
   if (remainingMinutes === 0) {
-    return hours === 1 ? "1 hr" : `${hours} hrs`;
+    return getString("reading-time-hours", { args: { hours } });
   }
 
-  if (hours === 1) {
-    return `1 hr ${remainingMinutes} min`;
-  }
-
-  return `${hours} hrs ${remainingMinutes} min`;
+  return getString("reading-time-hours-and-minutes", {
+    args: { hours, minutes: remainingMinutes },
+  });
 }
 
 /**

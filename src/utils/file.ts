@@ -1,5 +1,17 @@
 import { FilePickerHelper } from "zotero-plugin-toolkit";
 import { isZotero8OrLater } from "./zotero";
+import { getString } from "./locale";
+
+function defaultSaveFileTitle(): string {
+  try {
+    if (addon.data.locale) {
+      return getString("dialog-save-file");
+    }
+  } catch {
+    // Locale not initialized yet (default params can run before startup).
+  }
+  return "Save File";
+}
 
 /**
  * Gets the default download directory (Downloads folder on Mac/Windows)
@@ -31,9 +43,10 @@ function getDefaultDownloadPath(): string | null {
  */
 export async function pickSavePath(
   filename: string,
-  dialogTitle: string = "Save File",
+  dialogTitle?: string,
   filters?: [string, string][],
 ): Promise<string | null> {
+  const title = dialogTitle ?? defaultSaveFileTitle();
   if (!isZotero8OrLater()) {
     const tempDir = Zotero.getTempDirectory();
     const tempFile = tempDir.clone();
@@ -44,7 +57,7 @@ export async function pickSavePath(
 
   const defaultPath = getDefaultDownloadPath();
   const filePath = await new FilePickerHelper(
-    dialogTitle,
+    title,
     "save",
     filters,
     filename,
@@ -68,16 +81,17 @@ export async function pickSavePath(
  *
  * @param filename - The default filename to suggest (e.g., "my-file.txt")
  * @param textContent - The text content to write to the file
- * @param dialogTitle - Optional title for the file picker dialog (default: "Save File")
+ * @param dialogTitle - Optional title for the file picker dialog
  * @returns Promise that resolves to true if file was saved, false if user cancelled
  * @throws Error if file saving fails
  */
 export async function saveToFile(
   filename: string,
   textContent: string,
-  dialogTitle: string = "Save File",
+  dialogTitle?: string,
   reveal: boolean = true,
 ): Promise<boolean> {
+  const title = dialogTitle ?? defaultSaveFileTitle();
   if (!isZotero8OrLater()) {
     // Zotero 7 doesn't support the modern file picker path used below
     const tempDir = Zotero.getTempDirectory();
@@ -96,7 +110,7 @@ export async function saveToFile(
   try {
     const defaultPath = getDefaultDownloadPath();
     const filePath = await new FilePickerHelper(
-      dialogTitle,
+      title,
       "save",
       undefined,
       filename,

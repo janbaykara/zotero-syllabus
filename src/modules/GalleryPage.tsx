@@ -73,6 +73,7 @@ import {
 } from "./syllabus";
 import { getCachedItem } from "../utils/cache";
 import { formatReadingDate } from "../utils/dates";
+import { getString, getUiDir } from "../utils/locale";
 import type { SettingsSyllabusMetadata } from "../utils/schemas";
 import {
   getPrimaryAttachmentProgress,
@@ -128,8 +129,8 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
     [unfilteredSubcollectionRoot, matchingIds],
   );
   const emptyMessage = isFiltered
-    ? "No matching items."
-    : "No items in this collection.";
+    ? getString("gallery-empty-filtered")
+    : getString("gallery-empty");
 
   const selectGalleryItem = useCallback((item: Zotero.Item) => {
     try {
@@ -394,6 +395,7 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
         "syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background focus:outline-none",
         compactMode && "compact-mode",
       )}
+      dir={getUiDir()}
     >
       <div
         className={twMerge(
@@ -402,7 +404,7 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
         )}
       >
         <GalleryPageHeader
-          title={title || "Untitled"}
+          title={title || getString("untitled")}
           groupBy={groupBy}
           onGroupBy={setGroupBy}
           showClasses={isSyllabus}
@@ -447,9 +449,11 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
               ))}
               {untaggedItems.length > 0 && (
                 <section className="syllabus-gallery-section">
-                  <h2 className="syllabus-gallery-section-title">Untagged</h2>
+                  <h2 className="syllabus-gallery-section-title">
+                    {getString("gallery-untagged")}
+                  </h2>
                   <p className="syllabus-gallery-class-description">
-                    Items in this section have no tags.
+                    {getString("gallery-untagged-desc")}
                   </p>
                   {renderItems(untaggedItems, "untagged")}
                 </section>
@@ -462,7 +466,7 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
             <p className="text-secondary text-lg">
               {isFiltered
                 ? emptyMessage
-                : "No subcollections or items in this collection."}
+                : getString("gallery-empty-subcollections")}
             </p>
           ) : (
             <GallerySubcollectionSection
@@ -506,10 +510,10 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
               {furtherReadingItems.length > 0 && (
                 <section className="syllabus-gallery-section">
                   <h2 className="syllabus-gallery-section-title">
-                    Further reading
+                    {getString("further-reading-heading")}
                   </h2>
                   <p className="syllabus-gallery-class-description">
-                    Items in this section have not been assigned to any class.
+                    {getString("further-reading-empty-desc")}
                   </p>
                   {renderItems(furtherReadingItems, "further-reading")}
                 </section>
@@ -621,9 +625,11 @@ function GalleryClassHeading({
   if (classNumber == null) {
     return (
       <header className="syllabus-gallery-class-header">
-        <h2 className="syllabus-gallery-section-title">Unnumbered</h2>
+        <h2 className="syllabus-gallery-section-title">
+          {getString("gallery-unnumbered")}
+        </h2>
         <p className="syllabus-gallery-class-description">
-          Assigned without a class number.
+          {getString("gallery-unnumbered-desc")}
         </p>
       </header>
     );
@@ -651,7 +657,9 @@ function GalleryClassHeading({
           </h2>
         )}
         {classIsDone ? (
-          <span className="syllabus-gallery-class-done">Done</span>
+          <span className="syllabus-gallery-class-done">
+            {getString("status-done")}
+          </span>
         ) : null}
         {readingDate ? (
           <span className="syllabus-gallery-class-date">
@@ -671,69 +679,80 @@ function GalleryClassHeading({
   );
 }
 
-const GALLERY_SORT_OPTIONS: GallerySegmentOption<GallerySortBy>[] = [
-  {
-    mode: "auto",
-    label: "Auto",
-    title: "Automatic order (collection or syllabus)",
-    Icon: ListOrdered,
-  },
-  {
-    mode: "title",
-    label: "A–Z",
-    title: "Sort A–Z",
-    Icon: ArrowDownAZ,
-  },
-  {
-    mode: "date",
-    label: "Date",
-    title: "Sort by date (newest first)",
-    Icon: Calendar,
-  },
-];
+function gallerySortOptions(): GallerySegmentOption<GallerySortBy>[] {
+  return [
+    {
+      mode: "auto",
+      label: getString("gallery-sort-auto"),
+      title: getString("gallery-sort-auto-title"),
+      Icon: ListOrdered,
+    },
+    {
+      mode: "title",
+      label: getString("gallery-sort-az"),
+      title: getString("gallery-sort-az-title"),
+      Icon: ArrowDownAZ,
+    },
+    {
+      mode: "date",
+      label: getString("gallery-sort-date"),
+      title: getString("gallery-sort-date-title"),
+      Icon: Calendar,
+    },
+  ];
+}
 
-const GALLERY_GROUP_BY_OPTIONS: GallerySegmentOption<GalleryGroupBy>[] = [
-  { mode: "none", label: "None", title: "No grouping", Icon: LayoutGrid },
-  {
-    mode: "type",
-    label: "Type",
-    title: "Group by item type",
-    Icon: Shapes,
-  },
-  {
-    mode: "tags",
-    label: "Tags",
-    title: "Group by tags",
-    Icon: Tags,
-  },
-  {
-    mode: "subcollections",
-    label: "Sub-collections",
-    title: "Group by sub-collections",
-    Icon: Folder,
-  },
-  {
-    mode: "classes",
-    label: "Classes",
-    title: "Group by classes",
-    Icon: GraduationCap,
-  },
-];
+function galleryGroupByOptions(): GallerySegmentOption<GalleryGroupBy>[] {
+  return [
+    {
+      mode: "none",
+      label: getString("gallery-group-none"),
+      title: getString("gallery-group-none-title"),
+      Icon: LayoutGrid,
+    },
+    {
+      mode: "type",
+      label: getString("gallery-group-type"),
+      title: getString("gallery-group-type-title"),
+      Icon: Shapes,
+    },
+    {
+      mode: "tags",
+      label: getString("gallery-group-tags"),
+      title: getString("gallery-group-tags-title"),
+      Icon: Tags,
+    },
+    {
+      mode: "subcollections",
+      label: getString("gallery-group-subcollections"),
+      title: getString("gallery-group-subcollections-title"),
+      Icon: Folder,
+    },
+    {
+      mode: "classes",
+      label: getString("gallery-group-classes"),
+      title: getString("gallery-group-classes-title"),
+      Icon: GraduationCap,
+    },
+  ];
+}
 
-const GALLERY_LAYOUT_OPTIONS: GallerySegmentOption<GalleryLayout>[] = [
-  {
-    mode: "cover",
-    label: "Cover",
-    title: "Cover art",
-    Icon: Image,
-  },
-  {
-    mode: "card",
-    label: "Card",
-    title: "Syllabus cards",
-    Icon: LayoutList,
-  },
-];
+function galleryLayoutOptions(): GallerySegmentOption<GalleryLayout>[] {
+  return [
+    {
+      mode: "cover",
+      label: getString("gallery-layout-cover"),
+      title: getString("gallery-layout-cover-title"),
+      Icon: Image,
+    },
+    {
+      mode: "card",
+      label: getString("gallery-layout-card"),
+      title: getString("gallery-layout-card-title"),
+      Icon: LayoutList,
+    },
+  ];
+}
 
 type GallerySegmentOption<T extends string> = {
   mode: T;
@@ -791,9 +810,10 @@ function GalleryPageHeader({
     };
   }, [open]);
 
+  const allGroupBy = galleryGroupByOptions();
   const groupByOptions = showClasses
-    ? GALLERY_GROUP_BY_OPTIONS
-    : GALLERY_GROUP_BY_OPTIONS.filter((option) => option.mode !== "classes");
+    ? allGroupBy
+    : allGroupBy.filter((option) => option.mode !== "classes");
 
   return (
     <div className="syllabus-gallery-header">
@@ -802,10 +822,10 @@ function GalleryPageHeader({
         <button
           type="button"
           className="syllabus-gallery-menu-btn"
-          aria-label="Gallery view options"
+          aria-label={getString("gallery-options-aria")}
           aria-haspopup="menu"
           aria-expanded={open}
-          title="View options"
+          title={getString("gallery-options-title")}
           onClick={() => setOpen((value) => !value)}
         >
           <MoreHorizontal size={18} strokeWidth={2} aria-hidden="true" />
@@ -814,22 +834,22 @@ function GalleryPageHeader({
           <div className="syllabus-gallery-popover" role="menu">
             <div className="syllabus-gallery-toolbar">
               <GallerySegmentedControl
-                label="View"
-                ariaLabel="Gallery item layout"
+                label={getString("gallery-menu-view")}
+                ariaLabel={getString("gallery-menu-view")}
                 value={layout}
                 onChange={onLayout}
-                options={GALLERY_LAYOUT_OPTIONS}
+                options={galleryLayoutOptions()}
               />
               <GallerySegmentedControl
-                label="Sort"
-                ariaLabel="Sort gallery items"
+                label={getString("gallery-menu-sort")}
+                ariaLabel={getString("gallery-menu-sort")}
                 value={sortBy}
                 onChange={onSortBy}
-                options={GALLERY_SORT_OPTIONS}
+                options={gallerySortOptions()}
               />
               <GallerySegmentedControl
-                label="Group by"
-                ariaLabel="Group gallery items"
+                label={getString("gallery-menu-group")}
+                ariaLabel={getString("gallery-menu-group")}
                 value={groupBy}
                 onChange={onGroupBy}
                 options={groupByOptions}
@@ -922,7 +942,10 @@ function GalleryTile({
   onClick: (item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) => void;
   onDoubleClick: (item: Zotero.Item) => void;
 }) {
-  const title = useMemo(() => getItemTitle(item) || "Untitled", [item]);
+  const title = useMemo(
+    () => getItemTitle(item) || getString("untitled"),
+    [item],
+  );
   const creator = useMemo(() => {
     try {
       return (item.firstCreator || item.getField("firstCreator") || "").trim();
@@ -1002,7 +1025,9 @@ function GalleryTile({
         {progress ? (
           <div
             className="syllabus-gallery-progress"
-            title={`Page ${progress.page} of ${progress.total}`}
+            title={getString("gallery-page-of", {
+              args: { page: progress.page, total: progress.total },
+            })}
           >
             <div className="syllabus-gallery-progress-track">
               <div
@@ -1420,7 +1445,10 @@ function JournalFace({ item }: { item: Zotero.Item }) {
       contemporary ? journalEditionCompact(item) : journalEditionLine(item),
     [item, contemporary],
   );
-  const title = useMemo(() => itemField(item, "title") || "Untitled", [item]);
+  const title = useMemo(
+    () => itemField(item, "title") || getString("untitled"),
+    [item],
+  );
   const creator = useMemo(() => itemAuthorLine(item), [item]);
   const abstractNote = useMemo(
     () => (contemporary ? itemAbstractSnippet(item) : ""),

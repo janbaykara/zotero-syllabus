@@ -15,6 +15,7 @@ import { isZotero8OrLater, selectZoteroCollection } from "../utils/zotero";
 import { getCachedCollectionById } from "../utils/cache";
 import { TabManager } from "../utils/tabManager";
 import { classByNumber } from "../utils/schemas";
+import { getString, getUiDir } from "../utils/locale";
 import { ProseText } from "./ProseText";
 
 export type ClassReading = {
@@ -126,9 +127,15 @@ export function ClassReadingBlock({
               "absolute right-full mr-1 w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden accent-accent-green!",
               isZotero8OrLater() ? "md:mr-2!" : "mr-2!",
             )}
-            title={classStatus === "done" ? "Mark as not done" : "Mark as done"}
+            title={
+              classStatus === "done"
+                ? getString("mark-not-done")
+                : getString("mark-done")
+            }
             aria-label={
-              classStatus === "done" ? "Mark as not done" : "Mark as done"
+              classStatus === "done"
+                ? getString("mark-not-done")
+                : getString("mark-done")
             }
           />
           <div
@@ -153,12 +160,12 @@ export function ClassReadingBlock({
               {classReading.classNumber}
             </span>
             {showCollectionLink ? (
-              <>
-                <span className="text-secondary"> of </span>
-                <span className="font-semibold">
-                  {classReading.collectionName}
-                </span>
-              </>
+              <span className="text-secondary">
+                {" "}
+                {getString("schedule-of-collection", {
+                  args: { name: classReading.collectionName },
+                })}
+              </span>
             ) : null}
           </div>
         </div>
@@ -244,7 +251,10 @@ export function ClassSubcollectionPage({
   const openParent = () => openCollectionSyllabusPage(parentCollectionId);
 
   return (
-    <div className="syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background">
+    <div
+      className="syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background"
+      dir={getUiDir()}
+    >
       <div className="pb-12">
         <div
           className={twMerge(
@@ -257,14 +267,17 @@ export function ClassSubcollectionPage({
               type="button"
               onClick={openParent}
               className="flex items-center gap-1 text-secondary hover:text-primary bg-transparent! border-none p-0 cursor-pointer text-base in-[.print]:hidden"
-              title={`Open syllabus for ${parentTitle || "this collection"}`}
+              title={getString("schedule-open-syllabus", {
+                args: { title: parentTitle || getString("this-collection") },
+              })}
             >
               <ChevronLeft size={18} />
-              <span className="font-semibold">{parentTitle || "Syllabus"}</span>
+              <span className="font-semibold">
+                {parentTitle || getString("view-tab-syllabus")}
+              </span>
             </button>
             <p className="text-sm text-secondary mt-1 in-[.print]:hidden">
-              Auto-managed from this syllabus. Edits in this folder are
-              overwritten.
+              {getString("class-folder-managed-banner")}
             </p>
           </div>
         </div>
@@ -287,7 +300,8 @@ export function ClassSubcollectionPage({
             />
           ) : (
             <p className="text-secondary text-lg">
-              This folder is part of {parentTitle || "the syllabus"}.
+              This folder is part of{" "}
+              {parentTitle || getString("view-tab-syllabus")}.
             </p>
           )}
         </div>

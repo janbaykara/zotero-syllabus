@@ -1,0 +1,17 @@
+pref-title = Zotero Syllabus
+pref-enable =
+    .label = 啟用
+pref-show-bibliography =
+    .label = 顯示參考文獻
+pref-should-colour-syllabus-rows =
+    .label = 依課堂編號為列著色
+pref-compact-mode =
+    .label = 使用精簡版面
+pref-input = 輸入
+pref-help = { $name } Build { $version } { $time }
+pref-debug-mode =
+    .label = 啟用除錯模式
+pref-generate-reading-schedule-collection =
+    .label = 產生「閱讀日程」分類（由外掛自動管理；取消勾選將刪除該分類）
+pref-custom-icons =
+    .label = 在分類樹和閱讀日程分頁中使用自訂圖示

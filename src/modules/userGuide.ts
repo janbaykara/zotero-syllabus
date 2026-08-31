@@ -204,9 +204,9 @@ async function ensurePlaygroundSampleItems(
     return;
   }
   const titles = [
-    "Sample reading: Getting started with course lists",
-    "Sample reading: Annotating as you go",
-    "Sample reading: Planning the week ahead",
+    getString("tour-sample-reading-1"),
+    getString("tour-sample-reading-2"),
+    getString("tour-sample-reading-3"),
   ];
   const existingTitles = new Set(
     regularItems.map((item) => String(item.getField("title") || "")),

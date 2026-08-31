@@ -4,6 +4,7 @@ import slugify from "slugify";
  */
 
 import { getLocaleID, getString } from "../utils/locale";
+import type { FluentMessageId } from "../../typings/i10n";
 import { renderSyllabusPage } from "./SyllabusPage";
 import { renderGalleryPage } from "./GalleryPage";
 import { setGalleryGroupBy } from "./galleryGroupBy";
@@ -144,9 +145,15 @@ function syllabusViewModeChrome(): { label: string; tooltip: string } | null {
     return null;
   }
   if (isAutoManagedCollection(collection.id)) {
-    return { label: "Checklist", tooltip: "View as Checklist" };
+    return {
+      label: getString("view-tab-checklist"),
+      tooltip: getString("view-tab-checklist-tooltip"),
+    };
   }
-  return { label: "Syllabus", tooltip: "View as Syllabus" };
+  return {
+    label: getString("view-tab-syllabus"),
+    tooltip: getString("view-tab-syllabus-tooltip"),
+  };
 }
 
 function confirmEnableSubcollections(
@@ -158,7 +165,9 @@ function confirmEnableSubcollections(
     (typeof collectionId === "number"
       ? Zotero.Collections.get(collectionId)
       : Zotero.Collections.getByLibraryAndKey(...collectionId));
-  const name = fetched ? fetched.name || "this collection" : "this collection";
+  const name = fetched
+    ? fetched.name || getString("this-collection")
+    : getString("this-collection");
   return confirmPrompt(
     getString("enable-subcollections-title"),
     getString("enable-subcollections-message", { args: { name } }),
@@ -223,7 +232,7 @@ export type { GetByLibraryAndKeyArgs };
 const tabManager = FEATURE_FLAG.READING_SCHEDULE
   ? new TabManager<Record<string, never>>({
       type: "reading-list",
-      title: "Reading Schedule",
+      title: () => getString("view-tab-reading-schedule"),
       rootElementIdFactory: () => "reading-list-tab-root",
       data: () => (areCustomIconsEnabled() ? { icon: "calendar" } : {}),
       componentFactory: () => h(ReadingSchedule, {}),
@@ -559,7 +568,7 @@ export class SyllabusManager {
     Zotero.PreferencePanes.register({
       pluginID: addon.data.config.addonID,
       src: rootURI + "content/preferences.xhtml",
-      label: "Zotero Syllabus",
+      label: getString("app-name"),
       image: `chrome://${addon.data.config.addonRef}/content/icons/favicon.png`,
     });
   }
@@ -773,19 +782,19 @@ export class SyllabusManager {
     }[] = [
       {
         mode: "collection",
-        label: "Table",
-        tooltip: "View as Table",
+        label: getString("view-tab-table"),
+        tooltip: getString("view-tab-table-tooltip"),
       },
       {
         mode: "gallery",
-        label: "Gallery",
-        tooltip: "View as Gallery",
+        label: getString("view-tab-gallery"),
+        tooltip: getString("view-tab-gallery-tooltip"),
       },
       {
         mode: "syllabus",
         ...(syllabusViewModeChrome() ?? {
-          label: "Syllabus",
-          tooltip: "View as Syllabus",
+          label: getString("view-tab-syllabus"),
+          tooltip: getString("view-tab-syllabus-tooltip"),
         }),
       },
     ];
@@ -832,8 +841,8 @@ export class SyllabusManager {
         id: "syllabus-reading-schedule-button",
         classList: ["syllabus-toolbar-button"],
         properties: {
-          label: "Review your Reading Schedule",
-          tooltiptext: "Open Reading Schedule",
+          label: getString("toolbar-reading-schedule-review"),
+          tooltiptext: getString("toolbar-reading-schedule-open"),
         },
         listeners: [
           {
@@ -852,8 +861,8 @@ export class SyllabusManager {
           id: "syllabus-collection-reading-schedule-button",
           classList: ["syllabus-toolbar-button"],
           properties: {
-            label: "Reading Schedule",
-            tooltiptext: "Open Reading Schedule",
+            label: getString("view-tab-reading-schedule"),
+            tooltiptext: getString("toolbar-reading-schedule-open"),
           },
           listeners: [
             {
@@ -1164,7 +1173,7 @@ export class SyllabusManager {
                 editable,
               })
             : h("div", {
-                innerText: "Select a collection to view syllabus assignments",
+                innerText: getString("item-pane-select-collection"),
                 className: "text-center text-gray-500 p-4",
               }),
           "syllabus-item-pane",
@@ -1233,14 +1242,14 @@ export class SyllabusManager {
         color: p.color,
       }));
       // Add "(None)" option
-      options.push({ value: "", label: "(None)", color: "" });
+      options.push({ value: "", label: getString("menu-none"), color: "" });
       return options;
     })();
 
     ztoolkit.Menu.register("item", {
       tag: "menu",
       id: "syllabus-set-priority-menu",
-      label: "Set Priority",
+      label: getString("menu-set-priority"),
       icon: "chrome://zotero/skin/16/universal/book.svg",
       children: priorityOptions
         .map((opt) => {
@@ -1273,7 +1282,7 @@ export class SyllabusManager {
       tag: "menu",
       id: "syllabus-reassign-class-number-menu",
       icon: "chrome://zotero/skin/16/universal/book.svg",
-      label: "Assign to a class",
+      label: getString("menu-assign-to-class"),
       children: SyllabusManager.buildClassNumberChildren(),
     });
   }
@@ -1284,7 +1293,7 @@ export class SyllabusManager {
       return [
         {
           tag: "menuitem" as const,
-          label: "(No collection selected)",
+          label: getString("menu-no-collection"),
           disabled: true,
         },
       ];
@@ -1315,6 +1324,10 @@ export class SyllabusManager {
         }
       };
 
+    const { singularCapitalized } = this.getNomenclatureFormatted(
+      selectedCollection.id,
+    );
+
     const children: any[] = sortedClassNumbers.map((classNumber) => {
       const classTitle = this.getClassTitle(
         selectedCollection.id,
@@ -1323,7 +1336,11 @@ export class SyllabusManager {
       );
       return {
         tag: "menuitem" as const,
-        label: classTitle || `Class ${classNumber}`,
+        label:
+          classTitle ||
+          getString("menu-class-label", {
+            args: { nomenclature: singularCapitalized, number: classNumber },
+          }),
         commandListener: createClassHandler(classNumber),
       };
     });
@@ -1333,13 +1350,14 @@ export class SyllabusManager {
       children.push({ tag: "menuseparator" as const });
     }
 
-    // Add "Add to new class N" option (always last before "(None)")
-    const { singularCapitalized } = this.getNomenclatureFormatted(
-      selectedCollection.id,
-    );
     children.push({
       tag: "menuitem" as const,
-      label: `Add to new ${singularCapitalized} ${nextClassNumber}`,
+      label: getString("menu-add-to-new-class", {
+        args: {
+          nomenclature: singularCapitalized,
+          number: nextClassNumber,
+        },
+      }),
       commandListener: createClassHandler(nextClassNumber),
     });
 
@@ -1348,7 +1366,7 @@ export class SyllabusManager {
 
     children.push({
       tag: "menuitem" as const,
-      label: "(None)",
+      label: getString("menu-none"),
       commandListener: createClassHandler(undefined),
     });
 
@@ -1375,17 +1393,17 @@ export class SyllabusManager {
     ztoolkit.Menu.register("item", {
       tag: "menu",
       id: "syllabus-set-status-menu",
-      label: "Set Reading Status",
+      label: getString("menu-set-reading-status"),
       icon: "chrome://zotero/skin/16/universal/book.svg",
       children: [
         {
           tag: "menuitem" as const,
-          label: "Done",
+          label: getString("status-done"),
           commandListener: createStatusHandler("done"),
         },
         {
           tag: "menuitem" as const,
-          label: "Not Done",
+          label: getString("status-not-done"),
           commandListener: createStatusHandler(null),
         },
       ],
@@ -2537,7 +2555,16 @@ export class SyllabusManager {
    * Get default priorities (used when no custom priorities are set)
    */
   static getDefaultPriorities(): Priority[] {
-    return [...DEFAULT_PRIORITIES];
+    const names: Record<string, FluentMessageId> = {
+      "course-info": "priority-default-course-info",
+      essential: "priority-default-essential",
+      recommended: "priority-default-recommended",
+      optional: "priority-default-optional",
+    };
+    return DEFAULT_PRIORITIES.map((p) => ({
+      ...p,
+      name: names[p.id] ? getString(names[p.id]) : p.name,
+    }));
   }
 
   /**
