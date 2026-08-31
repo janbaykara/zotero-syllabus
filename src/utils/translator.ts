@@ -103,19 +103,6 @@ export async function installReadingListTranslators(
 
   if (installed.length > 0) {
     await Zotero.Translators.reinit();
-    new ztoolkit.ProgressWindow("Zotero Syllabus", {
-      closeOnClick: true,
-      closeTime: 6000,
-    })
-      .createLine({
-        text: "✅ Reading-list scrapers installed (Talis, Leganto, KeyLinks, eReserve Plus, BLUEcloud)",
-        type: "success",
-      })
-      .createLine({
-        text: `Open a supported reading list in your browser with the Zotero Connector to save it as a syllabus.\n(Using port ${PORT}.)`,
-        type: "default",
-      })
-      .show();
     ztoolkit.log("Reading-list scrapers installed", installed);
   }
 
