@@ -30,6 +30,35 @@ export function getItemField(item: Zotero.Item, field: string): string {
   }
 }
 
+/**
+ * Regular library items that belong on a syllabus. Skips notes, attachments,
+ * annotations, deleted items, and feed items (BBT: feeds are not user library
+ * members even when isRegularItem() is true on some versions).
+ */
+export function isSyllabusMemberItem(
+  item: Zotero.Item | false | null | undefined,
+): item is Zotero.Item {
+  if (!item) {
+    return false;
+  }
+  try {
+    if (item.deleted) {
+      return false;
+    }
+    if (typeof item.isRegularItem !== "function" || !item.isRegularItem()) {
+      return false;
+    }
+    const isFeedItem = (item as Zotero.Item & { isFeedItem?: () => boolean })
+      .isFeedItem;
+    if (typeof isFeedItem === "function" && isFeedItem.call(item)) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function sortItemsByTitle(items: Zotero.Item[]): Zotero.Item[] {
   return [...items].sort((a, b) =>
     getItemTitle(a).localeCompare(getItemTitle(b)),

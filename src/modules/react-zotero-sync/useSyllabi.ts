@@ -8,6 +8,7 @@ import {
 } from "../syllabus";
 import { getAllCollections } from "../../utils/zotero";
 import { getCachedItem, getCachedCollectionById } from "../../utils/cache";
+import { isSyllabusMemberItem } from "../../utils/items";
 import {
   getCollectionDocument,
   getDocumentGeneration,
@@ -57,7 +58,7 @@ export function useSyllabi(): SyllabusData[] {
         const items = syllabusData.itemIds
           .map((itemId) => {
             const item = getCachedItem(itemId);
-            if (!item || !item.isRegularItem()) {
+            if (!isSyllabusMemberItem(item)) {
               return null;
             }
             return {
@@ -101,7 +102,7 @@ function createSyllabiStore() {
 
       const itemIds = collection
         .getChildItems()
-        .filter((item) => item.isRegularItem())
+        .filter((item) => isSyllabusMemberItem(item))
         .map((item) => item.id);
 
       syllabi.push({

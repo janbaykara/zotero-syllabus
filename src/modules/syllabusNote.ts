@@ -27,7 +27,7 @@ import {
   getCachedItem,
 } from "../utils/cache";
 import { getAllCollections } from "../utils/zotero";
-import { getItemTitle } from "../utils/items";
+import { getItemTitle, isSyllabusMemberItem } from "../utils/items";
 import { normalizeDoi, normalizeIsbn } from "../utils/identifiers";
 import { getPrefValue } from "../utils/prefs";
 import {
@@ -201,7 +201,7 @@ export function buildItemIndex(
   const index: NonNullable<CollectionSyllabusDocument["itemIndex"]> = {};
   for (const itemKey of Object.keys(document.items || {})) {
     const item = Zotero.Items.getByLibraryAndKey(collection.libraryID, itemKey);
-    if (!item || !item.isRegularItem()) {
+    if (!item || !isSyllabusMemberItem(item)) {
       continue;
     }
     const doi = normalizeDoi(item.getField("DOI"));
@@ -221,7 +221,7 @@ export function remapDocumentItemKeys(
 ): CollectionSyllabusDocument {
   const regularItems = items.filter((item) => {
     try {
-      return item.isRegularItem();
+      return isSyllabusMemberItem(item);
     } catch {
       return false;
     }

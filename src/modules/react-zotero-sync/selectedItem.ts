@@ -2,6 +2,7 @@ import { useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
 import { SyllabusManager } from "../syllabus";
 import { isItemRemovalEvent } from "../../utils/cache";
+import { isSyllabusMemberItem } from "../../utils/items";
 
 export function useZoteroSelectedItemIds(): number[] | null {
   // Create the store once
@@ -27,7 +28,7 @@ export function createSelectedItemStore() {
     const pane = ztoolkit.getGlobal("ZoteroPane");
     const selectedItems = pane?.getSelectedItems() || [];
     const newSelectedItemIds = selectedItems
-      .filter((item) => item.isRegularItem())
+      .filter((item) => isSyllabusMemberItem(item))
       .map((item) => item.id);
 
     // Check if items actually changed

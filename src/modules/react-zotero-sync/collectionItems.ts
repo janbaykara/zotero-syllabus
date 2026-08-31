@@ -6,6 +6,7 @@ import {
   GetByLibraryAndKeyArgs,
   ItemSyllabusAssignment,
 } from "../syllabus";
+import { isSyllabusMemberItem } from "../../utils/items";
 import {
   getCachedItem,
   isItemRemovalEvent,
@@ -58,14 +59,16 @@ function collectRegularItems(
   recursive: boolean,
 ): Zotero.Item[] {
   if (!recursive) {
-    return collection.getChildItems().filter((item) => item.isRegularItem());
+    return collection
+      .getChildItems()
+      .filter((item) => isSyllabusMemberItem(item));
   }
 
   const seen = new Set<number>();
   const items: Zotero.Item[] = [];
   const walk = (col: Zotero.Collection) => {
     for (const item of col.getChildItems()) {
-      if (!item.isRegularItem() || seen.has(item.id)) {
+      if (!isSyllabusMemberItem(item) || seen.has(item.id)) {
         continue;
       }
       seen.add(item.id);
@@ -180,7 +183,7 @@ export function createCollectionItemsStore(
             const itemIds = ids as number[];
             for (const itemId of itemIds) {
               const item = getCachedItem(itemId);
-              if (item && item.isRegularItem()) {
+              if (item && isSyllabusMemberItem(item)) {
                 const collections = item.getCollections();
                 const collection =
                   SyllabusManager.getCollectionFromIdentifier(collectionId);

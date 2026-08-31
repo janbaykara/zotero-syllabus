@@ -1,6 +1,7 @@
 import { useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
 import { getCachedItem } from "../../utils/cache";
+import { isSyllabusMemberItem } from "../../utils/items";
 
 /**
  * Sentinel snapshot: the items tree is not applying a search/tag/advanced
@@ -81,7 +82,7 @@ function regularItemIdFromItem(item: Zotero.Item | undefined): number | null {
     return null;
   }
   try {
-    if (item.isRegularItem()) {
+    if (isSyllabusMemberItem(item)) {
       return item.id;
     }
     const parentId = item.parentItemID;

@@ -1,5 +1,9 @@
 import { assert } from "chai";
-import { getItemField, getItemTitle } from "../src/utils/items";
+import {
+  getItemField,
+  getItemTitle,
+  isSyllabusMemberItem,
+} from "../src/utils/items";
 
 async function createItem(
   type: string,
@@ -58,6 +62,42 @@ describe("getItemTitle", function () {
     assert.equal(getItemTitle(legalCase), "Brown v. Board of Education");
     assert.equal(getItemTitle(statute), "Civil Rights Act of 1964");
     assert.equal(getItemTitle(email), "Readings for week 3");
+  });
+});
+
+describe("isSyllabusMemberItem", function () {
+  this.timeout(30_000);
+
+  const items: Zotero.Item[] = [];
+
+  afterEach(async function () {
+    const ids = items.map((item) => item.id).filter(Boolean);
+    items.length = 0;
+    if (ids.length) {
+      try {
+        await Zotero.Items.erase(ids);
+      } catch {
+        /* profile is discarded after the run */
+      }
+    }
+  });
+
+  it("accepts live regular items and rejects deleted and feed items", async function () {
+    const book = await createItem("book", { title: "Member" });
+    items.push(book);
+    assert.isTrue(isSyllabusMemberItem(book));
+
+    book.deleted = true;
+    await book.saveTx();
+    assert.isFalse(isSyllabusMemberItem(book));
+
+    const feedLike = {
+      deleted: false,
+      isRegularItem: () => true,
+      isFeedItem: () => true,
+    } as unknown as Zotero.Item;
+    assert.isFalse(isSyllabusMemberItem(feedLike));
+    assert.isFalse(isSyllabusMemberItem(null));
   });
 });
 
