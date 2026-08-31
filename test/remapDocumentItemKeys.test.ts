@@ -2,6 +2,7 @@ import { assert } from "chai";
 import { CollectionSyllabusDocumentSchema } from "../src/utils/schemas";
 import {
   libraryIDFromDocumentCacheRef,
+  remapDocumentItemKeys,
   remapDocumentItemKeysByMap,
   selectItemKeyRemapForDocument,
 } from "../src/modules/syllabusNote";
@@ -95,5 +96,72 @@ describe("selectItemKeyRemapForDocument", function () {
     assert.isNull(
       selectItemKeyRemapForDocument("1:ABC12345", 1, ["keepKey"], keyMap),
     );
+  });
+});
+
+describe("remapDocumentItemKeys", function () {
+  this.timeout(30_000);
+
+  const items: Zotero.Item[] = [];
+
+  afterEach(async function () {
+    const ids = items.map((item) => item.id).filter(Boolean);
+    items.length = 0;
+    if (ids.length) {
+      try {
+        await Zotero.Items.erase(ids);
+      } catch {
+        /* profile is discarded after the run */
+      }
+    }
+  });
+
+  it("matches a doi.org URL to a bare DOI in the item index", async function () {
+    const item = new Zotero.Item("journalArticle");
+    item.libraryID = Zotero.Libraries.userLibraryID;
+    item.setField("title", "DOI remap");
+    item.setField("DOI", "https://doi.org/10.1234/foo");
+    await item.saveTx();
+    items.push(item);
+
+    const document = CollectionSyllabusDocumentSchema.parse({
+      version: 2,
+      classes: {
+        "class-1": { number: 1, title: "Intro", status: null },
+      },
+      items: {
+        oldKey: [{ id: "a1", classId: "class-1", priority: "essential" }],
+      },
+      itemIndex: {
+        oldKey: { title: "DOI remap", doi: "10.1234/foo" },
+      },
+    });
+    const result = remapDocumentItemKeys(document, [item]);
+    assert.equal(Object.keys(result.items)[0], item.key);
+    assert.isUndefined(result.items.oldKey);
+  });
+
+  it("matches ISBN-10 in the index to ISBN-13 on the item", async function () {
+    const item = new Zotero.Item("book");
+    item.libraryID = Zotero.Libraries.userLibraryID;
+    item.setField("title", "ISBN remap");
+    item.setField("ISBN", "978-0-306-40615-7");
+    await item.saveTx();
+    items.push(item);
+
+    const document = CollectionSyllabusDocumentSchema.parse({
+      version: 2,
+      classes: {
+        "class-1": { number: 1, title: "Intro", status: null },
+      },
+      items: {
+        oldKey: [{ id: "a1", classId: "class-1", priority: "essential" }],
+      },
+      itemIndex: {
+        oldKey: { title: "ISBN remap", isbn: "0-306-40615-2" },
+      },
+    });
+    const result = remapDocumentItemKeys(document, [item]);
+    assert.equal(Object.keys(result.items)[0], item.key);
   });
 });

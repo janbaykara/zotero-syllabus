@@ -28,6 +28,7 @@ import {
 } from "../utils/cache";
 import { getAllCollections } from "../utils/zotero";
 import { getItemTitle } from "../utils/items";
+import { normalizeDoi, normalizeIsbn } from "../utils/identifiers";
 import { getPrefValue } from "../utils/prefs";
 import {
   classFolderNameMatches,
@@ -203,8 +204,8 @@ export function buildItemIndex(
     if (!item || !item.isRegularItem()) {
       continue;
     }
-    const doi = String(item.getField("DOI") || "").trim();
-    const isbn = String(item.getField("ISBN") || "").trim();
+    const doi = normalizeDoi(item.getField("DOI"));
+    const isbn = normalizeIsbn(item.getField("ISBN"));
     index[itemKey] = {
       title: getItemTitle(item),
       ...(doi ? { doi } : {}),
@@ -231,12 +232,8 @@ export function remapDocumentItemKeys(
   const existingKeys = new Set<string>();
   for (const item of regularItems) {
     existingKeys.add(item.key);
-    const doi = String(item.getField("DOI") || "")
-      .trim()
-      .toLowerCase();
-    const isbn = String(item.getField("ISBN") || "")
-      .replace(/[-\s]/g, "")
-      .toLowerCase();
+    const doi = normalizeDoi(item.getField("DOI"));
+    const isbn = normalizeIsbn(item.getField("ISBN"));
     const title = getItemTitle(item).toLowerCase();
     if (doi) {
       byDoi.set(doi, item.key);
@@ -253,8 +250,8 @@ export function remapDocumentItemKeys(
   const itemsOut: CollectionSyllabusDocument["items"] = {};
   for (const [oldKey, assignments] of Object.entries(document.items || {})) {
     const meta = itemIndex[oldKey];
-    const doi = meta?.doi?.trim().toLowerCase();
-    const isbn = meta?.isbn?.replace(/[-\s]/g, "").toLowerCase();
+    const doi = normalizeDoi(meta?.doi);
+    const isbn = normalizeIsbn(meta?.isbn);
     const title = meta?.title?.trim().toLowerCase();
     const newKey =
       (doi && byDoi.get(doi)) ||
