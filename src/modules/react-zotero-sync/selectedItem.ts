@@ -1,6 +1,7 @@
 import { useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
 import { SyllabusManager } from "../syllabus";
+import { isItemRemovalEvent } from "../../utils/cache";
 
 export function useZoteroSelectedItemIds(): number[] | null {
   // Create the store once
@@ -56,11 +57,13 @@ export function createSelectedItemStore() {
             itemIdsArray.includes(id),
           );
 
-          if (hasSelectedItem && (event === "modify" || event === "delete")) {
+          if (
+            hasSelectedItem &&
+            (event === "modify" || isItemRemovalEvent(event))
+          ) {
             if (event === "modify") {
               listeners.forEach((l) => l());
-            } else if (event === "delete") {
-              // Remove deleted items from selection
+            } else {
               selectedItemIds = selectedItemIds.filter(
                 (id) => !itemIdsArray.includes(id),
               );

@@ -1,7 +1,7 @@
 import { useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
 import { SyllabusManager } from "../syllabus";
-import { getCachedItem } from "../../utils/cache";
+import { getCachedItem, isObjectLifecycleEvent } from "../../utils/cache";
 
 export function useZoteroItem(itemId: number | null) {
   // Create the store once per item ID
@@ -56,14 +56,13 @@ export function createItemStore(itemId: number | null) {
         //       version,
         // });
         // Listen to item modify/delete events for this specific item
-        if (type === "item" && ids.includes(itemId)) {
+        if (
+          type === "item" &&
+          ids.includes(itemId) &&
+          isObjectLifecycleEvent(event)
+        ) {
           version++;
-          if (event === "modify") {
-            listeners.forEach((l) => l());
-          } else if (event === "delete") {
-            // Item was deleted, increment version to signal it's gone
-            listeners.forEach((l) => l());
-          }
+          listeners.forEach((l) => l());
         }
       },
     };

@@ -6,7 +6,11 @@ import {
   GetByLibraryAndKeyArgs,
   ItemSyllabusAssignment,
 } from "../syllabus";
-import { getCachedItem } from "../../utils/cache";
+import {
+  getCachedItem,
+  isItemRemovalEvent,
+  isObjectLifecycleEvent,
+} from "../../utils/cache";
 import {
   getCollectionDocument,
   getDocumentGeneration,
@@ -169,44 +173,42 @@ export function createCollectionItemsStore(
           shouldUpdate = true;
         }
         // Also listen to item events (add, modify, delete) that might affect items in this collection
-        else if (
-          type === "item" &&
-          (event === "add" || event === "modify" || event === "delete")
-        ) {
-          const itemIds = ids as number[];
-          for (const itemId of itemIds) {
-            const item = getCachedItem(itemId);
-            if (item && item.isRegularItem()) {
-              const collections = item.getCollections();
-              const collection =
-                SyllabusManager.getCollectionFromIdentifier(collectionId);
-              if (collection && collections.includes(collection.id)) {
+        else if (type === "item" && isObjectLifecycleEvent(event)) {
+          if (isItemRemovalEvent(event) || event === "restore") {
+            shouldUpdate = true;
+          } else {
+            const itemIds = ids as number[];
+            for (const itemId of itemIds) {
+              const item = getCachedItem(itemId);
+              if (item && item.isRegularItem()) {
+                const collections = item.getCollections();
+                const collection =
+                  SyllabusManager.getCollectionFromIdentifier(collectionId);
+                if (collection && collections.includes(collection.id)) {
+                  shouldUpdate = true;
+                  break;
+                }
+                // When listing subcollections, also refresh for items in descendants.
+                if (
+                  collection &&
+                  shouldIncludeSubcollections(recursiveMode) &&
+                  itemInCollectionTree(item, collection)
+                ) {
+                  shouldUpdate = true;
+                  break;
+                }
+              } else {
+                // Item might not exist anymore, trigger update anyway
                 shouldUpdate = true;
                 break;
               }
-              // When listing subcollections, also refresh for items in descendants.
-              if (
-                collection &&
-                shouldIncludeSubcollections(recursiveMode) &&
-                itemInCollectionTree(item, collection)
-              ) {
-                shouldUpdate = true;
-                break;
-              }
-            } else {
-              // Item might not exist anymore, trigger update anyway
-              shouldUpdate = true;
-              break;
             }
           }
         }
         // Listen to collection modify/refresh events
         else if (
           type === "collection" &&
-          (event === "modify" ||
-            event === "refresh" ||
-            event === "add" ||
-            event === "delete")
+          (isObjectLifecycleEvent(event) || event === "refresh")
         ) {
           const collection =
             SyllabusManager.getCollectionFromIdentifier(collectionId);

@@ -11,6 +11,24 @@ type GetByLibraryAndKeyArgs = Parameters<
   typeof Zotero.Collections.getByLibraryAndKey
 >;
 
+/** Item/collection notifier events that mean cached objects may be stale. */
+export const OBJECT_LIFECYCLE_EVENTS = new Set([
+  "add",
+  "modify",
+  "trash",
+  "delete",
+  "restore",
+]);
+
+export function isObjectLifecycleEvent(event: string): boolean {
+  return OBJECT_LIFECYCLE_EVENTS.has(event);
+}
+
+/** Trash and permanent delete remove the object from collections. */
+export function isItemRemovalEvent(event: string): boolean {
+  return event === "trash" || event === "delete";
+}
+
 class ZoteroCache {
   // Item cache: itemId -> item
   private itemCache = new LRUCache<number, Zotero.Item>({
@@ -52,7 +70,7 @@ class ZoteroCache {
         if (type === "item") {
           ids.forEach((id) => {
             if (typeof id === "number") {
-              if (event === "modify" || event === "delete") {
+              if (isObjectLifecycleEvent(event)) {
                 this.itemCache.delete(id);
               }
             }
@@ -62,7 +80,7 @@ class ZoteroCache {
         if (type === "collection") {
           ids.forEach((id) => {
             if (typeof id === "number") {
-              if (event === "modify" || event === "delete") {
+              if (isObjectLifecycleEvent(event)) {
                 this.invalidateCollection(id);
               }
             }
