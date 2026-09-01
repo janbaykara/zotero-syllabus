@@ -295,9 +295,10 @@ export function isElementShownForKeyboard(el: HTMLElement): boolean {
   if (win) {
     const style = win.getComputedStyle(el);
     if (
-      style.display === "none" ||
-      style.visibility === "hidden" ||
-      style.visibility === "collapse"
+      style &&
+      (style.display === "none" ||
+        style.visibility === "hidden" ||
+        style.visibility === "collapse")
     ) {
       return false;
     }

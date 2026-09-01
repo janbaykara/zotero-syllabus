@@ -84,9 +84,8 @@ export function isSyllabusMemberItem(
     if (typeof item.isRegularItem !== "function" || !item.isRegularItem()) {
       return false;
     }
-    const isFeedItem = (item as Zotero.Item & { isFeedItem?: () => boolean })
-      .isFeedItem;
-    if (typeof isFeedItem === "function" && isFeedItem.call(item)) {
+    const isFeedItem = item.isFeedItem as boolean | (() => boolean);
+    if (typeof isFeedItem === "function" ? isFeedItem.call(item) : isFeedItem) {
       return false;
     }
     return true;

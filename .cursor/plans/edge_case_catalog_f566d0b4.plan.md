@@ -107,14 +107,11 @@ flowchart TD
   end
 ```
 
-
-
 ---
 
 ## Grounding in other plugins
 
 These are bugs other Zotero plugins already filed and fixed. Third-wave work maps onto them:
-
 
 | Category                                                 | Seen in the wild                                                                                                                                                                                                                                                                   | Our analogue                                                                                                                                                                   |
 | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -128,7 +125,6 @@ These are bugs other Zotero plugins already filed and fixed. Third-wave work map
 | Plugin JSON inside notes; both-sides-edited sync         | Better Notes (windingwind): [Note Synchronization](https://github.com/windingwind/zotero-better-notes/wiki/4.9-Note-Synchronization-Sycn.en) detects both-sides-edited notes and merges instead of dropping the incoming side.                                                     | **Done** (`eef4e58`). [shouldAdoptIncomingNote](src/modules/syllabusNote.ts) applies a strictly newer parseable note even while a write is in flight; reconcile after persist. |
 | Capture `libraryID` at notify time                       | Zotlit (aidenlx): the item may already be gone.                                                                                                                                                                                                                                    | Merge remap already scopes by `libraryID` (`d2e065f`).                                                                                                                         |
 
-
 ---
 
 ## A. Type-mapped fields
@@ -136,7 +132,7 @@ These are bugs other Zotero plugins already filed and fixed. Third-wave work map
 Zotero only maps base fields if you pass `includeBaseMapped`: `getField(field, false, true)`. Title uses `getDisplayTitle()`.
 
 - **Date / publication / publisher / pages** — **Done** (`bc802db`).
-- `**runningTime` / page ranges** — **Done** (`30a2876`). [parseRunningTimeMinutes](src/utils/readingTime.ts), [pageCountFromPagesField](src/utils/readingTime.ts).
+- `**runningTime` / page ranges** — **Done\*\* (`30a2876`). [parseRunningTimeMinutes](src/utils/readingTime.ts), [pageCountFromPagesField](src/utils/readingTime.ts).
 - **Creators** — **Done** (`182d5d4`). [getItemCreatorLine](src/utils/items.ts) uses Zotero `firstCreator` (primary type, localized) on gallery tiles and cards.
 - **Letters/interviews** — untitled items get synthesized titles from `getDisplayTitle`. **Title-only first-wins** — **Done** (`416f808`). Import remap keeps a live key and title-matches only when that title is unique.
 
@@ -156,7 +152,7 @@ Zotero only maps base fields if you pass `includeBaseMapped`: `getField(field, f
 
 ### Collection keys
 
-- `**getAllCollections` key-only dedupe** — **Done** (`d2b9d8c`). [dedupeCollectionsByLibraryAndKey](src/utils/zotero.ts).
+- `**getAllCollections` key-only dedupe** — **Done\*\* (`d2b9d8c`). [dedupeCollectionsByLibraryAndKey](src/utils/zotero.ts).
 - **Stale collection-id prefs** — **Done** (`03c3517`). Notero [#775](https://github.com/dvanoni/notero/issues/775): deleted collections lingered in prefs. [pruneStaleCollectionPrefs](src/utils/collectionPrefs.ts) drops `collectionViewModes` / gallery maps on trash, delete, and index rebuild. Recreate-with-new-id still will not inherit the old mode (by design).
 
 ### Extra absorb
@@ -176,7 +172,7 @@ DOI URL vs bare; ISBN-10 vs 13 — **Done** (`c85b039`). PMID / PMCID / arXiv (E
 - **Item cache trash/restore** — **Done** (`07be04d`). [OBJECT_LIFECYCLE_EVENTS](src/utils/cache.ts).
 - **Modify when `item.deleted`** — **Done** (`392c64a`). BBT [#2401](https://github.com/retorquere/zotero-better-bibtex/issues/2401).
 - BBT skips `isFeedItem`. **Done** (`e0e4a23`) via [isSyllabusMemberItem](src/utils/items.ts).
-- `**getNote()` on a non-note** — **Done** (`1243dbd`). BBT [#3541](https://github.com/retorquere/zotero-better-bibtex/issues/3541). [readItemNote](src/utils/items.ts).
+- `**getNote()` on a non-note** — **Done\*\* (`1243dbd`). BBT [#3541](https://github.com/retorquere/zotero-better-bibtex/issues/3541). [readItemNote](src/utils/items.ts).
 - **Write-inflight skip** — **Done** (`eef4e58`). Better Notes [both-sides-edited sync](https://github.com/windingwind/zotero-better-notes/wiki/4.9-Note-Synchronization-Sycn.en). [shouldAdoptIncomingNote](src/modules/syllabusNote.ts).
 - **documentForWrite** — **Done** (`b57abac`). Parsed note wins; cache only if the note is unreadable.
 - **enqueueWrite** nested `mutateCollectionDocument` from class-folder ensure — **Done** (`be018c4`). [createReentrantSerialQueue](src/utils/serialQueue.ts); trash path skips while a write is in flight.

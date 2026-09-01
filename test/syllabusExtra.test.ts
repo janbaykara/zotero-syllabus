@@ -70,105 +70,107 @@ async function eraseCreated(
   }
 }
 
-describe("placeItemInSyllabusDestinations", function () {
-  this.timeout(30_000);
+describe("syllabusExtra", function () {
+  describe("placeItemInSyllabusDestinations", function () {
+    this.timeout(30_000);
 
-  const collections: Zotero.Collection[] = [];
-  const items: Zotero.Item[] = [];
+    const collections: Zotero.Collection[] = [];
+    const items: Zotero.Item[] = [];
 
-  afterEach(async function () {
-    await eraseCreated(collections, items);
-  });
-
-  it("keeps the item in every Extra destination when there are two", async function () {
-    const first = await createCollection("Syllabus Extra A");
-    const second = await createCollection("Syllabus Extra B");
-    collections.push(first, second);
-    const item = await createBook(first, "Shared reading");
-    items.push(item);
-
-    placeItemInSyllabusDestinations(item, [first, second]);
-    await item.saveTx();
-
-    const ids = item.getCollections();
-    assert.include(ids, first.id);
-    assert.include(ids, second.id);
-  });
-
-  it("moves the item when Extra names a single collection", async function () {
-    const source = await createCollection("Syllabus Extra Source");
-    const destination = await createCollection("Syllabus Extra Dest");
-    collections.push(source, destination);
-    const item = await createBook(source, "Imported reading");
-    items.push(item);
-
-    placeItemInSyllabusDestinations(item, [destination]);
-    await item.saveTx();
-
-    const ids = item.getCollections();
-    assert.notInclude(ids, source.id);
-    assert.include(ids, destination.id);
-  });
-
-  it("does not add an item to a collection in another library", async function () {
-    const collection = await createCollection("Syllabus Extra Home");
-    collections.push(collection);
-    const item = await createBook(collection, "Group reading");
-    items.push(item);
-    const otherLibrary = {
-      id: collection.id,
-      libraryID: collection.libraryID + 1,
-      deleted: false,
-    } as Zotero.Collection;
-
-    placeItemInSyllabusDestinations(item, [otherLibrary]);
-    await item.saveTx();
-
-    assert.include(item.getCollections(), collection.id);
-  });
-});
-
-describe("absorbSyllabusExtraFromItems", function () {
-  this.timeout(30_000);
-
-  const collections: Zotero.Collection[] = [];
-  const items: Zotero.Item[] = [];
-
-  afterEach(async function () {
-    await eraseCreated(collections, items);
-  });
-
-  it("does not write Extra from items already in the trash", async function () {
-    const collection = await createCollection("Syllabus Extra Trash");
-    collections.push(collection);
-    await mutateCollectionDocument(collection, (document) => document, {
-      createNote: "always",
+    afterEach(async function () {
+      await eraseCreated(collections, items);
     });
-    const item = await createBook(collection, "Trashed Extra reading");
-    items.push(item);
 
-    const extraPayload = {
-      [collectionRefFromCollection(collection)]: [
-        {
-          id: "assignment-trashed-extra",
-          classNumber: 1,
-          priority: "essential",
-        },
-      ],
-    };
-    item.setField(
-      "extra",
-      `${SYLLABUS_EXTRA_KEY}: ${JSON.stringify(extraPayload)}`,
-    );
-    item.deleted = true;
-    await item.saveTx();
-    assert.isFalse(isSyllabusMemberItem(item));
-    const extraAfterTrash = String(item.getField("extra") || "");
+    it("keeps the item in every Extra destination when there are two", async function () {
+      const first = await createCollection("Syllabus Extra A");
+      const second = await createCollection("Syllabus Extra B");
+      collections.push(first, second);
+      const item = await createBook(first, "Shared reading");
+      items.push(item);
 
-    await absorbSyllabusExtraFromItems([item]);
+      placeItemInSyllabusDestinations(item, [first, second]);
+      await item.saveTx();
 
-    assert.equal(String(item.getField("extra") || ""), extraAfterTrash);
-    const document = peekPersistedSyllabusDocument(collection);
-    assert.notProperty(document?.items || {}, item.key);
+      const ids = item.getCollections();
+      assert.include(ids, first.id);
+      assert.include(ids, second.id);
+    });
+
+    it("moves the item when Extra names a single collection", async function () {
+      const source = await createCollection("Syllabus Extra Source");
+      const destination = await createCollection("Syllabus Extra Dest");
+      collections.push(source, destination);
+      const item = await createBook(source, "Imported reading");
+      items.push(item);
+
+      placeItemInSyllabusDestinations(item, [destination]);
+      await item.saveTx();
+
+      const ids = item.getCollections();
+      assert.notInclude(ids, source.id);
+      assert.include(ids, destination.id);
+    });
+
+    it("does not add an item to a collection in another library", async function () {
+      const collection = await createCollection("Syllabus Extra Home");
+      collections.push(collection);
+      const item = await createBook(collection, "Group reading");
+      items.push(item);
+      const otherLibrary = {
+        id: collection.id,
+        libraryID: collection.libraryID + 1,
+        deleted: false,
+      } as Zotero.Collection;
+
+      placeItemInSyllabusDestinations(item, [otherLibrary]);
+      await item.saveTx();
+
+      assert.include(item.getCollections(), collection.id);
+    });
+  });
+
+  describe("absorbSyllabusExtraFromItems", function () {
+    this.timeout(30_000);
+
+    const collections: Zotero.Collection[] = [];
+    const items: Zotero.Item[] = [];
+
+    afterEach(async function () {
+      await eraseCreated(collections, items);
+    });
+
+    it("does not write Extra from items already in the trash", async function () {
+      const collection = await createCollection("Syllabus Extra Trash");
+      collections.push(collection);
+      await mutateCollectionDocument(collection, (document) => document, {
+        createNote: "always",
+      });
+      const item = await createBook(collection, "Trashed Extra reading");
+      items.push(item);
+
+      const extraPayload = {
+        [collectionRefFromCollection(collection)]: [
+          {
+            id: "assignment-trashed-extra",
+            classNumber: 1,
+            priority: "essential",
+          },
+        ],
+      };
+      item.setField(
+        "extra",
+        `${SYLLABUS_EXTRA_KEY}: ${JSON.stringify(extraPayload)}`,
+      );
+      item.deleted = true;
+      await item.saveTx();
+      assert.isFalse(isSyllabusMemberItem(item));
+      const extraAfterTrash = String(item.getField("extra") || "");
+
+      await absorbSyllabusExtraFromItems([item]);
+
+      assert.equal(String(item.getField("extra") || ""), extraAfterTrash);
+      const document = peekPersistedSyllabusDocument(collection);
+      assert.notProperty(document?.items || {}, item.key);
+    });
   });
 });

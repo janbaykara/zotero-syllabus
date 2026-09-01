@@ -256,20 +256,17 @@ describe("syllabus smoke", function () {
     );
 
     const saved = await Promise.race([
-      mutateCollectionDocument(
-        collection,
-        (document) => ({
-          ...document,
-          classes: {
-            [CLASS_ID]: document.classes?.[CLASS_ID] || {
-              number: 1,
-              title: "Keep",
-              status: null,
-            },
+      mutateCollectionDocument(collection, (document) => ({
+        ...document,
+        classes: {
+          [CLASS_ID]: document.classes?.[CLASS_ID] || {
+            number: 1,
+            title: "Keep",
+            status: null,
           },
-          items: document.items,
-        }),
-      ),
+        },
+        items: document.items,
+      })),
       new Promise<never>((_, reject) => {
         setTimeout(
           () => reject(new Error("write queue deadlock removing class folder")),

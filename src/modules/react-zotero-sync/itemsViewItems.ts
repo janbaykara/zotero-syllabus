@@ -85,7 +85,7 @@ function regularItemIdFromItem(item: Zotero.Item | undefined): number | null {
     if (isSyllabusMemberItem(item)) {
       return item.id;
     }
-    const parentId = item.parentItemID;
+    const parentId = (item as Zotero.Item).parentItemID;
     if (parentId) {
       const parent = getCachedItem(parentId);
       if (parent) {
