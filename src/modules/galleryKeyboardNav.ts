@@ -251,24 +251,121 @@ export function isEditableKeyboardTarget(target: EventTarget | null): boolean {
   );
 }
 
+const CUSTOM_VIEW_KEYBOARD_IGNORE_SELECTOR = [
+  "#zotero-collections-tree",
+  "#zotero-collections-pane",
+  ".syllabus-gallery-popover",
+  "#zotero-item-pane",
+  "#zotero-context-pane",
+  "browser.reader",
+  ".reader",
+].join(", ");
+
 export function isGalleryKeyboardIgnoredTarget(
   target: EventTarget | null,
 ): boolean {
-  if (!target || typeof (target as HTMLElement).closest !== "function") {
+  if (!target) {
     return false;
   }
-  return Boolean(
-    (target as HTMLElement).closest(
-      "#zotero-collections-tree, #zotero-collections-pane, .syllabus-gallery-popover",
-    ),
-  );
+  const el = target as HTMLElement;
+  if (typeof el.closest !== "function") {
+    const tag = (el.tagName || "").toUpperCase();
+    const className = String(el.className || "");
+    return tag === "BROWSER" && className.split(/\s+/).includes("reader");
+  }
+  return Boolean(el.closest(CUSTOM_VIEW_KEYBOARD_IGNORE_SELECTOR));
 }
 
-/** True only while Gallery/Syllabus is showing (not native Table). */
+export function isNonLibraryTabType(type: string | null | undefined): boolean {
+  return !!type && type !== "library";
+}
+
+export function isElementShownForKeyboard(el: HTMLElement): boolean {
+  if (el.hidden || el.style.display === "none") {
+    return false;
+  }
+  if (typeof el.checkVisibility === "function") {
+    try {
+      return el.checkVisibility({ checkVisibilityCSS: true });
+    } catch {
+      // Older engines may not accept the options object.
+    }
+  }
+  const win = el.ownerDocument.defaultView;
+  if (win) {
+    const style = win.getComputedStyle(el);
+    if (
+      style.display === "none" ||
+      style.visibility === "hidden" ||
+      style.visibility === "collapse"
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function getSelectedTabType(): string | undefined {
+  try {
+    const win = typeof Zotero !== "undefined" ? Zotero.getMainWindow() : null;
+    const tabs = win?.Zotero_Tabs as
+      | {
+          selectedType?: string;
+          getState?: () => Array<{ type?: string; selected?: boolean }>;
+        }
+      | undefined;
+    if (tabs?.selectedType) {
+      return tabs.selectedType;
+    }
+    return tabs?.getState?.()?.find((tab) => tab.selected)?.type;
+  } catch {
+    return undefined;
+  }
+}
+
+function getMainDocument(): Document | null {
+  try {
+    const win = typeof Zotero !== "undefined" ? Zotero.getMainWindow() : null;
+    return win?.document ?? (typeof document !== "undefined" ? document : null);
+  } catch {
+    return typeof document !== "undefined" ? document : null;
+  }
+}
+
+/** True only while Gallery/Syllabus is showing in the library tab (not Table or a reader). */
 export function isCustomCollectionViewActive(): boolean {
-  const win = typeof Zotero !== "undefined" ? Zotero.getMainWindow() : null;
-  const customView = (win?.document ?? document).getElementById(
+  const doc = getMainDocument();
+  const customView = doc?.getElementById(
     "syllabus-custom-view",
   ) as HTMLElement | null;
-  return !!customView && customView.style.display !== "none";
+  if (!customView || customView.style.display === "none") {
+    return false;
+  }
+  if (isNonLibraryTabType(getSelectedTabType())) {
+    return false;
+  }
+  return isElementShownForKeyboard(customView);
+}
+
+/** Document-level capture listeners must not steal PDF reader / item-pane keys. */
+export function shouldCaptureCustomViewKeyboard(event: KeyboardEvent): boolean {
+  if (!isCustomCollectionViewActive()) {
+    return false;
+  }
+  if (isEditableKeyboardTarget(event.target)) {
+    return false;
+  }
+  if (isGalleryKeyboardIgnoredTarget(event.target)) {
+    return false;
+  }
+  const active =
+    event.view?.document?.activeElement ?? getMainDocument()?.activeElement;
+  if (
+    active &&
+    active !== event.target &&
+    isGalleryKeyboardIgnoredTarget(active)
+  ) {
+    return false;
+  }
+  return true;
 }

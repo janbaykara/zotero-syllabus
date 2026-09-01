@@ -73,7 +73,7 @@ import { SyllabusItemCard } from "./SyllabusItemCard";
 import { bibliographyToHtml } from "./Bibliography";
 import { LinksSection } from "./LinksSection";
 import { ClassGroupComponent } from "./ClassGroup";
-import { isCustomCollectionViewActive } from "./galleryKeyboardNav";
+import { shouldCaptureCustomViewKeyboard } from "./galleryKeyboardNav";
 
 export { SyllabusItemCard } from "./SyllabusItemCard";
 export { Bibliography } from "./Bibliography";
@@ -166,31 +166,6 @@ function getActiveNavIndex(
     }
   }
   return -1;
-}
-
-function isEditableKeyboardTarget(target: EventTarget | null): boolean {
-  if (!target || typeof (target as HTMLElement).closest !== "function") {
-    const tag = ((target as HTMLElement | null)?.tagName || "").toUpperCase();
-    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
-  }
-  const el = target as HTMLElement;
-  if (el.isContentEditable) {
-    return true;
-  }
-  return Boolean(
-    el.closest("input, textarea, select, [contenteditable='true']"),
-  );
-}
-
-function isCollectionsPaneTarget(target: EventTarget | null): boolean {
-  if (!target || typeof (target as HTMLElement).closest !== "function") {
-    return false;
-  }
-  return Boolean(
-    (target as HTMLElement).closest(
-      "#zotero-collections-tree, #zotero-collections-pane",
-    ),
-  );
 }
 
 function scrollSyllabusIdentifierIntoView(
@@ -785,7 +760,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
   const handleSyllabusKeyDown = useCallback((event: Event) => {
     const e = event as KeyboardEvent;
-    if (!isCustomCollectionViewActive()) {
+    if (!shouldCaptureCustomViewKeyboard(e)) {
       return;
     }
     if (e.ctrlKey || e.metaKey || e.altKey) {
@@ -795,12 +770,6 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     const isDown = e.key === "ArrowDown" || e.key === "Down";
     const isUp = e.key === "ArrowUp" || e.key === "Up";
     if (!isDown && !isUp) {
-      return;
-    }
-    if (isEditableKeyboardTarget(e.target)) {
-      return;
-    }
-    if (isCollectionsPaneTarget(e.target)) {
       return;
     }
 

@@ -2,6 +2,9 @@ import { assert } from "chai";
 import {
   clusterGalleryRows,
   findGalleryNavIndex,
+  isElementShownForKeyboard,
+  isGalleryKeyboardIgnoredTarget,
+  isNonLibraryTabType,
   parseGalleryNavKey,
   type NavRect,
 } from "../src/modules/galleryKeyboardNav";
@@ -94,5 +97,39 @@ describe("galleryKeyboardNav", function () {
     assert.equal(findGalleryNavIndex(rects, -1, "right"), 0);
     assert.equal(findGalleryNavIndex(rects, -1, "left"), 5);
     assert.equal(findGalleryNavIndex(rects, -1, "home"), 0);
+  });
+
+  it("treats reader and other non-library tabs as outside gallery keyboard scope", function () {
+    assert.isTrue(isNonLibraryTabType("reader"));
+    assert.isTrue(isNonLibraryTabType("reading-list"));
+    assert.isFalse(isNonLibraryTabType("library"));
+    assert.isFalse(isNonLibraryTabType(undefined));
+  });
+
+  it("ignores PDF reader browsers and item/context panes", function () {
+    const doc = Zotero.getMainWindow().document;
+    const reader = doc.createElement("div");
+    reader.className = "reader";
+    const itemPane = doc.createElement("div");
+    itemPane.id = "zotero-item-pane";
+    const nested = doc.createElement("div");
+    itemPane.appendChild(nested);
+    const galleryTile = doc.createElement("div");
+    galleryTile.className = "syllabus-gallery-tile";
+    assert.isTrue(isGalleryKeyboardIgnoredTarget(reader));
+    assert.isTrue(isGalleryKeyboardIgnoredTarget(nested));
+    assert.isFalse(isGalleryKeyboardIgnoredTarget(galleryTile));
+  });
+
+  it("treats CSS-hidden views as not shown for keyboard capture", function () {
+    const win = Zotero.getMainWindow();
+    const el = win.document.createElement("div");
+    el.style.visibility = "hidden";
+    win.document.documentElement.appendChild(el);
+    try {
+      assert.isFalse(isElementShownForKeyboard(el));
+    } finally {
+      el.remove();
+    }
   });
 });

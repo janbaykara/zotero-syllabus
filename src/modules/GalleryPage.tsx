@@ -56,10 +56,8 @@ import {
   findGalleryNavIndex,
   getActiveGalleryIndex,
   getGalleryNavElements,
-  isCustomCollectionViewActive,
-  isEditableKeyboardTarget,
-  isGalleryKeyboardIgnoredTarget,
   parseGalleryNavKey,
+  shouldCaptureCustomViewKeyboard,
 } from "./galleryKeyboardNav";
 import { useGalleryLayout, type GalleryLayout } from "./galleryLayout";
 import { useGallerySortBy, type GallerySortBy } from "./gallerySort";
@@ -160,16 +158,10 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
   const handleGalleryKeyDown = useCallback(
     (event: Event) => {
       const e = event as KeyboardEvent;
-      if (!isCustomCollectionViewActive()) {
+      if (!shouldCaptureCustomViewKeyboard(e)) {
         return;
       }
       if (e.ctrlKey || e.metaKey || e.altKey) {
-        return;
-      }
-      if (isEditableKeyboardTarget(e.target)) {
-        return;
-      }
-      if (isGalleryKeyboardIgnoredTarget(e.target)) {
         return;
       }
 
