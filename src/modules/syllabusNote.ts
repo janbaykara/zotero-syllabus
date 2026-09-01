@@ -763,7 +763,9 @@ function patchCachedDocumentsWithKeyMap(
   }
 }
 
-function patchCachedDocumentsFromModifyIds(ids: number[]): void {
+function patchCachedDocumentsFromModifyIds(
+  ids: number[],
+): Map<number, Record<string, string>> {
   const keyMapsByLibrary = new Map<number, Record<string, string>>();
   for (const id of ids) {
     let item: Zotero.Item | false | undefined;
@@ -797,6 +799,7 @@ function patchCachedDocumentsFromModifyIds(ids: number[]): void {
   for (const [libraryID, keyMap] of keyMapsByLibrary) {
     patchCachedDocumentsWithKeyMap(keyMap, libraryID);
   }
+  return keyMapsByLibrary;
 }
 
 async function applyItemKeyRemapToCachedDocuments(
@@ -854,6 +857,7 @@ async function applyItemKeyRemapToCachedDocuments(
 async function remapMergedKeysFromItemIds(
   ids: number[],
   event: string,
+  pendingKeyMaps?: Map<number, Record<string, string>>,
 ): Promise<void> {
   const keyMapsByLibrary = new Map<number, Record<string, string>>();
   const addRemap = (
@@ -869,6 +873,15 @@ async function remapMergedKeysFromItemIds(
     keyMapsByLibrary.set(libraryID, map);
   };
   try {
+    // Immediate cache patches drop the loser key before this persist runs.
+    // Keep those maps so the live note is still rewritten.
+    if (pendingKeyMaps) {
+      for (const [libraryID, keyMap] of pendingKeyMaps) {
+        for (const [oldKey, newKey] of Object.entries(keyMap)) {
+          addRemap(libraryID, oldKey, newKey);
+        }
+      }
+    }
     for (const id of ids) {
       let item: Zotero.Item | false | undefined;
       try {
@@ -2436,11 +2449,18 @@ export function initializeSyllabusNotes(): void {
         if (event === "trash" || event === "modify") {
           const queuedIds = [...numericIds];
           const queuedEvent = event;
-          if (event === "modify") {
-            patchCachedDocumentsFromModifyIds(queuedIds);
-          }
+          const pendingKeyMaps =
+            event === "modify"
+              ? patchCachedDocumentsFromModifyIds(queuedIds)
+              : undefined;
           afterDatabaseTransaction()
-            .then(() => remapMergedKeysFromItemIds(queuedIds, queuedEvent))
+            .then(() =>
+              remapMergedKeysFromItemIds(
+                queuedIds,
+                queuedEvent,
+                pendingKeyMaps,
+              ),
+            )
             .catch((error) => {
               ztoolkit.log(
                 "Error remapping merged item keys in syllabus notes:",
