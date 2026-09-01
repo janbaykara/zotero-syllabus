@@ -1867,15 +1867,16 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                             ? getString("page-reader-disable")
                             : getString("page-reader-enable")
                         }
+                        aria-pressed={readerMode}
                         onClick={toggleReaderMode}
                       >
                         {readerMode ? (
-                          <Menu
+                          <ListTodo
                             size={20}
                             className="text-primary hover:text-primary hover:bg-quinary rounded p-1"
                           />
                         ) : (
-                          <ListTodo
+                          <Menu
                             size={20}
                             className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
                           />
