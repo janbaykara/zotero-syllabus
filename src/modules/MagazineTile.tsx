@@ -143,12 +143,7 @@ export const MagazineTile = memo(function MagazineTile({
         ) : null}
         {playable ? (
           <div className="syllabus-gallery-play" aria-hidden="true">
-            <div
-              className={twMerge(
-                "syllabus-gallery-play-btn",
-                !isVideo && "is-audio",
-              )}
-            />
+            <div className="syllabus-gallery-play-btn" />
           </div>
         ) : null}
       </div>

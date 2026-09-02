@@ -40,6 +40,32 @@
     preference="customIcons"
     data-l10n-id="pref-custom-icons"
   />
+  <hbox align="center">
+    <html:label
+      data-l10n-id="pref-default-gallery-layout"
+      control="zotero-prefpane-__addonRef__-defaultGalleryLayout"
+    />
+    <menulist
+      id="zotero-prefpane-__addonRef__-defaultGalleryLayout"
+      native="true"
+      preference="defaultGalleryLayout"
+    >
+      <menupopup>
+        <menuitem
+          value="cover"
+          data-l10n-id="pref-gallery-layout-cover"
+        />
+        <menuitem
+          value="magazine"
+          data-l10n-id="pref-gallery-layout-magazine"
+        />
+        <menuitem
+          value="card"
+          data-l10n-id="pref-gallery-layout-card"
+        />
+      </menupopup>
+    </menulist>
+  </hbox>
   <hbox class="virtualized-table-container" flex="1" height="300px">
     <html:div id="__addonRef__-table-container" />
   </hbox>

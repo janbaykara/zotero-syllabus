@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from "preact/hooks";
 import * as z from "zod";
 import { config } from "../../package.json";
 import { getCachedPref, zoteroCache } from "../utils/cache";
+import { getPref, getPrefKey, setPref } from "../utils/prefs";
 
-export const GALLERY_LAYOUT_MODES = ["cover", "card", "magazine"] as const;
+export const GALLERY_LAYOUT_MODES = ["cover", "magazine", "card"] as const;
 
 export type GalleryLayout = (typeof GALLERY_LAYOUT_MODES)[number];
 
@@ -19,9 +20,22 @@ export function coerceGalleryLayout(value: unknown): GalleryLayout {
   return parsed.success ? parsed.data : "cover";
 }
 
+export function getDefaultGalleryLayout(): GalleryLayout {
+  return coerceGalleryLayout(getPref("defaultGalleryLayout"));
+}
+
+export function setDefaultGalleryLayout(mode: GalleryLayout): void {
+  setPref("defaultGalleryLayout", mode);
+  zoteroCache.invalidatePref(getPrefKey("defaultGalleryLayout"));
+}
+
 export function getGalleryLayout(viewKey: string | number): GalleryLayout {
   const map = getCachedPref(prefKey(), GalleryLayoutMapSchema) || {};
-  return coerceGalleryLayout(map[String(viewKey)]);
+  const key = String(viewKey);
+  if (!(key in map)) {
+    return getDefaultGalleryLayout();
+  }
+  return coerceGalleryLayout(map[key]);
 }
 
 export function setGalleryLayout(
@@ -43,7 +57,21 @@ export function useGalleryLayout(
   );
 
   useEffect(() => {
-    setMode(getGalleryLayout(viewKey));
+    const refresh = () => setMode(getGalleryLayout(viewKey));
+    refresh();
+    const observerIDs = [
+      Zotero.Prefs.registerObserver(prefKey(), refresh, true),
+      Zotero.Prefs.registerObserver(
+        getPrefKey("defaultGalleryLayout"),
+        refresh,
+        true,
+      ),
+    ];
+    return () => {
+      for (const observerID of observerIDs) {
+        Zotero.Prefs.unregisterObserver(observerID);
+      }
+    };
   }, [viewKey]);
 
   const setLayout = useCallback(

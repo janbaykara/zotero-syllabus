@@ -3,7 +3,7 @@ import * as z from "zod";
 import { config } from "../../package.json";
 import { getCachedPref, zoteroCache } from "../utils/cache";
 
-export const GALLERY_SORT_MODES = ["auto", "title", "date"] as const;
+export const GALLERY_SORT_MODES = ["auto", "title", "date", "dateAdded"] as const;
 
 export type GallerySortBy = (typeof GALLERY_SORT_MODES)[number];
 

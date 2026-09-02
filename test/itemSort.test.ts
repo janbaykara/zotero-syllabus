@@ -3,6 +3,7 @@ import {
   sortItems,
   sortItemsByCreator,
   sortItemsByDate,
+  sortItemsByDateAdded,
   sortItemsByTitle,
 } from "../src/utils/items";
 import { compareLocale } from "../src/utils/locale";
@@ -12,6 +13,7 @@ async function createBook(
   options: {
     creators?: Array<{ firstName: string; lastName: string }>;
     date?: string;
+    dateAdded?: string;
   } = {},
 ): Promise<Zotero.Item> {
   const item = new Zotero.Item("book");
@@ -28,6 +30,9 @@ async function createBook(
         creatorType: "author",
       })),
     );
+  }
+  if (options.dateAdded) {
+    item.dateAdded = options.dateAdded;
   }
   await item.saveTx();
   return item;
@@ -133,6 +138,26 @@ describe("item sort", function () {
       );
       assert.deepEqual(
         sortItems([older, newer], "date").map((item) => item.id),
+        [newer.id, older.id],
+      );
+    });
+
+    it("sorts by date added newest first", async function () {
+      const older = await createBook("Older added", {
+        dateAdded: "2020-01-01 00:00:00",
+      });
+      const newer = await createBook("Newer added", {
+        dateAdded: "2024-06-01 00:00:00",
+      });
+      items.push(older, newer);
+
+      const sorted = sortItemsByDateAdded([older, newer]);
+      assert.deepEqual(
+        sorted.map((item) => item.id),
+        [newer.id, older.id],
+      );
+      assert.deepEqual(
+        sortItems([older, newer], "dateAdded").map((item) => item.id),
         [newer.id, older.id],
       );
     });

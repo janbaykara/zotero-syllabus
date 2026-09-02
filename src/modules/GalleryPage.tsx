@@ -16,6 +16,7 @@ import {
   ArrowDownAZ,
   BookOpen,
   Calendar,
+  CalendarPlus,
   CaseSensitive,
   Folder,
   FolderOpen,
@@ -29,6 +30,8 @@ import {
   Shapes,
   Tag,
   Tags,
+  User,
+  UserX,
 } from "lucide-preact";
 import { renderComponent } from "../utils/react";
 import { isZotero8OrLater } from "../utils/zotero";
@@ -93,6 +96,7 @@ import { MagazineShelf } from "./MagazineShelf";
 import { GalleryViewportProvider, useNearViewport } from "./galleryVisibility";
 import { useGallerySortBy, type GallerySortBy } from "./gallerySort";
 import { collectionHasSyllabusNote } from "./syllabusNote";
+import { useCollectionCreatorGroups } from "./creatorGroups";
 import { useCollectionTagGroups } from "./tagGroups";
 import { useCollectionItemTypeGroups } from "./typeGroups";
 import { SubcollectionNode, useSubcollectionTree } from "./subcollectionGroups";
@@ -179,6 +183,8 @@ export function GalleryPage({
   const suppressScrollSpyRef = useRef(false);
   const { tagGroups, untaggedItems } = useCollectionTagGroups(syllabusItems);
   const { typeGroups } = useCollectionItemTypeGroups(syllabusItems);
+  const { creatorGroups, uncreditedItems } =
+    useCollectionCreatorGroups(syllabusItems);
   const {
     root: unfilteredSubcollectionRoot,
     resolveItems: resolveSubcollectionItems,
@@ -243,6 +249,23 @@ export function GalleryPage({
         icon: { kind: "item-type", itemType },
       }));
     }
+    if (groupBy === "creator") {
+      const groups: GalleryNavGroup[] = creatorGroups.map(
+        ({ label }, index) => ({
+          id: `creator-${index}`,
+          label,
+          icon: { kind: "creator" },
+        }),
+      );
+      if (uncreditedItems.length > 0) {
+        groups.push({
+          id: "uncredited",
+          label: getString("gallery-uncredited"),
+          icon: { kind: "uncredited" },
+        });
+      }
+      return groups;
+    }
     if (groupBy === "tags") {
       const groups: GalleryNavGroup[] = tagGroups.map(({ tag }, index) => ({
         id: `tag-${index}`,
@@ -300,6 +323,7 @@ export function GalleryPage({
   }, [
     classGroups,
     collectionIdOrZero,
+    creatorGroups,
     furtherReadingItems.length,
     groupBy,
     isFiltered,
@@ -307,6 +331,7 @@ export function GalleryPage({
     syllabusMetadata,
     tagGroups,
     typeGroups,
+    uncreditedItems.length,
     untaggedItems.length,
   ]);
 
@@ -804,6 +829,40 @@ export function GalleryPage({
                 ))
               ))}
 
+            {groupBy === "creator" &&
+              (creatorGroups.length === 0 && uncreditedItems.length === 0 ? (
+                <p className="text-secondary text-lg">{emptyMessage}</p>
+              ) : (
+                <>
+                  {creatorGroups.map(({ key, label, items }, index) => (
+                    <section
+                      key={key}
+                      className="syllabus-gallery-section"
+                      data-gallery-group={`creator-${index}`}
+                    >
+                      <GalleryGroupHeading icon={{ kind: "creator" }}>
+                        {label}
+                      </GalleryGroupHeading>
+                      {renderItems(items, `creator-${key}`)}
+                    </section>
+                  ))}
+                  {uncreditedItems.length > 0 && (
+                    <section
+                      className="syllabus-gallery-section"
+                      data-gallery-group="uncredited"
+                    >
+                      <GalleryGroupHeading icon={{ kind: "uncredited" }}>
+                        {getString("gallery-uncredited")}
+                      </GalleryGroupHeading>
+                      <p className="syllabus-gallery-class-description">
+                        {getString("gallery-uncredited-desc")}
+                      </p>
+                      {renderItems(uncreditedItems, "uncredited")}
+                    </section>
+                  )}
+                </>
+              ))}
+
             {groupBy === "tags" &&
               (tagGroups.length === 0 && untaggedItems.length === 0 ? (
                 <p className="text-secondary text-lg">{emptyMessage}</p>
@@ -957,15 +1016,19 @@ function GalleryGroupIcon({ spec }: { spec: GalleryGroupIconSpec }) {
     );
   }
   const Icon =
-    spec.kind === "tag"
-      ? Tags
-      : spec.kind === "untagged"
-        ? Tag
-        : spec.kind === "collection-root"
-          ? FolderOpen
-          : spec.kind === "class"
-            ? GraduationCap
-            : BookOpen;
+    spec.kind === "creator"
+      ? User
+      : spec.kind === "uncredited"
+        ? UserX
+        : spec.kind === "tag"
+          ? Tags
+          : spec.kind === "untagged"
+            ? Tag
+            : spec.kind === "collection-root"
+              ? FolderOpen
+              : spec.kind === "class"
+                ? GraduationCap
+                : BookOpen;
   return (
     <Icon
       className="syllabus-gallery-group-icon"
@@ -1170,6 +1233,12 @@ function gallerySortOptions(): GallerySegmentOption<GallerySortBy>[] {
       title: getString("gallery-sort-date-title"),
       Icon: Calendar,
     },
+    {
+      mode: "dateAdded",
+      label: getString("gallery-sort-date-added"),
+      title: getString("gallery-sort-date-added-title"),
+      Icon: CalendarPlus,
+    },
   ];
 }
 
@@ -1186,6 +1255,12 @@ function galleryGroupByOptions(): GallerySegmentOption<GalleryGroupBy>[] {
       label: getString("gallery-group-type"),
       title: getString("gallery-group-type-title"),
       Icon: Shapes,
+    },
+    {
+      mode: "creator",
+      label: getString("gallery-group-creator"),
+      title: getString("gallery-group-creator-title"),
+      Icon: User,
     },
     {
       mode: "tags",

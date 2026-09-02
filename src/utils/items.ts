@@ -204,23 +204,46 @@ export function sortItemsByTitle(items: Zotero.Item[]): Zotero.Item[] {
   );
 }
 
-/** First creator last name then given name. Empty if the item has no creator. */
-function itemCreatorSortKey(item: Zotero.Item): string {
+export type ItemPrimaryCreatorName = {
+  sortKey: string;
+  label: string;
+};
+
+function creatorDisplayLabel(last: string, given: string): string {
+  if (last && given) {
+    return `${last}, ${given}`;
+  }
+  return last || given;
+}
+
+/** First creator last name then given name. Null if the item has no creator. */
+export function getItemPrimaryCreatorName(
+  item: Zotero.Item,
+): ItemPrimaryCreatorName | null {
   try {
     const creators = item.getCreators();
     if (creators && creators.length > 0) {
       const first = creators[0];
       const last = String(first.lastName || "").trim();
       const given = String(first.firstName || "").trim();
-      const key = `${last} ${given}`.trim();
-      if (key) {
-        return key;
+      const sortKey = `${last} ${given}`.trim();
+      if (sortKey) {
+        return { sortKey, label: creatorDisplayLabel(last, given) };
       }
     }
-    return String(item.firstCreator || "").trim();
+    const fallback = String(item.firstCreator || "").trim();
+    if (fallback) {
+      return { sortKey: fallback, label: fallback };
+    }
   } catch {
-    return "";
+    // Ignore unreadable creator fields.
   }
+  return null;
+}
+
+/** First creator last name then given name. Empty if the item has no creator. */
+function itemCreatorSortKey(item: Zotero.Item): string {
+  return getItemPrimaryCreatorName(item)?.sortKey ?? "";
 }
 
 /** A–Z by first creator; items with no creator last; title as tiebreaker. */
@@ -302,7 +325,29 @@ export function sortItemsByDate(items: Zotero.Item[]): Zotero.Item[] {
   });
 }
 
-export type ItemSortMode = "auto" | "title" | "creator" | "date";
+/** Newest date added first; missing dates last; title as tiebreaker. */
+export function sortItemsByDateAdded(items: Zotero.Item[]): Zotero.Item[] {
+  return [...items].sort((a, b) => {
+    const addedA = itemDateAdded(a);
+    const addedB = itemDateAdded(b);
+    if (addedA === 0 && addedB === 0) {
+      return compareLocale(getItemTitle(a), getItemTitle(b));
+    }
+    if (addedA === 0) return 1;
+    if (addedB === 0) return -1;
+    if (addedA !== addedB) {
+      return addedB - addedA;
+    }
+    return compareLocale(getItemTitle(a), getItemTitle(b));
+  });
+}
+
+export type ItemSortMode =
+  | "auto"
+  | "title"
+  | "creator"
+  | "date"
+  | "dateAdded";
 
 export function sortItems(
   items: Zotero.Item[],
@@ -310,6 +355,9 @@ export function sortItems(
 ): Zotero.Item[] {
   if (mode === "date") {
     return sortItemsByDate(items);
+  }
+  if (mode === "dateAdded") {
+    return sortItemsByDateAdded(items);
   }
   if (mode === "creator") {
     return sortItemsByCreator(items);

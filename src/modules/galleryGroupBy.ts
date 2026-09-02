@@ -6,6 +6,7 @@ import { getCachedPref, zoteroCache } from "../utils/cache";
 export const GALLERY_GROUP_BY_MODES = [
   "none",
   "type",
+  "creator",
   "tags",
   "subcollections",
   "classes",
@@ -65,7 +66,12 @@ export function useGalleryGroupBy(
   );
 
   useEffect(() => {
-    setMode(getGalleryGroupBy(viewKey));
+    const refresh = () => setMode(getGalleryGroupBy(viewKey));
+    refresh();
+    const observerID = Zotero.Prefs.registerObserver(prefKey(), refresh, true);
+    return () => {
+      Zotero.Prefs.unregisterObserver(observerID);
+    };
   }, [viewKey]);
 
   const resolved = resolveGalleryGroupBy(mode, {

@@ -1,5 +1,7 @@
 export type GalleryGroupIconSpec =
   | { kind: "item-type"; itemType: string }
+  | { kind: "creator" }
+  | { kind: "uncredited" }
   | { kind: "tag" }
   | { kind: "untagged" }
   | { kind: "collection" }

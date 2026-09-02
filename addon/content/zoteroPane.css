@@ -616,11 +616,10 @@
   position: absolute;
   top: 50%;
   left: 54%;
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 0.38rem 0 0.38rem 0.62rem;
-  border-color: transparent transparent transparent rgba(255, 255, 255, 0.92);
+  width: 0.62rem;
+  height: 0.76rem;
+  background: rgba(255, 255, 255, 0.92);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
   transform: translate(-50%, -50%);
 }
 
@@ -1535,16 +1534,6 @@
   line-height: 1.2;
   text-transform: uppercase;
   color: var(--fill-secondary, #666);
-}
-
-.syllabus-gallery-play-btn.is-audio::after {
-  border-width: 0;
-  width: 0.42rem;
-  height: 0.42rem;
-  left: 50%;
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: 1px;
-  box-shadow: 0.28rem 0 0 rgba(255, 255, 255, 0.92);
 }
 
 @media (max-width: 520px) {

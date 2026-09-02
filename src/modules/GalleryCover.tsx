@@ -201,12 +201,7 @@ export const GalleryCover = memo(function GalleryCover({
         ) : null}
         {showPlay ? (
           <div className="syllabus-gallery-play" aria-hidden="true">
-            <span
-              className={twMerge(
-                "syllabus-gallery-play-btn",
-                isAudio && "is-audio",
-              )}
-            />
+            <span className="syllabus-gallery-play-btn" />
           </div>
         ) : null}
         {durationMinutes ? (

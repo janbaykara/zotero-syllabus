@@ -6,6 +6,8 @@ pref("shouldColourSyllabusRows", false);
 pref("debugMode", false);
 pref("wpm", 220);
 pref("latestTourVersion", 0);
+pref("latestGalleryTourVersion", 0);
+pref("defaultGalleryLayout", "cover");
 pref("generateReadingScheduleCollection", false);
 pref("readingScheduleCollectionKey", "");
 pref("customIcons", true);
