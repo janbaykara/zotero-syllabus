@@ -110,6 +110,8 @@ view-tab-table = 表格
 view-tab-table-tooltip = 以表格视图显示
 view-tab-gallery = 图库
 view-tab-gallery-tooltip = 以图库视图显示
+view-tab-explorer = 主页
+view-tab-explorer-tooltip = 以主页视图显示
 view-tab-reading-schedule = 阅读日程
 toolbar-reading-schedule-review = 查看阅读日程
 toolbar-reading-schedule-open = 打开阅读日程
@@ -394,6 +396,37 @@ reading-time-hours-and-minutes =
         [one] { $hours } 小时 { $minutes } 分钟
        *[other] { $hours } 小时 { $minutes } 分钟
     }
+
+# Explorer
+explorer-configure = 配置
+explorer-configure-display = 在主页显示
+explorer-configure-reorder = 重新排序
+explorer-library-count = { $count } 个条目
+explorer-nav-aria = 栏目
+explorer-customize = 自定义
+explorer-customize-done = 完成
+explorer-add-shelf = 添加书架
+explorer-add-collection = 分类…
+explorer-shelf-upcoming-deadlines = 即将到来的阅读截止日期
+explorer-shelf-upcoming-deadlines-desc = 本周到期，若无则显示一个月内的下一个截止日期。
+explorer-go-to-reading-schedule = 前往阅读日程
+explorer-shelf-watch-now = 立即观看
+explorer-shelf-watch-now-desc = 本文献库中最新的视频。
+explorer-shelf-listen-now = 立即收听
+explorer-shelf-listen-now-desc = 本文献库中最新的音频。
+explorer-shelf-recently-read = 最近阅读
+explorer-shelf-recently-read-desc = 最近打开过的条目。
+explorer-shelf-recently-added = 最近添加
+explorer-shelf-recently-added-desc = 最近 { $days } 天内添加的条目。
+explorer-recent-in-feed = 订阅源最近更新
+explorer-recent-in-feed-desc = 订阅源中的最新条目。
+explorer-recent-annotations = 最近批注
+explorer-recent-annotations-desc = 最近做的高亮批注。
+explorer-empty = 暂无内容
+explorer-shelf-empty = 没有条目
+explorer-move-up = 上移书架
+explorer-move-down = 下移书架
+explorer-remove-shelf = 移除书架
 
 # Collection tree
 tree-tooltip-reading-schedule = 阅读日程（自动管理）

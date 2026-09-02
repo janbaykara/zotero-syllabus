@@ -112,6 +112,8 @@ view-tab-table = Tabelle
 view-tab-table-tooltip = Als Tabelle anzeigen
 view-tab-gallery = Galerie
 view-tab-gallery-tooltip = Als Galerie anzeigen
+view-tab-explorer = Startseite
+view-tab-explorer-tooltip = Als Startseite anzeigen
 view-tab-reading-schedule = Lektüreplan
 toolbar-reading-schedule-review = Lektüreplan prüfen
 toolbar-reading-schedule-open = Lektüreplan öffnen
@@ -396,6 +398,41 @@ reading-time-hours-and-minutes =
         [one] { $hours } Std. { $minutes } Min.
        *[other] { $hours } Std. { $minutes } Min.
     }
+
+# Explorer
+explorer-configure = Konfigurieren
+explorer-configure-display = Auf der Startseite anzeigen
+explorer-configure-reorder = Reihenfolge ändern
+explorer-library-count =
+    { $count ->
+        [one] { $count } Eintrag
+       *[other] { $count } Einträge
+    }
+explorer-nav-aria = Abschnitte
+explorer-customize = Anpassen
+explorer-customize-done = Fertig
+explorer-add-shelf = Regal hinzufügen
+explorer-add-collection = Sammlung…
+explorer-shelf-upcoming-deadlines = Anstehende Lektürefristen
+explorer-shelf-upcoming-deadlines-desc = Fällig in dieser Woche, sonst der nächste Termin innerhalb eines Monats.
+explorer-go-to-reading-schedule = Zum Lektüreplan
+explorer-shelf-watch-now = Jetzt ansehen
+explorer-shelf-watch-now-desc = Neueste Videos in dieser Bibliothek.
+explorer-shelf-listen-now = Jetzt anhören
+explorer-shelf-listen-now-desc = Neueste Audiodateien in dieser Bibliothek.
+explorer-shelf-recently-read = Zuletzt gelesen
+explorer-shelf-recently-read-desc = Zuletzt geöffnete Einträge.
+explorer-shelf-recently-added = Zuletzt hinzugefügt
+explorer-shelf-recently-added-desc = In den letzten { $days } Tagen hinzugefügt.
+explorer-recent-in-feed = Neu im Feed
+explorer-recent-in-feed-desc = Neueste Einträge aus Ihren Feeds.
+explorer-recent-annotations = Neue Annotationen
+explorer-recent-annotations-desc = Markierungen, die Sie kürzlich gemacht haben.
+explorer-empty = Noch nichts anzuzeigen
+explorer-shelf-empty = Keine Einträge
+explorer-move-up = Regal nach oben
+explorer-move-down = Regal nach unten
+explorer-remove-shelf = Regal entfernen
 
 # Collection tree
 tree-tooltip-reading-schedule = Lektüreplan (automatisch verwaltet)

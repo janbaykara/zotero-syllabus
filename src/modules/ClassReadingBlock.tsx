@@ -45,6 +45,14 @@ export function selectCollectionInLibrary(collectionId: number): void {
   }
 }
 
+export function openReadingScheduleTab(): void {
+  try {
+    SyllabusManager.openReadingListTab();
+  } catch (error) {
+    ztoolkit.log("Error opening reading schedule:", error);
+  }
+}
+
 export function openCollectionSyllabusPage(collectionId: number): void {
   try {
     if (!selectZoteroCollection(collectionId)) {
@@ -87,6 +95,7 @@ export function ClassReadingBlock({
   compactMode,
   showCollectionLink = true,
   showLibraryName = false,
+  compactHeading = false,
   onCollectionClick,
   onItemClick,
 }: {
@@ -94,6 +103,7 @@ export function ClassReadingBlock({
   compactMode: boolean;
   showCollectionLink?: boolean;
   showLibraryName?: boolean;
+  compactHeading?: boolean;
   onCollectionClick?: () => void;
   onItemClick?: (item: Zotero.Item) => void;
 }) {
@@ -148,8 +158,8 @@ export function ClassReadingBlock({
           />
           <div
             className={twMerge(
-              "flex-1",
-              showCollectionLink ? "text-xl" : "text-3xl",
+              "flex-1 syllabus-class-reading-heading",
+              showCollectionLink || compactHeading ? "text-xl" : "text-3xl",
               classStatus === "done" ? "line-through" : "",
               onCollectionClick
                 ? "hover:cursor-pointer hover:bg-quinary active:bg-quarternary rounded-md px-1 -mx-1 inline-block"

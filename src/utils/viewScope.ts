@@ -69,6 +69,7 @@ export type SpecialViewScope = {
 export type LibraryViewScope = {
   kind: "library";
   viewKey: string;
+  libraryID: number;
 };
 
 export type OtherViewScope = {
@@ -251,6 +252,12 @@ export function viewScopeSupportsGallery(
   return scope?.kind === "collection" || scope?.kind === "special";
 }
 
+export function viewScopeSupportsExplorer(
+  scope: { kind: string } | null | undefined,
+): scope is LibraryViewScope {
+  return scope?.kind === "library";
+}
+
 function libraryIDFromRow(row: CollectionTreeRowLike): number {
   const fromRef = row.ref?.libraryID;
   if (typeof fromRef === "number" && fromRef > 0) {
@@ -359,6 +366,7 @@ export function getSelectedViewScope(): ViewScope {
     return {
       kind: "library",
       viewKey: treeViewIDFromRow(row, row.type || "library") || "library",
+      libraryID: libraryIDFromRow(row),
     };
   }
 

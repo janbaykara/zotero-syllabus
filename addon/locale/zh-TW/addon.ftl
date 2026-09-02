@@ -112,6 +112,8 @@ view-tab-table = 表格
 view-tab-table-tooltip = 以表格檢視顯示
 view-tab-gallery = 圖庫
 view-tab-gallery-tooltip = 以圖庫檢視顯示
+view-tab-explorer = Home
+view-tab-explorer-tooltip = View as Home
 view-tab-reading-schedule = 閱讀日程
 toolbar-reading-schedule-review = 查看閱讀日程
 toolbar-reading-schedule-open = 開啟閱讀日程
@@ -396,6 +398,41 @@ reading-time-hours-and-minutes =
         [one] { $hours } 小時 { $minutes } 分鐘
        *[other] { $hours } 小時 { $minutes } 分鐘
     }
+
+# Explorer
+explorer-configure = Configure
+explorer-configure-display = Display on Home
+explorer-configure-reorder = Reorder
+explorer-library-count =
+    { $count ->
+        [one] { $count } item
+       *[other] { $count } items
+    }
+explorer-nav-aria = Sections
+explorer-customize = Customize
+explorer-customize-done = Done
+explorer-add-shelf = Add shelf
+explorer-add-collection = Collection…
+explorer-shelf-upcoming-deadlines = Upcoming reading deadlines
+explorer-shelf-upcoming-deadlines-desc = Due this week, or the next deadline within a month.
+explorer-go-to-reading-schedule = Go to Reading Schedule
+explorer-shelf-watch-now = Watch now
+explorer-shelf-watch-now-desc = Newest videos in this library.
+explorer-shelf-listen-now = Listen now
+explorer-shelf-listen-now-desc = Newest audio in this library.
+explorer-shelf-recently-read = Recently read
+explorer-shelf-recently-read-desc = Items you last opened.
+explorer-shelf-recently-added = Recently added
+explorer-shelf-recently-added-desc = Items added in the last { $days } days.
+explorer-recent-in-feed = Recent in feed
+explorer-recent-in-feed-desc = Latest items from your feeds.
+explorer-recent-annotations = Recent annotations
+explorer-recent-annotations-desc = Highlights you made recently.
+explorer-empty = Nothing to show yet
+explorer-shelf-empty = No items
+explorer-move-up = Move shelf up
+explorer-move-down = Move shelf down
+explorer-remove-shelf = Remove shelf
 
 # Collection tree
 tree-tooltip-reading-schedule = 閱讀日程（自動管理）

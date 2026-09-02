@@ -1702,6 +1702,7 @@ function sortAssignmentRows(
 type GalleryTileProps = {
   item: Zotero.Item;
   selected: boolean;
+  interactive?: boolean;
   onClick: (item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) => void;
   onDoubleClick: (item: Zotero.Item) => void;
   onContextMenu: (
@@ -1710,9 +1711,10 @@ type GalleryTileProps = {
   ) => void;
 };
 
-const GalleryTile = memo(function GalleryTile({
+export const GalleryTile = memo(function GalleryTile({
   item,
   selected,
+  interactive = true,
   onClick,
   onDoubleClick,
   onContextMenu,
@@ -1764,14 +1766,17 @@ const GalleryTile = memo(function GalleryTile({
   return (
     <div
       ref={tileRef}
-      role="button"
-      tabIndex={-1}
+      role={interactive ? "button" : undefined}
+      tabIndex={interactive ? -1 : undefined}
       data-item-id={item.id}
-      className="syllabus-gallery-tile group min-w-0 cursor-pointer outline-none select-none"
+      className={twMerge(
+        "syllabus-gallery-tile group min-w-0 select-none",
+        interactive && "cursor-pointer outline-none",
+      )}
       title={title}
-      onClick={(e) => onClick(item, e)}
-      onDblClick={() => onDoubleClick(item)}
-      onContextMenu={(e) => onContextMenu(item, e)}
+      onClick={interactive ? (e) => onClick(item, e) : undefined}
+      onDblClick={interactive ? () => onDoubleClick(item) : undefined}
+      onContextMenu={interactive ? (e) => onContextMenu(item, e) : undefined}
     >
       <GalleryCover item={item} selected={selected} visible={visible} />
       <div className="syllabus-gallery-meta min-w-0 px-0.5">
@@ -1834,6 +1839,7 @@ function areGalleryTilePropsEqual(
     prev.item.id === next.item.id &&
     prev.item.dateModified === next.item.dateModified &&
     prev.selected === next.selected &&
+    prev.interactive === next.interactive &&
     prev.onClick === next.onClick &&
     prev.onDoubleClick === next.onDoubleClick &&
     prev.onContextMenu === next.onContextMenu

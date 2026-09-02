@@ -112,6 +112,8 @@ view-tab-table = Tabla
 view-tab-table-tooltip = Ver como tabla
 view-tab-gallery = Galería
 view-tab-gallery-tooltip = Ver como galería
+view-tab-explorer = Inicio
+view-tab-explorer-tooltip = Ver como inicio
 view-tab-reading-schedule = Calendario de lecturas
 toolbar-reading-schedule-review = Revisar el Calendario de lecturas
 toolbar-reading-schedule-open = Abrir el Calendario de lecturas
@@ -396,6 +398,41 @@ reading-time-hours-and-minutes =
         [one] { $hours } h { $minutes } min
        *[other] { $hours } h { $minutes } min
     }
+
+# Explorer
+explorer-configure = Configurar
+explorer-configure-display = Mostrar en inicio
+explorer-configure-reorder = Reordenar
+explorer-library-count =
+    { $count ->
+        [one] { $count } documento
+       *[other] { $count } documentos
+    }
+explorer-nav-aria = Secciones
+explorer-customize = Personalizar
+explorer-customize-done = Listo
+explorer-add-shelf = Añadir estante
+explorer-add-collection = Colección…
+explorer-shelf-upcoming-deadlines = Próximas fechas de lectura
+explorer-shelf-upcoming-deadlines-desc = Para esta semana, o la próxima fecha límite en un mes.
+explorer-go-to-reading-schedule = Ir al calendario de lecturas
+explorer-shelf-watch-now = Ver ahora
+explorer-shelf-watch-now-desc = Vídeos más recientes de esta biblioteca.
+explorer-shelf-listen-now = Escuchar ahora
+explorer-shelf-listen-now-desc = Audio más reciente de esta biblioteca.
+explorer-shelf-recently-read = Leído recientemente
+explorer-shelf-recently-read-desc = Elementos que abriste por última vez.
+explorer-shelf-recently-added = Añadidos recientemente
+explorer-shelf-recently-added-desc = Añadidos en los últimos { $days } días.
+explorer-recent-in-feed = Reciente en el feed
+explorer-recent-in-feed-desc = Novedades de tus canales.
+explorer-recent-annotations = Anotaciones recientes
+explorer-recent-annotations-desc = Resaltados que hiciste recientemente.
+explorer-empty = Nada que mostrar todavía
+explorer-shelf-empty = Sin elementos
+explorer-move-up = Subir estante
+explorer-move-down = Bajar estante
+explorer-remove-shelf = Quitar estante
 
 # Collection tree
 tree-tooltip-reading-schedule = Calendario de lecturas (gestionado automáticamente)

@@ -153,7 +153,10 @@ export const GalleryCover = memo(function GalleryCover({
                   cover.kind === "image" &&
                   "syllabus-gallery-journal-sheet",
               )
-            : "relative h-full w-full",
+            : twMerge(
+                "relative w-full",
+                useNaturalAspect ? "h-auto" : "h-full",
+              ),
         )}
       >
         {cover.kind === "image" ? (
@@ -179,6 +182,7 @@ export const GalleryCover = memo(function GalleryCover({
             cover={cover}
             insetForSpine={showSpine}
             compact={isWeb}
+            hideText={showPlay}
           />
         )}
         {showWebOverlay || showAudioCaption ? (
@@ -475,7 +479,7 @@ function PlaceholderFace({
   return (
     <div
       className={twMerge(
-        "absolute inset-0 flex flex-col justify-between text-white",
+        "syllabus-gallery-placeholder-face absolute inset-0 flex flex-col justify-between text-white",
         insetForSpine ? "syllabus-gallery-placeholder-spine" : "p-3",
       )}
       style={{

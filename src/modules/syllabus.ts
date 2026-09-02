@@ -7,13 +7,21 @@ import { getLocaleID, getString, compareLocale } from "../utils/locale";
 import type { FluentMessageId } from "../../typings/i10n";
 import { renderSyllabusPage } from "./SyllabusPage";
 import { renderGalleryPage } from "./GalleryPage";
+import { renderExplorerPage } from "./ExplorerPage";
 import { setGalleryGroupBy } from "./galleryGroupBy";
+import {
+  getLibraryViewMode,
+  setLibraryViewMode,
+  type LibraryViewMode,
+} from "./explorerConfig";
 import {
   getSelectedCollection,
   itemBelongsInCollection,
+  libraryIdForNewCollection,
 } from "../utils/zotero";
 import {
   getSelectedViewScope,
+  viewScopeSupportsExplorer,
   viewScopeSupportsGallery,
 } from "../utils/viewScope";
 import { getCurrentTab, confirmPrompt } from "../utils/window";
@@ -100,7 +108,11 @@ enum SyllabusSettingsKey {
   COLLECTION_VIEW_MODES = "collectionViewModes",
 }
 
-export type CollectionViewMode = "collection" | "gallery" | "syllabus";
+export type CollectionViewMode =
+  | "collection"
+  | "gallery"
+  | "syllabus"
+  | "explorer";
 
 const COLLECTION_VIEW_MODES: CollectionViewMode[] = [
   "collection",
@@ -112,6 +124,7 @@ const CollectionViewModeSchema = z.enum([
   "collection",
   "gallery",
   "syllabus",
+  "explorer",
   // Legacy top-tier modes — coerced to gallery + galleryGroupBy
   "tags",
   "subcollections",
@@ -675,6 +688,12 @@ export class SyllabusManager {
   // Function to get/set collection pane view mode (per collection)
   static getCollectionViewMode(): CollectionViewMode {
     const scope = getSelectedViewScope();
+    if (viewScopeSupportsExplorer(scope)) {
+      const libraryID = scope.libraryID || libraryIdForNewCollection();
+      return getLibraryViewMode(libraryID) === "explorer"
+        ? "explorer"
+        : "collection";
+    }
     if (!viewScopeSupportsGallery(scope)) {
       return "collection";
     }
@@ -727,19 +746,27 @@ export class SyllabusManager {
     const viewModes =
       getCachedPref(prefKey, z.record(z.string(), z.unknown())) || {};
     const mode = coerceCollectionViewMode(viewModes[scope.viewKey]);
-    return mode === "syllabus" ? "collection" : mode;
+    return mode === "syllabus" || mode === "explorer" ? "collection" : mode;
   }
 
   static coerceViewModeForCollection(
     _collection: Zotero.Collection,
     value: unknown,
   ): CollectionViewMode {
-    return coerceCollectionViewMode(value);
+    const mode = coerceCollectionViewMode(value);
+    return mode === "explorer" ? "collection" : mode;
   }
 
   static async setCollectionViewMode(mode: CollectionViewMode): Promise<void> {
     const scope = getSelectedViewScope();
-    if (!viewScopeSupportsGallery(scope)) {
+    if (viewScopeSupportsExplorer(scope)) {
+      if (mode === "explorer" || mode === "collection") {
+        const libraryID = scope.libraryID || libraryIdForNewCollection();
+        setLibraryViewMode(libraryID, mode as LibraryViewMode);
+      }
+      return;
+    }
+    if (mode === "explorer" || !viewScopeSupportsGallery(scope)) {
       return;
     }
 
@@ -786,6 +813,14 @@ export class SyllabusManager {
   }
 
   static async cycleCollectionViewMode(): Promise<CollectionViewMode> {
+    const scope = getSelectedViewScope();
+    if (viewScopeSupportsExplorer(scope)) {
+      const current = SyllabusManager.getCollectionViewMode();
+      await SyllabusManager.setCollectionViewMode(
+        current === "explorer" ? "collection" : "explorer",
+      );
+      return SyllabusManager.getCollectionViewMode();
+    }
     const modes = syllabusViewModeChrome()
       ? COLLECTION_VIEW_MODES
       : COLLECTION_VIEW_MODES.filter((mode) => mode !== "syllabus");
@@ -947,6 +982,11 @@ export class SyllabusManager {
         tooltip: getString("view-tab-gallery-tooltip"),
       },
       {
+        mode: "explorer",
+        label: getString("view-tab-explorer"),
+        tooltip: getString("view-tab-explorer-tooltip"),
+      },
+      {
         mode: "syllabus",
         ...(syllabusChrome ?? {
           label: getString("view-tab-syllabus"),
@@ -1102,6 +1142,7 @@ export class SyllabusManager {
     const hideViewModesInLibrary =
       FEATURE_FLAG.READING_SCHEDULE &&
       !viewScopeSupportsGallery(scope) &&
+      !viewScopeSupportsExplorer(scope) &&
       !isCustomTab;
     const readingScheduleContext = selectedCollection
       ? getReadingScheduleCollectionContext(selectedCollection.id)
@@ -1109,10 +1150,16 @@ export class SyllabusManager {
     const hideAll = !!(hideViewModesInLibrary || readingScheduleContext);
     const syllabusChrome = syllabusViewModeChrome();
     const showCreate = !hideAll && !!selectedCollection && !syllabusChrome;
+    const isLibraryRoot = viewScopeSupportsExplorer(scope);
 
     for (const button of viewModeButtons) {
       const buttonMode = button.getAttribute("data-view-mode");
-      if (buttonMode === "syllabus") {
+      if (isLibraryRoot) {
+        button.hidden =
+          hideAll || (buttonMode !== "collection" && buttonMode !== "explorer");
+      } else if (buttonMode === "explorer") {
+        button.hidden = true;
+      } else if (buttonMode === "syllabus") {
         button.hidden = hideAll || !syllabusChrome;
       } else {
         button.hidden = hideAll;
@@ -1187,7 +1234,8 @@ export class SyllabusManager {
       const resolvedViewMode = SyllabusManager.getCollectionViewMode();
       const shouldShowCustomView =
         (resolvedViewMode === "gallery" && viewScopeSupportsGallery(scope)) ||
-        (resolvedViewMode === "syllabus" && !!selectedCollection);
+        (resolvedViewMode === "syllabus" && !!selectedCollection) ||
+        (resolvedViewMode === "explorer" && viewScopeSupportsExplorer(scope));
 
       // Find or create custom syllabus view container
       let customView = doc.getElementById(
@@ -1234,7 +1282,12 @@ export class SyllabusManager {
         customView.style.display = "block";
 
         // Insert the master template
-        if (customView && resolvedViewMode === "gallery") {
+        if (customView && resolvedViewMode === "explorer") {
+          const libraryID =
+            (scope.kind === "library" && scope.libraryID) ||
+            libraryIdForNewCollection();
+          renderExplorerPage(w, customView, libraryID);
+        } else if (customView && resolvedViewMode === "gallery") {
           if (scope.kind === "collection") {
             renderGalleryPage(w, customView, {
               viewKey: scope.viewKey,

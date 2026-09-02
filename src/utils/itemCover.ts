@@ -276,6 +276,97 @@ export function isPlayableGalleryItem(item: Zotero.Item): boolean {
   return isVideoGalleryItem(item) || isAudioGalleryItem(item);
 }
 
+export type CoverHeuristicAttachment = {
+  contentType: string;
+  isPDF?: boolean;
+  isEPUB?: boolean;
+};
+
+export type CoverHeuristicInput = {
+  itemType: string;
+  pageUrl: string | null;
+  isbn: string;
+  attachments: CoverHeuristicAttachment[];
+};
+
+function isbnLooksValid(isbn: string): boolean {
+  const digits = isbn.replace(/[^0-9Xx]/g, "");
+  return digits.length === 10 || digits.length === 13;
+}
+
+function attachmentLooksLikeCoverSource(
+  attachment: CoverHeuristicAttachment,
+): boolean {
+  const type = (attachment.contentType || "").toLowerCase();
+  if (type.startsWith("image/")) {
+    return true;
+  }
+  if (attachment.isPDF || type === "application/pdf") {
+    return true;
+  }
+  if (
+    attachment.isEPUB ||
+    type === "application/epub+zip" ||
+    type === "application/epub"
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** Cheap sync stand-in for “this item can show a real cover/thumbnail”. */
+export function itemFeaturesLikelyHaveCover(
+  input: CoverHeuristicInput,
+): boolean {
+  if (isbnLooksValid(input.isbn)) {
+    return true;
+  }
+  if (isVideoGalleryItemFromTypeAndUrl(input.itemType, input.pageUrl)) {
+    if (input.pageUrl && youtubeVideoIdFromUrl(input.pageUrl)) {
+      return true;
+    }
+    if (input.pageUrl) {
+      return true;
+    }
+  }
+  return input.attachments.some(attachmentLooksLikeCoverSource);
+}
+
+export function itemLikelyHasCover(item: Zotero.Item): boolean {
+  const attachments: CoverHeuristicAttachment[] = [];
+  try {
+    for (const attId of item.getAttachments()) {
+      const att = getCachedItem(attId);
+      if (
+        !att ||
+        typeof att.isAttachment !== "function" ||
+        !att.isAttachment()
+      ) {
+        continue;
+      }
+      attachments.push({
+        contentType: String(att.attachmentContentType || ""),
+        isPDF: !!att.isPDFAttachment?.(),
+        isEPUB: !!att.isEPUBAttachment?.(),
+      });
+    }
+  } catch {
+    // Attachments may not be loaded.
+  }
+  let isbn = "";
+  try {
+    isbn = String(item.getField("ISBN") || "");
+  } catch {
+    isbn = "";
+  }
+  return itemFeaturesLikelyHaveCover({
+    itemType: item.itemType,
+    pageUrl: getItemPageUrl(item),
+    isbn,
+    attachments,
+  });
+}
+
 export function getVideoSiteHostname(item: Zotero.Item): string {
   const host = getItemHostname(item);
   if (!host || !host.includes(".")) {

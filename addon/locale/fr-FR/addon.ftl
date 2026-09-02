@@ -112,6 +112,8 @@ view-tab-table = Tableau
 view-tab-table-tooltip = Afficher comme tableau
 view-tab-gallery = Galerie
 view-tab-gallery-tooltip = Afficher comme galerie
+view-tab-explorer = Accueil
+view-tab-explorer-tooltip = Afficher comme accueil
 view-tab-reading-schedule = Planning des lectures
 toolbar-reading-schedule-review = Consulter le Planning des lectures
 toolbar-reading-schedule-open = Ouvrir le Planning des lectures
@@ -396,6 +398,41 @@ reading-time-hours-and-minutes =
         [one] { $hours } h { $minutes } min
        *[other] { $hours } h { $minutes } min
     }
+
+# Explorer
+explorer-configure = Configurer
+explorer-configure-display = Afficher sur l’accueil
+explorer-configure-reorder = Réorganiser
+explorer-library-count =
+    { $count ->
+        [one] { $count } document
+       *[other] { $count } documents
+    }
+explorer-nav-aria = Sections
+explorer-customize = Personnaliser
+explorer-customize-done = Terminé
+explorer-add-shelf = Ajouter une étagère
+explorer-add-collection = Collection…
+explorer-shelf-upcoming-deadlines = Échéances de lecture à venir
+explorer-shelf-upcoming-deadlines-desc = Pour cette semaine, ou la prochaine échéance dans le mois.
+explorer-go-to-reading-schedule = Aller au planning des lectures
+explorer-shelf-watch-now = Regarder
+explorer-shelf-watch-now-desc = Les vidéos les plus récentes de cette bibliothèque.
+explorer-shelf-listen-now = Écouter
+explorer-shelf-listen-now-desc = Les fichiers audio les plus récents de cette bibliothèque.
+explorer-shelf-recently-read = Lu récemment
+explorer-shelf-recently-read-desc = Documents ouverts récemment.
+explorer-shelf-recently-added = Ajoutés récemment
+explorer-shelf-recently-added-desc = Ajoutés au cours des { $days } derniers jours.
+explorer-recent-in-feed = Récent dans le flux
+explorer-recent-in-feed-desc = Derniers éléments de vos flux.
+explorer-recent-annotations = Annotations récentes
+explorer-recent-annotations-desc = Surlignages que vous avez faits récemment.
+explorer-empty = Rien à afficher pour l’instant
+explorer-shelf-empty = Aucun élément
+explorer-move-up = Monter l’étagère
+explorer-move-down = Descendre l’étagère
+explorer-remove-shelf = Supprimer l’étagère
 
 # Collection tree
 tree-tooltip-reading-schedule = Planning des lectures (géré automatiquement)
