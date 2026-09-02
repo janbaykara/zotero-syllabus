@@ -18,7 +18,7 @@ const FRONTMATTER_CUES =
   /copyright|\u00a9|all rights reserved|isbn[\s:-]|library of congress|catalogu(?:ing|ing).{0,16}publication|printed (?:and bound )?in\b|first published|this (?:paperback |hardcover )?edition|doi:\s*10\.|this page intentionally left blank|alle rechte vorbehalten|tous droits r[eé]serv[eé]s/i;
 
 const IMPRINT_HEAD =
-  /isbn(?:-1[03])?[:\s\-]|all rights reserved|library of congress|©|copyright\s+\d{4}|first published/i;
+  /isbn(?:-1[03])?[:\s-]|all rights reserved|library of congress|©|copyright\s+\d{4}|first published/i;
 
 const PRINTING_LINE =
   /(?:^|\n)\s*10\s+9\s+8\s+7\s+6\s+5\s+4\s+3\s+2\s+1\s*(?:\n|$)/;
@@ -309,7 +309,7 @@ function letterRatio(text: string): number {
 
 function lastImprintIndex(text: string): number {
   const window = text.slice(0, IMPRINT_SCAN_CHARS);
-  const re = /ISBN(?:-1[03])?[:\s\-]|all rights reserved/gi;
+  const re = /ISBN(?:-1[03])?[:\s-]|all rights reserved/gi;
   let cut = 0;
   let match: RegExpExecArray | null;
   while ((match = re.exec(window))) {

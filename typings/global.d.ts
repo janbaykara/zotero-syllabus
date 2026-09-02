@@ -69,6 +69,7 @@ declare const ChromeUtils: {
 
 declare const PathUtils: {
   join: (...parts: string[]) => string;
+  parent: (path: string) => string | null;
 };
 
 declare const IOUtils: {

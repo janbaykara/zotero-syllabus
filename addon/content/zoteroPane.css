@@ -1334,7 +1334,8 @@
 
 .syllabus-magazine-tile[data-role="hero"] .syllabus-magazine-cover.is-gallery,
 .syllabus-magazine-tile[data-role="wide"] .syllabus-magazine-cover.is-gallery,
-.syllabus-magazine-tile[data-role="compact"] .syllabus-magazine-cover.is-gallery,
+.syllabus-magazine-tile[data-role="compact"]
+  .syllabus-magazine-cover.is-gallery,
 .syllabus-magazine-tile[data-role="tall"] .syllabus-magazine-cover.is-gallery {
   height: auto;
 }
@@ -1375,7 +1376,9 @@
   overflow: hidden;
 }
 
-.syllabus-magazine-tile[data-role="wide"]:has(.syllabus-magazine-cover.is-bleed) {
+.syllabus-magazine-tile[data-role="wide"]:has(
+    .syllabus-magazine-cover.is-bleed
+  ) {
   flex-direction: column;
 }
 

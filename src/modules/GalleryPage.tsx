@@ -244,10 +244,10 @@ export function GalleryPage({
       }));
     }
     if (groupBy === "tags") {
-      const groups = tagGroups.map(({ tag }, index) => ({
+      const groups: GalleryNavGroup[] = tagGroups.map(({ tag }, index) => ({
         id: `tag-${index}`,
         label: tag,
-        icon: { kind: "tag" as const },
+        icon: { kind: "tag" },
       }));
       if (untaggedItems.length > 0) {
         groups.push({
@@ -319,9 +319,10 @@ export function GalleryPage({
     if (!container) {
       return;
     }
-    const sections = [
-      ...container.querySelectorAll<HTMLElement>("[data-gallery-group]"),
-    ];
+    const sections = Array.from(
+      container.querySelectorAll("[data-gallery-group]"),
+      (el) => el as HTMLElement,
+    );
     if (sections.length === 0) {
       setActiveGroupId(null);
       return;

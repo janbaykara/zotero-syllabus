@@ -91,8 +91,7 @@ export function scrollElementBelowSticky(
     ? sticky.getBoundingClientRect().bottom
     : containerRect.top;
   // Overshoot by 1px so rounding cannot leave the previous group as the spy hit.
-  const top =
-    targetRect.top - stickyBottom + container.scrollTop - padding + 1;
+  const top = targetRect.top - stickyBottom + container.scrollTop - padding + 1;
   container.scrollTo({ top: Math.max(0, Math.ceil(top)), behavior: "smooth" });
 }
 
