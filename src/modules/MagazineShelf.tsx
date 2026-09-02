@@ -52,6 +52,7 @@ export function MagazineShelf({
             onClick={onClick}
             onDoubleClick={onDoubleClick}
             onContextMenu={onContextMenu}
+            showHighlights={false}
           />
         ))}
       </div>

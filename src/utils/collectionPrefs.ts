@@ -9,8 +9,10 @@ const CollectionPrefMapSchema = z.record(z.string(), z.unknown());
 /** Prefs keyed by numeric collection id. */
 export const COLLECTION_ID_PREF_KEYS = [
   `${config.prefsPrefix}.collectionViewModes`,
+  `${config.prefsPrefix}.galleryLayout`,
   `${config.prefsPrefix}.galleryGroupBy`,
   `${config.prefsPrefix}.gallerySort`,
+  `${config.prefsPrefix}.galleryTypeSize`,
   `${config.prefsPrefix}.furtherReadingSort`,
 ] as const;
 

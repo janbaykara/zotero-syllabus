@@ -12,6 +12,10 @@ import {
   type ItemSortMode,
 } from "../utils/items";
 import { getItemBlurb, usableAbstractSnippet } from "../utils/itemBlurb";
+import {
+  getItemHighlightSample,
+  type ItemHighlight,
+} from "../utils/itemHighlights";
 import { formatReadingTime, getReadingTimeSync } from "../utils/readingTime";
 import {
   getPlaceholderCover,
@@ -34,6 +38,16 @@ export type MagazineTileClick = (
   e: JSX.TargetedMouseEvent<HTMLElement>,
 ) => void;
 
+const HIGHLIGHT_LAYOUT: Record<
+  MagazineTileRole,
+  { count: number; maxChars: number }
+> = {
+  hero: { count: 4, maxChars: 240 },
+  tall: { count: 3, maxChars: 180 },
+  wide: { count: 3, maxChars: 180 },
+  compact: { count: 2, maxChars: 120 },
+};
+
 export type MagazineTileProps = {
   item: Zotero.Item;
   role: MagazineTileRole;
@@ -41,6 +55,8 @@ export type MagazineTileProps = {
   onClick: MagazineTileClick;
   onDoubleClick: (item: Zotero.Item) => void;
   onContextMenu: MagazineTileClick;
+  /** Shelf tiles are height-capped; skip highlights there. */
+  showHighlights?: boolean;
 };
 
 export const MagazineTile = memo(function MagazineTile({
@@ -50,6 +66,7 @@ export const MagazineTile = memo(function MagazineTile({
   onClick,
   onDoubleClick,
   onContextMenu,
+  showHighlights = true,
 }: MagazineTileProps) {
   const tileRef = useRef<HTMLDivElement>(null);
   const visible = useNearViewport(tileRef);
@@ -64,6 +81,7 @@ export const MagazineTile = memo(function MagazineTile({
   );
   const abstractNote = useMemo(() => usableAbstractSnippet(item), [item]);
   const [blurb, setBlurb] = useState(abstractNote);
+  const [highlights, setHighlights] = useState<ItemHighlight[]>([]);
   const publication = useMemo(
     () => getItemField(item, "publicationTitle"),
     [item],
@@ -115,6 +133,26 @@ export const MagazineTile = memo(function MagazineTile({
       cancelled = true;
     };
   }, [visible, item, abstractNote]);
+
+  useEffect(() => {
+    setHighlights([]);
+  }, [item]);
+
+  useEffect(() => {
+    if (!visible || !showHighlights) {
+      return;
+    }
+    let cancelled = false;
+    const layout = HIGHLIGHT_LAYOUT[role];
+    void getItemHighlightSample(item, layout).then((sample) => {
+      if (!cancelled) {
+        setHighlights(sample);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, item, role, showHighlights]);
 
   const hasImage = cover.kind === "image";
   const fallbackMeta = [publication, date].filter(Boolean).join(" · ");
@@ -181,6 +219,27 @@ export const MagazineTile = memo(function MagazineTile({
         ) : fallbackMeta ? (
           <div className="syllabus-magazine-meta">{fallbackMeta}</div>
         ) : null}
+        {highlights.length > 0 ? (
+          <ul
+            className="syllabus-magazine-highlights"
+            aria-label={getString("magazine-highlights")}
+          >
+            {highlights.map((highlight) => (
+              <li key={highlight.id} className="syllabus-magazine-highlight">
+                <mark
+                  className="syllabus-magazine-highlight-mark"
+                  style={
+                    {
+                      "--highlight-color": highlight.color,
+                    } as JSX.CSSProperties
+                  }
+                >
+                  {highlight.text}
+                </mark>
+              </li>
+            ))}
+          </ul>
+        ) : null}
         {durationMinutes && !playable ? (
           <div className="syllabus-magazine-duration">
             {formatReadingTime(durationMinutes)}
@@ -202,7 +261,8 @@ function areMagazineTilePropsEqual(
     prev.selected === next.selected &&
     prev.onClick === next.onClick &&
     prev.onDoubleClick === next.onDoubleClick &&
-    prev.onContextMenu === next.onContextMenu
+    prev.onContextMenu === next.onContextMenu &&
+    prev.showHighlights === next.showHighlights
   );
 }
 

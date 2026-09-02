@@ -285,6 +285,7 @@ magazine-shelf-watch = Kijken
 magazine-shelf-watch-title = Onlangs toegevoegde video’s
 magazine-shelf-listen = Luisteren
 magazine-shelf-listen-title = Onlangs toegevoegde audio
+magazine-highlights = Markeringen
 gallery-options-aria = Opties voor galerijweergave
 gallery-options-title = Weergaveopties
 gallery-menu-view = Weergave
@@ -300,6 +301,25 @@ gallery-groups-nav-aria = Groepen
 gallery-group-jump = { $name } tonen
 gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = Pagina { $page } van { $total }
+gallery-save-globally = Opslaan als standaard
+gallery-save-globally-title = Deze optie als standaard voor alle collecties opslaan
+gallery-save-globally-active-title = De instelling van deze collectie wijkt af van de standaard. Klik om als standaard op te slaan.
+galleryTour-settings-title = Galerijopties
+galleryTour-settings-desc =
+    Open het menu in de hoek om weergave, sortering en groepering te wisselen. We lopen de drie lay-outs langs.
+galleryTour-cover-title = Omslagweergave
+galleryTour-cover-desc =
+    Omslag toont elk item als omslagbeeld — boeken, artikelen en webpagina’s in één oogopslag.
+galleryTour-magazine-title = Magazineweergave
+galleryTour-magazine-desc =
+    Magazine mengt grote en kleine tegels, als een inhoudsopgave. Handig om te bladeren en korte teksten te lezen.
+galleryTour-card-title = Kaartweergave
+galleryTour-card-desc =
+    Kaarten gebruiken dezelfde syllabuslay-out, gegroepeerd op itemtype zodat vergelijkbare lectuur bij elkaar staat.
+galleryTour-choose-title = Standaard kiezen
+galleryTour-choose-desc =
+    Met welke lay-out moet Galerij openen? Je kunt dit later wijzigen in de Zotero Syllabus-voorkeuren of met Opslaan als standaard.
+galleryTour-skip = Overslaan
 
 # Reading schedule
 schedule-edit-settings = Instellingen van het leesschema bewerken

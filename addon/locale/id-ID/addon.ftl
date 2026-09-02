@@ -285,6 +285,7 @@ magazine-shelf-watch = Tonton
 magazine-shelf-watch-title = Video yang baru ditambahkan
 magazine-shelf-listen = Dengar
 magazine-shelf-listen-title = Audio yang baru ditambahkan
+magazine-highlights = Sorotan
 gallery-options-aria = Opsi tampilan galeri
 gallery-options-title = Opsi tampilan
 gallery-menu-view = Tampilan
@@ -300,6 +301,25 @@ gallery-groups-nav-aria = Grup
 gallery-group-jump = Tampilkan { $name }
 gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = Halaman { $page } dari { $total }
+gallery-save-globally = Simpan sebagai default
+gallery-save-globally-title = Simpan opsi ini sebagai default untuk semua koleksi
+gallery-save-globally-active-title = Pengaturan koleksi ini berbeda dari default. Klik untuk menyimpannya sebagai default.
+galleryTour-settings-title = Opsi galeri
+galleryTour-settings-desc =
+    Buka menu di sudut untuk mengganti tampilan, urutan, dan pengelompokan. Kami akan menelusuri ketiga tata letak.
+galleryTour-cover-title = Tampilan sampul
+galleryTour-cover-desc =
+    Sampul menampilkan setiap item sebagai gambar — buku, artikel, dan halaman web sekilas.
+galleryTour-magazine-title = Tampilan majalah
+galleryTour-magazine-desc =
+    Majalah mencampur ubin besar dan kecil, seperti daftar isi. Cocok untuk menelusuri dan membaca sinopsis.
+galleryTour-card-title = Tampilan kartu
+galleryTour-card-desc =
+    Kartu memakai tata letak silabus yang sama, dikelompokkan menurut jenis item agar bacaan serupa berkumpul.
+galleryTour-choose-title = Pilih default
+galleryTour-choose-desc =
+    Tata letak mana yang dipakai Galeri saat dibuka? Anda dapat mengubahnya nanti di preferensi Zotero Syllabus atau dengan Simpan sebagai default.
+galleryTour-skip = Lewati
 
 # Reading schedule
 schedule-edit-settings = Sunting pengaturan jadwal bacaan

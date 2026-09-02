@@ -285,6 +285,7 @@ magazine-shelf-watch = 觀看
 magazine-shelf-watch-title = 最近新增的影片
 magazine-shelf-listen = 收聽
 magazine-shelf-listen-title = 最近新增的音訊
+magazine-highlights = 螢光標註
 gallery-options-aria = 圖庫檢視選項
 gallery-options-title = 檢視選項
 gallery-menu-view = 檢視
@@ -300,6 +301,25 @@ gallery-groups-nav-aria = 分組
 gallery-group-jump = 顯示{ $name }
 gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = 第 { $page } 頁，共 { $total } 頁
+gallery-save-globally = 儲存為預設
+gallery-save-globally-title = 將此選項儲存為所有收藏的預設設定
+gallery-save-globally-active-title = 此收藏的設定與預設不同。點一下以儲存為預設。
+galleryTour-settings-title = 圖庫選項
+galleryTour-settings-desc =
+    開啟角落的選單可切換檢視、排序與分組。我們將依序介紹三種版面。
+galleryTour-cover-title = 封面檢視
+galleryTour-cover-desc =
+    封面將每筆項目顯示為封面圖——書籍、論文與網頁一目了然。
+galleryTour-magazine-title = 雜誌檢視
+galleryTour-magazine-desc =
+    雜誌混合大小圖塊，像目錄頁。適合瀏覽並閱讀簡介。
+galleryTour-card-title = 卡片檢視
+galleryTour-card-desc =
+    卡片使用教學大綱項目版面，並依項目類型分組，讓同類讀物排在一起。
+galleryTour-choose-title = 選擇預設版面
+galleryTour-choose-desc =
+    圖庫應以哪種版面開啟？之後可在 Zotero Syllabus 偏好設定中更改，或使用「儲存為預設」。
+galleryTour-skip = 略過
 
 # Reading schedule
 schedule-edit-settings = 編輯閱讀日程設定

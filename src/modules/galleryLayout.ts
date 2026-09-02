@@ -8,6 +8,12 @@ export const GALLERY_LAYOUT_MODES = ["cover", "magazine", "card"] as const;
 
 export type GalleryLayout = (typeof GALLERY_LAYOUT_MODES)[number];
 
+export type GalleryGlobalSetting<T> = {
+  isCustom: boolean;
+  saveGlobally: () => void;
+  globalValue: T;
+};
+
 const GalleryLayoutSchema = z.enum(GALLERY_LAYOUT_MODES);
 const GalleryLayoutMapSchema = z.record(z.string(), z.unknown());
 
@@ -49,15 +55,33 @@ export function setGalleryLayout(
   zoteroCache.invalidatePref(key);
 }
 
+export function saveGalleryLayoutGlobally(
+  viewKey: string | number,
+  mode: GalleryLayout,
+): void {
+  setDefaultGalleryLayout(mode);
+  setGalleryLayout(viewKey, mode);
+}
+
 export function useGalleryLayout(
   viewKey: string | number,
-): [GalleryLayout, (mode: GalleryLayout) => void] {
+): [
+  GalleryLayout,
+  (mode: GalleryLayout) => void,
+  GalleryGlobalSetting<GalleryLayout>,
+] {
   const [mode, setMode] = useState<GalleryLayout>(() =>
     getGalleryLayout(viewKey),
   );
+  const [globalValue, setGlobalValue] = useState<GalleryLayout>(() =>
+    getDefaultGalleryLayout(),
+  );
 
   useEffect(() => {
-    const refresh = () => setMode(getGalleryLayout(viewKey));
+    const refresh = () => {
+      setMode(getGalleryLayout(viewKey));
+      setGlobalValue(getDefaultGalleryLayout());
+    };
     refresh();
     const observerIDs = [
       Zotero.Prefs.registerObserver(prefKey(), refresh, true),
@@ -82,5 +106,14 @@ export function useGalleryLayout(
     [viewKey],
   );
 
-  return [mode, setLayout];
+  const saveGlobally = useCallback(() => {
+    saveGalleryLayoutGlobally(viewKey, mode);
+    setGlobalValue(mode);
+  }, [mode, viewKey]);
+
+  return [
+    mode,
+    setLayout,
+    { isCustom: mode !== globalValue, saveGlobally, globalValue },
+  ];
 }

@@ -277,12 +277,57 @@
   gap: 0.35rem;
 }
 
+.syllabus-gallery-toolbar-heading {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+}
+
 .syllabus-gallery-groupby-label {
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--fill-secondary, #8c8c8c);
+}
+
+.syllabus-gallery-save-global {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fill-tertiary, #b3b3b3);
+  cursor: pointer;
+}
+
+.syllabus-gallery-save-global:hover {
+  color: var(--fill-primary);
+  background: var(--fill-quinary, rgba(0, 0, 0, 0.06));
+}
+
+.syllabus-gallery-save-global:focus-visible {
+  outline: 2px solid #7b4ddb;
+  outline-offset: 2px;
+}
+
+.syllabus-gallery-save-global.is-active {
+  color: #7b4ddb;
+  background: color-mix(in srgb, #7b4ddb 16%, transparent);
+}
+
+.syllabus-gallery-save-global.is-active:hover {
+  color: #6436c9;
+  background: color-mix(in srgb, #7b4ddb 24%, transparent);
 }
 
 .syllabus-gallery-groupby {
@@ -1521,6 +1566,76 @@
 }
 
 .syllabus-magazine-page.is-large-type .syllabus-magazine-meta {
+  -webkit-line-clamp: 3;
+}
+
+.syllabus-magazine-highlights {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0.55rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.syllabus-magazine-highlight {
+  margin: 0;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.syllabus-magazine-tile[data-role="hero"] .syllabus-magazine-highlight {
+  -webkit-line-clamp: 4;
+}
+
+.syllabus-magazine-tile[data-role="compact"] .syllabus-magazine-highlight {
+  -webkit-line-clamp: 2;
+}
+
+.syllabus-magazine-highlight-mark {
+  --highlight-color: #ffd400;
+  color: inherit;
+  font-family: var(--syllabus-magazine-serif);
+  font-size: calc(1.02rem * var(--magazine-type-scale, 1));
+  font-weight: 450;
+  font-style: normal;
+  line-height: 1.45;
+  padding: 0.04em 0.14em;
+  border-radius: 0.08em;
+  background-color: transparent;
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0.1em,
+    color-mix(
+        in srgb,
+        var(--highlight-color) 58%,
+        var(--material-background, Canvas)
+      )
+      0.1em,
+    color-mix(
+        in srgb,
+        var(--highlight-color) 58%,
+        var(--material-background, Canvas)
+      )
+      calc(100% - 0.06em),
+    transparent calc(100% - 0.06em)
+  );
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.syllabus-magazine-page.is-large-type
+  .syllabus-magazine-tile[data-role="hero"]
+  .syllabus-magazine-highlight {
+  -webkit-line-clamp: 5;
+}
+
+.syllabus-magazine-page.is-large-type
+  .syllabus-magazine-tile[data-role="compact"]
+  .syllabus-magazine-highlight {
   -webkit-line-clamp: 3;
 }
 

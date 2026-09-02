@@ -285,6 +285,7 @@ magazine-shelf-watch = Ansehen
 magazine-shelf-watch-title = Zuletzt hinzugefügte Videos
 magazine-shelf-listen = Anhören
 magazine-shelf-listen-title = Zuletzt hinzugefügtes Audio
+magazine-highlights = Hervorhebungen
 gallery-options-aria = Galerie-Ansichtsoptionen
 gallery-options-title = Ansichtsoptionen
 gallery-menu-view = Ansicht
@@ -300,6 +301,25 @@ gallery-groups-nav-aria = Gruppen
 gallery-group-jump = { $name } anzeigen
 gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = Seite { $page } von { $total }
+gallery-save-globally = Als Standard speichern
+gallery-save-globally-title = Diese Option als Standard für alle Sammlungen speichern
+gallery-save-globally-active-title = Diese Sammlung weicht vom Standard ab. Klicken Sie, um sie als Standard zu speichern.
+galleryTour-settings-title = Galerie-Optionen
+galleryTour-settings-desc =
+    Öffnen Sie das Menü in der Ecke, um Ansicht, Sortierung und Gruppierung zu wechseln. Wir zeigen die drei Layouts.
+galleryTour-cover-title = Cover-Ansicht
+galleryTour-cover-desc =
+    Cover zeigt jeden Eintrag als Titelbild — Bücher, Aufsätze und Webseiten auf einen Blick.
+galleryTour-magazine-title = Magazin-Ansicht
+galleryTour-magazine-desc =
+    Magazin mischt große und kleine Kacheln, wie ein Inhaltsverzeichnis. Ideal zum Stöbern und Lesen kurzer Texte.
+galleryTour-card-title = Kartenansicht
+galleryTour-card-desc =
+    Karten nutzen dasselbe Syllabus-Layout, gruppiert nach Eintragstyp, damit ähnliche Texte zusammenstehen.
+galleryTour-choose-title = Standard festlegen
+galleryTour-choose-desc =
+    Mit welchem Layout soll die Galerie öffnen? Sie können das später in den Zotero Syllabus-Einstellungen oder mit „Als Standard speichern“ ändern.
+galleryTour-skip = Überspringen
 
 # Reading schedule
 schedule-edit-settings = Lektüreplan-Einstellungen bearbeiten

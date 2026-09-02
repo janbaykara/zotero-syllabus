@@ -15,6 +15,11 @@ declare namespace _ZoteroTypes {
       "debugMode": boolean;
       "wpm": number;
       "latestTourVersion": number;
+      "latestGalleryTourVersion": number;
+      "defaultGalleryLayout": string;
+      "defaultGallerySort": string;
+      "defaultGalleryGroupBy": string;
+      "magazineTypeSize": string;
       "generateReadingScheduleCollection": boolean;
       "readingScheduleCollectionKey": string;
       "customIcons": boolean;

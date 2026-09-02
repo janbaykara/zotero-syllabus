@@ -285,6 +285,7 @@ magazine-shelf-watch = Ver
 magazine-shelf-watch-title = Vídeos añadidos recientemente
 magazine-shelf-listen = Escuchar
 magazine-shelf-listen-title = Audio añadido recientemente
+magazine-highlights = Resaltados
 gallery-options-aria = Opciones de la vista Galería
 gallery-options-title = Opciones de vista
 gallery-menu-view = Vista
@@ -300,6 +301,25 @@ gallery-groups-nav-aria = Grupos
 gallery-group-jump = Mostrar { $name }
 gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = Página { $page } de { $total }
+gallery-save-globally = Guardar como predeterminado
+gallery-save-globally-title = Guardar esta opción como predeterminada para todas las colecciones
+gallery-save-globally-active-title = El ajuste de esta colección difiere del predeterminado. Pulse para guardarlo como predeterminado.
+galleryTour-settings-title = Opciones de galería
+galleryTour-settings-desc =
+    Abra el menú de la esquina para cambiar la vista, el orden y el agrupado. Recorreremos las tres disposiciones.
+galleryTour-cover-title = Vista Portada
+galleryTour-cover-desc =
+    Portada muestra cada elemento como ilustración: libros, artículos y páginas web de un vistazo.
+galleryTour-magazine-title = Vista Revista
+galleryTour-magazine-desc =
+    Revista mezcla mosaicos grandes y pequeños, como un sumario. Ideal para hojear y leer entradillas.
+galleryTour-card-title = Vista Tarjetas
+galleryTour-card-desc =
+    Las tarjetas usan el mismo diseño del programa, agrupadas por tipo de documento para juntar lecturas similares.
+galleryTour-choose-title = Elegir el predeterminado
+galleryTour-choose-desc =
+    ¿Con qué disposición debe abrirse la Galería? Puede cambiarlo después en las preferencias de Zotero Syllabus o con Guardar como predeterminado.
+galleryTour-skip = Omitir
 
 # Reading schedule
 schedule-edit-settings = Editar ajustes del calendario de lecturas

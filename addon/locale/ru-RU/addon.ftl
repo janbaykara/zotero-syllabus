@@ -285,6 +285,7 @@ magazine-shelf-watch = Смотреть
 magazine-shelf-watch-title = Недавно добавленные видео
 magazine-shelf-listen = Слушать
 magazine-shelf-listen-title = Недавно добавленное аудио
+magazine-highlights = Выделения
 gallery-options-aria = Параметры вида галереи
 gallery-options-title = Параметры вида
 gallery-menu-view = Вид
@@ -300,6 +301,25 @@ gallery-groups-nav-aria = Группы
 gallery-group-jump = Показать { $name }
 gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = Страница { $page } из { $total }
+gallery-save-globally = Сохранить как значение по умолчанию
+gallery-save-globally-title = Сохранить этот параметр как значение по умолчанию для всех коллекций
+gallery-save-globally-active-title = Настройка этой коллекции отличается от значения по умолчанию. Нажмите, чтобы сохранить её по умолчанию.
+galleryTour-settings-title = Параметры галереи
+galleryTour-settings-desc =
+    Откройте меню в углу, чтобы сменить вид, сортировку и группировку. Мы покажем три макета.
+galleryTour-cover-title = Вид обложки
+galleryTour-cover-desc =
+    Обложка показывает каждый элемент как изображение — книги, статьи и веб-страницы сразу видны.
+galleryTour-magazine-title = Журнальный вид
+galleryTour-magazine-desc =
+    Журнал смешивает крупные и мелкие плитки, как содержание. Удобно листать и читать анонсы.
+galleryTour-card-title = Вид карточек
+galleryTour-card-desc =
+    Карточки используют тот же макет программы, сгруппированные по типу элемента, чтобы похожие материалы были рядом.
+galleryTour-choose-title = Выберите значение по умолчанию
+galleryTour-choose-desc =
+    С каким макетом должна открываться Галерея? Позже это можно изменить в настройках Zotero Syllabus или через «Сохранить как значение по умолчанию».
+galleryTour-skip = Пропустить
 
 # Reading schedule
 schedule-edit-settings = Изменить параметры графика чтения

@@ -285,6 +285,7 @@ magazine-shelf-watch = 보기
 magazine-shelf-watch-title = 최근 추가된 동영상
 magazine-shelf-listen = 듣기
 magazine-shelf-listen-title = 최근 추가된 오디오
+magazine-highlights = 형광 표시
 gallery-options-aria = 갤러리 보기 옵션
 gallery-options-title = 보기 옵션
 gallery-menu-view = 보기
@@ -300,6 +301,25 @@ gallery-groups-nav-aria = 그룹
 gallery-group-jump = { $name } 표시
 gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = { $page } / { $total }페이지
+gallery-save-globally = 기본값으로 저장
+gallery-save-globally-title = 이 옵션을 모든 컬렉션의 기본값으로 저장
+gallery-save-globally-active-title = 이 컬렉션 설정이 기본값과 다릅니다. 클릭하면 기본값으로 저장합니다.
+galleryTour-settings-title = 갤러리 옵션
+galleryTour-settings-desc =
+    모서리 메뉴에서 보기, 정렬, 그룹을 바꿉니다. 세 가지 레이아웃을 차례로 보여 드립니다.
+galleryTour-cover-title = 표지 보기
+galleryTour-cover-desc =
+    표지는 각 항목을 커버 이미지로 보여 줍니다. 책, 논문, 웹 페이지를 한눈에 볼 수 있습니다.
+galleryTour-magazine-title = 매거진 보기
+galleryTour-magazine-desc =
+    매거진은 큰 타일과 작은 타일을 섞어 목차처럼 보여 줍니다. 둘러보며 소개문을 읽기에 좋습니다.
+galleryTour-card-title = 카드 보기
+galleryTour-card-desc =
+    카드는 강의계획과 같은 레이아웃이며, 항목 유형별로 묶어 비슷한 읽기 자료를 모읍니다.
+galleryTour-choose-title = 기본값 선택
+galleryTour-choose-desc =
+    갤러리를 어떤 레이아웃으로 열까요? 나중에 Zotero Syllabus 환경설정이나 ‘기본값으로 저장’으로 바꿀 수 있습니다.
+galleryTour-skip = 건너뛰기
 
 # Reading schedule
 schedule-edit-settings = 읽기 일정 설정 편집

@@ -2,8 +2,15 @@ import { useCallback, useEffect, useState } from "preact/hooks";
 import * as z from "zod";
 import { config } from "../../package.json";
 import { getCachedPref, zoteroCache } from "../utils/cache";
+import { getPref, getPrefKey, setPref } from "../utils/prefs";
+import type { GalleryGlobalSetting } from "./galleryLayout";
 
-export const GALLERY_SORT_MODES = ["auto", "title", "date", "dateAdded"] as const;
+export const GALLERY_SORT_MODES = [
+  "auto",
+  "title",
+  "date",
+  "dateAdded",
+] as const;
 
 export type GallerySortBy = (typeof GALLERY_SORT_MODES)[number];
 
@@ -14,14 +21,27 @@ function prefKey() {
   return `${config.prefsPrefix}.gallerySort`;
 }
 
-function coerceGallerySortBy(value: unknown): GallerySortBy {
+export function coerceGallerySortBy(value: unknown): GallerySortBy {
   const parsed = GallerySortBySchema.safeParse(value);
   return parsed.success ? parsed.data : "auto";
 }
 
+export function getDefaultGallerySortBy(): GallerySortBy {
+  return coerceGallerySortBy(getPref("defaultGallerySort"));
+}
+
+export function setDefaultGallerySortBy(mode: GallerySortBy): void {
+  setPref("defaultGallerySort", mode);
+  zoteroCache.invalidatePref(getPrefKey("defaultGallerySort"));
+}
+
 export function getGallerySortBy(viewKey: string | number): GallerySortBy {
   const map = getCachedPref(prefKey(), GallerySortByMapSchema) || {};
-  return coerceGallerySortBy(map[String(viewKey)]);
+  const key = String(viewKey);
+  if (!(key in map)) {
+    return getDefaultGallerySortBy();
+  }
+  return coerceGallerySortBy(map[key]);
 }
 
 export function setGallerySortBy(
@@ -35,15 +55,47 @@ export function setGallerySortBy(
   zoteroCache.invalidatePref(key);
 }
 
+export function saveGallerySortByGlobally(
+  viewKey: string | number,
+  mode: GallerySortBy,
+): void {
+  setDefaultGallerySortBy(mode);
+  setGallerySortBy(viewKey, mode);
+}
+
 export function useGallerySortBy(
   viewKey: string | number,
-): [GallerySortBy, (mode: GallerySortBy) => void] {
+): [
+  GallerySortBy,
+  (mode: GallerySortBy) => void,
+  GalleryGlobalSetting<GallerySortBy>,
+] {
   const [mode, setMode] = useState<GallerySortBy>(() =>
     getGallerySortBy(viewKey),
   );
+  const [globalValue, setGlobalValue] = useState<GallerySortBy>(() =>
+    getDefaultGallerySortBy(),
+  );
 
   useEffect(() => {
-    setMode(getGallerySortBy(viewKey));
+    const refresh = () => {
+      setMode(getGallerySortBy(viewKey));
+      setGlobalValue(getDefaultGallerySortBy());
+    };
+    refresh();
+    const observerIDs = [
+      Zotero.Prefs.registerObserver(prefKey(), refresh, true),
+      Zotero.Prefs.registerObserver(
+        getPrefKey("defaultGallerySort"),
+        refresh,
+        true,
+      ),
+    ];
+    return () => {
+      for (const observerID of observerIDs) {
+        Zotero.Prefs.unregisterObserver(observerID);
+      }
+    };
   }, [viewKey]);
 
   const setSortBy = useCallback(
@@ -54,5 +106,14 @@ export function useGallerySortBy(
     [viewKey],
   );
 
-  return [mode, setSortBy];
+  const saveGlobally = useCallback(() => {
+    saveGallerySortByGlobally(viewKey, mode);
+    setGlobalValue(mode);
+  }, [mode, viewKey]);
+
+  return [
+    mode,
+    setSortBy,
+    { isCustom: mode !== globalValue, saveGlobally, globalValue },
+  ];
 }

@@ -20,6 +20,7 @@ import {
   CaseSensitive,
   Folder,
   FolderOpen,
+  Globe,
   GraduationCap,
   Image,
   LayoutGrid,
@@ -83,8 +84,17 @@ import {
   isItemContextMenuKey,
   openZoteroItemContextMenu,
 } from "../utils/itemContextMenu";
-import { useGalleryLayout, type GalleryLayout } from "./galleryLayout";
+import {
+  useGalleryLayout,
+  type GalleryGlobalSetting,
+  type GalleryLayout,
+} from "./galleryLayout";
 import { useMagazineTypeSize, type MagazineTypeSize } from "./magazineTypeSize";
+import {
+  GALLERY_TOUR_EVENT_CLOSE_SETTINGS,
+  GALLERY_TOUR_EVENT_OPEN_SETTINGS,
+  maybeShowGalleryTour,
+} from "./galleryTour";
 import {
   magazineSectionTemplate,
   pickRecentMediaItems,
@@ -157,13 +167,14 @@ export function GalleryPage({
   }, [allItems, matchingIds]);
   const isSyllabus =
     collectionId != null && collectionHasSyllabusNote(collectionId);
-  const [groupBy, setGroupBy] = useGalleryGroupBy(viewKey, {
+  const [groupBy, setGroupBy, groupByGlobal] = useGalleryGroupBy(viewKey, {
     classes: isSyllabus,
     subcollections: isCollectionScope,
   });
-  const [sortBy, setSortBy] = useGallerySortBy(viewKey);
-  const [layout, setLayout] = useGalleryLayout(viewKey);
-  const [magazineTypeSize, setMagazineTypeSize] = useMagazineTypeSize();
+  const [sortBy, setSortBy, sortByGlobal] = useGallerySortBy(viewKey);
+  const [layout, setLayout, layoutGlobal] = useGalleryLayout(viewKey);
+  const [magazineTypeSize, setMagazineTypeSize, magazineTypeSizeGlobal] =
+    useMagazineTypeSize(viewKey);
   const [compactMode] = useZoteroCompactMode();
   const [syllabusMetadata] = useZoteroSyllabusMetadata(collectionIdOrZero);
   const { classGroups, furtherReadingItems } = useSyllabusClassGroups(
@@ -181,6 +192,17 @@ export function GalleryPage({
   navStateRef.current = { selectedItemIds };
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const suppressScrollSpyRef = useRef(false);
+
+  useEffect(() => {
+    const win = Zotero.getMainWindow();
+    if (!win) {
+      return;
+    }
+    const timer = win.setTimeout(() => {
+      void maybeShowGalleryTour(win, viewKey);
+    }, 500);
+    return () => win.clearTimeout(timer);
+  }, [viewKey]);
   const { tagGroups, untaggedItems } = useCollectionTagGroups(syllabusItems);
   const { typeGroups } = useCollectionItemTypeGroups(syllabusItems);
   const { creatorGroups, uncreditedItems } =
@@ -746,14 +768,18 @@ export function GalleryPage({
               title={title || getString("untitled")}
               groupBy={groupBy}
               onGroupBy={setGroupBy}
+              groupByGlobal={groupByGlobal}
               showClasses={isSyllabus}
               showSubcollections={isCollectionScope}
               sortBy={sortBy}
               onSortBy={setSortBy}
+              sortByGlobal={sortByGlobal}
               layout={layout}
               onLayout={setLayout}
+              layoutGlobal={layoutGlobal}
               magazineTypeSize={magazineTypeSize}
               onMagazineTypeSize={setMagazineTypeSize}
+              magazineTypeSizeGlobal={magazineTypeSizeGlobal}
               navGroups={navGroups}
               activeGroupId={activeGroupId}
               onSelectGroup={handleSelectGroup}
@@ -1292,16 +1318,16 @@ function galleryLayoutOptions(): GallerySegmentOption<GalleryLayout>[] {
       Icon: Image,
     },
     {
-      mode: "card",
-      label: getString("gallery-layout-card"),
-      title: getString("gallery-layout-card-title"),
-      Icon: LayoutList,
-    },
-    {
       mode: "magazine",
       label: getString("gallery-layout-magazine"),
       title: getString("gallery-layout-magazine-title"),
       Icon: Newspaper,
+    },
+    {
+      mode: "card",
+      label: getString("gallery-layout-card"),
+      title: getString("gallery-layout-card-title"),
+      Icon: LayoutList,
     },
   ];
 }
@@ -1341,14 +1367,18 @@ function GalleryPageHeader({
   title,
   groupBy,
   onGroupBy,
+  groupByGlobal,
   showClasses,
   showSubcollections = true,
   sortBy,
   onSortBy,
+  sortByGlobal,
   layout,
   onLayout,
+  layoutGlobal,
   magazineTypeSize,
   onMagazineTypeSize,
+  magazineTypeSizeGlobal,
   navGroups,
   activeGroupId,
   onSelectGroup,
@@ -1357,27 +1387,57 @@ function GalleryPageHeader({
   title: string;
   groupBy: GalleryGroupBy;
   onGroupBy: (mode: GalleryGroupBy) => void;
+  groupByGlobal: GalleryGlobalSetting<GalleryGroupBy>;
   showClasses: boolean;
   showSubcollections?: boolean;
   sortBy: GallerySortBy;
   onSortBy: (mode: GallerySortBy) => void;
+  sortByGlobal: GalleryGlobalSetting<GallerySortBy>;
   layout: GalleryLayout;
   onLayout: (mode: GalleryLayout) => void;
+  layoutGlobal: GalleryGlobalSetting<GalleryLayout>;
   magazineTypeSize: MagazineTypeSize;
   onMagazineTypeSize: (size: MagazineTypeSize) => void;
+  magazineTypeSizeGlobal: GalleryGlobalSetting<MagazineTypeSize>;
   navGroups: GalleryNavGroup[];
   activeGroupId: string | null;
   onSelectGroup: (id: string) => void;
   pillsRef: RefObject<HTMLElement>;
 }) {
   const [open, setOpen] = useState(false);
+  const [tourPinned, setTourPinned] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuOpen = open || tourPinned;
 
   useEffect(() => {
-    if (!open) {
+    const win = Zotero.getMainWindow();
+    if (!win) {
+      return;
+    }
+    const onOpen = () => {
+      setTourPinned(true);
+      setOpen(true);
+    };
+    const onClose = () => {
+      setTourPinned(false);
+      setOpen(false);
+    };
+    win.addEventListener(GALLERY_TOUR_EVENT_OPEN_SETTINGS, onOpen);
+    win.addEventListener(GALLERY_TOUR_EVENT_CLOSE_SETTINGS, onClose);
+    return () => {
+      win.removeEventListener(GALLERY_TOUR_EVENT_OPEN_SETTINGS, onOpen);
+      win.removeEventListener(GALLERY_TOUR_EVENT_CLOSE_SETTINGS, onClose);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!menuOpen) {
       return;
     }
     const onPointerDown = (event: MouseEvent) => {
+      if (tourPinned) {
+        return;
+      }
       const root = rootRef.current;
       if (!root || !(event.target instanceof Node)) {
         return;
@@ -1387,7 +1447,7 @@ function GalleryPageHeader({
       }
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !tourPinned) {
         setOpen(false);
       }
     };
@@ -1398,7 +1458,7 @@ function GalleryPageHeader({
       win.document.removeEventListener("mousedown", onPointerDown, true);
       win.document.removeEventListener("keydown", onKeyDown, true);
     };
-  }, [open]);
+  }, [menuOpen, tourPinned]);
 
   const layoutOptions = galleryLayoutOptions();
   const sortOptions = gallerySortOptions();
@@ -1436,9 +1496,10 @@ function GalleryPageHeader({
           <button
             type="button"
             className="syllabus-gallery-menu-btn"
+            data-tour="gallery-options"
             aria-label={getString("gallery-options-aria")}
             aria-haspopup="menu"
-            aria-expanded={open}
+            aria-expanded={menuOpen}
             title={prefsSummary}
             onClick={() => setOpen((value) => !value)}
           >
@@ -1457,8 +1518,12 @@ function GalleryPageHeader({
             </span>
             <MoreHorizontal size={18} strokeWidth={2} aria-hidden="true" />
           </button>
-          {open ? (
-            <div className="syllabus-gallery-popover" role="menu">
+          {menuOpen ? (
+            <div
+              className="syllabus-gallery-popover"
+              role="menu"
+              data-tour="gallery-settings"
+            >
               <div className="syllabus-gallery-toolbar">
                 <GallerySegmentedControl
                   label={getString("gallery-menu-view")}
@@ -1466,6 +1531,8 @@ function GalleryPageHeader({
                   value={layout}
                   onChange={onLayout}
                   options={layoutOptions}
+                  tourPrefix="gallery-layout"
+                  globalSetting={layoutGlobal}
                 />
                 <GallerySegmentedControl
                   label={getString("gallery-menu-sort")}
@@ -1473,6 +1540,7 @@ function GalleryPageHeader({
                   value={sortBy}
                   onChange={onSortBy}
                   options={sortOptions}
+                  globalSetting={sortByGlobal}
                 />
                 <GallerySegmentedControl
                   label={getString("gallery-menu-group")}
@@ -1480,6 +1548,8 @@ function GalleryPageHeader({
                   value={groupBy}
                   onChange={onGroupBy}
                   options={groupByOptions}
+                  tourPrefix="gallery-group"
+                  globalSetting={groupByGlobal}
                 />
                 {layout === "magazine" ? (
                   <GallerySegmentedControl
@@ -1488,6 +1558,7 @@ function GalleryPageHeader({
                     value={magazineTypeSize}
                     onChange={onMagazineTypeSize}
                     options={magazineTypeSizeOptions()}
+                    globalSetting={magazineTypeSizeGlobal}
                   />
                 ) : null}
               </div>
@@ -1536,16 +1607,44 @@ function GallerySegmentedControl<T extends string>({
   value,
   onChange,
   options,
+  tourPrefix,
+  globalSetting,
 }: {
   label: string;
   ariaLabel: string;
   value: T;
   onChange: (mode: T) => void;
   options: GallerySegmentOption<T>[];
+  tourPrefix?: string;
+  globalSetting?: GalleryGlobalSetting<T>;
 }) {
   return (
     <div className="syllabus-gallery-toolbar-cluster">
-      <span className="syllabus-gallery-groupby-label">{label}</span>
+      <div className="syllabus-gallery-toolbar-heading">
+        <span className="syllabus-gallery-groupby-label">{label}</span>
+        {globalSetting ? (
+          <button
+            type="button"
+            className={twMerge(
+              "syllabus-gallery-save-global",
+              globalSetting.isCustom && "is-active",
+            )}
+            title={
+              globalSetting.isCustom
+                ? getString("gallery-save-globally-active-title")
+                : getString("gallery-save-globally-title")
+            }
+            aria-label={getString("gallery-save-globally")}
+            aria-pressed={globalSetting.isCustom}
+            onClick={(event) => {
+              event.stopPropagation();
+              globalSetting.saveGlobally();
+            }}
+          >
+            <Globe size={14} strokeWidth={2} aria-hidden="true" />
+          </button>
+        ) : null}
+      </div>
       <div
         role="radiogroup"
         aria-label={ariaLabel}
@@ -1559,6 +1658,7 @@ function GallerySegmentedControl<T extends string>({
             aria-checked={value === mode}
             title={title}
             className="syllabus-gallery-groupby-btn"
+            data-tour={tourPrefix ? `${tourPrefix}-${mode}` : undefined}
             onClick={() => onChange(mode)}
           >
             <Icon size={12} strokeWidth={2} aria-hidden="true" />

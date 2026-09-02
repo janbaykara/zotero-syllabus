@@ -283,6 +283,7 @@ magazine-shelf-watch = Watch
 magazine-shelf-watch-title = Recently added videos
 magazine-shelf-listen = Listen
 magazine-shelf-listen-title = Recently added audio
+magazine-highlights = Highlights
 gallery-options-aria = Gallery view options
 gallery-options-title = View options
 gallery-menu-view = View
@@ -298,6 +299,25 @@ gallery-groups-nav-aria = Groups
 gallery-group-jump = Show { $name }
 gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = Page { $page } of { $total }
+gallery-save-globally = Save as default
+gallery-save-globally-title = Save this option as the default for all collections
+gallery-save-globally-active-title = This collection’s setting differs from the default. Click to save it as the default.
+galleryTour-settings-title = Gallery options
+galleryTour-settings-desc =
+    Open the menu in the corner to switch view, sort, and grouping. We’ll walk through the three layouts.
+galleryTour-cover-title = Cover view
+galleryTour-cover-desc =
+    Cover shows each item as artwork — books, papers, and web pages at a glance.
+galleryTour-magazine-title = Magazine view
+galleryTour-magazine-desc =
+    Magazine mixes large and small tiles, like a contents page. Good when you want to browse and read blurbs.
+galleryTour-card-title = Card view
+galleryTour-card-desc =
+    Cards use the same syllabus item layout, grouped by item type so similar readings sit together.
+galleryTour-choose-title = Choose your default
+galleryTour-choose-desc =
+    Which layout should Gallery open with? You can change this later in Zotero Syllabus preferences, or with Save as default in Gallery options.
+galleryTour-skip = Skip
 
 # Reading schedule
 schedule-edit-settings = Edit reading schedule settings

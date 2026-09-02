@@ -285,6 +285,7 @@ magazine-shelf-watch = 見る
 magazine-shelf-watch-title = 最近追加した動画
 magazine-shelf-listen = 聴く
 magazine-shelf-listen-title = 最近追加した音声
+magazine-highlights = ハイライト
 gallery-options-aria = ギャラリー表示オプション
 gallery-options-title = 表示オプション
 gallery-menu-view = 表示
@@ -300,6 +301,25 @@ gallery-groups-nav-aria = グループ
 gallery-group-jump = { $name } を表示
 gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = { $page } / { $total } ページ
+gallery-save-globally = デフォルトとして保存
+gallery-save-globally-title = このオプションをすべてのコレクションのデフォルトとして保存
+gallery-save-globally-active-title = このコレクションの設定はデフォルトと異なります。クリックしてデフォルトとして保存します。
+galleryTour-settings-title = ギャラリーのオプション
+galleryTour-settings-desc =
+    隅のメニューで表示、並べ替え、グループ化を切り替えます。3つのレイアウトを順に紹介します。
+galleryTour-cover-title = カバー表示
+galleryTour-cover-desc =
+    カバーは各アイテムを表紙として表示します。図書、論文、ウェブページを一目で把握できます。
+galleryTour-magazine-title = マガジン表示
+galleryTour-magazine-desc =
+    マガジンは大小のタイルを混ぜ、目次のように見せます。流し読みやリード文の確認に向いています。
+galleryTour-card-title = カード表示
+galleryTour-card-desc =
+    カードはシラバスと同じレイアウトで、アイテムタイプごとにグループ化し、似た資料をまとめます。
+galleryTour-choose-title = デフォルトを選ぶ
+galleryTour-choose-desc =
+    ギャラリーはどのレイアウトで開きますか？あとから Zotero Syllabus の設定、または「デフォルトとして保存」で変更できます。
+galleryTour-skip = スキップ
 
 # Reading schedule
 schedule-edit-settings = 読書スケジュール設定を編集

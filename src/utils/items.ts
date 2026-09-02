@@ -342,12 +342,7 @@ export function sortItemsByDateAdded(items: Zotero.Item[]): Zotero.Item[] {
   });
 }
 
-export type ItemSortMode =
-  | "auto"
-  | "title"
-  | "creator"
-  | "date"
-  | "dateAdded";
+export type ItemSortMode = "auto" | "title" | "creator" | "date" | "dateAdded";
 
 export function sortItems(
   items: Zotero.Item[],

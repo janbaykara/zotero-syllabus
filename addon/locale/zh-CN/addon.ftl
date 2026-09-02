@@ -283,6 +283,7 @@ magazine-shelf-watch = 观看
 magazine-shelf-watch-title = 最近添加的视频
 magazine-shelf-listen = 收听
 magazine-shelf-listen-title = 最近添加的音频
+magazine-highlights = 高亮
 gallery-options-aria = 图库视图选项
 gallery-options-title = 视图选项
 gallery-menu-view = 视图
@@ -298,6 +299,25 @@ gallery-groups-nav-aria = 分组
 gallery-group-jump = 显示{ $name }
 gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = 第 { $page } 页，共 { $total } 页
+gallery-save-globally = 保存为默认
+gallery-save-globally-title = 将此选项保存为所有分类的默认设置
+gallery-save-globally-active-title = 此分类的设置与默认不同。点击以保存为默认。
+galleryTour-settings-title = 图库选项
+galleryTour-settings-desc =
+    打开角落的菜单可切换视图、排序和分组。我们将依次介绍三种布局。
+galleryTour-cover-title = 封面视图
+galleryTour-cover-desc =
+    封面将每条条目显示为封面图——图书、论文和网页一目了然。
+galleryTour-magazine-title = 杂志视图
+galleryTour-magazine-desc =
+    杂志混合大小图块，像目录页。适合浏览并阅读简介。
+galleryTour-card-title = 卡片视图
+galleryTour-card-desc =
+    卡片使用教学大纲条目布局，并按条目类型分组，让同类阅读材料排在一起。
+galleryTour-choose-title = 选择默认布局
+galleryTour-choose-desc =
+    图库应以哪种布局打开？之后可在 Zotero Syllabus 首选项中更改，或使用“保存为默认”。
+galleryTour-skip = 跳过
 
 # Reading schedule
 schedule-edit-settings = 编辑阅读日程设置

@@ -285,6 +285,7 @@ magazine-shelf-watch = Oglądaj
 magazine-shelf-watch-title = Ostatnio dodane filmy
 magazine-shelf-listen = Słuchaj
 magazine-shelf-listen-title = Ostatnio dodane nagrania
+magazine-highlights = Wyróżnienia
 gallery-options-aria = Opcje widoku galerii
 gallery-options-title = Opcje widoku
 gallery-menu-view = Widok
@@ -300,6 +301,25 @@ gallery-groups-nav-aria = Grupy
 gallery-group-jump = Pokaż { $name }
 gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = Strona { $page } z { $total }
+gallery-save-globally = Zapisz jako domyślne
+gallery-save-globally-title = Zapisz tę opcję jako domyślną dla wszystkich kolekcji
+gallery-save-globally-active-title = Ustawienie tej kolekcji różni się od domyślnego. Kliknij, aby zapisać je jako domyślne.
+galleryTour-settings-title = Opcje galerii
+galleryTour-settings-desc =
+    Otwórz menu w rogu, aby zmienić widok, sortowanie i grupowanie. Pokażemy trzy układy.
+galleryTour-cover-title = Widok okładki
+galleryTour-cover-desc =
+    Okładka pokazuje każdy element jako ilustrację — książki, artykuły i strony WWW na pierwszy rzut oka.
+galleryTour-magazine-title = Widok magazynu
+galleryTour-magazine-desc =
+    Magazyn miesza duże i małe kafelki, jak spis treści. Dobry do przeglądania i czytania zapowiedzi.
+galleryTour-card-title = Widok kart
+galleryTour-card-desc =
+    Karty używają tego samego układu sylabusa, pogrupowane według typu elementu, aby podobne lektury były razem.
+galleryTour-choose-title = Wybierz domyślny
+galleryTour-choose-desc =
+    W jakim układzie ma się otwierać Galeria? Możesz to później zmienić w preferencjach Zotero Syllabus lub przez Zapisz jako domyślne.
+galleryTour-skip = Pomiń
 
 # Reading schedule
 schedule-edit-settings = Edytuj ustawienia harmonogramu lektur

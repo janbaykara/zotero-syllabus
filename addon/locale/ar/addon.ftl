@@ -285,6 +285,7 @@ magazine-shelf-watch = مشاهدة
 magazine-shelf-watch-title = فيديوهات أُضيفت مؤخرًا
 magazine-shelf-listen = استماع
 magazine-shelf-listen-title = صوت أُضيف مؤخرًا
+magazine-highlights = تظليلات
 gallery-options-aria = خيارات عرض المعرض
 gallery-options-title = خيارات العرض
 gallery-menu-view = العرض
@@ -300,6 +301,25 @@ gallery-groups-nav-aria = المجموعات
 gallery-group-jump = عرض { $name }
 gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = الصفحة { $page } من { $total }
+gallery-save-globally = حفظ كافتراضي
+gallery-save-globally-title = حفظ هذا الخيار كافتراضي لجميع المجموعات
+gallery-save-globally-active-title = إعداد هذه المجموعة يختلف عن الافتراضي. انقر لحفظه كافتراضي.
+galleryTour-settings-title = خيارات المعرض
+galleryTour-settings-desc =
+    افتح القائمة في الزاوية لتغيير العرض والترتيب والتجميع. سنعرض التخطيطات الثلاثة.
+galleryTour-cover-title = عرض الغلاف
+galleryTour-cover-desc =
+    يعرض الغلاف كل عنصر كصورة غلاف — كتب ومقالات وصفحات ويب بنظرة واحدة.
+galleryTour-magazine-title = عرض المجلة
+galleryTour-magazine-desc =
+    المجلة تمزج بلاطات كبيرة وصغيرة، كصفحة محتويات. مناسبة للتصفح وقراءة المقدمات.
+galleryTour-card-title = عرض البطاقات
+galleryTour-card-desc =
+    تستخدم البطاقات تخطيط المقرر نفسه، مجمّعة حسب نوع العنصر حتى تتجاور القراءات المتشابهة.
+galleryTour-choose-title = اختر الافتراضي
+galleryTour-choose-desc =
+    بأي تخطيط يُفتح المعرض؟ يمكنك تغيير ذلك لاحقًا في تفضيلات Zotero Syllabus أو عبر حفظ كافتراضي.
+galleryTour-skip = تخطي
 
 # Reading schedule
 schedule-edit-settings = تحرير إعدادات جدول القراءات

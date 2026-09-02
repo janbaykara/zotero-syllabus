@@ -285,6 +285,7 @@ magazine-shelf-watch = İzle
 magazine-shelf-watch-title = Son eklenen videolar
 magazine-shelf-listen = Dinle
 magazine-shelf-listen-title = Son eklenen sesler
+magazine-highlights = Vurgular
 gallery-options-aria = Galeri görünümü seçenekleri
 gallery-options-title = Görünüm seçenekleri
 gallery-menu-view = Görünüm
@@ -300,6 +301,25 @@ gallery-groups-nav-aria = Gruplar
 gallery-group-jump = { $name } göster
 gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = Sayfa { $page } / { $total }
+gallery-save-globally = Varsayılan olarak kaydet
+gallery-save-globally-title = Bu seçeneği tüm koleksiyonlar için varsayılan olarak kaydet
+gallery-save-globally-active-title = Bu koleksiyonun ayarı varsayılandan farklı. Varsayılan olarak kaydetmek için tıklayın.
+galleryTour-settings-title = Galeri seçenekleri
+galleryTour-settings-desc =
+    Görünümü, sıralamayı ve gruplamayı değiştirmek için köşedeki menüyü açın. Üç yerleşimi sırayla göstereceğiz.
+galleryTour-cover-title = Kapak görünümü
+galleryTour-cover-desc =
+    Kapak her öğeyi kapak görseli olarak gösterir — kitaplar, makaleler ve web sayfaları bir bakışta.
+galleryTour-magazine-title = Magazin görünümü
+galleryTour-magazine-desc =
+    Magazin büyük ve küçük döşemeleri karıştırır, içindekiler sayfası gibi. Göz atmak ve kısa metinleri okumak için iyidir.
+galleryTour-card-title = Kart görünümü
+galleryTour-card-desc =
+    Kartlar aynı müfredat yerleşimini kullanır, öğe türüne göre gruplanır böylece benzer okumalar bir arada durur.
+galleryTour-choose-title = Varsayılanı seçin
+galleryTour-choose-desc =
+    Galeri hangi yerleşimle açılsın? Bunu daha sonra Zotero Syllabus tercihlerinden veya Varsayılan olarak kaydet ile değiştirebilirsiniz.
+galleryTour-skip = Atla
 
 # Reading schedule
 schedule-edit-settings = Okuma takvimi ayarlarını düzenle

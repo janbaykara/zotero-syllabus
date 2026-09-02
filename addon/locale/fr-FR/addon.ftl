@@ -285,6 +285,7 @@ magazine-shelf-watch = À regarder
 magazine-shelf-watch-title = Vidéos ajoutées récemment
 magazine-shelf-listen = À écouter
 magazine-shelf-listen-title = Audio ajouté récemment
+magazine-highlights = Surlignages
 gallery-options-aria = Options de la vue Galerie
 gallery-options-title = Options d’affichage
 gallery-menu-view = Affichage
@@ -300,6 +301,25 @@ gallery-groups-nav-aria = Groupes
 gallery-group-jump = Afficher { $name }
 gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = Page { $page } sur { $total }
+gallery-save-globally = Enregistrer par défaut
+gallery-save-globally-title = Enregistrer cette option comme valeur par défaut pour toutes les collections
+gallery-save-globally-active-title = Le réglage de cette collection diffère du défaut. Cliquez pour l’enregistrer comme défaut.
+galleryTour-settings-title = Options de la galerie
+galleryTour-settings-desc =
+    Ouvrez le menu dans le coin pour changer l’affichage, le tri et le groupement. Nous parcourons les trois mises en page.
+galleryTour-cover-title = Vue Couverture
+galleryTour-cover-desc =
+    Couverture montre chaque notice comme une image — livres, articles et pages web d’un coup d’œil.
+galleryTour-magazine-title = Vue Magazine
+galleryTour-magazine-desc =
+    Magazine mélange tuiles grandes et petites, comme un sommaire. Idéal pour parcourir et lire les accroches.
+galleryTour-card-title = Vue Cartes
+galleryTour-card-desc =
+    Les cartes reprennent la mise en page du syllabus, groupées par type de document pour rassembler les lectures similaires.
+galleryTour-choose-title = Choisir le défaut
+galleryTour-choose-desc =
+    Avec quelle mise en page la Galerie doit-elle s’ouvrir ? Vous pourrez changer cela plus tard dans les préférences de Zotero Syllabus, ou avec Enregistrer par défaut.
+galleryTour-skip = Ignorer
 
 # Reading schedule
 schedule-edit-settings = Modifier les paramètres du planning des lectures

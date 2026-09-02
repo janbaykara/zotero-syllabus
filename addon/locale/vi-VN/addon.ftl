@@ -285,6 +285,7 @@ magazine-shelf-watch = Xem
 magazine-shelf-watch-title = Video mới thêm
 magazine-shelf-listen = Nghe
 magazine-shelf-listen-title = Âm thanh mới thêm
+magazine-highlights = Đoạn tô sáng
 gallery-options-aria = Tùy chọn chế độ xem thư viện ảnh
 gallery-options-title = Tùy chọn xem
 gallery-menu-view = Xem
@@ -300,6 +301,25 @@ gallery-groups-nav-aria = Nhóm
 gallery-group-jump = Hiện { $name }
 gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = Trang { $page } / { $total }
+gallery-save-globally = Lưu làm mặc định
+gallery-save-globally-title = Lưu tùy chọn này làm mặc định cho mọi bộ sưu tập
+gallery-save-globally-active-title = Cài đặt bộ sưu tập này khác với mặc định. Nhấp để lưu làm mặc định.
+galleryTour-settings-title = Tùy chọn thư viện ảnh
+galleryTour-settings-desc =
+    Mở menu ở góc để đổi chế độ xem, sắp xếp và nhóm. Chúng tôi sẽ lần lượt giới thiệu ba bố cục.
+galleryTour-cover-title = Chế độ xem Bìa
+galleryTour-cover-desc =
+    Bìa hiện mỗi mục như ảnh bìa — sách, bài báo và trang web trong một cái nhìn.
+galleryTour-magazine-title = Chế độ xem Tạp chí
+galleryTour-magazine-desc =
+    Tạp chí xen kẽ ô lớn và nhỏ, như mục lục. Phù hợp để duyệt và đọc đoạn giới thiệu.
+galleryTour-card-title = Chế độ xem Thẻ
+galleryTour-card-desc =
+    Thẻ dùng cùng bố cục đề cương, nhóm theo loại mục để các bài đọc tương tự nằm cạnh nhau.
+galleryTour-choose-title = Chọn mặc định
+galleryTour-choose-desc =
+    Thư viện ảnh nên mở với bố cục nào? Bạn có thể đổi sau trong tùy chọn Zotero Syllabus hoặc bằng Lưu làm mặc định.
+galleryTour-skip = Bỏ qua
 
 # Reading schedule
 schedule-edit-settings = Sửa cài đặt lịch đọc
