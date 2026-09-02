@@ -19,39 +19,39 @@ function coerceGallerySortBy(value: unknown): GallerySortBy {
   return parsed.success ? parsed.data : "auto";
 }
 
-export function getGallerySortBy(collectionId: number): GallerySortBy {
+export function getGallerySortBy(viewKey: string | number): GallerySortBy {
   const map = getCachedPref(prefKey(), GallerySortByMapSchema) || {};
-  return coerceGallerySortBy(map[String(collectionId)]);
+  return coerceGallerySortBy(map[String(viewKey)]);
 }
 
 export function setGallerySortBy(
-  collectionId: number,
+  viewKey: string | number,
   mode: GallerySortBy,
 ): void {
   const key = prefKey();
   const map = getCachedPref(key, GallerySortByMapSchema) || {};
-  map[String(collectionId)] = mode;
+  map[String(viewKey)] = mode;
   Zotero.Prefs.set(key, JSON.stringify(map), true);
   zoteroCache.invalidatePref(key);
 }
 
 export function useGallerySortBy(
-  collectionId: number,
+  viewKey: string | number,
 ): [GallerySortBy, (mode: GallerySortBy) => void] {
   const [mode, setMode] = useState<GallerySortBy>(() =>
-    getGallerySortBy(collectionId),
+    getGallerySortBy(viewKey),
   );
 
   useEffect(() => {
-    setMode(getGallerySortBy(collectionId));
-  }, [collectionId]);
+    setMode(getGallerySortBy(viewKey));
+  }, [viewKey]);
 
   const setSortBy = useCallback(
     (next: GallerySortBy) => {
       setMode(next);
-      setGallerySortBy(collectionId, next);
+      setGallerySortBy(viewKey, next);
     },
-    [collectionId],
+    [viewKey],
   );
 
   return [mode, setSortBy];

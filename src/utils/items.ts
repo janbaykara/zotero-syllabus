@@ -70,22 +70,28 @@ export function readItemNote(
  * Regular library items that belong on a syllabus. Skips notes, attachments,
  * annotations, deleted items, and feed items (BBT: feeds are not user library
  * members even when isRegularItem() is true on some versions).
+ *
+ * Pass `{ includeDeleted: true }` for trash/bin views so Gallery can list
+ * trashed regular items. Pass `{ includeFeedItems: true }` for RSS feed rows.
  */
 export function isSyllabusMemberItem(
   item: Zotero.Item | false | null | undefined,
+  options?: { includeDeleted?: boolean; includeFeedItems?: boolean },
 ): item is Zotero.Item {
   if (!item) {
     return false;
   }
   try {
-    if (item.deleted) {
+    if (item.deleted && !options?.includeDeleted) {
       return false;
     }
     if (typeof item.isRegularItem !== "function" || !item.isRegularItem()) {
       return false;
     }
     const isFeedItem = item.isFeedItem as boolean | (() => boolean);
-    if (typeof isFeedItem === "function" ? isFeedItem.call(item) : isFeedItem) {
+    const feedItem =
+      typeof isFeedItem === "function" ? isFeedItem.call(item) : isFeedItem;
+    if (feedItem && !options?.includeFeedItems) {
       return false;
     }
     return true;

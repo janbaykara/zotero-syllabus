@@ -19,39 +19,39 @@ function coerceGalleryLayout(value: unknown): GalleryLayout {
   return parsed.success ? parsed.data : "cover";
 }
 
-export function getGalleryLayout(collectionId: number): GalleryLayout {
+export function getGalleryLayout(viewKey: string | number): GalleryLayout {
   const map = getCachedPref(prefKey(), GalleryLayoutMapSchema) || {};
-  return coerceGalleryLayout(map[String(collectionId)]);
+  return coerceGalleryLayout(map[String(viewKey)]);
 }
 
 export function setGalleryLayout(
-  collectionId: number,
+  viewKey: string | number,
   mode: GalleryLayout,
 ): void {
   const key = prefKey();
   const map = getCachedPref(key, GalleryLayoutMapSchema) || {};
-  map[String(collectionId)] = mode;
+  map[String(viewKey)] = mode;
   Zotero.Prefs.set(key, JSON.stringify(map), true);
   zoteroCache.invalidatePref(key);
 }
 
 export function useGalleryLayout(
-  collectionId: number,
+  viewKey: string | number,
 ): [GalleryLayout, (mode: GalleryLayout) => void] {
   const [mode, setMode] = useState<GalleryLayout>(() =>
-    getGalleryLayout(collectionId),
+    getGalleryLayout(viewKey),
   );
 
   useEffect(() => {
-    setMode(getGalleryLayout(collectionId));
-  }, [collectionId]);
+    setMode(getGalleryLayout(viewKey));
+  }, [viewKey]);
 
   const setLayout = useCallback(
     (next: GalleryLayout) => {
       setMode(next);
-      setGalleryLayout(collectionId, next);
+      setGalleryLayout(viewKey, next);
     },
-    [collectionId],
+    [viewKey],
   );
 
   return [mode, setLayout];

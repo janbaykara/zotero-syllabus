@@ -25,44 +25,64 @@ function coerceGalleryGroupBy(value: unknown): GalleryGroupBy {
   return parsed.success ? parsed.data : "none";
 }
 
-export function getGalleryGroupBy(collectionId: number): GalleryGroupBy {
+export function getGalleryGroupBy(viewKey: string | number): GalleryGroupBy {
   const map = getCachedPref(prefKey(), GalleryGroupByMapSchema) || {};
-  return coerceGalleryGroupBy(map[String(collectionId)]);
+  return coerceGalleryGroupBy(map[String(viewKey)]);
 }
 
 export function setGalleryGroupBy(
-  collectionId: number,
+  viewKey: string | number,
   mode: GalleryGroupBy,
 ): void {
   const key = prefKey();
   const map = getCachedPref(key, GalleryGroupByMapSchema) || {};
-  map[String(collectionId)] = mode;
+  map[String(viewKey)] = mode;
   Zotero.Prefs.set(key, JSON.stringify(map), true);
   zoteroCache.invalidatePref(key);
 }
 
+function resolveGalleryGroupBy(
+  mode: GalleryGroupBy,
+  allow: { classes?: boolean; subcollections?: boolean },
+): GalleryGroupBy {
+  if (mode === "classes" && !allow.classes) {
+    return "none";
+  }
+  if (mode === "subcollections" && allow.subcollections === false) {
+    return "none";
+  }
+  return mode;
+}
+
 export function useGalleryGroupBy(
-  collectionId: number,
-  allowClasses: boolean,
+  viewKey: string | number,
+  allow: { classes?: boolean; subcollections?: boolean } = {},
 ): [GalleryGroupBy, (mode: GalleryGroupBy) => void] {
+  const allowClasses = !!allow.classes;
+  const allowSubcollections = allow.subcollections !== false;
   const [mode, setMode] = useState<GalleryGroupBy>(() =>
-    getGalleryGroupBy(collectionId),
+    getGalleryGroupBy(viewKey),
   );
 
   useEffect(() => {
-    setMode(getGalleryGroupBy(collectionId));
-  }, [collectionId]);
+    setMode(getGalleryGroupBy(viewKey));
+  }, [viewKey]);
 
-  const resolved: GalleryGroupBy =
-    mode === "classes" && !allowClasses ? "none" : mode;
+  const resolved = resolveGalleryGroupBy(mode, {
+    classes: allowClasses,
+    subcollections: allowSubcollections,
+  });
 
   const setGroupBy = useCallback(
     (next: GalleryGroupBy) => {
-      const allowed = next === "classes" && !allowClasses ? "none" : next;
+      const allowed = resolveGalleryGroupBy(next, {
+        classes: allowClasses,
+        subcollections: allowSubcollections,
+      });
       setMode(allowed);
-      setGalleryGroupBy(collectionId, allowed);
+      setGalleryGroupBy(viewKey, allowed);
     },
-    [allowClasses, collectionId],
+    [allowClasses, allowSubcollections, viewKey],
   );
 
   return [resolved, setGroupBy];

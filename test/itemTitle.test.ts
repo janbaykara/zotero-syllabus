@@ -96,6 +96,7 @@ describe("item fields", function () {
       book.deleted = true;
       await book.saveTx();
       assert.isFalse(isSyllabusMemberItem(book));
+      assert.isTrue(isSyllabusMemberItem(book, { includeDeleted: true }));
 
       const feedLike = {
         deleted: false,
@@ -103,6 +104,7 @@ describe("item fields", function () {
         isFeedItem: () => true,
       } as unknown as Zotero.Item;
       assert.isFalse(isSyllabusMemberItem(feedLike));
+      assert.isTrue(isSyllabusMemberItem(feedLike, { includeFeedItems: true }));
       assert.isFalse(isSyllabusMemberItem(null));
     });
   });

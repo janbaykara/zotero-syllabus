@@ -2,6 +2,10 @@ import { useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
 import { getCachedItem } from "../../utils/cache";
 import { isSyllabusMemberItem } from "../../utils/items";
+import {
+  treeViewIDFromRow,
+  type CollectionTreeRowLike,
+} from "../../utils/viewScope";
 
 /**
  * Sentinel snapshot: the items tree is not applying a search/tag/advanced
@@ -15,12 +19,6 @@ type ItemsViewRow = {
   ref?: Zotero.Item | { id?: number };
 };
 
-type CollectionTreeRowLike = {
-  isCollection?: () => boolean;
-  isSearchMode?: () => boolean;
-  ref?: { id?: number };
-};
-
 type EventBinding = {
   addListener?: (listener: () => void) => void;
   removeListener?: (listener: () => void) => void;
@@ -30,9 +28,16 @@ type ItemsViewLike = {
   rowCount?: number;
   getRowCount?: () => number;
   getRow?: (index: number) => ItemsViewRow | undefined;
+  collectionTreeRow?: CollectionTreeRowLike;
+  _collectionTreeRow?: CollectionTreeRowLike;
   collectionTreeRows?: CollectionTreeRowLike[];
   onRefresh?: EventBinding;
   onRowCountChange?: EventBinding;
+};
+
+export type MemberItemOptions = {
+  includeDeleted?: boolean;
+  includeFeedItems?: boolean;
 };
 
 function getItemsView(): ItemsViewLike | null {
@@ -46,17 +51,45 @@ function getItemsView(): ItemsViewLike | null {
   }
 }
 
+function getViewCollectionTreeRows(
+  view: ItemsViewLike,
+): CollectionTreeRowLike[] {
+  if (
+    Array.isArray(view.collectionTreeRows) &&
+    view.collectionTreeRows.length
+  ) {
+    return view.collectionTreeRows;
+  }
+  const singular = view.collectionTreeRow || view._collectionTreeRow;
+  return singular ? [singular] : [];
+}
+
 function itemsViewCoversCollection(
   view: ItemsViewLike,
   collectionId: number,
 ): boolean {
-  const rows = view.collectionTreeRows;
-  if (!Array.isArray(rows) || rows.length === 0) {
+  return getViewCollectionTreeRows(view).some((row) => {
+    try {
+      if (row.isCollection?.() && row.ref?.id === collectionId) {
+        return true;
+      }
+      return treeViewIDFromRow(row) === `C${collectionId}`;
+    } catch {
+      return false;
+    }
+  });
+}
+
+export function itemsViewCoversTreeViewID(
+  view: ItemsViewLike,
+  treeViewID: string,
+): boolean {
+  if (!treeViewID) {
     return false;
   }
-  return rows.some((row) => {
+  return getViewCollectionTreeRows(view).some((row) => {
     try {
-      return !!row.isCollection?.() && row.ref?.id === collectionId;
+      return treeViewIDFromRow(row) === treeViewID;
     } catch {
       return false;
     }
@@ -64,11 +97,7 @@ function itemsViewCoversCollection(
 }
 
 function itemsViewIsFiltered(view: ItemsViewLike): boolean {
-  const rows = view.collectionTreeRows;
-  if (!Array.isArray(rows) || rows.length === 0) {
-    return false;
-  }
-  return rows.some((row) => {
+  return getViewCollectionTreeRows(view).some((row) => {
     try {
       return !!row.isSearchMode?.();
     } catch {
@@ -77,19 +106,22 @@ function itemsViewIsFiltered(view: ItemsViewLike): boolean {
   });
 }
 
-function regularItemIdFromItem(item: Zotero.Item | undefined): number | null {
+function regularItemIdFromItem(
+  item: Zotero.Item | undefined,
+  options?: MemberItemOptions,
+): number | null {
   if (!item || typeof item.isRegularItem !== "function") {
     return null;
   }
   try {
-    if (isSyllabusMemberItem(item)) {
+    if (isSyllabusMemberItem(item, options)) {
       return item.id;
     }
     const parentId = (item as Zotero.Item).parentItemID;
     if (parentId) {
       const parent = getCachedItem(parentId);
       if (parent) {
-        return regularItemIdFromItem(parent);
+        return regularItemIdFromItem(parent, options);
       }
       return parentId;
     }
@@ -99,7 +131,10 @@ function regularItemIdFromItem(item: Zotero.Item | undefined): number | null {
   return null;
 }
 
-function collectRegularItemIds(view: ItemsViewLike): number[] {
+export function collectRegularItemIds(
+  view: ItemsViewLike,
+  options?: MemberItemOptions,
+): number[] {
   const count =
     typeof view.rowCount === "number"
       ? view.rowCount
@@ -121,12 +156,31 @@ function collectRegularItemIds(view: ItemsViewLike): number[] {
     if (!row || row.isObjectRow === false) {
       continue;
     }
-    const id = regularItemIdFromItem(row.ref as Zotero.Item | undefined);
+    const id = regularItemIdFromItem(
+      row.ref as Zotero.Item | undefined,
+      options,
+    );
     if (id != null) {
       ids.add(id);
     }
   }
   return [...ids].sort((a, b) => a - b);
+}
+
+/** Item IDs currently shown for this tree row, or null if the items view isn't showing it. */
+export function readItemsViewRegularItemIds(options: {
+  treeViewID: string;
+  includeDeleted?: boolean;
+  includeFeedItems?: boolean;
+}): number[] | null {
+  const view = getItemsView();
+  if (!view || !itemsViewCoversTreeViewID(view, options.treeViewID)) {
+    return null;
+  }
+  return collectRegularItemIds(view, {
+    includeDeleted: options.includeDeleted,
+    includeFeedItems: options.includeFeedItems,
+  });
 }
 
 function readSnapshot(collectionId: number): string {
@@ -140,10 +194,75 @@ function readSnapshot(collectionId: number): string {
   return collectRegularItemIds(view).join(",");
 }
 
-function bindEvent(binding: EventBinding | undefined, listener: () => void) {
+export function bindItemsViewEvent(
+  binding: EventBinding | undefined,
+  listener: () => void,
+) {
   binding?.addListener?.(listener);
   return () => {
     binding?.removeListener?.(listener);
+  };
+}
+
+export function subscribeToItemsViewChanges(
+  onStoreChange: () => void,
+): () => void {
+  let boundView: ItemsViewLike | null = null;
+  let unbindView = () => {};
+
+  const attachView = () => {
+    const view = getItemsView();
+    if (view === boundView) {
+      return;
+    }
+    unbindView();
+    boundView = view;
+    if (!view) {
+      unbindView = () => {};
+      return;
+    }
+    const unbindRefresh = bindItemsViewEvent(view.onRefresh, handleChange);
+    const unbindRows = bindItemsViewEvent(view.onRowCountChange, handleChange);
+    unbindView = () => {
+      unbindRefresh();
+      unbindRows();
+    };
+  };
+
+  const handleChange = () => {
+    attachView();
+    onStoreChange();
+  };
+
+  attachView();
+
+  let searchBox: Element | null = null;
+  try {
+    searchBox =
+      Zotero.getMainWindow()?.document.getElementById("zotero-tb-search");
+  } catch {
+    searchBox = null;
+  }
+  if (searchBox) {
+    searchBox.addEventListener("command", handleChange);
+  }
+
+  const observer = {
+    notify() {
+      handleChange();
+    },
+  };
+  const notifierId = Zotero.Notifier.registerObserver(observer, [
+    "item",
+    "collection-item",
+    "search",
+    "feed",
+  ]);
+
+  return () => {
+    unbindView();
+    searchBox?.removeEventListener("command", handleChange);
+    Zotero.Notifier.unregisterObserver(notifierId);
   };
 }
 
@@ -153,61 +272,7 @@ export function createItemsViewItemsStore(collectionId: number) {
   }
 
   function subscribe(onStoreChange: () => void) {
-    let boundView: ItemsViewLike | null = null;
-    let unbindView = () => {};
-
-    const attachView = () => {
-      const view = getItemsView();
-      if (view === boundView) {
-        return;
-      }
-      unbindView();
-      boundView = view;
-      if (!view) {
-        unbindView = () => {};
-        return;
-      }
-      const unbindRefresh = bindEvent(view.onRefresh, handleChange);
-      const unbindRows = bindEvent(view.onRowCountChange, handleChange);
-      unbindView = () => {
-        unbindRefresh();
-        unbindRows();
-      };
-    };
-
-    const handleChange = () => {
-      attachView();
-      onStoreChange();
-    };
-
-    attachView();
-
-    let searchBox: Element | null = null;
-    try {
-      searchBox =
-        Zotero.getMainWindow()?.document.getElementById("zotero-tb-search");
-    } catch {
-      searchBox = null;
-    }
-    if (searchBox) {
-      searchBox.addEventListener("command", handleChange);
-    }
-
-    const observer = {
-      notify() {
-        handleChange();
-      },
-    };
-    const notifierId = Zotero.Notifier.registerObserver(observer, [
-      "item",
-      "collection-item",
-    ]);
-
-    return () => {
-      unbindView();
-      searchBox?.removeEventListener("command", handleChange);
-      Zotero.Notifier.unregisterObserver(notifierId);
-    };
+    return subscribeToItemsViewChanges(onStoreChange);
   }
 
   return { getSnapshot, subscribe };

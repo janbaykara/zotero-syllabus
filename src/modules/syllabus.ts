@@ -12,6 +12,10 @@ import {
   getSelectedCollection,
   itemBelongsInCollection,
 } from "../utils/zotero";
+import {
+  getSelectedViewScope,
+  viewScopeSupportsGallery,
+} from "../utils/viewScope";
 import { getCurrentTab, confirmPrompt } from "../utils/window";
 import { renderComponent, unmountComponent } from "../utils/react";
 import { ItemPane } from "./ItemPane";
@@ -100,11 +104,6 @@ export type CollectionViewMode = "collection" | "gallery" | "syllabus";
 
 const COLLECTION_VIEW_MODES: CollectionViewMode[] = [
   "collection",
-  "gallery",
-  "syllabus",
-];
-
-const CUSTOM_COLLECTION_VIEW_MODES: CollectionViewMode[] = [
   "gallery",
   "syllabus",
 ];
@@ -609,24 +608,21 @@ export class SyllabusManager {
   static setupSyllabusViewTabListener() {
     this.cleanupSyllabusViewTabListener();
     ztoolkit.log("SyllabusManager.setupSyllabusViewTabListener");
-    let selectedCollectionId = getSelectedCollection()?.id.toString() || "";
+    let selectedViewKey = getSelectedViewScope().viewKey;
     let currentTabId = Zotero.getMainWindow()?.Zotero_Tabs?.selectedID || "";
     const interval = setInterval(async () => {
-      const collection = getSelectedCollection();
-      const currentCollectionId = collection?.id.toString() || "";
+      const scope = getSelectedViewScope();
+      const currentViewKey = scope.viewKey;
       const newTabId = Zotero.getMainWindow()?.Zotero_Tabs?.selectedID || "";
 
       SyllabusManager.updateReadingScheduleTabBarButton();
 
-      const collectionChanged = currentCollectionId !== selectedCollectionId;
+      const collectionChanged = currentViewKey !== selectedViewKey;
       const tabChanged = newTabId !== currentTabId;
 
       if (collectionChanged) {
-        ztoolkit.log(
-          "Selected collection changed",
-          collection?.id || "My Library",
-        );
-        selectedCollectionId = currentCollectionId;
+        ztoolkit.log("Selected collection changed", currentViewKey || "none");
+        selectedViewKey = currentViewKey;
         currentTabId = newTabId; // Update tab ID when collection changes
         // setupUI() calls setupPage() which re-renders React component for new collection
         // Once mounted, React stores handle all data updates automatically
@@ -678,53 +674,60 @@ export class SyllabusManager {
 
   // Function to get/set collection pane view mode (per collection)
   static getCollectionViewMode(): CollectionViewMode {
-    const selectedCollection = getSelectedCollection();
-
-    // If no collection is selected, default to collection (tree) view
-    if (!selectedCollection) {
+    const scope = getSelectedViewScope();
+    if (!viewScopeSupportsGallery(scope)) {
       return "collection";
     }
 
-    if (getReadingScheduleCollectionContext(selectedCollection.id)) {
-      return "syllabus";
+    if (scope.kind === "collection") {
+      const selectedCollection = scope.collection;
+      if (getReadingScheduleCollectionContext(selectedCollection.id)) {
+        return "syllabus";
+      }
+
+      const collectionId = scope.viewKey;
+      const prefKey = SyllabusManager.getPreferenceKey(
+        SyllabusSettingsKey.COLLECTION_VIEW_MODES,
+      );
+      const viewModes =
+        getCachedPref(prefKey, z.record(z.string(), z.unknown())) || {};
+
+      const stored = viewModes[collectionId];
+      if (migrateLegacyBrowseViewMode(selectedCollection, stored)) {
+        viewModes[collectionId] = "gallery";
+        Zotero.Prefs.set(prefKey, JSON.stringify(viewModes), true);
+        zoteroCache.invalidatePref(prefKey);
+        return "gallery";
+      }
+      if (stored !== undefined && stored !== null) {
+        return SyllabusManager.coerceViewModeForCollection(
+          selectedCollection,
+          stored,
+        );
+      }
+      const classContext = getClassSubcollectionContext(selectedCollection);
+      if (classContext) {
+        const parentStored = viewModes[String(classContext.parent.id)];
+        if (parentStored !== undefined && parentStored !== null) {
+          return SyllabusManager.coerceViewModeForCollection(
+            selectedCollection,
+            parentStored,
+          );
+        }
+      }
+      if (isAutoManagedCollection(selectedCollection.id)) {
+        return "syllabus";
+      }
+      return "collection";
     }
 
-    const collectionId = String(selectedCollection.id);
     const prefKey = SyllabusManager.getPreferenceKey(
       SyllabusSettingsKey.COLLECTION_VIEW_MODES,
     );
-    // Accept legacy booleans and current string modes
     const viewModes =
       getCachedPref(prefKey, z.record(z.string(), z.unknown())) || {};
-
-    const stored = viewModes[collectionId];
-    if (migrateLegacyBrowseViewMode(selectedCollection, stored)) {
-      viewModes[collectionId] = "gallery";
-      Zotero.Prefs.set(prefKey, JSON.stringify(viewModes), true);
-      zoteroCache.invalidatePref(prefKey);
-      return "gallery";
-    }
-    if (stored !== undefined && stored !== null) {
-      return SyllabusManager.coerceViewModeForCollection(
-        selectedCollection,
-        stored,
-      );
-    }
-    const classContext = getClassSubcollectionContext(selectedCollection);
-    if (classContext) {
-      const parentStored = viewModes[String(classContext.parent.id)];
-      if (parentStored !== undefined && parentStored !== null) {
-        return SyllabusManager.coerceViewModeForCollection(
-          selectedCollection,
-          parentStored,
-        );
-      }
-    }
-    // Class folders and reading-schedule collections open as Checklist.
-    if (isAutoManagedCollection(selectedCollection.id)) {
-      return "syllabus";
-    }
-    return "collection";
+    const mode = coerceCollectionViewMode(viewModes[scope.viewKey]);
+    return mode === "syllabus" ? "collection" : mode;
   }
 
   static coerceViewModeForCollection(
@@ -735,41 +738,57 @@ export class SyllabusManager {
   }
 
   static async setCollectionViewMode(mode: CollectionViewMode): Promise<void> {
-    const selectedCollection = getSelectedCollection();
-
-    // If no collection is selected, don't save preference
-    if (!selectedCollection) {
+    const scope = getSelectedViewScope();
+    if (!viewScopeSupportsGallery(scope)) {
       return;
     }
 
     if (mode === "syllabus") {
-      const enabled = await ensureSyllabusNoteForUser(selectedCollection);
+      if (scope.kind !== "collection") {
+        return;
+      }
+      const enabled = await ensureSyllabusNoteForUser(scope.collection);
       if (!enabled) {
         return;
       }
+      this.writeCollectionViewMode(scope.collection, mode);
+      return;
     }
 
-    this.writeCollectionViewMode(selectedCollection, mode);
+    if (scope.kind === "collection") {
+      this.writeCollectionViewMode(scope.collection, mode);
+      return;
+    }
+
+    this.writeViewModeForKey(scope.viewKey, mode);
   }
 
-  static writeCollectionViewMode(
-    selectedCollection: Zotero.Collection,
-    mode: CollectionViewMode,
-  ): void {
-    const collectionId = String(selectedCollection.id);
+  static writeViewModeForKey(viewKey: string, mode: CollectionViewMode): void {
+    if (!viewKey) {
+      return;
+    }
     const prefKey = SyllabusManager.getPreferenceKey(
       SyllabusSettingsKey.COLLECTION_VIEW_MODES,
     );
     const viewModes =
       getCachedPref(prefKey, z.record(z.string(), z.unknown())) || {};
 
-    viewModes[collectionId] = mode;
+    viewModes[viewKey] = mode;
     Zotero.Prefs.set(prefKey, JSON.stringify(viewModes), true);
     zoteroCache.invalidatePref(prefKey);
   }
 
+  static writeCollectionViewMode(
+    selectedCollection: Zotero.Collection,
+    mode: CollectionViewMode,
+  ): void {
+    this.writeViewModeForKey(String(selectedCollection.id), mode);
+  }
+
   static async cycleCollectionViewMode(): Promise<CollectionViewMode> {
-    const modes = COLLECTION_VIEW_MODES;
+    const modes = syllabusViewModeChrome()
+      ? COLLECTION_VIEW_MODES
+      : COLLECTION_VIEW_MODES.filter((mode) => mode !== "syllabus");
     const current = SyllabusManager.getCollectionViewMode();
     const index = Math.max(0, modes.indexOf(current));
     const next = modes[(index + 1) % modes.length];
@@ -1074,13 +1093,16 @@ export class SyllabusManager {
 
     if (!viewModeButtons.length) return;
 
-    const selectedCollection = getSelectedCollection();
+    const scope = getSelectedViewScope();
+    const selectedCollection =
+      scope.kind === "collection" ? scope.collection : null;
     const currentTab = getCurrentTab();
-    const isInMainLibrary = !selectedCollection;
     const isCustomTab =
       currentTab?.type === "syllabus" || currentTab?.type === "reading-list";
     const hideViewModesInLibrary =
-      FEATURE_FLAG.READING_SCHEDULE && isInMainLibrary && !isCustomTab;
+      FEATURE_FLAG.READING_SCHEDULE &&
+      !viewScopeSupportsGallery(scope) &&
+      !isCustomTab;
     const readingScheduleContext = selectedCollection
       ? getReadingScheduleCollectionContext(selectedCollection.id)
       : null;
@@ -1125,8 +1147,9 @@ export class SyllabusManager {
        * Lead with a hide/show check
        */
 
-      // Get collection
-      const selectedCollection = getSelectedCollection();
+      const scope = getSelectedViewScope();
+      const selectedCollection =
+        scope.kind === "collection" ? scope.collection : null;
 
       // Confirm item tree
       // Find the items tree container
@@ -1163,8 +1186,8 @@ export class SyllabusManager {
       }
       const resolvedViewMode = SyllabusManager.getCollectionViewMode();
       const shouldShowCustomView =
-        !!selectedCollection &&
-        CUSTOM_COLLECTION_VIEW_MODES.includes(resolvedViewMode);
+        (resolvedViewMode === "gallery" && viewScopeSupportsGallery(scope)) ||
+        (resolvedViewMode === "syllabus" && !!selectedCollection);
 
       // Find or create custom syllabus view container
       let customView = doc.getElementById(
@@ -1211,12 +1234,22 @@ export class SyllabusManager {
         customView.style.display = "block";
 
         // Insert the master template
-        if (customView && selectedCollection) {
-          if (resolvedViewMode === "gallery") {
-            renderGalleryPage(w, customView, selectedCollection.id);
-          } else {
-            renderSyllabusPage(w, customView, selectedCollection.id);
+        if (customView && resolvedViewMode === "gallery") {
+          if (scope.kind === "collection") {
+            renderGalleryPage(w, customView, {
+              viewKey: scope.viewKey,
+              collectionId: scope.collection.id,
+            });
+          } else if (scope.kind === "special") {
+            renderGalleryPage(w, customView, {
+              viewKey: scope.viewKey,
+              treeViewID: scope.treeViewID,
+              includeDeleted: scope.type === "trash",
+              includeFeedItems: scope.type === "feed" || scope.type === "feeds",
+            });
           }
+        } else if (customView && selectedCollection) {
+          renderSyllabusPage(w, customView, selectedCollection.id);
         }
       }
 

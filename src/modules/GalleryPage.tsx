@@ -50,6 +50,10 @@ import {
 } from "../utils/itemCover";
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
 import { useZoteroItemsViewRegularItemIds } from "./react-zotero-sync/itemsViewItems";
+import {
+  useZoteroTreeRowItems,
+  useZoteroTreeRowTitle,
+} from "./react-zotero-sync/treeRowItems";
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { ProseText } from "./ProseText";
@@ -98,31 +102,55 @@ import {
   getReadStatusMetadata,
 } from "../zotero-reading-list/compat";
 
-interface GalleryPageProps {
-  collectionId: number;
-}
+export type GalleryPageProps = {
+  viewKey: string;
+  collectionId?: number;
+  treeViewID?: string;
+  includeDeleted?: boolean;
+  includeFeedItems?: boolean;
+};
 
-export function GalleryPage({ collectionId }: GalleryPageProps) {
-  const [title] = useZoteroCollectionTitle(collectionId);
-  const allItems = useZoteroCollectionItems(collectionId, {
+export function GalleryPage({
+  viewKey,
+  collectionId,
+  treeViewID,
+  includeDeleted = false,
+  includeFeedItems = false,
+}: GalleryPageProps) {
+  const isCollectionScope = collectionId != null;
+  const resolvedTreeViewID = treeViewID ?? (isCollectionScope ? "" : viewKey);
+  const collectionIdOrZero = collectionId ?? 0;
+  const [collectionTitle] = useZoteroCollectionTitle(collectionIdOrZero);
+  const treeRowTitle = useZoteroTreeRowTitle(resolvedTreeViewID);
+  const title = isCollectionScope ? collectionTitle : treeRowTitle;
+  const collectionItems = useZoteroCollectionItems(collectionIdOrZero, {
     recursive: "pref",
   });
-  const matchingIds = useZoteroItemsViewRegularItemIds(collectionId);
-  const isFiltered = matchingIds != null;
+  const treeRowItems = useZoteroTreeRowItems(resolvedTreeViewID, {
+    includeDeleted,
+    includeFeedItems,
+  });
+  const matchingIds = useZoteroItemsViewRegularItemIds(collectionIdOrZero);
+  const allItems = isCollectionScope ? collectionItems : treeRowItems;
+  const isFiltered = isCollectionScope && matchingIds != null;
   const syllabusItems = useMemo(() => {
     if (!matchingIds) {
       return allItems;
     }
     return allItems.filter(({ zoteroItem }) => matchingIds.has(zoteroItem.id));
   }, [allItems, matchingIds]);
-  const isSyllabus = collectionHasSyllabusNote(collectionId);
-  const [groupBy, setGroupBy] = useGalleryGroupBy(collectionId, isSyllabus);
-  const [sortBy, setSortBy] = useGallerySortBy(collectionId);
-  const [layout, setLayout] = useGalleryLayout(collectionId);
+  const isSyllabus =
+    collectionId != null && collectionHasSyllabusNote(collectionId);
+  const [groupBy, setGroupBy] = useGalleryGroupBy(viewKey, {
+    classes: isSyllabus,
+    subcollections: isCollectionScope,
+  });
+  const [sortBy, setSortBy] = useGallerySortBy(viewKey);
+  const [layout, setLayout] = useGalleryLayout(viewKey);
   const [compactMode] = useZoteroCompactMode();
-  const [syllabusMetadata] = useZoteroSyllabusMetadata(collectionId);
+  const [syllabusMetadata] = useZoteroSyllabusMetadata(collectionIdOrZero);
   const { classGroups, furtherReadingItems } = useSyllabusClassGroups(
-    collectionId,
+    collectionIdOrZero,
     syllabusItems,
     syllabusMetadata,
     0,
@@ -141,7 +169,7 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
   const {
     root: unfilteredSubcollectionRoot,
     resolveItems: resolveSubcollectionItems,
-  } = useSubcollectionTree(collectionId);
+  } = useSubcollectionTree(collectionIdOrZero);
   const subcollectionRoot = useMemo(
     () => filterSubcollectionNode(unfilteredSubcollectionRoot, matchingIds),
     [unfilteredSubcollectionRoot, matchingIds],
@@ -195,7 +223,7 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
         groups.push({
           id: `class-${key}`,
           label: classNavLabel(
-            collectionId,
+            collectionIdOrZero,
             group.classNumber,
             syllabusMetadata,
           ),
@@ -214,7 +242,7 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
     return [];
   }, [
     classGroups,
-    collectionId,
+    collectionIdOrZero,
     furtherReadingItems.length,
     groupBy,
     isFiltered,
@@ -493,7 +521,7 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
         <SlimSyllabusItemCard
           key={`${keyPrefix}-${item.id}`}
           item={item}
-          collectionId={collectionId}
+          collectionId={collectionIdOrZero}
           keyPrefix={keyPrefix}
           compactMode={compactMode}
           selectedIdentifiers={selectedIdentifiers}
@@ -540,7 +568,7 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
             <SyllabusItemCard
               key={`${keyPrefix}-${item.id}-${assignment.id}`}
               item={item}
-              collectionId={collectionId}
+              collectionId={collectionIdOrZero}
               classNumber={classNumber ?? undefined}
               assignment={assignment}
               slim={compactMode || !priority || priority === "optional"}
@@ -584,6 +612,7 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
               groupBy={groupBy}
               onGroupBy={setGroupBy}
               showClasses={isSyllabus}
+              showSubcollections={isCollectionScope}
               sortBy={sortBy}
               onSortBy={setSortBy}
               layout={layout}
@@ -698,7 +727,7 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
                         data-gallery-group={`class-${key}`}
                       >
                         <GalleryClassHeading
-                          collectionId={collectionId}
+                          collectionId={collectionIdOrZero}
                           classNumber={group.classNumber}
                           syllabusMetadata={syllabusMetadata}
                         />
@@ -1065,6 +1094,7 @@ function GalleryPageHeader({
   groupBy,
   onGroupBy,
   showClasses,
+  showSubcollections = true,
   sortBy,
   onSortBy,
   layout,
@@ -1078,6 +1108,7 @@ function GalleryPageHeader({
   groupBy: GalleryGroupBy;
   onGroupBy: (mode: GalleryGroupBy) => void;
   showClasses: boolean;
+  showSubcollections?: boolean;
   sortBy: GallerySortBy;
   onSortBy: (mode: GallerySortBy) => void;
   layout: GalleryLayout;
@@ -1120,9 +1151,15 @@ function GalleryPageHeader({
   const layoutOptions = galleryLayoutOptions();
   const sortOptions = gallerySortOptions();
   const allGroupBy = galleryGroupByOptions();
-  const groupByOptions = showClasses
-    ? allGroupBy
-    : allGroupBy.filter((option) => option.mode !== "classes");
+  const groupByOptions = allGroupBy.filter((option) => {
+    if (option.mode === "classes" && !showClasses) {
+      return false;
+    }
+    if (option.mode === "subcollections" && !showSubcollections) {
+      return false;
+    }
+    return true;
+  });
   const layoutOption = currentGalleryOption(layoutOptions, layout);
   const sortOption = currentGalleryOption(sortOptions, sortBy);
   const groupOption = currentGalleryOption(groupByOptions, groupBy);
@@ -1928,12 +1965,12 @@ function PlaceholderFace({
 export function renderGalleryPage(
   win: _ZoteroTypes.MainWindow,
   rootElement: HTMLElement,
-  collectionId: number,
+  props: GalleryPageProps,
 ) {
   renderComponent(
     win,
     rootElement,
-    <GalleryPage collectionId={collectionId} />,
+    <GalleryPage {...props} />,
     "syllabus-custom-view",
   );
 }
