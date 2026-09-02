@@ -135,11 +135,11 @@ export const MagazineTile = memo(function MagazineTile({
   }, [visible, item, abstractNote]);
 
   useEffect(() => {
-    setHighlights([]);
-  }, [item]);
-
-  useEffect(() => {
-    if (!visible || !showHighlights) {
+    if (!showHighlights) {
+      setHighlights([]);
+      return;
+    }
+    if (!visible) {
       return;
     }
     let cancelled = false;

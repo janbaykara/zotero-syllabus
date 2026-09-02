@@ -150,6 +150,14 @@ function isHighlightAnnotation(ann: Zotero.Item): boolean {
   return type === "highlight" || type === 1;
 }
 
+async function loadChildItems(item: Zotero.Item): Promise<void> {
+  try {
+    await item.loadDataType("childItems");
+  } catch {
+    // Already loaded, or this object does not carry child-item data.
+  }
+}
+
 async function annotationsForAttachment(
   att: Zotero.Item,
 ): Promise<Zotero.Item[]> {
@@ -159,21 +167,18 @@ async function annotationsForAttachment(
   if (typeof att.getAnnotations !== "function") {
     return [];
   }
+  await loadChildItems(att);
   try {
     return att.getAnnotations(false) || [];
   } catch {
-    try {
-      await att.loadDataType("childItems");
-      return att.getAnnotations(false) || [];
-    } catch {
-      return [];
-    }
+    return [];
   }
 }
 
 async function collectItemHighlights(
   item: Zotero.Item,
 ): Promise<ItemHighlight[]> {
+  await loadChildItems(item);
   let ids: number[] = [];
   try {
     ids = item.getAttachments();

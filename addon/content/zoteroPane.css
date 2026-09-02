@@ -1581,28 +1581,28 @@
 .syllabus-magazine-highlight {
   margin: 0;
   min-width: 0;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  font-size: calc(1.02rem * var(--magazine-type-scale, 1));
+  line-height: 1.45;
+  max-height: calc(1.45em * 3);
   overflow: hidden;
 }
 
 .syllabus-magazine-tile[data-role="hero"] .syllabus-magazine-highlight {
-  -webkit-line-clamp: 4;
+  max-height: calc(1.45em * 4);
 }
 
 .syllabus-magazine-tile[data-role="compact"] .syllabus-magazine-highlight {
-  -webkit-line-clamp: 2;
+  max-height: calc(1.45em * 2);
 }
 
 .syllabus-magazine-highlight-mark {
   --highlight-color: #ffd400;
   color: inherit;
   font-family: var(--syllabus-magazine-serif);
-  font-size: calc(1.02rem * var(--magazine-type-scale, 1));
+  font-size: inherit;
   font-weight: 450;
   font-style: normal;
-  line-height: 1.45;
+  line-height: inherit;
   padding: 0.04em 0.14em;
   border-radius: 0.08em;
   background-color: transparent;
@@ -1630,13 +1630,13 @@
 .syllabus-magazine-page.is-large-type
   .syllabus-magazine-tile[data-role="hero"]
   .syllabus-magazine-highlight {
-  -webkit-line-clamp: 5;
+  max-height: calc(1.45em * 5);
 }
 
 .syllabus-magazine-page.is-large-type
   .syllabus-magazine-tile[data-role="compact"]
   .syllabus-magazine-highlight {
-  -webkit-line-clamp: 3;
+  max-height: calc(1.45em * 3);
 }
 
 .syllabus-magazine-duration {
