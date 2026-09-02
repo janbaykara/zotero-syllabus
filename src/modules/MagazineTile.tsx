@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
 import {
-  getItemCreatorLine,
+  getItemCreatorByline,
   getItemField,
   getItemTitle,
   sortItems,
@@ -14,13 +14,17 @@ import {
 import { getItemBlurb, usableAbstractSnippet } from "../utils/itemBlurb";
 import {
   getPlaceholderCover,
+  isAudioGalleryItem,
   isPlayableGalleryItem,
+  isTextHeavyGalleryItem,
   isVideoGalleryItem,
+  isWebGalleryItem,
   resolveItemCover,
   type ResolvedCover,
 } from "../utils/itemCover";
 import { getString } from "../utils/locale";
 import { useNearViewport } from "./galleryVisibility";
+import { GalleryCover } from "./GalleryCover";
 import type { MagazineSectionTemplate } from "./magazineDesks";
 import { assignMagazineRoles, type MagazineTileRole } from "./magazineLayout";
 
@@ -52,7 +56,7 @@ export const MagazineTile = memo(function MagazineTile({
     () => getItemTitle(item) || getString("untitled"),
     [item],
   );
-  const creator = useMemo(() => getItemCreatorLine(item), [item]);
+  const creator = useMemo(() => getItemCreatorByline(item), [item]);
   const abstractNote = useMemo(() => usableAbstractSnippet(item), [item]);
   const [blurb, setBlurb] = useState(abstractNote);
   const publication = useMemo(
@@ -64,6 +68,10 @@ export const MagazineTile = memo(function MagazineTile({
   const [cover, setCover] = useState<ResolvedCover>(placeholder);
   const playable = isPlayableGalleryItem(item);
   const isVideo = isVideoGalleryItem(item);
+  const hideGraphic = isTextHeavyGalleryItem(item);
+  const usePhotoBanner = !hideGraphic && isWebGalleryItem(item) && !isVideo;
+  const useGalleryCover = !hideGraphic && !usePhotoBanner;
+  const bleedCover = isVideo || isAudioGalleryItem(item) || usePhotoBanner;
 
   useEffect(() => {
     setBlurb(abstractNote);
@@ -74,7 +82,7 @@ export const MagazineTile = memo(function MagazineTile({
   }, [placeholder]);
 
   useEffect(() => {
-    if (!visible) {
+    if (!visible || !usePhotoBanner) {
       return;
     }
     let cancelled = false;
@@ -86,7 +94,7 @@ export const MagazineTile = memo(function MagazineTile({
     return () => {
       cancelled = true;
     };
-  }, [visible, item]);
+  }, [visible, item, usePhotoBanner]);
 
   useEffect(() => {
     if (!visible || abstractNote) {
@@ -106,6 +114,42 @@ export const MagazineTile = memo(function MagazineTile({
   const hasImage = cover.kind === "image";
   const fallbackMeta = [publication, date].filter(Boolean).join(" · ");
 
+  let coverNode = null;
+  if (useGalleryCover) {
+    coverNode = (
+      <div
+        className={twMerge(
+          "syllabus-magazine-cover is-gallery",
+          bleedCover && "is-bleed",
+        )}
+      >
+        <GalleryCover item={item} selected={false} visible={visible} />
+      </div>
+    );
+  } else if (usePhotoBanner && hasImage) {
+    coverNode = (
+      <div className="syllabus-magazine-cover is-photo is-bleed">
+        {visible && hasImage ? (
+          <img
+            src={cover.src}
+            alt=""
+            className="syllabus-magazine-cover-img is-photo"
+          />
+        ) : null}
+        {playable ? (
+          <div className="syllabus-gallery-play" aria-hidden="true">
+            <div
+              className={twMerge(
+                "syllabus-gallery-play-btn",
+                !isVideo && "is-audio",
+              )}
+            />
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div
       ref={tileRef}
@@ -123,30 +167,7 @@ export const MagazineTile = memo(function MagazineTile({
       onDblClick={() => onDoubleClick(item)}
       onContextMenu={(e) => onContextMenu(item, e)}
     >
-      <div
-        className="syllabus-magazine-cover"
-        style={
-          hasImage
-            ? undefined
-            : {
-                background: placeholder.color,
-              }
-        }
-      >
-        {visible && cover.kind === "image" ? (
-          <img src={cover.src} alt="" className="syllabus-magazine-cover-img" />
-        ) : null}
-        {playable ? (
-          <div className="syllabus-gallery-play" aria-hidden="true">
-            <div
-              className={twMerge(
-                "syllabus-gallery-play-btn",
-                !isVideo && "is-audio",
-              )}
-            />
-          </div>
-        ) : null}
-      </div>
+      {coverNode}
       <div className="syllabus-magazine-body">
         {publication ? (
           <div className="syllabus-magazine-kicker">{publication}</div>

@@ -30,6 +30,85 @@ export function getItemCreatorLine(item: Zotero.Item): string {
   }
 }
 
+function creatorFullName(creator: {
+  firstName?: string;
+  lastName?: string;
+  fieldMode?: number;
+}): string {
+  const last = String(creator.lastName || "").trim();
+  const first = String(creator.firstName || "").trim();
+  if (creator.fieldMode === 1 || !first) {
+    return last;
+  }
+  return `${first} ${last}`.trim();
+}
+
+function joinCreatorByline(names: string[]): string {
+  if (names.length === 0) {
+    return "";
+  }
+  if (names.length === 1) {
+    return names[0];
+  }
+  if (names.length === 2) {
+    try {
+      const and = Zotero.getString("general.and");
+      if (and) {
+        return `${names[0]} ${and} ${names[1]}`;
+      }
+    } catch {
+      // Fall through to the locale list formatter.
+    }
+    try {
+      return new Intl.ListFormat(Zotero.locale || undefined, {
+        style: "long",
+        type: "conjunction",
+      }).format(names);
+    } catch {
+      return `${names[0]}, ${names[1]}`;
+    }
+  }
+  try {
+    const etAl = Zotero.getString("general.etAl");
+    if (etAl) {
+      return `${names[0]} ${etAl}`;
+    }
+  } catch {
+    // Fall through.
+  }
+  return names[0];
+}
+
+/**
+ * Magazine byline: primary creators with given names, same 1 / 2 / et al.
+ * grouping as `firstCreator`.
+ */
+export function getItemCreatorByline(item: Zotero.Item): string {
+  try {
+    const creators = item.getCreators() || [];
+    if (creators.length === 0) {
+      return getItemCreatorLine(item);
+    }
+    let primaryTypeID: number | null = null;
+    try {
+      primaryTypeID = Zotero.CreatorTypes.getPrimaryIDForType(item.itemTypeID);
+    } catch {
+      primaryTypeID = null;
+    }
+    const primary = primaryTypeID
+      ? creators.filter((creator) => creator.creatorTypeID === primaryTypeID)
+      : [];
+    const used = primary.length > 0 ? primary : creators;
+    const names = used.map(creatorFullName).filter(Boolean);
+    if (names.length > 0) {
+      return joinCreatorByline(names);
+    }
+    return getItemCreatorLine(item);
+  } catch {
+    return getItemCreatorLine(item);
+  }
+}
+
 /**
  * Field value with Zotero base-field mapping. `getField("date")` is empty for
  * types that store it under another name (case → dateDecided, statute →

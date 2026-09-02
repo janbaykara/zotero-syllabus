@@ -32,6 +32,21 @@ const WEB_GALLERY_ITEM_TYPES = new Set([
   "encyclopediaArticle",
 ]);
 
+/** Journals, preprints, and legal/text items: no magazine graphic. */
+const TEXT_HEAVY_GALLERY_ITEM_TYPES = new Set([
+  "journalArticle",
+  "conferencePaper",
+  "preprint",
+  "case",
+  "statute",
+  "bill",
+  "hearing",
+  "patent",
+  "gazette",
+  "regulation",
+  "treaty",
+]);
+
 const VIDEO_GALLERY_ITEM_TYPES = new Set([
   "film",
   "videoRecording",
@@ -157,6 +172,10 @@ function itemTitle(item: Zotero.Item): string {
 
 export function isWebGalleryItem(item: Zotero.Item): boolean {
   return WEB_GALLERY_ITEM_TYPES.has(item.itemType);
+}
+
+export function isTextHeavyGalleryItem(item: Zotero.Item): boolean {
+  return TEXT_HEAVY_GALLERY_ITEM_TYPES.has(item.itemType);
 }
 
 export function getItemPageUrl(item: Zotero.Item): string | null {

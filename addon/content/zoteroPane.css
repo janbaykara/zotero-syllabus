@@ -1205,7 +1205,7 @@
   height: auto;
   overflow: hidden;
   background: transparent;
-  contain: layout style;
+  contain: style;
 }
 
 .syllabus-magazine-grid > .syllabus-magazine-tile {
@@ -1275,6 +1275,76 @@
   object-position: center 18%;
 }
 
+.syllabus-magazine-cover-img.is-photo {
+  object-position: center;
+}
+
+.syllabus-magazine-grid
+  > .syllabus-magazine-tile:has(.syllabus-magazine-cover.is-gallery) {
+  overflow: visible;
+}
+
+.syllabus-magazine-cover.is-gallery {
+  height: auto;
+  max-width: 9.5rem;
+  width: 100%;
+  overflow: visible;
+  background: transparent;
+}
+
+.syllabus-magazine-tile[data-role="hero"] .syllabus-magazine-cover.is-gallery,
+.syllabus-magazine-tile[data-role="wide"] .syllabus-magazine-cover.is-gallery,
+.syllabus-magazine-tile[data-role="compact"] .syllabus-magazine-cover.is-gallery,
+.syllabus-magazine-tile[data-role="tall"] .syllabus-magazine-cover.is-gallery {
+  height: auto;
+}
+
+.syllabus-magazine-tile[data-role="wide"] .syllabus-magazine-cover.is-gallery {
+  flex: 0 0 auto;
+  width: 108px;
+  max-width: 108px;
+}
+
+.syllabus-magazine-tile[data-role="hero"] .syllabus-magazine-cover.is-gallery {
+  max-width: 11rem;
+}
+
+.syllabus-magazine-cover.is-gallery .syllabus-gallery-cover-portrait,
+.syllabus-magazine-cover.is-gallery .syllabus-gallery-cover-video,
+.syllabus-magazine-cover.is-gallery .syllabus-gallery-cover-web,
+.syllabus-magazine-cover.is-gallery .syllabus-gallery-cover-square,
+.syllabus-magazine-cover.is-gallery .syllabus-gallery-cover-natural,
+.syllabus-magazine-cover.is-gallery .syllabus-gallery-cover-with-binder {
+  align-self: start;
+  width: 100%;
+}
+
+.syllabus-magazine-cover.is-bleed,
+.syllabus-magazine-tile[data-role="hero"] .syllabus-magazine-cover.is-bleed,
+.syllabus-magazine-tile[data-role="wide"] .syllabus-magazine-cover.is-bleed,
+.syllabus-magazine-tile[data-role="compact"] .syllabus-magazine-cover.is-bleed,
+.syllabus-magazine-tile[data-role="tall"] .syllabus-magazine-cover.is-bleed {
+  width: 100%;
+  max-width: none;
+  height: auto;
+  flex: 0 0 auto;
+}
+
+.syllabus-magazine-cover.is-photo.is-bleed {
+  aspect-ratio: 1.91 / 1;
+  overflow: hidden;
+}
+
+.syllabus-magazine-tile[data-role="wide"]:has(.syllabus-magazine-cover.is-bleed) {
+  flex-direction: column;
+}
+
+.syllabus-magazine-tile[data-role="wide"]:has(.syllabus-magazine-cover.is-bleed)
+  .syllabus-magazine-body {
+  border-inline-start: none;
+  padding-inline-start: 0;
+}
+
 .syllabus-magazine-body {
   display: flex;
   flex-direction: column;
@@ -1287,8 +1357,17 @@
   flex: 1 1 auto;
   justify-content: center;
   padding-top: 0.15rem;
+}
+
+.syllabus-magazine-tile[data-role="wide"]:has(.syllabus-magazine-cover)
+  .syllabus-magazine-body {
   border-inline-start: 1px solid var(--syllabus-magazine-rule);
   padding-inline-start: 1.1rem;
+}
+
+.syllabus-magazine-tile:not(:has(.syllabus-magazine-cover))
+  .syllabus-magazine-body {
+  padding-top: 0.15rem;
 }
 
 .syllabus-magazine-kicker {
