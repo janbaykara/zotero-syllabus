@@ -23,6 +23,7 @@ import {
   LayoutList,
   ListOrdered,
   MoreHorizontal,
+  Newspaper,
   Shapes,
   Tag,
   Tags,
@@ -30,6 +31,7 @@ import {
 import { renderComponent } from "../utils/react";
 import { isZotero8OrLater } from "../utils/zotero";
 import {
+  getItemAbstractSnippet,
   getItemCreatorLine,
   getItemField,
   getItemTitle,
@@ -82,6 +84,10 @@ import {
   openZoteroItemContextMenu,
 } from "../utils/itemContextMenu";
 import { useGalleryLayout, type GalleryLayout } from "./galleryLayout";
+import { magazineSectionTemplate, pickRecentMediaItems } from "./magazineDesks";
+import { MagazineGrid } from "./MagazineTile";
+import { MagazineHome } from "./MagazineHome";
+import { MagazineShelf } from "./MagazineShelf";
 import { GalleryViewportProvider, useNearViewport } from "./galleryVisibility";
 import { useGallerySortBy, type GallerySortBy } from "./gallerySort";
 import { collectionHasSyllabusNote } from "./syllabusNote";
@@ -550,10 +556,37 @@ export function GalleryPage({
     </div>
   );
 
-  const renderItems = (items: Zotero.Item[], keyPrefix: string) =>
-    layout === "card"
-      ? renderCards(items, keyPrefix)
-      : renderCovers(items, keyPrefix);
+  const renderMagazine = (
+    items: Zotero.Item[],
+    keyPrefix: string,
+    template = magazineSectionTemplate(0),
+  ) => (
+    <MagazineGrid
+      items={items}
+      keyPrefix={keyPrefix}
+      sortBy={sortBy}
+      template={template}
+      selectedItemIds={selectedItemIds}
+      onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
+      onContextMenu={handleContextMenu}
+    />
+  );
+
+  let magazineSectionIndex = 0;
+  const renderItems = (items: Zotero.Item[], keyPrefix: string) => {
+    if (layout === "card") {
+      return renderCards(items, keyPrefix);
+    }
+    if (layout === "magazine") {
+      return renderMagazine(
+        items,
+        keyPrefix,
+        magazineSectionTemplate(magazineSectionIndex++),
+      );
+    }
+    return renderCovers(items, keyPrefix);
+  };
 
   const renderClassAssignments = (
     rows: Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }>,
@@ -562,6 +595,12 @@ export function GalleryPage({
   ) => {
     if (rows.length === 0) {
       return null;
+    }
+    if (layout === "magazine") {
+      return renderMagazine(
+        rows.map(({ item }) => item),
+        keyPrefix,
+      );
     }
     if (layout !== "card") {
       return renderCovers(
@@ -613,6 +652,7 @@ export function GalleryPage({
       tabIndex={-1}
       className={twMerge(
         "syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background focus:outline-none",
+        layout === "magazine" && "syllabus-magazine-page",
         compactMode && "compact-mode",
       )}
       dir={getUiDir()}
@@ -645,9 +685,46 @@ export function GalleryPage({
         </div>
         <GalleryViewportProvider rootRef={pageRef}>
           <div className="px-6 pt-4">
+            {layout === "magazine" && groupBy !== "none" ? (
+              <>
+                <MagazineShelf
+                  kind="video"
+                  items={pickRecentMediaItems(
+                    syllabusItems.map(({ zoteroItem }) => zoteroItem),
+                    "video",
+                  )}
+                  selectedItemIds={selectedItemIds}
+                  onClick={handleClick}
+                  onDoubleClick={handleDoubleClick}
+                  onContextMenu={handleContextMenu}
+                />
+                <MagazineShelf
+                  kind="audio"
+                  items={pickRecentMediaItems(
+                    syllabusItems.map(({ zoteroItem }) => zoteroItem),
+                    "audio",
+                  )}
+                  selectedItemIds={selectedItemIds}
+                  onClick={handleClick}
+                  onDoubleClick={handleDoubleClick}
+                  onContextMenu={handleContextMenu}
+                />
+              </>
+            ) : null}
             {groupBy === "none" &&
               (syllabusItems.length === 0 ? (
                 <p className="text-secondary text-lg">{emptyMessage}</p>
+              ) : layout === "magazine" ? (
+                <MagazineHome
+                  items={syllabusItems.map(({ zoteroItem }) => zoteroItem)}
+                  tagGroups={tagGroups}
+                  subcollectionRoot={subcollectionRoot}
+                  sortBy={sortBy}
+                  selectedItemIds={selectedItemIds}
+                  onClick={handleClick}
+                  onDoubleClick={handleDoubleClick}
+                  onContextMenu={handleContextMenu}
+                />
               ) : (
                 renderItems(
                   syllabusItems.map(({ zoteroItem }) => zoteroItem),
@@ -1090,6 +1167,12 @@ function galleryLayoutOptions(): GallerySegmentOption<GalleryLayout>[] {
       label: getString("gallery-layout-card"),
       title: getString("gallery-layout-card-title"),
       Icon: LayoutList,
+    },
+    {
+      mode: "magazine",
+      label: getString("gallery-layout-magazine"),
+      title: getString("gallery-layout-magazine-title"),
+      Icon: Newspaper,
     },
   ];
 }
@@ -1831,20 +1914,6 @@ function journalEditionCompact(item: Zotero.Item): string {
   return volIssue;
 }
 
-function itemAbstractSnippet(item: Zotero.Item): string {
-  return itemField(item, "abstractNote")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(
-      /^(?:research highlights(?:\s+and)?\s+)?abstracts?\b[\s:,.\-–—]*/i,
-      "",
-    )
-    .replace(/(?:,\s*){2,}/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function JournalFace({ item }: { item: Zotero.Item }) {
   const journal = useMemo(() => {
     return (
@@ -1872,7 +1941,7 @@ function JournalFace({ item }: { item: Zotero.Item }) {
   );
   const creator = useMemo(() => getItemCreatorLine(item), [item]);
   const abstractNote = useMemo(
-    () => (contemporary ? itemAbstractSnippet(item) : ""),
+    () => (contemporary ? getItemAbstractSnippet(item) : ""),
     [item, contemporary],
   );
   const mark = useMemo(

@@ -41,6 +41,7 @@ const VIDEO_GALLERY_ITEM_TYPES = new Set([
 const AUDIO_GALLERY_ITEM_TYPES = new Set([
   "radioBroadcast",
   "audioRecording",
+  "podcast",
 ]);
 
 const VIDEO_HOSTS = [

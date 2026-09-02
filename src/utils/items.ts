@@ -48,6 +48,25 @@ export function getItemField(item: Zotero.Item, field: string): string {
   }
 }
 
+/** Strip HTML and leading “Abstract” boilerplate from `abstractNote` text. */
+export function snippetFromAbstractNote(value: string): string {
+  return value
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(
+      /^(?:research highlights(?:\s+and)?\s+)?abstracts?\b[\s:,.\-–—]*/i,
+      "",
+    )
+    .replace(/(?:,\s*){2,}/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function getItemAbstractSnippet(item: Zotero.Item): string {
+  return snippetFromAbstractNote(getItemField(item, "abstractNote"));
+}
+
 /**
  * Note HTML, or "" if this is not a note. Zotero 9 throws
  * `getNote() can only be called on notes and attachments` when the item is a

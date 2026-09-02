@@ -92,6 +92,20 @@ describe("galleryKeyboardNav", function () {
     assert.equal(findGalleryNavIndex(rects, 3, "up"), 0);
   });
 
+  it("navigates a mixed-span magazine grid by visual rows", function () {
+    const rects: NavRect[] = [
+      { left: 0, top: 0, width: 210, height: 100 },
+      { left: 220, top: 0, width: 100, height: 100 },
+      { left: 0, top: 120, width: 100, height: 210 },
+      { left: 120, top: 120, width: 200, height: 100 },
+    ];
+    assert.equal(findGalleryNavIndex(rects, 0, "right"), 1);
+    assert.equal(findGalleryNavIndex(rects, 1, "left"), 0);
+    const downFromLead = findGalleryNavIndex(rects, 0, "down");
+    assert.notEqual(downFromLead, 0);
+    assert.notEqual(downFromLead, 1);
+  });
+
   it("selects an edge item when nothing is current", function () {
     const rects = grid(3, 6);
     assert.equal(findGalleryNavIndex(rects, -1, "right"), 0);

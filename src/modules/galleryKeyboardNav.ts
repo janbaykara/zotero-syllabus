@@ -22,7 +22,7 @@ export type GalleryNavCell = {
 };
 
 export const GALLERY_NAV_SELECTOR =
-  ".syllabus-gallery-tile, .syllabus-gallery-cards .syllabus-item-card";
+  ".syllabus-gallery-tile, .syllabus-magazine-tile, .syllabus-gallery-cards .syllabus-item-card";
 
 export function getGalleryNavElements(container: HTMLElement): HTMLElement[] {
   return Array.from(

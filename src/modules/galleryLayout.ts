@@ -3,7 +3,7 @@ import * as z from "zod";
 import { config } from "../../package.json";
 import { getCachedPref, zoteroCache } from "../utils/cache";
 
-export const GALLERY_LAYOUT_MODES = ["cover", "card"] as const;
+export const GALLERY_LAYOUT_MODES = ["cover", "card", "magazine"] as const;
 
 export type GalleryLayout = (typeof GALLERY_LAYOUT_MODES)[number];
 
@@ -14,7 +14,7 @@ function prefKey() {
   return `${config.prefsPrefix}.galleryLayout`;
 }
 
-function coerceGalleryLayout(value: unknown): GalleryLayout {
+export function coerceGalleryLayout(value: unknown): GalleryLayout {
   const parsed = GalleryLayoutSchema.safeParse(value);
   return parsed.success ? parsed.data : "cover";
 }
