@@ -93,7 +93,11 @@
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+}
+
+.syllabus-gallery-groups-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .syllabus-gallery-groups-nav-inner {
@@ -1014,6 +1018,52 @@
   padding-right: 8px !important;
   border: 0.5px solid var(--fill-secondary);
   margin-inline-start: 4px;
+}
+
+#zotero-tabs-toolbar > .syllabus-tab-bar-button {
+  fill: #7b4ddb;
+  -moz-context-properties: fill, fill-opacity;
+  width: auto !important;
+  min-width: max-content !important;
+  height: 28px !important;
+  max-height: 28px !important;
+  min-height: 28px !important;
+  gap: 4px;
+  padding-block: 0 !important;
+  padding-inline: 8px !important;
+  border: 0.5px solid var(--fill-secondary);
+  margin-inline: 4px 2px;
+  border-radius: 4px;
+  list-style-image: url("chrome://syllabus/content/icons/calendar.svg");
+}
+
+#zotero-tabs-toolbar > .syllabus-tab-bar-button .toolbarbutton-text {
+  min-width: 0 !important;
+  max-width: none !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  padding-inline: 0 !important;
+  display: flex !important;
+}
+
+#zotero-tabs-toolbar > .syllabus-tab-bar-button .toolbarbutton-icon {
+  width: 16px !important;
+  height: 16px !important;
+  display: flex !important;
+  fill: #7b4ddb;
+  -moz-context-properties: fill, fill-opacity;
+  list-style-image: url("chrome://syllabus/content/icons/calendar.svg");
+}
+
+/* Icon-only while the Reading Schedule tab is open in the tab list. */
+#zotero-tabs-toolbar > .syllabus-tab-bar-button[data-tab-open="true"] {
+  width: 28px !important;
+  min-width: 28px !important;
+  padding-inline: 0 !important;
+}
+
+#zotero-tabs-toolbar > .syllabus-tab-bar-button[data-tab-open="true"] .toolbarbutton-text {
+  display: none !important;
 }
 
 .syllabus-managed-folder-banner {

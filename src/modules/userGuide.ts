@@ -655,15 +655,14 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
       ),
       position: "center",
       element: () =>
-        doc.querySelector("#syllabus-collection-reading-schedule-button") ||
-        doc.querySelector("#syllabus-reading-schedule-button") ||
+        doc.querySelector("#syllabus-reading-schedule-tab-button") ||
         doc.documentElement!,
       showButtons: ["prev", "next"],
       showProgress: true,
       onMask: ({ mask }) => {
-        const target =
-          doc.querySelector("#syllabus-collection-reading-schedule-button") ||
-          doc.querySelector("#syllabus-reading-schedule-button");
+        const target = doc.querySelector(
+          "#syllabus-reading-schedule-tab-button",
+        );
         if (target) {
           mask(target);
         }
@@ -673,9 +672,7 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
         // Date was just set on the previous Next — avoid remounting again.
         await waitForElement(
           win,
-          () =>
-            doc.querySelector("#syllabus-collection-reading-schedule-button") ||
-            doc.querySelector("#syllabus-reading-schedule-button"),
+          () => doc.querySelector("#syllabus-reading-schedule-tab-button"),
           3000,
         );
       },

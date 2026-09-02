@@ -330,6 +330,7 @@ export class SyllabusManager {
       videoRecording: "video",
       audioRecording: "audio",
       film: "video",
+      tvBroadcast: "video",
       thesis: "document",
       report: "document",
       document: "document",
@@ -546,6 +547,7 @@ export class SyllabusManager {
     removeManagedCollectionBanner(win);
     this.unpatchReadingScheduleTabBar(win);
     this.setupUI();
+    this.removeReadingScheduleTabBarButton?.(win);
     this.cleanupSyllabusViewTabListener();
     if (this.readingScheduleTab) {
       this.readingScheduleTab.cleanupAll();
@@ -557,6 +559,7 @@ export class SyllabusManager {
     unregisterCustomIconsPrefObserver();
     this.unregisterNotifier();
     for (const mainWindow of Zotero.getMainWindows() as _ZoteroTypes.MainWindow[]) {
+      this.removeReadingScheduleTabBarButton?.(mainWindow);
       this.unpatchReadingScheduleTabBar(mainWindow);
       unpatchManagedCollectionTree(mainWindow);
       removeManagedCollectionBanner(mainWindow);
@@ -592,12 +595,13 @@ export class SyllabusManager {
   static setupSyllabusViewTabListener() {
     ztoolkit.log("SyllabusManager.setupSyllabusViewTabListener");
     let selectedCollectionId = getSelectedCollection()?.id.toString() || "";
-    let currentTabId = getCurrentTab()?.id || "";
+    let currentTabId = Zotero.getMainWindow()?.Zotero_Tabs?.selectedID || "";
     const interval = setInterval(async () => {
       const collection = getSelectedCollection();
       const currentCollectionId = collection?.id.toString() || "";
-      const tab = getCurrentTab();
-      const newTabId = tab?.id || "";
+      const newTabId = Zotero.getMainWindow()?.Zotero_Tabs?.selectedID || "";
+
+      SyllabusManager.updateReadingScheduleTabBarButton();
 
       const collectionChanged = currentCollectionId !== selectedCollectionId;
       const tabChanged = newTabId !== currentTabId;
@@ -770,10 +774,95 @@ export class SyllabusManager {
     );
   }
 
+  static removeReadingScheduleTabBarButton(
+    win?: _ZoteroTypes.MainWindow,
+  ): void {
+    win = win || Zotero.getMainWindow();
+    const doc = win?.document;
+    if (!doc) return;
+    for (const el of Array.from(
+      doc.querySelectorAll(
+        "#syllabus-reading-schedule-tab-button, #syllabus-reading-schedule-button, #syllabus-collection-reading-schedule-button",
+      ),
+    ) as Element[]) {
+      el.remove();
+    }
+  }
+
+  static setupReadingScheduleTabBarButton(
+    win?: _ZoteroTypes.MainWindow,
+  ): void {
+    win = win || Zotero.getMainWindow();
+    const doc = win.document;
+    SyllabusManager.removeReadingScheduleTabBarButton(win);
+    if (!FEATURE_FLAG.READING_SCHEDULE) {
+      return;
+    }
+
+    const tabsToolbar = doc.getElementById("zotero-tabs-toolbar");
+    const tabsMenu = doc.getElementById("zotero-tb-tabs-menu");
+    if (!tabsToolbar) return;
+
+    const tooltip = getString("toolbar-reading-schedule-open");
+    const button = ztoolkit.UI.createElement(doc, "toolbarbutton", {
+      id: "syllabus-reading-schedule-tab-button",
+      classList: ["zotero-tb-button", "syllabus-tab-bar-button"],
+      attributes: {
+        crop: "none",
+        tooltiptext: tooltip,
+        image: "chrome://syllabus/content/icons/calendar.svg",
+      },
+      properties: {
+        label: getString("view-tab-reading-schedule"),
+        tooltiptext: tooltip,
+      },
+      listeners: [
+        {
+          type: "command",
+          listener: () => {
+            SyllabusManager.openReadingListTab();
+          },
+        },
+        {
+          type: "click",
+          listener: () => {
+            SyllabusManager.openReadingListTab();
+          },
+        },
+      ],
+    });
+
+    if (tabsMenu && tabsMenu.parentNode === tabsToolbar) {
+      tabsToolbar.insertBefore(button, tabsMenu);
+    } else {
+      tabsToolbar.insertBefore(button, tabsToolbar.firstChild);
+    }
+    SyllabusManager.updateReadingScheduleTabBarButton(win);
+  }
+
+  static updateReadingScheduleTabBarButton(
+    win?: _ZoteroTypes.MainWindow,
+  ): void {
+    win = win || Zotero.getMainWindow();
+    const button = win?.document.getElementById(
+      "syllabus-reading-schedule-tab-button",
+    );
+    if (!button) return;
+    let tabOpen = false;
+    try {
+      tabOpen = !!win.Zotero_Tabs?._getTab("syllabus-reading-list-tab")?.tab;
+    } catch {
+      tabOpen = false;
+    }
+    button.setAttribute("data-tab-open", tabOpen ? "true" : "false");
+  }
+
   // Function to create/update the view-mode radio control
   static setupToggleButton() {
     const w = Zotero.getMainWindow();
     const doc = w.document;
+
+    SyllabusManager.setupReadingScheduleTabBarButton(w);
 
     // Find the items toolbar
     const itemsToolbar = doc.getElementById("zotero-items-toolbar");
@@ -785,7 +874,7 @@ export class SyllabusManager {
     // Remove legacy / duplicate toolbar controls (IDs can be duplicated after hot reload)
     for (const el of Array.from(
       doc.querySelectorAll(
-        "#syllabus-view-toggle, #syllabus-view-mode-group, .syllabus-view-mode-button, #syllabus-reading-schedule-button, #syllabus-collection-reading-schedule-button",
+        "#syllabus-view-toggle, #syllabus-view-mode-group, .syllabus-view-mode-button",
       ),
     ) as Element[]) {
       el.remove();
@@ -849,49 +938,6 @@ export class SyllabusManager {
       viewModeButtons.push(button);
     }
 
-    let readingScheduleButton: XULButtonElement | null = null;
-    let collectionReadingScheduleButton: XULButtonElement | null = null;
-
-    if (FEATURE_FLAG.READING_SCHEDULE) {
-      readingScheduleButton = ztoolkit.UI.createElement(doc, "toolbarbutton", {
-        id: "syllabus-reading-schedule-button",
-        classList: ["syllabus-toolbar-button"],
-        properties: {
-          label: getString("toolbar-reading-schedule-review"),
-          tooltiptext: getString("toolbar-reading-schedule-open"),
-        },
-        listeners: [
-          {
-            type: "click",
-            listener: () => {
-              SyllabusManager.openReadingListTab();
-            },
-          },
-        ],
-      });
-
-      collectionReadingScheduleButton = ztoolkit.UI.createElement(
-        doc,
-        "toolbarbutton",
-        {
-          id: "syllabus-collection-reading-schedule-button",
-          classList: ["syllabus-toolbar-button"],
-          properties: {
-            label: getString("view-tab-reading-schedule"),
-            tooltiptext: getString("toolbar-reading-schedule-open"),
-          },
-          listeners: [
-            {
-              type: "click",
-              listener: () => {
-                SyllabusManager.openReadingListTab();
-              },
-            },
-          ],
-        },
-      );
-    }
-
     let spacer = doc.getElementById("syllabus-view-spacer") as Element | null;
     if (!spacer) {
       spacer = doc.createElementNS(
@@ -912,12 +958,6 @@ export class SyllabusManager {
 
     for (const button of viewModeButtons) {
       insertBefore(button);
-    }
-    if (collectionReadingScheduleButton) {
-      insertBefore(collectionReadingScheduleButton);
-    }
-    if (readingScheduleButton) {
-      insertBefore(readingScheduleButton);
     }
     if (!spacer.parentNode) {
       insertBefore(spacer);
@@ -964,15 +1004,11 @@ export class SyllabusManager {
     const w = Zotero.getMainWindow();
     const doc = w.document;
 
+    SyllabusManager.updateReadingScheduleTabBarButton(w);
+
     const viewModeButtons = Array.from(
       doc.querySelectorAll(".syllabus-view-mode-button"),
     ) as XULButtonElement[];
-    const readingScheduleButton = doc.getElementById(
-      "syllabus-reading-schedule-button",
-    ) as XULButtonElement | null;
-    const collectionReadingScheduleButton = doc.getElementById(
-      "syllabus-collection-reading-schedule-button",
-    ) as XULButtonElement | null;
 
     if (!viewModeButtons.length) return;
 
@@ -981,36 +1017,14 @@ export class SyllabusManager {
     const isInMainLibrary = !selectedCollection;
     const isCustomTab =
       currentTab?.type === "syllabus" || currentTab?.type === "reading-list";
-    const shouldShowReadingSchedule =
+    const hideViewModesInLibrary =
       FEATURE_FLAG.READING_SCHEDULE && isInMainLibrary && !isCustomTab;
     const readingScheduleContext = selectedCollection
       ? getReadingScheduleCollectionContext(selectedCollection.id)
       : null;
 
     for (const button of viewModeButtons) {
-      if (shouldShowReadingSchedule || readingScheduleContext) {
-        button.hidden = true;
-        continue;
-      }
-      button.hidden = false;
-    }
-
-    if (!FEATURE_FLAG.READING_SCHEDULE) {
-      if (readingScheduleButton) readingScheduleButton.hidden = true;
-      if (collectionReadingScheduleButton) {
-        collectionReadingScheduleButton.hidden = true;
-      }
-      return;
-    }
-
-    if (readingScheduleButton) {
-      readingScheduleButton.hidden = !shouldShowReadingSchedule;
-    }
-    if (collectionReadingScheduleButton) {
-      collectionReadingScheduleButton.hidden =
-        !selectedCollection ||
-        shouldShowReadingSchedule ||
-        readingScheduleContext?.kind === "root";
+      button.hidden = !!(hideViewModesInLibrary || readingScheduleContext);
     }
   }
 
@@ -2740,6 +2754,7 @@ export class SyllabusManager {
     if (this.readingScheduleTab) {
       this.readingScheduleTab.open(win);
       this.syncReadingScheduleTabIcon(win);
+      this.updateReadingScheduleTabBarButton(win);
     }
   }
 

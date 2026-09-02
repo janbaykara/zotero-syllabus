@@ -31,7 +31,13 @@ const WEB_GALLERY_ITEM_TYPES = new Set([
   "encyclopediaArticle",
 ]);
 
-const VIDEO_GALLERY_ITEM_TYPES = new Set(["film", "videoRecording"]);
+const VIDEO_GALLERY_ITEM_TYPES = new Set([
+  "film",
+  "videoRecording",
+  "tvBroadcast",
+]);
+
+const AUDIO_GALLERY_ITEM_TYPES = new Set(["radioBroadcast"]);
 
 const VIDEO_HOSTS = [
   "youtube.com",
@@ -221,6 +227,14 @@ export function isVideoGalleryItem(item: Zotero.Item): boolean {
   }
 }
 
+export function isAudioGalleryItem(item: Zotero.Item): boolean {
+  return AUDIO_GALLERY_ITEM_TYPES.has(item.itemType);
+}
+
+export function isPlayableGalleryItem(item: Zotero.Item): boolean {
+  return isVideoGalleryItem(item) || isAudioGalleryItem(item);
+}
+
 export function getVideoSiteHostname(item: Zotero.Item): string {
   const host = getItemHostname(item);
   if (!host || !host.includes(".")) {
@@ -287,7 +301,11 @@ async function resolveItemCoverUncached(
     return { kind: "image", src: youtubeSrc, fit: "cover" };
   }
 
-  if (isWebGalleryItem(item) || isVideoGalleryItem(item)) {
+  if (
+    isWebGalleryItem(item) ||
+    isVideoGalleryItem(item) ||
+    isAudioGalleryItem(item)
+  ) {
     const webSrc = await fetchWebThumbnail(item);
     if (webSrc) {
       return { kind: "image", src: webSrc, fit: "cover" };

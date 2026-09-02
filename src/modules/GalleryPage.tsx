@@ -40,6 +40,8 @@ import {
   getItemHostname,
   getPlaceholderCover,
   getVideoSiteHostname,
+  isAudioGalleryItem,
+  isPlayableGalleryItem,
   isVideoGalleryItem,
   isWebGalleryItem,
   resolveItemCover,
@@ -592,137 +594,134 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
           </div>
         </div>
         <div className="px-6 pt-4">
+          {groupBy === "none" &&
+            (syllabusItems.length === 0 ? (
+              <p className="text-secondary text-lg">{emptyMessage}</p>
+            ) : (
+              renderItems(
+                syllabusItems.map(({ zoteroItem }) => zoteroItem),
+                "all",
+              )
+            ))}
 
-        {groupBy === "none" &&
-          (syllabusItems.length === 0 ? (
-            <p className="text-secondary text-lg">{emptyMessage}</p>
-          ) : (
-            renderItems(
-              syllabusItems.map(({ zoteroItem }) => zoteroItem),
-              "all",
-            )
-          ))}
-
-        {groupBy === "type" &&
-          (typeGroups.length === 0 ? (
-            <p className="text-secondary text-lg">{emptyMessage}</p>
-          ) : (
-            typeGroups.map(({ itemType, label, items }) => (
-              <section
-                key={itemType}
-                className="syllabus-gallery-section"
-                data-gallery-group={`type-${itemType}`}
-              >
-                <GalleryGroupHeading
-                  icon={{ kind: "item-type", itemType }}
-                >
-                  {label}
-                </GalleryGroupHeading>
-                {renderItems(items, `type-${itemType}`)}
-              </section>
-            ))
-          ))}
-
-        {groupBy === "tags" &&
-          (tagGroups.length === 0 && untaggedItems.length === 0 ? (
-            <p className="text-secondary text-lg">{emptyMessage}</p>
-          ) : (
-            <>
-              {tagGroups.map(({ tag, items }, index) => (
+          {groupBy === "type" &&
+            (typeGroups.length === 0 ? (
+              <p className="text-secondary text-lg">{emptyMessage}</p>
+            ) : (
+              typeGroups.map(({ itemType, label, items }) => (
                 <section
-                  key={tag}
+                  key={itemType}
                   className="syllabus-gallery-section"
-                  data-gallery-group={`tag-${index}`}
+                  data-gallery-group={`type-${itemType}`}
                 >
-                  <GalleryGroupHeading icon={{ kind: "tag" }}>
-                    {tag}
+                  <GalleryGroupHeading icon={{ kind: "item-type", itemType }}>
+                    {label}
                   </GalleryGroupHeading>
-                  {renderItems(items, `tag-${tag}`)}
+                  {renderItems(items, `type-${itemType}`)}
                 </section>
-              ))}
-              {untaggedItems.length > 0 && (
-                <section
-                  className="syllabus-gallery-section"
-                  data-gallery-group="untagged"
-                >
-                  <GalleryGroupHeading icon={{ kind: "untagged" }}>
-                    {getString("gallery-untagged")}
-                  </GalleryGroupHeading>
-                  <p className="syllabus-gallery-class-description">
-                    {getString("gallery-untagged-desc")}
-                  </p>
-                  {renderItems(untaggedItems, "untagged")}
-                </section>
-              )}
-            </>
-          ))}
+              ))
+            ))}
 
-        {groupBy === "subcollections" &&
-          (!subcollectionRoot || !subtreeHasContent(subcollectionRoot) ? (
-            <p className="text-secondary text-lg">
-              {isFiltered
-                ? emptyMessage
-                : getString("gallery-empty-subcollections")}
-            </p>
-          ) : (
-            <GallerySubcollectionSection
-              node={subcollectionRoot}
-              depth={0}
-              isRoot
-              resolveItems={resolveSubcollectionItems}
-              renderItems={renderItems}
-            />
-          ))}
-
-        {groupBy === "classes" &&
-          (classGroups.every((group) => group.itemAssignments.length === 0) &&
-          furtherReadingItems.length === 0 ? (
-            <p className="text-secondary text-lg">{emptyMessage}</p>
-          ) : (
-            <>
-              {classGroups.map((group) => {
-                if (
-                  group.itemAssignments.length === 0 &&
-                  (isFiltered || group.classNumber == null)
-                ) {
-                  return null;
-                }
-                const key = String(group.classNumber ?? "unnumbered");
-                return (
+          {groupBy === "tags" &&
+            (tagGroups.length === 0 && untaggedItems.length === 0 ? (
+              <p className="text-secondary text-lg">{emptyMessage}</p>
+            ) : (
+              <>
+                {tagGroups.map(({ tag, items }, index) => (
                   <section
-                    key={key}
+                    key={tag}
                     className="syllabus-gallery-section"
-                    data-gallery-group={`class-${key}`}
+                    data-gallery-group={`tag-${index}`}
                   >
-                    <GalleryClassHeading
-                      collectionId={collectionId}
-                      classNumber={group.classNumber}
-                      syllabusMetadata={syllabusMetadata}
-                    />
-                    {renderClassAssignments(
-                      group.itemAssignments,
-                      group.classNumber,
-                      `class-${key}`,
-                    )}
+                    <GalleryGroupHeading icon={{ kind: "tag" }}>
+                      {tag}
+                    </GalleryGroupHeading>
+                    {renderItems(items, `tag-${tag}`)}
                   </section>
-                );
-              })}
-              {furtherReadingItems.length > 0 && (
-                <section
-                  className="syllabus-gallery-section"
-                  data-gallery-group="further-reading"
-                >
-                  <GalleryGroupHeading icon={{ kind: "further-reading" }}>
-                    {getString("further-reading-heading")}
-                  </GalleryGroupHeading>
-                  <p className="syllabus-gallery-class-description">
-                    {getString("further-reading-empty-desc")}
-                  </p>
-                  {renderItems(furtherReadingItems, "further-reading")}
-                </section>
-              )}
-            </>
-          ))}
+                ))}
+                {untaggedItems.length > 0 && (
+                  <section
+                    className="syllabus-gallery-section"
+                    data-gallery-group="untagged"
+                  >
+                    <GalleryGroupHeading icon={{ kind: "untagged" }}>
+                      {getString("gallery-untagged")}
+                    </GalleryGroupHeading>
+                    <p className="syllabus-gallery-class-description">
+                      {getString("gallery-untagged-desc")}
+                    </p>
+                    {renderItems(untaggedItems, "untagged")}
+                  </section>
+                )}
+              </>
+            ))}
+
+          {groupBy === "subcollections" &&
+            (!subcollectionRoot || !subtreeHasContent(subcollectionRoot) ? (
+              <p className="text-secondary text-lg">
+                {isFiltered
+                  ? emptyMessage
+                  : getString("gallery-empty-subcollections")}
+              </p>
+            ) : (
+              <GallerySubcollectionSection
+                node={subcollectionRoot}
+                depth={0}
+                isRoot
+                resolveItems={resolveSubcollectionItems}
+                renderItems={renderItems}
+              />
+            ))}
+
+          {groupBy === "classes" &&
+            (classGroups.every((group) => group.itemAssignments.length === 0) &&
+            furtherReadingItems.length === 0 ? (
+              <p className="text-secondary text-lg">{emptyMessage}</p>
+            ) : (
+              <>
+                {classGroups.map((group) => {
+                  if (
+                    group.itemAssignments.length === 0 &&
+                    (isFiltered || group.classNumber == null)
+                  ) {
+                    return null;
+                  }
+                  const key = String(group.classNumber ?? "unnumbered");
+                  return (
+                    <section
+                      key={key}
+                      className="syllabus-gallery-section"
+                      data-gallery-group={`class-${key}`}
+                    >
+                      <GalleryClassHeading
+                        collectionId={collectionId}
+                        classNumber={group.classNumber}
+                        syllabusMetadata={syllabusMetadata}
+                      />
+                      {renderClassAssignments(
+                        group.itemAssignments,
+                        group.classNumber,
+                        `class-${key}`,
+                      )}
+                    </section>
+                  );
+                })}
+                {furtherReadingItems.length > 0 && (
+                  <section
+                    className="syllabus-gallery-section"
+                    data-gallery-group="further-reading"
+                  >
+                    <GalleryGroupHeading icon={{ kind: "further-reading" }}>
+                      {getString("further-reading-heading")}
+                    </GalleryGroupHeading>
+                    <p className="syllabus-gallery-class-description">
+                      {getString("further-reading-empty-desc")}
+                    </p>
+                    {renderItems(furtherReadingItems, "further-reading")}
+                  </section>
+                )}
+              </>
+            ))}
         </div>
       </div>
     </div>
@@ -744,7 +743,9 @@ function classNavLabel(
   if (classNumber == null) {
     return getString("gallery-unnumbered");
   }
-  const title = (classByNumber(syllabusMetadata, classNumber)?.title || "").trim();
+  const title = (
+    classByNumber(syllabusMetadata, classNumber)?.title || ""
+  ).trim();
   if (title) {
     return title;
   }
@@ -1153,7 +1154,11 @@ function GalleryPageHeader({
             title={prefsSummary}
             onClick={() => setOpen((value) => !value)}
           >
-            <span className="syllabus-gallery-prefs" dir="ltr" aria-hidden="true">
+            <span
+              className="syllabus-gallery-prefs"
+              dir="ltr"
+              aria-hidden="true"
+            >
               <span className="syllabus-gallery-prefs-paren">(</span>
               <LayoutIcon size={14} strokeWidth={2} />
               <span className="syllabus-gallery-prefs-sep">/</span>
@@ -1317,7 +1322,7 @@ function GalleryTile({
     if (isVideoGalleryItem(item)) {
       return getVideoSiteHostname(item);
     }
-    if (isWebGalleryItem(item)) {
+    if (isWebGalleryItem(item) || isAudioGalleryItem(item)) {
       return getItemHostname(item);
     }
     return "";
@@ -1498,6 +1503,7 @@ function GalleryCover({
     item.itemType === "thesis";
   const isVideo = isVideoGalleryItem(item);
   const isWeb = isWebGalleryItem(item);
+  const showPlay = isPlayableGalleryItem(item);
   const showWebOverlay = isWeb && cover.kind === "image" && !isVideo;
   const videoSite = isVideo ? getVideoSiteHostname(item) : "";
   const videoFavicon = videoSite ? faviconUrlForHostname(videoSite) : null;
@@ -1570,7 +1576,6 @@ function GalleryCover({
           <PlaceholderFace
             cover={cover}
             insetForSpine={showSpine}
-            hideText={isVideo}
           />
         )}
         {showWebOverlay ? (
@@ -1591,7 +1596,7 @@ function GalleryCover({
             }}
           />
         ) : null}
-        {isVideo ? (
+        {showPlay ? (
           <div className="syllabus-gallery-play" aria-hidden="true">
             <span className="syllabus-gallery-play-btn" />
           </div>
