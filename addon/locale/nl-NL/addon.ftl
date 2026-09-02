@@ -106,6 +106,8 @@ view-tab-checklist = Checklist
 view-tab-checklist-tooltip = Weergeven als checklist
 view-tab-syllabus = Syllabus
 view-tab-syllabus-tooltip = Weergeven als syllabus
+view-tab-create-syllabus = Syllabus maken
+view-tab-create-syllabus-tooltip = Deze collectie omzetten naar een syllabus
 view-tab-table = Tabel
 view-tab-table-tooltip = Weergeven als tabel
 view-tab-gallery = Galerij
@@ -276,6 +278,10 @@ gallery-options-title = Weergaveopties
 gallery-menu-view = Weergave
 gallery-menu-sort = Sorteren
 gallery-menu-group = Groeperen op
+gallery-in-this-collection = In deze collectie
+gallery-groups-nav-aria = Groepen
+gallery-group-jump = { $name } tonen
+gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = Pagina { $page } van { $total }
 
 # Reading schedule

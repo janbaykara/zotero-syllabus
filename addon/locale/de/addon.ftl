@@ -106,6 +106,8 @@ view-tab-checklist = Checkliste
 view-tab-checklist-tooltip = Als Checkliste anzeigen
 view-tab-syllabus = Lehrplan
 view-tab-syllabus-tooltip = Als Lehrplan anzeigen
+view-tab-create-syllabus = Lehrplan erstellen
+view-tab-create-syllabus-tooltip = Diese Sammlung in einen Lehrplan umwandeln
 view-tab-table = Tabelle
 view-tab-table-tooltip = Als Tabelle anzeigen
 view-tab-gallery = Galerie
@@ -276,6 +278,10 @@ gallery-options-title = Ansichtsoptionen
 gallery-menu-view = Ansicht
 gallery-menu-sort = Sortieren
 gallery-menu-group = Gruppieren nach
+gallery-in-this-collection = In dieser Sammlung
+gallery-groups-nav-aria = Gruppen
+gallery-group-jump = { $name } anzeigen
+gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = Seite { $page } von { $total }
 
 # Reading schedule

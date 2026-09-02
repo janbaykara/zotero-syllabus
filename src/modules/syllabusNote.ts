@@ -1393,7 +1393,45 @@ function resolveCollection(
   }
 }
 
-/** Class folders are not syllabi; reads and writes go to the parent note. */
+/**
+ * Class folders are not syllabi; reads and writes go to the parent note.
+ * Unmanaged nested collections keep their own document (or none).
+ */
+function managedClassFolderParent(
+  collection: Zotero.Collection,
+): Zotero.Collection | null {
+  const mapped = parentCollectionForManagedId(collection.id);
+  if (mapped) {
+    return mapped;
+  }
+  if (!collection.parentID) {
+    return null;
+  }
+  const parent: Zotero.Collection | false | undefined =
+    getCachedCollectionById(collection.parentID) ||
+    Zotero.Collections.get(collection.parentID);
+  if (!parent) {
+    return null;
+  }
+  const parentEntry = documentCache.get(collectionRefFromCollection(parent));
+  if (!parentEntry) {
+    return null;
+  }
+  const classes = parentEntry.document.classes || {};
+  for (const meta of Object.values(classes)) {
+    if (!meta?.number) {
+      continue;
+    }
+    if (
+      meta.subcollectionKey === collection.key ||
+      classFolderNameMatches(parentEntry.document, meta, collection.name)
+    ) {
+      return parent;
+    }
+  }
+  return null;
+}
+
 export function resolveSyllabusRoot(
   collection: Zotero.Collection,
 ): Zotero.Collection {
@@ -1401,27 +1439,17 @@ export function resolveSyllabusRoot(
   if (getReadingScheduleCollectionContext(collection.id)) {
     return collection;
   }
-  const managedParent = parentCollectionForManagedId(collection.id);
+  // A nested collection with its own note is an independent syllabus.
+  if (
+    documentCache.get(collectionRefFromCollection(collection))?.noteId != null
+  ) {
+    return collection;
+  }
+  const managedParent = managedClassFolderParent(collection);
   if (managedParent) {
     return managedParent;
   }
-  if (!collection.parentID) {
-    return collection;
-  }
-  const parent =
-    getCachedCollectionById(collection.parentID) ||
-    Zotero.Collections.get(collection.parentID);
-  if (!parent) {
-    return collection;
-  }
-  const parentEntry = documentCache.get(collectionRefFromCollection(parent));
-  if (parentEntry?.noteId) {
-    return parent;
-  }
-  const isManagedChild = Object.values(
-    parentEntry?.document.classes || {},
-  ).some((meta) => meta?.subcollectionKey === collection.key);
-  return isManagedChild ? parent : collection;
+  return collection;
 }
 
 function resolveSyllabusCollection(
@@ -1469,46 +1497,6 @@ export function getClassSubcollectionContext(
     }
   }
   return null;
-}
-
-function ancestorHasSyllabusNote(collection: Zotero.Collection): boolean {
-  const seen = new Set<number>();
-  let current: Zotero.Collection | null = collection;
-  while (current?.parentID) {
-    if (seen.has(current.parentID)) {
-      return false;
-    }
-    seen.add(current.parentID);
-    const parent =
-      getCachedCollectionById(current.parentID) ||
-      Zotero.Collections.get(current.parentID);
-    if (!parent) {
-      return false;
-    }
-    const parentEntry = documentCache.get(collectionRefFromCollection(parent));
-    if (parentEntry?.noteId) {
-      return true;
-    }
-    current = parent;
-  }
-  return false;
-}
-
-/**
- * Descendant of a syllabus that is not a class folder. Direct children inherit
- * the parent note for reads/writes. Deeper folders must still not offer
- * Syllabus view (that is the ancestor cover).
- */
-export function isUnmanagedSyllabusChild(
-  collection: Zotero.Collection,
-): boolean {
-  if (getReadingScheduleCollectionContext(collection.id)) {
-    return false;
-  }
-  if (getClassSubcollectionContext(collection)) {
-    return false;
-  }
-  return ancestorHasSyllabusNote(collection);
 }
 
 registerManagedClassFolderCheck((collectionId) => {

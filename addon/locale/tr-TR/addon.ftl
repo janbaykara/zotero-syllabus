@@ -106,6 +106,8 @@ view-tab-checklist = Denetim listesi
 view-tab-checklist-tooltip = Denetim listesi olarak görüntüle
 view-tab-syllabus = İzlence
 view-tab-syllabus-tooltip = İzlence olarak görüntüle
+view-tab-create-syllabus = İzlence oluştur
+view-tab-create-syllabus-tooltip = Bu koleksiyonu izlenceye dönüştür
 view-tab-table = Tablo
 view-tab-table-tooltip = Tablo olarak görüntüle
 view-tab-gallery = Galeri
@@ -276,6 +278,10 @@ gallery-options-title = Görünüm seçenekleri
 gallery-menu-view = Görünüm
 gallery-menu-sort = Sırala
 gallery-menu-group = Grupla
+gallery-in-this-collection = Bu koleksiyonda
+gallery-groups-nav-aria = Gruplar
+gallery-group-jump = { $name } göster
+gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = Sayfa { $page } / { $total }
 
 # Reading schedule

@@ -66,7 +66,6 @@ import {
   getClassSubcollectionContext,
   collectionHasSyllabusNote,
   ensureSyllabusNoteForUser,
-  isUnmanagedSyllabusChild,
   whenSyllabusNotesReady,
 } from "./syllabusNote";
 import { getItemTitle, readItemNote } from "../utils/items";
@@ -75,7 +74,10 @@ import {
   getReadingScheduleCollectionContext,
   isManagedReadingScheduleCollection,
 } from "./readingScheduleCollection";
-import { isAutoManagedCollection, getCollectionTreeKind } from "./autoManagedCollection";
+import {
+  getCollectionTreeKind,
+  isAutoManagedCollection,
+} from "./autoManagedCollection";
 import {
   applyManagedCollectionTree,
   areCustomIconsEnabled,
@@ -707,14 +709,10 @@ export class SyllabusManager {
   }
 
   static coerceViewModeForCollection(
-    collection: Zotero.Collection,
+    _collection: Zotero.Collection,
     value: unknown,
   ): CollectionViewMode {
-    const mode = coerceCollectionViewMode(value);
-    if (mode === "syllabus" && isUnmanagedSyllabusChild(collection)) {
-      return "collection";
-    }
-    return mode;
+    return coerceCollectionViewMode(value);
   }
 
   static async setCollectionViewMode(mode: CollectionViewMode): Promise<void> {
@@ -726,9 +724,6 @@ export class SyllabusManager {
     }
 
     if (mode === "syllabus") {
-      if (isUnmanagedSyllabusChild(selectedCollection)) {
-        return;
-      }
       const enabled = await ensureSyllabusNoteForUser(selectedCollection);
       if (!enabled) {
         return;
@@ -755,11 +750,7 @@ export class SyllabusManager {
   }
 
   static async cycleCollectionViewMode(): Promise<CollectionViewMode> {
-    const selectedCollection = getSelectedCollection();
-    const modes =
-      selectedCollection && isUnmanagedSyllabusChild(selectedCollection)
-        ? COLLECTION_VIEW_MODES.filter((mode) => mode !== "syllabus")
-        : COLLECTION_VIEW_MODES;
+    const modes = COLLECTION_VIEW_MODES;
     const current = SyllabusManager.getCollectionViewMode();
     const index = Math.max(0, modes.indexOf(current));
     const next = modes[(index + 1) % modes.length];
@@ -996,18 +987,8 @@ export class SyllabusManager {
       ? getReadingScheduleCollectionContext(selectedCollection.id)
       : null;
 
-    const hideSyllabusTab =
-      !!selectedCollection && isUnmanagedSyllabusChild(selectedCollection);
-
     for (const button of viewModeButtons) {
       if (shouldShowReadingSchedule || readingScheduleContext) {
-        button.hidden = true;
-        continue;
-      }
-      if (
-        hideSyllabusTab &&
-        button.getAttribute("data-view-mode") === "syllabus"
-      ) {
         button.hidden = true;
         continue;
       }

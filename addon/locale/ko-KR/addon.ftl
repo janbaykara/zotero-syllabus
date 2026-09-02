@@ -106,6 +106,8 @@ view-tab-checklist = 체크리스트
 view-tab-checklist-tooltip = 체크리스트로 보기
 view-tab-syllabus = 강의계획서
 view-tab-syllabus-tooltip = 강의계획서로 보기
+view-tab-create-syllabus = 강의계획서 만들기
+view-tab-create-syllabus-tooltip = 이 컬렉션을 강의계획서로 전환
 view-tab-table = 표
 view-tab-table-tooltip = 표로 보기
 view-tab-gallery = 갤러리
@@ -276,6 +278,10 @@ gallery-options-title = 보기 옵션
 gallery-menu-view = 보기
 gallery-menu-sort = 정렬
 gallery-menu-group = 그룹 기준
+gallery-in-this-collection = 이 컬렉션에서
+gallery-groups-nav-aria = 그룹
+gallery-group-jump = { $name } 표시
+gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = { $page } / { $total }페이지
 
 # Reading schedule

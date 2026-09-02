@@ -106,6 +106,8 @@ view-tab-checklist = Контрольний список
 view-tab-checklist-tooltip = Показати як контрольний список
 view-tab-syllabus = Силабус
 view-tab-syllabus-tooltip = Показати як силабус
+view-tab-create-syllabus = Створити силабус
+view-tab-create-syllabus-tooltip = Перетворити цю колекцію на силабус
 view-tab-table = Таблиця
 view-tab-table-tooltip = Показати як таблицю
 view-tab-gallery = Галерея
@@ -276,6 +278,10 @@ gallery-options-title = Параметри вигляду
 gallery-menu-view = Вигляд
 gallery-menu-sort = Сортування
 gallery-menu-group = Групувати за
+gallery-in-this-collection = У цій колекції
+gallery-groups-nav-aria = Групи
+gallery-group-jump = Показати { $name }
+gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = Сторінка { $page } з { $total }
 
 # Reading schedule

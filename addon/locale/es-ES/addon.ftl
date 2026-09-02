@@ -106,6 +106,8 @@ view-tab-checklist = Lista de comprobación
 view-tab-checklist-tooltip = Ver como lista de comprobación
 view-tab-syllabus = Programa
 view-tab-syllabus-tooltip = Ver como programa del curso
+view-tab-create-syllabus = Crear programa
+view-tab-create-syllabus-tooltip = Convertir esta colección en un programa del curso
 view-tab-table = Tabla
 view-tab-table-tooltip = Ver como tabla
 view-tab-gallery = Galería
@@ -276,6 +278,10 @@ gallery-options-title = Opciones de vista
 gallery-menu-view = Vista
 gallery-menu-sort = Ordenar
 gallery-menu-group = Agrupar por
+gallery-in-this-collection = En esta colección
+gallery-groups-nav-aria = Grupos
+gallery-group-jump = Mostrar { $name }
+gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = Página { $page } de { $total }
 
 # Reading schedule

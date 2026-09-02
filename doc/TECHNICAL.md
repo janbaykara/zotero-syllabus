@@ -94,7 +94,7 @@ Prefix: `extensions.zotero.syllabus`.
 
 ## Item Extra (legacy absorb)
 
-Older builds stored assignments in the item Extra field (`syllabus: {…}`). On item add/modify, `absorbSyllabusExtraFromItems` copies Extra into the collection named by Extra (for reading-list import, a new top-level collection), moves the item there if the Connector saved it elsewhere, and clears Extra. Absorb is skipped for class folders so a child collection never gets its own syllabus note and folder membership cannot write back to the parent document.
+Older builds stored assignments in the item Extra field (`syllabus: {…}`). On item add/modify, `absorbSyllabusExtraFromItems` copies Extra into the collection named by Extra (for reading-list import, a new top-level collection), moves the item there if the Connector saved it elsewhere, and clears Extra. Absorb is skipped for class folders so folder membership cannot write back to the parent document.
 
 ## Class subcollections
 
@@ -109,7 +109,7 @@ After each note persist, [`src/modules/classSubcollections.ts`](../src/modules/c
 
 On startup, folders are ensured for every syllabus that has the setting on. New folder keys are written back to the note; if keys are already present, only membership is synced.
 
-Class-folder Syllabus view is a single-class page (same class renderer as the Reading Schedule) with a link back to the parent. Document reads/writes for a class folder resolve to the parent note (`getClassSubcollectionContext` / `resolveSyllabusRoot`). Unmanaged descendants of a syllabus do not get Syllabus view — open the parent, or un-nest the folder to make a second syllabus.
+Class-folder Syllabus view is a single-class page (same class renderer as the Reading Schedule) with a link back to the parent. Document reads/writes for a class folder resolve to the parent note (`getClassSubcollectionContext` / `resolveSyllabusRoot`). Unmanaged nested collections do not inherit that note: they are ordinary folders until turned into their own syllabus.
 
 ## Practical rules
 
@@ -117,7 +117,7 @@ Class-folder Syllabus view is a single-class page (same class renderer as the Re
 - Do not call `getNote()` from render/hot paths; use the document cache.
 - The plugin sandbox often has no `structuredClone`; clone documents with JSON.
 - Do not call `mutateCollectionDocument` from inside a class-folder ensure that already runs inside a write (deadlock on the per-collection write queue). Folder create/rename runs in the same write as the note persist; item membership runs after.
-- Do not absorb Extra, or create a syllabus note, on a collection whose parent already has a syllabus. Reading-list import (Talis, Leganto, KeyLinks, eReserve Plus, BLUEcloud) creates a new top-level collection instead.
+- Do not absorb Extra, or create a syllabus note, on a class folder. Reading-list import (Talis, Leganto, KeyLinks, eReserve Plus, BLUEcloud) creates a new top-level collection instead.
 - When remapping item merges, never write the syllabus note on the merge/notifier call stack; queue like Extra absorb. Do not treat item `trash` as a merge unless `dc:replaces` names a live survivor.
 
 ## Localization

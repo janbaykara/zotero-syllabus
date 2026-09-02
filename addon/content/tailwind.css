@@ -144,6 +144,12 @@
   .z-50 {
     z-index: 50;
   }
+  .col-2 {
+    grid-column: 2;
+  }
+  .col-3 {
+    grid-column: 3;
+  }
   .container {
     width: 100%;
     @media (width >= 40rem) {

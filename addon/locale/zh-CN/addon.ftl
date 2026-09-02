@@ -104,6 +104,8 @@ view-tab-checklist = 清单
 view-tab-checklist-tooltip = 以清单视图显示
 view-tab-syllabus = 教学大纲
 view-tab-syllabus-tooltip = 以教学大纲视图显示
+view-tab-create-syllabus = 创建教学大纲
+view-tab-create-syllabus-tooltip = 将此分类转为教学大纲
 view-tab-table = 表格
 view-tab-table-tooltip = 以表格视图显示
 view-tab-gallery = 图库
@@ -274,6 +276,10 @@ gallery-options-title = 视图选项
 gallery-menu-view = 视图
 gallery-menu-sort = 排序
 gallery-menu-group = 分组方式
+gallery-in-this-collection = 本收藏中
+gallery-groups-nav-aria = 分组
+gallery-group-jump = 显示{ $name }
+gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = 第 { $page } 页，共 { $total } 页
 
 # Reading schedule

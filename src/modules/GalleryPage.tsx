@@ -8,12 +8,14 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
-import type { JSX } from "preact";
+import type { ComponentChildren, JSX, RefObject } from "preact";
 import { twMerge } from "tailwind-merge";
 import {
   ArrowDownAZ,
+  BookOpen,
   Calendar,
   Folder,
+  FolderOpen,
   GraduationCap,
   Image,
   LayoutGrid,
@@ -21,6 +23,7 @@ import {
   ListOrdered,
   MoreHorizontal,
   Shapes,
+  Tag,
   Tags,
 } from "lucide-preact";
 import { renderComponent } from "../utils/react";
@@ -52,6 +55,14 @@ import { SlimSyllabusItemCard, useItemIdentifierSelection } from "./browsePage";
 import { SyllabusItemCard } from "./SyllabusItemCard";
 import { useSyllabusClassGroups } from "./classGroups";
 import { useGalleryGroupBy, type GalleryGroupBy } from "./galleryGroupBy";
+import {
+  findActiveGalleryGroupId,
+  flattenSubcollectionNavGroups,
+  scrollChildIntoNearestHorizontal,
+  scrollElementBelowSticky,
+  type GalleryGroupIconSpec,
+  type GalleryNavGroup,
+} from "./galleryGroupNav";
 import {
   findGalleryNavIndex,
   getActiveGalleryIndex,
@@ -115,8 +126,12 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
   const { selectedIdentifiers, selectedItemIds, handleIdentifierClick } =
     useItemIdentifierSelection();
   const pageRef = useRef<HTMLDivElement>(null);
+  const stickyRef = useRef<HTMLDivElement>(null);
+  const pillsRef = useRef<HTMLElement>(null);
   const navStateRef = useRef({ selectedItemIds });
   navStateRef.current = { selectedItemIds };
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const suppressScrollSpyRef = useRef(false);
   const { tagGroups, untaggedItems } = useCollectionTagGroups(syllabusItems);
   const { typeGroups } = useCollectionItemTypeGroups(syllabusItems);
   const {
@@ -130,6 +145,167 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
   const emptyMessage = isFiltered
     ? getString("gallery-empty-filtered")
     : getString("gallery-empty");
+
+  const navGroups = useMemo((): GalleryNavGroup[] => {
+    if (groupBy === "type") {
+      return typeGroups.map(({ itemType, label }) => ({
+        id: `type-${itemType}`,
+        label,
+        icon: { kind: "item-type", itemType },
+      }));
+    }
+    if (groupBy === "tags") {
+      const groups = tagGroups.map(({ tag }, index) => ({
+        id: `tag-${index}`,
+        label: tag,
+        icon: { kind: "tag" as const },
+      }));
+      if (untaggedItems.length > 0) {
+        groups.push({
+          id: "untagged",
+          label: getString("gallery-untagged"),
+          icon: { kind: "untagged" },
+        });
+      }
+      return groups;
+    }
+    if (groupBy === "subcollections") {
+      if (!subcollectionRoot || !subtreeHasContent(subcollectionRoot)) {
+        return [];
+      }
+      return flattenSubcollectionNavGroups(
+        subcollectionRoot,
+        getString("gallery-in-this-collection"),
+      );
+    }
+    if (groupBy === "classes") {
+      const groups: GalleryNavGroup[] = [];
+      for (const group of classGroups) {
+        if (
+          group.itemAssignments.length === 0 &&
+          (isFiltered || group.classNumber == null)
+        ) {
+          continue;
+        }
+        const key = String(group.classNumber ?? "unnumbered");
+        groups.push({
+          id: `class-${key}`,
+          label: classNavLabel(
+            collectionId,
+            group.classNumber,
+            syllabusMetadata,
+          ),
+          icon: { kind: "class" },
+        });
+      }
+      if (furtherReadingItems.length > 0) {
+        groups.push({
+          id: "further-reading",
+          label: getString("further-reading-heading"),
+          icon: { kind: "further-reading" },
+        });
+      }
+      return groups;
+    }
+    return [];
+  }, [
+    classGroups,
+    collectionId,
+    furtherReadingItems.length,
+    groupBy,
+    isFiltered,
+    subcollectionRoot,
+    syllabusMetadata,
+    tagGroups,
+    typeGroups,
+    untaggedItems.length,
+  ]);
+
+  const updateActiveFromScroll = useCallback(() => {
+    if (suppressScrollSpyRef.current) {
+      return;
+    }
+    const container = pageRef.current;
+    const sticky = stickyRef.current;
+    if (!container) {
+      return;
+    }
+    const sections = [
+      ...container.querySelectorAll<HTMLElement>("[data-gallery-group]"),
+    ];
+    if (sections.length === 0) {
+      setActiveGroupId(null);
+      return;
+    }
+    const activationLine = sticky
+      ? sticky.getBoundingClientRect().bottom
+      : container.getBoundingClientRect().top;
+    const nextId = findActiveGalleryGroupId(
+      sections.map((section) => ({
+        id: section.dataset.galleryGroup || "",
+        top: section.getBoundingClientRect().top,
+      })),
+      activationLine,
+    );
+    setActiveGroupId(nextId);
+  }, []);
+
+  useEffect(() => {
+    const container = pageRef.current;
+    if (!container || navGroups.length === 0) {
+      return;
+    }
+    const onScroll = () => updateActiveFromScroll();
+    const onScrollEnd = () => {
+      suppressScrollSpyRef.current = false;
+      updateActiveFromScroll();
+    };
+    container.addEventListener("scroll", onScroll, { passive: true });
+    container.addEventListener("scrollend", onScrollEnd);
+    updateActiveFromScroll();
+    return () => {
+      container.removeEventListener("scroll", onScroll);
+      container.removeEventListener("scrollend", onScrollEnd);
+    };
+  }, [navGroups, updateActiveFromScroll]);
+
+  useLayoutEffect(() => {
+    const strip = pillsRef.current;
+    if (!strip || !activeGroupId) {
+      return;
+    }
+    const pill = strip.querySelector<HTMLElement>(
+      `[data-gallery-group-pill="${activeGroupId}"]`,
+    );
+    if (pill) {
+      scrollChildIntoNearestHorizontal(strip, pill);
+    }
+  }, [activeGroupId]);
+
+  const handleSelectGroup = useCallback(
+    (id: string) => {
+      const container = pageRef.current;
+      const sticky = stickyRef.current;
+      if (!container) {
+        return;
+      }
+      const section = container.querySelector<HTMLElement>(
+        `[data-gallery-group="${id}"]`,
+      );
+      if (!section) {
+        return;
+      }
+      suppressScrollSpyRef.current = true;
+      setActiveGroupId(id);
+      scrollElementBelowSticky(container, section, sticky);
+      const win = Zotero.getMainWindow();
+      win.setTimeout(() => {
+        suppressScrollSpyRef.current = false;
+        updateActiveFromScroll();
+      }, 650);
+    },
+    [updateActiveFromScroll],
+  );
 
   const selectGalleryItem = useCallback((item: Zotero.Item) => {
     try {
@@ -390,22 +566,32 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
       )}
       dir={getUiDir()}
     >
-      <div
-        className={twMerge(
-          "px-6 pb-10",
-          isZotero8OrLater() ? "md:pt-8 pt-6" : "pt-8",
-        )}
-      >
-        <GalleryPageHeader
-          title={title || getString("untitled")}
-          groupBy={groupBy}
-          onGroupBy={setGroupBy}
-          showClasses={isSyllabus}
-          sortBy={sortBy}
-          onSortBy={setSortBy}
-          layout={layout}
-          onLayout={setLayout}
-        />
+      <div className="pb-10">
+        <div
+          ref={stickyRef}
+          className={twMerge(
+            "syllabus-gallery-sticky sticky top-0 z-40 bg-background",
+            isZotero8OrLater() ? "md:pt-8 pt-6" : "pt-8",
+          )}
+        >
+          <div className="px-6">
+            <GalleryPageHeader
+              title={title || getString("untitled")}
+              groupBy={groupBy}
+              onGroupBy={setGroupBy}
+              showClasses={isSyllabus}
+              sortBy={sortBy}
+              onSortBy={setSortBy}
+              layout={layout}
+              onLayout={setLayout}
+              navGroups={navGroups}
+              activeGroupId={activeGroupId}
+              onSelectGroup={handleSelectGroup}
+              pillsRef={pillsRef}
+            />
+          </div>
+        </div>
+        <div className="px-6 pt-4">
 
         {groupBy === "none" &&
           (syllabusItems.length === 0 ? (
@@ -422,8 +608,16 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
             <p className="text-secondary text-lg">{emptyMessage}</p>
           ) : (
             typeGroups.map(({ itemType, label, items }) => (
-              <section key={itemType} className="syllabus-gallery-section">
-                <h2 className="syllabus-gallery-section-title">{label}</h2>
+              <section
+                key={itemType}
+                className="syllabus-gallery-section"
+                data-gallery-group={`type-${itemType}`}
+              >
+                <GalleryGroupHeading
+                  icon={{ kind: "item-type", itemType }}
+                >
+                  {label}
+                </GalleryGroupHeading>
                 {renderItems(items, `type-${itemType}`)}
               </section>
             ))
@@ -434,17 +628,26 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
             <p className="text-secondary text-lg">{emptyMessage}</p>
           ) : (
             <>
-              {tagGroups.map(({ tag, items }) => (
-                <section key={tag} className="syllabus-gallery-section">
-                  <h2 className="syllabus-gallery-section-title">{tag}</h2>
+              {tagGroups.map(({ tag, items }, index) => (
+                <section
+                  key={tag}
+                  className="syllabus-gallery-section"
+                  data-gallery-group={`tag-${index}`}
+                >
+                  <GalleryGroupHeading icon={{ kind: "tag" }}>
+                    {tag}
+                  </GalleryGroupHeading>
                   {renderItems(items, `tag-${tag}`)}
                 </section>
               ))}
               {untaggedItems.length > 0 && (
-                <section className="syllabus-gallery-section">
-                  <h2 className="syllabus-gallery-section-title">
+                <section
+                  className="syllabus-gallery-section"
+                  data-gallery-group="untagged"
+                >
+                  <GalleryGroupHeading icon={{ kind: "untagged" }}>
                     {getString("gallery-untagged")}
-                  </h2>
+                  </GalleryGroupHeading>
                   <p className="syllabus-gallery-class-description">
                     {getString("gallery-untagged-desc")}
                   </p>
@@ -486,7 +689,11 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
                 }
                 const key = String(group.classNumber ?? "unnumbered");
                 return (
-                  <section key={key} className="syllabus-gallery-section">
+                  <section
+                    key={key}
+                    className="syllabus-gallery-section"
+                    data-gallery-group={`class-${key}`}
+                  >
                     <GalleryClassHeading
                       collectionId={collectionId}
                       classNumber={group.classNumber}
@@ -501,10 +708,13 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
                 );
               })}
               {furtherReadingItems.length > 0 && (
-                <section className="syllabus-gallery-section">
-                  <h2 className="syllabus-gallery-section-title">
+                <section
+                  className="syllabus-gallery-section"
+                  data-gallery-group="further-reading"
+                >
+                  <GalleryGroupHeading icon={{ kind: "further-reading" }}>
                     {getString("further-reading-heading")}
-                  </h2>
+                  </GalleryGroupHeading>
                   <p className="syllabus-gallery-class-description">
                     {getString("further-reading-empty-desc")}
                   </p>
@@ -513,6 +723,7 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
               )}
             </>
           ))}
+        </div>
       </div>
     </div>
   );
@@ -523,6 +734,83 @@ function subtreeHasContent(node: SubcollectionNode): boolean {
     return true;
   }
   return node.children.some(subtreeHasContent);
+}
+
+function classNavLabel(
+  collectionId: number,
+  classNumber: number | null,
+  syllabusMetadata: SettingsSyllabusMetadata,
+): string {
+  if (classNumber == null) {
+    return getString("gallery-unnumbered");
+  }
+  const title = (classByNumber(syllabusMetadata, classNumber)?.title || "").trim();
+  if (title) {
+    return title;
+  }
+  const { singularCapitalized } =
+    SyllabusManager.getNomenclatureFormatted(collectionId);
+  return `${singularCapitalized} ${classNumber}`;
+}
+
+function GalleryGroupIcon({ spec }: { spec: GalleryGroupIconSpec }) {
+  if (spec.kind === "item-type") {
+    return (
+      <span
+        className="icon icon-css icon-item-type syllabus-gallery-group-icon"
+        data-item-type={spec.itemType}
+        aria-hidden="true"
+      />
+    );
+  }
+  if (spec.kind === "collection") {
+    return (
+      <span
+        className="icon icon-css icon-collection syllabus-gallery-group-icon"
+        aria-hidden="true"
+      />
+    );
+  }
+  const Icon =
+    spec.kind === "tag"
+      ? Tags
+      : spec.kind === "untagged"
+        ? Tag
+        : spec.kind === "collection-root"
+          ? FolderOpen
+          : spec.kind === "class"
+            ? GraduationCap
+            : BookOpen;
+  return (
+    <Icon
+      className="syllabus-gallery-group-icon"
+      strokeWidth={2}
+      aria-hidden="true"
+    />
+  );
+}
+
+function GalleryGroupHeading({
+  icon,
+  children,
+  muted = false,
+}: {
+  icon: GalleryGroupIconSpec;
+  children: ComponentChildren;
+  muted?: boolean;
+}) {
+  return (
+    <h2
+      className={
+        muted
+          ? "syllabus-gallery-section-title-muted"
+          : "syllabus-gallery-section-title"
+      }
+    >
+      <GalleryGroupIcon spec={icon} />
+      <span>{children}</span>
+    </h2>
+  );
 }
 
 function filterSubcollectionNode(
@@ -575,16 +863,22 @@ function GallerySubcollectionSection({
       )}
       data-collection-id={node.collectionId}
       data-depth={depth}
+      data-gallery-group={isRoot ? undefined : `col-${node.collectionId}`}
     >
       {!isRoot && (
-        <h2 className="syllabus-gallery-section-title">{node.name}</h2>
+        <GalleryGroupHeading icon={{ kind: "collection" }}>
+          {node.name}
+        </GalleryGroupHeading>
       )}
 
       {isRoot && items.length > 0 && (
-        <section className="syllabus-gallery-section">
-          <h2 className="syllabus-gallery-section-title-muted">
-            In this collection
-          </h2>
+        <section
+          className="syllabus-gallery-section"
+          data-gallery-group={`col-root-${node.collectionId}`}
+        >
+          <GalleryGroupHeading icon={{ kind: "collection-root" }} muted>
+            {getString("gallery-in-this-collection")}
+          </GalleryGroupHeading>
           {renderItems(items, `root-${node.collectionId}`)}
         </section>
       )}
@@ -618,9 +912,9 @@ function GalleryClassHeading({
   if (classNumber == null) {
     return (
       <header className="syllabus-gallery-class-header">
-        <h2 className="syllabus-gallery-section-title">
+        <GalleryGroupHeading icon={{ kind: "class" }}>
           {getString("gallery-unnumbered")}
-        </h2>
+        </GalleryGroupHeading>
         <p className="syllabus-gallery-class-description">
           {getString("gallery-unnumbered-desc")}
         </p>
@@ -646,7 +940,10 @@ function GalleryClassHeading({
           </div>
         ) : (
           <h2 className="syllabus-gallery-class-label">
-            {singularCapitalized} {classNumber}
+            <GalleryGroupIcon spec={{ kind: "class" }} />
+            <span>
+              {singularCapitalized} {classNumber}
+            </span>
           </h2>
         )}
         {classIsDone ? (
@@ -661,7 +958,9 @@ function GalleryClassHeading({
         ) : null}
       </div>
       {title ? (
-        <h2 className="syllabus-gallery-section-title">{title}</h2>
+        <GalleryGroupHeading icon={{ kind: "class" }}>
+          {title}
+        </GalleryGroupHeading>
       ) : null}
       {description ? (
         <div className="syllabus-gallery-class-description">
@@ -754,6 +1053,13 @@ type GallerySegmentOption<T extends string> = {
   Icon: typeof LayoutGrid;
 };
 
+function currentGalleryOption<T extends string>(
+  options: GallerySegmentOption<T>[],
+  value: T,
+): GallerySegmentOption<T> {
+  return options.find((option) => option.mode === value) ?? options[0];
+}
+
 function GalleryPageHeader({
   title,
   groupBy,
@@ -763,6 +1069,10 @@ function GalleryPageHeader({
   onSortBy,
   layout,
   onLayout,
+  navGroups,
+  activeGroupId,
+  onSelectGroup,
+  pillsRef,
 }: {
   title: string;
   groupBy: GalleryGroupBy;
@@ -772,6 +1082,10 @@ function GalleryPageHeader({
   onSortBy: (mode: GallerySortBy) => void;
   layout: GalleryLayout;
   onLayout: (mode: GalleryLayout) => void;
+  navGroups: GalleryNavGroup[];
+  activeGroupId: string | null;
+  onSelectGroup: (id: string) => void;
+  pillsRef: RefObject<HTMLElement>;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -803,54 +1117,113 @@ function GalleryPageHeader({
     };
   }, [open]);
 
+  const layoutOptions = galleryLayoutOptions();
+  const sortOptions = gallerySortOptions();
   const allGroupBy = galleryGroupByOptions();
   const groupByOptions = showClasses
     ? allGroupBy
     : allGroupBy.filter((option) => option.mode !== "classes");
+  const layoutOption = currentGalleryOption(layoutOptions, layout);
+  const sortOption = currentGalleryOption(sortOptions, sortBy);
+  const groupOption = currentGalleryOption(groupByOptions, groupBy);
+  const LayoutIcon = layoutOption.Icon;
+  const SortIcon = sortOption.Icon;
+  const GroupIcon = groupOption.Icon;
+  const prefsSummary = getString("gallery-prefs-summary", {
+    args: {
+      layout: layoutOption.label,
+      sort: sortOption.label,
+      group: groupOption.label,
+    },
+  });
 
   return (
     <div className="syllabus-gallery-header">
-      <h1 className="syllabus-gallery-title">{title}</h1>
-      <div className="syllabus-gallery-menu" ref={rootRef}>
-        <button
-          type="button"
-          className="syllabus-gallery-menu-btn"
-          aria-label={getString("gallery-options-aria")}
-          aria-haspopup="menu"
-          aria-expanded={open}
-          title={getString("gallery-options-title")}
-          onClick={() => setOpen((value) => !value)}
-        >
-          <MoreHorizontal size={18} strokeWidth={2} aria-hidden="true" />
-        </button>
-        {open ? (
-          <div className="syllabus-gallery-popover" role="menu">
-            <div className="syllabus-gallery-toolbar">
-              <GallerySegmentedControl
-                label={getString("gallery-menu-view")}
-                ariaLabel={getString("gallery-menu-view")}
-                value={layout}
-                onChange={onLayout}
-                options={galleryLayoutOptions()}
-              />
-              <GallerySegmentedControl
-                label={getString("gallery-menu-sort")}
-                ariaLabel={getString("gallery-menu-sort")}
-                value={sortBy}
-                onChange={onSortBy}
-                options={gallerySortOptions()}
-              />
-              <GallerySegmentedControl
-                label={getString("gallery-menu-group")}
-                ariaLabel={getString("gallery-menu-group")}
-                value={groupBy}
-                onChange={onGroupBy}
-                options={groupByOptions}
-              />
+      <div className="syllabus-gallery-header-bar">
+        <h1 className="syllabus-gallery-title" title={title}>
+          {title}
+        </h1>
+        <div className="syllabus-gallery-menu" ref={rootRef}>
+          <button
+            type="button"
+            className="syllabus-gallery-menu-btn"
+            aria-label={getString("gallery-options-aria")}
+            aria-haspopup="menu"
+            aria-expanded={open}
+            title={prefsSummary}
+            onClick={() => setOpen((value) => !value)}
+          >
+            <span className="syllabus-gallery-prefs" dir="ltr" aria-hidden="true">
+              <span className="syllabus-gallery-prefs-paren">(</span>
+              <LayoutIcon size={14} strokeWidth={2} />
+              <span className="syllabus-gallery-prefs-sep">/</span>
+              <SortIcon size={14} strokeWidth={2} />
+              <span className="syllabus-gallery-prefs-sep">/</span>
+              <GroupIcon size={14} strokeWidth={2} />
+              <span className="syllabus-gallery-prefs-paren">)</span>
+            </span>
+            <MoreHorizontal size={18} strokeWidth={2} aria-hidden="true" />
+          </button>
+          {open ? (
+            <div className="syllabus-gallery-popover" role="menu">
+              <div className="syllabus-gallery-toolbar">
+                <GallerySegmentedControl
+                  label={getString("gallery-menu-view")}
+                  ariaLabel={getString("gallery-menu-view")}
+                  value={layout}
+                  onChange={onLayout}
+                  options={layoutOptions}
+                />
+                <GallerySegmentedControl
+                  label={getString("gallery-menu-sort")}
+                  ariaLabel={getString("gallery-menu-sort")}
+                  value={sortBy}
+                  onChange={onSortBy}
+                  options={sortOptions}
+                />
+                <GallerySegmentedControl
+                  label={getString("gallery-menu-group")}
+                  ariaLabel={getString("gallery-menu-group")}
+                  value={groupBy}
+                  onChange={onGroupBy}
+                  options={groupByOptions}
+                />
+              </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
+      {navGroups.length > 0 ? (
+        <nav
+          className="syllabus-gallery-groups-nav"
+          ref={pillsRef}
+          aria-label={getString("gallery-groups-nav-aria")}
+        >
+          <div className="syllabus-gallery-groups-nav-inner">
+            {navGroups.map((group) => {
+              const isActive = group.id === activeGroupId;
+              return (
+                <button
+                  key={group.id}
+                  type="button"
+                  className="syllabus-gallery-group-pill"
+                  data-gallery-group-pill={group.id}
+                  aria-current={isActive ? "true" : undefined}
+                  title={getString("gallery-group-jump", {
+                    args: { name: group.label },
+                  })}
+                  onClick={() => onSelectGroup(group.id)}
+                >
+                  <GalleryGroupIcon spec={group.icon} />
+                  <span className="syllabus-gallery-group-pill-label">
+                    {group.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      ) : null}
     </div>
   );
 }

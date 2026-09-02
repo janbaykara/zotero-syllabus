@@ -106,6 +106,8 @@ view-tab-checklist = قائمة التحقق
 view-tab-checklist-tooltip = العرض كقائمة تحقق
 view-tab-syllabus = المنهاج
 view-tab-syllabus-tooltip = العرض كمنهاج
+view-tab-create-syllabus = إنشاء المنهاج
+view-tab-create-syllabus-tooltip = تحويل هذه المجموعة إلى منهاج دراسي
 view-tab-table = جدول
 view-tab-table-tooltip = العرض كجدول
 view-tab-gallery = معرض
@@ -276,6 +278,10 @@ gallery-options-title = خيارات العرض
 gallery-menu-view = العرض
 gallery-menu-sort = الفرز
 gallery-menu-group = التجميع حسب
+gallery-in-this-collection = في هذه المجموعة
+gallery-groups-nav-aria = المجموعات
+gallery-group-jump = عرض { $name }
+gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = الصفحة { $page } من { $total }
 
 # Reading schedule

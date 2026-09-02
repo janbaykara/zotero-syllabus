@@ -106,6 +106,8 @@ view-tab-checklist = Daftar periksa
 view-tab-checklist-tooltip = Tampilkan sebagai daftar periksa
 view-tab-syllabus = Silabus
 view-tab-syllabus-tooltip = Tampilkan sebagai silabus
+view-tab-create-syllabus = Buat silabus
+view-tab-create-syllabus-tooltip = Jadikan koleksi ini sebagai silabus
 view-tab-table = Tabel
 view-tab-table-tooltip = Tampilkan sebagai tabel
 view-tab-gallery = Galeri
@@ -276,6 +278,10 @@ gallery-options-title = Opsi tampilan
 gallery-menu-view = Tampilan
 gallery-menu-sort = Urutkan
 gallery-menu-group = Kelompokkan menurut
+gallery-in-this-collection = Di koleksi ini
+gallery-groups-nav-aria = Grup
+gallery-group-jump = Tampilkan { $name }
+gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = Halaman { $page } dari { $total }
 
 # Reading schedule

@@ -106,6 +106,8 @@ view-tab-checklist = Danh sách kiểm
 view-tab-checklist-tooltip = Xem dạng danh sách kiểm
 view-tab-syllabus = Đề cương
 view-tab-syllabus-tooltip = Xem dạng đề cương
+view-tab-create-syllabus = Tạo đề cương
+view-tab-create-syllabus-tooltip = Chuyển bộ sưu tập này thành đề cương
 view-tab-table = Bảng
 view-tab-table-tooltip = Xem dạng bảng
 view-tab-gallery = Thư viện ảnh
@@ -276,6 +278,10 @@ gallery-options-title = Tùy chọn xem
 gallery-menu-view = Xem
 gallery-menu-sort = Sắp xếp
 gallery-menu-group = Nhóm theo
+gallery-in-this-collection = Trong bộ sưu tập này
+gallery-groups-nav-aria = Nhóm
+gallery-group-jump = Hiện { $name }
+gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = Trang { $page } / { $total }
 
 # Reading schedule

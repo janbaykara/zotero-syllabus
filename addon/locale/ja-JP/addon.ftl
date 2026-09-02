@@ -106,6 +106,8 @@ view-tab-checklist = チェックリスト
 view-tab-checklist-tooltip = チェックリストで表示
 view-tab-syllabus = シラバス
 view-tab-syllabus-tooltip = シラバスで表示
+view-tab-create-syllabus = シラバスを作成
+view-tab-create-syllabus-tooltip = このコレクションをシラバスに変換
 view-tab-table = 表
 view-tab-table-tooltip = 表で表示
 view-tab-gallery = ギャラリー
@@ -276,6 +278,10 @@ gallery-options-title = 表示オプション
 gallery-menu-view = 表示
 gallery-menu-sort = 並べ替え
 gallery-menu-group = グループ化
+gallery-in-this-collection = このコレクション内
+gallery-groups-nav-aria = グループ
+gallery-group-jump = { $name } を表示
+gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = { $page } / { $total } ページ
 
 # Reading schedule

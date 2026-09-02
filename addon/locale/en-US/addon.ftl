@@ -104,6 +104,8 @@ view-tab-checklist = Checklist
 view-tab-checklist-tooltip = View as Checklist
 view-tab-syllabus = Syllabus
 view-tab-syllabus-tooltip = View as Syllabus
+view-tab-create-syllabus = Create Syllabus
+view-tab-create-syllabus-tooltip = Turn this collection into a syllabus
 view-tab-table = Table
 view-tab-table-tooltip = View as Table
 view-tab-gallery = Gallery
@@ -274,6 +276,10 @@ gallery-options-title = View options
 gallery-menu-view = View
 gallery-menu-sort = Sort
 gallery-menu-group = Group by
+gallery-in-this-collection = In this collection
+gallery-groups-nav-aria = Groups
+gallery-group-jump = Show { $name }
+gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = Page { $page } of { $total }
 
 # Reading schedule

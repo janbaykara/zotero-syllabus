@@ -106,6 +106,8 @@ view-tab-checklist = 清單
 view-tab-checklist-tooltip = 以清單檢視顯示
 view-tab-syllabus = 教學大綱
 view-tab-syllabus-tooltip = 以教學大綱檢視顯示
+view-tab-create-syllabus = 建立教學大綱
+view-tab-create-syllabus-tooltip = 將此分類轉為教學大綱
 view-tab-table = 表格
 view-tab-table-tooltip = 以表格檢視顯示
 view-tab-gallery = 圖庫
@@ -276,6 +278,10 @@ gallery-options-title = 檢視選項
 gallery-menu-view = 檢視
 gallery-menu-sort = 排序
 gallery-menu-group = 分組方式
+gallery-in-this-collection = 本收藏集中
+gallery-groups-nav-aria = 分組
+gallery-group-jump = 顯示{ $name }
+gallery-prefs-summary = { $layout } / { $sort } / { $group }
 gallery-page-of = 第 { $page } 頁，共 { $total } 頁
 
 # Reading schedule

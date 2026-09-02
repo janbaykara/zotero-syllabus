@@ -8,9 +8,9 @@ import {
   getHydratedItemAssignments,
   getSyllabusNoteId,
   isSyllabusNoteFile,
-  isUnmanagedSyllabusChild,
   mutateCollectionDocument,
   parseSyllabusNote,
+  resolveSyllabusRoot,
   whenSyllabusNotesReady,
 } from "../src/modules/syllabusNote";
 import { generateClassId } from "../src/utils/schemas";
@@ -253,7 +253,8 @@ describe("syllabus smoke", function () {
     assert.equal(folder.parentID, collection.id);
     assert.equal(folder.name, expectedName);
     assert.isTrue(isManagedClassFolderCollection(folder.id));
-    assert.isFalse(isUnmanagedSyllabusChild(folder));
+    assert.equal(resolveSyllabusRoot(folder).id, collection.id);
+    assert.equal(getSyllabusNoteId(folder), getSyllabusNoteId(collection));
 
     const folderItemIds = childItemIds(folder);
     assert.include(folderItemIds, book.id);
@@ -407,7 +408,7 @@ describe("syllabus smoke", function () {
     assert.equal(assignments[0]?.classInstruction, "Read before class");
   });
 
-  it("treats unmanaged descendants of a syllabus as not their own syllabus", async function () {
+  it("lets nested collections keep independent syllabi", async function () {
     collection = await createCollection("Smoke Syllabus Parent");
     await mutateCollectionDocument(
       collection,
@@ -431,11 +432,40 @@ describe("syllabus smoke", function () {
     const sibling = await createCollection("Smoke Syllabus Sibling");
     try {
       assert.isTrue(collectionHasSyllabusNote(collection));
-      assert.isTrue(isUnmanagedSyllabusChild(child));
-      assert.isTrue(isUnmanagedSyllabusChild(grandchild));
-      assert.isTrue(isUnmanagedSyllabusChild(greatGrandchild));
-      assert.isFalse(isUnmanagedSyllabusChild(collection));
-      assert.isFalse(isUnmanagedSyllabusChild(sibling));
+      assert.isFalse(collectionHasSyllabusNote(child));
+      assert.isFalse(collectionHasSyllabusNote(grandchild));
+      assert.isFalse(collectionHasSyllabusNote(greatGrandchild));
+      assert.isFalse(collectionHasSyllabusNote(sibling));
+      assert.equal(resolveSyllabusRoot(child).id, child.id);
+      assert.equal(resolveSyllabusRoot(grandchild).id, grandchild.id);
+      assert.equal(resolveSyllabusRoot(greatGrandchild).id, greatGrandchild.id);
+      assert.notEqual(getCollectionDocument(child).courseCode, "EDU303");
+
+      await mutateCollectionDocument(
+        child,
+        (document) => ({ ...document, courseCode: "CHILD101" }),
+        { createNote: "always" },
+      );
+      await mutateCollectionDocument(
+        greatGrandchild,
+        (document) => ({ ...document, courseCode: "DEEP404" }),
+        { createNote: "always" },
+      );
+
+      assert.isTrue(collectionHasSyllabusNote(child));
+      assert.isTrue(collectionHasSyllabusNote(greatGrandchild));
+      assert.isFalse(collectionHasSyllabusNote(grandchild));
+      assert.equal(getCollectionDocument(collection).courseCode, "EDU303");
+      assert.equal(getCollectionDocument(child).courseCode, "CHILD101");
+      assert.equal(
+        getCollectionDocument(greatGrandchild).courseCode,
+        "DEEP404",
+      );
+      assert.notEqual(getSyllabusNoteId(collection), getSyllabusNoteId(child));
+      assert.notEqual(
+        getSyllabusNoteId(child),
+        getSyllabusNoteId(greatGrandchild),
+      );
     } finally {
       try {
         await sibling.eraseTx();
