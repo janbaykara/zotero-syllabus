@@ -1118,7 +1118,7 @@
     "Hiragino Mincho ProN", serif;
   --syllabus-magazine-rule: color-mix(
     in srgb,
-    var(--fill-primary, #111) 22%,
+    var(--fill-primary, #111) 16%,
     transparent
   );
   font-synthesis: none;
@@ -1174,14 +1174,10 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   grid-auto-flow: dense;
-  grid-auto-rows: auto;
-  align-items: start;
-  column-gap: 1.35rem;
-  row-gap: 1.6rem;
-}
-
-.syllabus-magazine-grid[data-magazine-template="strip"] {
-  grid-auto-rows: auto;
+  grid-auto-rows: minmax(min-content, auto);
+  align-items: stretch;
+  column-gap: 0;
+  row-gap: 0;
 }
 
 .syllabus-magazine-grid[data-magazine-template="strip"]
@@ -1193,8 +1189,6 @@
 .syllabus-magazine-grid[data-magazine-template="essay"]
   .syllabus-magazine-tile[data-role="compact"] {
   grid-column: span 1;
-  border-bottom: 1px solid var(--syllabus-magazine-rule);
-  padding-bottom: 1rem;
 }
 
 .syllabus-magazine-grid[data-magazine-template="essay"]
@@ -1214,9 +1208,16 @@
   contain: layout style;
 }
 
-.syllabus-magazine-tile[data-role="hero"],
-.syllabus-magazine-tile[data-role="tall"] {
-  height: 100%;
+.syllabus-magazine-grid > .syllabus-magazine-tile {
+  align-self: stretch;
+  height: auto;
+  min-height: auto;
+  overflow: hidden;
+  background-color: var(--material-background, Canvas);
+  padding-block: 1.25rem 1.5rem;
+  padding-inline: 1.15rem 1.25rem;
+  border-bottom: 1px solid var(--syllabus-magazine-rule);
+  border-inline-end: 1px solid var(--syllabus-magazine-rule);
 }
 
 .syllabus-magazine-tile[data-role="hero"] {
@@ -1306,7 +1307,7 @@
 
 .syllabus-magazine-title {
   font-family: var(--syllabus-magazine-serif);
-  font-size: 1.15rem;
+  font-size: 1.28rem;
   font-weight: 700;
   line-height: 1.18;
   letter-spacing: -0.02em;
@@ -1318,19 +1319,19 @@
 }
 
 .syllabus-magazine-tile[data-role="hero"] .syllabus-magazine-title {
-  font-size: 1.85rem;
+  font-size: 2rem;
   -webkit-line-clamp: 4;
 }
 
 .syllabus-magazine-tile[data-role="compact"] .syllabus-magazine-title {
-  font-size: 1.05rem;
+  font-size: 1.22rem;
   -webkit-line-clamp: 3;
 }
 
 .syllabus-magazine-byline {
   margin-top: 0.28rem;
   font-family: var(--syllabus-magazine-serif);
-  font-size: 1.15rem;
+  font-size: 1.22rem;
   font-style: italic;
   font-weight: 500;
   line-height: 1.35;

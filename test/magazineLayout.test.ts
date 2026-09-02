@@ -3,7 +3,9 @@ import { coerceGalleryLayout } from "../src/modules/galleryLayout";
 import {
   assignMagazineRoles,
   MAGAZINE_HERO_ABSTRACT_MIN,
+  MAGAZINE_MAX_CONSECUTIVE_COMPACT,
   MAGAZINE_MAX_CONSECUTIVE_HERO,
+  MAGAZINE_MAX_CONSECUTIVE_SAME,
   MAGAZINE_WIDE_ABSTRACT_MIN,
   type MagazineItemFeatures,
   type MagazineTileRole,
@@ -51,12 +53,27 @@ describe("magazineLayout", function () {
     const roles = assignMagazineRoles([
       item(1, "journalArticle", 0),
       item(2, "book", 40),
-      item(3, "thesis", 0),
-      item(4, "report", 80),
+      item(3, "webpage", 80),
+      item(4, "thesis", 0),
+      item(5, "report", 80),
     ]);
     assert.equal(roles[1], "tall");
-    assert.equal(roles[2], "tall");
     assert.equal(roles[3], "tall");
+    assert.equal(roles[4], "tall");
+  });
+
+  it("breaks a run of the same spanning role so book-heavy desks stay mixed", function () {
+    const roles = assignMagazineRoles([
+      item(1, "book", 0),
+      item(2, "book", 0),
+      item(3, "book", 0),
+      item(4, "book", 0),
+    ]);
+    assert.equal(roles[0], "hero");
+    assert.equal(roles[1], "tall");
+    assert.equal(roles[2], "tall");
+    assert.notEqual(roles[3], "tall");
+    assert.isAtMost(maxRun(roles, "tall"), MAGAZINE_MAX_CONSECUTIVE_SAME);
   });
 
   it("prefers hero or wide for long abstracts", function () {
@@ -87,7 +104,7 @@ describe("magazineLayout", function () {
       item(index + 10, "journalArticle", 0),
     );
     const roles = assignMagazineRoles(items);
-    assert.isAtMost(maxRun(roles, "compact"), 4);
+    assert.isAtMost(maxRun(roles, "compact"), MAGAZINE_MAX_CONSECUTIVE_COMPACT);
     const promoted = roles.filter(
       (role) => role === "tall" || role === "wide" || role === "hero",
     );
@@ -104,22 +121,22 @@ describe("magazineLayout", function () {
     assert.equal(roles[2], "wide");
   });
 
-  it("uses essay and strip templates for grouped desks", function () {
-    const items = Array.from({ length: 5 }, (_, index) =>
+  it("uses essay and strip as opening flavors, not all-compact grids", function () {
+    const items = Array.from({ length: 12 }, (_, index) =>
       item(index + 1, "journalArticle", MAGAZINE_WIDE_ABSTRACT_MIN),
     );
-    assert.deepEqual(
-      assignMagazineRoles(items, { template: "strip" }),
-      items.map(() => "compact"),
-    );
+    const strip = assignMagazineRoles(items, { template: "strip" });
     const essay = assignMagazineRoles(items, { template: "essay" });
     assert.equal(essay[0], "wide");
-    assert.deepEqual(essay.slice(1), [
-      "compact",
-      "compact",
-      "compact",
-      "compact",
-    ]);
+    assert.notInclude(strip, "hero");
+    for (const roles of [strip, essay]) {
+      const spanning = roles.filter((role) => role !== "compact");
+      assert.isAtLeast(spanning.length, 4);
+      assert.isAtMost(maxRun(roles, "compact"), MAGAZINE_MAX_CONSECUTIVE_COMPACT);
+      assert.isAtMost(maxRun(roles, "tall"), MAGAZINE_MAX_CONSECUTIVE_SAME);
+      assert.isAtMost(maxRun(roles, "wide"), MAGAZINE_MAX_CONSECUTIVE_SAME);
+      assert.isAbove(new Set(roles).size, 1);
+    }
   });
 
   it("strips HTML and Abstract boilerplate from abstract notes", function () {
