@@ -64,9 +64,9 @@ userGuide-start-close = تذكيري لاحقًا
 userGuide-collection-title = ابدأ من مجموعة
 userGuide-collection-desc =
     المناهج مرتبطة بالمجموعات. سنفتح مجموعة تجريبية باسم «جولة في المنهاج» تتضمن بعض القراءات النموذجية.
-userGuide-syllabusButton-title = فتح عرض المنهاج
+userGuide-syllabusButton-title = تحويل إلى منهاج
 userGuide-syllabusButton-desc =
-    انقر «المنهاج» في شريط أدوات العناصر لاستبدال القائمة بمخطط المقرر. ستنتقل الجولة إلى هناك نيابة عنك.
+    انقر «تحويل إلى منهاج» في شريط أدوات العناصر لتحويل هذه المجموعة إلى مخطط المقرر. ستنتقل الجولة إلى هناك نيابة عنك.
 userGuide-addClass-title = إضافة محاضرة
 userGuide-addClass-desc =
     المحاضرات (أو الأسابيع / الجلسات — يمكنك إعادة تسميتها لاحقًا) هي أقسام المنهاج. أضف واحدة للبدء.
@@ -106,7 +106,7 @@ view-tab-checklist = قائمة التحقق
 view-tab-checklist-tooltip = العرض كقائمة تحقق
 view-tab-syllabus = المنهاج
 view-tab-syllabus-tooltip = العرض كمنهاج
-view-tab-create-syllabus = إنشاء المنهاج
+view-tab-create-syllabus = تحويل إلى منهاج
 view-tab-create-syllabus-tooltip = تحويل هذه المجموعة إلى منهاج دراسي
 view-tab-table = جدول
 view-tab-table-tooltip = العرض كجدول

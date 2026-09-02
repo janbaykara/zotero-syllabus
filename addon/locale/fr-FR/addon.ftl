@@ -64,9 +64,9 @@ userGuide-start-close = Me le rappeler plus tard
 userGuide-collection-title = Partir d’une collection
 userGuide-collection-desc =
     Les syllabus sont liés aux collections. Nous ouvrirons une collection d’essai « Syllabus Tour » avec quelques lectures d’exemple.
-userGuide-syllabusButton-title = Ouvrir la vue Syllabus
+userGuide-syllabusButton-title = Transformer en syllabus
 userGuide-syllabusButton-desc =
-    Cliquez sur Syllabus dans la barre d’outils des documents pour remplacer la liste par le plan du cours. La visite basculera automatiquement.
+    Cliquez sur Transformer en syllabus dans la barre d’outils des documents pour transformer cette collection en plan du cours. La visite basculera automatiquement.
 userGuide-addClass-title = Ajouter une séance
 userGuide-addClass-desc =
     Les séances (ou semaines / sessions — vous pourrez les renommer plus tard) sont les sections de votre syllabus. Ajoutez-en une pour commencer.
@@ -106,7 +106,7 @@ view-tab-checklist = Liste de contrôle
 view-tab-checklist-tooltip = Afficher comme liste de contrôle
 view-tab-syllabus = Syllabus
 view-tab-syllabus-tooltip = Afficher comme syllabus
-view-tab-create-syllabus = Créer un syllabus
+view-tab-create-syllabus = Transformer en syllabus
 view-tab-create-syllabus-tooltip = Transformer cette collection en syllabus
 view-tab-table = Tableau
 view-tab-table-tooltip = Afficher comme tableau

@@ -64,9 +64,9 @@ userGuide-start-close = 以後再說
 userGuide-collection-title = 從分類開始
 userGuide-collection-desc =
     教學大綱建立在分類上。我們將開啟一個「Syllabus Tour」練習分類，並放入幾篇範例閱讀。
-userGuide-syllabusButton-title = 開啟教學大綱檢視
+userGuide-syllabusButton-title = 轉為教學大綱
 userGuide-syllabusButton-desc =
-    在條目工具列點選「教學大綱」，用課程大綱取代清單檢視。本指南會自動切換過去。
+    在條目工具列點選「轉為教學大綱」，將此分類轉為課程大綱。本指南會自動切換過去。
 userGuide-addClass-title = 新增課堂
 userGuide-addClass-desc =
     課堂（或週次 / 單元——稍後可改名）是教學大綱的分節。先新增一個開始。
@@ -106,7 +106,7 @@ view-tab-checklist = 清單
 view-tab-checklist-tooltip = 以清單檢視顯示
 view-tab-syllabus = 教學大綱
 view-tab-syllabus-tooltip = 以教學大綱檢視顯示
-view-tab-create-syllabus = 建立教學大綱
+view-tab-create-syllabus = 轉為教學大綱
 view-tab-create-syllabus-tooltip = 將此分類轉為教學大綱
 view-tab-table = 表格
 view-tab-table-tooltip = 以表格檢視顯示

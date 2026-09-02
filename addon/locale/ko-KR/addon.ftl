@@ -64,9 +64,9 @@ userGuide-start-close = 나중에 알림
 userGuide-collection-title = 컬렉션에서 시작
 userGuide-collection-desc =
     강의계획서는 컬렉션에 있습니다. 샘플 읽기가 몇 편 들어 있는 “Syllabus Tour” 연습 컬렉션을 엽니다.
-userGuide-syllabusButton-title = 강의계획서 보기 열기
+userGuide-syllabusButton-title = 강의계획서로 전환
 userGuide-syllabusButton-desc =
-    항목 도구 모음에서 강의계획서를 클릭하면 목록이 강의 개요로 바뀝니다. 투어가 그 화면으로 전환합니다.
+    항목 도구 모음에서 강의계획서로 전환을 클릭하면 이 컬렉션이 강의 개요로 전환됩니다. 투어가 그 화면으로 전환합니다.
 userGuide-addClass-title = 수업 추가
 userGuide-addClass-desc =
     수업(또는 주 / 회차 — 나중에 이름을 바꿀 수 있습니다)은 강의계획서의 구역입니다. 하나를 추가해 시작하세요.
@@ -106,7 +106,7 @@ view-tab-checklist = 체크리스트
 view-tab-checklist-tooltip = 체크리스트로 보기
 view-tab-syllabus = 강의계획서
 view-tab-syllabus-tooltip = 강의계획서로 보기
-view-tab-create-syllabus = 강의계획서 만들기
+view-tab-create-syllabus = 강의계획서로 전환
 view-tab-create-syllabus-tooltip = 이 컬렉션을 강의계획서로 전환
 view-tab-table = 표
 view-tab-table-tooltip = 표로 보기

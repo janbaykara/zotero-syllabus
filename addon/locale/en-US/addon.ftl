@@ -62,9 +62,9 @@ userGuide-start-close = Remind me later
 userGuide-collection-title = Start from a collection
 userGuide-collection-desc =
     Syllabi live on collections. We’ll open a “Syllabus Tour” playground collection with a couple of sample readings.
-userGuide-syllabusButton-title = Open Syllabus view
+userGuide-syllabusButton-title = Turn into a syllabus
 userGuide-syllabusButton-desc =
-    Click Syllabus in the items toolbar to replace the list with your course outline. The tour will switch there for you.
+    Click Turn into Syllabus in the items toolbar to turn this collection into a course outline. The tour will switch there for you.
 userGuide-addClass-title = Add a class
 userGuide-addClass-desc =
     Classes (or weeks / sessions — you can rename them later) are the sections of your syllabus. Add one to get started.
@@ -104,7 +104,7 @@ view-tab-checklist = Checklist
 view-tab-checklist-tooltip = View as Checklist
 view-tab-syllabus = Syllabus
 view-tab-syllabus-tooltip = View as Syllabus
-view-tab-create-syllabus = Create Syllabus
+view-tab-create-syllabus = Turn into Syllabus
 view-tab-create-syllabus-tooltip = Turn this collection into a syllabus
 view-tab-table = Table
 view-tab-table-tooltip = View as Table

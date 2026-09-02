@@ -64,9 +64,9 @@ userGuide-start-close = Nhắc tôi sau
 userGuide-collection-title = Bắt đầu từ một bộ sưu tập
 userGuide-collection-desc =
     Đề cương gắn với bộ sưu tập. Chúng tôi sẽ mở bộ sưu tập luyện tập “Tour đề cương” với một vài bài đọc mẫu.
-userGuide-syllabusButton-title = Mở chế độ xem Đề cương
+userGuide-syllabusButton-title = Chuyển thành đề cương
 userGuide-syllabusButton-desc =
-    Nhấp Đề cương trên thanh công cụ mục để thay danh sách bằng dàn ý học phần. Tour sẽ chuyển sang đó giúp bạn.
+    Nhấp Chuyển thành đề cương trên thanh công cụ mục để chuyển bộ sưu tập này thành dàn ý học phần. Tour sẽ chuyển sang đó giúp bạn.
 userGuide-addClass-title = Thêm buổi học
 userGuide-addClass-desc =
     Buổi học (hoặc tuần / phiên — bạn có thể đổi tên sau) là các phần của đề cương. Thêm một buổi để bắt đầu.
@@ -106,7 +106,7 @@ view-tab-checklist = Danh sách kiểm
 view-tab-checklist-tooltip = Xem dạng danh sách kiểm
 view-tab-syllabus = Đề cương
 view-tab-syllabus-tooltip = Xem dạng đề cương
-view-tab-create-syllabus = Tạo đề cương
+view-tab-create-syllabus = Chuyển thành đề cương
 view-tab-create-syllabus-tooltip = Chuyển bộ sưu tập này thành đề cương
 view-tab-table = Bảng
 view-tab-table-tooltip = Xem dạng bảng

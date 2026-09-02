@@ -1,5 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
+import { memo } from "preact/compat";
 import {
   useCallback,
   useEffect,
@@ -73,6 +74,7 @@ import {
   shouldCaptureCustomViewKeyboard,
 } from "./galleryKeyboardNav";
 import { useGalleryLayout, type GalleryLayout } from "./galleryLayout";
+import { GalleryViewportProvider, useNearViewport } from "./galleryVisibility";
 import { useGallerySortBy, type GallerySortBy } from "./gallerySort";
 import { collectionHasSyllabusNote } from "./syllabusNote";
 import { useCollectionTagGroups } from "./tagGroups";
@@ -464,7 +466,7 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
     for (const el of els) {
       el.tabIndex = el === tabStop ? 0 : -1;
     }
-  });
+  }, [selectedItemIds, layout, groupBy, syllabusItems]);
 
   const renderCovers = (items: Zotero.Item[], keyPrefix: string) => (
     <div className="syllabus-gallery-grid">
@@ -593,136 +595,139 @@ export function GalleryPage({ collectionId }: GalleryPageProps) {
             />
           </div>
         </div>
-        <div className="px-6 pt-4">
-          {groupBy === "none" &&
-            (syllabusItems.length === 0 ? (
-              <p className="text-secondary text-lg">{emptyMessage}</p>
-            ) : (
-              renderItems(
-                syllabusItems.map(({ zoteroItem }) => zoteroItem),
-                "all",
-              )
-            ))}
+        <GalleryViewportProvider rootRef={pageRef}>
+          <div className="px-6 pt-4">
+            {groupBy === "none" &&
+              (syllabusItems.length === 0 ? (
+                <p className="text-secondary text-lg">{emptyMessage}</p>
+              ) : (
+                renderItems(
+                  syllabusItems.map(({ zoteroItem }) => zoteroItem),
+                  "all",
+                )
+              ))}
 
-          {groupBy === "type" &&
-            (typeGroups.length === 0 ? (
-              <p className="text-secondary text-lg">{emptyMessage}</p>
-            ) : (
-              typeGroups.map(({ itemType, label, items }) => (
-                <section
-                  key={itemType}
-                  className="syllabus-gallery-section"
-                  data-gallery-group={`type-${itemType}`}
-                >
-                  <GalleryGroupHeading icon={{ kind: "item-type", itemType }}>
-                    {label}
-                  </GalleryGroupHeading>
-                  {renderItems(items, `type-${itemType}`)}
-                </section>
-              ))
-            ))}
-
-          {groupBy === "tags" &&
-            (tagGroups.length === 0 && untaggedItems.length === 0 ? (
-              <p className="text-secondary text-lg">{emptyMessage}</p>
-            ) : (
-              <>
-                {tagGroups.map(({ tag, items }, index) => (
+            {groupBy === "type" &&
+              (typeGroups.length === 0 ? (
+                <p className="text-secondary text-lg">{emptyMessage}</p>
+              ) : (
+                typeGroups.map(({ itemType, label, items }) => (
                   <section
-                    key={tag}
+                    key={itemType}
                     className="syllabus-gallery-section"
-                    data-gallery-group={`tag-${index}`}
+                    data-gallery-group={`type-${itemType}`}
                   >
-                    <GalleryGroupHeading icon={{ kind: "tag" }}>
-                      {tag}
+                    <GalleryGroupHeading icon={{ kind: "item-type", itemType }}>
+                      {label}
                     </GalleryGroupHeading>
-                    {renderItems(items, `tag-${tag}`)}
+                    {renderItems(items, `type-${itemType}`)}
                   </section>
-                ))}
-                {untaggedItems.length > 0 && (
-                  <section
-                    className="syllabus-gallery-section"
-                    data-gallery-group="untagged"
-                  >
-                    <GalleryGroupHeading icon={{ kind: "untagged" }}>
-                      {getString("gallery-untagged")}
-                    </GalleryGroupHeading>
-                    <p className="syllabus-gallery-class-description">
-                      {getString("gallery-untagged-desc")}
-                    </p>
-                    {renderItems(untaggedItems, "untagged")}
-                  </section>
-                )}
-              </>
-            ))}
+                ))
+              ))}
 
-          {groupBy === "subcollections" &&
-            (!subcollectionRoot || !subtreeHasContent(subcollectionRoot) ? (
-              <p className="text-secondary text-lg">
-                {isFiltered
-                  ? emptyMessage
-                  : getString("gallery-empty-subcollections")}
-              </p>
-            ) : (
-              <GallerySubcollectionSection
-                node={subcollectionRoot}
-                depth={0}
-                isRoot
-                resolveItems={resolveSubcollectionItems}
-                renderItems={renderItems}
-              />
-            ))}
-
-          {groupBy === "classes" &&
-            (classGroups.every((group) => group.itemAssignments.length === 0) &&
-            furtherReadingItems.length === 0 ? (
-              <p className="text-secondary text-lg">{emptyMessage}</p>
-            ) : (
-              <>
-                {classGroups.map((group) => {
-                  if (
-                    group.itemAssignments.length === 0 &&
-                    (isFiltered || group.classNumber == null)
-                  ) {
-                    return null;
-                  }
-                  const key = String(group.classNumber ?? "unnumbered");
-                  return (
+            {groupBy === "tags" &&
+              (tagGroups.length === 0 && untaggedItems.length === 0 ? (
+                <p className="text-secondary text-lg">{emptyMessage}</p>
+              ) : (
+                <>
+                  {tagGroups.map(({ tag, items }, index) => (
                     <section
-                      key={key}
+                      key={tag}
                       className="syllabus-gallery-section"
-                      data-gallery-group={`class-${key}`}
+                      data-gallery-group={`tag-${index}`}
                     >
-                      <GalleryClassHeading
-                        collectionId={collectionId}
-                        classNumber={group.classNumber}
-                        syllabusMetadata={syllabusMetadata}
-                      />
-                      {renderClassAssignments(
-                        group.itemAssignments,
-                        group.classNumber,
-                        `class-${key}`,
-                      )}
+                      <GalleryGroupHeading icon={{ kind: "tag" }}>
+                        {tag}
+                      </GalleryGroupHeading>
+                      {renderItems(items, `tag-${tag}`)}
                     </section>
-                  );
-                })}
-                {furtherReadingItems.length > 0 && (
-                  <section
-                    className="syllabus-gallery-section"
-                    data-gallery-group="further-reading"
-                  >
-                    <GalleryGroupHeading icon={{ kind: "further-reading" }}>
-                      {getString("further-reading-heading")}
-                    </GalleryGroupHeading>
-                    <p className="syllabus-gallery-class-description">
-                      {getString("further-reading-empty-desc")}
-                    </p>
-                    {renderItems(furtherReadingItems, "further-reading")}
-                  </section>
-                )}
-              </>
-            ))}
-        </div>
+                  ))}
+                  {untaggedItems.length > 0 && (
+                    <section
+                      className="syllabus-gallery-section"
+                      data-gallery-group="untagged"
+                    >
+                      <GalleryGroupHeading icon={{ kind: "untagged" }}>
+                        {getString("gallery-untagged")}
+                      </GalleryGroupHeading>
+                      <p className="syllabus-gallery-class-description">
+                        {getString("gallery-untagged-desc")}
+                      </p>
+                      {renderItems(untaggedItems, "untagged")}
+                    </section>
+                  )}
+                </>
+              ))}
+
+            {groupBy === "subcollections" &&
+              (!subcollectionRoot || !subtreeHasContent(subcollectionRoot) ? (
+                <p className="text-secondary text-lg">
+                  {isFiltered
+                    ? emptyMessage
+                    : getString("gallery-empty-subcollections")}
+                </p>
+              ) : (
+                <GallerySubcollectionSection
+                  node={subcollectionRoot}
+                  depth={0}
+                  isRoot
+                  resolveItems={resolveSubcollectionItems}
+                  renderItems={renderItems}
+                />
+              ))}
+
+            {groupBy === "classes" &&
+              (classGroups.every(
+                (group) => group.itemAssignments.length === 0,
+              ) && furtherReadingItems.length === 0 ? (
+                <p className="text-secondary text-lg">{emptyMessage}</p>
+              ) : (
+                <>
+                  {classGroups.map((group) => {
+                    if (
+                      group.itemAssignments.length === 0 &&
+                      (isFiltered || group.classNumber == null)
+                    ) {
+                      return null;
+                    }
+                    const key = String(group.classNumber ?? "unnumbered");
+                    return (
+                      <section
+                        key={key}
+                        className="syllabus-gallery-section"
+                        data-gallery-group={`class-${key}`}
+                      >
+                        <GalleryClassHeading
+                          collectionId={collectionId}
+                          classNumber={group.classNumber}
+                          syllabusMetadata={syllabusMetadata}
+                        />
+                        {renderClassAssignments(
+                          group.itemAssignments,
+                          group.classNumber,
+                          `class-${key}`,
+                        )}
+                      </section>
+                    );
+                  })}
+                  {furtherReadingItems.length > 0 && (
+                    <section
+                      className="syllabus-gallery-section"
+                      data-gallery-group="further-reading"
+                    >
+                      <GalleryGroupHeading icon={{ kind: "further-reading" }}>
+                        {getString("further-reading-heading")}
+                      </GalleryGroupHeading>
+                      <p className="syllabus-gallery-class-description">
+                        {getString("further-reading-empty-desc")}
+                      </p>
+                      {renderItems(furtherReadingItems, "further-reading")}
+                    </section>
+                  )}
+                </>
+              ))}
+          </div>
+        </GalleryViewportProvider>
       </div>
     </div>
   );
@@ -1302,17 +1307,21 @@ function sortAssignmentRows(
   );
 }
 
-function GalleryTile({
-  item,
-  selected,
-  onClick,
-  onDoubleClick,
-}: {
+type GalleryTileProps = {
   item: Zotero.Item;
   selected: boolean;
   onClick: (item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) => void;
   onDoubleClick: (item: Zotero.Item) => void;
-}) {
+};
+
+const GalleryTile = memo(function GalleryTile({
+  item,
+  selected,
+  onClick,
+  onDoubleClick,
+}: GalleryTileProps) {
+  const tileRef = useRef<HTMLDivElement>(null);
+  const visible = useNearViewport(tileRef);
   const title = useMemo(
     () => getItemTitle(item) || getString("untitled"),
     [item],
@@ -1341,6 +1350,9 @@ function GalleryTile({
   );
 
   useEffect(() => {
+    if (!visible) {
+      return;
+    }
     let cancelled = false;
     void getPrimaryAttachmentProgress(item).then((resolved) => {
       if (!cancelled) {
@@ -1350,10 +1362,11 @@ function GalleryTile({
     return () => {
       cancelled = true;
     };
-  }, [item]);
+  }, [visible, item]);
 
   return (
     <div
+      ref={tileRef}
       role="button"
       tabIndex={-1}
       data-item-id={item.id}
@@ -1362,7 +1375,7 @@ function GalleryTile({
       onClick={(e) => onClick(item, e)}
       onDblClick={() => onDoubleClick(item)}
     >
-      <GalleryCover item={item} selected={selected} />
+      <GalleryCover item={item} selected={selected} visible={visible} />
       <div className="syllabus-gallery-meta min-w-0 px-0.5">
         <div className="text-sm font-medium text-primary leading-snug line-clamp-2">
           {title}
@@ -1413,6 +1426,19 @@ function GalleryTile({
       </div>
     </div>
   );
+}, areGalleryTilePropsEqual);
+
+function areGalleryTilePropsEqual(
+  prev: GalleryTileProps,
+  next: GalleryTileProps,
+): boolean {
+  return (
+    prev.item.id === next.item.id &&
+    prev.item.dateModified === next.item.dateModified &&
+    prev.selected === next.selected &&
+    prev.onClick === next.onClick &&
+    prev.onDoubleClick === next.onDoubleClick
+  );
 }
 
 const PAGE_LIKE_ITEM_TYPES = new Set([
@@ -1421,58 +1447,29 @@ const PAGE_LIKE_ITEM_TYPES = new Set([
   "conferencePaper",
   "document",
   "journalArticle",
-  "magazineArticle",
   "manuscript",
   "preprint",
   "report",
   "thesis",
 ]);
 
-function GalleryCover({
-  item,
-  selected,
-}: {
+type GalleryCoverProps = {
   item: Zotero.Item;
   selected: boolean;
-}) {
-  const rootRef = useRef<HTMLDivElement>(null);
+  visible: boolean;
+};
+
+const GalleryCover = memo(function GalleryCover({
+  item,
+  selected,
+  visible,
+}: GalleryCoverProps) {
   const placeholder = useMemo(() => getPlaceholderCover(item), [item]);
-  const [visible, setVisible] = useState(false);
   const [cover, setCover] = useState<ResolvedCover>(placeholder);
 
   useEffect(() => {
     setCover(placeholder);
   }, [placeholder]);
-
-  useEffect(() => {
-    const el = rootRef.current;
-    if (!el) {
-      return;
-    }
-    const win = Zotero.getMainWindow();
-    const Observer = win.IntersectionObserver;
-    if (typeof Observer !== "function") {
-      setVisible(true);
-      return;
-    }
-    const observer = new Observer(
-      (entries: IntersectionObserverEntry[]) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          setVisible(true);
-        }
-      },
-      {
-        root: el.closest(".syllabus-page") as Element | null,
-        rootMargin: "240px",
-      },
-    );
-    observer.observe(el);
-    const timeout = win.setTimeout(() => setVisible(true), 500);
-    return () => {
-      observer.disconnect();
-      win.clearTimeout(timeout);
-    };
-  }, []);
 
   useEffect(() => {
     if (!visible) {
@@ -1503,23 +1500,44 @@ function GalleryCover({
     item.itemType === "thesis";
   const isVideo = isVideoGalleryItem(item);
   const isWeb = isWebGalleryItem(item);
+  const isAudio = isAudioGalleryItem(item);
   const showPlay = isPlayableGalleryItem(item);
   const showWebOverlay = isWeb && cover.kind === "image" && !isVideo;
+  const showAudioCaption =
+    isAudio && cover.kind === "image" && !cover.fromAttachment;
   const videoSite = isVideo ? getVideoSiteHostname(item) : "";
   const videoFavicon = videoSite ? faviconUrlForHostname(videoSite) : null;
   const useNaturalAspect =
-    cover.kind === "image" && !isVideo && !isWeb && (isPageLike || isArtwork);
+    visible &&
+    cover.kind === "image" &&
+    !isVideo &&
+    !isWeb &&
+    (isPageLike || isArtwork);
   const coverShapeClass = isVideo
     ? "syllabus-gallery-cover-video"
-    : useNaturalAspect
-      ? "syllabus-gallery-cover-natural"
-      : isPageLike
-        ? "syllabus-gallery-cover-portrait"
-        : "syllabus-gallery-cover-square";
+    : isWeb
+      ? "syllabus-gallery-cover-web"
+      : useNaturalAspect
+        ? "syllabus-gallery-cover-natural"
+        : isPageLike
+          ? "syllabus-gallery-cover-portrait"
+          : "syllabus-gallery-cover-square";
+
+  if (!visible) {
+    return (
+      <div
+        className={twMerge(
+          "relative w-full overflow-hidden rounded-[3px] bg-quinary",
+          coverShapeClass,
+          selected &&
+            "ring-2 ring-[#7b4ddb] ring-offset-2 ring-offset-background",
+        )}
+      />
+    );
+  }
 
   return (
     <div
-      ref={rootRef}
       className={twMerge(
         "relative w-full",
         showBinder
@@ -1544,14 +1562,15 @@ function GalleryCover({
       ) : null}
       <div
         className={twMerge(
-          showBinder &&
-            twMerge(
-              "syllabus-gallery-cover-face relative min-w-0 flex-1 overflow-hidden rounded-[3px] bg-quinary shadow-card transition-shadow group-hover:shadow-card-hover",
-              coverShapeClass,
-              isJournalLike &&
-                cover.kind === "image" &&
-                "syllabus-gallery-journal-sheet",
-            ),
+          showBinder
+            ? twMerge(
+                "syllabus-gallery-cover-face relative min-w-0 flex-1 overflow-hidden rounded-[3px] bg-quinary shadow-card transition-shadow group-hover:shadow-card-hover",
+                coverShapeClass,
+                isJournalLike &&
+                  cover.kind === "image" &&
+                  "syllabus-gallery-journal-sheet",
+              )
+            : "relative h-full w-full",
         )}
       >
         {cover.kind === "image" ? (
@@ -1576,9 +1595,10 @@ function GalleryCover({
           <PlaceholderFace
             cover={cover}
             insetForSpine={showSpine}
+            compact={isWeb}
           />
         )}
-        {showWebOverlay ? (
+        {showWebOverlay || showAudioCaption ? (
           <div className="syllabus-gallery-web-caption">
             <div className="syllabus-gallery-web-caption-title">
               {placeholder.title}
@@ -1605,6 +1625,18 @@ function GalleryCover({
         {isJournalLike ? <div className="syllabus-gallery-page-fold" /> : null}
       </div>
     </div>
+  );
+}, areGalleryCoverPropsEqual);
+
+function areGalleryCoverPropsEqual(
+  prev: GalleryCoverProps,
+  next: GalleryCoverProps,
+): boolean {
+  return (
+    prev.item.id === next.item.id &&
+    prev.item.dateModified === next.item.dateModified &&
+    prev.selected === next.selected &&
+    prev.visible === next.visible
   );
 }
 
@@ -1859,10 +1891,12 @@ function PlaceholderFace({
   cover,
   insetForSpine = false,
   hideText = false,
+  compact = false,
 }: {
   cover: Extract<ResolvedCover, { kind: "placeholder" }>;
   insetForSpine?: boolean;
   hideText?: boolean;
+  compact?: boolean;
 }) {
   return (
     <div
@@ -1876,7 +1910,12 @@ function PlaceholderFace({
     >
       {hideText ? null : (
         <>
-          <div className="text-[13px] font-semibold leading-snug line-clamp-4 drop-shadow-sm">
+          <div
+            className={twMerge(
+              "font-semibold leading-snug drop-shadow-sm",
+              compact ? "text-[12px] line-clamp-2" : "text-[13px] line-clamp-4",
+            )}
+          >
             {cover.title}
           </div>
           {cover.creator ? (

@@ -28,6 +28,7 @@ const WEB_GALLERY_ITEM_TYPES = new Set([
   "webpage",
   "blogPost",
   "newspaperArticle",
+  "magazineArticle",
   "encyclopediaArticle",
 ]);
 
@@ -37,7 +38,10 @@ const VIDEO_GALLERY_ITEM_TYPES = new Set([
   "tvBroadcast",
 ]);
 
-const AUDIO_GALLERY_ITEM_TYPES = new Set(["radioBroadcast"]);
+const AUDIO_GALLERY_ITEM_TYPES = new Set([
+  "radioBroadcast",
+  "audioRecording",
+]);
 
 const VIDEO_HOSTS = [
   "youtube.com",
@@ -76,7 +80,7 @@ const PDFJS_WORKER_CANDIDATES = [
 export type CoverFit = "cover" | "contain";
 
 export type ResolvedCover =
-  | { kind: "image"; src: string; fit: CoverFit }
+  | { kind: "image"; src: string; fit: CoverFit; fromAttachment?: boolean }
   | { kind: "placeholder"; color: string; title: string; creator: string };
 
 type PdfjsModule = {
@@ -210,6 +214,9 @@ function hostIsVideoSite(hostname: string): boolean {
 }
 
 export function isVideoGalleryItem(item: Zotero.Item): boolean {
+  if (isAudioGalleryItem(item)) {
+    return false;
+  }
   if (VIDEO_GALLERY_ITEM_TYPES.has(item.itemType)) {
     return true;
   }
@@ -293,7 +300,7 @@ async function resolveItemCoverUncached(
 ): Promise<ResolvedCover> {
   const imageSrc = await findImageAttachmentSrc(item);
   if (imageSrc) {
-    return { kind: "image", src: imageSrc, fit: "cover" };
+    return { kind: "image", src: imageSrc, fit: "cover", fromAttachment: true };
   }
 
   const youtubeSrc = findYoutubeThumb(item);
@@ -312,19 +319,21 @@ async function resolveItemCoverUncached(
     }
   }
 
-  const epubSrc = await extractEpubCover(item);
-  if (epubSrc) {
-    return { kind: "image", src: epubSrc, fit: "cover" };
-  }
+  if (!isAudioGalleryItem(item)) {
+    const epubSrc = await extractEpubCover(item);
+    if (epubSrc) {
+      return { kind: "image", src: epubSrc, fit: "cover" };
+    }
 
-  const pdfSrc = await renderPdfPageOne(item);
-  if (pdfSrc) {
-    return { kind: "image", src: pdfSrc, fit: "contain" };
-  }
+    const pdfSrc = await renderPdfPageOne(item);
+    if (pdfSrc) {
+      return { kind: "image", src: pdfSrc, fit: "contain" };
+    }
 
-  const isbnSrc = await fetchIsbnCover(item);
-  if (isbnSrc) {
-    return { kind: "image", src: isbnSrc, fit: "cover" };
+    const isbnSrc = await fetchIsbnCover(item);
+    if (isbnSrc) {
+      return { kind: "image", src: isbnSrc, fit: "cover" };
+    }
   }
 
   return getPlaceholderCover(item);

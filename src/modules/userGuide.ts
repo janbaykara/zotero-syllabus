@@ -78,6 +78,26 @@ async function waitForElement(
   return null;
 }
 
+function isVisibleToolbarTarget(el: Element | null): el is Element {
+  return !!el && !(el as HTMLElement).hidden;
+}
+
+/** Turn into Syllabus when that action is shown; otherwise the Syllabus view radio. */
+function findSyllabusTourToolbarTarget(
+  win: _ZoteroTypes.MainWindow,
+): Element | null {
+  const doc = win.document;
+  const create = doc.getElementById("syllabus-create-syllabus-button");
+  if (isVisibleToolbarTarget(create)) {
+    return create;
+  }
+  const syllabus = doc.getElementById("syllabus-view-mode-syllabus");
+  if (isVisibleToolbarTarget(syllabus)) {
+    return syllabus;
+  }
+  return null;
+}
+
 async function settleTourUi(ms = 500): Promise<void> {
   await Zotero.Promise.delay(ms);
 }
@@ -244,6 +264,7 @@ async function enableSyllabusViewForTour(
   });
   SyllabusManager.writeCollectionViewMode(collection, "syllabus");
   SyllabusManager.updateViewModeButtons();
+  SyllabusManager.updateButtonVisibility();
   SyllabusManager.setupPage();
   const ready = await waitForElement(
     Zotero.getMainWindow(),
@@ -481,14 +502,14 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
       "module.png",
       300,
     ),
-    element: "#syllabus-view-mode-syllabus",
+    element: () => findSyllabusTourToolbarTarget(win) || doc.documentElement!,
     showButtons: ["prev", "next"],
     showProgress: true,
     onBeforeRender: async () => {
       win.Zotero_Tabs?.select("zotero-pane");
       playgroundCollection =
         await resolvePlaygroundCollection(playgroundCollection);
-      await waitForElement(win, "#syllabus-view-mode-syllabus");
+      await waitForElement(win, () => findSyllabusTourToolbarTarget(win));
     },
     onExit: async () => {
       playgroundCollection =

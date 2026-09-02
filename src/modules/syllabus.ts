@@ -145,6 +145,9 @@ function migrateLegacyBrowseViewMode(
   return true;
 }
 
+const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
+
+/** Label for the Syllabus/Checklist view radio, or null when that view is not available. */
 function syllabusViewModeChrome(): { label: string; tooltip: string } | null {
   const collection = getSelectedCollection();
   if (!collection) {
@@ -156,16 +159,27 @@ function syllabusViewModeChrome(): { label: string; tooltip: string } | null {
       tooltip: getString("view-tab-checklist-tooltip"),
     };
   }
-  if (getCollectionTreeKind(collection.id) !== "syllabus") {
+  if (
+    getCollectionTreeKind(collection.id) === "syllabus" ||
+    collectionHasSyllabusNote(collection)
+  ) {
     return {
-      label: getString("view-tab-create-syllabus"),
-      tooltip: getString("view-tab-create-syllabus-tooltip"),
+      label: getString("view-tab-syllabus"),
+      tooltip: getString("view-tab-syllabus-tooltip"),
     };
   }
-  return {
-    label: getString("view-tab-syllabus"),
-    tooltip: getString("view-tab-syllabus-tooltip"),
+  return null;
+}
+
+function createXulElement(doc: Document, tag: string, id: string): Element {
+  const xulDoc = doc as Document & {
+    createXULElement?: (tag: string) => Element;
   };
+  const el = xulDoc.createXULElement
+    ? xulDoc.createXULElement(tag)
+    : doc.createElementNS(XUL_NS, tag);
+  el.id = id;
+  return el;
 }
 
 function confirmEnableSubcollections(
@@ -593,6 +607,7 @@ export class SyllabusManager {
   static syllabusViewTabListener: NodeJS.Timeout | null = null;
 
   static setupSyllabusViewTabListener() {
+    this.cleanupSyllabusViewTabListener();
     ztoolkit.log("SyllabusManager.setupSyllabusViewTabListener");
     let selectedCollectionId = getSelectedCollection()?.id.toString() || "";
     let currentTabId = Zotero.getMainWindow()?.Zotero_Tabs?.selectedID || "";
@@ -789,9 +804,7 @@ export class SyllabusManager {
     }
   }
 
-  static setupReadingScheduleTabBarButton(
-    win?: _ZoteroTypes.MainWindow,
-  ): void {
+  static setupReadingScheduleTabBarButton(win?: _ZoteroTypes.MainWindow): void {
     win = win || Zotero.getMainWindow();
     const doc = win.document;
     SyllabusManager.removeReadingScheduleTabBarButton(win);
@@ -857,6 +870,15 @@ export class SyllabusManager {
     button.setAttribute("data-tab-open", tabOpen ? "true" : "false");
   }
 
+  static async applyCollectionViewModeFromToolbar(
+    mode: CollectionViewMode,
+  ): Promise<void> {
+    await SyllabusManager.setCollectionViewMode(mode);
+    SyllabusManager.updateViewModeButtons();
+    SyllabusManager.updateButtonVisibility();
+    await SyllabusManager.setupPage();
+  }
+
   // Function to create/update the view-mode radio control
   static setupToggleButton() {
     const w = Zotero.getMainWindow();
@@ -874,12 +896,22 @@ export class SyllabusManager {
     // Remove legacy / duplicate toolbar controls (IDs can be duplicated after hot reload)
     for (const el of Array.from(
       doc.querySelectorAll(
-        "#syllabus-view-toggle, #syllabus-view-mode-group, .syllabus-view-mode-button",
+        [
+          "#syllabus-view-toggle",
+          "#syllabus-view-mode-group",
+          "#syllabus-view-mode-cluster",
+          "#syllabus-view-spacer",
+          "#syllabus-view-spacer-start",
+          "#syllabus-view-spacer-end",
+          "#syllabus-create-syllabus-button",
+          ".syllabus-view-mode-button",
+        ].join(", "),
       ),
     ) as Element[]) {
       el.remove();
     }
 
+    const syllabusChrome = syllabusViewModeChrome();
     const viewModeOptions: {
       mode: CollectionViewMode;
       label: string;
@@ -897,14 +929,16 @@ export class SyllabusManager {
       },
       {
         mode: "syllabus",
-        ...(syllabusViewModeChrome() ?? {
+        ...(syllabusChrome ?? {
           label: getString("view-tab-syllabus"),
           tooltip: getString("view-tab-syllabus-tooltip"),
         }),
       },
     ];
 
-    const viewModeButtons: XULButtonElement[] = [];
+    const group = createXulElement(doc, "hbox", "syllabus-view-mode-group");
+    group.setAttribute("align", "stretch");
+
     for (const option of viewModeOptions) {
       const button = ztoolkit.UI.createElement(doc, "toolbarbutton", {
         id: `syllabus-view-mode-${option.mode}`,
@@ -925,28 +959,59 @@ export class SyllabusManager {
             type: "click",
             listener: (e: Event) => {
               e.preventDefault?.();
-              void (async () => {
-                await SyllabusManager.setCollectionViewMode(option.mode);
-                SyllabusManager.updateViewModeButtons();
-                SyllabusManager.updateButtonVisibility();
-                await SyllabusManager.setupPage();
-              })();
+              void SyllabusManager.applyCollectionViewModeFromToolbar(
+                option.mode,
+              );
             },
           },
         ],
       });
-      viewModeButtons.push(button);
+      group.appendChild(button);
     }
 
-    let spacer = doc.getElementById("syllabus-view-spacer") as Element | null;
-    if (!spacer) {
-      spacer = doc.createElementNS(
-        "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
-        "spacer",
-      );
-      spacer.id = "syllabus-view-spacer";
-      spacer.setAttribute("flex", "1");
-    }
+    const createLabel = getString("view-tab-create-syllabus");
+    const createTooltip = getString("view-tab-create-syllabus-tooltip");
+    const createButton = ztoolkit.UI.createElement(doc, "toolbarbutton", {
+      id: "syllabus-create-syllabus-button",
+      classList: ["syllabus-create-syllabus-button"],
+      attributes: {
+        crop: "none",
+        tooltiptext: createTooltip,
+        image: "chrome://syllabus/content/icons/graduation-cap.svg",
+      },
+      properties: {
+        label: createLabel,
+        tooltiptext: createTooltip,
+      },
+      listeners: [
+        {
+          type: "click",
+          listener: (e: Event) => {
+            e.preventDefault?.();
+            void SyllabusManager.applyCollectionViewModeFromToolbar("syllabus");
+          },
+        },
+      ],
+    });
+
+    const cluster = createXulElement(doc, "hbox", "syllabus-view-mode-cluster");
+    cluster.setAttribute("align", "center");
+    cluster.setAttribute("flex", "0");
+    cluster.appendChild(group);
+    cluster.appendChild(createButton);
+
+    const spacerStart = createXulElement(
+      doc,
+      "spacer",
+      "syllabus-view-spacer-start",
+    );
+    spacerStart.setAttribute("flex", "1");
+    const spacerEnd = createXulElement(
+      doc,
+      "spacer",
+      "syllabus-view-spacer-end",
+    );
+    spacerEnd.setAttribute("flex", "1");
 
     const insertBefore = (el: Element) => {
       if (searchSpinner && searchSpinner.parentNode) {
@@ -956,12 +1021,9 @@ export class SyllabusManager {
       }
     };
 
-    for (const button of viewModeButtons) {
-      insertBefore(button);
-    }
-    if (!spacer.parentNode) {
-      insertBefore(spacer);
-    }
+    insertBefore(spacerStart);
+    insertBefore(cluster);
+    insertBefore(spacerEnd);
 
     SyllabusManager.updateViewModeButtons();
     SyllabusManager.updateButtonVisibility();
@@ -1022,9 +1084,36 @@ export class SyllabusManager {
     const readingScheduleContext = selectedCollection
       ? getReadingScheduleCollectionContext(selectedCollection.id)
       : null;
+    const hideAll = !!(hideViewModesInLibrary || readingScheduleContext);
+    const syllabusChrome = syllabusViewModeChrome();
+    const showCreate = !hideAll && !!selectedCollection && !syllabusChrome;
 
     for (const button of viewModeButtons) {
-      button.hidden = !!(hideViewModesInLibrary || readingScheduleContext);
+      const buttonMode = button.getAttribute("data-view-mode");
+      if (buttonMode === "syllabus") {
+        button.hidden = hideAll || !syllabusChrome;
+      } else {
+        button.hidden = hideAll;
+      }
+    }
+
+    const createButton = doc.getElementById(
+      "syllabus-create-syllabus-button",
+    ) as XULButtonElement | null;
+    if (createButton) {
+      createButton.hidden = !showCreate;
+    }
+
+    const hideChrome = hideAll;
+    for (const id of [
+      "syllabus-view-mode-cluster",
+      "syllabus-view-spacer-start",
+      "syllabus-view-spacer-end",
+    ]) {
+      const el = doc.getElementById(id) as HTMLElement | null;
+      if (el) {
+        el.hidden = hideChrome;
+      }
     }
   }
 

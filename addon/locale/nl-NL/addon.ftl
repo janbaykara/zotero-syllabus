@@ -64,9 +64,9 @@ userGuide-start-close = Later herinneren
 userGuide-collection-title = Beginnen vanuit een collectie
 userGuide-collection-desc =
     Syllabi horen bij collecties. We openen een oefencollectie “Syllabus Tour” met een paar voorbeeldteksten.
-userGuide-syllabusButton-title = Syllabusweergave openen
+userGuide-syllabusButton-title = Omzetten naar een syllabus
 userGuide-syllabusButton-desc =
-    Klik op Syllabus in de itemwerkbalk om de lijst te vervangen door uw cursusoverzicht. De rondleiding schakelt daar automatisch naartoe.
+    Klik op Omzetten naar syllabus in de itemwerkbalk om deze collectie om te zetten naar uw cursusoverzicht. De rondleiding schakelt daar automatisch naartoe.
 userGuide-addClass-title = Een bijeenkomst toevoegen
 userGuide-addClass-desc =
     Bijeenkomsten (of weken / sessies — u kunt de naam later wijzigen) zijn de onderdelen van uw syllabus. Voeg er een toe om te beginnen.
@@ -106,7 +106,7 @@ view-tab-checklist = Checklist
 view-tab-checklist-tooltip = Weergeven als checklist
 view-tab-syllabus = Syllabus
 view-tab-syllabus-tooltip = Weergeven als syllabus
-view-tab-create-syllabus = Syllabus maken
+view-tab-create-syllabus = Omzetten naar syllabus
 view-tab-create-syllabus-tooltip = Deze collectie omzetten naar een syllabus
 view-tab-table = Tabel
 view-tab-table-tooltip = Weergeven als tabel

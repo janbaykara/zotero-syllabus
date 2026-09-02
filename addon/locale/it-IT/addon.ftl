@@ -64,9 +64,9 @@ userGuide-start-close = Ricordamelo più tardi
 userGuide-collection-title = Parti da una raccolta
 userGuide-collection-desc =
     I programmi vivono sulle raccolte. Apriremo una raccolta di prova «Syllabus Tour» con alcune letture di esempio.
-userGuide-syllabusButton-title = Apri la vista Programma
+userGuide-syllabusButton-title = Converti in un programma
 userGuide-syllabusButton-desc =
-    Fai clic su Programma nella barra degli strumenti degli elementi per sostituire l’elenco con lo schema del corso. Il tour passerà lì automaticamente.
+    Fai clic su Converti in programma nella barra degli strumenti degli elementi per convertire questa raccolta nello schema del corso. Il tour passerà lì automaticamente.
 userGuide-addClass-title = Aggiungi una lezione
 userGuide-addClass-desc =
     Le lezioni (o settimane / sessioni — potrai rinominarle in seguito) sono le sezioni del programma. Aggiungine una per iniziare.
@@ -106,7 +106,7 @@ view-tab-checklist = Elenco di controllo
 view-tab-checklist-tooltip = Visualizza come elenco di controllo
 view-tab-syllabus = Programma
 view-tab-syllabus-tooltip = Visualizza come programma del corso
-view-tab-create-syllabus = Crea programma
+view-tab-create-syllabus = Converti in programma
 view-tab-create-syllabus-tooltip = Converti questa raccolta in un programma del corso
 view-tab-table = Tabella
 view-tab-table-tooltip = Visualizza come tabella

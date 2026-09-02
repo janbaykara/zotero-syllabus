@@ -64,9 +64,9 @@ userGuide-start-close = Lembrar mais tarde
 userGuide-collection-title = Começar a partir de uma coleção
 userGuide-collection-desc =
     Os programas de curso residem nas coleções. Abriremos uma coleção de ensaio «Visita guiada ao programa» com algumas leituras de exemplo.
-userGuide-syllabusButton-title = Abrir a vista de programa de curso
+userGuide-syllabusButton-title = Transformar num programa
 userGuide-syllabusButton-desc =
-    Clique em Programa na barra de ferramentas dos itens para substituir a lista pelo plano da unidade curricular. A visita guiada fará essa mudança por si.
+    Clique em Transformar em programa na barra de ferramentas dos itens para transformar esta coleção num plano da unidade curricular. A visita guiada fará essa mudança por si.
 userGuide-addClass-title = Adicionar uma aula
 userGuide-addClass-desc =
     As aulas (ou semanas / sessões — pode alterar a designação mais tarde) são as secções do programa. Adicione uma para começar.
@@ -106,7 +106,7 @@ view-tab-checklist = Lista de verificação
 view-tab-checklist-tooltip = Ver como lista de verificação
 view-tab-syllabus = Programa
 view-tab-syllabus-tooltip = Ver como programa de curso
-view-tab-create-syllabus = Criar programa
+view-tab-create-syllabus = Transformar em programa
 view-tab-create-syllabus-tooltip = Transformar esta coleção num programa de curso
 view-tab-table = Tabela
 view-tab-table-tooltip = Ver como tabela

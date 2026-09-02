@@ -1,32 +1,32 @@
 /* Segmented Table / Gallery / Syllabus control */
+#syllabus-view-mode-cluster {
+  flex: 0 0 auto;
+}
+
+#syllabus-view-mode-group {
+  overflow: hidden;
+  border: 0.5px solid var(--fill-secondary);
+  border-radius: 4px;
+}
+
 .syllabus-view-mode-button {
   fill: currentColor;
   -moz-context-properties: fill, fill-opacity;
+  appearance: none !important;
+  -moz-appearance: none !important;
   width: auto !important;
   min-width: 0 !important;
   margin: 0 !important;
   padding-left: 10px !important;
   padding-right: 10px !important;
-  border: 0.5px solid var(--fill-secondary) !important;
+  border: none !important;
   border-radius: 0 !important;
   background: transparent !important;
 }
 
-.syllabus-view-mode-button[data-view-mode="collection"] {
-  border-start-start-radius: 4px !important;
-  border-end-start-radius: 4px !important;
-  margin-inline-start: 4px !important;
-}
-
-.syllabus-view-mode-button[data-view-mode="gallery"] {
-  border-inline-start: none !important;
-}
-
-.syllabus-view-mode-button[data-view-mode="syllabus"] {
-  border-inline-start: none !important;
-  border-start-end-radius: 4px !important;
-  border-end-end-radius: 4px !important;
-  margin-inline-end: 4px !important;
+.syllabus-view-mode-button:not([hidden])
+  ~ .syllabus-view-mode-button:not([hidden]) {
+  border-inline-start: 0.5px solid var(--fill-secondary) !important;
 }
 
 .syllabus-view-mode-button .toolbarbutton-text {
@@ -45,6 +45,44 @@
 .syllabus-view-mode-button[checked="true"] {
   background-color: #7b4ddb !important;
   color: #fff !important;
+}
+
+.syllabus-create-syllabus-button {
+  fill: currentColor;
+  stroke: currentColor;
+  -moz-context-properties: fill, stroke, fill-opacity;
+  appearance: none !important;
+  -moz-appearance: none !important;
+  width: auto !important;
+  min-width: max-content !important;
+  margin: 0 !important;
+  margin-inline-start: 8px !important;
+  padding-block: 0 !important;
+  padding-inline: 8px !important;
+  border: none !important;
+  border-radius: 4px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  gap: 4px;
+  list-style-image: url("chrome://syllabus/content/icons/graduation-cap.svg");
+}
+
+.syllabus-create-syllabus-button .toolbarbutton-text {
+  min-width: 0 !important;
+  max-width: none !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  padding-inline: 0 !important;
+  display: flex !important;
+}
+
+.syllabus-create-syllabus-button .toolbarbutton-icon {
+  width: 16px !important;
+  height: 16px !important;
+  display: flex !important;
+  fill: currentColor;
+  stroke: currentColor;
+  -moz-context-properties: fill, stroke, fill-opacity;
 }
 
 #syllabus-custom-view {
@@ -478,10 +516,12 @@
   grid-row: span 2;
   min-width: 0;
   margin-bottom: 1.75rem;
+  contain: layout style;
 }
 
 .syllabus-gallery-cover-portrait,
 .syllabus-gallery-cover-video,
+.syllabus-gallery-cover-web,
 .syllabus-gallery-cover-square,
 .syllabus-gallery-cover-natural {
   align-self: end;
@@ -491,6 +531,7 @@
 /* Paper edge above cover art (inset shadows sit under descendants). */
 .syllabus-gallery-cover-portrait::after,
 .syllabus-gallery-cover-video::after,
+.syllabus-gallery-cover-web::after,
 .syllabus-gallery-cover-square::after,
 .syllabus-gallery-cover-natural::after {
   content: "";
@@ -510,6 +551,11 @@
 
 .syllabus-gallery-cover-video {
   aspect-ratio: 16 / 9;
+}
+
+/* Open Graph / social share card (1200×630). */
+.syllabus-gallery-cover-web {
+  aspect-ratio: 1.91 / 1;
 }
 
 .syllabus-gallery-cover-square {
@@ -903,6 +949,23 @@
   overflow: hidden;
 }
 
+.syllabus-gallery-cover-web .syllabus-gallery-web-caption {
+  padding: 1.1rem 0.5rem 0.4rem;
+}
+
+.syllabus-gallery-cover-web .syllabus-gallery-web-caption-title {
+  font-size: 12px;
+  -webkit-line-clamp: 2;
+}
+
+.syllabus-gallery-cover-square .syllabus-gallery-web-caption {
+  padding: 1.35rem 0.5rem 0.45rem;
+}
+
+.syllabus-gallery-cover-square .syllabus-gallery-web-caption-title {
+  -webkit-line-clamp: 3;
+}
+
 .syllabus-gallery-hostrow {
   display: flex;
   align-items: center;
@@ -1062,7 +1125,9 @@
   padding-inline: 0 !important;
 }
 
-#zotero-tabs-toolbar > .syllabus-tab-bar-button[data-tab-open="true"] .toolbarbutton-text {
+#zotero-tabs-toolbar
+  > .syllabus-tab-bar-button[data-tab-open="true"]
+  .toolbarbutton-text {
   display: none !important;
 }
 

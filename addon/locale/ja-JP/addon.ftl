@@ -64,9 +64,9 @@ userGuide-start-close = あとで通知
 userGuide-collection-title = コレクションから始める
 userGuide-collection-desc =
     シラバスはコレクション上に置かれます。「Syllabus Tour」という練習用コレクションを開き、サンプルの文献をいくつか入れます。
-userGuide-syllabusButton-title = シラバスビューを開く
+userGuide-syllabusButton-title = シラバスに変換
 userGuide-syllabusButton-desc =
-    アイテムツールバーの「シラバス」をクリックすると、リストが授業のアウトラインに切り替わります。ツアーがその画面へ移動します。
+    アイテムツールバーの「シラバスに変換」をクリックすると、このコレクションが授業のアウトラインに切り替わります。ツアーがその画面へ移動します。
 userGuide-addClass-title = 授業を追加する
 userGuide-addClass-desc =
     授業（または週 / 回——後から名称を変えられます）がシラバスの区切りです。まず1つ追加してください。
@@ -106,7 +106,7 @@ view-tab-checklist = チェックリスト
 view-tab-checklist-tooltip = チェックリストで表示
 view-tab-syllabus = シラバス
 view-tab-syllabus-tooltip = シラバスで表示
-view-tab-create-syllabus = シラバスを作成
+view-tab-create-syllabus = シラバスに変換
 view-tab-create-syllabus-tooltip = このコレクションをシラバスに変換
 view-tab-table = 表
 view-tab-table-tooltip = 表で表示

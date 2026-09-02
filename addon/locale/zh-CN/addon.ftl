@@ -62,9 +62,9 @@ userGuide-start-close = 以后再说
 userGuide-collection-title = 从分类开始
 userGuide-collection-desc =
     教学大纲建立在分类上。我们将打开一个“Syllabus Tour”练习分类，并放入几篇示例阅读。
-userGuide-syllabusButton-title = 打开教学大纲视图
+userGuide-syllabusButton-title = 转为教学大纲
 userGuide-syllabusButton-desc =
-    在条目工具栏点击「教学大纲」，用课程大纲替换列表视图。本指南会自动切换过去。
+    在条目工具栏点击「转为教学大纲」，将此分类转为课程大纲。本指南会自动切换过去。
 userGuide-addClass-title = 添加课堂
 userGuide-addClass-desc =
     课堂（或周次 / 单元——稍后可改名）是教学大纲的分节。先添加一个开始。
@@ -104,7 +104,7 @@ view-tab-checklist = 清单
 view-tab-checklist-tooltip = 以清单视图显示
 view-tab-syllabus = 教学大纲
 view-tab-syllabus-tooltip = 以教学大纲视图显示
-view-tab-create-syllabus = 创建教学大纲
+view-tab-create-syllabus = 转为教学大纲
 view-tab-create-syllabus-tooltip = 将此分类转为教学大纲
 view-tab-table = 表格
 view-tab-table-tooltip = 以表格视图显示

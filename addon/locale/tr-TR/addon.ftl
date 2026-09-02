@@ -64,9 +64,9 @@ userGuide-start-close = Daha sonra hatırlat
 userGuide-collection-title = Bir koleksiyondan başlayın
 userGuide-collection-desc =
     İzlenceler koleksiyonlarda yaşar. Birkaç örnek okuma içeren bir “İzlence Turu” deneme koleksiyonu açacağız.
-userGuide-syllabusButton-title = İzlence görünümünü açın
+userGuide-syllabusButton-title = İzlenceye dönüştürün
 userGuide-syllabusButton-desc =
-    Listeyi ders taslağınızla değiştirmek için öğe araç çubuğundaki İzlence’ye tıklayın. Tur sizi oraya geçirecektir.
+    Bu koleksiyonu ders taslağına dönüştürmek için öğe araç çubuğundaki İzlenceye dönüştür’e tıklayın. Tur sizi oraya geçirecektir.
 userGuide-addClass-title = Ders ekleyin
 userGuide-addClass-desc =
     Dersler (veya haftalar / oturumlar — adlarını sonra değiştirebilirsiniz) izlencenizin bölümleridir. Başlamak için bir tane ekleyin.
@@ -106,7 +106,7 @@ view-tab-checklist = Denetim listesi
 view-tab-checklist-tooltip = Denetim listesi olarak görüntüle
 view-tab-syllabus = İzlence
 view-tab-syllabus-tooltip = İzlence olarak görüntüle
-view-tab-create-syllabus = İzlence oluştur
+view-tab-create-syllabus = İzlenceye dönüştür
 view-tab-create-syllabus-tooltip = Bu koleksiyonu izlenceye dönüştür
 view-tab-table = Tablo
 view-tab-table-tooltip = Tablo olarak görüntüle

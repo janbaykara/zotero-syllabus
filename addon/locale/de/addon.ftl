@@ -64,9 +64,9 @@ userGuide-start-close = Später erinnern
 userGuide-collection-title = Mit einer Sammlung beginnen
 userGuide-collection-desc =
     Lehrpläne liegen auf Sammlungen. Wir öffnen eine Übungs-Sammlung „Syllabus Tour“ mit einigen Beispieltexten.
-userGuide-syllabusButton-title = Lehrplan-Ansicht öffnen
+userGuide-syllabusButton-title = In einen Lehrplan umwandeln
 userGuide-syllabusButton-desc =
-    Klicken Sie in der Eintrags-Werkzeugleiste auf Lehrplan, um die Liste durch Ihre Kursgliederung zu ersetzen. Die Tour wechselt automatisch dorthin.
+    Klicken Sie in der Eintrags-Werkzeugleiste auf In Lehrplan umwandeln, um diese Sammlung in eine Kursgliederung zu verwandeln. Die Tour wechselt automatisch dorthin.
 userGuide-addClass-title = Eine Sitzung hinzufügen
 userGuide-addClass-desc =
     Sitzungen (oder Wochen / Termine — die Bezeichnung können Sie später ändern) sind die Abschnitte Ihres Lehrplans. Fügen Sie eine hinzu, um zu beginnen.
@@ -106,7 +106,7 @@ view-tab-checklist = Checkliste
 view-tab-checklist-tooltip = Als Checkliste anzeigen
 view-tab-syllabus = Lehrplan
 view-tab-syllabus-tooltip = Als Lehrplan anzeigen
-view-tab-create-syllabus = Lehrplan erstellen
+view-tab-create-syllabus = In Lehrplan umwandeln
 view-tab-create-syllabus-tooltip = Diese Sammlung in einen Lehrplan umwandeln
 view-tab-table = Tabelle
 view-tab-table-tooltip = Als Tabelle anzeigen

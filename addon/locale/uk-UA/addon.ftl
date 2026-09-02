@@ -64,9 +64,9 @@ userGuide-start-close = Нагадати пізніше
 userGuide-collection-title = Почніть із колекції
 userGuide-collection-desc =
     Силабуси прив’язані до колекцій. Ми відкриємо навчальну колекцію «Екскурсія силабусом» із кількома зразками літератури.
-userGuide-syllabusButton-title = Відкрийте вигляд силабуса
+userGuide-syllabusButton-title = Перетворити на силабус
 userGuide-syllabusButton-desc =
-    Натисніть «Силабус» на панелі інструментів записів, щоб замінити список планом курсу. Екскурсія перемкне вигляд за вас.
+    Натисніть «Перетворити на силабус» на панелі інструментів записів, щоб перетворити цю колекцію на план курсу. Екскурсія перемкне вигляд за вас.
 userGuide-addClass-title = Додайте заняття
 userGuide-addClass-desc =
     Заняття (або тижні / сесії — назви можна змінити пізніше) — це розділи силабуса. Додайте одне, щоб почати.
@@ -106,7 +106,7 @@ view-tab-checklist = Контрольний список
 view-tab-checklist-tooltip = Показати як контрольний список
 view-tab-syllabus = Силабус
 view-tab-syllabus-tooltip = Показати як силабус
-view-tab-create-syllabus = Створити силабус
+view-tab-create-syllabus = Перетворити на силабус
 view-tab-create-syllabus-tooltip = Перетворити цю колекцію на силабус
 view-tab-table = Таблиця
 view-tab-table-tooltip = Показати як таблицю

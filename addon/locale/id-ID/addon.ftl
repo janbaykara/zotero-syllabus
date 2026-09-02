@@ -64,9 +64,9 @@ userGuide-start-close = Ingatkan nanti
 userGuide-collection-title = Mulai dari sebuah koleksi
 userGuide-collection-desc =
     Silabus melekat pada koleksi. Kami akan membuka koleksi latihan “Tur Silabus” dengan beberapa bacaan contoh.
-userGuide-syllabusButton-title = Buka tampilan Silabus
+userGuide-syllabusButton-title = Jadikan silabus
 userGuide-syllabusButton-desc =
-    Klik Silabus pada bilah alat item untuk mengganti daftar dengan kerangka mata kuliah. Tur akan berpindah ke sana untuk Anda.
+    Klik Jadikan silabus pada bilah alat item untuk menjadikan koleksi ini sebagai kerangka mata kuliah. Tur akan berpindah ke sana untuk Anda.
 userGuide-addClass-title = Tambah kelas
 userGuide-addClass-desc =
     Kelas (atau minggu / sesi — nama dapat diubah nanti) adalah bagian-bagian silabus. Tambahkan satu untuk memulai.
@@ -106,7 +106,7 @@ view-tab-checklist = Daftar periksa
 view-tab-checklist-tooltip = Tampilkan sebagai daftar periksa
 view-tab-syllabus = Silabus
 view-tab-syllabus-tooltip = Tampilkan sebagai silabus
-view-tab-create-syllabus = Buat silabus
+view-tab-create-syllabus = Jadikan silabus
 view-tab-create-syllabus-tooltip = Jadikan koleksi ini sebagai silabus
 view-tab-table = Tabel
 view-tab-table-tooltip = Tampilkan sebagai tabel

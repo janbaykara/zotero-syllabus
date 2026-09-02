@@ -64,9 +64,9 @@ userGuide-start-close = Lembrar depois
 userGuide-collection-title = Começar por uma coleção
 userGuide-collection-desc =
     Os programas ficam nas coleções. Abriremos uma coleção de prática “Syllabus Tour” com algumas leituras de exemplo.
-userGuide-syllabusButton-title = Abrir a visão Programa
+userGuide-syllabusButton-title = Transformar em um programa
 userGuide-syllabusButton-desc =
-    Clique em Programa na barra de ferramentas dos itens para substituir a lista pelo esboço da disciplina. O tour mudará para lá automaticamente.
+    Clique em Transformar em programa na barra de ferramentas dos itens para transformar esta coleção no esboço da disciplina. O tour mudará para lá automaticamente.
 userGuide-addClass-title = Adicionar uma aula
 userGuide-addClass-desc =
     Aulas (ou semanas / sessões — você pode renomeá-las depois) são as seções do seu programa. Adicione uma para começar.
@@ -106,7 +106,7 @@ view-tab-checklist = Lista de verificação
 view-tab-checklist-tooltip = Ver como lista de verificação
 view-tab-syllabus = Programa
 view-tab-syllabus-tooltip = Ver como programa do curso
-view-tab-create-syllabus = Criar programa
+view-tab-create-syllabus = Transformar em programa
 view-tab-create-syllabus-tooltip = Transformar esta coleção em um programa do curso
 view-tab-table = Tabela
 view-tab-table-tooltip = Ver como tabela

@@ -64,9 +64,9 @@ userGuide-start-close = Przypomnij później
 userGuide-collection-title = Zacznij od kolekcji
 userGuide-collection-desc =
     Sylabusy są powiązane z kolekcjami. Otworzymy kolekcję ćwiczeniową „Wycieczka po sylabusie” z kilkoma przykładowymi lekturami.
-userGuide-syllabusButton-title = Otwórz widok sylabusa
+userGuide-syllabusButton-title = Przekształć w sylabus
 userGuide-syllabusButton-desc =
-    Kliknij Sylabus na pasku narzędzi pozycji, aby zastąpić listę zarysem kursu. Wycieczka przełączy widok za Ciebie.
+    Kliknij Przekształć w sylabus na pasku narzędzi pozycji, aby przekształcić tę kolekcję w zarys kursu. Wycieczka przełączy widok za Ciebie.
 userGuide-addClass-title = Dodaj zajęcia
 userGuide-addClass-desc =
     Zajęcia (lub tygodnie / sesje — nazwy można później zmienić) to sekcje sylabusa. Dodaj jedne, aby rozpocząć.
@@ -106,7 +106,7 @@ view-tab-checklist = Lista kontrolna
 view-tab-checklist-tooltip = Widok listy kontrolnej
 view-tab-syllabus = Sylabus
 view-tab-syllabus-tooltip = Widok sylabusa
-view-tab-create-syllabus = Utwórz sylabus
+view-tab-create-syllabus = Przekształć w sylabus
 view-tab-create-syllabus-tooltip = Przekształć tę kolekcję w sylabus
 view-tab-table = Tabela
 view-tab-table-tooltip = Widok tabeli
