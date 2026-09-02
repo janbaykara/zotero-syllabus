@@ -49,6 +49,10 @@ export interface ClassGroupComponentProps {
     assignmentId: string | undefined,
     e?: JSX.TargetedMouseEvent<HTMLElement>,
   ) => void;
+  onContextMenu?: (
+    item: Zotero.Item,
+    e: JSX.TargetedMouseEvent<HTMLElement>,
+  ) => void;
   selectedForDrag?: {
     assignments: Array<{ itemId: number; assignmentId: string }>;
     itemIds: number[];
@@ -84,6 +88,7 @@ export function ClassGroupComponent({
   onResetSortOrder,
   selectedIdentifiers = new Set(),
   onIdentifierClick,
+  onContextMenu,
   selectedForDrag = { assignments: [], itemIds: [] },
   onPriorityChange,
   onDelete,
@@ -407,6 +412,7 @@ export function ClassGroupComponent({
                   isLocked={isLocked}
                   selectedIdentifiers={selectedIdentifiers}
                   onIdentifierClick={onIdentifierClick}
+                  onContextMenu={onContextMenu}
                   selectedForDrag={selectedForDrag}
                   onPriorityChange={onPriorityChange}
                   onDelete={onDelete}

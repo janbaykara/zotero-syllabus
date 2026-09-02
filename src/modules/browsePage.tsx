@@ -166,6 +166,7 @@ export function SlimSyllabusItemCard({
   selectedIdentifiers,
   selectedItemIds,
   onIdentifierClick,
+  onContextMenu,
 }: {
   item: Zotero.Item;
   collectionId: number;
@@ -177,6 +178,10 @@ export function SlimSyllabusItemCard({
     item: Zotero.Item,
     assignmentId: string | undefined,
     e?: JSX.TargetedMouseEvent<HTMLElement>,
+  ) => void;
+  onContextMenu?: (
+    item: Zotero.Item,
+    e: JSX.TargetedMouseEvent<HTMLElement>,
   ) => void;
 }) {
   return (
@@ -191,6 +196,7 @@ export function SlimSyllabusItemCard({
       isLocked={true}
       selectedIdentifiers={selectedIdentifiers}
       onIdentifierClick={onIdentifierClick}
+      onContextMenu={onContextMenu}
       isZoteroSelected={selectedItemIds?.includes(item.id) || false}
       isIdentifierSelected={selectedIdentifiers.has(`item:${item.id}`)}
     />

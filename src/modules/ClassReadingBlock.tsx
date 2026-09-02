@@ -21,6 +21,7 @@ import { TabManager } from "../utils/tabManager";
 import { classByNumber } from "../utils/schemas";
 import { getString, getUiDir } from "../utils/locale";
 import { ProseText } from "./ProseText";
+import { openZoteroItemContextMenu } from "../utils/itemContextMenu";
 
 export type ClassReading = {
   collectionId: number;
@@ -201,6 +202,9 @@ export function ClassReadingBlock({
               compactMode={compactMode}
               isLocked={true}
               onClick={onItemClick}
+              onContextMenu={(item, e) => {
+                void openZoteroItemContextMenu(item, e);
+              }}
               readerMode
               className={onItemClick ? "cursor-pointer" : undefined}
             />

@@ -74,6 +74,10 @@ import { bibliographyToHtml } from "./Bibliography";
 import { LinksSection } from "./LinksSection";
 import { ClassGroupComponent } from "./ClassGroup";
 import { shouldCaptureCustomViewKeyboard } from "./galleryKeyboardNav";
+import {
+  isItemContextMenuKey,
+  openZoteroItemContextMenu,
+} from "../utils/itemContextMenu";
 
 export { SyllabusItemCard } from "./SyllabusItemCard";
 export { Bibliography } from "./Bibliography";
@@ -403,6 +407,13 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       syllabusPageRef.current?.focus({ preventScroll: true });
     },
     [selectedItemIds],
+  );
+
+  const handleContextMenu = useCallback(
+    (item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) => {
+      void openZoteroItemContextMenu(item, e);
+    },
+    [],
   );
 
   // Helper: Convert identifier to string format
@@ -769,7 +780,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
     const isDown = e.key === "ArrowDown" || e.key === "Down";
     const isUp = e.key === "ArrowUp" || e.key === "Up";
-    if (!isDown && !isUp) {
+    const isContextMenu = isItemContextMenuKey(e);
+    if (!isDown && !isUp && !isContextMenu) {
       return;
     }
 
@@ -782,9 +794,28 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     const currentIndex = getActiveNavIndex(
       selected,
       entries,
-      isDown ? "down" : "up",
+      isDown || isContextMenu ? "down" : "up",
     );
     if (currentIndex < 0) {
+      return;
+    }
+
+    if (isContextMenu) {
+      const entry = entries[currentIndex];
+      const container = syllabusPageRef.current;
+      const el = container?.querySelector(
+        `[data-syllabus-identifier="${CSS.escape(entry.identifier)}"]`,
+      );
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof e.stopImmediatePropagation === "function") {
+        e.stopImmediatePropagation();
+      }
+      void openZoteroItemContextMenu(
+        entry.item,
+        e,
+        el instanceof Element ? el : null,
+      );
       return;
     }
 
@@ -2034,6 +2065,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                 onResetSortOrder={() => setItemOrderVersion((v) => v + 1)}
                 selectedIdentifiers={selectedIdentifiers}
                 onIdentifierClick={handleIdentifierClick}
+                onContextMenu={handleContextMenu}
                 selectedForDrag={selectedForDrag}
                 onPriorityChange={handlePriorityChange}
                 onDelete={handleDelete}
@@ -2196,6 +2228,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                       readerMode={readerMode}
                       selectedIdentifiers={selectedIdentifiers}
                       onIdentifierClick={handleIdentifierClick}
+                      onContextMenu={handleContextMenu}
                       selectedForDrag={selectedForDrag}
                       onPriorityChange={handlePriorityChange}
                       onDelete={handleDelete}

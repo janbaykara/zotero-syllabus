@@ -77,6 +77,10 @@ import {
   parseGalleryNavKey,
   shouldCaptureCustomViewKeyboard,
 } from "./galleryKeyboardNav";
+import {
+  isItemContextMenuKey,
+  openZoteroItemContextMenu,
+} from "../utils/itemContextMenu";
 import { useGalleryLayout, type GalleryLayout } from "./galleryLayout";
 import { GalleryViewportProvider, useNearViewport } from "./galleryVisibility";
 import { useGallerySortBy, type GallerySortBy } from "./gallerySort";
@@ -363,6 +367,13 @@ export function GalleryPage({
     openItemBestAttachment(item);
   }, []);
 
+  const handleContextMenu = useCallback(
+    (item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) => {
+      void openZoteroItemContextMenu(item, e);
+    },
+    [],
+  );
+
   const handleGalleryKeyDown = useCallback(
     (event: Event) => {
       const e = event as KeyboardEvent;
@@ -383,8 +394,9 @@ export function GalleryPage({
       }
 
       const isEnter = e.key === "Enter";
+      const isContextMenu = isItemContextMenuKey(e);
       const navKey = parseGalleryNavKey(e.key);
-      if (!navKey && !isEnter) {
+      if (!navKey && !isEnter && !isContextMenu) {
         return;
       }
 
@@ -396,19 +408,23 @@ export function GalleryPage({
         navKey ?? "down",
       );
 
-      if (isEnter) {
+      if (isEnter || isContextMenu) {
         const currentEl = currentIndex >= 0 ? els[currentIndex] : null;
         const itemId = Number(currentEl?.dataset.itemId);
         const item = itemId
           ? getCachedItem(itemId) || Zotero.Items.get(itemId)
           : null;
-        if (!item) {
+        if (!item || !currentEl) {
           return;
         }
         e.preventDefault();
         e.stopPropagation();
         if (typeof e.stopImmediatePropagation === "function") {
           e.stopImmediatePropagation();
+        }
+        if (isContextMenu) {
+          void openZoteroItemContextMenu(item, e, currentEl);
+          return;
         }
         handleDoubleClick(item);
         return;
@@ -505,6 +521,7 @@ export function GalleryPage({
           selected={selectedItemIds?.includes(item.id) || false}
           onClick={handleClick}
           onDoubleClick={handleDoubleClick}
+          onContextMenu={handleContextMenu}
         />
       ))}
     </div>
@@ -527,6 +544,7 @@ export function GalleryPage({
           selectedIdentifiers={selectedIdentifiers}
           selectedItemIds={selectedItemIds}
           onIdentifierClick={handleIdentifierClick}
+          onContextMenu={handleContextMenu}
         />
       ))}
     </div>
@@ -577,6 +595,7 @@ export function GalleryPage({
               isLocked={true}
               selectedIdentifiers={selectedIdentifiers}
               onIdentifierClick={handleIdentifierClick}
+              onContextMenu={handleContextMenu}
               isZoteroSelected={selectedItemIds?.includes(item.id) || false}
               isIdentifierSelected={selectedIdentifiers.has(
                 `assignment:${assignment.id}`,
@@ -1343,6 +1362,10 @@ type GalleryTileProps = {
   selected: boolean;
   onClick: (item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) => void;
   onDoubleClick: (item: Zotero.Item) => void;
+  onContextMenu: (
+    item: Zotero.Item,
+    e: JSX.TargetedMouseEvent<HTMLElement>,
+  ) => void;
 };
 
 const GalleryTile = memo(function GalleryTile({
@@ -1350,6 +1373,7 @@ const GalleryTile = memo(function GalleryTile({
   selected,
   onClick,
   onDoubleClick,
+  onContextMenu,
 }: GalleryTileProps) {
   const tileRef = useRef<HTMLDivElement>(null);
   const visible = useNearViewport(tileRef);
@@ -1405,6 +1429,7 @@ const GalleryTile = memo(function GalleryTile({
       title={title}
       onClick={(e) => onClick(item, e)}
       onDblClick={() => onDoubleClick(item)}
+      onContextMenu={(e) => onContextMenu(item, e)}
     >
       <GalleryCover item={item} selected={selected} visible={visible} />
       <div className="syllabus-gallery-meta min-w-0 px-0.5">
@@ -1468,7 +1493,8 @@ function areGalleryTilePropsEqual(
     prev.item.dateModified === next.item.dateModified &&
     prev.selected === next.selected &&
     prev.onClick === next.onClick &&
-    prev.onDoubleClick === next.onDoubleClick
+    prev.onDoubleClick === next.onDoubleClick &&
+    prev.onContextMenu === next.onContextMenu
   );
 }
 

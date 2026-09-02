@@ -508,6 +508,7 @@
   column-gap: 1.25rem;
   row-gap: 0;
   grid-auto-rows: auto auto;
+  align-items: stretch;
 }
 
 .syllabus-gallery-tile {
@@ -516,7 +517,9 @@
   grid-row: span 2;
   min-width: 0;
   margin-bottom: 1.75rem;
-  contain: layout style;
+  /* contain:layout breaks subgrid (covers no longer share a baseline). */
+  contain: style;
+  align-content: end;
 }
 
 .syllabus-gallery-cover-portrait,
@@ -526,6 +529,20 @@
 .syllabus-gallery-cover-natural {
   align-self: end;
   width: 100%;
+}
+
+@supports not (grid-template-rows: subgrid) {
+  .syllabus-gallery-grid {
+    grid-auto-rows: auto;
+    align-items: end;
+  }
+
+  .syllabus-gallery-tile {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    grid-row: auto;
+  }
 }
 
 /* Paper edge above cover art (inset shadows sit under descendants). */

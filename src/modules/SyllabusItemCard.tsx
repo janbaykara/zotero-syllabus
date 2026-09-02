@@ -38,6 +38,7 @@ export function SyllabusItemCard({
   onDrop,
   onDragOver,
   onClick: customOnClick,
+  onContextMenu: customOnContextMenu,
   selectedIdentifiers = new Set(),
   onIdentifierClick,
   selectedForDrag = { assignments: [], itemIds: [] },
@@ -67,6 +68,10 @@ export function SyllabusItemCard({
     item: Zotero.Item,
     e?: JSX.TargetedMouseEvent<HTMLElement>,
   ) => void; // Optional custom click handler
+  onContextMenu?: (
+    item: Zotero.Item,
+    e: JSX.TargetedMouseEvent<HTMLElement>,
+  ) => void;
   // Selection props
   selectedIdentifiers?: Set<string>;
   onIdentifierClick?: (
@@ -523,6 +528,9 @@ export function SyllabusItemCard({
           onClick(item, e);
         }
       }}
+      onContextMenu={
+        customOnContextMenu ? (e) => customOnContextMenu(item, e) : undefined
+      }
       onDblClick={(e) => onDoubleClick(item, e)}
       onDragStart={isLocked || showYoutubeEmbed ? undefined : handleDragStart}
       onDragEnd={isLocked || showYoutubeEmbed ? undefined : handleDragEnd}
