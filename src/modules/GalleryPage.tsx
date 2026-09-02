@@ -937,37 +937,31 @@ function GalleryClassHeading({
   const classIsDone =
     SyllabusManager.getClassStatus(collectionId, classNumber) === "done";
 
+  const className = `${singularCapitalized} ${classNumber}`;
+  const showKicker = Boolean(title || classIsDone || readingDate);
+
   return (
     <header className="syllabus-gallery-class-header">
-      <div className="syllabus-gallery-class-kicker">
-        {title ? (
-          <div className="syllabus-gallery-class-label">
-            {singularCapitalized} {classNumber}
-          </div>
-        ) : (
-          <h2 className="syllabus-gallery-class-label">
-            <GalleryGroupIcon spec={{ kind: "class" }} />
-            <span>
-              {singularCapitalized} {classNumber}
+      {showKicker ? (
+        <div className="syllabus-gallery-class-kicker">
+          {title ? (
+            <div className="syllabus-gallery-class-label">{className}</div>
+          ) : null}
+          {classIsDone ? (
+            <span className="syllabus-gallery-class-done">
+              {getString("status-done")}
             </span>
-          </h2>
-        )}
-        {classIsDone ? (
-          <span className="syllabus-gallery-class-done">
-            {getString("status-done")}
-          </span>
-        ) : null}
-        {readingDate ? (
-          <span className="syllabus-gallery-class-date">
-            {formatReadingDate(readingDate)}
-          </span>
-        ) : null}
-      </div>
-      {title ? (
-        <GalleryGroupHeading icon={{ kind: "class" }}>
-          {title}
-        </GalleryGroupHeading>
+          ) : null}
+          {readingDate ? (
+            <span className="syllabus-gallery-class-date">
+              {formatReadingDate(readingDate)}
+            </span>
+          ) : null}
+        </div>
       ) : null}
+      <GalleryGroupHeading icon={{ kind: "class" }}>
+        {title || className}
+      </GalleryGroupHeading>
       {description ? (
         <div className="syllabus-gallery-class-description">
           <ProseText text={description} />
