@@ -1471,6 +1471,46 @@ export function getClassSubcollectionContext(
   return null;
 }
 
+function ancestorHasSyllabusNote(collection: Zotero.Collection): boolean {
+  const seen = new Set<number>();
+  let current: Zotero.Collection | null = collection;
+  while (current?.parentID) {
+    if (seen.has(current.parentID)) {
+      return false;
+    }
+    seen.add(current.parentID);
+    const parent =
+      getCachedCollectionById(current.parentID) ||
+      Zotero.Collections.get(current.parentID);
+    if (!parent) {
+      return false;
+    }
+    const parentEntry = documentCache.get(collectionRefFromCollection(parent));
+    if (parentEntry?.noteId) {
+      return true;
+    }
+    current = parent;
+  }
+  return false;
+}
+
+/**
+ * Descendant of a syllabus that is not a class folder. Direct children inherit
+ * the parent note for reads/writes. Deeper folders must still not offer
+ * Syllabus view (that is the ancestor cover).
+ */
+export function isUnmanagedSyllabusChild(
+  collection: Zotero.Collection,
+): boolean {
+  if (getReadingScheduleCollectionContext(collection.id)) {
+    return false;
+  }
+  if (getClassSubcollectionContext(collection)) {
+    return false;
+  }
+  return ancestorHasSyllabusNote(collection);
+}
+
 registerManagedClassFolderCheck((collectionId) => {
   const context = getClassSubcollectionContext(collectionId);
   return context != null && context.classNumber != null;

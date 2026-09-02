@@ -66,6 +66,7 @@ import {
   getClassSubcollectionContext,
   collectionHasSyllabusNote,
   ensureSyllabusNoteForUser,
+  isUnmanagedSyllabusChild,
   whenSyllabusNotesReady,
 } from "./syllabusNote";
 import { getItemTitle, readItemNote } from "../utils/items";
@@ -74,7 +75,7 @@ import {
   getReadingScheduleCollectionContext,
   isManagedReadingScheduleCollection,
 } from "./readingScheduleCollection";
-import { isAutoManagedCollection } from "./autoManagedCollection";
+import { isAutoManagedCollection, getCollectionTreeKind } from "./autoManagedCollection";
 import {
   applyManagedCollectionTree,
   areCustomIconsEnabled,
@@ -151,6 +152,12 @@ function syllabusViewModeChrome(): { label: string; tooltip: string } | null {
     return {
       label: getString("view-tab-checklist"),
       tooltip: getString("view-tab-checklist-tooltip"),
+    };
+  }
+  if (getCollectionTreeKind(collection.id) !== "syllabus") {
+    return {
+      label: getString("view-tab-create-syllabus"),
+      tooltip: getString("view-tab-create-syllabus-tooltip"),
     };
   }
   return {
@@ -700,10 +707,14 @@ export class SyllabusManager {
   }
 
   static coerceViewModeForCollection(
-    _collection: Zotero.Collection,
+    collection: Zotero.Collection,
     value: unknown,
   ): CollectionViewMode {
-    return coerceCollectionViewMode(value);
+    const mode = coerceCollectionViewMode(value);
+    if (mode === "syllabus" && isUnmanagedSyllabusChild(collection)) {
+      return "collection";
+    }
+    return mode;
   }
 
   static async setCollectionViewMode(mode: CollectionViewMode): Promise<void> {
@@ -715,6 +726,9 @@ export class SyllabusManager {
     }
 
     if (mode === "syllabus") {
+      if (isUnmanagedSyllabusChild(selectedCollection)) {
+        return;
+      }
       const enabled = await ensureSyllabusNoteForUser(selectedCollection);
       if (!enabled) {
         return;
@@ -741,7 +755,11 @@ export class SyllabusManager {
   }
 
   static async cycleCollectionViewMode(): Promise<CollectionViewMode> {
-    const modes = COLLECTION_VIEW_MODES;
+    const selectedCollection = getSelectedCollection();
+    const modes =
+      selectedCollection && isUnmanagedSyllabusChild(selectedCollection)
+        ? COLLECTION_VIEW_MODES.filter((mode) => mode !== "syllabus")
+        : COLLECTION_VIEW_MODES;
     const current = SyllabusManager.getCollectionViewMode();
     const index = Math.max(0, modes.indexOf(current));
     const next = modes[(index + 1) % modes.length];
@@ -978,8 +996,18 @@ export class SyllabusManager {
       ? getReadingScheduleCollectionContext(selectedCollection.id)
       : null;
 
+    const hideSyllabusTab =
+      !!selectedCollection && isUnmanagedSyllabusChild(selectedCollection);
+
     for (const button of viewModeButtons) {
       if (shouldShowReadingSchedule || readingScheduleContext) {
+        button.hidden = true;
+        continue;
+      }
+      if (
+        hideSyllabusTab &&
+        button.getAttribute("data-view-mode") === "syllabus"
+      ) {
         button.hidden = true;
         continue;
       }

@@ -109,7 +109,7 @@ After each note persist, [`src/modules/classSubcollections.ts`](../src/modules/c
 
 On startup, folders are ensured for every syllabus that has the setting on. New folder keys are written back to the note; if keys are already present, only membership is synced.
 
-Class-folder Syllabus view is a single-class page (same class renderer as the Reading Schedule) with a link back to the parent. Document reads/writes for a class folder resolve to the parent note (`getClassSubcollectionContext` / `resolveSyllabusRoot`).
+Class-folder Syllabus view is a single-class page (same class renderer as the Reading Schedule) with a link back to the parent. Document reads/writes for a class folder resolve to the parent note (`getClassSubcollectionContext` / `resolveSyllabusRoot`). Unmanaged descendants of a syllabus do not get Syllabus view — open the parent, or un-nest the folder to make a second syllabus.
 
 ## Practical rules
 

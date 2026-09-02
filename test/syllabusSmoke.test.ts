@@ -8,6 +8,7 @@ import {
   getHydratedItemAssignments,
   getSyllabusNoteId,
   isSyllabusNoteFile,
+  isUnmanagedSyllabusChild,
   mutateCollectionDocument,
   parseSyllabusNote,
   whenSyllabusNotesReady,
@@ -21,10 +22,37 @@ function childCollections(collection: Zotero.Collection): Zotero.Collection[] {
   return Array.isArray(children) ? children : [];
 }
 
+/** Deepest-first descendants (not including `collection`). */
+function descendantCollections(
+  collection: Zotero.Collection,
+): Zotero.Collection[] {
+  const out: Zotero.Collection[] = [];
+  const walk = (col: Zotero.Collection) => {
+    for (const child of childCollections(col)) {
+      walk(child);
+      out.push(child);
+    }
+  };
+  walk(collection);
+  return out;
+}
+
 async function createCollection(name: string): Promise<Zotero.Collection> {
   const collection = new Zotero.Collection();
   collection.libraryID = Zotero.Libraries.userLibraryID;
   collection.name = name;
+  await collection.saveTx();
+  return collection;
+}
+
+async function createChildCollection(
+  name: string,
+  parent: Zotero.Collection,
+): Promise<Zotero.Collection> {
+  const collection = new Zotero.Collection();
+  collection.libraryID = parent.libraryID;
+  collection.name = name;
+  collection.parentID = parent.id;
   await collection.saveTx();
   return collection;
 }
@@ -65,7 +93,7 @@ async function eraseCreated(
 ): Promise<void> {
   const itemIds = items.map((item) => item.id).filter(Boolean);
   if (collection?.id) {
-    for (const child of childCollections(collection)) {
+    for (const child of descendantCollections(collection)) {
       itemIds.push(...childItemIds(child));
     }
     itemIds.push(...childItemIds(collection));
@@ -80,7 +108,7 @@ async function eraseCreated(
   }
   if (collection?.id) {
     try {
-      for (const child of childCollections(collection)) {
+      for (const child of descendantCollections(collection)) {
         await child.eraseTx();
       }
       await collection.eraseTx();
@@ -225,6 +253,7 @@ describe("syllabus smoke", function () {
     assert.equal(folder.parentID, collection.id);
     assert.equal(folder.name, expectedName);
     assert.isTrue(isManagedClassFolderCollection(folder.id));
+    assert.isFalse(isUnmanagedSyllabusChild(folder));
 
     const folderItemIds = childItemIds(folder);
     assert.include(folderItemIds, book.id);
@@ -376,5 +405,43 @@ describe("syllabus smoke", function () {
     assert.equal(assignments[0]?.classId, CLASS_ID);
     assert.equal(assignments[0]?.priority, "essential");
     assert.equal(assignments[0]?.classInstruction, "Read before class");
+  });
+
+  it("treats unmanaged descendants of a syllabus as not their own syllabus", async function () {
+    collection = await createCollection("Smoke Syllabus Parent");
+    await mutateCollectionDocument(
+      collection,
+      (document) => ({ ...document, courseCode: "EDU303" }),
+      { createNote: "always" },
+    );
+
+    const child = await createChildCollection(
+      "Smoke Unmanaged Child",
+      collection,
+    );
+    const grandchild = await createChildCollection(
+      "Smoke Unmanaged Grandchild",
+      child,
+    );
+    const greatGrandchild = await createChildCollection(
+      "Smoke Unmanaged Great-Grandchild",
+      grandchild,
+    );
+
+    const sibling = await createCollection("Smoke Syllabus Sibling");
+    try {
+      assert.isTrue(collectionHasSyllabusNote(collection));
+      assert.isTrue(isUnmanagedSyllabusChild(child));
+      assert.isTrue(isUnmanagedSyllabusChild(grandchild));
+      assert.isTrue(isUnmanagedSyllabusChild(greatGrandchild));
+      assert.isFalse(isUnmanagedSyllabusChild(collection));
+      assert.isFalse(isUnmanagedSyllabusChild(sibling));
+    } finally {
+      try {
+        await sibling.eraseTx();
+      } catch {
+        /* profile is discarded after the run */
+      }
+    }
   });
 });
