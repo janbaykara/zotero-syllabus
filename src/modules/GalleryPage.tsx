@@ -12,9 +12,11 @@ import {
 import type { ComponentChildren, JSX, RefObject } from "preact";
 import { twMerge } from "tailwind-merge";
 import {
+  ALargeSmall,
   ArrowDownAZ,
   BookOpen,
   Calendar,
+  CaseSensitive,
   Folder,
   FolderOpen,
   GraduationCap,
@@ -79,7 +81,12 @@ import {
   openZoteroItemContextMenu,
 } from "../utils/itemContextMenu";
 import { useGalleryLayout, type GalleryLayout } from "./galleryLayout";
-import { magazineSectionTemplate, pickRecentMediaItems } from "./magazineDesks";
+import { useMagazineTypeSize, type MagazineTypeSize } from "./magazineTypeSize";
+import {
+  magazineSectionTemplate,
+  pickRecentMediaItems,
+  type MagazineDeskInput,
+} from "./magazineDesks";
 import { MagazineGrid } from "./MagazineTile";
 import { MagazineHome } from "./MagazineHome";
 import { MagazineShelf } from "./MagazineShelf";
@@ -152,6 +159,7 @@ export function GalleryPage({
   });
   const [sortBy, setSortBy] = useGallerySortBy(viewKey);
   const [layout, setLayout] = useGalleryLayout(viewKey);
+  const [magazineTypeSize, setMagazineTypeSize] = useMagazineTypeSize();
   const [compactMode] = useZoteroCompactMode();
   const [syllabusMetadata] = useZoteroSyllabusMetadata(collectionIdOrZero);
   const { classGroups, furtherReadingItems } = useSyllabusClassGroups(
@@ -179,6 +187,50 @@ export function GalleryPage({
     () => filterSubcollectionNode(unfilteredSubcollectionRoot, matchingIds),
     [unfilteredSubcollectionRoot, matchingIds],
   );
+  const magazineClassDesks = useMemo((): MagazineDeskInput[] => {
+    if (!isSyllabus) {
+      return [];
+    }
+    const desks: MagazineDeskInput[] = [];
+    for (const group of classGroups) {
+      const itemIds: number[] = [];
+      const seen = new Set<number>();
+      for (const { item } of group.itemAssignments) {
+        if (seen.has(item.id)) {
+          continue;
+        }
+        seen.add(item.id);
+        itemIds.push(item.id);
+      }
+      if (itemIds.length === 0) {
+        continue;
+      }
+      const key = String(group.classNumber ?? "unnumbered");
+      desks.push({
+        id: `class-${key}`,
+        title: classNavLabel(
+          collectionIdOrZero,
+          group.classNumber,
+          syllabusMetadata,
+        ),
+        itemIds,
+      });
+    }
+    if (furtherReadingItems.length > 0) {
+      desks.push({
+        id: "further-reading",
+        title: getString("further-reading-heading"),
+        itemIds: furtherReadingItems.map((item) => item.id),
+      });
+    }
+    return desks;
+  }, [
+    classGroups,
+    collectionIdOrZero,
+    furtherReadingItems,
+    isSyllabus,
+    syllabusMetadata,
+  ]);
   const emptyMessage = isFiltered
     ? getString("gallery-empty-filtered")
     : getString("gallery-empty");
@@ -648,6 +700,9 @@ export function GalleryPage({
       className={twMerge(
         "syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background focus:outline-none",
         layout === "magazine" && "syllabus-magazine-page",
+        layout === "magazine" &&
+          magazineTypeSize === "large" &&
+          "is-large-type",
         compactMode && "compact-mode",
       )}
       dir={getUiDir()}
@@ -671,6 +726,8 @@ export function GalleryPage({
               onSortBy={setSortBy}
               layout={layout}
               onLayout={setLayout}
+              magazineTypeSize={magazineTypeSize}
+              onMagazineTypeSize={setMagazineTypeSize}
               navGroups={navGroups}
               activeGroupId={activeGroupId}
               onSelectGroup={handleSelectGroup}
@@ -713,6 +770,7 @@ export function GalleryPage({
                 <MagazineHome
                   items={syllabusItems.map(({ zoteroItem }) => zoteroItem)}
                   tagGroups={tagGroups}
+                  classDesks={magazineClassDesks}
                   subcollectionRoot={subcollectionRoot}
                   sortBy={sortBy}
                   selectedItemIds={selectedItemIds}
@@ -1172,6 +1230,23 @@ function galleryLayoutOptions(): GallerySegmentOption<GalleryLayout>[] {
   ];
 }
 
+function magazineTypeSizeOptions(): GallerySegmentOption<MagazineTypeSize>[] {
+  return [
+    {
+      mode: "small",
+      label: getString("gallery-type-small"),
+      title: getString("gallery-type-small-title"),
+      Icon: CaseSensitive,
+    },
+    {
+      mode: "large",
+      label: getString("gallery-type-large"),
+      title: getString("gallery-type-large-title"),
+      Icon: ALargeSmall,
+    },
+  ];
+}
+
 type GallerySegmentOption<T extends string> = {
   mode: T;
   label: string;
@@ -1196,6 +1271,8 @@ function GalleryPageHeader({
   onSortBy,
   layout,
   onLayout,
+  magazineTypeSize,
+  onMagazineTypeSize,
   navGroups,
   activeGroupId,
   onSelectGroup,
@@ -1210,6 +1287,8 @@ function GalleryPageHeader({
   onSortBy: (mode: GallerySortBy) => void;
   layout: GalleryLayout;
   onLayout: (mode: GalleryLayout) => void;
+  magazineTypeSize: MagazineTypeSize;
+  onMagazineTypeSize: (size: MagazineTypeSize) => void;
   navGroups: GalleryNavGroup[];
   activeGroupId: string | null;
   onSelectGroup: (id: string) => void;
@@ -1326,6 +1405,15 @@ function GalleryPageHeader({
                   onChange={onGroupBy}
                   options={groupByOptions}
                 />
+                {layout === "magazine" ? (
+                  <GallerySegmentedControl
+                    label={getString("gallery-menu-type-size")}
+                    ariaLabel={getString("gallery-menu-type-size")}
+                    value={magazineTypeSize}
+                    onChange={onMagazineTypeSize}
+                    options={magazineTypeSizeOptions()}
+                  />
+                ) : null}
               </div>
             </div>
           ) : null}

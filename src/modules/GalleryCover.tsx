@@ -1,5 +1,4 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
 import { memo } from "preact/compat";
 import { useEffect, useMemo, useState } from "preact/hooks";
@@ -22,6 +21,7 @@ import {
   type ResolvedCover,
 } from "../utils/itemCover";
 import { getString } from "../utils/locale";
+import { formatReadingTime, getReadingTimeSync } from "../utils/readingTime";
 
 const PAGE_LIKE_ITEM_TYPES = new Set([
   "book",
@@ -84,6 +84,7 @@ export const GalleryCover = memo(function GalleryCover({
   const isWeb = isWebGalleryItem(item);
   const isAudio = isAudioGalleryItem(item);
   const showPlay = isPlayableGalleryItem(item);
+  const durationMinutes = showPlay ? getReadingTimeSync(item) : null;
   const showWebOverlay = isWeb && cover.kind === "image" && !isVideo;
   const showAudioCaption =
     isAudio && cover.kind === "image" && !cover.fromAttachment;
@@ -200,7 +201,17 @@ export const GalleryCover = memo(function GalleryCover({
         ) : null}
         {showPlay ? (
           <div className="syllabus-gallery-play" aria-hidden="true">
-            <span className="syllabus-gallery-play-btn" />
+            <span
+              className={twMerge(
+                "syllabus-gallery-play-btn",
+                isAudio && "is-audio",
+              )}
+            />
+          </div>
+        ) : null}
+        {durationMinutes ? (
+          <div className="syllabus-gallery-duration">
+            {formatReadingTime(durationMinutes)}
           </div>
         ) : null}
         {showSpine ? <div className="syllabus-gallery-book-spine" /> : null}

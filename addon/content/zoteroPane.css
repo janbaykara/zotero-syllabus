@@ -638,6 +638,23 @@
   pointer-events: none;
 }
 
+.syllabus-gallery-duration {
+  position: absolute;
+  right: 0.35rem;
+  bottom: 0.35rem;
+  z-index: 3;
+  padding: 0.15rem 0.38rem;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  font-family: system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
 /* Faint Apple Books–style hinge on book / book section covers */
 .syllabus-gallery-book-spine {
   position: absolute;
@@ -1112,6 +1129,9 @@
 }
 
 .syllabus-magazine-page {
+  --magazine-type-scale: 1;
+  --magazine-col-min: 200px;
+  --magazine-shelf-width: 196px;
   --syllabus-magazine-kicker: #c70000;
   --syllabus-magazine-serif:
     "Newsreader", Georgia, "Palatino Linotype", Palatino, "Songti SC",
@@ -1122,6 +1142,23 @@
     transparent
   );
   font-synthesis: none;
+}
+
+.syllabus-magazine-page.is-large-type {
+  --magazine-type-scale: 1.25;
+  --magazine-col-min: 232px;
+  --magazine-shelf-width: 228px;
+}
+
+.syllabus-magazine-page.is-large-type
+  .syllabus-magazine-shelf-scroller
+  .syllabus-magazine-tile {
+  height: auto;
+  min-height: 268px;
+}
+
+.syllabus-magazine-page .syllabus-gallery-duration {
+  font-size: calc(10px * var(--magazine-type-scale, 1));
 }
 
 .syllabus-magazine-page .syllabus-gallery-section {
@@ -1139,7 +1176,7 @@
   padding-top: 0.55rem;
   border-top: 3px solid var(--fill-primary, #111);
   font-family: var(--syllabus-magazine-serif);
-  font-size: 1.65rem;
+  font-size: calc(1.65rem * var(--magazine-type-scale, 1));
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.15;
@@ -1161,8 +1198,8 @@
 }
 
 .syllabus-magazine-shelf-scroller .syllabus-magazine-tile {
-  flex: 0 0 196px;
-  width: 196px;
+  flex: 0 0 var(--magazine-shelf-width, 196px);
+  width: var(--magazine-shelf-width, 196px);
   height: 268px;
   grid-column: auto;
   grid-row: auto;
@@ -1172,7 +1209,10 @@
 
 .syllabus-magazine-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(var(--magazine-col-min, 200px), 1fr)
+  );
   grid-auto-flow: dense;
   grid-auto-rows: minmax(min-content, auto);
   align-items: stretch;
@@ -1372,7 +1412,7 @@
 
 .syllabus-magazine-kicker {
   font-family: system-ui, sans-serif;
-  font-size: 11px;
+  font-size: calc(11px * var(--magazine-type-scale, 1));
   font-weight: 700;
   line-height: 1.3;
   letter-spacing: 0.12em;
@@ -1386,7 +1426,7 @@
 
 .syllabus-magazine-title {
   font-family: var(--syllabus-magazine-serif);
-  font-size: 1.28rem;
+  font-size: calc(1.28rem * var(--magazine-type-scale, 1));
   font-weight: 700;
   line-height: 1.18;
   letter-spacing: -0.02em;
@@ -1398,19 +1438,19 @@
 }
 
 .syllabus-magazine-tile[data-role="hero"] .syllabus-magazine-title {
-  font-size: 2rem;
+  font-size: calc(2rem * var(--magazine-type-scale, 1));
   -webkit-line-clamp: 4;
 }
 
 .syllabus-magazine-tile[data-role="compact"] .syllabus-magazine-title {
-  font-size: 1.22rem;
+  font-size: calc(1.22rem * var(--magazine-type-scale, 1));
   -webkit-line-clamp: 3;
 }
 
 .syllabus-magazine-byline {
   margin-top: 0.28rem;
   font-family: var(--syllabus-magazine-serif);
-  font-size: 1.22rem;
+  font-size: calc(1.22rem * var(--magazine-type-scale, 1));
   font-style: italic;
   font-weight: 500;
   line-height: 1.35;
@@ -1424,7 +1464,7 @@
 .syllabus-magazine-meta {
   margin-top: 0.45rem;
   font-family: var(--syllabus-magazine-serif);
-  font-size: 1.15rem;
+  font-size: calc(1.15rem * var(--magazine-type-scale, 1));
   font-weight: 450;
   line-height: 1.5;
   color: var(--fill-primary, inherit);
@@ -1434,7 +1474,7 @@
 }
 
 .syllabus-magazine-tile[data-role="hero"] .syllabus-magazine-abstract {
-  font-size: 1.22rem;
+  font-size: calc(1.22rem * var(--magazine-type-scale, 1));
   -webkit-line-clamp: 8;
 }
 
@@ -1452,6 +1492,46 @@
 
 .syllabus-magazine-meta {
   -webkit-line-clamp: 2;
+}
+
+.syllabus-magazine-page.is-large-type
+  .syllabus-magazine-tile[data-role="hero"]
+  .syllabus-magazine-abstract {
+  -webkit-line-clamp: 12;
+}
+
+.syllabus-magazine-page.is-large-type
+  .syllabus-magazine-tile[data-role="wide"]
+  .syllabus-magazine-abstract {
+  -webkit-line-clamp: 9;
+}
+
+.syllabus-magazine-page.is-large-type
+  .syllabus-magazine-tile[data-role="tall"]
+  .syllabus-magazine-abstract {
+  -webkit-line-clamp: 12;
+}
+
+.syllabus-magazine-page.is-large-type
+  .syllabus-magazine-tile[data-role="compact"]
+  .syllabus-magazine-abstract {
+  -webkit-line-clamp: 9;
+}
+
+.syllabus-magazine-page.is-large-type .syllabus-magazine-meta {
+  -webkit-line-clamp: 3;
+}
+
+.syllabus-magazine-duration {
+  margin-top: auto;
+  padding-top: 0.85rem;
+  font-family: system-ui, sans-serif;
+  font-size: calc(11px * var(--magazine-type-scale, 1));
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: var(--fill-secondary, #666);
 }
 
 .syllabus-gallery-play-btn.is-audio::after {

@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h } from "preact";
-import { Folder, Tags } from "lucide-preact";
+import { Folder, GraduationCap, BookOpen, Tags } from "lucide-preact";
 import { getString } from "../utils/locale";
 import type { ItemSortMode } from "../utils/items";
 import type { TagGroup } from "./tagGroups";
@@ -10,6 +10,7 @@ import {
   pickMagazineDesks,
   pickRecentMediaItems,
   remainderItemIds,
+  type MagazineDeskInput,
 } from "./magazineDesks";
 import { MagazineGrid, type MagazineTileClick } from "./MagazineTile";
 import { MagazineShelf } from "./MagazineShelf";
@@ -35,9 +36,23 @@ function collectNodeItemIds(node: SubcollectionNode): number[] {
   return ids;
 }
 
+function deskIcon(id: string) {
+  if (id.startsWith("tag-")) {
+    return Tags;
+  }
+  if (id === "further-reading") {
+    return BookOpen;
+  }
+  if (id.startsWith("class-")) {
+    return GraduationCap;
+  }
+  return Folder;
+}
+
 export function MagazineHome({
   items,
   tagGroups,
+  classDesks = [],
   subcollectionRoot,
   sortBy,
   selectedItemIds,
@@ -47,6 +62,7 @@ export function MagazineHome({
 }: {
   items: Zotero.Item[];
   tagGroups: TagGroup[];
+  classDesks?: MagazineDeskInput[];
   subcollectionRoot: SubcollectionNode | null;
   sortBy: ItemSortMode;
   selectedItemIds: number[] | null | undefined;
@@ -69,7 +85,7 @@ export function MagazineHome({
       title: group.tag,
       itemIds: group.items.map((item) => item.id),
     }));
-  const desks = pickMagazineDesks([...subDesks, ...tagDesks]);
+  const desks = pickMagazineDesks([...classDesks, ...subDesks, ...tagDesks]);
   const restIds = remainderItemIds(
     items.map((item) => item.id),
     desks,
@@ -112,8 +128,7 @@ export function MagazineHome({
         if (deskItems.length === 0) {
           return null;
         }
-        const isTag = desk.id.startsWith("tag-");
-        const Icon = isTag ? Tags : Folder;
+        const Icon = deskIcon(desk.id);
         return (
           <section
             key={desk.id}

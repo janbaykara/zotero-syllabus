@@ -89,7 +89,7 @@ export function getItemCreatorByline(item: Zotero.Item): string {
     if (creators.length === 0) {
       return getItemCreatorLine(item);
     }
-    let primaryTypeID: number | null = null;
+    let primaryTypeID: number | false | null = null;
     try {
       primaryTypeID = Zotero.CreatorTypes.getPrimaryIDForType(item.itemTypeID);
     } catch {

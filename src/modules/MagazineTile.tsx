@@ -12,6 +12,7 @@ import {
   type ItemSortMode,
 } from "../utils/items";
 import { getItemBlurb, usableAbstractSnippet } from "../utils/itemBlurb";
+import { formatReadingTime, getReadingTimeSync } from "../utils/readingTime";
 import {
   getPlaceholderCover,
   isAudioGalleryItem,
@@ -57,6 +58,10 @@ export const MagazineTile = memo(function MagazineTile({
     [item],
   );
   const creator = useMemo(() => getItemCreatorByline(item), [item]);
+  const durationMinutes = useMemo(
+    () => getReadingTimeSync(item, { roundUp: true }),
+    [item],
+  );
   const abstractNote = useMemo(() => usableAbstractSnippet(item), [item]);
   const [blurb, setBlurb] = useState(abstractNote);
   const publication = useMemo(
@@ -180,6 +185,11 @@ export const MagazineTile = memo(function MagazineTile({
           <div className="syllabus-magazine-abstract">{blurb}</div>
         ) : fallbackMeta ? (
           <div className="syllabus-magazine-meta">{fallbackMeta}</div>
+        ) : null}
+        {durationMinutes && !playable ? (
+          <div className="syllabus-magazine-duration">
+            {formatReadingTime(durationMinutes)}
+          </div>
         ) : null}
       </div>
     </div>

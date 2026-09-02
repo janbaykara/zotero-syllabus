@@ -19,6 +19,17 @@ describe("magazine desks and blurbs", function () {
     assert.deepEqual(pickRecentMediaIds(items, "audio"), [4, 3]);
   });
 
+  it("keeps earlier class desks ahead of tags when claiming items", function () {
+    const desks = pickMagazineDesks([
+      { id: "class-1", title: "Week 1", itemIds: [1, 2, 3] },
+      { id: "tag-0", title: "Theory", itemIds: [1, 2, 3, 4, 5] },
+    ]);
+    assert.equal(desks[0].id, "class-1");
+    assert.deepEqual(desks[0].itemIds, [1, 2, 3]);
+    assert.equal(desks[1].id, "tag-0");
+    assert.deepEqual(desks[1].itemIds, [4, 5]);
+  });
+
   it("claims items for the largest desks and leaves a remainder", function () {
     const desks = pickMagazineDesks([
       { id: "theory", title: "Theory", itemIds: [1, 2, 3, 4, 9] },

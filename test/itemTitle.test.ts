@@ -1,5 +1,6 @@
 import { assert } from "chai";
 import {
+  getItemCreatorByline,
   getItemCreatorLine,
   getItemField,
   getItemTitle,
@@ -231,6 +232,31 @@ describe("item fields", function () {
       const line = getItemCreatorLine(patent);
       assert.equal(line, String(patent.firstCreator || "").trim());
       assert.match(line, /Lovelace/);
+    });
+
+    it("uses given names in magazine bylines", async function () {
+      const book = new Zotero.Item("book");
+      book.libraryID = Zotero.Libraries.userLibraryID;
+      book.setField("title", "The Bonds of Love");
+      book.setCreators([
+        {
+          firstName: "Jessica",
+          lastName: "Benjamin",
+          creatorType: "author",
+        },
+        {
+          firstName: "Lou",
+          lastName: "Andreas-Salomé",
+          creatorType: "author",
+        },
+      ]);
+      await book.saveTx();
+      items.push(book);
+
+      const line = getItemCreatorByline(book);
+      assert.match(line, /Jessica/);
+      assert.match(line, /Lou/);
+      assert.notEqual(line, getItemCreatorLine(book));
     });
   });
 });

@@ -234,13 +234,27 @@ function hostIsVideoSite(hostname: string): boolean {
 }
 
 export function isVideoGalleryItem(item: Zotero.Item): boolean {
-  if (isAudioGalleryItem(item)) {
+  return isVideoGalleryItemFromTypeAndUrl(item.itemType, getItemPageUrl(item));
+}
+
+/**
+ * Books, reports, and other bibliographic types stay their type even when a
+ * YouTube (or other video-site) URL is attached. URL/host detection is only
+ * for web-like items (a saved YouTube page) and for film/video types.
+ */
+export function isVideoGalleryItemFromTypeAndUrl(
+  itemType: string,
+  pageUrl: string | null,
+): boolean {
+  if (AUDIO_GALLERY_ITEM_TYPES.has(itemType)) {
     return false;
   }
-  if (VIDEO_GALLERY_ITEM_TYPES.has(item.itemType)) {
+  if (VIDEO_GALLERY_ITEM_TYPES.has(itemType)) {
     return true;
   }
-  const pageUrl = getItemPageUrl(item);
+  if (!WEB_GALLERY_ITEM_TYPES.has(itemType)) {
+    return false;
+  }
   if (!pageUrl) {
     return false;
   }
@@ -360,6 +374,9 @@ async function resolveItemCoverUncached(
 }
 
 function findYoutubeThumb(item: Zotero.Item): string | null {
+  if (!isVideoGalleryItem(item)) {
+    return null;
+  }
   const url = youtubeUrlFromItem(item);
   const videoId = youtubeVideoIdFromUrl(url);
   return videoId ? youtubeThumbnailUrl(videoId, "mq") : null;

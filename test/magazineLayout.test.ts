@@ -1,5 +1,6 @@
 import { assert } from "chai";
 import { coerceGalleryLayout } from "../src/modules/galleryLayout";
+import { coerceMagazineTypeSize } from "../src/modules/magazineTypeSize";
 import {
   assignMagazineRoles,
   MAGAZINE_HERO_ABSTRACT_MIN,
@@ -39,6 +40,12 @@ describe("magazineLayout", function () {
     assert.equal(coerceGalleryLayout("magazine"), "magazine");
     assert.equal(coerceGalleryLayout("cover"), "cover");
     assert.equal(coerceGalleryLayout("nope"), "cover");
+  });
+
+  it("coerces magazine type size", function () {
+    assert.equal(coerceMagazineTypeSize("large"), "large");
+    assert.equal(coerceMagazineTypeSize("small"), "small");
+    assert.equal(coerceMagazineTypeSize("huge"), "small");
   });
 
   it("makes the first item a hero", function () {
@@ -132,7 +139,10 @@ describe("magazineLayout", function () {
     for (const roles of [strip, essay]) {
       const spanning = roles.filter((role) => role !== "compact");
       assert.isAtLeast(spanning.length, 4);
-      assert.isAtMost(maxRun(roles, "compact"), MAGAZINE_MAX_CONSECUTIVE_COMPACT);
+      assert.isAtMost(
+        maxRun(roles, "compact"),
+        MAGAZINE_MAX_CONSECUTIVE_COMPACT,
+      );
       assert.isAtMost(maxRun(roles, "tall"), MAGAZINE_MAX_CONSECUTIVE_SAME);
       assert.isAtMost(maxRun(roles, "wide"), MAGAZINE_MAX_CONSECUTIVE_SAME);
       assert.isAbove(new Set(roles).size, 1);
