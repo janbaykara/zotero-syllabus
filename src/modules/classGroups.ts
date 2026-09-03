@@ -16,9 +16,10 @@ export type SyllabusClassGroup = {
   }>;
 };
 
-/** No assigned readings. */
+/** No assigned readings and no class description. */
 export function isEmptyClassGroup(group: SyllabusClassGroup): boolean {
-  return group.itemAssignments.length === 0;
+  const description = (group.syllabusMetadata?.description || "").trim();
+  return group.itemAssignments.length === 0 && !description;
 }
 
 export function useSyllabusClassGroups(
