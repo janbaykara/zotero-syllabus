@@ -17,6 +17,7 @@ export const EXPLORER_SHELF_TYPES = [
   "recent-in-feed",
   "recent-annotations",
   "collection",
+  "saved-search",
 ] as const;
 
 const PARSED_SHELF_TYPES = [
@@ -64,6 +65,7 @@ export type ExplorerShelf = ExplorerShelfBase &
     | { type: "recent-in-feed"; days: number }
     | { type: "recent-annotations"; limit: number }
     | { type: "collection"; libraryID: number; collectionKey: string }
+    | { type: "saved-search"; libraryID: number; searchKey: string }
   );
 
 const LayoutSchema = z.enum(GALLERY_LAYOUT_MODES);
@@ -80,6 +82,7 @@ const ExplorerShelfSchema = z
     groupBy: z.literal("auto").optional(),
     libraryID: z.number().int().positive().optional(),
     collectionKey: z.string().optional(),
+    searchKey: z.string().optional(),
     enabled: z.boolean().optional(),
   })
   .passthrough();
@@ -103,6 +106,7 @@ export function defaultLayoutForShelfType(
     case "recently-added":
     case "recent-in-feed":
     case "collection":
+    case "saved-search":
       return "magazine";
     case "recent-annotations":
       return "card";
@@ -159,7 +163,7 @@ export function defaultExplorerShelves(): ExplorerShelf[] {
 
 export const EXPLORER_SHELF_MENU_TYPES: Exclude<
   ExplorerShelfType,
-  "collection"
+  "collection" | "saved-search"
 >[] = [
   "upcoming-deadlines",
   "watch-now",
@@ -259,6 +263,18 @@ export function coerceExplorerShelf(value: unknown): ExplorerShelf | null {
         collectionKey: raw.collectionKey,
       };
       break;
+    case "saved-search":
+      if (!raw.searchKey || raw.libraryID == null) {
+        return null;
+      }
+      shelf = {
+        id,
+        type: "saved-search",
+        layout,
+        libraryID: raw.libraryID,
+        searchKey: raw.searchKey,
+      };
+      break;
     default:
       return null;
   }
@@ -333,7 +349,7 @@ export function setExplorerShelves(shelves: ExplorerShelf[]): void {
 }
 
 export function createExplorerShelf(
-  type: Exclude<ExplorerShelfType, "collection">,
+  type: Exclude<ExplorerShelfType, "collection" | "saved-search">,
   id: string,
 ): ExplorerShelf {
   return coerceExplorerShelf({
@@ -357,6 +373,27 @@ export function createCollectionShelf(
   };
 }
 
+export function createSavedSearchShelf(
+  id: string,
+  libraryID: number,
+  searchKey: string,
+): ExplorerShelf {
+  return {
+    id,
+    type: "saved-search",
+    layout: "magazine",
+    libraryID,
+    searchKey,
+  };
+}
+
+export function savedSearchShelfKey(
+  libraryID: number,
+  searchKey: string,
+): string {
+  return `${libraryID}:${searchKey}`;
+}
+
 export function isExplorerShelfEnabled(shelf: ExplorerShelf): boolean {
   return shelf.enabled !== false;
 }
@@ -365,10 +402,14 @@ export function mergeExplorerCatalog(
   shelves: ExplorerShelf[],
   libraryID: number,
   topLevelCollectionKeys: string[],
+  savedSearchKeys: string[] = [],
 ): ExplorerShelf[] {
   const next: ExplorerShelf[] = [];
-  const seenPreset = new Set<Exclude<ExplorerShelfType, "collection">>();
+  const seenPreset = new Set<
+    Exclude<ExplorerShelfType, "collection" | "saved-search">
+  >();
   const seenCollection = new Set<string>();
+  const seenSearch = new Set<string>();
 
   for (const shelf of shelves) {
     if (shelf.type === "collection") {
@@ -381,6 +422,21 @@ export function mergeExplorerCatalog(
         shelf.libraryID === libraryID &&
         topLevelCollectionKeys.includes(shelf.collectionKey);
       if (!isTopLevel && !isExplorerShelfEnabled(shelf)) {
+        continue;
+      }
+      next.push(shelf);
+      continue;
+    }
+    if (shelf.type === "saved-search") {
+      const key = savedSearchShelfKey(shelf.libraryID, shelf.searchKey);
+      if (seenSearch.has(key)) {
+        continue;
+      }
+      seenSearch.add(key);
+      const inLibrary =
+        shelf.libraryID === libraryID &&
+        savedSearchKeys.includes(shelf.searchKey);
+      if (!inLibrary && !isExplorerShelfEnabled(shelf)) {
         continue;
       }
       next.push(shelf);
@@ -414,6 +470,17 @@ export function mergeExplorerCatalog(
         libraryID,
         collectionKey,
       ),
+      enabled: false,
+    });
+  }
+
+  for (const searchKey of savedSearchKeys) {
+    const key = savedSearchShelfKey(libraryID, searchKey);
+    if (seenSearch.has(key)) {
+      continue;
+    }
+    next.push({
+      ...createSavedSearchShelf(`catalog:search:${key}`, libraryID, searchKey),
       enabled: false,
     });
   }

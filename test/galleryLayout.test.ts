@@ -21,6 +21,7 @@ import {
   coerceGalleryGroupBy,
   getDefaultGalleryGroupBy,
   getGalleryGroupBy,
+  resolveGalleryGroupBy,
   saveGalleryGroupByGlobally,
   setDefaultGalleryGroupBy,
 } from "../src/modules/galleryGroupBy";
@@ -119,8 +120,16 @@ describe("gallery defaults", function () {
     zoteroCache.invalidatePref(`${config.prefsPrefix}.galleryGroupBy`);
     setDefaultGalleryGroupBy("type");
     assert.equal(coerceGalleryGroupBy("creator"), "creator");
+    assert.equal(coerceGalleryGroupBy("auto"), "auto");
     assert.equal(getDefaultGalleryGroupBy(), "type");
     assert.equal(getGalleryGroupBy("missing-view"), "type");
+  });
+
+  it("keeps automatic grouping in magazine view and falls back to none elsewhere", function () {
+    assert.equal(resolveGalleryGroupBy("auto", { magazine: true }), "auto");
+    assert.equal(resolveGalleryGroupBy("auto", {}), "none");
+    assert.equal(resolveGalleryGroupBy("none", { magazine: true }), "none");
+    assert.equal(resolveGalleryGroupBy("type", { magazine: true }), "type");
   });
 
   it("save globally writes the default and the collection group-by", function () {

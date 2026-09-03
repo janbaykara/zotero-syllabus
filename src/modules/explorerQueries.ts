@@ -6,7 +6,7 @@ import {
   DEFAULT_HIGHLIGHT_COLOR,
   normalizeHighlightColor,
 } from "../utils/itemHighlights";
-import type { ExplorerShelf } from "./explorerConfig";
+import { savedSearchShelfKey, type ExplorerShelf } from "./explorerConfig";
 
 export const EXPLORER_MEDIA_LIMIT = 10;
 export const EXPLORER_RECENTLY_ADDED_LIMIT = 20;
@@ -366,11 +366,49 @@ export async function searchRecentAnnotations(
     .slice(0, limit);
 }
 
+export async function searchSavedSearchItems(
+  libraryID: number,
+  searchKey: string,
+  limit: number,
+): Promise<Zotero.Item[]> {
+  try {
+    const saved = Zotero.Searches.getByLibraryAndKey(libraryID, searchKey);
+    if (!saved || saved.deleted) {
+      return [];
+    }
+    const ids = await saved.search();
+    if (!Array.isArray(ids)) {
+      return [];
+    }
+    const items: Zotero.Item[] = [];
+    const seen = new Set<number>();
+    for (const id of ids) {
+      if (typeof id !== "number" || seen.has(id)) {
+        continue;
+      }
+      const item = resolveItem(id);
+      if (!item || !isSyllabusMemberItem(item)) {
+        continue;
+      }
+      seen.add(id);
+      items.push(item);
+      if (items.length >= limit) {
+        break;
+      }
+    }
+    return items;
+  } catch (error) {
+    ztoolkit.log("Explorer saved search failed:", error);
+    return [];
+  }
+}
+
 export type ExplorerQuerySnapshot = {
   recentItems: Zotero.Item[];
   recentlyRead: Zotero.Item[];
   feedItems: Zotero.Item[];
   annotations: ExplorerAnnotation[];
+  savedSearchItems: Record<string, Zotero.Item[]>;
 };
 
 function emptySnapshot(): ExplorerQuerySnapshot {
@@ -379,6 +417,7 @@ function emptySnapshot(): ExplorerQuerySnapshot {
     recentlyRead: [],
     feedItems: [],
     annotations: [],
+    savedSearchItems: {},
   };
 }
 
@@ -410,51 +449,74 @@ async function loadExplorerSnapshot(
   shelves: ExplorerShelf[],
 ): Promise<ExplorerQuerySnapshot> {
   const recentlyRead = maxRecentlyRead(shelves);
-  const [recentItems, recentlyReadItems, feedItems, annotations] =
-    await Promise.all([
-      searchRecentLibraryItems(libraryID, EXPLORER_FEATURED_LOOKBACK_DAYS),
-      searchRecentlyReadItems(libraryID, recentlyRead.days, recentlyRead.limit),
-      shelvesNeedFeeds(shelves)
-        ? searchRecentFeedItems(
-            Math.max(
-              ...shelves
-                .filter(
-                  (
-                    shelf,
-                  ): shelf is Extract<
-                    ExplorerShelf,
-                    { type: "recent-in-feed" }
-                  > => shelf.type === "recent-in-feed",
-                )
-                .map((shelf) => shelf.days),
-              7,
-            ),
-          )
-        : Promise.resolve([]),
-      shelvesNeedAnnotations(shelves)
-        ? searchRecentAnnotations(
-            libraryID,
-            Math.max(
-              ...shelves
-                .filter(
-                  (
-                    shelf,
-                  ): shelf is Extract<
-                    ExplorerShelf,
-                    { type: "recent-annotations" }
-                  > => shelf.type === "recent-annotations",
-                )
-                .map((shelf) => shelf.limit),
-              20,
-            ),
-          )
-        : Promise.resolve([]),
-    ]);
+  const savedSearchShelves = shelves.filter(
+    (shelf): shelf is Extract<ExplorerShelf, { type: "saved-search" }> =>
+      shelf.type === "saved-search",
+  );
+  const [
+    recentItems,
+    recentlyReadItems,
+    feedItems,
+    annotations,
+    savedSearchRows,
+  ] = await Promise.all([
+    searchRecentLibraryItems(libraryID, EXPLORER_FEATURED_LOOKBACK_DAYS),
+    searchRecentlyReadItems(libraryID, recentlyRead.days, recentlyRead.limit),
+    shelvesNeedFeeds(shelves)
+      ? searchRecentFeedItems(
+          Math.max(
+            ...shelves
+              .filter(
+                (
+                  shelf,
+                ): shelf is Extract<
+                  ExplorerShelf,
+                  { type: "recent-in-feed" }
+                > => shelf.type === "recent-in-feed",
+              )
+              .map((shelf) => shelf.days),
+            7,
+          ),
+        )
+      : Promise.resolve([]),
+    shelvesNeedAnnotations(shelves)
+      ? searchRecentAnnotations(
+          libraryID,
+          Math.max(
+            ...shelves
+              .filter(
+                (
+                  shelf,
+                ): shelf is Extract<
+                  ExplorerShelf,
+                  { type: "recent-annotations" }
+                > => shelf.type === "recent-annotations",
+              )
+              .map((shelf) => shelf.limit),
+            20,
+          ),
+        )
+      : Promise.resolve([]),
+    Promise.all(
+      savedSearchShelves.map(async (shelf) => {
+        const items = await searchSavedSearchItems(
+          shelf.libraryID,
+          shelf.searchKey,
+          EXPLORER_ARTICLE_DESK_LIMIT * 2,
+        );
+        return [
+          savedSearchShelfKey(shelf.libraryID, shelf.searchKey),
+          items,
+        ] as const;
+      }),
+    ),
+  ]);
   return {
     recentItems,
     recentlyRead: recentlyReadItems,
     feedItems,
     annotations,
+    savedSearchItems: Object.fromEntries(savedSearchRows),
   };
 }
 
@@ -506,7 +568,7 @@ function createExplorerQueryStore(libraryID: number, shelvesKey: string) {
               scheduleReload();
             },
           },
-          ["item", "collection", "feed", "collection-item"],
+          ["item", "collection", "feed", "collection-item", "search"],
         );
         void reload();
       }
@@ -534,6 +596,9 @@ export function useExplorerQueryData(
       type: shelf.type,
       days: "days" in shelf ? shelf.days : 0,
       limit: "limit" in shelf ? shelf.limit : 0,
+      libraryID: "libraryID" in shelf ? shelf.libraryID : 0,
+      collectionKey: "collectionKey" in shelf ? shelf.collectionKey : "",
+      searchKey: "searchKey" in shelf ? shelf.searchKey : "",
     })),
   );
   const store = useMemo(

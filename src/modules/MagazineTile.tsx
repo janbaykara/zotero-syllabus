@@ -19,10 +19,8 @@ import {
 import { formatReadingTime, getReadingTimeSync } from "../utils/readingTime";
 import {
   getPlaceholderCover,
-  isAudioGalleryItem,
   isPlayableGalleryItem,
   isTextHeavyGalleryItem,
-  isVideoGalleryItem,
   isWebGalleryItem,
   resolveItemCover,
   type ResolvedCover,
@@ -90,11 +88,9 @@ export const MagazineTile = memo(function MagazineTile({
   const placeholder = useMemo(() => getPlaceholderCover(item), [item]);
   const [cover, setCover] = useState<ResolvedCover>(placeholder);
   const playable = isPlayableGalleryItem(item);
-  const isVideo = isVideoGalleryItem(item);
   const hideGraphic = isTextHeavyGalleryItem(item);
-  const usePhotoBanner = !hideGraphic && isWebGalleryItem(item) && !isVideo;
+  const usePhotoBanner = !hideGraphic && (isWebGalleryItem(item) || playable);
   const useGalleryCover = !hideGraphic && !usePhotoBanner;
-  const bleedCover = isVideo || isAudioGalleryItem(item) || usePhotoBanner;
 
   useEffect(() => {
     setBlurb(abstractNote);
@@ -160,18 +156,22 @@ export const MagazineTile = memo(function MagazineTile({
   let coverNode = null;
   if (useGalleryCover) {
     coverNode = (
-      <div
-        className={twMerge(
-          "syllabus-magazine-cover is-gallery",
-          bleedCover && "is-bleed",
-        )}
-      >
+      <div className="syllabus-magazine-cover is-gallery">
         <GalleryCover item={item} selected={false} visible={visible} />
       </div>
     );
-  } else if (usePhotoBanner && hasImage) {
+  } else if (usePhotoBanner && (hasImage || playable)) {
+    const placeholderFill =
+      cover.kind === "placeholder"
+        ? {
+            background: `linear-gradient(165deg, color-mix(in srgb, ${cover.color} 88%, white) 0%, ${cover.color} 55%, color-mix(in srgb, ${cover.color} 72%, black) 100%)`,
+          }
+        : undefined;
     coverNode = (
-      <div className="syllabus-magazine-cover is-photo is-bleed">
+      <div
+        className="syllabus-magazine-cover is-photo is-bleed"
+        style={placeholderFill}
+      >
         {visible && hasImage ? (
           <img
             src={cover.src}

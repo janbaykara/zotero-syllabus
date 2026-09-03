@@ -45,6 +45,21 @@ export function selectCollectionInLibrary(collectionId: number): void {
   }
 }
 
+export function selectSavedSearchInLibrary(search: Zotero.Search): void {
+  try {
+    const pane = ztoolkit.getGlobal("ZoteroPane");
+    const collectionsView = pane?.collectionsView;
+    const treeViewID = search.treeViewID || `S${search.id}`;
+    if (!collectionsView || !treeViewID) {
+      return;
+    }
+    collectionsView.selectByID(treeViewID);
+    TabManager.selectLibraryTab();
+  } catch (error) {
+    ztoolkit.log("Error selecting saved search:", error);
+  }
+}
+
 export function openReadingScheduleTab(): void {
   try {
     SyllabusManager.openReadingListTab();

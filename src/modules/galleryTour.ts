@@ -190,7 +190,7 @@ async function maybeShowGalleryTour(
       showProgress: true,
       onBeforeRender: async () => {
         requestGalleryTourOpenSettings(win);
-        applyGalleryTourState(viewKey, "magazine", "none");
+        applyGalleryTourState(viewKey, "magazine", "auto");
         await waitForElement(win, '[data-tour="gallery-layout-magazine"]');
         await settleTourUi(350);
       },

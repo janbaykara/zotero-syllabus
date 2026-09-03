@@ -9,7 +9,7 @@ pref("latestTourVersion", 0);
 pref("latestGalleryTourVersion", 0);
 pref("defaultGalleryLayout", "cover");
 pref("defaultGallerySort", "auto");
-pref("defaultGalleryGroupBy", "none");
+pref("defaultGalleryGroupBy", "auto");
 pref("magazineTypeSize", "small");
 pref("generateReadingScheduleCollection", false);
 pref("readingScheduleCollectionKey", "");

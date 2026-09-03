@@ -7,6 +7,7 @@ import type { GalleryGlobalSetting } from "./galleryLayout";
 
 export const GALLERY_GROUP_BY_MODES = [
   "none",
+  "auto",
   "type",
   "creator",
   "tags",
@@ -15,6 +16,12 @@ export const GALLERY_GROUP_BY_MODES = [
 ] as const;
 
 export type GalleryGroupBy = (typeof GALLERY_GROUP_BY_MODES)[number];
+
+export type GalleryGroupByAllow = {
+  classes?: boolean;
+  subcollections?: boolean;
+  magazine?: boolean;
+};
 
 const GalleryGroupBySchema = z.enum(GALLERY_GROUP_BY_MODES);
 const GalleryGroupByMapSchema = z.record(z.string(), z.unknown());
@@ -65,10 +72,13 @@ export function saveGalleryGroupByGlobally(
   setGalleryGroupBy(viewKey, mode);
 }
 
-function resolveGalleryGroupBy(
+export function resolveGalleryGroupBy(
   mode: GalleryGroupBy,
-  allow: { classes?: boolean; subcollections?: boolean },
+  allow: GalleryGroupByAllow,
 ): GalleryGroupBy {
+  if (mode === "auto" && !allow.magazine) {
+    return "none";
+  }
   if (mode === "classes" && !allow.classes) {
     return "none";
   }
@@ -80,7 +90,7 @@ function resolveGalleryGroupBy(
 
 export function useGalleryGroupBy(
   viewKey: string | number,
-  allow: { classes?: boolean; subcollections?: boolean } = {},
+  allow: GalleryGroupByAllow = {},
 ): [
   GalleryGroupBy,
   (mode: GalleryGroupBy) => void,
@@ -88,6 +98,7 @@ export function useGalleryGroupBy(
 ] {
   const allowClasses = !!allow.classes;
   const allowSubcollections = allow.subcollections !== false;
+  const allowMagazine = !!allow.magazine;
   const [mode, setMode] = useState<GalleryGroupBy>(() =>
     getGalleryGroupBy(viewKey),
   );
@@ -119,6 +130,7 @@ export function useGalleryGroupBy(
   const allowOpts = {
     classes: allowClasses,
     subcollections: allowSubcollections,
+    magazine: allowMagazine,
   };
   const resolved = resolveGalleryGroupBy(mode, allowOpts);
   const resolvedGlobal = resolveGalleryGroupBy(globalValue, allowOpts);
@@ -128,11 +140,12 @@ export function useGalleryGroupBy(
       const allowed = resolveGalleryGroupBy(next, {
         classes: allowClasses,
         subcollections: allowSubcollections,
+        magazine: allowMagazine,
       });
       setMode(allowed);
       setGalleryGroupBy(viewKey, allowed);
     },
-    [allowClasses, allowSubcollections, viewKey],
+    [allowClasses, allowMagazine, allowSubcollections, viewKey],
   );
 
   const saveGlobally = useCallback(() => {

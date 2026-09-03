@@ -24,6 +24,7 @@ import { getReadingTimeSync, formatReadingTime } from "../utils/readingTime";
 import { getItemCreatorLine, getItemField, getItemTitle } from "../utils/items";
 import { YoutubePlayer } from "./YoutubePlayer";
 import { getString } from "../utils/locale";
+import { isOsFileDrag } from "../utils/nativeFileDrop";
 
 export function SyllabusItemCard({
   className,
@@ -445,6 +446,10 @@ export function SyllabusItemCard({
     : {};
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
+    if (isOsFileDrag(e.dataTransfer)) {
+      e.preventDefault();
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     if (e.dataTransfer) {
@@ -456,6 +461,10 @@ export function SyllabusItemCard({
   };
 
   const handleItemDrop = (e: JSX.TargetedDragEvent<HTMLElement>) => {
+    if (isOsFileDrag(e.dataTransfer)) {
+      e.preventDefault();
+      return;
+    }
     e.preventDefault();
     if (!onDrop) return;
 

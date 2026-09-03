@@ -145,6 +145,58 @@ describe("explorer shelves", function () {
     );
   });
 
+  it("fills saved searches into the catalog and drops disabled ones from other libraries", function () {
+    const merged = mergeExplorerCatalog(
+      [
+        { id: "wn", type: "watch-now", layout: "cover" },
+        {
+          id: "other",
+          type: "saved-search",
+          layout: "magazine",
+          libraryID: 2,
+          searchKey: "GONE",
+          enabled: false,
+        },
+        {
+          id: "mine",
+          type: "saved-search",
+          layout: "magazine",
+          libraryID: 1,
+          searchKey: "MINE",
+        },
+      ],
+      1,
+      [],
+      ["MINE", "NEW"],
+    );
+    assert.isFalse(
+      merged.some(
+        (shelf) => shelf.type === "saved-search" && shelf.searchKey === "GONE",
+      ),
+    );
+    const mine = merged.find(
+      (shelf) => shelf.type === "saved-search" && shelf.searchKey === "MINE",
+    );
+    assert.ok(mine);
+    assert.isTrue(isExplorerShelfEnabled(mine!));
+    const added = merged.find(
+      (shelf) => shelf.type === "saved-search" && shelf.searchKey === "NEW",
+    );
+    assert.ok(added);
+    assert.isFalse(isExplorerShelfEnabled(added!));
+  });
+
+  it("keeps a saved search that is missing keys out of coerced shelves", function () {
+    const shelves = coerceExplorerShelves([
+      { id: "ss", type: "saved-search", libraryID: 1 },
+      { id: "wn", type: "watch-now" },
+    ]);
+    assert.deepEqual(
+      shelves.map((shelf) => shelf.type),
+      ["watch-now"],
+    );
+  });
+
   it("keeps watch and listen shelves on cover layout", function () {
     const shelves = coerceExplorerShelves([
       { id: "wn", type: "watch-now", layout: "magazine" },

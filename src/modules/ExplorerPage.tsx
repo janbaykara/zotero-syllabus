@@ -46,6 +46,7 @@ import {
   openReadingScheduleTab,
   selectCollectionInLibrary,
   selectItemInCollection,
+  selectSavedSearchInLibrary,
 } from "./ClassReadingBlock";
 import {
   buildClassReadings,
@@ -72,6 +73,7 @@ import {
   isExplorerShelfEnabled,
   layoutsForExplorerShelf,
   mergeExplorerCatalog,
+  savedSearchShelfKey,
   useExplorerShelves,
   type ExplorerShelf,
   type ExplorerShelfType,
@@ -90,7 +92,7 @@ import { isAudioGalleryItem, isVideoGalleryItem } from "../utils/itemCover";
 import type { MagazineSectionTemplate } from "./magazineDesks";
 
 const SHELF_TITLE_IDS: Record<
-  Exclude<ExplorerShelfType, "collection">,
+  Exclude<ExplorerShelfType, "collection" | "saved-search">,
   FluentMessageId
 > = {
   "upcoming-deadlines": "explorer-shelf-upcoming-deadlines",
@@ -116,17 +118,37 @@ function collectionForShelf(shelf: ExplorerShelf): Zotero.Collection | null {
   );
 }
 
+function searchForShelf(shelf: ExplorerShelf): Zotero.Search | null {
+  if (shelf.type !== "saved-search") {
+    return null;
+  }
+  try {
+    const search = Zotero.Searches.getByLibraryAndKey(
+      shelf.libraryID,
+      shelf.searchKey,
+    );
+    return search && !search.deleted ? search : null;
+  } catch {
+    return null;
+  }
+}
+
 function shelfTitle(shelf: ExplorerShelf): string {
   if (shelf.type === "collection") {
     return (
       collectionForShelf(shelf)?.name || getString("explorer-add-collection")
     );
   }
+  if (shelf.type === "saved-search") {
+    return (
+      searchForShelf(shelf)?.name || getString("explorer-add-saved-search")
+    );
+  }
   return getString(SHELF_TITLE_IDS[shelf.type]);
 }
 
 const PRESET_ICONS: Record<
-  Exclude<ExplorerShelfType, "collection">,
+  Exclude<ExplorerShelfType, "collection" | "saved-search">,
   typeof BookOpen
 > = {
   "upcoming-deadlines": Calendar,
@@ -149,6 +171,14 @@ function CatalogRowIcon({
     return (
       <span
         className="icon icon-css icon-collection syllabus-gallery-group-icon"
+        aria-hidden="true"
+      />
+    );
+  }
+  if (shelf.type === "saved-search") {
+    return (
+      <span
+        className="icon icon-css icon-search syllabus-gallery-group-icon"
         aria-hidden="true"
       />
     );
@@ -279,10 +309,22 @@ function ExplorerConfigureMenu({
   const draggingIdRef = useRef<string | null>(null);
   const dragImageRef = useRef<HTMLElement | null>(null);
   const popoverStyle = useExplorerPopover(open, setOpen, rootRef);
+  const savedSearchKeys = useMemo(() => {
+    if (!open) {
+      return [];
+    }
+    return librarySavedSearches(libraryID).map((search) => search.key);
+  }, [libraryID, open]);
 
   const catalog = useMemo(
-    () => mergeExplorerCatalog(shelves, libraryID, topLevelCollectionKeys),
-    [libraryID, shelves, topLevelCollectionKeys],
+    () =>
+      mergeExplorerCatalog(
+        shelves,
+        libraryID,
+        topLevelCollectionKeys,
+        savedSearchKeys,
+      ),
+    [libraryID, savedSearchKeys, shelves, topLevelCollectionKeys],
   );
 
   const draggingFrom = draggingId
@@ -546,6 +588,7 @@ function shelfDescription(shelf: ExplorerShelf): string | null {
     case "recent-annotations":
       return getString("explorer-recent-annotations-desc");
     case "collection":
+    case "saved-search":
       return null;
   }
 }
@@ -608,6 +651,29 @@ function readCollectionItems(
   };
   walk(collection);
   return items;
+}
+
+function librarySavedSearches(libraryID: number): Zotero.Search[] {
+  try {
+    const api = Zotero.Searches as {
+      getByLibrary?: (id: number) => Zotero.Search[] | false | null;
+      getAll?: () => Zotero.Search[];
+    };
+    let searches: Zotero.Search[] = [];
+    if (typeof api.getByLibrary === "function") {
+      const byLibrary = api.getByLibrary(libraryID);
+      searches = Array.isArray(byLibrary) ? byLibrary : [];
+    } else if (typeof api.getAll === "function") {
+      searches = (api.getAll() || []).filter(
+        (search) => search.libraryID === libraryID,
+      );
+    }
+    return searches
+      .filter((search) => search && !search.deleted && search.key)
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  } catch {
+    return [];
+  }
 }
 
 function libraryCollections(
@@ -1128,6 +1194,12 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
             shelf.libraryID,
             shelf.collectionKey,
           ).slice(0, EXPLORER_ARTICLE_DESK_LIMIT * 2);
+        case "saved-search":
+          return (
+            data.savedSearchItems[
+              savedSearchShelfKey(shelf.libraryID, shelf.searchKey)
+            ] || []
+          );
         default:
           return [];
       }
@@ -1138,6 +1210,7 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
       data.feedItems,
       data.recentItems,
       data.recentlyRead,
+      data.savedSearchItems,
       videos,
     ],
   );
@@ -1352,12 +1425,18 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
           <div className="px-6 pt-6 flex flex-col gap-10">
             {renderedShelves.map(({ shelf, items }, index) => {
               const collection = collectionForShelf(shelf);
+              const savedSearch = searchForShelf(shelf);
               const collectionId = collection?.id || 0;
               const heading = shelfTitle(shelf);
               const description = shelfDescription(shelf);
               const openCollection = () => {
                 if (collectionId) {
                   selectCollectionInLibrary(collectionId);
+                }
+              };
+              const openSearch = () => {
+                if (savedSearch) {
+                  selectSavedSearchInLibrary(savedSearch);
                 }
               };
               return (
@@ -1379,6 +1458,19 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                           >
                             <span
                               className="icon icon-css icon-collection syllabus-gallery-group-icon"
+                              aria-hidden="true"
+                            />
+                            <span>{heading}</span>
+                          </button>
+                        ) : shelf.type === "saved-search" ? (
+                          <button
+                            type="button"
+                            className="syllabus-explorer-collection-link"
+                            disabled={!savedSearch}
+                            onClick={openSearch}
+                          >
+                            <span
+                              className="icon icon-css icon-search syllabus-gallery-group-icon"
                               aria-hidden="true"
                             />
                             <span>{heading}</span>

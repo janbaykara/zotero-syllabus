@@ -29,6 +29,7 @@ import {
   MoreHorizontal,
   Newspaper,
   Shapes,
+  Sparkles,
   Tag,
   Tags,
   User,
@@ -118,6 +119,11 @@ import {
 import { getCachedItem } from "../utils/cache";
 import { formatReadingDate } from "../utils/dates";
 import { getString, getUiDir } from "../utils/locale";
+import {
+  importDroppedOsFilesIntoCurrentView,
+  useOsFileDropHandlers,
+} from "../utils/nativeFileDrop";
+import { OsFileDropOverlay } from "./OsFileDropOverlay";
 import type { SettingsSyllabusMetadata } from "../utils/schemas";
 import {
   getPrimaryAttachmentProgress,
@@ -167,12 +173,13 @@ export function GalleryPage({
   }, [allItems, matchingIds]);
   const isSyllabus =
     collectionId != null && collectionHasSyllabusNote(collectionId);
+  const [layout, setLayout, layoutGlobal] = useGalleryLayout(viewKey);
   const [groupBy, setGroupBy, groupByGlobal] = useGalleryGroupBy(viewKey, {
     classes: isSyllabus,
     subcollections: isCollectionScope,
+    magazine: layout === "magazine",
   });
   const [sortBy, setSortBy, sortByGlobal] = useGallerySortBy(viewKey);
-  const [layout, setLayout, layoutGlobal] = useGalleryLayout(viewKey);
   const [magazineTypeSize, setMagazineTypeSize, magazineTypeSizeGlobal] =
     useMagazineTypeSize(viewKey);
   const [compactMode] = useZoteroCompactMode();
@@ -192,6 +199,11 @@ export function GalleryPage({
   navStateRef.current = { selectedItemIds };
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const suppressScrollSpyRef = useRef(false);
+  const fileDrop = useOsFileDropHandlers({
+    onOsFileDrop: async (event) => {
+      await importDroppedOsFilesIntoCurrentView(event);
+    },
+  });
 
   useEffect(() => {
     const win = Zotero.getMainWindow();
@@ -746,15 +758,21 @@ export function GalleryPage({
       ref={pageRef}
       tabIndex={-1}
       className={twMerge(
-        "syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background focus:outline-none",
+        "syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background focus:outline-none relative",
         layout === "magazine" && "syllabus-magazine-page",
         layout === "magazine" &&
           magazineTypeSize === "large" &&
           "is-large-type",
         compactMode && "compact-mode",
+        fileDrop.isDraggingFile && "file-drag-over",
       )}
       dir={getUiDir()}
+      onDragEnter={fileDrop.onDragEnter}
+      onDragOver={fileDrop.onDragOver}
+      onDragLeave={fileDrop.onDragLeave}
+      onDrop={fileDrop.onDrop}
     >
+      <OsFileDropOverlay visible={fileDrop.isDraggingFile} />
       <div className="pb-10">
         <div
           ref={stickyRef}
@@ -789,7 +807,9 @@ export function GalleryPage({
         </div>
         <GalleryViewportProvider rootRef={pageRef}>
           <div className="px-6 pt-4">
-            {layout === "magazine" && groupBy !== "none" ? (
+            {layout === "magazine" &&
+            groupBy !== "none" &&
+            groupBy !== "auto" ? (
               <>
                 <MagazineShelf
                   kind="video"
@@ -818,7 +838,17 @@ export function GalleryPage({
             {groupBy === "none" &&
               (syllabusItems.length === 0 ? (
                 <p className="text-secondary text-lg">{emptyMessage}</p>
-              ) : layout === "magazine" ? (
+              ) : (
+                renderItems(
+                  syllabusItems.map(({ zoteroItem }) => zoteroItem),
+                  "all",
+                )
+              ))}
+
+            {groupBy === "auto" &&
+              (syllabusItems.length === 0 ? (
+                <p className="text-secondary text-lg">{emptyMessage}</p>
+              ) : (
                 <MagazineHome
                   items={syllabusItems.map(({ zoteroItem }) => zoteroItem)}
                   tagGroups={tagGroups}
@@ -830,11 +860,6 @@ export function GalleryPage({
                   onDoubleClick={handleDoubleClick}
                   onContextMenu={handleContextMenu}
                 />
-              ) : (
-                renderItems(
-                  syllabusItems.map(({ zoteroItem }) => zoteroItem),
-                  "all",
-                )
               ))}
 
             {groupBy === "type" &&
@@ -1277,6 +1302,12 @@ function galleryGroupByOptions(): GallerySegmentOption<GalleryGroupBy>[] {
       Icon: LayoutGrid,
     },
     {
+      mode: "auto",
+      label: getString("gallery-group-auto"),
+      title: getString("gallery-group-auto-title"),
+      Icon: Sparkles,
+    },
+    {
       mode: "type",
       label: getString("gallery-group-type"),
       title: getString("gallery-group-type-title"),
@@ -1464,6 +1495,9 @@ function GalleryPageHeader({
   const sortOptions = gallerySortOptions();
   const allGroupBy = galleryGroupByOptions();
   const groupByOptions = allGroupBy.filter((option) => {
+    if (option.mode === "auto" && layout !== "magazine") {
+      return false;
+    }
     if (option.mode === "classes" && !showClasses) {
       return false;
     }

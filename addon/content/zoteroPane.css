@@ -1429,6 +1429,17 @@
   overflow: hidden;
 }
 
+/* Audio/video in magazine columns: same full-bleed photo as web, native ratio. */
+.syllabus-magazine-tile.is-playable
+  .syllabus-magazine-cover.is-photo.is-bleed:has(img) {
+  aspect-ratio: auto;
+}
+
+.syllabus-magazine-tile.is-playable .syllabus-magazine-cover-img.is-photo {
+  height: auto;
+  object-fit: unset;
+}
+
 .syllabus-magazine-tile[data-role="wide"]:has(
     .syllabus-magazine-cover.is-bleed
   ) {

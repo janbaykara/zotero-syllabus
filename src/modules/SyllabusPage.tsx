@@ -78,6 +78,13 @@ import {
   isItemContextMenuKey,
   openZoteroItemContextMenu,
 } from "../utils/itemContextMenu";
+import {
+  importDroppedOsFilesIntoCurrentView,
+  isOsFileDrag,
+  isSyllabusNoteFileName,
+  useOsFileDropHandlers,
+} from "../utils/nativeFileDrop";
+import { OsFileDropOverlay } from "./OsFileDropOverlay";
 
 export { SyllabusItemCard } from "./SyllabusItemCard";
 export { Bibliography } from "./Bibliography";
@@ -220,6 +227,58 @@ function scrollSyllabusIdentifierIntoView(
   }
 }
 
+async function importSyllabusMetadataFromFile(
+  collectionId: number,
+  file: File,
+): Promise<void> {
+  try {
+    const fileContents = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result;
+        if (typeof content === "string") {
+          resolve(content);
+        } else if (content instanceof ArrayBuffer) {
+          resolve(new TextDecoder("utf-8").decode(content));
+        } else {
+          reject(new Error("Failed to read file contents"));
+        }
+      };
+      reader.onerror = () => reject(new Error("Error reading file"));
+      reader.readAsText(file);
+    });
+
+    await SyllabusManager.importSyllabusMetadata(
+      collectionId,
+      fileContents,
+      "page",
+    );
+
+    ztoolkit.log("Successfully imported and merged syllabus metadata");
+
+    new ztoolkit.ProgressWindow(getString("progress-import-success-title"), {
+      closeOnClick: true,
+      closeTime: 3000,
+    })
+      .createLine({
+        text: getString("progress-import-success-text"),
+        type: "success",
+      })
+      .show();
+  } catch (error) {
+    new ztoolkit.ProgressWindow(getString("progress-import-error-title"), {
+      closeOnClick: true,
+      closeTime: 5000,
+    })
+      .createLine({
+        text: error instanceof Error ? error.message : String(error),
+        type: "fail",
+      })
+      .show();
+    ztoolkit.log("Import processing error:", error);
+  }
+}
+
 function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   // Sync with external Zotero stores using hooks
   const [title, setTitle] = useZoteroCollectionTitle(collectionId);
@@ -260,8 +319,19 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   // Track drag state for showing "Add to Class X" dropzone
   const [isDragging, setIsDragging] = useState(false);
 
-  // Track file drag state for file upload
-  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const fileDrop = useOsFileDropHandlers({
+    onOsFileDrop: async (event) => {
+      const files = Array.from(event.dataTransfer?.files || []);
+      for (const file of files) {
+        if (isSyllabusNoteFileName(file.name)) {
+          await importSyllabusMetadataFromFile(collectionId, file);
+        }
+      }
+      await importDroppedOsFilesIntoCurrentView(event, {
+        skipFileName: isSyllabusNoteFileName,
+      });
+    },
+  });
 
   // Track item order changes to trigger re-computation
   const [itemOrderVersion, setItemOrderVersion] = useState(0);
@@ -719,19 +789,6 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     };
   }, []);
 
-  // Reset file drag state when drag ends (e.g., when file is dragged back to its window)
-  useEffect(() => {
-    const handleFileDragEnd = () => {
-      setIsDraggingFile(false);
-    };
-
-    document.addEventListener("dragend", handleFileDragEnd);
-
-    return () => {
-      document.removeEventListener("dragend", handleFileDragEnd);
-    };
-  }, []);
-
   // Listen to metadata changes for item order (now part of metadata)
   // The useZoteroSyllabusMetadata hook will trigger re-renders when metadata changes
   // We use itemOrderVersion to force re-computation of class groups when order changes
@@ -874,6 +931,10 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     targetItemId?: number,
     insertBefore?: boolean,
   ) => {
+    if (isOsFileDrag(e.dataTransfer)) {
+      e.preventDefault();
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
 
@@ -1419,6 +1480,10 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   };
 
   const handleDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
+    if (isOsFileDrag(e.dataTransfer)) {
+      e.preventDefault();
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     if (e.dataTransfer) {
@@ -1468,60 +1533,6 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     fileInputRef.current?.click();
   };
 
-  // Process a file for import (reusable for both file input and drag-drop)
-  const processFile = async (file: File) => {
-    try {
-      // Read file contents using FileReader
-      const fileContents = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const content = event.target?.result;
-          if (typeof content === "string") {
-            resolve(content);
-          } else if (content instanceof ArrayBuffer) {
-            resolve(new TextDecoder("utf-8").decode(content));
-          } else {
-            reject(new Error("Failed to read file contents"));
-          }
-        };
-        reader.onerror = () => reject(new Error("Error reading file"));
-        reader.readAsText(file);
-      });
-
-      // Import syllabus metadata using SyllabusManager
-      // This handles JSON parsing, validation, collection title update, merging, and saving
-      await SyllabusManager.importSyllabusMetadata(
-        collectionId,
-        fileContents,
-        "page",
-      );
-
-      ztoolkit.log("Successfully imported and merged syllabus metadata");
-
-      // Show success message
-      new ztoolkit.ProgressWindow(getString("progress-import-success-title"), {
-        closeOnClick: true,
-        closeTime: 3000,
-      })
-        .createLine({
-          text: getString("progress-import-success-text"),
-          type: "success",
-        })
-        .show();
-    } catch (error) {
-      new ztoolkit.ProgressWindow(getString("progress-import-error-title"), {
-        closeOnClick: true,
-        closeTime: 5000,
-      })
-        .createLine({
-          text: error instanceof Error ? error.message : String(error),
-          type: "fail",
-        })
-        .show();
-      ztoolkit.log("Import processing error:", error);
-    }
-  };
-
   const handleFileInputChange = async (
     e: JSX.TargetedEvent<HTMLInputElement>,
   ) => {
@@ -1536,89 +1547,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       return;
     }
 
-    await processFile(selectedFile);
-  };
-
-  // Drag and drop handlers for file upload
-  const handleFileDragEnter = (e: JSX.TargetedDragEvent<HTMLDivElement>) => {
-    // Only handle file drags, not item drags
-    // Check if this is a file drag (has "Files" type) and not an item drag
-    const isFileDrag = e.dataTransfer?.types.includes("Files");
-    const isItemDrag = e.dataTransfer?.types.includes("text/plain");
-
-    if (isFileDrag && !isItemDrag) {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsDraggingFile(true);
-    }
-  };
-
-  const handleFileDragOver = (e: JSX.TargetedDragEvent<HTMLDivElement>) => {
-    // Only handle file drags, not item drags
-    const isFileDrag = e.dataTransfer?.types.includes("Files");
-    const isItemDrag = e.dataTransfer?.types.includes("text/plain");
-
-    if (isFileDrag && !isItemDrag) {
-      e.preventDefault();
-      e.stopPropagation();
-      if (e.dataTransfer) {
-        e.dataTransfer.dropEffect = "copy";
-      }
-    }
-  };
-
-  const handleFileDragLeave = (e: JSX.TargetedDragEvent<HTMLDivElement>) => {
-    // Only handle file drags, not item drags
-    const isFileDrag = e.dataTransfer?.types.includes("Files");
-    const isItemDrag = e.dataTransfer?.types.includes("text/plain");
-
-    if (isFileDrag && !isItemDrag) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      // Check if we're actually leaving the container (not just moving to a child)
-      // relatedTarget is the element we're entering, or null if leaving the document
-      const relatedTarget = e.relatedTarget as HTMLElement | null;
-      const currentTarget = e.currentTarget;
-
-      // If relatedTarget is null, we're leaving the document entirely
-      // If relatedTarget is not a child of currentTarget, we're leaving the container
-      if (!relatedTarget || !currentTarget.contains(relatedTarget)) {
-        setIsDraggingFile(false);
-      }
-    }
-  };
-
-  const handleFileDrop = async (e: JSX.TargetedDragEvent<HTMLDivElement>) => {
-    // Only handle file drags, not item drags
-    const isFileDrag = e.dataTransfer?.types.includes("Files");
-    const isItemDrag = e.dataTransfer?.types.includes("text/plain");
-
-    if (isFileDrag && !isItemDrag) {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsDraggingFile(false);
-
-      const files = Array.from(e.dataTransfer?.files || []);
-      const syllabusFile = files.find((file) =>
-        file.name.endsWith(".syllabus"),
-      );
-
-      if (syllabusFile) {
-        await processFile(syllabusFile);
-      } else if (files.length > 0) {
-        // Show error if file doesn't have .syllabus extension
-        new ztoolkit.ProgressWindow(getString("progress-import-error-title"), {
-          closeOnClick: true,
-          closeTime: 5000,
-        })
-          .createLine({
-            text: getString("progress-import-bad-file"),
-            type: "fail",
-          })
-          .show();
-      }
-    }
+    await importSyllabusMetadataFromFile(collectionId, selectedFile);
   };
 
   const handlePrint = async () => {
@@ -1778,28 +1707,16 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         className={twMerge(
           "syllabus-page overflow-y-auto overflow-x-hidden h-full in-[.print]:scheme-light relative focus:outline-none",
           compactMode && "compact-mode",
-          isDraggingFile && "file-drag-over",
+          fileDrop.isDraggingFile && "file-drag-over",
         )}
         dir={getUiDir()}
         onKeyDown={handleSyllabusKeyDown}
-        onDragEnter={handleFileDragEnter}
-        onDragOver={handleFileDragOver}
-        onDragLeave={handleFileDragLeave}
-        onDrop={handleFileDrop}
+        onDragEnter={fileDrop.onDragEnter}
+        onDragOver={fileDrop.onDragOver}
+        onDragLeave={fileDrop.onDragLeave}
+        onDrop={fileDrop.onDrop}
       >
-        {/* File drag overlay */}
-        {isDraggingFile && (
-          <div className="sticky h-full inset-0 z-50 bg-accent-blue/10 backdrop-blur-sm flex items-center justify-center pointer-events-none in-[.print]:hidden">
-            <div className="bg-background border-4 border-dashed border-accent-blue rounded-lg p-8 shadow-lg">
-              <div className="flex flex-col items-center gap-4">
-                <Upload size={48} className="text-accent-blue" />
-                <div className="text-xl font-semibold text-accent-blue">
-                  {getString("page-drop-import-file")}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <OsFileDropOverlay visible={fileDrop.isDraggingFile} />
         <div className="pb-12">
           <div
             syllabus-view-title-container
