@@ -61,7 +61,7 @@ import {
   openSyllabusPrintDialog,
   serializeSyllabusForPrint,
 } from "../utils/printSyllabus";
-import { useSyllabusClassGroups } from "./classGroups";
+import { isEmptyClassGroup, useSyllabusClassGroups } from "./classGroups";
 import { ClassSubcollectionPage } from "./ClassReadingBlock";
 import { getClassSubcollectionContext } from "./syllabusNote";
 import { ReadingSchedule } from "./ReadingSchedule";
@@ -810,14 +810,22 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       itemOrderVersion,
     );
 
+  const visibleClassGroups = useMemo(
+    () =>
+      isLocked
+        ? classGroups.filter((group) => !isEmptyClassGroup(group))
+        : classGroups,
+    [classGroups, isLocked],
+  );
+
   const furtherReadingItems = useMemo(
     () => sortItems(unsortedFurtherReading, furtherReadingSortBy),
     [unsortedFurtherReading, furtherReadingSortBy],
   );
 
   const navigableEntries = useMemo(
-    () => getNavigableSyllabusEntries(classGroups, furtherReadingItems),
-    [classGroups, furtherReadingItems],
+    () => getNavigableSyllabusEntries(visibleClassGroups, furtherReadingItems),
+    [visibleClassGroups, furtherReadingItems],
   );
 
   const navStateRef = useRef({
@@ -1756,7 +1764,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                     {showTOC && (
                       <TableOfContents
                         collectionId={collectionId}
-                        classGroups={classGroups}
+                        classGroups={visibleClassGroups}
                         isOpen={showTOC}
                         onClose={() => setShowTOC(false)}
                       />
@@ -1963,7 +1971,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
               compactMode ? "gap-10 mt-4" : "gap-12 mt-6",
             )}
           >
-            {classGroups.map((group) => (
+            {visibleClassGroups.map((group) => (
               <ClassGroupComponent
                 key={group.classNumber ?? "null"}
                 classNumber={group.classNumber}

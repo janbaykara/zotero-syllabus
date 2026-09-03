@@ -7,6 +7,20 @@ import {
 } from "./syllabus";
 import { sortItemsByTitle } from "../utils/items";
 
+export type SyllabusClassGroup = {
+  classNumber: number | null;
+  syllabusMetadata: ReturnType<typeof classByNumber>;
+  itemAssignments: Array<{
+    item: Zotero.Item;
+    assignment: ItemSyllabusAssignment;
+  }>;
+};
+
+/** No assigned readings. */
+export function isEmptyClassGroup(group: SyllabusClassGroup): boolean {
+  return group.itemAssignments.length === 0;
+}
+
 export function useSyllabusClassGroups(
   collectionId: number,
   syllabusItems: {
@@ -113,11 +127,13 @@ export function useSyllabusClassGroups(
     }
 
     return {
-      classGroups: sortedFinalClassNumbers.map((classNumber) => ({
-        classNumber,
-        syllabusMetadata: classByNumber(syllabusMetadata, classNumber),
-        itemAssignments: itemsByClass.get(classNumber) || [],
-      })),
+      classGroups: sortedFinalClassNumbers.map(
+        (classNumber): SyllabusClassGroup => ({
+          classNumber,
+          syllabusMetadata: classByNumber(syllabusMetadata, classNumber),
+          itemAssignments: itemsByClass.get(classNumber) || [],
+        }),
+      ),
       furtherReadingItems: sortItemsByTitle(furtherReading),
     };
   }, [syllabusItems, collectionId, syllabusMetadata, itemOrderVersion]);
