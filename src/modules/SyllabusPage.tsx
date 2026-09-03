@@ -28,6 +28,7 @@ import { renderComponent } from "../utils/react";
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
+import { useZoteroItemsViewRegularItemIds } from "./react-zotero-sync/itemsViewItems";
 import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
 import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
 import { useZoteroReaderMode } from "./react-zotero-sync/readerMode";
@@ -309,6 +310,17 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
   const isLocked = syllabusMetadata.locked || false;
   const syllabusItems = useZoteroCollectionItems(collectionId);
+  // Visual-only search/tag filter — does not change syllabus configuration.
+  const matchingIds = useZoteroItemsViewRegularItemIds(collectionId);
+  const isFiltered = matchingIds != null;
+  const displaySyllabusItems = useMemo(() => {
+    if (!matchingIds) {
+      return syllabusItems;
+    }
+    return syllabusItems.filter(({ zoteroItem }) =>
+      matchingIds.has(zoteroItem.id),
+    );
+  }, [syllabusItems, matchingIds]);
   const classAssignments = useMemo(() => {
     return syllabusItems.map((item) => item.assignments).flat();
   }, [syllabusItems]);
@@ -805,17 +817,17 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   const { classGroups, furtherReadingItems: unsortedFurtherReading } =
     useSyllabusClassGroups(
       collectionId,
-      syllabusItems,
+      displaySyllabusItems,
       syllabusMetadata,
       itemOrderVersion,
     );
 
   const visibleClassGroups = useMemo(
     () =>
-      isLocked
+      isLocked || isFiltered
         ? classGroups.filter((group) => !isEmptyClassGroup(group))
         : classGroups,
-    [classGroups, isLocked],
+    [classGroups, isLocked, isFiltered],
   );
 
   const furtherReadingItems = useMemo(
@@ -1971,6 +1983,13 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
               compactMode ? "gap-10 mt-4" : "gap-12 mt-6",
             )}
           >
+            {isFiltered &&
+              visibleClassGroups.length === 0 &&
+              furtherReadingItems.length === 0 && (
+                <p className="container-padded text-secondary text-lg">
+                  {getString("gallery-empty-filtered")}
+                </p>
+              )}
             {visibleClassGroups.map((group) => (
               <ClassGroupComponent
                 key={group.classNumber ?? "null"}
@@ -2014,7 +2033,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
               return (
                 <>
-                  {!isLocked && hasNoClasses && (
+                  {!isLocked && !isFiltered && hasNoClasses && (
                     <div
                       className="in-[.print]:hidden mb-6 rounded-lg border border-quinary bg-quinary/40 p-6 space-y-3"
                       data-tour="syllabus-empty-state"
