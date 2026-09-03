@@ -755,10 +755,18 @@ export function findClassIdByNumber(
     return undefined;
   }
   if (!classOrder?.length) {
+    let hasStoredNumbers = false;
     for (const [id, meta] of Object.entries(classes || {})) {
-      if (meta?.number === classNumber) {
+      if (typeof meta?.number !== "number") {
+        continue;
+      }
+      hasStoredNumbers = true;
+      if (meta.number === classNumber) {
         return id;
       }
+    }
+    if (hasStoredNumbers) {
+      return undefined;
     }
   }
   return orderedClassIds({ classes, classOrder })[classNumber - 1];
