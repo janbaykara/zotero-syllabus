@@ -8,7 +8,9 @@ enable-subcollections-message =
 
     Điều gì xảy ra:
 
-    • Mỗi buổi học được tạo hoặc nhận một thư mục, rồi đổi tên cho khớp với đề cương (ví dụ “Buổi 1: Tiêu đề”).
+    • Mỗi buổi học có bài đọc được gán sẽ được tạo hoặc nhận một thư mục, rồi đổi tên cho khớp với đề cương (ví dụ “Buổi 1: Tiêu đề”).
+
+    • Các buổi không có bài đọc được gán không có thư mục. Thư mục sẵn có của những buổi đó sẽ bị gỡ.
 
     • Các bộ sưu tập con không phải thư mục buổi học — và không có ghi chú đề cương riêng — sẽ bị xóa. Mục không bị xóa khỏi thư viện; chúng vẫn nằm trong bộ sưu tập cha.
 
@@ -16,7 +18,7 @@ enable-subcollections-message =
 
     • Xóa một buổi học khỏi đề cương sẽ xóa thư mục buổi học đó.
 
-    • Nếu bạn xóa thư mục buổi học, tiện ích sẽ tạo lại.
+    • Nếu bạn xóa thư mục buổi học vẫn còn bài đọc được gán, tiện ích sẽ tạo lại.
 
     Tắt sau này sẽ ngừng quản lý thư mục; các thư mục hiện có được giữ nguyên.
 
@@ -223,7 +225,7 @@ settings-singular = Dạng số ít
 settings-nomenclature-placeholder = vd. tuần, buổi học, phiên, phần
 settings-plural-label = Dạng số nhiều:
 settings-subcollections = Bộ sưu tập con buổi học
-settings-subcollections-desc = Tắt theo mặc định. Khi bật, mỗi buổi học có một thư mục trong bộ sưu tập này. Thư mục được tạo, đổi tên và gỡ để khớp đề cương — kể cả bộ sưu tập con sẵn có, có thể bị xóa. Tắt sẽ giữ nguyên thư mục.
+settings-subcollections-desc = Tắt theo mặc định. Khi bật, mỗi buổi học có bài đọc được gán có một thư mục trong bộ sưu tập này. Buổi không có bài gán không có thư mục; những thư mục đó bị gỡ. Thư mục được tạo, đổi tên và gỡ để khớp đề cương — kể cả bộ sưu tập con sẵn có, có thể bị xóa. Tắt sẽ giữ nguyên thư mục.
 settings-subcollections-checkbox = Tạo bộ sưu tập con?
 settings-bib-style = Phong cách thư mục
 settings-bib-style-desc = Chọn phong cách CSL (Citation Style Language) cho tài liệu tham khảo. Nếu không đặt, sẽ dùng phong cách mặc định của người dùng.

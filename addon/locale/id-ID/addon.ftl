@@ -8,7 +8,9 @@ enable-subcollections-message =
 
     Yang terjadi:
 
-    • Satu folder dibuat atau diadopsi per kelas, lalu namanya disesuaikan dengan silabus (misalnya “Kelas 1: Judul”).
+    • Satu folder dibuat atau diadopsi per kelas yang punya bacaan tertugas, lalu namanya disesuaikan dengan silabus (misalnya “Kelas 1: Judul”).
+
+    • Kelas tanpa bacaan tertugas tidak mendapat folder. Folder yang sudah ada untuk kelas itu dihapus.
 
     • Koleksi turunan yang bukan folder kelas tersebut — dan yang tidak memiliki catatan silabus sendiri — akan dihapus. Item tidak dihapus dari pustaka; item tetap berada di koleksi induk.
 
@@ -16,7 +18,7 @@ enable-subcollections-message =
 
     • Menghapus kelas dari silabus menghapus folder kelas tersebut.
 
-    • Jika Anda menghapus folder kelas, pengaya akan membuatnya kembali.
+    • Jika Anda menghapus folder kelas yang masih punya bacaan tertugas, pengaya akan membuatnya kembali.
 
     Menonaktifkan nanti menghentikan pengelolaan folder; folder yang ada dibiarkan di tempatnya.
 
@@ -223,7 +225,7 @@ settings-singular = Bentuk tunggal
 settings-nomenclature-placeholder = mis., minggu, kelas, sesi, bagian
 settings-plural-label = Bentuk jamak:
 settings-subcollections = Subkoleksi kelas
-settings-subcollections-desc = Nonaktif secara bawaan. Jika diaktifkan, setiap kelas mendapat folder di bawah koleksi ini. Folder dibuat, diganti namanya, dan dihapus agar sesuai dengan silabus — termasuk koleksi turunan yang sudah ada, yang dapat dihapus. Menonaktifkan opsi ini membiarkan folder di tempatnya.
+settings-subcollections-desc = Nonaktif secara bawaan. Jika diaktifkan, setiap kelas dengan bacaan tertugas mendapat folder di bawah koleksi ini. Kelas tanpa penugasan tidak mendapat folder, dan folder itu dihapus. Folder dibuat, diganti namanya, dan dihapus agar sesuai dengan silabus — termasuk koleksi turunan yang sudah ada, yang dapat dihapus. Menonaktifkan opsi ini membiarkan folder di tempatnya.
 settings-subcollections-checkbox = Buat subkoleksi?
 settings-bib-style = Gaya bibliografi
 settings-bib-style-desc = Pilih gaya CSL (Citation Style Language) untuk rujukan bibliografi. Jika tidak diatur, gaya bawaan pengguna akan digunakan.

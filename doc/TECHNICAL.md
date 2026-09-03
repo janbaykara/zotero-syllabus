@@ -100,10 +100,10 @@ Older builds stored assignments in the item Extra field (`syllabus: {…}`). On 
 
 After each note persist, [`src/modules/classSubcollections.ts`](../src/modules/classSubcollections.ts) makes the tree match the document:
 
-- One child collection per class, named like `Class 1: Title` (or `Week 1: …` when nomenclature is set). A reading deadline is appended (`— Friday 28th Aug`); when the class is marked done, the name ends with `✅`.
+- One child collection per class that has assigned readings, named like `Class 1: Title` (or `Week 1: …` when nomenclature is set). A reading deadline is appended (`— Friday 28th Aug`); when the class is marked done, the name ends with `✅`. Classes with no assignments do not get a folder; existing folders for those classes are removed.
 - The class record stores `subcollectionKey` (Zotero collection key). It is stripped from UI metadata and preserved across number-keyed merges.
 - Desired items = regular items with assignments for that `classId`. Missing items are added to the folder; extras are removed from the **folder only**. Items stay on the parent.
-- User edits in a folder never update the note. Removing an item from the folder is restored on the next sync; adding a stray item is dropped. Deleting a managed folder recreates it from the note.
+- User edits in a folder never update the note. Removing an item from the folder is restored on the next sync; adding a stray item is dropped. Deleting a managed folder for a class that still has assignments recreates it from the note.
 - Extra child collections that are not class folders (and do not have their own syllabus note) are removed.
 - This is controlled per syllabus by **Create subcollections?** in Syllabus Settings (off by default for new syllabi and for collections migrated from legacy prefs). Turning it on asks for confirmation: existing child collections become managed, extra folders can be deleted, and class-folder membership is rewritten from the note. Turning it off stops create/rename/delete; leftover folders are not removed.
 

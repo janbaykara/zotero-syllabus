@@ -8,7 +8,9 @@ enable-subcollections-message =
 
     Ne olur:
 
-    • Her ders için bir klasör oluşturulur veya benimsenir ve izlenceyle eşleşecek biçimde yeniden adlandırılır (örneğin “Ders 1: Başlık”).
+    • Atanmış okuması olan her ders için bir klasör oluşturulur veya benimsenir ve izlenceyle eşleşecek biçimde yeniden adlandırılır (örneğin “Ders 1: Başlık”).
+
+    • Atanmış okuması olmayan dersler klasör almaz. Bu derslerin mevcut klasörleri kaldırılır.
 
     • Bu ders klasörleri olmayan — ve kendi izlence notu bulunmayan — alt koleksiyonlar silinir. Öğeler kitaplıktan silinmez; üst koleksiyonda kalır.
 
@@ -16,7 +18,7 @@ enable-subcollections-message =
 
     • İzlenceden bir dersin kaldırılması, o ders klasörünü siler.
 
-    • Bir ders klasörünü silerseniz eklenti onu yeniden oluşturur.
+    • Hâlâ atanmış okuması olan bir ders klasörünü silerseniz eklenti onu yeniden oluşturur.
 
     Daha sonra kapatmak klasör yönetimini durdurur; mevcut klasörler yerinde bırakılır.
 
@@ -223,7 +225,7 @@ settings-singular = Tekil biçim
 settings-nomenclature-placeholder = örn. hafta, ders, oturum, bölüm
 settings-plural-label = Çoğul biçim:
 settings-subcollections = Ders alt koleksiyonları
-settings-subcollections-desc = Varsayılan olarak kapalıdır. Etkinleştirildiğinde her ders bu koleksiyon altında bir klasör alır. Klasörler izlenceyle eşleşecek biçimde oluşturulur, yeniden adlandırılır ve kaldırılır — silinebilecek mevcut alt koleksiyonlar dahil. Kapatmak klasörleri yerinde bırakır.
+settings-subcollections-desc = Varsayılan olarak kapalıdır. Etkinleştirildiğinde atanmış okuması olan her ders bu koleksiyon altında bir klasör alır. Ataması olmayan dersler klasör almaz; bu klasörler kaldırılır. Klasörler izlenceyle eşleşecek biçimde oluşturulur, yeniden adlandırılır ve kaldırılır — silinebilecek mevcut alt koleksiyonlar dahil. Kapatmak klasörleri yerinde bırakır.
 settings-subcollections-checkbox = Alt koleksiyonlar oluşturulsun mu?
 settings-bib-style = Kaynakça stili
 settings-bib-style-desc = Kaynakça göndermeleri için bir CSL (Citation Style Language) stili seçin. Ayarlanmazsa kullanıcının varsayılan stili kullanılır.

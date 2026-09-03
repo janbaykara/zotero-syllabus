@@ -8,7 +8,9 @@ enable-subcollections-message =
 
     O que acontece:
 
-    • Uma pasta é criada ou adotada por aula e renomeada para corresponder ao programa (por exemplo, “Aula 1: Título”).
+    • Uma pasta é criada ou adotada por aula com leituras atribuídas e renomeada para corresponder ao programa (por exemplo, “Aula 1: Título”).
+
+    • Aulas sem leituras atribuídas não recebem pasta. Pastas existentes dessas aulas são removidas.
 
     • Coleções filhas que não forem essas pastas de aula — e que não tiverem a própria nota de programa — serão excluídas. Os itens não são excluídos da biblioteca; permanecem na coleção pai.
 
@@ -16,7 +18,7 @@ enable-subcollections-message =
 
     • Remover uma aula do programa exclui essa pasta de aula.
 
-    • Se você excluir uma pasta de aula, o complemento a recria.
+    • Se você excluir uma pasta de aula que ainda tiver leituras atribuídas, o complemento a recria.
 
     Desativar depois interrompe o gerenciamento das pastas; as pastas existentes permanecem.
 
@@ -223,7 +225,7 @@ settings-singular = Forma singular
 settings-nomenclature-placeholder = ex.: semana, aula, sessão, unidade
 settings-plural-label = Forma plural:
 settings-subcollections = Subcoleções de aula
-settings-subcollections-desc = Desativado por padrão. Quando ativado, cada aula ganha uma pasta nesta coleção. Pastas são criadas, renomeadas e removidas para corresponder ao programa — inclusive coleções filhas existentes, que podem ser excluídas. Desativar deixa as pastas no lugar.
+settings-subcollections-desc = Desativado por padrão. Quando ativado, cada aula com leituras atribuídas ganha uma pasta nesta coleção. Aulas sem atribuições não recebem pasta, e essas pastas são removidas. Pastas são criadas, renomeadas e removidas para corresponder ao programa — inclusive coleções filhas existentes, que podem ser excluídas. Desativar deixa as pastas no lugar.
 settings-subcollections-checkbox = Criar subcoleções?
 settings-bib-style = Estilo de bibliografia
 settings-bib-style-desc = Escolha um estilo CSL (Citation Style Language) para as referências bibliográficas. Se não for definido, será usado o estilo padrão do usuário.

@@ -8,7 +8,9 @@ enable-subcollections-message =
 
     O que acontece:
 
-    • É criada ou adotada uma pasta por aula, cuja designação passa a coincidir com o programa (por exemplo, «Aula 1: Título»).
+    • É criada ou adotada uma pasta por aula com leituras atribuídas, cuja designação passa a coincidir com o programa (por exemplo, «Aula 1: Título»).
+
+    • As aulas sem leituras atribuídas não recebem pasta. As pastas existentes dessas aulas são removidas.
 
     • As coleções descendentes que não sejam essas pastas de aula — e que não tenham uma nota de programa própria — serão eliminadas. Os itens não são eliminados da biblioteca; permanecem na coleção ascendente.
 
@@ -16,7 +18,7 @@ enable-subcollections-message =
 
     • Remover uma aula do programa elimina a pasta correspondente.
 
-    • Se eliminar uma pasta de aula, o extra recria-a.
+    • Se eliminar uma pasta de aula que ainda tenha leituras atribuídas, o extra recria-a.
 
     Desativar mais tarde deixa de gerir as pastas; as pastas existentes mantêm-se.
 
@@ -223,7 +225,7 @@ settings-singular = Forma singular
 settings-nomenclature-placeholder = p. ex., semana, aula, sessão, secção
 settings-plural-label = Forma plural:
 settings-subcollections = Subcoleções de aulas
-settings-subcollections-desc = Desativado por omissão. Quando ativado, cada aula recebe uma pasta nesta coleção. As pastas são criadas, renomeadas e removidas de acordo com o programa — incluindo coleções descendentes existentes, que podem ser eliminadas. Desativar deixa as pastas no sítio.
+settings-subcollections-desc = Desativado por omissão. Quando ativado, cada aula com leituras atribuídas recebe uma pasta nesta coleção. As aulas sem atribuições não recebem pasta, e essas pastas são removidas. As pastas são criadas, renomeadas e removidas de acordo com o programa — incluindo coleções descendentes existentes, que podem ser eliminadas. Desativar deixa as pastas no sítio.
 settings-subcollections-checkbox = Criar subcoleções?
 settings-bib-style = Estilo bibliográfico
 settings-bib-style-desc = Escolha um estilo CSL (Citation Style Language) para as referências bibliográficas. Se não for definido, será usado o estilo predefinido do utilizador.

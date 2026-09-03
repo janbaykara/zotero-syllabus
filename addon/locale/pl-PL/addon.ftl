@@ -8,7 +8,9 @@ enable-subcollections-message =
 
     Co się stanie:
 
-    • Dla każdych zajęć tworzony lub przejmowany jest jeden folder i zmieniana jest jego nazwa zgodnie z sylabusem (na przykład „Zajęcia 1: Tytuł”).
+    • Dla zajęć z przypisanymi lekturami tworzony lub przejmowany jest jeden folder i zmieniana jest jego nazwa zgodnie z sylabusem (na przykład „Zajęcia 1: Tytuł”).
+
+    • Zajęcia bez przypisanych lektur nie otrzymują folderu. Istniejące foldery takich zajęć są usuwane.
 
     • Kolekcje podrzędne, które nie są folderami zajęć — i nie mają własnej notatki sylabusa — zostaną usunięte. Pozycje nie są usuwane z biblioteki; pozostają w kolekcji nadrzędnej.
 
@@ -16,7 +18,7 @@ enable-subcollections-message =
 
     • Usunięcie zajęć z sylabusa usuwa odpowiadający im folder.
 
-    • Jeśli usuniesz folder zajęć, wtyczka utworzy go ponownie.
+    • Jeśli usuniesz folder zajęć, który nadal ma przypisane lektury, wtyczka utworzy go ponownie.
 
     Późniejsze wyłączenie tej opcji kończy zarządzanie folderami; istniejące foldery pozostają na miejscu.
 
@@ -223,7 +225,7 @@ settings-singular = Forma liczby pojedynczej
 settings-nomenclature-placeholder = np. tydzień, zajęcia, sesja, sekcja
 settings-plural-label = Forma liczby mnogiej:
 settings-subcollections = Podkolekcje zajęć
-settings-subcollections-desc = Domyślnie wyłączone. Po włączeniu każde zajęcia otrzymują folder w tej kolekcji. Foldery są tworzone, przemianowywane i usuwane zgodnie z sylabusem — w tym istniejące kolekcje podrzędne, które mogą zostać usunięte. Wyłączenie tej opcji pozostawia foldery na miejscu.
+settings-subcollections-desc = Domyślnie wyłączone. Po włączeniu zajęcia z przypisanymi lekturami otrzymują folder w tej kolekcji. Zajęcia bez przypisań nie otrzymują folderu; takie foldery są usuwane. Foldery są tworzone, przemianowywane i usuwane zgodnie z sylabusem — w tym istniejące kolekcje podrzędne, które mogą zostać usunięte. Wyłączenie tej opcji pozostawia foldery na miejscu.
 settings-subcollections-checkbox = Tworzyć podkolekcje?
 settings-bib-style = Styl bibliografii
 settings-bib-style-desc = Wybierz styl CSL (Citation Style Language) dla odwołań bibliograficznych. Jeśli nie ustawiono, użyty zostanie styl domyślny użytkownika.

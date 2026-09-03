@@ -8,7 +8,9 @@ enable-subcollections-message =
 
     具體行為：
 
-    • 每個課堂會建立或沿用一個子分類，並依教學大綱重新命名（例如「課堂 1: 標題」）。
+    • 每個有指定閱讀的課堂會建立或沿用一個子分類，並依教學大綱重新命名（例如「課堂 1: 標題」）。
+
+    • 沒有指定閱讀的課堂不會獲得資料夾。這些課堂的既有資料夾會被刪除。
 
     • 不是課堂資料夾、且自身沒有教學大綱筆記的子分類會被刪除。條目不會從文獻庫中刪除，仍留在父分類中。
 
@@ -16,7 +18,7 @@ enable-subcollections-message =
 
     • 從教學大綱中刪除某個課堂時，對應的子分類也會被刪除。
 
-    • 如果你刪除了課堂資料夾，外掛會再建立回來。
+    • 如果你刪除了仍有指定閱讀的課堂資料夾，外掛會再建立回來。
 
     之後關閉此選項將停止管理資料夾，已有資料夾會保留。
 
@@ -223,7 +225,7 @@ settings-singular = 單數形式
 settings-nomenclature-placeholder = 例如：週、課堂、單元、節
 settings-plural-label = 複數形式：
 settings-subcollections = 課堂子分類
-settings-subcollections-desc = 預設關閉。啟用後，每個課堂會在此分類下擁有一個資料夾。資料夾會依教學大綱建立、重新命名和刪除——包括既有子分類，它們也可能被刪除。關閉此選項後資料夾會保留。
+settings-subcollections-desc = 預設關閉。啟用後，每個有指定閱讀的課堂會在此分類下擁有一個資料夾。沒有指定閱讀的課堂不會獲得資料夾，這些資料夾會被刪除。資料夾會依教學大綱建立、重新命名和刪除——包括既有子分類，它們也可能被刪除。關閉此選項後資料夾會保留。
 settings-subcollections-checkbox = 建立子分類？
 settings-bib-style = 參考文獻樣式
 settings-bib-style-desc = 為文獻引用選擇 CSL（Citation Style Language）樣式。未設定時將使用使用者預設樣式。

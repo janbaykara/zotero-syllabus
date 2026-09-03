@@ -8,7 +8,9 @@ enable-subcollections-message =
 
     具体行为：
 
-    • 每个课堂会创建或沿用一个子分类，并按教学大纲重命名（例如“Class 1: Title”）。
+    • 每个有指定阅读的课堂会创建或沿用一个子分类，并按教学大纲重命名（例如“Class 1: Title”）。
+
+    • 没有指定阅读的课堂不会获得文件夹。这些课堂的现有文件夹会被删除。
 
     • 不是课堂文件夹、且自身没有教学大纲笔记的子分类会被删除。条目不会从文献库中删除，仍留在父分类中。
 
@@ -16,7 +18,7 @@ enable-subcollections-message =
 
     • 从教学大纲中删除某个课堂时，对应的子分类也会被删除。
 
-    • 如果你删除了课堂文件夹，插件会再创建回来。
+    • 如果你删除了仍有指定阅读的课堂文件夹，插件会再创建回来。
 
     之后关闭此选项将停止管理文件夹，已有文件夹会保留。
 
@@ -221,7 +223,7 @@ settings-singular = 单数形式
 settings-nomenclature-placeholder = 例如：周、课堂、单元、节
 settings-plural-label = 复数形式：
 settings-subcollections = 课堂子分类
-settings-subcollections-desc = 默认关闭。启用后，每个课堂会在此分类下拥有一个文件夹。文件夹会按教学大纲创建、重命名和删除——包括已有子分类，它们也可能被删除。关闭此选项后文件夹会保留。
+settings-subcollections-desc = 默认关闭。启用后，每个有指定阅读的课堂会在此分类下拥有一个文件夹。没有指定阅读的课堂不会获得文件夹，这些文件夹会被删除。文件夹会按教学大纲创建、重命名和删除——包括已有子分类，它们也可能被删除。关闭此选项后文件夹会保留。
 settings-subcollections-checkbox = 创建子分类？
 settings-bib-style = 参考文献样式
 settings-bib-style-desc = 为文献引用选择 CSL（Citation Style Language）样式。未设置时将使用用户默认样式。

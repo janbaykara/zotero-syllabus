@@ -8,7 +8,9 @@ enable-subcollections-message =
 
     Ce qui se passe :
 
-    • Un dossier est créé ou adopté par séance, et renommé pour correspondre au syllabus (par exemple « Séance 1 : Titre »).
+    • Un dossier est créé ou adopté par séance qui a des lectures assignées, et renommé pour correspondre au syllabus (par exemple « Séance 1 : Titre »).
+
+    • Les séances sans lectures assignées n’ont pas de dossier. Les dossiers existants pour ces séances sont supprimés.
 
     • Les collections enfants qui ne sont pas ces dossiers de séance — et qui n’ont pas leur propre note de syllabus — seront supprimées. Les documents ne sont pas supprimés de la bibliothèque ; ils restent dans la collection parente.
 
@@ -16,7 +18,7 @@ enable-subcollections-message =
 
     • Retirer une séance du syllabus supprime ce dossier de séance.
 
-    • Si vous supprimez un dossier de séance, le module le recrée.
+    • Si vous supprimez un dossier de séance qui a encore des lectures assignées, le module le recrée.
 
     Désactiver plus tard arrête la gestion des dossiers ; les dossiers existants sont conservés.
 
@@ -223,7 +225,7 @@ settings-singular = Forme au singulier
 settings-nomenclature-placeholder = p. ex. semaine, cours, séance, section
 settings-plural-label = Forme au pluriel :
 settings-subcollections = Sous-collections de séance
-settings-subcollections-desc = Désactivé par défaut. Une fois activé, chaque séance obtient un dossier sous cette collection. Les dossiers sont créés, renommés et supprimés pour correspondre au syllabus — y compris les collections enfants existantes, qui peuvent être supprimées. Désactiver laisse les dossiers en place.
+settings-subcollections-desc = Désactivé par défaut. Une fois activé, chaque séance avec des lectures assignées obtient un dossier sous cette collection. Les séances sans assignations n’ont pas de dossier ; ces dossiers sont supprimés. Les dossiers sont créés, renommés et supprimés pour correspondre au syllabus — y compris les collections enfants existantes, qui peuvent être supprimées. Désactiver laisse les dossiers en place.
 settings-subcollections-checkbox = Créer des sous-collections ?
 settings-bib-style = Style bibliographique
 settings-bib-style-desc = Choisissez un style CSL (Citation Style Language) pour les références bibliographiques. S’il n’est pas défini, le style par défaut de l’utilisateur sera utilisé.

@@ -8,7 +8,9 @@ enable-subcollections-message =
 
     Wat er gebeurt:
 
-    • Per bijeenkomst wordt een map aangemaakt of overgenomen, en hernoemd zodat die bij de syllabus past (bijvoorbeeld “Bijeenkomst 1: Titel”).
+    • Per bijeenkomst met toegewezen lectuur wordt een map aangemaakt of overgenomen, en hernoemd zodat die bij de syllabus past (bijvoorbeeld “Bijeenkomst 1: Titel”).
+
+    • Bijeenkomsten zonder toegewezen lectuur krijgen geen map. Bestaande mappen voor die bijeenkomsten worden verwijderd.
 
     • Kindcollecties die niet die bijeenkomstmappen zijn — en die geen eigen syllabusnotitie hebben — worden verwijderd. Items worden niet uit de bibliotheek verwijderd; ze blijven in de bovenliggende collectie.
 
@@ -16,7 +18,7 @@ enable-subcollections-message =
 
     • Een bijeenkomst uit de syllabus halen verwijdert die bijeenkomstmap.
 
-    • Als u een bijeenkomstmap verwijdert, maakt de plug-in die opnieuw.
+    • Als u een bijeenkomstmap verwijdert die nog toegewezen lectuur heeft, maakt de plug-in die opnieuw.
 
     Later uitschakelen stopt het beheer van mappen; bestaande mappen blijven staan.
 
@@ -223,7 +225,7 @@ settings-singular = Enkelvoud
 settings-nomenclature-placeholder = bijv. week, college, bijeenkomst, onderdeel
 settings-plural-label = Meervoud:
 settings-subcollections = Subcollecties per bijeenkomst
-settings-subcollections-desc = Standaard uit. Als dit aanstaat, krijgt elke bijeenkomst een map onder deze collectie. Mappen worden aangemaakt, hernoemd en verwijderd zodat ze bij de syllabus passen — inclusief bestaande kindcollecties, die kunnen worden verwijderd. Uitschakelen laat mappen staan.
+settings-subcollections-desc = Standaard uit. Als dit aanstaat, krijgt elke bijeenkomst met toegewezen lectuur een map onder deze collectie. Bijeenkomsten zonder toewijzingen krijgen geen map; die mappen worden verwijderd. Mappen worden aangemaakt, hernoemd en verwijderd zodat ze bij de syllabus passen — inclusief bestaande kindcollecties, die kunnen worden verwijderd. Uitschakelen laat mappen staan.
 settings-subcollections-checkbox = Subcollecties aanmaken?
 settings-bib-style = Bibliografiestijl
 settings-bib-style-desc = Kies een CSL-stijl (Citation Style Language) voor bibliografische verwijzingen. Als er geen is ingesteld, wordt de standaardstijl van de gebruiker gebruikt.

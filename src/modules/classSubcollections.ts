@@ -440,8 +440,10 @@ async function ensureChildForClass(
 
 /**
  * Create, rename, adopt, and delete class folders when the syllabus has
- * `createSubcollections` explicitly enabled. Returns a copy of `next` with
- * `subcollectionKey` stamped on each class. Does not write the note.
+ * `createSubcollections` explicitly enabled. Classes with no assignments do
+ * not get a folder; existing folders for those classes are removed. Returns a
+ * copy of `next` with `subcollectionKey` stamped on each class that has a
+ * folder. Does not write the note.
  */
 export async function ensureClassSubcollections(
   parent: Zotero.Collection,
@@ -474,7 +476,21 @@ export async function ensureClassSubcollections(
     }
 
     for (const [classId, meta] of Object.entries(classes)) {
-      if (!meta?.number) {
+      if (!meta) {
+        continue;
+      }
+      if (desiredItemKeysForClass(next, classId).size === 0) {
+        const stale = childByKey(parent, meta.subcollectionKey);
+        if (stale) {
+          await eraseManagedChild(stale);
+        }
+        if (meta.subcollectionKey) {
+          const { subcollectionKey: _subcollectionKey, ...rest } = meta;
+          classes[classId] = rest;
+        }
+        continue;
+      }
+      if (!meta.number) {
         continue;
       }
       const name = classSubcollectionName(

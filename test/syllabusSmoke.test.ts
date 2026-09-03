@@ -262,6 +262,61 @@ describe("syllabus smoke", function () {
     assert.include(book.getCollections(), folder.id);
   });
 
+  it("does not create a class folder when the class has no assignments", async function () {
+    collection = await createCollection("Smoke Syllabus Empty Class Folder");
+    const emptyClassId = generateClassId();
+    const saved = await mutateCollectionDocument(
+      collection,
+      (document) => ({
+        ...document,
+        nomenclature: "week",
+        createSubcollections: true,
+        classes: {
+          [emptyClassId]: { number: 1, title: "Empty", status: null },
+        },
+        items: {},
+      }),
+      { createNote: "always" },
+    );
+
+    assert.isUndefined(saved.classes?.[emptyClassId]?.subcollectionKey);
+    assert.lengthOf(childCollections(collection), 0);
+  });
+
+  it("removes a class folder when the class has no remaining assignments", async function () {
+    collection = await createCollection("Smoke Syllabus Empty After Unassign");
+    const book = await createBook(collection, "Unassign Folder Book");
+    items.push(book);
+    const first = await mutateCollectionDocument(
+      collection,
+      (document) => ({
+        ...document,
+        nomenclature: "week",
+        createSubcollections: true,
+        classes: {
+          [CLASS_ID]: { number: 1, title: "Seminar", status: null },
+        },
+        items: {
+          [book.key]: [{ classId: CLASS_ID, priority: "essential" }],
+        },
+      }),
+      { createNote: "always" },
+    );
+    const folderKey = first.classes?.[CLASS_ID]?.subcollectionKey;
+    assert.isString(folderKey);
+
+    const saved = await mutateCollectionDocument(collection, (document) => ({
+      ...document,
+      items: {},
+    }));
+    assert.isUndefined(saved.classes?.[CLASS_ID]?.subcollectionKey);
+    const folder = Zotero.Collections.getByLibraryAndKey(
+      collection.libraryID,
+      folderKey!,
+    );
+    assert.isTrue(!folder || folder.deleted);
+  });
+
   it("removing a class folder during ensure does not deadlock the write queue", async function () {
     collection = await createCollection("Smoke Syllabus Folder Remove");
     const book = await createBook(collection, "Folder Remove Book");

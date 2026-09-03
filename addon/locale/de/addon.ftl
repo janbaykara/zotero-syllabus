@@ -8,7 +8,9 @@ enable-subcollections-message =
 
     Was passiert:
 
-    • Pro Sitzung wird ein Ordner angelegt oder übernommen und so umbenannt, dass er zum Lehrplan passt (zum Beispiel „Sitzung 1: Titel“).
+    • Pro Sitzung mit zugewiesenen Texten wird ein Ordner angelegt oder übernommen und so umbenannt, dass er zum Lehrplan passt (zum Beispiel „Sitzung 1: Titel“).
+
+    • Sitzungen ohne zugewiesene Texte erhalten keinen Ordner. Vorhandene Ordner für solche Sitzungen werden entfernt.
 
     • Untersammlungen, die keine solchen Sitzungsordner sind — und die keine eigene Lehrplan-Notiz haben — werden gelöscht. Einträge werden nicht aus der Bibliothek gelöscht; sie bleiben in der übergeordneten Sammlung.
 
@@ -16,7 +18,7 @@ enable-subcollections-message =
 
     • Wenn Sie eine Sitzung aus dem Lehrplan entfernen, wird der zugehörige Sitzungsordner gelöscht.
 
-    • Wenn Sie einen Sitzungsordner löschen, legt das Plugin ihn erneut an.
+    • Wenn Sie einen Sitzungsordner löschen, der noch zugewiesene Texte hat, legt das Plugin ihn erneut an.
 
     Wenn Sie dies später deaktivieren, werden Ordner nicht mehr verwaltet; vorhandene Ordner bleiben erhalten.
 
@@ -223,7 +225,7 @@ settings-singular = Einzahl
 settings-nomenclature-placeholder = z. B. Woche, Klasse, Sitzung, Abschnitt
 settings-plural-label = Mehrzahl:
 settings-subcollections = Untersammlungen für Sitzungen
-settings-subcollections-desc = Standardmäßig aus. Wenn aktiviert, erhält jede Sitzung einen Ordner unter dieser Sammlung. Ordner werden angelegt, umbenannt und entfernt, damit sie zum Lehrplan passen — einschließlich vorhandener Untersammlungen, die gelöscht werden können. Das Deaktivieren lässt Ordner bestehen.
+settings-subcollections-desc = Standardmäßig aus. Wenn aktiviert, erhält jede Sitzung mit zugewiesenen Texten einen Ordner unter dieser Sammlung. Sitzungen ohne Zuweisungen erhalten keinen Ordner; solche Ordner werden entfernt. Ordner werden angelegt, umbenannt und entfernt, damit sie zum Lehrplan passen — einschließlich vorhandener Untersammlungen, die gelöscht werden können. Das Deaktivieren lässt Ordner bestehen.
 settings-subcollections-checkbox = Untersammlungen anlegen?
 settings-bib-style = Bibliografiestil
 settings-bib-style-desc = Wählen Sie einen CSL-Stil (Citation Style Language) für bibliografische Nachweise. Ist keiner gesetzt, wird der Standardstil des Nutzers verwendet.

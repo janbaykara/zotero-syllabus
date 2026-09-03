@@ -8,7 +8,9 @@ enable-subcollections-message =
 
     What happens:
 
-    • One folder is created or adopted per class, and renamed to match the syllabus (for example “Class 1: Title”).
+    • One folder is created or adopted per class that has assigned readings, and renamed to match the syllabus (for example “Class 1: Title”).
+
+    • Classes with no assigned readings do not get a folder. Existing folders for those classes are removed.
 
     • Child collections that are not those class folders — and that do not have their own syllabus note — will be deleted. Items are not deleted from the library; they stay in the parent collection.
 
@@ -16,7 +18,7 @@ enable-subcollections-message =
 
     • Removing a class from the syllabus deletes that class folder.
 
-    • If you delete a class folder, the plugin recreates it.
+    • If you delete a class folder that still has assigned readings, the plugin recreates it.
 
     Turning this off later stops managing folders; existing folders are left in place.
 
@@ -221,7 +223,7 @@ settings-singular = Singular form
 settings-nomenclature-placeholder = e.g., week, class, session, section
 settings-plural-label = Plural form:
 settings-subcollections = Class subcollections
-settings-subcollections-desc = Off by default. When enabled, each class gets a folder under this collection. Folders are created, renamed, and removed to match the syllabus — including existing child collections, which can be deleted. Turning this off leaves folders in place.
+settings-subcollections-desc = Off by default. When enabled, each class with assigned readings gets a folder under this collection. Classes with no assignments do not get a folder, and those folders are removed. Folders are created, renamed, and removed to match the syllabus — including existing child collections, which can be deleted. Turning this off leaves folders in place.
 settings-subcollections-checkbox = Create subcollections?
 settings-bib-style = Bibliography Style
 settings-bib-style-desc = Choose a CSL (Citation Style Language) style for bibliographic references. If not set, the user default style will be used.

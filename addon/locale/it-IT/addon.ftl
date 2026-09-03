@@ -8,7 +8,9 @@ enable-subcollections-message =
 
     Cosa succede:
 
-    • Viene creata o adottata una cartella per ogni lezione e rinominata in modo da corrispondere al programma (ad esempio «Lezione 1: Titolo»).
+    • Viene creata o adottata una cartella per ogni lezione con letture assegnate e rinominata in modo da corrispondere al programma (ad esempio «Lezione 1: Titolo»).
+
+    • Le lezioni senza letture assegnate non hanno una cartella. Le cartelle esistenti di quelle lezioni vengono rimosse.
 
     • Le raccolte figlie che non sono quelle cartelle di lezione — e che non hanno una propria nota di programma — verranno eliminate. Gli elementi non vengono cancellati dalla libreria; restano nella raccolta padre.
 
@@ -16,7 +18,7 @@ enable-subcollections-message =
 
     • Rimuovere una lezione dal programma elimina quella cartella di lezione.
 
-    • Se si elimina una cartella di lezione, il componente aggiuntivo la ricrea.
+    • Se si elimina una cartella di lezione che ha ancora letture assegnate, il componente aggiuntivo la ricrea.
 
     Disattivando in seguito si interrompe la gestione delle cartelle; quelle esistenti restano al loro posto.
 
@@ -223,7 +225,7 @@ settings-singular = Forma singolare
 settings-nomenclature-placeholder = es. settimana, lezione, sessione, sezione
 settings-plural-label = Forma plurale:
 settings-subcollections = Sottoraccolte delle lezioni
-settings-subcollections-desc = Disattivato per impostazione predefinita. Se attivato, ogni lezione ottiene una cartella sotto questa raccolta. Le cartelle vengono create, rinominate e rimosse per corrispondere al programma — comprese le raccolte figlie esistenti, che possono essere eliminate. Disattivare lascia le cartelle al loro posto.
+settings-subcollections-desc = Disattivato per impostazione predefinita. Se attivato, ogni lezione con letture assegnate ottiene una cartella sotto questa raccolta. Le lezioni senza assegnazioni non hanno una cartella; quelle cartelle vengono rimosse. Le cartelle vengono create, rinominate e rimosse per corrispondere al programma — comprese le raccolte figlie esistenti, che possono essere eliminate. Disattivare lascia le cartelle al loro posto.
 settings-subcollections-checkbox = Creare sottoraccolte?
 settings-bib-style = Stile bibliografico
 settings-bib-style-desc = Scegli uno stile CSL (Citation Style Language) per i riferimenti bibliografici. Se non è impostato, verrà usato lo stile predefinito dell’utente.

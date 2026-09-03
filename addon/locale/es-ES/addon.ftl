@@ -8,7 +8,9 @@ enable-subcollections-message =
 
     Qué ocurre:
 
-    • Se crea o se adopta una carpeta por clase y se renombra para que coincida con el programa (por ejemplo, «Clase 1: Título»).
+    • Se crea o se adopta una carpeta por clase con lecturas asignadas y se renombra para que coincida con el programa (por ejemplo, «Clase 1: Título»).
+
+    • Las clases sin lecturas asignadas no tienen carpeta. Las carpetas existentes de esas clases se eliminan.
 
     • Las colecciones hijas que no sean esas carpetas de clase —y que no tengan su propia nota de programa— se eliminarán. Los elementos no se borran de la biblioteca; permanecen en la colección padre.
 
@@ -16,7 +18,7 @@ enable-subcollections-message =
 
     • Quitar una clase del programa elimina esa carpeta de clase.
 
-    • Si elimina una carpeta de clase, el complemento la vuelve a crear.
+    • Si elimina una carpeta de clase que aún tiene lecturas asignadas, el complemento la vuelve a crear.
 
     Desactivar más tarde deja de gestionar las carpetas; las existentes se conservan.
 
@@ -223,7 +225,7 @@ settings-singular = Forma singular
 settings-nomenclature-placeholder = p. ej., semana, clase, sesión, sección
 settings-plural-label = Forma plural:
 settings-subcollections = Subcolecciones de clase
-settings-subcollections-desc = Desactivado de forma predeterminada. Al activarlo, cada clase obtiene una carpeta bajo esta colección. Las carpetas se crean, se renombran y se eliminan para coincidir con el programa, incluidas las colecciones hijas existentes, que pueden borrarse. Desactivar deja las carpetas en su sitio.
+settings-subcollections-desc = Desactivado de forma predeterminada. Al activarlo, cada clase con lecturas asignadas obtiene una carpeta bajo esta colección. Las clases sin asignaciones no tienen carpeta, y esas carpetas se eliminan. Las carpetas se crean, se renombran y se eliminan para coincidir con el programa, incluidas las colecciones hijas existentes, que pueden borrarse. Desactivar deja las carpetas en su sitio.
 settings-subcollections-checkbox = ¿Crear subcolecciones?
 settings-bib-style = Estilo de bibliografía
 settings-bib-style-desc = Elija un estilo CSL (Citation Style Language) para las referencias bibliográficas. Si no se define, se usará el estilo predeterminado del usuario.
