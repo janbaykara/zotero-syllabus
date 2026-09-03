@@ -208,6 +208,7 @@ item-pane-assignment-n = Zadanie nr { $number }
 item-pane-assignment-for = dla { $title }
 item-pane-due = Termin { $date }
 item-pane-reference-material = Materiały źródłowe
+item-pane-class-named = { $nomenclature } { $number }: { $title }
 item-pane-mark-done = Oznacz jako ukończone
 placeholder-class-number = np. 1, 2, 3…
 field-priority = Priorytet

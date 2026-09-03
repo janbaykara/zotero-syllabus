@@ -3,7 +3,7 @@ import { getString } from "../utils/locale";
 import type { FluentMessageId } from "../../typings/i10n";
 import { clearPref, getPref, setPref } from "../utils/prefs";
 import { toLocalDateKey } from "../utils/dates";
-import { ensureClassRecord } from "../utils/schemas";
+import { ensureClassRecord, orderedClassIds } from "../utils/schemas";
 import { mutateCollectionDocument } from "./syllabusNote";
 import { SyllabusManager } from "./syllabus";
 import { FEATURE_FLAG } from "./featureFlags";
@@ -297,8 +297,9 @@ async function ensureTourClass(
     collection,
     (document) => {
       const classes = { ...(document.classes || {}) };
-      ensureClassRecord(classes, classNumber);
-      return { ...document, classes };
+      const classOrder = orderedClassIds(document);
+      ensureClassRecord(classes, classNumber, classOrder);
+      return { ...document, classes, classOrder };
     },
     { createNote: "always" },
   );

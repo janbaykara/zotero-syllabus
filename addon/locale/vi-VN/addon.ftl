@@ -208,6 +208,7 @@ item-pane-assignment-n = Bài tập #{ $number }
 item-pane-assignment-for = cho { $title }
 item-pane-due = Hạn { $date }
 item-pane-reference-material = Tài liệu tham khảo
+item-pane-class-named = { $nomenclature } { $number }: { $title }
 item-pane-mark-done = Đánh dấu xong
 placeholder-class-number = vd. 1, 2, 3…
 field-priority = Mức ưu tiên

@@ -208,6 +208,7 @@ item-pane-assignment-n = Opdracht #{ $number }
 item-pane-assignment-for = voor { $title }
 item-pane-due = Inleveren { $date }
 item-pane-reference-material = Referentiemateriaal
+item-pane-class-named = { $nomenclature } { $number }: { $title }
 item-pane-mark-done = Als afgerond markeren
 placeholder-class-number = bijv. 1, 2, 3…
 field-priority = Prioriteit

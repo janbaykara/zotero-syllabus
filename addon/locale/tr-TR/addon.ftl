@@ -208,6 +208,7 @@ item-pane-assignment-n = Ödev #{ $number }
 item-pane-assignment-for = { $title } için
 item-pane-due = Teslim { $date }
 item-pane-reference-material = Başvuru malzemesi
+item-pane-class-named = { $nomenclature } { $number }: { $title }
 item-pane-mark-done = Tamamlandı işaretle
 placeholder-class-number = örn. 1, 2, 3…
 field-priority = Öncelik

@@ -7,7 +7,7 @@ import { twMerge } from "tailwind-merge";
 import { useZoteroItem } from "./react-zotero-sync/item";
 import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
 import { useSelectedCollectionId } from "./react-zotero-sync/collection";
-import { classByNumber, classNumberSchema } from "../utils/schemas";
+import { classByNumber } from "../utils/schemas";
 import {
   getCachedCollectionById,
   getCachedCollectionByKey,
@@ -510,6 +510,31 @@ function AssignmentEditor({
   const { singularCapitalized } =
     SyllabusManager.getNomenclatureFormatted(collectionId);
 
+  const classNumbers = SyllabusManager.getFullClassNumberRange(collectionId);
+  const nextClassNumber = classNumbers.length + 1;
+  const pickerNumbers =
+    assignment.classNumber != null &&
+    !classNumbers.includes(assignment.classNumber)
+      ? [...classNumbers, assignment.classNumber].sort((a, b) => a - b)
+      : classNumbers;
+
+  const classOptionLabel = (classNumber: number) => {
+    const meta = classByNumber(cls, classNumber);
+    const title = meta?.title?.trim();
+    if (title) {
+      return getString("item-pane-class-named", {
+        args: {
+          nomenclature: singularCapitalized,
+          number: classNumber,
+          title,
+        },
+      });
+    }
+    return getString("menu-class-label", {
+      args: { nomenclature: singularCapitalized, number: classNumber },
+    });
+  };
+
   const assignmentStatus = assignment.status || null;
   const isDone = assignmentStatus === "done";
 
@@ -599,31 +624,34 @@ function AssignmentEditor({
       {/* Class Number */}
       <div className="flex items-center gap-2 justify-between">
         <label className="w-1/4 shrink-0 grow-0">{singularCapitalized}</label>
-        <input
-          type="number"
-          min="1"
-          step="1"
+        <select
           disabled={!editable || isSaving}
-          placeholder={getString("placeholder-class-number")}
-          value={assignment.classNumber}
+          value={assignment.classNumber ?? ""}
           onChange={(e) => {
-            const inputRef = e.target as HTMLInputElement;
-            const value = inputRef.value.trim();
-            ztoolkit.log("Value:", value);
-            if (!value || classNumberSchema.safeParse(Number(value)).success) {
-              // ztoolkit.log("Valid class number:", value);
-              onClassNumberChange(
-                assignment.id!,
-                collectionId,
-                value ? Number(value) : undefined,
-              );
-            } else {
-              inputRef.value = assignment.classNumber?.toString() || "";
-              // ztoolkit.log("Invalid class number:", value, inputRef.value);
-            }
+            const value = (e.target as HTMLSelectElement).value;
+            onClassNumberChange(
+              assignment.id!,
+              collectionId,
+              value === "" ? undefined : Number(value),
+            );
           }}
           className="w-full border-0 hover:not-focus:bg-quinary hover:not-focus:cursor-pointer px-1.5! m-0! box-border text-2xl! font-medium! text-left! -my-1.5!"
-        />
+        >
+          <option value="">{getString("item-pane-reference-material")}</option>
+          {pickerNumbers.map((classNumber) => (
+            <option key={classNumber} value={classNumber}>
+              {classOptionLabel(classNumber)}
+            </option>
+          ))}
+          <option value={nextClassNumber}>
+            {getString("menu-add-to-new-class", {
+              args: {
+                nomenclature: singularCapitalized,
+                number: nextClassNumber,
+              },
+            })}
+          </option>
+        </select>
       </div>
 
       {/* Priority - Dropdown and Quick Buttons */}

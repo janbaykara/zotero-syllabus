@@ -206,6 +206,7 @@ item-pane-assignment-n = Assignment #{ $number }
 item-pane-assignment-for = for { $title }
 item-pane-due = Due { $date }
 item-pane-reference-material = Reference material
+item-pane-class-named = { $nomenclature } { $number }: { $title }
 item-pane-mark-done = Mark done
 placeholder-class-number = e.g., 1, 2, 3…
 field-priority = Priority

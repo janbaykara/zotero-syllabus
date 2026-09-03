@@ -5,6 +5,7 @@
 
 import {
   assignmentClassNumber,
+  getClassNumberById,
   shouldCreateSubcollections,
   type CollectionSyllabusDocument,
   type StoredClassMetadata,
@@ -190,18 +191,20 @@ export function classFolderNameMatches(
   document: CollectionSyllabusDocument,
   meta: StoredClassMetadata,
   collectionName: string,
+  classNumber?: number,
 ): boolean {
-  if (!meta?.number) {
+  const number = classNumber ?? meta.number;
+  if (!number) {
     return false;
   }
   const withoutDate = classSubcollectionName(
     document.nomenclature,
-    meta.number,
+    number,
     meta.title,
   );
   const withDate = classSubcollectionName(
     document.nomenclature,
-    meta.number,
+    number,
     meta.title,
     { done: meta.status === "done", readingDate: meta.readingDate },
   );
@@ -490,12 +493,14 @@ export async function ensureClassSubcollections(
         }
         continue;
       }
-      if (!meta.number) {
+      const classNumber =
+        getClassNumberById(classes, classId, next.classOrder) ?? meta.number;
+      if (!classNumber) {
         continue;
       }
       const name = classSubcollectionName(
         next.nomenclature,
-        meta.number,
+        classNumber,
         meta.title,
         { done: meta.status === "done", readingDate: meta.readingDate },
       );
@@ -524,7 +529,9 @@ function desiredItemKeysForClass(
   classId: string,
 ): Set<string> {
   const keys = new Set<string>();
-  const classNumber = document.classes?.[classId]?.number;
+  const classNumber =
+    getClassNumberById(document.classes, classId, document.classOrder) ??
+    document.classes?.[classId]?.number;
   for (const [itemKey, assignments] of Object.entries(document.items || {})) {
     const belongs = (assignments || []).some((assignment) => {
       if (assignment.classId === classId) {
@@ -534,7 +541,11 @@ function desiredItemKeysForClass(
         return false;
       }
       return (
-        assignmentClassNumber(assignment, document.classes) === classNumber
+        assignmentClassNumber(
+          assignment,
+          document.classes,
+          document.classOrder,
+        ) === classNumber
       );
     });
     if (belongs) {

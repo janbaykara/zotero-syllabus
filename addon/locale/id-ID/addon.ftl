@@ -208,6 +208,7 @@ item-pane-assignment-n = Tugas #{ $number }
 item-pane-assignment-for = untuk { $title }
 item-pane-due = Tenggat { $date }
 item-pane-reference-material = Bahan rujukan
+item-pane-class-named = { $nomenclature } { $number }: { $title }
 item-pane-mark-done = Tandai selesai
 placeholder-class-number = mis., 1, 2, 3…
 field-priority = Prioritas

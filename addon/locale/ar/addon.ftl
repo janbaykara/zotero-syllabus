@@ -208,6 +208,7 @@ item-pane-assignment-n = التكليف #{ $number }
 item-pane-assignment-for = لـ { $title }
 item-pane-due = يستحق في { $date }
 item-pane-reference-material = مواد مرجعية
+item-pane-class-named = { $nomenclature } { $number }: { $title }
 item-pane-mark-done = تعليم كمكتمل
 placeholder-class-number = مثل: 1، 2، 3…
 field-priority = الأولوية

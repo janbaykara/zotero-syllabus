@@ -208,6 +208,7 @@ item-pane-assignment-n = 課題 #{ $number }
 item-pane-assignment-for = { $title } 向け
 item-pane-due = 期限 { $date }
 item-pane-reference-material = 参考資料
+item-pane-class-named = { $nomenclature } { $number }: { $title }
 item-pane-mark-done = 完了にする
 placeholder-class-number = 例：1、2、3…
 field-priority = 優先度

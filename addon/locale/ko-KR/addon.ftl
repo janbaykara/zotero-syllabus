@@ -208,6 +208,7 @@ item-pane-assignment-n = 과제 #{ $number }
 item-pane-assignment-for = { $title }용
 item-pane-due = 마감 { $date }
 item-pane-reference-material = 참고 자료
+item-pane-class-named = { $nomenclature } { $number }: { $title }
 item-pane-mark-done = 완료로 표시
 placeholder-class-number = 예: 1, 2, 3…
 field-priority = 우선순위

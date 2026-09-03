@@ -8,6 +8,7 @@
 
 import {
   assignmentClassNumber,
+  getClassNumberById,
   type CollectionSyllabusDocument,
 } from "../utils/schemas";
 import { getCachedCollectionById } from "../utils/cache";
@@ -303,7 +304,9 @@ export function buildReadingScheduleDesiredItems(
         byDate.set(dateKey, new Set());
       }
       const itemIds = byDate.get(dateKey)!;
-      const classNumber = meta.number;
+      const classNumber =
+        getClassNumberById(document.classes, classId, document.classOrder) ??
+        meta.number;
       for (const [itemKey, assignments] of Object.entries(
         document.items || {},
       )) {
@@ -315,7 +318,11 @@ export function buildReadingScheduleDesiredItems(
             return false;
           }
           return (
-            assignmentClassNumber(assignment, document.classes) === classNumber
+            assignmentClassNumber(
+              assignment,
+              document.classes,
+              document.classOrder,
+            ) === classNumber
           );
         });
         if (!belongs) {

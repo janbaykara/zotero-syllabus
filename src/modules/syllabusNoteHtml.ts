@@ -4,6 +4,8 @@ import {
   COLLECTION_SYLLABUS_DOCUMENT_VERSION,
   DEFAULT_PRIORITIES,
   assignmentClassNumber,
+  getClassNumberById,
+  orderedClassIds,
   type CollectionSyllabusDocument,
   type ItemSyllabusAssignment,
 } from "../utils/schemas";
@@ -114,7 +116,11 @@ function gatherClassReadings(
   const assigned: ClassReading[] = [];
   for (const [itemKey, assignments] of Object.entries(document.items || {})) {
     for (const assignment of assignments) {
-      const number = assignmentClassNumber(assignment, document.classes);
+      const number = assignmentClassNumber(
+        assignment,
+        document.classes,
+        document.classOrder,
+      );
       if (
         assignment.classId === classId ||
         (classNumber !== undefined && number === classNumber)
@@ -163,7 +169,11 @@ function gatherFurtherReadings(
     for (const assignment of assignments) {
       if (
         assignment.classId ||
-        assignmentClassNumber(assignment, document.classes) !== undefined
+        assignmentClassNumber(
+          assignment,
+          document.classes,
+          document.classOrder,
+        ) !== undefined
       ) {
         continue;
       }
@@ -435,18 +445,25 @@ async function renderReadableNoteBody(
   collection?: Zotero.Collection | null,
 ): Promise<string> {
   const titles = itemTitlesByKey(collection);
-  const classes = Object.entries(document.classes || {}).sort(
-    ([, a], [, b]) => (a?.number || 0) - (b?.number || 0),
-  );
+  const classes = orderedClassIds(document).map((classId) => {
+    const classMeta = document.classes?.[classId];
+    return [classId, classMeta] as const;
+  });
 
   const classSections: string[] = [];
   for (const [classId, classMeta] of classes) {
-    if (!classMeta?.number) {
+    if (!classMeta) {
+      continue;
+    }
+    const classNumber =
+      getClassNumberById(document.classes, classId, document.classOrder) ??
+      classMeta.number;
+    if (!classNumber) {
       continue;
     }
     const readings = gatherClassReadings(
       classId,
-      classMeta.number,
+      classNumber,
       classMeta.itemOrder,
       document,
     );
@@ -456,7 +473,7 @@ async function renderReadableNoteBody(
           3,
           classSubcollectionName(
             document.nomenclature,
-            classMeta.number,
+            classNumber,
             classMeta.title,
             {
               done: classMeta.status === "done",

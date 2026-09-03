@@ -15,6 +15,8 @@ import {
   mergeNumberKeyedClasses,
   persistAssignment,
   shouldCreateSubcollections,
+  normalizeClassList,
+  getClassNumberById,
   type CollectionSyllabusDocument,
   type ItemSyllabusAssignment,
   type SettingsCollectionDictionaryData,
@@ -193,7 +195,7 @@ export function metadataFromDocument(
 ): SettingsSyllabusMetadata {
   return SettingsSyllabusMetadataSchema.parse({
     ...document,
-    classes: classesToNumberKeyed(document.classes),
+    classes: classesToNumberKeyed(document.classes, document.classOrder),
   });
 }
 
@@ -219,7 +221,9 @@ export function getHydratedItemAssignments(
         continue;
       }
       seen.add(id);
-      rows.push(hydrateAssignment(assignment, document.classes));
+      rows.push(
+        hydrateAssignment(assignment, document.classes, document.classOrder),
+      );
     }
   }
   return rows;
@@ -1026,22 +1030,28 @@ async function mergedKeyMapForOrphanedKeys(
 function persistDocument(
   document: CollectionSyllabusDocument,
 ): CollectionSyllabusDocument {
-  const classes = { ...(document.classes || {}) };
+  const padded = normalizeClassList({
+    ...document,
+    classes: { ...(document.classes || {}) },
+  });
+  const classes = { ...(padded.classes || {}) };
+  const classOrder = [...(padded.classOrder || [])];
   const items: CollectionSyllabusDocument["items"] = {};
-  for (const [itemKey, assignments] of Object.entries(document.items || {})) {
+  for (const [itemKey, assignments] of Object.entries(padded.items || {})) {
     const persisted = assignments.map((assignment) =>
-      persistAssignment(assignment, classes),
+      persistAssignment(assignment, classes, classOrder),
     );
     if (persisted.length) {
       items[itemKey] = persisted;
     }
   }
-  return {
-    ...document,
+  return normalizeClassList({
+    ...padded,
     version: COLLECTION_SYLLABUS_DOCUMENT_VERSION,
     classes,
+    classOrder,
     items,
-  };
+  });
 }
 
 function snapshotOf(document: CollectionSyllabusDocument): string {
@@ -1072,7 +1082,8 @@ function setCacheEntry(
   noteVersion: number,
   document: CollectionSyllabusDocument,
 ): CachedDocument {
-  const snapshot = snapshotOf(document);
+  const normalized = normalizeClassList(document);
+  const snapshot = snapshotOf(normalized);
   const existing = documentCache.get(ref);
   if (
     existing &&
@@ -1086,7 +1097,7 @@ function setCacheEntry(
     collectionRef: ref,
     noteId,
     noteVersion,
-    document,
+    document: normalized,
     snapshot,
   };
   documentCache.set(ref, entry);
@@ -1418,13 +1429,22 @@ function managedClassFolderParent(
     return null;
   }
   const classes = parentEntry.document.classes || {};
-  for (const meta of Object.values(classes)) {
-    if (!meta?.number) {
+  for (const [classId, meta] of Object.entries(classes)) {
+    if (!meta) {
       continue;
     }
+    const classNumber =
+      getClassNumberById(classes, classId, parentEntry.document.classOrder) ??
+      meta.number;
     if (
       meta.subcollectionKey === collection.key ||
-      classFolderNameMatches(parentEntry.document, meta, collection.name)
+      (classNumber != null &&
+        classFolderNameMatches(
+          parentEntry.document,
+          meta,
+          collection.name,
+          classNumber,
+        ))
     ) {
       return parent;
     }
@@ -1485,15 +1505,18 @@ export function getClassSubcollectionContext(
   const document = loadDocumentForCollection(parent).document;
   const classes = document.classes || {};
   for (const [classId, meta] of Object.entries(classes)) {
-    if (!meta?.number) {
+    if (!meta) {
       continue;
     }
+    const classNumber =
+      getClassNumberById(classes, classId, document.classOrder) ?? meta.number;
     if (
       meta.subcollectionKey === collection.key ||
-      classFolderNameMatches(document, meta, collection.name)
+      (classNumber != null &&
+        classFolderNameMatches(document, meta, collection.name, classNumber))
     ) {
       rememberManagedClassFolder(collection, parent);
-      return { parent, classId, classNumber: meta.number };
+      return { parent, classId, classNumber: classNumber ?? null };
     }
   }
   return null;
@@ -2143,7 +2166,11 @@ export async function setCollectionDocumentMetadata(
       ...document,
       ...metadata,
       version: COLLECTION_SYLLABUS_DOCUMENT_VERSION,
-      classes: mergeNumberKeyedClasses(document.classes, metadata.classes),
+      classes: mergeNumberKeyedClasses(
+        document.classes,
+        metadata.classes,
+        document.classOrder,
+      ),
       items: document.items,
       createSubcollections:
         metadata.createSubcollections !== undefined
@@ -2200,7 +2227,11 @@ export async function patchCollectionDocumentMetadata(
         next.createSubcollections = patch.createSubcollections;
       }
       if (patch.classes !== undefined) {
-        next.classes = mergeNumberKeyedClasses(document.classes, patch.classes);
+        next.classes = mergeNumberKeyedClasses(
+          document.classes,
+          patch.classes,
+          document.classOrder,
+        );
       }
 
       return next;

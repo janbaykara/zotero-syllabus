@@ -208,6 +208,7 @@ item-pane-assignment-n = Задание №{ $number }
 item-pane-assignment-for = для { $title }
 item-pane-due = Срок { $date }
 item-pane-reference-material = Справочные материалы
+item-pane-class-named = { $nomenclature } { $number }: { $title }
 item-pane-mark-done = Отметить выполненным
 placeholder-class-number = напр., 1, 2, 3…
 field-priority = Приоритет

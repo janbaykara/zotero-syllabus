@@ -47,6 +47,7 @@ import {
   ensureClassRecord,
   findClassIdByNumber,
   getClassNumberById,
+  orderedClassIds,
   shouldCreateSubcollections,
 } from "../utils/schemas";
 import * as z from "zod";
@@ -243,9 +244,11 @@ function resolveAssignmentClassNumber(
   if (collectionId === undefined) {
     return assignment.classNumber;
   }
+  const document = getCollectionDocument(collectionId);
   return assignmentClassNumber(
     assignment,
-    getCollectionDocument(collectionId).classes,
+    document.classes,
+    document.classOrder,
   );
 }
 
@@ -1737,21 +1740,16 @@ export class SyllabusManager {
   }
 
   /**
-   * Display numbers for classes that exist on the collection document.
-   * Empty classes from Add Class are included; deleted middle classes stay
-   * as gaps (not filled back in as 1..max).
+   * Display numbers for classes on the collection document (1..n in list
+   * order). Empty placeholder classes are included; deleting a class removes
+   * that slot and later numbers compact.
    */
   static getFullClassNumberRange(
     collectionId: number | GetByLibraryAndKeyArgs,
   ): number[] {
-    const document = getCollectionDocument(collectionId);
-    const classNumbers = new Set<number>();
-    for (const meta of Object.values(document.classes || {})) {
-      if (meta?.number) {
-        classNumbers.add(meta.number);
-      }
-    }
-    return Array.from(classNumbers).sort((a, b) => a - b);
+    return orderedClassIds(getCollectionDocument(collectionId)).map(
+      (_, index) => index + 1,
+    );
   }
 
   /**
@@ -2417,9 +2415,11 @@ export class SyllabusManager {
     collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number,
   ): string | undefined {
+    const document = getCollectionDocument(collectionId);
     return findClassIdByNumber(
-      getCollectionDocument(collectionId).classes,
+      document.classes,
       classNumber,
+      document.classOrder,
     );
   }
 
@@ -2428,7 +2428,11 @@ export class SyllabusManager {
     classNumber: number,
   ) {
     const document = getCollectionDocument(collectionId);
-    const classId = findClassIdByNumber(document.classes, classNumber);
+    const classId = findClassIdByNumber(
+      document.classes,
+      classNumber,
+      document.classOrder,
+    );
     return classId ? document.classes?.[classId] : undefined;
   }
 
@@ -2436,10 +2440,8 @@ export class SyllabusManager {
     collectionId: number | GetByLibraryAndKeyArgs,
     classId: string | undefined,
   ): number | undefined {
-    return getClassNumberById(
-      getCollectionDocument(collectionId).classes,
-      classId,
-    );
+    const document = getCollectionDocument(collectionId);
+    return getClassNumberById(document.classes, classId, document.classOrder);
   }
 
   static async ensureClass(
@@ -2451,8 +2453,9 @@ export class SyllabusManager {
       collectionId,
       (document) => {
         const classes = { ...(document.classes || {}) };
-        classId = ensureClassRecord(classes, classNumber);
-        return { ...document, classes };
+        const classOrder = orderedClassIds(document);
+        classId = ensureClassRecord(classes, classNumber, classOrder);
+        return { ...document, classes, classOrder };
       },
       { createNote: "prompt" },
     );
@@ -2641,8 +2644,9 @@ export class SyllabusManager {
       collectionId,
       (document) => {
         const classes = { ...(document.classes || {}) };
-        ensureClassRecord(classes, classNumber);
-        return { ...document, classes };
+        const classOrder = orderedClassIds(document);
+        ensureClassRecord(classes, classNumber, classOrder);
+        return { ...document, classes, classOrder };
       },
       { createNote: "prompt" },
     );
@@ -2660,10 +2664,18 @@ export class SyllabusManager {
     ztoolkit.log("SyllabusManager.deleteClass", collectionId, classNumber);
     await mutateCollectionDocument(collectionId, (document) => {
       const classes = { ...(document.classes || {}) };
-      const classId = findClassIdByNumber(classes, classNumber);
+      const classId = findClassIdByNumber(
+        classes,
+        classNumber,
+        document.classOrder,
+      );
       if (classId) {
         delete classes[classId];
       }
+      const classOrder = orderedClassIds({
+        classes,
+        classOrder: document.classOrder,
+      });
       const items: typeof document.items = {};
       for (const [itemKey, assignments] of Object.entries(
         document.items || {},
@@ -2678,14 +2690,14 @@ export class SyllabusManager {
           items[itemKey] = remaining;
         }
       }
-      return { ...document, classes, items };
+      return { ...document, classes, classOrder, items };
     });
     this.onClassListUpdate();
   }
 
   /**
-   * Swap two classes: only the displayed numbers move. Assignments keep
-   * their classId, so readings and itemOrder stay with the class identity.
+   * Swap two classes in list order. Display numbers follow index; assignments
+   * keep their classId, so readings and folders stay with the class identity.
    */
   static async swapClasses(
     collectionId: number | GetByLibraryAndKeyArgs,
@@ -2702,16 +2714,21 @@ export class SyllabusManager {
       classNumberB,
     );
     await mutateCollectionDocument(collectionId, (document) => {
-      const classes = { ...(document.classes || {}) };
-      const idA = findClassIdByNumber(classes, classNumberA);
-      const idB = findClassIdByNumber(classes, classNumberB);
-      if (idA && classes[idA]) {
-        classes[idA] = { ...classes[idA], number: classNumberB };
+      const classOrder = [...orderedClassIds(document)];
+      const indexA = classNumberA - 1;
+      const indexB = classNumberB - 1;
+      if (
+        indexA < 0 ||
+        indexB < 0 ||
+        indexA >= classOrder.length ||
+        indexB >= classOrder.length
+      ) {
+        return document;
       }
-      if (idB && classes[idB]) {
-        classes[idB] = { ...classes[idB], number: classNumberA };
-      }
-      return { ...document, classes };
+      const swapped = classOrder[indexA];
+      classOrder[indexA] = classOrder[indexB];
+      classOrder[indexB] = swapped;
+      return { ...document, classOrder };
     });
     this.onClassListUpdate();
   }

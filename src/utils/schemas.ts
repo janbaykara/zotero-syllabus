@@ -341,7 +341,8 @@ export const SettingsClassMetadataSchema = z.object({
 });
 
 export const StoredClassMetadataSchema = SettingsClassMetadataSchema.extend({
-  number: z.number().int().min(1),
+  /** Legacy display number. Used once to place the class in `classOrder`. */
+  number: z.number().int().min(1).optional(),
   /** Zotero collection.key of the one-way class subcollection. */
   subcollectionKey: z.string().optional(),
 });
@@ -430,7 +431,10 @@ const CollectionSyllabusDocumentV1Schema =
   });
 
 /**
- * v2: classes are keyed by stable classId; each class stores its display number.
+ * v2: classes are keyed by stable classId. Display number is index in
+ * `classOrder` (1-based). On ingest, a stored `number` places the class in
+ * that slot; leftover unnumbered classes fill earlier gaps, then empty
+ * classes pad the rest. `number` is then stripped.
  */
 const CollectionSyllabusDocumentV2Schema = SettingsSyllabusMetadataSchema.omit({
   classes: true,
@@ -439,6 +443,7 @@ const CollectionSyllabusDocumentV2Schema = SettingsSyllabusMetadataSchema.omit({
     .literal(COLLECTION_SYLLABUS_DOCUMENT_VERSION)
     .default(COLLECTION_SYLLABUS_DOCUMENT_VERSION),
   classes: transformClasses(StoredClassMetadataSchema),
+  classOrder: z.array(z.string()).optional(),
   items: z
     .record(z.string(), z.array(ItemSyllabusAssignmentEntity.latestSchema))
     .default(() => ({})),
@@ -688,36 +693,101 @@ export type StoredClassMetadata = z.infer<typeof StoredClassMetadataSchema>;
 export type AssignmentStatus = z.infer<typeof AssignmentStatusSchema>;
 export type ClassStatus = z.infer<typeof ClassStatusSchema>;
 
+export type ClassListDocument = {
+  classes?: CollectionSyllabusDocument["classes"];
+  classOrder?: string[] | null;
+};
+
+function stripStoredClassNumber(
+  meta: StoredClassMetadata,
+): StoredClassMetadata {
+  const { number: _number, ...rest } = meta;
+  return rest;
+}
+
+/**
+ * Display order: `classOrder` when present. Without it, ids are sorted by
+ * leftover `number` (compact — call `normalizeClassList` to pad gaps).
+ */
+export function orderedClassIds(document: ClassListDocument): string[] {
+  const classes = document.classes || {};
+  const ids = Object.keys(classes).filter((id) => classes[id]);
+  const classOrder = document.classOrder;
+  if (classOrder && classOrder.length > 0) {
+    const seen = new Set<string>();
+    const ordered: string[] = [];
+    for (const id of classOrder) {
+      if (!classes[id] || seen.has(id)) {
+        continue;
+      }
+      ordered.push(id);
+      seen.add(id);
+    }
+    for (const id of ids) {
+      if (!seen.has(id)) {
+        ordered.push(id);
+      }
+    }
+    return ordered;
+  }
+
+  const numbered = ids.filter((id) => typeof classes[id]?.number === "number");
+  if (numbered.length === 0) {
+    return ids;
+  }
+  numbered.sort((a, b) => {
+    const delta = (classes[a]?.number || 0) - (classes[b]?.number || 0);
+    return delta !== 0 ? delta : a.localeCompare(b);
+  });
+  if (numbered.length === ids.length) {
+    return numbered;
+  }
+  const numberedSet = new Set(numbered);
+  return [...numbered, ...ids.filter((id) => !numberedSet.has(id))];
+}
+
 export function findClassIdByNumber(
   classes: CollectionSyllabusDocument["classes"] | undefined,
   classNumber: number,
+  classOrder?: string[] | null,
 ): string | undefined {
-  if (!classes) {
+  if (!classNumber || classNumber < 1) {
     return undefined;
   }
-  for (const [classId, meta] of Object.entries(classes)) {
-    if (meta?.number === classNumber) {
-      return classId;
+  if (!classOrder?.length) {
+    for (const [id, meta] of Object.entries(classes || {})) {
+      if (meta?.number === classNumber) {
+        return id;
+      }
     }
   }
-  return undefined;
+  return orderedClassIds({ classes, classOrder })[classNumber - 1];
 }
 
 export function getClassNumberById(
   classes: CollectionSyllabusDocument["classes"] | undefined,
   classId: string | undefined,
+  classOrder?: string[] | null,
 ): number | undefined {
   if (!classes || !classId) {
     return undefined;
   }
-  return classes[classId]?.number;
+  if (!classOrder?.length) {
+    const stored = classes[classId]?.number;
+    if (typeof stored === "number") {
+      return stored;
+    }
+  }
+  const index = orderedClassIds({ classes, classOrder }).indexOf(classId);
+  return index >= 0 ? index + 1 : undefined;
 }
 
 export function assignmentClassNumber(
   assignment: Pick<ItemSyllabusAssignment, "classId" | "classNumber">,
   classes?: CollectionSyllabusDocument["classes"],
+  classOrder?: string[] | null,
 ): number | undefined {
-  const fromId = getClassNumberById(classes, assignment.classId);
+  const fromId = getClassNumberById(classes, assignment.classId, classOrder);
   if (fromId !== undefined) {
     return fromId;
   }
@@ -741,51 +811,89 @@ export function shouldCreateSubcollections(document: {
   return document.createSubcollections === true;
 }
 
+function settingsClassFromStored(
+  meta: StoredClassMetadata,
+): SettingsClassMetadata {
+  const {
+    number: _number,
+    subcollectionKey: _subcollectionKey,
+    ...rest
+  } = meta;
+  return rest;
+}
+
 export function classesToNumberKeyed(
   classes: CollectionSyllabusDocument["classes"] | undefined,
+  classOrder?: string[] | null,
 ): SettingsSyllabusMetadata["classes"] {
   const byNumber: NonNullable<SettingsSyllabusMetadata["classes"]> = {};
-  for (const meta of Object.values(classes || {})) {
-    if (!meta?.number) {
-      continue;
+  if (!classOrder?.length) {
+    const used = new Set<number>();
+    for (const meta of Object.values(classes || {})) {
+      if (!meta || typeof meta.number !== "number") {
+        continue;
+      }
+      byNumber[String(meta.number)] = settingsClassFromStored(meta);
+      used.add(meta.number);
     }
-    const {
-      number: _number,
-      subcollectionKey: _subcollectionKey,
-      ...rest
-    } = meta;
-    byNumber[String(meta.number)] = rest;
+    let next = 1;
+    for (const meta of Object.values(classes || {})) {
+      if (!meta || typeof meta.number === "number") {
+        continue;
+      }
+      while (used.has(next)) {
+        next++;
+      }
+      byNumber[String(next)] = settingsClassFromStored(meta);
+      used.add(next);
+      next++;
+    }
+    return Object.keys(byNumber).length > 0 ? byNumber : {};
   }
+  orderedClassIds({ classes, classOrder }).forEach((classId, index) => {
+    const meta = classes?.[classId];
+    if (!meta) {
+      return;
+    }
+    byNumber[String(index + 1)] = settingsClassFromStored(meta);
+  });
   return Object.keys(byNumber).length > 0 ? byNumber : {};
 }
 
 export function mergeNumberKeyedClasses(
   existing: CollectionSyllabusDocument["classes"] | undefined,
   incoming: SettingsSyllabusMetadata["classes"] | undefined,
+  existingOrder?: string[] | null,
 ): NonNullable<CollectionSyllabusDocument["classes"]> {
   const next: NonNullable<CollectionSyllabusDocument["classes"]> = {
     ...(existing || {}),
   };
+  const order = orderedClassIds({ classes: next, classOrder: existingOrder });
   const usedIds = new Set<string>();
   for (const [key, meta] of Object.entries(incoming || {})) {
     const number = parseInt(key, 10);
     if (isNaN(number) || !meta) {
       continue;
     }
-    let classId = findClassIdByNumber(next, number);
-    if (!classId || usedIds.has(classId)) {
+    let classId = ensureClassRecord(next, number, order);
+    if (usedIds.has(classId)) {
       classId = generateClassId();
+      next[classId] = StoredClassMetadataSchema.parse({
+        title: "",
+      });
+      order.push(classId);
     }
     usedIds.add(classId);
     const existingMeta = next[classId];
-    next[classId] = StoredClassMetadataSchema.parse({
-      ...existingMeta,
-      ...meta,
-      number,
-      ...(existingMeta?.subcollectionKey
-        ? { subcollectionKey: existingMeta.subcollectionKey }
-        : {}),
-    });
+    next[classId] = stripStoredClassNumber(
+      StoredClassMetadataSchema.parse({
+        ...existingMeta,
+        ...meta,
+        ...(existingMeta?.subcollectionKey
+          ? { subcollectionKey: existingMeta.subcollectionKey }
+          : {}),
+      }),
+    );
   }
   return next;
 }
@@ -793,30 +901,35 @@ export function mergeNumberKeyedClasses(
 export function ensureClassRecord(
   classes: NonNullable<CollectionSyllabusDocument["classes"]>,
   classNumber: number,
+  classOrder?: string[],
 ): string {
-  const existing = findClassIdByNumber(classes, classNumber);
-  if (existing) {
-    return existing;
-  }
-  const classId = generateClassId();
-  classes[classId] = StoredClassMetadataSchema.parse({
-    title: "",
-    number: classNumber,
+  const ids = orderedClassIds({
+    classes,
+    classOrder: classOrder?.length ? classOrder : undefined,
   });
-  return classId;
+  while (ids.length < classNumber) {
+    const classId = generateClassId();
+    classes[classId] = StoredClassMetadataSchema.parse({ title: "" });
+    ids.push(classId);
+  }
+  if (classOrder) {
+    classOrder.splice(0, classOrder.length, ...ids);
+  }
+  return ids[classNumber - 1];
 }
 
 export function persistAssignment(
   assignment: ItemSyllabusAssignment,
   classes: NonNullable<CollectionSyllabusDocument["classes"]>,
+  classOrder?: string[],
 ): ItemSyllabusAssignment {
   const { classNumber, classId: existingClassId, ...rest } = assignment;
   let classId =
     existingClassId && classes[existingClassId] ? existingClassId : undefined;
   if (typeof classNumber === "number") {
-    const currentNumber = classId ? classes[classId]?.number : undefined;
+    const currentNumber = getClassNumberById(classes, classId, classOrder);
     if (currentNumber !== classNumber) {
-      classId = ensureClassRecord(classes, classNumber);
+      classId = ensureClassRecord(classes, classNumber, classOrder);
     }
   }
   const persisted: ItemSyllabusAssignment = { ...rest };
@@ -829,8 +942,9 @@ export function persistAssignment(
 export function hydrateAssignment(
   assignment: ItemSyllabusAssignment,
   classes?: CollectionSyllabusDocument["classes"],
+  classOrder?: string[] | null,
 ): ItemSyllabusAssignment {
-  const classNumber = assignmentClassNumber(assignment, classes);
+  const classNumber = assignmentClassNumber(assignment, classes, classOrder);
   if (classNumber === undefined) {
     return assignment;
   }
@@ -840,8 +954,69 @@ export function hydrateAssignment(
 export function hydrateAssignments(
   assignments: ItemSyllabusAssignment[] | undefined,
   classes?: CollectionSyllabusDocument["classes"],
+  classOrder?: string[] | null,
 ): ItemSyllabusAssignment[] {
   return (assignments || []).map((assignment) =>
-    hydrateAssignment(assignment, classes),
+    hydrateAssignment(assignment, classes, classOrder),
   );
+}
+
+export function normalizeClassList<T extends ClassListDocument>(
+  document: T,
+): T {
+  const incoming = document.classes || {};
+  const ids = Object.keys(incoming).filter((id) => incoming[id]);
+  const classes: NonNullable<CollectionSyllabusDocument["classes"]> = {
+    ...incoming,
+  };
+
+  let order: string[];
+  if (document.classOrder && document.classOrder.length > 0) {
+    order = orderedClassIds(document);
+  } else {
+    const byNumber = new Map<number, string>();
+    const unnumbered: string[] = [];
+    for (const id of ids) {
+      const n = incoming[id]?.number;
+      if (typeof n === "number" && n >= 1 && !byNumber.has(n)) {
+        byNumber.set(n, id);
+      } else {
+        unnumbered.push(id);
+      }
+    }
+    if (byNumber.size === 0) {
+      order = ids;
+    } else {
+      const max = Math.max(...byNumber.keys());
+      order = [];
+      let unnumberedIndex = 0;
+      for (let n = 1; n <= max; n++) {
+        let id = byNumber.get(n);
+        if (!id && unnumberedIndex < unnumbered.length) {
+          id = unnumbered[unnumberedIndex];
+          unnumberedIndex++;
+        }
+        if (!id) {
+          id = generateClassId();
+          classes[id] = StoredClassMetadataSchema.parse({ title: "" });
+        }
+        order.push(id);
+      }
+      order.push(...unnumbered.slice(unnumberedIndex));
+    }
+  }
+
+  const stripped: NonNullable<CollectionSyllabusDocument["classes"]> = {};
+  for (const id of order) {
+    const meta = classes[id];
+    if (!meta) {
+      continue;
+    }
+    stripped[id] = stripStoredClassNumber(meta);
+  }
+  return {
+    ...document,
+    classes: stripped,
+    classOrder: order.length > 0 ? order : undefined,
+  };
 }

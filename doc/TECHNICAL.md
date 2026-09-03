@@ -31,7 +31,7 @@ The note HTML is roughly:
 2. A “Plugin data (do not edit)” heading.
 3. A `<pre data-zotero-syllabus="1">` block with the JSON document.
 
-Schema: `CollectionSyllabusDocument` in [`src/utils/schemas.ts`](../src/utils/schemas.ts) (currently **v2**). Classes are keyed by a stable `classId`; each class stores a display `number`. Assignments live under `items[itemKey]` and point at a `classId` (not at the display number). Swapping two classes only exchanges numbers; identities and folders stay put.
+Schema: `CollectionSyllabusDocument` in [`src/utils/schemas.ts`](../src/utils/schemas.ts) (currently **v2**). Classes are keyed by a stable `classId`. Display number is the 1-based index in `classOrder`. A leftover stored `number` is used once on ingest to place that class in that slot (class 5 stays 5). Unnumbered classes fill earlier gaps first; remaining holes become empty classes. `number` is then stripped. Assignments live under `items[itemKey]` and point at a `classId` (not at the display number). Moving a class up or down reorders `classOrder`; identities and folders stay put.
 
 Reads on the UI hot path must not call `getNote()`. [`src/modules/syllabusNote.ts`](../src/modules/syllabusNote.ts) keeps an in-memory cache, rebuilt at startup and updated after writes / note notifiers. Mutations go through `mutateCollectionDocument`, which serialises writes per collection, persists the note, then syncs class folders.
 

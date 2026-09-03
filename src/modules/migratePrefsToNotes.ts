@@ -204,7 +204,10 @@ function mergePrefsMetadataIntoDocument(
   document: CollectionSyllabusDocument,
   prefsMetadata: SettingsSyllabusMetadata,
 ): CollectionSyllabusDocument {
-  const existingByNumber = classesToNumberKeyed(document.classes);
+  const existingByNumber = classesToNumberKeyed(
+    document.classes,
+    document.classOrder,
+  );
   // Existing note classes win on conflict; prefs fill in missing numbers.
   const unionClasses = {
     ...prefsMetadata.classes,
@@ -235,7 +238,11 @@ function mergePrefsMetadataIntoDocument(
       document.priorities && document.priorities.length > 0
         ? document.priorities
         : prefsMetadata.priorities,
-    classes: mergeNumberKeyedClasses(document.classes, unionClasses),
+    classes: mergeNumberKeyedClasses(
+      document.classes,
+      unionClasses,
+      document.classOrder,
+    ),
     items: document.items,
     version: COLLECTION_SYLLABUS_DOCUMENT_VERSION,
   };
@@ -245,7 +252,7 @@ function prefsMetadataPresentInDocument(
   prefsMetadata: SettingsSyllabusMetadata,
   document: CollectionSyllabusDocument,
 ): boolean {
-  const classes = classesToNumberKeyed(document.classes);
+  const classes = classesToNumberKeyed(document.classes, document.classOrder);
   for (const classNum of Object.keys(prefsMetadata.classes || {})) {
     if (!classes[classNum] && !classes[String(Number(classNum))]) {
       return false;

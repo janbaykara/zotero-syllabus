@@ -153,6 +153,7 @@ export type FluentMessageId =
   | 'item-pane-also-assigned'
   | 'item-pane-assignment-for'
   | 'item-pane-assignment-n'
+  | 'item-pane-class-named'
   | 'item-pane-current-view'
   | 'item-pane-due'
   | 'item-pane-mark-done'
