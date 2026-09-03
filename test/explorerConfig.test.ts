@@ -214,4 +214,23 @@ describe("explorer shelves", function () {
       "card",
     ]);
   });
+
+  it("defaults recent-annotations size to small and large to limit 7", function () {
+    const small = coerceExplorerShelves([
+      { id: "ann", type: "recent-annotations" },
+    ])[0];
+    assert.equal(small.type, "recent-annotations");
+    if (small.type === "recent-annotations") {
+      assert.equal(small.size, "small");
+      assert.equal(small.limit, 20);
+    }
+    const large = coerceExplorerShelves([
+      { id: "ann", type: "recent-annotations", size: "large" },
+    ])[0];
+    assert.equal(large.type, "recent-annotations");
+    if (large.type === "recent-annotations") {
+      assert.equal(large.size, "large");
+      assert.equal(large.limit, 7);
+    }
+  });
 });

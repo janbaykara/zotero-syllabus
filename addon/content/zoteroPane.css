@@ -2471,6 +2471,15 @@
   -webkit-line-clamp: 4;
 }
 
+.syllabus-explorer-annotation-tile.is-large .syllabus-explorer-annotation-quote,
+.syllabus-explorer-annotation-tile.is-large
+  .syllabus-explorer-annotation-quotes:not(:has(> :only-child))
+  .syllabus-explorer-annotation-quote {
+  -webkit-line-clamp: unset;
+  display: block;
+  overflow: visible;
+}
+
 .syllabus-explorer-annotation-quote .syllabus-magazine-highlight-mark {
   font-size: 1.02rem;
   line-height: 1.45;

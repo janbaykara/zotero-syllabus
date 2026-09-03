@@ -70,6 +70,7 @@ import {
   scrollElementBelowSticky,
 } from "./galleryGroupNav";
 import {
+  annotationLimitForSize,
   isExplorerShelfEnabled,
   layoutsForExplorerShelf,
   mergeExplorerCatalog,
@@ -563,6 +564,57 @@ function ExplorerShelfSettingsMenu({
               })}
             </div>
           </div>
+          {shelf.type === "recent-annotations" ? (
+            <div className="syllabus-explorer-shelf-setting">
+              <div className="syllabus-explorer-configure-heading">
+                {getString("explorer-annotations-size")}
+              </div>
+              <div
+                role="radiogroup"
+                aria-label={getString("explorer-annotations-size")}
+                className="syllabus-explorer-layout-toggle"
+              >
+                {(
+                  [
+                    {
+                      mode: "small" as const,
+                      label: getString("gallery-type-small"),
+                      title: getString("explorer-annotations-size-small-title"),
+                    },
+                    {
+                      mode: "large" as const,
+                      label: getString("gallery-type-large"),
+                      title: getString("explorer-annotations-size-large-title"),
+                    },
+                  ] as const
+                ).map(({ mode, label, title }) => {
+                  const selected = shelf.size === mode;
+                  return (
+                    <button
+                      key={mode}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      title={title}
+                      className={twMerge(
+                        "syllabus-explorer-layout-btn",
+                        selected && "is-selected",
+                      )}
+                      onClick={() =>
+                        onChange({
+                          ...shelf,
+                          size: mode,
+                          limit: annotationLimitForSize(mode),
+                        })
+                      }
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -751,6 +803,7 @@ function AnnotationQuote({
 function ExplorerAnnotationTile({
   rows,
   layout,
+  size,
   selected,
   onClick,
   onDoubleClick,
@@ -758,6 +811,7 @@ function ExplorerAnnotationTile({
 }: {
   rows: ExplorerAnnotation[];
   layout: "cover" | "card";
+  size: "small" | "large";
   selected: boolean;
   onClick: MagazineTileClick;
   onDoubleClick: (item: Zotero.Item) => void;
@@ -784,6 +838,7 @@ function ExplorerAnnotationTile({
       className={twMerge(
         "syllabus-explorer-annotation-tile group min-w-0 cursor-pointer outline-none select-none",
         layout === "cover" && "is-cover",
+        size === "large" && "is-large",
         layout === "card" &&
           twMerge(
             "is-card syllabus-item-card rounded-lg flex shrink-0 flex-row items-start bg-background-sidepane text-primary relative px-4 py-3 gap-4",
@@ -873,6 +928,7 @@ function ExplorerAnnotationTile({
 function ExplorerAnnotationShelf({
   annotations,
   layout,
+  size,
   selectedItemIds,
   onClick,
   onDoubleClick,
@@ -880,6 +936,7 @@ function ExplorerAnnotationShelf({
 }: {
   annotations: ExplorerAnnotation[];
   layout: "cover" | "card";
+  size: "small" | "large";
   selectedItemIds: number[] | null;
   onClick: MagazineTileClick;
   onDoubleClick: (item: Zotero.Item) => void;
@@ -909,6 +966,7 @@ function ExplorerAnnotationShelf({
           key={group.annotations.map((row) => row.id).join("-")}
           rows={group.annotations}
           layout={layout}
+          size={size}
           selected={
             !!group.parent &&
             (selectedItemIds?.includes(group.parent.id) || false)
@@ -1545,6 +1603,7 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                     <ExplorerAnnotationShelf
                       annotations={data.annotations.slice(0, shelf.limit)}
                       layout={shelf.layout === "card" ? "card" : "cover"}
+                      size={shelf.size}
                       selectedItemIds={selectedItemIds}
                       onClick={handleClick}
                       onDoubleClick={handleDoubleClick}

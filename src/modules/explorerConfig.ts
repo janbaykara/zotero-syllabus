@@ -49,6 +49,18 @@ export type ExplorerShelfType = (typeof EXPLORER_SHELF_TYPES)[number];
 
 export type LibraryViewMode = "collection" | "explorer";
 
+export type ExplorerAnnotationSize = "small" | "large";
+
+export const EXPLORER_ANNOTATION_SIZES = ["small", "large"] as const;
+
+export function annotationLimitForSize(size: ExplorerAnnotationSize): number {
+  return size === "large" ? 7 : 20;
+}
+
+function coerceAnnotationSize(value: unknown): ExplorerAnnotationSize {
+  return value === "large" ? "large" : "small";
+}
+
 type ExplorerShelfBase = {
   id: string;
   layout: GalleryLayout;
@@ -63,7 +75,11 @@ export type ExplorerShelf = ExplorerShelfBase &
     | { type: "recently-added"; days: number }
     | { type: "recently-read"; days: number; limit: number }
     | { type: "recent-in-feed"; days: number }
-    | { type: "recent-annotations"; limit: number }
+    | {
+        type: "recent-annotations";
+        limit: number;
+        size: ExplorerAnnotationSize;
+      }
     | { type: "collection"; libraryID: number; collectionKey: string }
     | { type: "saved-search"; libraryID: number; searchKey: string }
   );
@@ -79,6 +95,7 @@ const ExplorerShelfSchema = z
     layout: z.unknown().optional(),
     days: z.number().positive().optional(),
     limit: z.number().positive().optional(),
+    size: z.enum(EXPLORER_ANNOTATION_SIZES).optional(),
     groupBy: z.literal("auto").optional(),
     libraryID: z.number().int().positive().optional(),
     collectionKey: z.string().optional(),
@@ -243,14 +260,17 @@ export function coerceExplorerShelf(value: unknown): ExplorerShelf | null {
         limit: positiveInt(raw.limit, 10),
       };
       break;
-    case "recent-annotations":
+    case "recent-annotations": {
+      const size = coerceAnnotationSize(raw.size);
       shelf = {
         id,
         type: "recent-annotations",
         layout,
-        limit: positiveInt(raw.limit, 20),
+        size,
+        limit: positiveInt(raw.limit, annotationLimitForSize(size)),
       };
       break;
+    }
     case "collection":
       if (!raw.collectionKey || raw.libraryID == null) {
         return null;
