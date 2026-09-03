@@ -106,6 +106,18 @@ function itemsViewIsFiltered(view: ItemsViewLike): boolean {
   });
 }
 
+/** True when the items tree is showing a filtered view of this tree row. */
+export function itemsViewIsFilteredForTreeViewID(treeViewID: string): boolean {
+  if (!treeViewID) {
+    return false;
+  }
+  const view = getItemsView();
+  if (!view || !itemsViewCoversTreeViewID(view, treeViewID)) {
+    return false;
+  }
+  return itemsViewIsFiltered(view);
+}
+
 function regularItemIdFromItem(
   item: Zotero.Item | undefined,
   options?: MemberItemOptions,

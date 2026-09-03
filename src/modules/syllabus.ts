@@ -24,6 +24,7 @@ import {
   viewScopeSupportsExplorer,
   viewScopeSupportsGallery,
 } from "../utils/viewScope";
+import { itemsViewIsFilteredForTreeViewID } from "./react-zotero-sync/itemsViewItems";
 import { getCurrentTab, confirmPrompt } from "../utils/window";
 import { renderComponent, unmountComponent } from "../utils/react";
 import { ItemPane } from "./ItemPane";
@@ -627,20 +628,29 @@ export class SyllabusManager {
     ztoolkit.log("SyllabusManager.setupSyllabusViewTabListener");
     let selectedViewKey = getSelectedViewScope().viewKey;
     let currentTabId = Zotero.getMainWindow()?.Zotero_Tabs?.selectedID || "";
+    let libraryItemsFiltered =
+      viewScopeSupportsExplorer(getSelectedViewScope()) &&
+      itemsViewIsFilteredForTreeViewID(selectedViewKey);
     const interval = setInterval(async () => {
       const scope = getSelectedViewScope();
       const currentViewKey = scope.viewKey;
       const newTabId = Zotero.getMainWindow()?.Zotero_Tabs?.selectedID || "";
+      const nextLibraryItemsFiltered =
+        viewScopeSupportsExplorer(scope) &&
+        itemsViewIsFilteredForTreeViewID(currentViewKey);
 
       SyllabusManager.updateReadingScheduleTabBarButton();
 
       const collectionChanged = currentViewKey !== selectedViewKey;
       const tabChanged = newTabId !== currentTabId;
+      const libraryFilterChanged =
+        nextLibraryItemsFiltered !== libraryItemsFiltered;
 
       if (collectionChanged) {
         ztoolkit.log("Selected collection changed", currentViewKey || "none");
         selectedViewKey = currentViewKey;
         currentTabId = newTabId; // Update tab ID when collection changes
+        libraryItemsFiltered = nextLibraryItemsFiltered;
         // setupUI() calls setupPage() which re-renders React component for new collection
         // Once mounted, React stores handle all data updates automatically
         SyllabusManager.setupUI();
@@ -648,6 +658,11 @@ export class SyllabusManager {
         SyllabusManager.updateButtonVisibility();
         // Reload context menus for the new collection
         SyllabusManager.registerContextualMenus();
+      } else if (libraryFilterChanged) {
+        libraryItemsFiltered = nextLibraryItemsFiltered;
+        // Home → Table while searching; restore Home when the filter clears.
+        SyllabusManager.setupUI();
+        SyllabusManager.updateButtonVisibility();
       } else if (tabChanged) {
         ztoolkit.log("Tab changed", newTabId);
         currentTabId = newTabId;
@@ -694,9 +709,15 @@ export class SyllabusManager {
     const scope = getSelectedViewScope();
     if (viewScopeSupportsExplorer(scope)) {
       const libraryID = scope.libraryID || libraryIdForNewCollection();
-      return getLibraryViewMode(libraryID) === "explorer"
-        ? "explorer"
-        : "collection";
+      // Searching/filtering hides Home shelves so the items tree is visible.
+      // Do not persist — clearing the filter restores explorer if preferred.
+      if (
+        getLibraryViewMode(libraryID) === "explorer" &&
+        !itemsViewIsFilteredForTreeViewID(scope.viewKey)
+      ) {
+        return "explorer";
+      }
+      return "collection";
     }
     if (!viewScopeSupportsGallery(scope)) {
       return "collection";
