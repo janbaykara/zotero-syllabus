@@ -3,6 +3,9 @@ import { config } from "../package.json";
 import {
   getSelectedCollection,
   getSelectedCollections,
+  getSelectedLibraryID,
+  getSelectedLibraryIDs,
+  libraryIdForNewCollection,
 } from "../src/utils/zotero";
 
 describe("startup", function () {
@@ -32,5 +35,20 @@ describe("startup", function () {
       );
     }
     assert.isTrue(collection === null || typeof collection.id === "number");
+  });
+
+  it("getSelectedLibraryIDs does not call the removed singular getter", function () {
+    let ids: number[] = [];
+    try {
+      ids = getSelectedLibraryIDs();
+    } catch (error) {
+      assert.fail(
+        `getSelectedLibraryIDs threw: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    assert.isArray(ids);
+    const libraryID = getSelectedLibraryID();
+    assert.isTrue(libraryID === null || libraryID > 0);
+    assert.isAbove(libraryIdForNewCollection(), 0);
   });
 });

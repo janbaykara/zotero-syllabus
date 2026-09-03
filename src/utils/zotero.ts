@@ -24,6 +24,7 @@ export function isZotero8OrLater(): boolean {
 type ZoteroPaneSelection = {
   getSelectedCollections?: () => Zotero.Collection[] | false | null | undefined;
   getSelectedCollection?: () => Zotero.Collection | false | null | undefined;
+  getSelectedLibraryIDs?: () => number[] | false | null | undefined;
   getSelectedLibraryID?: () => number | false | null | undefined;
   collectionsView?: { selectByID: (id: string) => unknown } | false | null;
 };
@@ -69,6 +70,43 @@ export function getSelectedCollection(): Zotero.Collection | null {
   return collections.length === 1 ? collections[0] : null;
 }
 
+/**
+ * Libraries currently selected in the collections pane.
+ * Zotero 10 removed the singular getter; the stub still exists and throws.
+ */
+export function getSelectedLibraryIDs(): number[] {
+  try {
+    const pane = getZoteroPane();
+    if (!pane) return [];
+
+    if (typeof pane.getSelectedLibraryIDs === "function") {
+      const ids = pane.getSelectedLibraryIDs();
+      return Array.isArray(ids)
+        ? ids.filter((id): id is number => typeof id === "number" && id > 0)
+        : [];
+    }
+
+    if (typeof pane.getSelectedLibraryID === "function") {
+      try {
+        const id = pane.getSelectedLibraryID();
+        return typeof id === "number" && id > 0 ? [id] : [];
+      } catch {
+        return [];
+      }
+    }
+
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+/** The selected library, or null if none or more than one is selected. */
+export function getSelectedLibraryID(): number | null {
+  const ids = getSelectedLibraryIDs();
+  return ids.length === 1 ? ids[0] : null;
+}
+
 export function selectZoteroCollection(collectionId: number): boolean {
   try {
     const pane = getZoteroPane();
@@ -92,16 +130,7 @@ export function libraryIdForNewCollection(): number {
   if (selected) {
     return selected.libraryID;
   }
-  try {
-    const pane = getZoteroPane();
-    const libraryID = pane?.getSelectedLibraryID?.();
-    if (typeof libraryID === "number" && libraryID > 0) {
-      return libraryID;
-    }
-  } catch {
-    // Fall through to the user library.
-  }
-  return Zotero.Libraries.userLibraryID;
+  return getSelectedLibraryID() ?? Zotero.Libraries.userLibraryID;
 }
 
 function uniqueTopLevelCollectionName(

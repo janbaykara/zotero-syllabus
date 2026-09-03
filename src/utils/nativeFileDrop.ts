@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import type { JSX } from "preact";
-import { getSelectedCollection } from "./zotero";
+import { getSelectedCollection, getSelectedLibraryID } from "./zotero";
 
 function logNativeFileDrop(message: string, error?: unknown): void {
   try {
@@ -40,9 +40,6 @@ type ZoteroDragDrop = {
 };
 
 type DropPane = {
-  canEdit?: (row?: number) => boolean;
-  canEditFiles?: (row?: number) => boolean;
-  getSelectedLibraryID?: () => number | false | null | undefined;
   displayCannotEditLibraryMessage?: () => void;
   displayCannotEditLibraryFilesMessage?: () => void;
   displayCannotAddShortcutMessage?: (path?: string) => void;
@@ -291,39 +288,35 @@ function getActivePane(): DropPane | undefined {
 
 export function resolveNativeFileDropDestination(): NativeFileDropDestination | null {
   try {
-    const pane = getActivePane();
-    if (!pane) {
-      return null;
-    }
-    let canEdit = true;
-    let canEditFiles = true;
-    if (typeof pane.canEdit === "function") {
-      canEdit = pane.canEdit();
-    }
-    if (typeof pane.canEditFiles === "function") {
-      canEditFiles = pane.canEditFiles();
-    }
     const collection = getSelectedCollection();
-    const selectedLibraryID =
-      typeof pane.getSelectedLibraryID === "function"
-        ? pane.getSelectedLibraryID()
-        : null;
+    const selectedLibraryID = getSelectedLibraryID();
     const fallbackLibraryID = Zotero.Libraries?.userLibraryID;
     const libraryID =
       collection?.libraryID ??
-      (typeof selectedLibraryID === "number" && selectedLibraryID > 0
-        ? selectedLibraryID
-        : typeof fallbackLibraryID === "number" && fallbackLibraryID > 0
-          ? fallbackLibraryID
-          : null);
+      selectedLibraryID ??
+      (typeof fallbackLibraryID === "number" && fallbackLibraryID > 0
+        ? fallbackLibraryID
+        : null);
     if (libraryID == null) {
       return null;
+    }
+    const library = Zotero.Libraries.get(libraryID);
+    // Missing library objects must not be treated as read-only: that used to
+    // show Zotero's "cannot make changes to the currently selected collection"
+    // alert on Gallery/Syllabus drops.
+    if (!library) {
+      return {
+        libraryID,
+        collections: collection ? [collection.id] : undefined,
+        canEdit: true,
+        canEditFiles: true,
+      };
     }
     return {
       libraryID,
       collections: collection ? [collection.id] : undefined,
-      canEdit,
-      canEditFiles,
+      canEdit: Boolean(library.editable),
+      canEditFiles: Boolean(library.filesEditable ?? library.editable),
     };
   } catch (error) {
     logNativeFileDrop("Error resolving native file drop destination:", error);
@@ -374,19 +367,6 @@ function recognizeImportedItems(items: Zotero.Item[]): void {
   }
 }
 
-function itemsViewOnDrop(
-  event: DragEvent,
-): Promise<unknown> | unknown | undefined {
-  const pane = getActivePane() as DropPane & {
-    itemsView?: { onDrop?: (event: DragEvent, row: number) => unknown };
-  };
-  const onDrop = pane?.itemsView?.onDrop;
-  if (typeof onDrop !== "function") {
-    return undefined;
-  }
-  return onDrop.call(pane.itemsView, event, -1);
-}
-
 function ensureDropEffectAllowsDrop(event: DragEvent): void {
   const dataTransfer = event.dataTransfer;
   if (!dataTransfer) {
@@ -416,7 +396,8 @@ function allowOsFileDragEvent(event: DragEvent): boolean {
 
 /**
  * Import OS-dropped files/URLs into the selected collection (or library).
- * Prefer Zotero's items-list onDrop (row -1 = empty space in the list).
+ * Does not call itemsView.onDrop: that path treats orientation 0 as "drop on
+ * a row" and can show a false read-only alert while the items tree is hidden.
  */
 export async function importDroppedOsFilesIntoCurrentView(
   event: DragEvent,
@@ -426,7 +407,11 @@ export async function importDroppedOsFilesIntoCurrentView(
 
   const dest = resolveNativeFileDropDestination();
   const pane = getActivePane();
-  if (!dest?.canEdit) {
+  if (!dest) {
+    logNativeFileDrop("No collection/library to import dropped files into");
+    return [];
+  }
+  if (!dest.canEdit) {
     pane?.displayCannotEditLibraryMessage?.();
     return [];
   }
@@ -442,26 +427,6 @@ export async function importDroppedOsFilesIntoCurrentView(
     }
     return !skip?.(item.name);
   });
-  const fileListHasSkipped = Array.from(event.dataTransfer?.files || []).some(
-    (file) => skip?.(file.name),
-  );
-  const mustSkipSome =
-    !!skip &&
-    (fileListHasSkipped ||
-      dropped.some((item) => item.kind === "file" && skip(item.name)));
-
-  if (!mustSkipSome) {
-    try {
-      const nativeResult = itemsViewOnDrop(event);
-      if (nativeResult !== undefined) {
-        await nativeResult;
-        return [];
-      }
-    } catch (error) {
-      logNativeFileDrop("Native itemsView.onDrop failed, falling back:", error);
-    }
-  }
-
   if (!toImport.length) {
     return [];
   }

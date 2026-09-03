@@ -1,4 +1,4 @@
-import { getSelectedCollection } from "./zotero";
+import { getSelectedCollection, getSelectedLibraryID } from "./zotero";
 
 export const SPECIAL_GALLERY_ROW_TYPES = [
   "search",
@@ -263,20 +263,10 @@ function libraryIDFromRow(row: CollectionTreeRowLike): number {
   if (typeof fromRef === "number" && fromRef > 0) {
     return fromRef;
   }
-  try {
-    const pane = getZoteroPane();
-    const id = pane?.getSelectedLibraryID?.();
-    if (typeof id === "number" && id > 0) {
-      return id;
-    }
-  } catch {
-    // Fall through.
-  }
-  return 0;
+  return getSelectedLibraryID() ?? 0;
 }
 
 type PaneWithTree = {
-  getSelectedLibraryID?: () => number | false | null | undefined;
   collectionsView?: {
     selectedTreeRow?: CollectionTreeRowLike | false | null;
   } | null;

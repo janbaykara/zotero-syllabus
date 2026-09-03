@@ -140,8 +140,35 @@ describe("nativeFileDrop", function () {
         assert.isAbove(dest.libraryID, 0);
         assert.isBoolean(dest.canEdit);
         assert.isBoolean(dest.canEditFiles);
+        const library = Zotero.Libraries.get(dest.libraryID);
+        if (library) {
+          assert.equal(dest.canEdit, Boolean(library.editable));
+        }
       }
       assert.isBoolean(canAcceptOsFileDrop());
+    });
+
+    it("does not treat Zotero 10's removed getSelectedLibraryID stub as a read-only collection", function () {
+      const dest = resolveNativeFileDropDestination();
+      const pane = Zotero.getActiveZoteroPane() as {
+        getSelectedLibraryID?: () => number;
+        canEdit?: () => boolean;
+      };
+      let stubThrew = false;
+      try {
+        pane?.getSelectedLibraryID?.();
+      } catch {
+        stubThrew = true;
+      }
+      if (stubThrew && dest) {
+        assert.isTrue(
+          dest.canEdit,
+          "Gallery drops must not show the cannot-edit alert when the library is editable",
+        );
+      }
+      if (typeof pane?.canEdit === "function") {
+        assert.doesNotThrow(() => pane.canEdit?.());
+      }
     });
   });
 });
