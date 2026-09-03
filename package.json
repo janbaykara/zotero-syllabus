@@ -33,7 +33,7 @@
     "update-deps": "pnpm update --save"
   },
   "dependencies": {
-    "concurrently": "^9.2.1",
+    "concurrently": "^10.0.5",
     "date-fns": "^4.1.0",
     "lru-cache": "^11.2.4",
     "lucide-preact": "^0.562.0",
