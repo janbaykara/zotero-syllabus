@@ -68,6 +68,14 @@ export function openReadingScheduleTab(): void {
   }
 }
 
+export function openMyAnnotationsTab(libraryID: number): void {
+  try {
+    SyllabusManager.openMyAnnotationsTab(libraryID);
+  } catch (error) {
+    ztoolkit.log("Error opening My Annotations:", error);
+  }
+}
+
 export function openCollectionSyllabusPage(collectionId: number): void {
   try {
     if (!selectZoteroCollection(collectionId)) {

@@ -49,6 +49,25 @@ export function groupAdjacentAnnotations(
   return groups;
 }
 
+/** Group all annotations by parent item, preserving first-seen parent order. */
+export function groupAnnotationsByParent(
+  rows: ExplorerAnnotation[],
+): ExplorerAnnotationGroup[] {
+  const byParent = new Map<number | "none", ExplorerAnnotationGroup>();
+  const order: Array<number | "none"> = [];
+  for (const row of rows) {
+    const key = row.parent?.id ?? "none";
+    let group = byParent.get(key);
+    if (!group) {
+      group = { parent: row.parent, annotations: [] };
+      byParent.set(key, group);
+      order.push(key);
+    }
+    group.annotations.push(row);
+  }
+  return order.map((key) => byParent.get(key)!);
+}
+
 function dateMs(value: string | undefined): number {
   const parsed = Date.parse(value || "");
   return Number.isNaN(parsed) ? 0 : parsed;
@@ -366,6 +385,104 @@ export async function searchRecentAnnotations(
     .slice(0, limit);
 }
 
+export const MY_ANNOTATIONS_ITEM_LIMIT = 20;
+export const MY_ANNOTATIONS_LOOKBACK_DAYS = 365;
+
+async function loadChildItems(item: Zotero.Item): Promise<void> {
+  try {
+    await item.loadDataType("childItems");
+  } catch {
+    // Already loaded, or this object does not carry child-item data.
+  }
+}
+
+async function annotationsForParent(
+  parent: Zotero.Item,
+): Promise<ExplorerAnnotation[]> {
+  await loadChildItems(parent);
+  let attachmentIds: number[] = [];
+  try {
+    attachmentIds = parent.getAttachments();
+  } catch {
+    return [];
+  }
+  const rows: ExplorerAnnotation[] = [];
+  for (const attId of attachmentIds) {
+    const att = resolveItem(attId);
+    if (!att) {
+      continue;
+    }
+    if (
+      typeof att.isFileAttachment !== "function" ||
+      !att.isFileAttachment() ||
+      typeof att.getAnnotations !== "function"
+    ) {
+      continue;
+    }
+    await loadChildItems(att);
+    let annotations: Zotero.Item[] = [];
+    try {
+      annotations = att.getAnnotations(false) || [];
+    } catch {
+      continue;
+    }
+    for (const ann of annotations) {
+      try {
+        if (ann.deleted) {
+          continue;
+        }
+      } catch {
+        continue;
+      }
+      let text = "";
+      try {
+        text = String(ann.annotationText || ann.annotationComment || "").trim();
+      } catch {
+        text = "";
+      }
+      let color = DEFAULT_HIGHLIGHT_COLOR;
+      try {
+        color = normalizeHighlightColor(String(ann.annotationColor || ""));
+      } catch {
+        color = DEFAULT_HIGHLIGHT_COLOR;
+      }
+      rows.push({
+        id: ann.id,
+        text,
+        color,
+        dateModified: String(ann.dateModified || ""),
+        parent,
+      });
+    }
+  }
+  return rows.sort(
+    (a, b) => dateMs(b.dateModified) - dateMs(a.dateModified) || a.id - b.id,
+  );
+}
+
+export async function searchMyAnnotatedRecentlyRead(
+  libraryID: number,
+  limit = MY_ANNOTATIONS_ITEM_LIMIT,
+): Promise<ExplorerAnnotationGroup[]> {
+  const candidates = await searchRecentlyReadItems(
+    libraryID,
+    MY_ANNOTATIONS_LOOKBACK_DAYS,
+    Math.max(limit * 5, limit),
+  );
+  const groups: ExplorerAnnotationGroup[] = [];
+  for (const parent of candidates) {
+    const annotations = await annotationsForParent(parent);
+    if (annotations.length === 0) {
+      continue;
+    }
+    groups.push({ parent, annotations });
+    if (groups.length >= limit) {
+      break;
+    }
+  }
+  return groups;
+}
+
 export async function searchSavedSearchItems(
   libraryID: number,
   searchKey: string,
@@ -604,6 +721,83 @@ export function useExplorerQueryData(
   const store = useMemo(
     () => createExplorerQueryStore(libraryID, shelvesKey),
     [libraryID, shelvesKey],
+  );
+  useSyncExternalStore(store.subscribe, store.getSnapshot);
+  return store.getData();
+}
+
+function createMyAnnotationsQueryStore(libraryID: number) {
+  let snapshot: ExplorerAnnotationGroup[] = [];
+  let serialized = JSON.stringify({ n: 0 });
+  let generation = 0;
+  const listeners = new Set<() => void>();
+  let notifierID: string | null = null;
+  let debounce: ReturnType<typeof setTimeout> | null = null;
+  let loadToken = 0;
+
+  function emit() {
+    generation += 1;
+    serialized = JSON.stringify({ n: generation });
+    listeners.forEach((listener) => listener());
+  }
+
+  async function reload() {
+    const token = ++loadToken;
+    const next = await searchMyAnnotatedRecentlyRead(libraryID);
+    if (token !== loadToken) {
+      return;
+    }
+    snapshot = next;
+    emit();
+  }
+
+  function scheduleReload() {
+    if (debounce) {
+      clearTimeout(debounce);
+    }
+    debounce = setTimeout(() => {
+      debounce = null;
+      void reload();
+    }, 250);
+  }
+
+  return {
+    getSnapshot: () => serialized,
+    getData: () => snapshot,
+    subscribe(onStoreChange: () => void) {
+      listeners.add(onStoreChange);
+      if (!notifierID) {
+        notifierID = Zotero.Notifier.registerObserver(
+          {
+            notify: () => {
+              scheduleReload();
+            },
+          },
+          ["item"],
+        );
+        void reload();
+      }
+      return () => {
+        listeners.delete(onStoreChange);
+        if (listeners.size === 0 && notifierID) {
+          Zotero.Notifier.unregisterObserver(notifierID);
+          notifierID = null;
+        }
+        if (listeners.size === 0 && debounce) {
+          clearTimeout(debounce);
+          debounce = null;
+        }
+      };
+    },
+  };
+}
+
+export function useMyAnnotatedRecentlyRead(
+  libraryID: number,
+): ExplorerAnnotationGroup[] {
+  const store = useMemo(
+    () => createMyAnnotationsQueryStore(libraryID),
+    [libraryID],
   );
   useSyncExternalStore(store.subscribe, store.getSnapshot);
   return store.getData();

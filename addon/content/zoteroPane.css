@@ -2341,7 +2341,8 @@
   }
 }
 
-.syllabus-explorer-cover-rail .syllabus-explorer-annotation-tile {
+.syllabus-explorer-cover-rail .syllabus-explorer-annotation-tile,
+.syllabus-my-annotations-covers .syllabus-explorer-annotation-tile {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
@@ -2354,7 +2355,17 @@
   padding-inline-end: 0.35rem;
 }
 
+.syllabus-my-annotations-covers {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1.6rem;
+}
+
 .syllabus-explorer-cover-rail
+  .syllabus-explorer-annotation-tile
+  .syllabus-gallery-tile,
+.syllabus-my-annotations-covers
   .syllabus-explorer-annotation-tile
   .syllabus-gallery-tile {
   display: flex;
@@ -2365,6 +2376,11 @@
   justify-content: flex-start;
   align-self: flex-start;
   overflow: visible;
+  flex: none;
+  width: 148px;
+  max-width: 148px;
+  min-width: 0;
+  margin-bottom: 0;
 }
 
 .syllabus-explorer-cover-rail
@@ -2383,6 +2399,24 @@
   .syllabus-explorer-annotation-tile
   .syllabus-gallery-cover-natural,
 .syllabus-explorer-cover-rail
+  .syllabus-explorer-annotation-tile
+  .syllabus-gallery-cover-with-binder,
+.syllabus-my-annotations-covers
+  .syllabus-explorer-annotation-tile
+  .syllabus-gallery-cover-portrait,
+.syllabus-my-annotations-covers
+  .syllabus-explorer-annotation-tile
+  .syllabus-gallery-cover-video,
+.syllabus-my-annotations-covers
+  .syllabus-explorer-annotation-tile
+  .syllabus-gallery-cover-web,
+.syllabus-my-annotations-covers
+  .syllabus-explorer-annotation-tile
+  .syllabus-gallery-cover-square,
+.syllabus-my-annotations-covers
+  .syllabus-explorer-annotation-tile
+  .syllabus-gallery-cover-natural,
+.syllabus-my-annotations-covers
   .syllabus-explorer-annotation-tile
   .syllabus-gallery-cover-with-binder {
   align-self: start;

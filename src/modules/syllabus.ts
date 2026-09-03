@@ -33,6 +33,7 @@ import { uuidv7 } from "uuidv7";
 import pluralize from "pluralize";
 import { getPref } from "../utils/prefs";
 import { ReadingSchedule } from "./ReadingSchedule";
+import { MyAnnotationsPage } from "./MyAnnotationsPage";
 import { parseXULTemplate } from "../utils/ui";
 import { TabManager } from "../utils/tabManager";
 import { FEATURE_FLAG } from "./featureFlags";
@@ -283,12 +284,22 @@ const tabManager = FEATURE_FLAG.READING_SCHEDULE
     })
   : null;
 
+const myAnnotationsTabManager = new TabManager<{ libraryID: number }>({
+  type: "my-annotations",
+  title: () => getString("view-tab-my-annotations"),
+  rootElementIdFactory: (p) => `my-annotations-tab-root-${p?.libraryID ?? 0}`,
+  data: () => ({}),
+  componentFactory: (p) => h(MyAnnotationsPage, { libraryID: p!.libraryID }),
+  getTabId: (p) => `syllabus-my-annotations-tab-${p?.libraryID ?? 0}`,
+});
+
 export class SyllabusManager {
   static notifierID: string | null = null;
   static syllabusItemPaneSection: false | string | null = null;
   static readingsTabPanelID: string | null = null;
 
   static readingScheduleTab = tabManager;
+  static myAnnotationsTab = myAnnotationsTabManager;
 
   static settingsKeys = SyllabusSettingsKey;
   static getPreferenceKey(key: SyllabusSettingsKey): string {
@@ -437,6 +448,10 @@ export class SyllabusManager {
         );
         this.readingScheduleTab.renderAllTabs(win);
       }
+      ztoolkit.log(
+        "SyllabusManager.onMainWindowLoad: rerendering My Annotations tabs",
+      );
+      this.myAnnotationsTab.renderAllTabs(win);
     });
   }
 
@@ -583,6 +598,7 @@ export class SyllabusManager {
     if (this.readingScheduleTab) {
       this.readingScheduleTab.cleanupAll();
     }
+    this.myAnnotationsTab.cleanupAll();
   }
 
   static onShutdown() {
@@ -1163,7 +1179,9 @@ export class SyllabusManager {
       scope.kind === "collection" ? scope.collection : null;
     const currentTab = getCurrentTab();
     const isCustomTab =
-      currentTab?.type === "syllabus" || currentTab?.type === "reading-list";
+      currentTab?.type === "syllabus" ||
+      currentTab?.type === "reading-list" ||
+      currentTab?.type === "my-annotations";
     const hideViewModesInLibrary =
       FEATURE_FLAG.READING_SCHEDULE &&
       !viewScopeSupportsGallery(scope) &&
@@ -2996,6 +3014,14 @@ export class SyllabusManager {
       this.syncReadingScheduleTabIcon(win);
       this.updateReadingScheduleTabBarButton(win);
     }
+  }
+
+  /**
+   * Open and render the My Annotations tab for a library
+   */
+  static openMyAnnotationsTab(libraryID: number) {
+    const win = Zotero.getMainWindow();
+    this.myAnnotationsTab.open(win, { libraryID });
   }
 
   /**
