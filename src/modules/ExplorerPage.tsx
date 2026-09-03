@@ -29,15 +29,9 @@ import {
 import { renderComponent } from "../utils/react";
 import { isZotero8OrLater, libraryDisplayName } from "../utils/zotero";
 import { getCachedCollectionByKey } from "../utils/cache";
-import {
-  isSyllabusMemberItem,
-  openItemBestAttachment,
-} from "../utils/items";
+import { isSyllabusMemberItem, openItemBestAttachment } from "../utils/items";
 import { getString, getUiDir } from "../utils/locale";
-import {
-  formatReadingDate,
-  formatRelativeReadingDate,
-} from "../utils/dates";
+import { formatReadingDate, formatRelativeReadingDate } from "../utils/dates";
 import {
   ClassReadingBlock,
   openCollectionSyllabusPage,
@@ -69,7 +63,6 @@ import {
   scrollElementBelowSticky,
 } from "./galleryGroupNav";
 import {
-  annotationLimitForSize,
   isExplorerShelfEnabled,
   layoutsForExplorerShelf,
   mergeExplorerCatalog,
@@ -602,7 +595,6 @@ function ExplorerShelfSettingsMenu({
                         onChange({
                           ...shelf,
                           size: mode,
-                          limit: annotationLimitForSize(mode),
                         })
                       }
                     >

@@ -19,6 +19,9 @@ declare namespace _ZoteroTypes {
       "defaultGalleryLayout": string;
       "defaultGallerySort": string;
       "defaultGalleryGroupBy": string;
+      "myAnnotationsLayout": string;
+      "myAnnotationsSort": string;
+      "myAnnotationsGroupBy": string;
       "magazineTypeSize": string;
       "generateReadingScheduleCollection": boolean;
       "readingScheduleCollectionKey": string;

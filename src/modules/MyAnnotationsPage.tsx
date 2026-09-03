@@ -11,15 +11,12 @@ import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
 import {
   ArrowDownAZ,
+  BookOpen,
   Calendar,
   CalendarPlus,
   ChevronDown,
-  Globe,
-  Image,
   LayoutGrid,
   LayoutList,
-  ListOrdered,
-  Newspaper,
   Shapes,
   Tags,
   User,
@@ -29,16 +26,14 @@ import { openItemBestAttachment, sortItems } from "../utils/items";
 import { getString, getUiDir } from "../utils/locale";
 import { openZoteroItemContextMenu } from "../utils/itemContextMenu";
 import { renderComponent } from "../utils/react";
-import type { GalleryLayout } from "./galleryLayout";
+import type { GalleryGroupBy } from "./galleryGroupBy";
+import type { GallerySortBy } from "./gallerySort";
 import {
-  useGalleryLayout,
-  type GalleryGlobalSetting,
-} from "./galleryLayout";
-import {
-  useGalleryGroupBy,
-  type GalleryGroupBy,
-} from "./galleryGroupBy";
-import { useGallerySortBy, type GallerySortBy } from "./gallerySort";
+  useMyAnnotationsGroupBy,
+  useMyAnnotationsLayout,
+  useMyAnnotationsSortBy,
+  type MyAnnotationsLayout,
+} from "./myAnnotationsPrefs";
 import { GalleryViewportProvider } from "./galleryVisibility";
 import { useItemIdentifierSelection } from "./browsePage";
 import type { MagazineTileClick } from "./MagazineTile";
@@ -51,8 +46,6 @@ import { useCollectionTagGroups } from "./tagGroups";
 import { useCollectionItemTypeGroups } from "./typeGroups";
 import { useCollectionCreatorGroups } from "./creatorGroups";
 
-export const MY_ANNOTATIONS_VIEW_KEY = "my-annotations";
-
 type SegmentOption<T extends string> = {
   mode: T;
   label: string;
@@ -60,25 +53,19 @@ type SegmentOption<T extends string> = {
   Icon: typeof LayoutGrid;
 };
 
-function layoutOptions(): SegmentOption<GalleryLayout>[] {
+function layoutOptions(): SegmentOption<MyAnnotationsLayout>[] {
   return [
     {
-      mode: "cover",
-      label: getString("gallery-layout-cover"),
-      title: getString("gallery-layout-cover-title"),
-      Icon: Image,
-    },
-    {
-      mode: "magazine",
-      label: getString("gallery-layout-magazine"),
-      title: getString("gallery-layout-magazine-title"),
-      Icon: Newspaper,
-    },
-    {
-      mode: "card",
-      label: getString("gallery-layout-card"),
-      title: getString("gallery-layout-card-title"),
+      mode: "vertical",
+      label: getString("my-annotations-layout-vertical"),
+      title: getString("my-annotations-layout-vertical-title"),
       Icon: LayoutList,
+    },
+    {
+      mode: "grid",
+      label: getString("my-annotations-layout-grid"),
+      title: getString("my-annotations-layout-grid-title"),
+      Icon: LayoutGrid,
     },
   ];
 }
@@ -86,10 +73,10 @@ function layoutOptions(): SegmentOption<GalleryLayout>[] {
 function sortOptions(): SegmentOption<GallerySortBy>[] {
   return [
     {
-      mode: "auto",
-      label: getString("gallery-sort-auto"),
-      title: getString("gallery-sort-auto-title"),
-      Icon: ListOrdered,
+      mode: "lastRead",
+      label: getString("gallery-sort-last-read"),
+      title: getString("gallery-sort-last-read-title"),
+      Icon: BookOpen,
     },
     {
       mode: "title",
@@ -194,55 +181,20 @@ function useConfigurePopover(
   return popoverStyle;
 }
 
-function GlobalSaveButton<T>({
-  setting,
-}: {
-  setting: GalleryGlobalSetting<T>;
-}) {
-  return (
-    <button
-      type="button"
-      className={twMerge(
-        "syllabus-gallery-save-global",
-        setting.isCustom && "is-active",
-      )}
-      title={
-        setting.isCustom
-          ? getString("gallery-save-globally-active-title")
-          : getString("gallery-save-globally-title")
-      }
-      aria-label={getString("gallery-save-globally")}
-      aria-pressed={setting.isCustom}
-      onClick={(event) => {
-        event.stopPropagation();
-        setting.saveGlobally();
-      }}
-    >
-      <Globe size={14} strokeWidth={2} aria-hidden="true" />
-    </button>
-  );
-}
-
 function MyAnnotationsSettingsMenu({
   layout,
   onLayout,
-  layoutGlobal,
   sortBy,
   onSortBy,
-  sortByGlobal,
   groupBy,
   onGroupBy,
-  groupByGlobal,
 }: {
-  layout: GalleryLayout;
-  onLayout: (mode: GalleryLayout) => void;
-  layoutGlobal: GalleryGlobalSetting<GalleryLayout>;
+  layout: MyAnnotationsLayout;
+  onLayout: (mode: MyAnnotationsLayout) => void;
   sortBy: GallerySortBy;
   onSortBy: (mode: GallerySortBy) => void;
-  sortByGlobal: GalleryGlobalSetting<GallerySortBy>;
   groupBy: GalleryGroupBy;
   onGroupBy: (mode: GalleryGroupBy) => void;
-  groupByGlobal: GalleryGlobalSetting<GalleryGroupBy>;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -278,11 +230,8 @@ function MyAnnotationsSettingsMenu({
             {getString("gallery-options-title")}
           </div>
           <div className="syllabus-explorer-shelf-setting">
-            <div className="syllabus-gallery-toolbar-heading">
-              <span className="syllabus-explorer-configure-heading">
-                {getString("gallery-menu-view")}
-              </span>
-              <GlobalSaveButton setting={layoutGlobal} />
+            <div className="syllabus-explorer-configure-heading">
+              {getString("gallery-menu-view")}
             </div>
             <div
               role="radiogroup"
@@ -312,11 +261,8 @@ function MyAnnotationsSettingsMenu({
             </div>
           </div>
           <div className="syllabus-explorer-shelf-setting">
-            <div className="syllabus-gallery-toolbar-heading">
-              <span className="syllabus-explorer-configure-heading">
-                {getString("gallery-menu-sort")}
-              </span>
-              <GlobalSaveButton setting={sortByGlobal} />
+            <div className="syllabus-explorer-configure-heading">
+              {getString("gallery-menu-sort")}
             </div>
             <div
               role="radiogroup"
@@ -346,11 +292,8 @@ function MyAnnotationsSettingsMenu({
             </div>
           </div>
           <div className="syllabus-explorer-shelf-setting">
-            <div className="syllabus-gallery-toolbar-heading">
-              <span className="syllabus-explorer-configure-heading">
-                {getString("gallery-menu-group")}
-              </span>
-              <GlobalSaveButton setting={groupByGlobal} />
+            <div className="syllabus-explorer-configure-heading">
+              {getString("gallery-menu-group")}
             </div>
             <div
               role="radiogroup"
@@ -389,8 +332,12 @@ function sortAnnotationGroups(
   groups: ExplorerAnnotationGroup[],
   sortBy: GallerySortBy,
 ): ExplorerAnnotationGroup[] {
-  if (sortBy === "auto") {
-    return groups;
+  if (sortBy === "auto" || sortBy === "lastRead") {
+    return [...groups].sort(
+      (a, b) =>
+        (b.lastRead || 0) - (a.lastRead || 0) ||
+        (a.parent?.id || 0) - (b.parent?.id || 0),
+    );
   }
   const parents = groups
     .map((group) => group.parent)
@@ -399,22 +346,26 @@ function sortAnnotationGroups(
     sortItems(parents, sortBy).map((item, index) => [item.id, index]),
   );
   return [...groups].sort((a, b) => {
-    const aOrder = a.parent ? (order.get(a.parent.id) ?? 0) : Number.MAX_SAFE_INTEGER;
-    const bOrder = b.parent ? (order.get(b.parent.id) ?? 0) : Number.MAX_SAFE_INTEGER;
+    const aOrder = a.parent
+      ? (order.get(a.parent.id) ?? 0)
+      : Number.MAX_SAFE_INTEGER;
+    const bOrder = b.parent
+      ? (order.get(b.parent.id) ?? 0)
+      : Number.MAX_SAFE_INTEGER;
     return aOrder - bOrder;
   });
 }
 
 function AnnotationGroupsGrid({
   groups,
-  tileLayout,
+  arrangement,
   selectedItemIds,
   onClick,
   onDoubleClick,
   onContextMenu,
 }: {
   groups: ExplorerAnnotationGroup[];
-  tileLayout: "cover" | "card";
+  arrangement: MyAnnotationsLayout;
   selectedItemIds: number[] | null;
   onClick: MagazineTileClick;
   onDoubleClick: (item: Zotero.Item) => void;
@@ -430,20 +381,20 @@ function AnnotationGroupsGrid({
   return (
     <div
       className={
-        tileLayout === "cover"
-          ? "syllabus-my-annotations-covers"
-          : "syllabus-explorer-annotation-cards"
+        arrangement === "grid"
+          ? "syllabus-my-annotations-grid"
+          : "syllabus-my-annotations-vertical"
       }
     >
       {groups.map((group) => (
         <ExplorerAnnotationTile
           key={
-            group.parent?.id ??
-            group.annotations.map((row) => row.id).join("-")
+            group.parent?.id ?? group.annotations.map((row) => row.id).join("-")
           }
           rows={group.annotations}
-          layout={tileLayout}
+          layout="cover"
           size="large"
+          arrangement="stack"
           selected={
             !!group.parent &&
             (selectedItemIds?.includes(group.parent.id) || false)
@@ -458,20 +409,17 @@ function AnnotationGroupsGrid({
 }
 
 export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
-  const viewKey = MY_ANNOTATIONS_VIEW_KEY;
   const groups = useMyAnnotatedRecentlyRead(libraryID);
-  const [layout, setLayout, layoutGlobal] = useGalleryLayout(viewKey);
-  const [groupBy, setGroupBy, groupByGlobal] = useGalleryGroupBy(viewKey, {
+  const [layout, setLayout] = useMyAnnotationsLayout();
+  const [groupBy, setGroupBy] = useMyAnnotationsGroupBy({
     classes: false,
     subcollections: false,
     magazine: false,
   });
-  const [sortBy, setSortBy, sortByGlobal] = useGallerySortBy(viewKey);
+  const [sortBy, setSortBy] = useMyAnnotationsSortBy();
   const { selectedItemIds, handleIdentifierClick } =
     useItemIdentifierSelection();
   const pageRef = useRef<HTMLDivElement>(null);
-
-  const tileLayout: "cover" | "card" = layout === "card" ? "card" : "cover";
 
   const syllabusItems = useMemo(
     () =>
@@ -535,7 +483,7 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
     return (
       <AnnotationGroupsGrid
         groups={sortAnnotationGroups(mapped, sortBy)}
-        tileLayout={tileLayout}
+        arrangement={layout}
         selectedItemIds={selectedItemIds}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
@@ -569,19 +517,21 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
             <MyAnnotationsSettingsMenu
               layout={layout}
               onLayout={setLayout}
-              layoutGlobal={layoutGlobal}
               sortBy={sortBy}
               onSortBy={setSortBy}
-              sortByGlobal={sortByGlobal}
               groupBy={groupBy}
               onGroupBy={setGroupBy}
-              groupByGlobal={groupByGlobal}
             />
           </div>
         </div>
       </div>
       <GalleryViewportProvider rootRef={pageRef}>
-        <div className="container-padded px-6 pt-6 pb-10 flex flex-col gap-8">
+        <div
+          className={twMerge(
+            "syllabus-my-annotations-body pt-6 pb-10 flex flex-col gap-8 box-border min-w-0",
+            layout === "grid" ? "is-grid-body px-6 w-full" : "container-padded",
+          )}
+        >
           {groupBy === "type" ? (
             typeGroups.length === 0 ? (
               <p className="text-secondary text-base">
@@ -662,7 +612,7 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
           ) : (
             <AnnotationGroupsGrid
               groups={sortedGroups}
-              tileLayout={tileLayout}
+              arrangement={layout}
               selectedItemIds={selectedItemIds}
               onClick={handleClick}
               onDoubleClick={handleDoubleClick}

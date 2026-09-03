@@ -53,9 +53,8 @@ export type ExplorerAnnotationSize = "small" | "large";
 
 export const EXPLORER_ANNOTATION_SIZES = ["small", "large"] as const;
 
-export function annotationLimitForSize(size: ExplorerAnnotationSize): number {
-  return size === "large" ? 7 : 20;
-}
+/** Shared shelf depth for recent annotations; size only controls quote abridgement. */
+export const EXPLORER_ANNOTATION_SHELF_LIMIT = 20;
 
 function coerceAnnotationSize(value: unknown): ExplorerAnnotationSize {
   return value === "large" ? "large" : "small";
@@ -267,7 +266,8 @@ export function coerceExplorerShelf(value: unknown): ExplorerShelf | null {
         type: "recent-annotations",
         layout,
         size,
-        limit: positiveInt(raw.limit, annotationLimitForSize(size)),
+        // Size only controls quote abridgement; shelf depth is shared.
+        limit: EXPLORER_ANNOTATION_SHELF_LIMIT,
       };
       break;
     }

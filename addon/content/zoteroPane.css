@@ -2342,30 +2342,88 @@
 }
 
 .syllabus-explorer-cover-rail .syllabus-explorer-annotation-tile,
-.syllabus-my-annotations-covers .syllabus-explorer-annotation-tile {
+.syllabus-my-annotations-vertical .syllabus-explorer-annotation-tile {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
   gap: 0.9rem;
   flex: 0 0 calc(148px * 3 + 0.9rem);
   width: calc(148px * 3 + 0.9rem);
+  max-width: 100%;
+  box-sizing: border-box;
   margin-bottom: 0;
   scroll-snap-align: start;
   text-align: start;
   padding-inline-end: 0.35rem;
+  overflow: hidden;
 }
 
-.syllabus-my-annotations-covers {
+/* Sticky covers need no scrollport ancestor; clip only the inline axis. */
+.syllabus-my-annotations-vertical .syllabus-explorer-annotation-tile {
+  overflow-x: clip;
+  overflow-y: visible;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.syllabus-my-annotations-body {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.syllabus-my-annotations-body.is-grid-body {
+  width: 100%;
+}
+
+.syllabus-my-annotations-vertical {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
   gap: 1.6rem;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.syllabus-my-annotations-grid {
+  /* Vertical packing: fill columns top-to-bottom so uneven quote
+     counts don't leave empty row gaps beside short items. */
+  column-width: calc(148px + 0.9rem + 60ch);
+  column-gap: 2rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.syllabus-my-annotations-grid .syllabus-explorer-annotation-tile {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.9rem;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0 0 1.75rem;
+  text-align: start;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  /* Clip horizontal spill without creating a scrollport (keeps sticky covers). */
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
+.syllabus-my-annotations-grid
+  .syllabus-explorer-annotation-tile
+  .syllabus-explorer-annotation-quotes {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .syllabus-explorer-cover-rail
-  .syllabus-explorer-annotation-tile
-  .syllabus-gallery-tile,
-.syllabus-my-annotations-covers
   .syllabus-explorer-annotation-tile
   .syllabus-gallery-tile {
   display: flex;
@@ -2381,6 +2439,38 @@
   max-width: 148px;
   min-width: 0;
   margin-bottom: 0;
+}
+
+.syllabus-my-annotations-vertical
+  .syllabus-explorer-annotation-tile
+  .syllabus-gallery-tile,
+.syllabus-my-annotations-grid
+  .syllabus-explorer-annotation-tile
+  .syllabus-gallery-tile {
+  display: flex;
+  flex-direction: column;
+  grid-row: auto;
+  grid-template-rows: none;
+  align-content: start;
+  justify-content: flex-start;
+  align-self: flex-start;
+  position: sticky;
+  /* Sit below the sticky page header (title + description). */
+  top: 5.75rem;
+  z-index: 1;
+  overflow: visible;
+  flex: none;
+  width: 148px;
+  max-width: 148px;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.syllabus-my-annotations-grid
+  .syllabus-explorer-annotation-tile
+  .syllabus-gallery-tile {
+  flex: 0 0 148px;
+  min-width: 148px;
 }
 
 .syllabus-explorer-cover-rail
@@ -2401,22 +2491,40 @@
 .syllabus-explorer-cover-rail
   .syllabus-explorer-annotation-tile
   .syllabus-gallery-cover-with-binder,
-.syllabus-my-annotations-covers
+.syllabus-my-annotations-vertical
   .syllabus-explorer-annotation-tile
   .syllabus-gallery-cover-portrait,
-.syllabus-my-annotations-covers
+.syllabus-my-annotations-vertical
   .syllabus-explorer-annotation-tile
   .syllabus-gallery-cover-video,
-.syllabus-my-annotations-covers
+.syllabus-my-annotations-vertical
   .syllabus-explorer-annotation-tile
   .syllabus-gallery-cover-web,
-.syllabus-my-annotations-covers
+.syllabus-my-annotations-vertical
   .syllabus-explorer-annotation-tile
   .syllabus-gallery-cover-square,
-.syllabus-my-annotations-covers
+.syllabus-my-annotations-vertical
   .syllabus-explorer-annotation-tile
   .syllabus-gallery-cover-natural,
-.syllabus-my-annotations-covers
+.syllabus-my-annotations-vertical
+  .syllabus-explorer-annotation-tile
+  .syllabus-gallery-cover-with-binder,
+.syllabus-my-annotations-grid
+  .syllabus-explorer-annotation-tile
+  .syllabus-gallery-cover-portrait,
+.syllabus-my-annotations-grid
+  .syllabus-explorer-annotation-tile
+  .syllabus-gallery-cover-video,
+.syllabus-my-annotations-grid
+  .syllabus-explorer-annotation-tile
+  .syllabus-gallery-cover-web,
+.syllabus-my-annotations-grid
+  .syllabus-explorer-annotation-tile
+  .syllabus-gallery-cover-square,
+.syllabus-my-annotations-grid
+  .syllabus-explorer-annotation-tile
+  .syllabus-gallery-cover-natural,
+.syllabus-my-annotations-grid
   .syllabus-explorer-annotation-tile
   .syllabus-gallery-cover-with-binder {
   align-self: start;
@@ -2427,6 +2535,30 @@
   flex: 1 1 auto;
   min-width: 0;
   padding-top: 0.1rem;
+}
+
+.syllabus-explorer-annotation-tile.is-quote-wrap
+  .syllabus-explorer-annotation-quotes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(60ch, 100%), 1fr));
+  align-content: flex-start;
+  gap: 0.65rem 1rem;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  flex: 1 1 0;
+  min-width: 0;
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
+.syllabus-explorer-annotation-tile.is-quote-wrap
+  .syllabus-explorer-annotation-entry {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  width: auto;
+  overflow: hidden;
 }
 
 .syllabus-explorer-annotation-cards {
@@ -2466,7 +2598,9 @@
   flex-direction: column;
   gap: 0.45rem;
   min-width: 0;
-  max-width: 60ch;
+  max-width: min(60ch, 100%);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .syllabus-explorer-annotation-entry {
@@ -2482,6 +2616,16 @@
   overflow: hidden;
   min-width: 0;
   padding-block: 0.14em;
+  font-family: var(
+    --syllabus-magazine-serif,
+    "Newsreader",
+    Georgia,
+    "Palatino Linotype",
+    Palatino,
+    "Songti SC",
+    "Hiragino Mincho ProN",
+    serif
+  );
 }
 
 .syllabus-explorer-annotation-tile.is-cover
@@ -2511,12 +2655,57 @@
   .syllabus-explorer-annotation-quote {
   -webkit-line-clamp: unset;
   display: block;
-  overflow: visible;
+  overflow: hidden;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .syllabus-explorer-annotation-quote .syllabus-magazine-highlight-mark {
+  font-family: var(
+    --syllabus-magazine-serif,
+    "Newsreader",
+    Georgia,
+    "Palatino Linotype",
+    Palatino,
+    "Songti SC",
+    "Hiragino Mincho ProN",
+    serif
+  );
   font-size: 1.02rem;
   line-height: 1.45;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.syllabus-explorer-annotation-tile.is-large
+  .syllabus-explorer-annotation-quotes {
+  gap: 0.85rem;
+}
+
+.syllabus-explorer-annotation-tile.is-large
+  .syllabus-explorer-annotation-entry {
+  gap: 0.3rem;
+}
+
+.syllabus-explorer-annotation-tile.is-large
+  .syllabus-explorer-annotation-quote
+  .syllabus-magazine-highlight-mark {
+  font-size: 1.22rem;
+  line-height: 1.6;
+  font-weight: 450;
+  padding: 0.06em 0.18em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.syllabus-explorer-annotation-tile.is-large .syllabus-explorer-annotation-time {
+  font-size: 0.84rem;
+  line-height: 1.35;
+  margin-top: 0.1rem;
 }
 
 .syllabus-explorer-annotation-parent {

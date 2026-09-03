@@ -7,6 +7,7 @@ import type { GalleryGlobalSetting } from "./galleryLayout";
 
 export const GALLERY_SORT_MODES = [
   "auto",
+  "lastRead",
   "title",
   "date",
   "dateAdded",

@@ -30,6 +30,8 @@ export type ExplorerAnnotation = {
 export type ExplorerAnnotationGroup = {
   parent: Zotero.Item | null;
   annotations: ExplorerAnnotation[];
+  /** Unix timestamp in seconds; set for My Annotations last-read ordering. */
+  lastRead?: number;
 };
 
 export function groupAdjacentAnnotations(
@@ -460,6 +462,24 @@ async function annotationsForParent(
   );
 }
 
+function maxLastReadForParent(parent: Zotero.Item): number {
+  let best = 0;
+  let attachmentIds: number[] = [];
+  try {
+    attachmentIds = parent.getAttachments();
+  } catch {
+    return 0;
+  }
+  for (const attId of attachmentIds) {
+    const att = resolveItem(attId);
+    if (!att) {
+      continue;
+    }
+    best = Math.max(best, attachmentLastReadSeconds(att));
+  }
+  return best;
+}
+
 export async function searchMyAnnotatedRecentlyRead(
   libraryID: number,
   limit = MY_ANNOTATIONS_ITEM_LIMIT,
@@ -475,7 +495,11 @@ export async function searchMyAnnotatedRecentlyRead(
     if (annotations.length === 0) {
       continue;
     }
-    groups.push({ parent, annotations });
+    groups.push({
+      parent,
+      annotations,
+      lastRead: maxLastReadForParent(parent),
+    });
     if (groups.length >= limit) {
       break;
     }

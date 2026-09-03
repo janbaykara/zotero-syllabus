@@ -215,7 +215,7 @@ describe("explorer shelves", function () {
     ]);
   });
 
-  it("defaults recent-annotations size to small and large to limit 7", function () {
+  it("defaults recent-annotations size to small without changing shelf depth", function () {
     const small = coerceExplorerShelves([
       { id: "ann", type: "recent-annotations" },
     ])[0];
@@ -230,7 +230,7 @@ describe("explorer shelves", function () {
     assert.equal(large.type, "recent-annotations");
     if (large.type === "recent-annotations") {
       assert.equal(large.size, "large");
-      assert.equal(large.limit, 7);
+      assert.equal(large.limit, 20);
     }
   });
 });

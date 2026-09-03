@@ -342,7 +342,13 @@ export function sortItemsByDateAdded(items: Zotero.Item[]): Zotero.Item[] {
   });
 }
 
-export type ItemSortMode = "auto" | "title" | "creator" | "date" | "dateAdded";
+export type ItemSortMode =
+  | "auto"
+  | "lastRead"
+  | "title"
+  | "creator"
+  | "date"
+  | "dateAdded";
 
 export function sortItems(
   items: Zotero.Item[],
@@ -360,6 +366,7 @@ export function sortItems(
   if (mode === "title") {
     return sortItemsByTitle(items);
   }
+  // auto / lastRead: keep caller order (last-read order is applied upstream)
   return [...items];
 }
 

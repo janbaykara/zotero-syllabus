@@ -55,6 +55,7 @@ export function ExplorerAnnotationTile({
   rows,
   layout,
   size,
+  arrangement = "stack",
   selected,
   onClick,
   onDoubleClick,
@@ -63,6 +64,8 @@ export function ExplorerAnnotationTile({
   rows: ExplorerAnnotation[];
   layout: "cover" | "card";
   size: "small" | "large";
+  /** How quotes flow beside the cover. `wrap` packs quotes into columns. */
+  arrangement?: "stack" | "wrap";
   selected: boolean;
   onClick: MagazineTileClick;
   onDoubleClick: (item: Zotero.Item) => void;
@@ -90,6 +93,7 @@ export function ExplorerAnnotationTile({
         "syllabus-explorer-annotation-tile group min-w-0 cursor-pointer outline-none select-none",
         layout === "cover" && "is-cover",
         size === "large" && "is-large",
+        arrangement === "wrap" && "is-quote-wrap",
         layout === "card" &&
           twMerge(
             "is-card syllabus-item-card rounded-lg flex shrink-0 flex-row items-start bg-background-sidepane text-primary relative px-4 py-3 gap-4",
