@@ -173,6 +173,7 @@ class-reset-sort = Скинути порядок сортування
 class-move-up = Перемістити { $nomenclature } вгору
 class-move-down = Перемістити { $nomenclature } вниз
 class-delete = Вилучити { $nomenclature }
+class-insert-here = Додати { $nomenclature } сюди
 class-dropzone-hint = Перетягніть записи до { $nomenclature } { $number }
 due-date-clear = Очистити термін
 due-date-add = Додати термін

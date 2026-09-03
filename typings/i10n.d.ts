@@ -26,6 +26,7 @@ export type FluentMessageId =
   | 'class-dropzone-hint'
   | 'class-due-date-label'
   | 'class-folder-managed-banner'
+  | 'class-insert-here'
   | 'class-move-down'
   | 'class-move-up'
   | 'class-reset-sort'

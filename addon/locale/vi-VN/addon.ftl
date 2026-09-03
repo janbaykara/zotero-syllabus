@@ -173,6 +173,7 @@ class-reset-sort = Đặt lại thứ tự sắp xếp
 class-move-up = Chuyển { $nomenclature } lên
 class-move-down = Chuyển { $nomenclature } xuống
 class-delete = Xóa { $nomenclature }
+class-insert-here = Thêm { $nomenclature } tại đây
 class-dropzone-hint = Kéo mục vào { $nomenclature } { $number }
 due-date-clear = Xóa hạn
 due-date-add = Thêm hạn

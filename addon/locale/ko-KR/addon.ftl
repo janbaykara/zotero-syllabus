@@ -173,6 +173,7 @@ class-reset-sort = 정렬 순서 재설정
 class-move-up = { $nomenclature } 위로 이동
 class-move-down = { $nomenclature } 아래로 이동
 class-delete = { $nomenclature } 삭제
+class-insert-here = 여기에 { $nomenclature } 추가
 class-dropzone-hint = 항목을 { $nomenclature } { $number }(으)로 드래그
 due-date-clear = 마감일 지우기
 due-date-add = 마감일 추가

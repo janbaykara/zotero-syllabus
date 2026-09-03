@@ -173,6 +173,7 @@ class-reset-sort = Sıralamayı sıfırla
 class-move-up = { $nomenclature } ögesini yukarı taşı
 class-move-down = { $nomenclature } ögesini aşağı taşı
 class-delete = { $nomenclature } ögesini sil
+class-insert-here = Buraya { $nomenclature } ekle
 class-dropzone-hint = Öğeleri { $nomenclature } { $number } üzerine sürükleyin
 due-date-clear = Teslim tarihini temizle
 due-date-add = Teslim tarihi ekle

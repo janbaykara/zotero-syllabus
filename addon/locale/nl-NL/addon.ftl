@@ -173,6 +173,7 @@ class-reset-sort = Sorteervolgorde herstellen
 class-move-up = { $nomenclature } omhoog
 class-move-down = { $nomenclature } omlaag
 class-delete = { $nomenclature } verwijderen
+class-insert-here = { $nomenclature } hier toevoegen
 class-dropzone-hint = Sleep items naar { $nomenclature } { $number }
 due-date-clear = Inleverdatum wissen
 due-date-add = Een inleverdatum toevoegen

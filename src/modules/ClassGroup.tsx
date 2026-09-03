@@ -2,7 +2,7 @@
 import { h, Fragment } from "preact";
 import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
-import { ChevronUp, ChevronDown } from "lucide-preact";
+import { ChevronUp, ChevronDown, Plus } from "lucide-preact";
 import {
   SyllabusManager,
   ItemSyllabusAssignment,
@@ -152,6 +152,21 @@ export function ClassGroupComponent({
     }
   };
 
+  const handleInsertClassBefore = async () => {
+    if (classNumber == null) {
+      return;
+    }
+    try {
+      await SyllabusManager.insertClassBefore(
+        collectionId,
+        classNumber,
+        "page",
+      );
+    } catch (err) {
+      ztoolkit.log("Error inserting class:", err);
+    }
+  };
+
   const handleResetSortOrder = async () => {
     if (classNumber !== null && classNumber !== undefined) {
       try {
@@ -204,10 +219,32 @@ export function ClassGroupComponent({
         <>
           <div
             className={twMerge(
-              "sticky z-35 bg-background py-1 in-[.print]:static top-10",
+              "group/class-heading relative sticky z-35 bg-background py-1 in-[.print]:static top-10",
               isZotero8OrLater() ? "md:pt-8" : "pt-8",
             )}
           >
+            {!isLocked && (
+              <button
+                type="button"
+                className="absolute left-0 right-0 top-1.5 flex items-center gap-2 opacity-0 group-hover/class-heading:opacity-100 focus-visible:opacity-100 transition-opacity in-[.print]:hidden text-xs text-secondary hover:text-primary cursor-pointer bg-transparent border-0 p-0"
+                onClick={handleInsertClassBefore}
+                title={getString("class-insert-here", {
+                  args: { nomenclature: singular },
+                })}
+                aria-label={getString("class-insert-here", {
+                  args: { nomenclature: singular },
+                })}
+              >
+                <span className="flex-1 h-px bg-quinary" />
+                <span className="inline-flex items-center gap-1 shrink-0">
+                  <Plus size={12} />
+                  {getString("class-insert-here", {
+                    args: { nomenclature: singular },
+                  })}
+                </span>
+                <span className="flex-1 h-px bg-quinary" />
+              </button>
+            )}
             <div
               className={twMerge(
                 "container-padded rounded-xs mb-1",

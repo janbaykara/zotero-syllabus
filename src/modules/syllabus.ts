@@ -47,6 +47,7 @@ import {
   ensureClassRecord,
   findClassIdByNumber,
   getClassNumberById,
+  insertClassAtIndex,
   orderedClassIds,
   shouldCreateSubcollections,
 } from "../utils/schemas";
@@ -2646,6 +2647,32 @@ export class SyllabusManager {
         const classes = { ...(document.classes || {}) };
         const classOrder = orderedClassIds(document);
         ensureClassRecord(classes, classNumber, classOrder);
+        return { ...document, classes, classOrder };
+      },
+      { createNote: "prompt" },
+    );
+    this.onClassListUpdate();
+  }
+
+  /**
+   * Insert an empty class before `classNumber`, shifting later classes down.
+   */
+  static async insertClassBefore(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    classNumber: number,
+    source: "page",
+  ): Promise<void> {
+    ztoolkit.log(
+      "SyllabusManager.insertClassBefore",
+      collectionId,
+      classNumber,
+    );
+    await mutateCollectionDocument(
+      collectionId,
+      (document) => {
+        const classes = { ...(document.classes || {}) };
+        const classOrder = orderedClassIds(document);
+        insertClassAtIndex(classes, classOrder, classNumber - 1);
         return { ...document, classes, classOrder };
       },
       { createNote: "prompt" },

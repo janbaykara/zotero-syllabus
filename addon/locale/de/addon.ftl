@@ -173,6 +173,7 @@ class-reset-sort = Sortierung zurücksetzen
 class-move-up = { $nomenclature } nach oben
 class-move-down = { $nomenclature } nach unten
 class-delete = { $nomenclature } löschen
+class-insert-here = { $nomenclature } hier hinzufügen
 class-dropzone-hint = Einträge auf { $nomenclature } { $number } ziehen
 due-date-clear = Fälligkeitsdatum löschen
 due-date-add = Fälligkeitsdatum hinzufügen

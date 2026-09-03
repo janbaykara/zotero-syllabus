@@ -173,6 +173,7 @@ class-reset-sort = Repor a ordem de classificação
 class-move-up = Mover { $nomenclature } para cima
 class-move-down = Mover { $nomenclature } para baixo
 class-delete = Eliminar { $nomenclature }
+class-insert-here = Adicionar { $nomenclature } aqui
 class-dropzone-hint = Arraste itens para { $nomenclature } { $number }
 due-date-clear = Limpar a data-limite
 due-date-add = Adicionar uma data-limite

@@ -918,6 +918,18 @@ export function ensureClassRecord(
   return ids[classNumber - 1];
 }
 
+export function insertClassAtIndex(
+  classes: NonNullable<CollectionSyllabusDocument["classes"]>,
+  classOrder: string[],
+  index: number,
+): string {
+  const classId = generateClassId();
+  classes[classId] = StoredClassMetadataSchema.parse({ title: "" });
+  const clamped = Math.max(0, Math.min(index, classOrder.length));
+  classOrder.splice(clamped, 0, classId);
+  return classId;
+}
+
 export function persistAssignment(
   assignment: ItemSyllabusAssignment,
   classes: NonNullable<CollectionSyllabusDocument["classes"]>,

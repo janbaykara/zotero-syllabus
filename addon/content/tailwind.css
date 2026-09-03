@@ -108,6 +108,9 @@
   .top-0 {
     top: 0px;
   }
+  .top-1\.5 {
+    top: calc(var(--spacing) * 1.5);
+  }
   .top-10 {
     top: calc(var(--spacing) * 10);
   }
@@ -116,6 +119,9 @@
   }
   .top-full {
     top: 100%;
+  }
+  .right-0 {
+    right: 0px;
   }
   .right-full {
     right: 100%;
@@ -370,6 +376,9 @@
   }
   .h-full {
     height: 100%;
+  }
+  .h-px {
+    height: 1px;
   }
   .max-h-\[80vh\] {
     max-height: 80vh;
@@ -1149,6 +1158,9 @@
     .group-hover\:opacity-100:is(:where(.group):hover *) {
       opacity: 100%;
     }
+    .group-hover\/class-heading\:opacity-100:is(:where(.group\/class-heading):hover *) {
+      opacity: 100%;
+    }
   }
   .first-letter\:capitalize::first-letter {
     text-transform: capitalize;
@@ -1287,6 +1299,9 @@
   .focus\:outline-none:focus {
     --tw-outline-style: none;
     outline-style: none;
+  }
+  .focus-visible\:opacity-100:focus-visible {
+    opacity: 100%;
   }
   .active\:bg-quarternary:active {
     background-color: var(--color-quarternary);

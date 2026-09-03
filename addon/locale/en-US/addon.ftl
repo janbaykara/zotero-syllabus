@@ -171,6 +171,7 @@ class-reset-sort = Reset sort order
 class-move-up = Move { $nomenclature } up
 class-move-down = Move { $nomenclature } down
 class-delete = Delete { $nomenclature }
+class-insert-here = Add { $nomenclature } here
 class-dropzone-hint = Drag items to { $nomenclature } { $number }
 due-date-clear = Clear due date
 due-date-add = Add a due date

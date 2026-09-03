@@ -173,6 +173,7 @@ class-reset-sort = إعادة ضبط ترتيب الفرز
 class-move-up = نقل { $nomenclature } إلى الأعلى
 class-move-down = نقل { $nomenclature } إلى الأسفل
 class-delete = حذف { $nomenclature }
+class-insert-here = إضافة { $nomenclature } هنا
 class-dropzone-hint = اسحب العناصر إلى { $nomenclature } { $number }
 due-date-clear = مسح تاريخ الاستحقاق
 due-date-add = إضافة تاريخ استحقاق

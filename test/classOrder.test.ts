@@ -4,6 +4,7 @@ import {
   findClassIdByNumber,
   getClassNumberById,
   hydrateAssignment,
+  insertClassAtIndex,
   normalizeClassList,
   orderedClassIds,
 } from "../src/utils/schemas";
@@ -174,5 +175,19 @@ describe("class order", function () {
       normalized.classOrder,
     );
     assert.equal(hydrated.classNumber, 3);
+  });
+
+  it("inserts an empty class at an index and shifts later classes", function () {
+    const first = "class-first";
+    const second = "class-second";
+    const classes = {
+      [first]: { title: "First" },
+      [second]: { title: "Second" },
+    };
+    const classOrder = [first, second];
+    const inserted = insertClassAtIndex(classes, classOrder, 1);
+    assert.deepEqual(classOrder, [first, inserted, second]);
+    assert.equal(classes[inserted]?.title, "");
+    assert.equal(getClassNumberById(classes, second, classOrder), 3);
   });
 });

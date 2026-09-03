@@ -173,6 +173,7 @@ class-reset-sort = Réinitialiser l’ordre
 class-move-up = Déplacer { $nomenclature } vers le haut
 class-move-down = Déplacer { $nomenclature } vers le bas
 class-delete = Supprimer { $nomenclature }
+class-insert-here = Ajouter { $nomenclature } ici
 class-dropzone-hint = Faites glisser des documents vers { $nomenclature } { $number }
 due-date-clear = Effacer la date d’échéance
 due-date-add = Ajouter une date d’échéance

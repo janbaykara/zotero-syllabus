@@ -173,6 +173,7 @@ class-reset-sort = Atur ulang urutan
 class-move-up = Pindahkan { $nomenclature } ke atas
 class-move-down = Pindahkan { $nomenclature } ke bawah
 class-delete = Hapus { $nomenclature }
+class-insert-here = Tambah { $nomenclature } di sini
 class-dropzone-hint = Seret item ke { $nomenclature } { $number }
 due-date-clear = Hapus tenggat
 due-date-add = Tambah tenggat

@@ -173,6 +173,7 @@ class-reset-sort = Resetuj kolejność sortowania
 class-move-up = Przenieś { $nomenclature } w górę
 class-move-down = Przenieś { $nomenclature } w dół
 class-delete = Usuń { $nomenclature }
+class-insert-here = Dodaj { $nomenclature } tutaj
 class-dropzone-hint = Przeciągnij pozycje do: { $nomenclature } { $number }
 due-date-clear = Wyczyść termin
 due-date-add = Dodaj termin

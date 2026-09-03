@@ -173,6 +173,7 @@ class-reset-sort = 並べ替えをリセット
 class-move-up = { $nomenclature }を上へ
 class-move-down = { $nomenclature }を下へ
 class-delete = { $nomenclature }を削除
+class-insert-here = ここに{ $nomenclature }を追加
 class-dropzone-hint = アイテムを{ $nomenclature } { $number }へドラッグ
 due-date-clear = 期限をクリア
 due-date-add = 期限を追加

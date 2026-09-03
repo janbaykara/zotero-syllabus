@@ -173,6 +173,7 @@ class-reset-sort = 重設排序
 class-move-up = 上移{ $nomenclature }
 class-move-down = 下移{ $nomenclature }
 class-delete = 刪除{ $nomenclature }
+class-insert-here = 在此新增{ $nomenclature }
 class-dropzone-hint = 將條目拖到{ $nomenclature } { $number }
 due-date-clear = 清除截止日期
 due-date-add = 新增截止日期
