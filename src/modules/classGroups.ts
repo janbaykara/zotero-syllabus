@@ -16,6 +16,46 @@ export type SyllabusClassGroup = {
   }>;
 };
 
+/** Collection member with optional classless assignment (e.g. done status). */
+export type FurtherReadingEntry = {
+  item: Zotero.Item;
+  assignment?: ItemSyllabusAssignment;
+};
+
+/** No class, priority, or instruction — may still carry reading `status`. */
+export function isClasslessAssignment(
+  assignment: ItemSyllabusAssignment,
+  collectionId: number,
+): boolean {
+  const resolvedClassNumber =
+    SyllabusManager.getClassNumber(collectionId, assignment.classId) ??
+    assignment.classNumber;
+  return (
+    !assignment.priority &&
+    !assignment.classInstruction &&
+    resolvedClassNumber === undefined
+  );
+}
+
+export function pickFurtherReadingAssignment(
+  assignments: ItemSyllabusAssignment[],
+  collectionId: number,
+): ItemSyllabusAssignment | undefined {
+  const classless = assignments.filter((a) =>
+    isClasslessAssignment(a, collectionId),
+  );
+  return classless.find((a) => a.status === "done") || classless[0];
+}
+
+function sortFurtherReadingEntries(
+  entries: FurtherReadingEntry[],
+): FurtherReadingEntry[] {
+  const byId = new Map(entries.map((entry) => [entry.item.id, entry]));
+  return sortItemsByTitle(entries.map((entry) => entry.item))
+    .map((item) => byId.get(item.id))
+    .filter((entry): entry is FurtherReadingEntry => entry != null);
+}
+
 /** No assigned readings and no class description. */
 export function isEmptyClassGroup(group: SyllabusClassGroup): boolean {
   const description = (group.syllabusMetadata?.description || "").trim();
@@ -32,7 +72,7 @@ export function useSyllabusClassGroups(
   itemOrderVersion: number,
 ) {
   return useMemo(() => {
-    const furtherReading: Zotero.Item[] = [];
+    const furtherReading: FurtherReadingEntry[] = [];
     // Track items with their specific assignments to support multiple assignments per class
     const itemsByClass: Map<
       number | null,
@@ -44,38 +84,28 @@ export function useSyllabusClassGroups(
       if (!item.isRegularItem()) continue;
       const assignments = __item.assignments;
 
-      // If no assignments or all assignments are empty, add to further reading
+      // If no assignments or all assignments are classless, add to further reading
       if (
         assignments.length === 0 ||
-        assignments.every((a) => {
-          const resolvedClassNumber =
-            SyllabusManager.getClassNumber(collectionId, a.classId) ??
-            a.classNumber;
-          return (
-            !a.priority &&
-            !a.classInstruction &&
-            resolvedClassNumber === undefined
-          );
-        })
+        assignments.every((a) => isClasslessAssignment(a, collectionId))
       ) {
-        furtherReading.push(item);
+        furtherReading.push({
+          item,
+          assignment: pickFurtherReadingAssignment(assignments, collectionId),
+        });
         continue;
       }
 
       // Add item with each assignment to each class it's assigned to (supporting repeat inclusions)
       for (const assignment of assignments) {
-        // Skip empty assignments
-        const resolvedClassNumber =
-          SyllabusManager.getClassNumber(collectionId, assignment.classId) ??
-          assignment.classNumber;
-        if (
-          !assignment.priority &&
-          !assignment.classInstruction &&
-          resolvedClassNumber === undefined
-        ) {
+        // Skip classless assignments (status-only rows stay off class lists)
+        if (isClasslessAssignment(assignment, collectionId)) {
           continue;
         }
 
+        const resolvedClassNumber =
+          SyllabusManager.getClassNumber(collectionId, assignment.classId) ??
+          assignment.classNumber;
         const normalizedClassNumber =
           resolvedClassNumber === undefined ? null : resolvedClassNumber;
         if (!itemsByClass.has(normalizedClassNumber)) {
@@ -135,7 +165,7 @@ export function useSyllabusClassGroups(
           itemAssignments: itemsByClass.get(classNumber) || [],
         }),
       ),
-      furtherReadingItems: sortItemsByTitle(furtherReading),
+      furtherReadingItems: sortFurtherReadingEntries(furtherReading),
     };
   }, [syllabusItems, collectionId, syllabusMetadata, itemOrderVersion]);
 }

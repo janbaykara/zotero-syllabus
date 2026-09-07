@@ -260,7 +260,7 @@ export function GalleryPage({
       desks.push({
         id: "further-reading",
         title: getString("further-reading-heading"),
-        itemIds: furtherReadingItems.map((item) => item.id),
+        itemIds: furtherReadingItems.map((entry) => entry.item.id),
       });
     }
     return desks;
@@ -1010,7 +1010,10 @@ export function GalleryPage({
                       <p className="syllabus-gallery-class-description">
                         {getString("further-reading-empty-desc")}
                       </p>
-                      {renderItems(furtherReadingItems, "further-reading")}
+                      {renderItems(
+                        furtherReadingItems.map((entry) => entry.item),
+                        "further-reading",
+                      )}
                     </section>
                   )}
                 </>

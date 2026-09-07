@@ -483,15 +483,14 @@ export function SyllabusItemCard({
     e: JSX.TargetedEvent<HTMLInputElement>,
   ) => {
     e.stopPropagation();
-    if (!assignment?.id) return;
 
     try {
       const newStatus = assignmentStatus === "done" ? null : "done";
-      await SyllabusManager.updateClassAssignment(
+      await SyllabusManager.setReadingStatus(
         item,
         collectionId,
-        assignment.id,
-        { status: newStatus },
+        assignment?.id,
+        newStatus,
         "page",
       );
       await item.saveTx();

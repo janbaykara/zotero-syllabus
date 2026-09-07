@@ -63,6 +63,7 @@ import {
   serializeSyllabusForPrint,
 } from "../utils/printSyllabus";
 import { isEmptyClassGroup, useSyllabusClassGroups } from "./classGroups";
+import type { FurtherReadingEntry } from "./classGroups";
 import { ClassSubcollectionPage } from "./ClassReadingBlock";
 import { getClassSubcollectionContext } from "./syllabusNote";
 import { ReadingSchedule } from "./ReadingSchedule";
@@ -129,7 +130,7 @@ function getNavigableSyllabusEntries(
       assignment: ItemSyllabusAssignment;
     }>;
   }>,
-  furtherReadingItems: Zotero.Item[],
+  furtherReadingItems: FurtherReadingEntry[],
 ): SyllabusNavEntry[] {
   const entries: SyllabusNavEntry[] = [];
 
@@ -148,10 +149,10 @@ function getNavigableSyllabusEntries(
     }
   }
 
-  furtherReadingItems.forEach((item, index) => {
+  furtherReadingItems.forEach((entry, index) => {
     entries.push({
-      identifier: `item:${item.id}`,
-      item,
+      identifier: `item:${entry.item.id}`,
+      item: entry.item,
       isFirstInGroup: index === 0,
     });
   });
@@ -830,10 +831,17 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     [classGroups, isLocked, isFiltered],
   );
 
-  const furtherReadingItems = useMemo(
-    () => sortItems(unsortedFurtherReading, furtherReadingSortBy),
-    [unsortedFurtherReading, furtherReadingSortBy],
-  );
+  const furtherReadingItems = useMemo(() => {
+    const byId = new Map(
+      unsortedFurtherReading.map((entry) => [entry.item.id, entry]),
+    );
+    return sortItems(
+      unsortedFurtherReading.map((entry) => entry.item),
+      furtherReadingSortBy,
+    )
+      .map((item) => byId.get(item.id))
+      .filter((entry): entry is FurtherReadingEntry => entry != null);
+  }, [unsortedFurtherReading, furtherReadingSortBy]);
 
   const navigableEntries = useMemo(
     () => getNavigableSyllabusEntries(visibleClassGroups, furtherReadingItems),
@@ -2161,12 +2169,13 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                 >
-                  {furtherReadingItems.map((item: Zotero.Item) => (
+                  {furtherReadingItems.map(({ item, assignment }) => (
                     <SyllabusItemCard
                       key={item.id}
                       item={item}
                       collectionId={collectionId}
                       classNumber={undefined}
+                      assignment={assignment}
                       slim={true}
                       compactMode={compactMode}
                       readerMode={readerMode}

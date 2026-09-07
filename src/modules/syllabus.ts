@@ -1486,6 +1486,68 @@ export class SyllabusManager {
     }
   }
 
+  /**
+   * Toggle or set reading done status. For further-reading items with no
+   * assignment yet, creates a classless status-only row. Clearing done on a
+   * bare classless row removes it so the note stays clean.
+   */
+  static async setReadingStatus(
+    item: Zotero.Item,
+    collectionId: number | GetByLibraryAndKeyArgs,
+    assignmentId: string | undefined,
+    status: "done" | null,
+    source: "page" | "item-pane" | "context-menu",
+  ): Promise<void> {
+    if (assignmentId) {
+      const assignments = this.getItemSyllabusDataForCollection(
+        item,
+        collectionId,
+      );
+      const existing = assignments.find((entry) => entry.id === assignmentId);
+      if (!existing) {
+        ztoolkit.log("Warning: Assignment not found by ID:", assignmentId);
+        return;
+      }
+
+      const resolvedClassNumber =
+        this.getClassNumber(collectionId, existing.classId) ??
+        existing.classNumber;
+      const isBare =
+        !existing.priority &&
+        !existing.classInstruction &&
+        resolvedClassNumber === undefined;
+
+      if (status === null && isBare) {
+        await this.removeAssignmentById(
+          item,
+          collectionId,
+          assignmentId,
+          source,
+        );
+        return;
+      }
+
+      await this.updateClassAssignment(
+        item,
+        collectionId,
+        assignmentId,
+        { status },
+        source,
+      );
+      return;
+    }
+
+    if (status === "done") {
+      await this.addClassAssignment(
+        item,
+        collectionId,
+        undefined,
+        { status },
+        source,
+      );
+    }
+  }
+
   static setupContextMenuSetPriority() {
     ztoolkit.Menu.unregister("syllabus-set-priority-menu");
     const createPriorityHandler = (priority: string) => async () => {
@@ -2091,15 +2153,15 @@ export class SyllabusManager {
       ...this.getItemSyllabusDataForCollection(item, collectionId),
     ];
 
-    const newEntry = ItemSyllabusAssignmentEntity.safeParse({
-      classNumber,
+    const newEntry = ItemSyllabusAssignmentEntity.latestSchema.safeParse({
+      ...(typeof classNumber === "number" ? { classNumber } : {}),
       ...metadata,
     });
-    if (newEntry.type !== "ok") {
+    if (!newEntry.success) {
       ztoolkit.log("Error adding new assignment:", newEntry.error);
       return;
     }
-    assignments.push(newEntry.value);
+    assignments.push(newEntry.data);
     await this.setItemAssignments(item, collectionId, assignments, source);
   }
 

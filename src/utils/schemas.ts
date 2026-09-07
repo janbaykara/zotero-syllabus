@@ -78,6 +78,11 @@ function getAssignmentVersion(data: unknown): number | null {
   if (typeof obj.classId === "string" && obj.classId.length > 0) {
     return 3;
   }
+  // v1 has no `status`. Treat status-bearing payloads as v2 so creates that omit
+  // `id` (defaults are applied later) do not strip done/not-done.
+  if ("status" in obj) {
+    return 2;
+  }
   if (!("id" in obj) || obj.id === undefined) {
     return 1;
   }
