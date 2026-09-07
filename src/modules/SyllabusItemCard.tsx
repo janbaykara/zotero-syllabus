@@ -526,6 +526,11 @@ export function SyllabusItemCard({
       )}
       data-item-id={item.id}
       data-syllabus-identifier={identifier}
+      data-print-url={
+        /^https?:\/\//i.test(String(url).trim())
+          ? String(url).trim()
+          : undefined
+      }
       draggable={!isLocked && !showYoutubeEmbed}
       onClick={(e) => {
         if (customOnClick) {
@@ -619,7 +624,7 @@ export function SyllabusItemCard({
               <div className="syllabus-item-title-row flex flex-row gap-2 items-baseline justify-between">
                 <div
                   className={twMerge(
-                    "text-base font-medium grow wrap-break-word",
+                    "syllabus-item-title text-base font-medium grow wrap-break-word",
                     readerMode && assignmentStatus === "done"
                       ? "line-through"
                       : "",
@@ -685,6 +690,7 @@ export function SyllabusItemCard({
               <div className="syllabus-item-title-row">
                 <div
                   className={twMerge(
+                    "syllabus-item-title",
                     !slim ? "text-xl font-medium" : "text-lg font-medium",
                     readerMode && assignmentStatus === "done"
                       ? "line-through"

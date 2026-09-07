@@ -218,19 +218,17 @@ function copyFormValues(source: HTMLElement, clone: HTMLElement): void {
 function syncPrintOnlyTextFromInputs(root: ParentNode): void {
   [...root.querySelectorAll("input, textarea")].forEach((node) => {
     const el = asFormField(node);
-    if (!el) {
+    if (!el?.value) {
       return;
     }
-    const parent = el.parentElement;
-    if (!parent || !el.value) {
-      return;
+    // TextInput places its print-only mirror as the next sibling. Do not walk
+    // all print-only cousins under a shared parent (e.g. course code +
+    // institution in the masthead Fragment), or the last input overwrites every
+    // field and duplicates its value in the PDF.
+    const sibling = asElement(el.nextElementSibling);
+    if (sibling && isPrintOnly(sibling)) {
+      sibling.textContent = el.value;
     }
-    [...parent.children].forEach((node) => {
-      const child = asElement(node);
-      if (child && child !== el && isPrintOnly(child)) {
-        child.textContent = el.value;
-      }
-    });
   });
 }
 
@@ -396,11 +394,40 @@ function polishMasthead(root: ParentNode): void {
   });
 }
 
+/** Turn item titles into clickable links when the card has a web URL. */
+function linkItemTitles(root: ParentNode): void {
+  root.querySelectorAll(".syllabus-item-card[data-print-url]").forEach((card) => {
+    const href = (card.getAttribute("data-print-url") || "").trim();
+    if (!/^https?:\/\//i.test(href)) {
+      return;
+    }
+    const title = card.querySelector(".syllabus-item-title");
+    if (!title || title.querySelector("a")) {
+      return;
+    }
+    const text = (title.textContent || "").trim();
+    if (!text) {
+      return;
+    }
+    const anchor = title.ownerDocument.createElement("a");
+    anchor.setAttribute("href", href);
+    anchor.className = "syllabus-item-print-link";
+    while (title.firstChild) {
+      anchor.appendChild(title.firstChild);
+    }
+    title.appendChild(anchor);
+  });
+}
+
 function polishLinks(root: ParentNode): void {
   root.querySelectorAll("a, .underline").forEach((el) => {
+    const isItemTitleLink = classListHas(el, "syllabus-item-print-link");
     setPrintStyle(el, {
       color: "#1d4ed8",
-      "font-size": "13px",
+      "text-decoration": "underline",
+      ...(isItemTitleLink
+        ? { "font-size": "inherit", "font-weight": "inherit" }
+        : { "font-size": "13px" }),
       "overflow-wrap": "anywhere",
       "word-break": "break-word",
     });
@@ -513,6 +540,7 @@ export function serializeSyllabusForPrint(source: HTMLElement): string {
   replaceFormControlsWithText(clone);
   expandCharacterSeparators(clone);
   putTitlesBeforeBadges(clone);
+  linkItemTitles(clone);
   flattenPrintLayout(clone);
   applyInlinePrintStyles(clone);
   polishClassHeadings(clone);
