@@ -113,6 +113,11 @@
   box-sizing: border-box !important;
 }
 
+/* Class-level dimming already applies; don't stack item opacity on top. */
+.opacity-40 .syllabus-item-card.opacity-40 {
+  opacity: 1;
+}
+
 .syllabus-gallery-sticky {
   padding-bottom: 0.5rem;
 }

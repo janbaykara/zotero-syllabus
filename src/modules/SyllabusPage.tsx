@@ -2278,28 +2278,36 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   )}
                 >
                   {getString("further-reading-heading")}
-                  <label className="ml-auto shrink-0 inline-flex items-center gap-1.5 in-[.print]:hidden font-normal text-sm text-secondary">
-                    <ArrowUpDown size={12} strokeWidth={2} aria-hidden="true" />
-                    <span>{getString("sort-label")}</span>
-                    <select
-                      value={furtherReadingSortBy}
-                      onChange={(e) =>
-                        setFurtherReadingSortBy(
-                          e.currentTarget.value as FurtherReadingSortBy,
-                        )
-                      }
-                      aria-label={getString("further-reading-sort-aria")}
-                      className="text-sm text-primary bg-background border border-quinary rounded px-1.5 py-0.5 cursor-pointer"
-                    >
-                      <option value="title">
-                        {getString("sort-by-title")}
-                      </option>
-                      <option value="creator">
-                        {getString("sort-by-creator")}
-                      </option>
-                      <option value="date">{getString("sort-by-date")}</option>
-                    </select>
-                  </label>
+                  {!isLocked && (
+                    <label className="ml-auto shrink-0 inline-flex items-center gap-1.5 in-[.print]:hidden font-normal text-sm text-secondary">
+                      <ArrowUpDown
+                        size={12}
+                        strokeWidth={2}
+                        aria-hidden="true"
+                      />
+                      <span>{getString("sort-label")}</span>
+                      <select
+                        value={furtherReadingSortBy}
+                        onChange={(e) =>
+                          setFurtherReadingSortBy(
+                            e.currentTarget.value as FurtherReadingSortBy,
+                          )
+                        }
+                        aria-label={getString("further-reading-sort-aria")}
+                        className="text-sm text-primary bg-background border border-quinary rounded px-1.5 py-0.5 cursor-pointer"
+                      >
+                        <option value="title">
+                          {getString("sort-by-title")}
+                        </option>
+                        <option value="creator">
+                          {getString("sort-by-creator")}
+                        </option>
+                        <option value="date">
+                          {getString("sort-by-date")}
+                        </option>
+                      </select>
+                    </label>
+                  )}
                 </div>
                 {density === "expanded" && (
                   <p className="text-secondary text-lg">

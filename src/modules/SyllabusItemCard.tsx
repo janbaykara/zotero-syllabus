@@ -534,7 +534,7 @@ export function SyllabusItemCard({
           "not-in-[.print]:outline-2! not-in-[.print]:outline-accent-blue",
         isIdentifierSelected && "not-in-[.print]:bg-accent-blue! scheme-dark",
         // isZoteroSelected && isIdentifierSelected && "outline-none!",
-        // assignmentStatus === "done" ? "opacity-40" : "",
+        readerMode && assignmentStatus === "done" ? "opacity-40" : "",
         className,
       )}
       data-item-id={item.id}
