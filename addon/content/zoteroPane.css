@@ -1905,6 +1905,32 @@
     color-mix(in srgb, var(--fill-primary, #111) 18%, transparent);
 }
 
+.syllabus-save-format-popover {
+  min-width: 10.5rem;
+  padding: 0.35rem 0;
+}
+
+.syllabus-save-format-option {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0.4rem 0.9rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+  line-height: 1.3;
+  text-align: start;
+  cursor: pointer;
+}
+
+.syllabus-save-format-option:hover,
+.syllabus-save-format-option:focus-visible {
+  background: color-mix(in srgb, var(--fill-primary, #111) 8%, transparent);
+  outline: none;
+}
+
 .syllabus-explorer-configure-heading {
   padding: 0.15rem 0.9rem 0.45rem;
   color: var(--fill-secondary, inherit);

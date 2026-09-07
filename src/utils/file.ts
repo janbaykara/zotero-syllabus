@@ -74,6 +74,55 @@ export async function pickSavePath(
   return filePath;
 }
 
+async function writeTextAtPath(
+  filePath: string,
+  textContent: string,
+  reveal: boolean,
+): Promise<boolean> {
+  ztoolkit.log(`Saving to path: ${filePath}`);
+  const fileObj = Zotero.File.pathToFile(filePath);
+  await Zotero.File.putContentsAsync(fileObj, textContent, "utf-8");
+
+  if (fileObj.exists()) {
+    ztoolkit.log(`File saved successfully to: ${filePath}`);
+    if (reveal) {
+      fileObj.reveal();
+    }
+    return true;
+  }
+
+  ztoolkit.log(`Warning: File may not have been created at: ${filePath}`);
+  return false;
+}
+
+async function writeBytesAtPath(
+  filePath: string,
+  data: Uint8Array,
+  reveal: boolean,
+): Promise<boolean> {
+  ztoolkit.log(`Saving binary to path: ${filePath}`);
+  if (typeof IOUtils !== "undefined" && typeof IOUtils.write === "function") {
+    await IOUtils.write(filePath, data);
+  } else {
+    const fileObj = Zotero.File.pathToFile(filePath);
+    const copy = new Uint8Array(data.byteLength);
+    copy.set(data);
+    await Zotero.File.putContentsAsync(fileObj, copy.buffer);
+  }
+
+  const fileObj = Zotero.File.pathToFile(filePath);
+  if (fileObj.exists()) {
+    ztoolkit.log(`File saved successfully to: ${filePath}`);
+    if (reveal) {
+      fileObj.reveal();
+    }
+    return true;
+  }
+
+  ztoolkit.log(`Warning: File may not have been created at: ${filePath}`);
+  return false;
+}
+
 /**
  * Opens a file picker dialog to let the user select where to save a file,
  * then saves the provided text content to that location.
@@ -82,6 +131,8 @@ export async function pickSavePath(
  * @param filename - The default filename to suggest (e.g., "my-file.txt")
  * @param textContent - The text content to write to the file
  * @param dialogTitle - Optional title for the file picker dialog
+ * @param reveal - Whether to reveal the file in the OS after saving
+ * @param filters - Optional file-type filters for the picker
  * @returns Promise that resolves to true if file was saved, false if user cancelled
  * @throws Error if file saving fails
  */
@@ -90,57 +141,38 @@ export async function saveToFile(
   textContent: string,
   dialogTitle?: string,
   reveal: boolean = true,
+  filters?: [string, string][],
 ): Promise<boolean> {
-  const title = dialogTitle ?? defaultSaveFileTitle();
-  if (!isZotero8OrLater()) {
-    // Zotero 7 doesn't support the modern file picker path used below
-    const tempDir = Zotero.getTempDirectory();
-    const tempFile = tempDir.clone();
-    tempFile.append(filename);
-    // NORMAL_FILE_TYPE = 0
-    tempFile.createUnique(0, 0o666);
-
-    const fileObj = Zotero.File.pathToFile(tempFile.path);
-    await Zotero.File.putContentsAsync(fileObj, textContent, "utf-8");
-
-    fileObj.reveal();
-    return true;
-  }
-
   try {
-    const defaultPath = getDefaultDownloadPath();
-    const filePath = await new FilePickerHelper(
-      title,
-      "save",
-      undefined,
-      filename,
-      Zotero.getMainWindow(),
-      "all",
-      defaultPath ?? undefined,
-    ).open();
-
-    if (!filePath || typeof filePath !== "string") {
-      ztoolkit.log("File save cancelled by user");
+    const filePath = await pickSavePath(filename, dialogTitle, filters);
+    if (!filePath) {
       return false;
     }
-
-    ztoolkit.log(`Saving to path: ${filePath}`);
-
-    const fileObj = Zotero.File.pathToFile(filePath);
-    await Zotero.File.putContentsAsync(fileObj, textContent, "utf-8");
-
-    if (fileObj.exists()) {
-      ztoolkit.log(`File saved successfully to: ${filePath}`);
-      if (reveal) {
-        fileObj.reveal();
-      }
-      return true;
-    }
-
-    ztoolkit.log(`Warning: File may not have been created at: ${filePath}`);
-    return false;
+    return await writeTextAtPath(filePath, textContent, reveal);
   } catch (err) {
     ztoolkit.log("Error saving file:", err);
+    throw err;
+  }
+}
+
+/**
+ * Opens a save picker, then writes binary bytes (e.g. a .docx) to the chosen path.
+ */
+export async function saveBinaryToFile(
+  filename: string,
+  data: Uint8Array,
+  dialogTitle?: string,
+  filters?: [string, string][],
+  reveal: boolean = true,
+): Promise<boolean> {
+  try {
+    const filePath = await pickSavePath(filename, dialogTitle, filters);
+    if (!filePath) {
+      return false;
+    }
+    return await writeBytesAtPath(filePath, data, reveal);
+  } catch (err) {
+    ztoolkit.log("Error saving binary file:", err);
     throw err;
   }
 }

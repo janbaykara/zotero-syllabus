@@ -4,29 +4,42 @@ import { serializeSyllabusForPrint } from "../src/utils/printSyllabus";
 describe("serializeSyllabusForPrint", function () {
   it("keeps distinct course code and institution in the masthead", function () {
     const root = document.createElement("div");
-    root.innerHTML = `
-      <div class="syllabus-masthead-meta">
-        <input class="in-[.print]:hidden" value="EDU101" />
-        <div class="hidden in-[.print]:block">stale-code</div>
-        <input class="in-[.print]:hidden" value="Test University" />
-        <div class="hidden in-[.print]:block">stale-institution</div>
-      </div>
-    `;
-    // cloneNode does not copy live input values unless set as attributes;
-    // mirror TextInput by ensuring both .value and the value attribute exist.
-    const inputs = root.querySelectorAll("input");
-    inputs[0].value = "EDU101";
-    inputs[0].setAttribute("value", "EDU101");
-    inputs[1].value = "Test University";
-    inputs[1].setAttribute("value", "Test University");
+    const masthead = document.createElement("div");
+    masthead.className = "syllabus-masthead-meta";
+
+    const codeInput = document.createElement("input");
+    codeInput.className = "in-[.print]:hidden";
+    codeInput.value = "EDU101";
+    codeInput.setAttribute("value", "EDU101");
+
+    const codeMirror = document.createElement("div");
+    codeMirror.className = "hidden in-[.print]:block";
+    codeMirror.textContent = "stale-code";
+
+    const institutionInput = document.createElement("input");
+    institutionInput.className = "in-[.print]:hidden";
+    institutionInput.value = "Test University";
+    institutionInput.setAttribute("value", "Test University");
+
+    const institutionMirror = document.createElement("div");
+    institutionMirror.className = "hidden in-[.print]:block";
+    institutionMirror.textContent = "stale-institution";
+
+    masthead.append(
+      codeInput,
+      codeMirror,
+      institutionInput,
+      institutionMirror,
+    );
+    root.append(masthead);
 
     const html = serializeSyllabusForPrint(root);
     const out = document.createElement("div");
     out.innerHTML = html;
-    const masthead = out.querySelector(".syllabus-masthead-meta");
-    assert.ok(masthead);
+    const outMasthead = out.querySelector(".syllabus-masthead-meta");
+    assert.ok(outMasthead);
     assert.equal(
-      masthead!.textContent?.replace(/\s+/g, " ").trim(),
+      outMasthead!.textContent?.replace(/\s+/g, " ").trim(),
       "EDU101 · Test University",
     );
   });

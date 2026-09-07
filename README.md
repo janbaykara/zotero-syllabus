@@ -178,7 +178,7 @@ Example lists were last checked in August 2026 — institutions can unpublish th
 ### Other features
 
 - **Assign an item multiple times** within a syllabus. Useful for breaking down larger readings into smaller chunks.
-- **Print to PDF** — the printer icon asks where to save a PDF of the syllabus, including a bibliography.
+- **Save as PDF, Word, Markdown, or HTML** — the printer icon opens a format menu, then asks where to save the syllabus (including a bibliography).
 - **Zotero Reading List compatibility**: if you have the [Zotero Reading List](https://github.com/Dominic-DallOsto/zotero-reading-list) plugin installed, reading status will be displayed in the syllabus view
 - **Customizable priorities** — Define your own priority levels with custom names and colors, or use the defaults (Essential, Recommended, Optional, Course Information).
 - **Customizable nomenclature** — Change the terminology used throughout (e.g., "week", "class", "session", "section") with automatic pluralization.

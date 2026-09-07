@@ -59,9 +59,13 @@ import { TableOfContents } from "./TableOfContents";
 import { saveToFile } from "../utils/file";
 import {
   buildPrintableHtml,
-  openSyllabusPrintDialog,
   serializeSyllabusForPrint,
 } from "../utils/printSyllabus";
+import {
+  saveSyllabusExport,
+  saveSyllabusPdf,
+  type SyllabusExportFormat,
+} from "../utils/exportSyllabus";
 import { isEmptyClassGroup, useSyllabusClassGroups } from "./classGroups";
 import type { FurtherReadingEntry } from "./classGroups";
 import { ClassSubcollectionPage } from "./ClassReadingBlock";
@@ -279,6 +283,127 @@ async function importSyllabusMetadataFromFile(
       .show();
     ztoolkit.log("Import processing error:", error);
   }
+}
+
+function useSaveFormatPopover(
+  open: boolean,
+  setOpen: (open: boolean) => void,
+  rootRef: { current: HTMLDivElement | null },
+): JSX.CSSProperties {
+  const [popoverStyle, setPopoverStyle] = useState<JSX.CSSProperties>({});
+  const setOpenRef = useRef(setOpen);
+  setOpenRef.current = setOpen;
+
+  useLayoutEffect(() => {
+    if (!open) {
+      return;
+    }
+    const doc = rootRef.current?.ownerDocument || document;
+    const updatePosition = () => {
+      const el = rootRef.current;
+      if (!el) {
+        return;
+      }
+      const rect = el.getBoundingClientRect();
+      const view = doc.documentElement;
+      setPopoverStyle(
+        getUiDir() === "rtl"
+          ? { top: rect.bottom + 6, left: rect.left }
+          : { top: rect.bottom + 6, right: view.clientWidth - rect.right },
+      );
+    };
+    updatePosition();
+    const onPointerDown = (event: PointerEvent) => {
+      if (rootRef.current?.contains(event.target as Node)) {
+        return;
+      }
+      setOpenRef.current(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpenRef.current(false);
+      }
+    };
+    const win = doc.defaultView;
+    win?.addEventListener("resize", updatePosition);
+    doc.addEventListener("pointerdown", onPointerDown, true);
+    doc.addEventListener("keydown", onKeyDown);
+    return () => {
+      win?.removeEventListener("resize", updatePosition);
+      doc.removeEventListener("pointerdown", onPointerDown, true);
+      doc.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, rootRef]);
+
+  return popoverStyle;
+}
+
+const SAVE_FORMAT_OPTIONS: {
+  format: SyllabusExportFormat;
+  labelKey:
+    | "page-save-pdf"
+    | "page-save-word"
+    | "page-save-markdown"
+    | "page-save-html";
+}[] = [
+  { format: "pdf", labelKey: "page-save-pdf" },
+  { format: "docx", labelKey: "page-save-word" },
+  { format: "markdown", labelKey: "page-save-markdown" },
+  { format: "html", labelKey: "page-save-html" },
+];
+
+function SyllabusSaveFormatMenu({
+  onSelect,
+}: {
+  onSelect: (format: SyllabusExportFormat) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const popoverStyle = useSaveFormatPopover(open, setOpen, rootRef);
+
+  return (
+    <div className="syllabus-save-format relative grow-0 shrink-0" ref={rootRef}>
+      <div
+        className="flex items-center in-[.print]:hidden cursor-pointer"
+        title={getString("page-print")}
+        aria-label={getString("page-print")}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Printer
+          size={20}
+          className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+        />
+      </div>
+      {open ? (
+        <div
+          className="syllabus-explorer-configure-popover syllabus-save-format-popover"
+          role="menu"
+          aria-label={getString("page-print")}
+          style={popoverStyle}
+        >
+          <ul className="syllabus-explorer-configure-list">
+            {SAVE_FORMAT_OPTIONS.map(({ format, labelKey }) => (
+              <li key={format}>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="syllabus-save-format-option"
+                  onClick={() => {
+                    setOpen(false);
+                    onSelect(format);
+                  }}
+                >
+                  {getString(labelKey)}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
@@ -1578,7 +1703,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     await importSyllabusMetadataFromFile(collectionId, selectedFile);
   };
 
-  const handlePrint = async () => {
+  const handleExportFormat = async (format: SyllabusExportFormat) => {
     const syllabusPageElement = syllabusPageRef.current;
     if (!syllabusPageElement) {
       ztoolkit.log("Syllabus page element not found");
@@ -1601,7 +1726,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         syllabusMetadata.cslStyle || null,
       );
       ztoolkit.log(
-        "Print bibliography:",
+        "Export bibliography:",
         bibliography
           ? `${bibliography.isHtml ? "html" : "text"} ${bibliography.content.length} chars from ${items.length} items`
           : `none (${items.length} items)`,
@@ -1615,28 +1740,51 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         : "";
       const innerHTML = serializeSyllabusForPrint(syllabusPageElement);
       ztoolkit.log(
-        "Print clone",
+        "Export clone",
         syllabusPageElement.querySelectorAll(".syllabus-class-group").length,
         "class groups,",
         innerHTML.length,
         "chars",
       );
+      const exportTitle = title || "Syllabus";
       const htmlContent = await buildPrintableHtml({
-        title: title || "Syllabus",
+        title: exportTitle,
         innerHTML,
         bibliographyHtml,
       });
-      const filename = `syllabus-${
-        slugify(title || "syllabus", {
+      const slug =
+        slugify(exportTitle, {
           lower: true,
           strict: true,
-        }) || "syllabus"
-      }.pdf`;
-      await openSyllabusPrintDialog(htmlContent, filename, () =>
-        progress.close(),
-      );
+        }) || "syllabus";
+      const extension =
+        format === "pdf"
+          ? "pdf"
+          : format === "docx"
+            ? "docx"
+            : format === "markdown"
+              ? "md"
+              : "html";
+      const filename = `syllabus-${slug}.${extension}`;
+
+      if (format === "pdf") {
+        await saveSyllabusPdf({
+          htmlContent,
+          filename,
+          onReady: () => progress.close(),
+        });
+        return;
+      }
+
+      progress.close();
+      await saveSyllabusExport({
+        format,
+        title: exportTitle,
+        htmlContent,
+        filename,
+      });
     } catch (err) {
-      ztoolkit.log("Error printing syllabus:", err);
+      ztoolkit.log("Error exporting syllabus:", err);
       progress.close();
       new ztoolkit.ProgressWindow(getString("app-name"), {
         closeOnClick: true,
@@ -1921,17 +2069,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                       />
                     )}
                   </div>
-                  <div
-                    className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                    title={getString("page-print")}
-                    aria-label={getString("page-print")}
-                    onClick={handlePrint}
-                  >
-                    <Printer
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  </div>
+                  <SyllabusSaveFormatMenu onSelect={handleExportFormat} />
                 </div>
               </div>
             </div>
@@ -1964,17 +2102,18 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   readOnly={isLocked}
                 />
               </div>
-              <TextInput
-                elementType="textarea"
-                initialValue={syllabusMetadata.description || ""}
-                onSave={setDescription}
-                syllabus-collection-description
-                className="w-full px-0! mx-0! text-primary"
-                placeholder={getString("placeholder-add-description")}
-                emptyBehavior="delete"
-                fieldSizing="content"
-                readOnly={isLocked}
-              />
+              <div className="syllabus-collection-description">
+                <TextInput
+                  elementType="textarea"
+                  initialValue={syllabusMetadata.description || ""}
+                  onSave={setDescription}
+                  className="w-full px-0! mx-0! text-primary"
+                  placeholder={getString("placeholder-add-description")}
+                  emptyBehavior="delete"
+                  fieldSizing="content"
+                  readOnly={isLocked}
+                />
+              </div>
             </div>
           </div>
 
