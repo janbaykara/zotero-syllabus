@@ -288,7 +288,8 @@ const myAnnotationsTabManager = new TabManager<{ libraryID: number }>({
   type: "my-annotations",
   title: () => getString("view-tab-my-annotations"),
   rootElementIdFactory: (p) => `my-annotations-tab-root-${p?.libraryID ?? 0}`,
-  data: () => ({}),
+  // Reader sidebar Annotations stack (same asset as item-pane attachment-annotations).
+  data: () => ({ icon: "attachment-annotations" }),
   componentFactory: (p) => h(MyAnnotationsPage, { libraryID: p!.libraryID }),
   getTabId: (p) => `syllabus-my-annotations-tab-${p?.libraryID ?? 0}`,
 });
@@ -430,10 +431,12 @@ export class SyllabusManager {
     this.setupSyllabusViewReloadListener();
     applyManagedCollectionTree(win);
     this.syncReadingScheduleTabIcon(win);
+    this.syncMyAnnotationsTabIcon(win);
     void whenSyllabusNotesReady().then(() => {
       applyManagedCollectionTree(win);
       refreshManagedCollectionTrees();
       this.syncReadingScheduleTabIcon(win);
+      this.syncMyAnnotationsTabIcon(win);
       this.setupToggleButton();
     });
 
@@ -442,6 +445,7 @@ export class SyllabusManager {
     Zotero.Promise.delay(100).then(() => {
       applyManagedCollectionTree(win);
       this.syncReadingScheduleTabIcon(win);
+      this.syncMyAnnotationsTabIcon(win);
       if (this.readingScheduleTab) {
         ztoolkit.log(
           "SyllabusManager.onMainWindowLoad: rerendering reading schedule tab",
@@ -453,6 +457,31 @@ export class SyllabusManager {
       );
       this.myAnnotationsTab.renderAllTabs(win);
     });
+  }
+
+  /** Use Zotero's reader/item-pane annotations stack for My Annotations tabs. */
+  static syncMyAnnotationsTabIcon(win: _ZoteroTypes.MainWindow): void {
+    try {
+      const tabs = win.Zotero_Tabs;
+      let changed = false;
+      for (const tab of tabs._tabs) {
+        if (
+          tab.type === "my-annotations" &&
+          tab.data?.icon !== "attachment-annotations"
+        ) {
+          tab.data = {
+            ...tab.data,
+            icon: "attachment-annotations",
+          };
+          changed = true;
+        }
+      }
+      if (changed) {
+        tabs._update();
+      }
+    } catch (error) {
+      ztoolkit.log("Error updating My Annotations tab icon:", error);
+    }
   }
 
   static syncReadingScheduleTabIcon(win: _ZoteroTypes.MainWindow): void {
@@ -3022,6 +3051,7 @@ export class SyllabusManager {
   static openMyAnnotationsTab(libraryID: number) {
     const win = Zotero.getMainWindow();
     this.myAnnotationsTab.open(win, { libraryID });
+    this.syncMyAnnotationsTabIcon(win);
   }
 
   /**

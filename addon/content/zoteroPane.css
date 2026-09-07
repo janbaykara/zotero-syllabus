@@ -1728,6 +1728,16 @@
   -moz-context-properties: fill, fill-opacity;
 }
 
+/* My Annotations: Zotero reader sidebar Annotations stack (attachment-annotations). */
+#tab-bar-container
+  .tab[data-id^="syllabus-my-annotations-tab-"]
+  .icon-item-type[data-item-type="attachment-annotations"] {
+  background: url("chrome://zotero/skin/16/universal/attachment-annotations.svg")
+    no-repeat center / contain !important;
+  fill: var(--fill-secondary);
+  -moz-context-properties: fill, fill-opacity;
+}
+
 :root.syllabus-custom-icons
   #zotero-collections-tree
   .row.selected
