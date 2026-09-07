@@ -6,7 +6,7 @@ type PluginPrefsMap = _ZoteroTypes.Prefs["PluginPrefsMap"];
 export const PREFS_KEYS: (keyof PluginPrefsMap)[] = [
   "enable",
   "showBibliography",
-  "compactMode",
+  "itemDensity",
   "readerMode",
   "shouldColourSyllabusRows",
   "debugMode",

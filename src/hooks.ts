@@ -15,6 +15,7 @@ import { zoteroCache } from "./utils/cache";
 import { FEATURE_FLAG } from "./modules/featureFlags";
 import { stashReadingListFile } from "./modules/readingListFileStash";
 import { registerUserGuideHelpMenu, showUserGuide } from "./modules/userGuide";
+import { migrateCompactModeToItemDensity } from "./modules/react-zotero-sync/itemDensity";
 
 async function onStartup(rootURI: string) {
   await Promise.all([
@@ -27,6 +28,8 @@ async function onStartup(rootURI: string) {
 
   // Initialize cache system
   zoteroCache.initialize();
+
+  migrateCompactModeToItemDensity();
 
   // Install reading-list translators (Talis, Leganto, KeyLinks, eReserve, BLUEcloud)
   SyllabusManager.onStartup(rootURI);

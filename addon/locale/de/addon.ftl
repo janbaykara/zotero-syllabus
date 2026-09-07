@@ -135,8 +135,10 @@ status-not-done = Nicht erledigt
 # Syllabus page
 page-toc-title = Inhaltsverzeichnis
 placeholder-add-title = Titel hinzufügen…
-page-compact-enable = Kompaktmodus aktivieren
-page-compact-disable = Kompaktmodus deaktivieren
+page-density-cycle = Wechseln zu { $next }
+page-density-row = Zeile
+page-density-standard = Standard
+page-density-expanded = Erweitert
 page-reader-enable = Lesemodus aktivieren
 page-reader-disable = Lesemodus deaktivieren
 page-export = Lehrplan-Datei exportieren

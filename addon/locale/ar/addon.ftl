@@ -135,8 +135,10 @@ status-not-done = غير مكتمل
 # Syllabus page
 page-toc-title = جدول المحتويات
 placeholder-add-title = أضف عنوانًا…
-page-compact-enable = تمكين الوضع المضغوط
-page-compact-disable = تعطيل الوضع المضغوط
+page-density-cycle = التبديل إلى { $next }
+page-density-row = صف
+page-density-standard = قياسي
+page-density-expanded = موسّع
 page-reader-enable = تمكين وضع القراءة
 page-reader-disable = تعطيل وضع القراءة
 page-export = تصدير ملف المنهاج

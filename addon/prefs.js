@@ -1,6 +1,6 @@
 pref("enable", true);
 pref("showBibliography", false);
-pref("compactMode", false);
+pref("itemDensity", "expanded");
 pref("readerMode", false);
 pref("shouldColourSyllabusRows", false);
 pref("debugMode", false);

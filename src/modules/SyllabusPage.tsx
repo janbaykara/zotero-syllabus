@@ -30,7 +30,11 @@ import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata"
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
 import { useZoteroItemsViewRegularItemIds } from "./react-zotero-sync/itemsViewItems";
 import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
-import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
+import {
+  nextItemDensity,
+  useZoteroItemDensity,
+} from "./react-zotero-sync/itemDensity";
+import { densityCycleTitle } from "./browsePage";
 import { useZoteroReaderMode } from "./react-zotero-sync/readerMode";
 import { isZotero8OrLater } from "../utils/zotero";
 import { getItemTitle, sortItems } from "../utils/items";
@@ -48,8 +52,9 @@ import {
   Lock,
   Unlock,
   Maximize2,
-  Minimize2,
   List,
+  Rows2,
+  Rows3,
   Download,
   Upload,
   Menu,
@@ -474,8 +479,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   // Track item order changes to trigger re-computation
   const [itemOrderVersion, setItemOrderVersion] = useState(0);
 
-  // Compact mode state - reactive to preference changes
-  const [compactMode, setCompactMode] = useZoteroCompactMode();
+  // Item density — reactive to preference changes
+  const [density, , cycleDensity] = useZoteroItemDensity();
 
   // Reader mode state - reactive to preference changes
   const [readerMode, setReaderMode] = useZoteroReaderMode();
@@ -884,10 +889,10 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   // Ref for hidden file input for import
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const toggleCompactMode = () => {
-    const nextMode = !compactMode;
-    ztoolkit.log("toggleCompactMode", { compactMode, nextMode });
-    setCompactMode(nextMode);
+  const toggleDensity = () => {
+    const next = nextItemDensity(density);
+    ztoolkit.log("toggleDensity", { density, next });
+    cycleDensity();
   };
 
   const toggleReaderMode = () => {
@@ -1734,11 +1739,11 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       const bibliographyHtml = bibliography
         ? bibliographyToHtml(
             bibliography.content,
-            compactMode,
+            density,
             bibliography.isHtml,
           )
         : "";
-      const innerHTML = serializeSyllabusForPrint(syllabusPageElement);
+      const innerHTML = serializeSyllabusForPrint(syllabusPageElement, density);
       ztoolkit.log(
         "Export clone",
         syllabusPageElement.querySelectorAll(".syllabus-class-group").length,
@@ -1751,6 +1756,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         title: exportTitle,
         innerHTML,
         bibliographyHtml,
+        density,
       });
       const slug =
         slugify(exportTitle, {
@@ -1882,9 +1888,10 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         tabIndex={-1}
         className={twMerge(
           "syllabus-page overflow-y-auto overflow-x-hidden h-full in-[.print]:scheme-light relative focus:outline-none",
-          compactMode && "compact-mode",
+          `density-${density}`,
           fileDrop.isDraggingFile && "file-drag-over",
         )}
+        data-item-density={density}
         dir={getUiDir()}
         onKeyDown={handleSyllabusKeyDown}
         onDragEnter={fileDrop.onDragEnter}
@@ -1955,25 +1962,22 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                     <>
                       <div
                         className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                        title={
-                          compactMode
-                            ? getString("page-compact-disable")
-                            : getString("page-compact-enable")
-                        }
-                        aria-label={
-                          compactMode
-                            ? getString("page-compact-disable")
-                            : getString("page-compact-enable")
-                        }
-                        onClick={toggleCompactMode}
+                        title={densityCycleTitle(density)}
+                        aria-label={densityCycleTitle(density)}
+                        onClick={toggleDensity}
                       >
-                        {compactMode ? (
-                          <Maximize2
+                        {density === "row" ? (
+                          <Rows3
+                            size={20}
+                            className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                          />
+                        ) : density === "standard" ? (
+                          <Rows2
                             size={20}
                             className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
                           />
                         ) : (
-                          <Minimize2
+                          <Maximize2
                             size={20}
                             className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
                           />
@@ -2079,7 +2083,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
             <div
               className={twMerge(
                 "py-2 space-y-2",
-                compactMode ? "text-base" : "text-lg",
+                density !== "expanded" ? "text-base" : "text-lg",
               )}
             >
               <div className="syllabus-masthead-meta flex flex-0! flex-row gap-2 items-center">
@@ -2121,13 +2125,13 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
             links={syllabusMetadata.links || []}
             setLinks={setLinks}
             isLocked={isLocked}
-            compactMode={compactMode}
+            density={density}
           />
 
           <div
             className={twMerge(
               "syllabus-class-groups flex flex-col mb-12",
-              compactMode ? "gap-10 mt-4" : "gap-12 mt-6",
+              density !== "expanded" ? "gap-10 mt-4" : "gap-12 mt-6",
             )}
           >
             {isFiltered &&
@@ -2150,7 +2154,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
-                compactMode={compactMode}
+                density={density}
                 readerMode={readerMode}
                 isLocked={isLocked}
                 onResetSortOrder={() => setItemOrderVersion((v) => v + 1)}
@@ -2216,7 +2220,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                     </div>
                   )}
 
-                  {!isLocked && isDragging && !compactMode && (
+                  {!isLocked && isDragging && density === "expanded" && (
                     <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
                       <div className="syllabus-class-header-container">
                         <div className="syllabus-class-header">
@@ -2270,7 +2274,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                 <div
                   className={twMerge(
                     "flex flex-row items-baseline gap-2 font-semibold",
-                    compactMode ? "text-xl mt-8 mb-2" : "text-2xl mt-12 mb-4",
+                    density !== "expanded" ? "text-xl mt-8 mb-2" : "text-2xl mt-12 mb-4",
                   )}
                 >
                   {getString("further-reading-heading")}
@@ -2297,13 +2301,13 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                     </select>
                   </label>
                 </div>
-                {!compactMode && (
+                {density === "expanded" && (
                   <p className="text-secondary text-lg">
                     {getString("further-reading-empty-desc")}
                   </p>
                 )}
                 <div
-                  className={compactMode ? "space-y-2" : "space-y-4"}
+                  className={density !== "expanded" ? "space-y-2" : "space-y-4"}
                   onDrop={(e) => handleDrop(e, null)}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
@@ -2316,7 +2320,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                       classNumber={undefined}
                       assignment={assignment}
                       slim={true}
-                      compactMode={compactMode}
+                      density={density}
                       readerMode={readerMode}
                       selectedIdentifiers={selectedIdentifiers}
                       onIdentifierClick={handleIdentifierClick}

@@ -22,7 +22,7 @@ import {
   setDefaultOptions,
   startOfWeek,
 } from "date-fns";
-import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
+import { useZoteroItemDensity } from "./react-zotero-sync/itemDensity";
 import { useSyllabi } from "./react-zotero-sync/useSyllabi";
 import { getPref } from "../utils/prefs";
 import { isSameWeek } from "date-fns/fp";
@@ -40,7 +40,7 @@ setDefaultOptions({
 });
 
 export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
-  const [compactMode] = useZoteroCompactMode();
+  const [density] = useZoteroItemDensity();
   const [showSettings, setShowSettings] = useState(false);
 
   const allSyllabi = useSyllabi();
@@ -123,12 +123,12 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
             <div
               className={twMerge(
                 "font-semibold mb-2",
-                compactMode ? "text-xl" : "text-2xl",
+                density !== "expanded" ? "text-xl" : "text-2xl",
               )}
             >
               {getString("schedule-empty-title")}
             </div>
-            <p className={twMerge(compactMode ? "text-base" : "text-lg")}>
+            <p className={twMerge(density !== "expanded" ? "text-base" : "text-lg")}>
               {getString("schedule-empty-desc")}
             </p>
             {getPref("debugMode") && (
@@ -222,7 +222,7 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
                               <ClassReadingBlock
                                 key={`${classReading.collectionId}-${classReading.classNumber}`}
                                 classReading={classReading}
-                                compactMode={compactMode}
+                                density={density}
                                 showLibraryName={showLibrarySource}
                                 onCollectionClick={() =>
                                   handleCollectionClick(

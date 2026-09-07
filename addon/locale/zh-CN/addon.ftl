@@ -133,8 +133,10 @@ status-not-done = 未完成
 # Syllabus page
 page-toc-title = 目录
 placeholder-add-title = 添加标题…
-page-compact-enable = 启用紧凑模式
-page-compact-disable = 关闭紧凑模式
+page-density-cycle = 切换到{ $next }
+page-density-row = 行
+page-density-standard = 标准
+page-density-expanded = 展开
 page-reader-enable = 启用阅读模式
 page-reader-disable = 关闭阅读模式
 page-export = 导出教学大纲文件

@@ -135,8 +135,10 @@ status-not-done = Tamamlanmadı
 # Syllabus page
 page-toc-title = İçindekiler
 placeholder-add-title = Başlık ekleyin…
-page-compact-enable = Sıkışık kipi etkinleştir
-page-compact-disable = Sıkışık kipi kapat
+page-density-cycle = { $next } görünümüne geç
+page-density-row = Satır
+page-density-standard = Standart
+page-density-expanded = Genişletilmiş
 page-reader-enable = Okuyucu kipini etkinleştir
 page-reader-disable = Okuyucu kipini kapat
 page-export = İzlence dosyasını dışa aktar

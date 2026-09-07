@@ -135,8 +135,10 @@ status-not-done = 미완료
 # Syllabus page
 page-toc-title = 목차
 placeholder-add-title = 제목 추가…
-page-compact-enable = 컴팩트 모드 켜기
-page-compact-disable = 컴팩트 모드 끄기
+page-density-cycle = { $next }(으)로 전환
+page-density-row = 행
+page-density-standard = 표준
+page-density-expanded = 확장
 page-reader-enable = 리더 모드 켜기
 page-reader-disable = 리더 모드 끄기
 page-export = 강의계획서 파일 내보내기

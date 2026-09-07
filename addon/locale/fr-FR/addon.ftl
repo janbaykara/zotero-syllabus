@@ -135,8 +135,10 @@ status-not-done = Non lu
 # Syllabus page
 page-toc-title = Table des matières
 placeholder-add-title = Ajouter un titre…
-page-compact-enable = Activer le mode compact
-page-compact-disable = Désactiver le mode compact
+page-density-cycle = Passer à { $next }
+page-density-row = Ligne
+page-density-standard = Standard
+page-density-expanded = Étendu
 page-reader-enable = Activer le mode lecture
 page-reader-disable = Désactiver le mode lecture
 page-export = Exporter le fichier syllabus

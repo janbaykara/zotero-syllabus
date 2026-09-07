@@ -135,8 +135,10 @@ status-not-done = Nie ukończono
 # Syllabus page
 page-toc-title = Spis treści
 placeholder-add-title = Dodaj tytuł…
-page-compact-enable = Włącz tryb zwarty
-page-compact-disable = Wyłącz tryb zwarty
+page-density-cycle = Przełącz na { $next }
+page-density-row = Wiersz
+page-density-standard = Standardowa
+page-density-expanded = Rozszerzona
 page-reader-enable = Włącz tryb czytnika
 page-reader-disable = Wyłącz tryb czytnika
 page-export = Eksportuj plik sylabusa

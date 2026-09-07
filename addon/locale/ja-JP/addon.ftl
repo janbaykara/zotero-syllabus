@@ -135,8 +135,10 @@ status-not-done = 未完了
 # Syllabus page
 page-toc-title = 目次
 placeholder-add-title = タイトルを追加…
-page-compact-enable = コンパクトモードを有効にする
-page-compact-disable = コンパクトモードを無効にする
+page-density-cycle = { $next }に切り替え
+page-density-row = 行
+page-density-standard = 標準
+page-density-expanded = 拡大
 page-reader-enable = リーダーモードを有効にする
 page-reader-disable = リーダーモードを無効にする
 page-export = シラバスファイルを書き出す

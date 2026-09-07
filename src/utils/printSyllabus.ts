@@ -1,5 +1,9 @@
 import { pickSavePath } from "./file";
 import { getString } from "./locale";
+import {
+  coerceItemDensity,
+  type ItemDensity,
+} from "../modules/react-zotero-sync/itemDensity";
 
 type PrintBrowsingContext = {
   print: (settings: unknown) => Promise<unknown>;
@@ -79,6 +83,14 @@ const PRINT_DOCUMENT_CSS = `
   .syllabus-class-group + .syllabus-class-group {
     margin-top: 1.75rem;
   }
+  body[data-item-density="standard"] .syllabus-class-group + .syllabus-class-group,
+  .density-standard .syllabus-class-group + .syllabus-class-group {
+    margin-top: 1.1rem;
+  }
+  body[data-item-density="row"] .syllabus-class-group + .syllabus-class-group,
+  .density-row .syllabus-class-group + .syllabus-class-group {
+    margin-top: 0.75rem;
+  }
   .syllabus-class-header {
     text-transform: uppercase;
     font-weight: 600;
@@ -99,10 +111,29 @@ const PRINT_DOCUMENT_CSS = `
     border-radius: 0.5rem;
     margin: 0.45rem 0;
   }
+  body[data-item-density="standard"] .syllabus-item-card,
+  .density-standard .syllabus-item-card {
+    padding: 0.4rem 0.65rem;
+    margin: 0.25rem 0;
+    border-radius: 0.35rem;
+  }
+  body[data-item-density="row"] .syllabus-item-card,
+  .density-row .syllabus-item-card {
+    background: transparent;
+    padding: 0.1rem 0;
+    margin: 0.05rem 0;
+    border-radius: 0;
+  }
   .syllabus-item-title-row {
     font-weight: 500;
     font-size: 1.05rem;
     margin-bottom: 0.15rem;
+  }
+  body[data-item-density="row"] .syllabus-item-title-row,
+  .density-row .syllabus-item-title-row {
+    font-size: 0.95rem;
+    font-weight: 400;
+    margin-bottom: 0;
   }
   .syllabus-item-metadata,
   .text-secondary {
@@ -113,6 +144,12 @@ const PRINT_DOCUMENT_CSS = `
   .syllabus-item-reference {
     margin-top: 0.25rem;
     font-size: 0.95rem;
+  }
+  body[data-item-density="row"] .syllabus-item-description,
+  body[data-item-density="row"] .syllabus-item-reference,
+  .density-row .syllabus-item-description,
+  .density-row .syllabus-item-reference {
+    display: none !important;
   }
   .uppercase { text-transform: uppercase; }
   .syllabus-print-page-break {
@@ -435,7 +472,10 @@ function polishLinks(root: ParentNode): void {
 }
 
 /** Gecko print often ignores <style> here; inline styles do survive. */
-function applyInlinePrintStyles(root: ParentNode): void {
+function applyInlinePrintStyles(
+  root: ParentNode,
+  density: ItemDensity = "expanded",
+): void {
   root.querySelectorAll("*").forEach((el) => {
     const classes = el.classList ? [...el.classList] : [];
     const style = asStyleable(el);
@@ -443,18 +483,26 @@ function applyInlinePrintStyles(root: ParentNode): void {
 
     if (classes.includes("text-3xl")) {
       setPrintStyle(el, {
-        "font-size": "24px",
+        "font-size": density === "row" ? "20px" : "24px",
         "font-weight": "700",
         "letter-spacing": "-0.02em",
         "line-height": "1.25",
         "margin-bottom": "2px",
       });
     } else if (classes.includes("text-2xl")) {
-      setPrintStyle(el, { "font-size": "17px", "font-weight": "700" });
+      setPrintStyle(el, {
+        "font-size": density === "row" ? "15px" : "17px",
+        "font-weight": "700",
+      });
     } else if (classes.includes("text-xl")) {
-      setPrintStyle(el, { "font-size": "16px", "font-weight": "600" });
+      setPrintStyle(el, {
+        "font-size": density === "row" ? "14px" : "16px",
+        "font-weight": "600",
+      });
     } else if (classes.includes("text-lg")) {
-      setPrintStyle(el, { "font-size": "15px" });
+      setPrintStyle(el, {
+        "font-size": density === "row" ? "13px" : "15px",
+      });
     }
 
     if (classes.includes("font-semibold") || classes.includes("font-bold")) {
@@ -478,59 +526,120 @@ function applyInlinePrintStyles(root: ParentNode): void {
       });
     }
     if (classes.includes("syllabus-class-groups")) {
-      setPrintStyle(el, { "margin-top": "8px" });
+      setPrintStyle(el, {
+        "margin-top": density === "row" ? "4px" : "8px",
+      });
     }
     if (classes.includes("syllabus-class-group")) {
-      setPrintStyle(el, { "margin-bottom": "26px" });
+      setPrintStyle(el, {
+        "margin-bottom":
+          density === "row" ? "12px" : density === "standard" ? "18px" : "26px",
+      });
     }
     if (classes.includes("syllabus-class-items")) {
-      setPrintStyle(el, { "margin-top": "8px" });
+      setPrintStyle(el, {
+        "margin-top": density === "row" ? "4px" : "8px",
+      });
     }
     if (classes.includes("syllabus-item-card")) {
-      setPrintStyle(el, {
-        display: "block",
-        background:
-          existingBg && existingBg !== "rgba(0, 0, 0, 0)"
-            ? existingBg
-            : "#f3f4f6",
-        padding: "10px 14px",
-        "border-radius": "8px",
-        margin: "0 0 8px",
-        "page-break-inside": "avoid",
-        "break-inside": "avoid",
-        "overflow-wrap": "anywhere",
-      });
+      if (density === "row") {
+        setPrintStyle(el, {
+          display: "block",
+          background: "transparent",
+          padding: "2px 0",
+          "border-radius": "0",
+          margin: "0 0 2px",
+          "page-break-inside": "avoid",
+          "break-inside": "avoid",
+          "overflow-wrap": "anywhere",
+        });
+      } else if (density === "standard") {
+        setPrintStyle(el, {
+          display: "block",
+          background:
+            existingBg && existingBg !== "rgba(0, 0, 0, 0)"
+              ? existingBg
+              : "#f3f4f6",
+          padding: "6px 10px",
+          "border-radius": "6px",
+          margin: "0 0 4px",
+          "page-break-inside": "avoid",
+          "break-inside": "avoid",
+          "overflow-wrap": "anywhere",
+        });
+      } else {
+        setPrintStyle(el, {
+          display: "block",
+          background:
+            existingBg && existingBg !== "rgba(0, 0, 0, 0)"
+              ? existingBg
+              : "#f3f4f6",
+          padding: "10px 14px",
+          "border-radius": "8px",
+          margin: "0 0 8px",
+          "page-break-inside": "avoid",
+          "break-inside": "avoid",
+          "overflow-wrap": "anywhere",
+        });
+      }
     }
     if (classes.includes("syllabus-item-title-row")) {
       setPrintStyle(el, {
-        "font-size": "14.5px",
-        "font-weight": "600",
+        "font-size":
+          density === "row" ? "13px" : density === "standard" ? "13.5px" : "14.5px",
+        "font-weight": density === "row" ? "500" : "600",
         "line-height": "1.35",
-        "margin-bottom": "3px",
+        "margin-bottom": density === "row" ? "0" : "3px",
       });
     }
     if (
       classes.includes("syllabus-item-metadata") ||
       classes.includes("text-secondary")
     ) {
-      setPrintStyle(el, { color: "#6b7280", "font-size": "12.5px" });
+      setPrintStyle(el, {
+        color: "#6b7280",
+        "font-size": density === "row" ? "12px" : "12.5px",
+      });
     }
     if (
       classes.includes("syllabus-item-description") ||
       classes.includes("syllabus-item-reference")
     ) {
-      setPrintStyle(el, {
-        "margin-top": "4px",
-        "font-size": "13px",
-        "line-height": "1.4",
-      });
+      if (density === "row") {
+        setPrintStyle(el, { display: "none" });
+      } else {
+        setPrintStyle(el, {
+          "margin-top": "4px",
+          "font-size": "13px",
+          "line-height": "1.4",
+        });
+      }
     }
   });
 }
 
+function resolvePrintDensity(
+  source: HTMLElement,
+  density?: ItemDensity,
+): ItemDensity {
+  if (density) {
+    return coerceItemDensity(density);
+  }
+  const fromAttr =
+    source.getAttribute("data-item-density") ||
+    source.dataset?.itemDensity ||
+    "";
+  return coerceItemDensity(fromAttr || "expanded");
+}
+
 /** Clone the live syllabus into print-safe HTML (no screen-only chrome). */
-export function serializeSyllabusForPrint(source: HTMLElement): string {
+export function serializeSyllabusForPrint(
+  source: HTMLElement,
+  density?: ItemDensity,
+): string {
+  const resolved = resolvePrintDensity(source, density);
   const clone = source.cloneNode(true) as HTMLElement;
+  clone.setAttribute("data-item-density", resolved);
   copyFormValues(source, clone);
   syncPrintOnlyTextFromInputs(clone);
   clone
@@ -542,7 +651,7 @@ export function serializeSyllabusForPrint(source: HTMLElement): string {
   putTitlesBeforeBadges(clone);
   linkItemTitles(clone);
   flattenPrintLayout(clone);
-  applyInlinePrintStyles(clone);
+  applyInlinePrintStyles(clone, resolved);
   polishClassHeadings(clone);
   polishMasthead(clone);
   polishLinks(clone);
@@ -553,11 +662,14 @@ export async function buildPrintableHtml({
   title,
   innerHTML,
   bibliographyHtml = "",
+  density = "expanded",
 }: {
   title: string;
   innerHTML: string;
   bibliographyHtml?: string;
+  density?: ItemDensity;
 }): Promise<string> {
+  const resolved = coerceItemDensity(density);
   const safeTitle = escapeHtml(title || "Syllabus");
   const bodyStyle = [
     "margin:0",
@@ -576,8 +688,8 @@ export async function buildPrintableHtml({
   <title>${safeTitle}</title>
   <style type="text/css">${PRINT_DOCUMENT_CSS}</style>
 </head>
-<body class="print" style="${bodyStyle}">
-  <div class="syllabus-page">
+<body class="print density-${resolved}" data-item-density="${resolved}" style="${bodyStyle}">
+  <div class="syllabus-page" data-item-density="${resolved}">
     ${innerHTML}
   </div>
   ${

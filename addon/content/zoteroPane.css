@@ -91,6 +91,28 @@
   overflow: hidden;
 }
 
+/* Row density: keep type icons at 16px; strip Zotero .icon padding that clips art. */
+.syllabus-item-thumbnail[data-density="row"] {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  max-width: 16px !important;
+  flex: 0 0 16px !important;
+  overflow: visible;
+}
+
+.syllabus-item-thumbnail[data-density="row"] .icon,
+.syllabus-item-thumbnail[data-density="row"] .icon-css,
+.syllabus-item-thumbnail[data-density="row"] .icon-item-type {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  max-width: 16px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
 .syllabus-gallery-sticky {
   padding-bottom: 0.5rem;
 }

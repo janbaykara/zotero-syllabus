@@ -135,8 +135,10 @@ status-not-done = Não concluído
 # Syllabus page
 page-toc-title = Índice
 placeholder-add-title = Adicionar um título…
-page-compact-enable = Ativar o modo compacto
-page-compact-disable = Desativar o modo compacto
+page-density-cycle = Mudar para { $next }
+page-density-row = Linha
+page-density-standard = Padrão
+page-density-expanded = Expandido
 page-reader-enable = Ativar o modo de leitura
 page-reader-disable = Desativar o modo de leitura
 page-export = Exportar ficheiro do programa

@@ -135,8 +135,10 @@ status-not-done = 未完成
 # Syllabus page
 page-toc-title = 目錄
 placeholder-add-title = 新增標題…
-page-compact-enable = 啟用精簡模式
-page-compact-disable = 關閉精簡模式
+page-density-cycle = 切換到{ $next }
+page-density-row = 列
+page-density-standard = 標準
+page-density-expanded = 展開
 page-reader-enable = 啟用閱讀模式
 page-reader-disable = 關閉閱讀模式
 page-export = 匯出教學大綱檔案

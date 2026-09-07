@@ -135,8 +135,10 @@ status-not-done = Belum selesai
 # Syllabus page
 page-toc-title = Daftar isi
 placeholder-add-title = Tambahkan judul…
-page-compact-enable = Aktifkan mode ringkas
-page-compact-disable = Nonaktifkan mode ringkas
+page-density-cycle = Beralih ke { $next }
+page-density-row = Baris
+page-density-standard = Standar
+page-density-expanded = Diperluas
 page-reader-enable = Aktifkan mode baca
 page-reader-disable = Nonaktifkan mode baca
 page-export = Ekspor berkas silabus

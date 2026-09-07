@@ -1,3 +1,4 @@
+import type { ItemDensity } from "./react-zotero-sync/itemDensity";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
 import { useState, useEffect, useRef } from "preact/hooks";
@@ -9,12 +10,12 @@ export function LinksSection({
   links,
   setLinks,
   isLocked,
-  compactMode,
+  density,
 }: {
   links: string[];
   setLinks: (links: string[]) => void;
   isLocked: boolean;
-  compactMode: boolean;
+  density: ItemDensity;
 }) {
   const savedLinks = links.map((link) => link.trim()).filter(Boolean);
   const [draft, setDraft] = useState<{
@@ -93,7 +94,7 @@ export function LinksSection({
 
   return (
     <div className="container-padded">
-      <div className={twMerge("py-2", compactMode ? "text-base" : "text-lg")}>
+      <div className={twMerge("py-2", density !== "expanded" ? "text-base" : "text-lg")}>
         <div className="flex flex-col gap-2">
           {rows.map((row) => {
             const isDraftRow = "draft" in row;

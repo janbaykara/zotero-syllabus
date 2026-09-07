@@ -135,8 +135,10 @@ status-not-done = Chưa xong
 # Syllabus page
 page-toc-title = Mục lục
 placeholder-add-title = Thêm tiêu đề…
-page-compact-enable = Bật chế độ gọn
-page-compact-disable = Tắt chế độ gọn
+page-density-cycle = Chuyển sang { $next }
+page-density-row = Hàng
+page-density-standard = Tiêu chuẩn
+page-density-expanded = Mở rộng
 page-reader-enable = Bật chế độ đọc
 page-reader-disable = Tắt chế độ đọc
 page-export = Xuất tệp đề cương

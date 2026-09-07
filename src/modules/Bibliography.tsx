@@ -3,6 +3,8 @@ import { h, Fragment } from "preact";
 import { twMerge } from "tailwind-merge";
 import { escapeHtml } from "../utils/printSyllabus";
 import { getString } from "../utils/locale";
+import type { ItemDensity } from "./react-zotero-sync/itemDensity";
+import { isDenseDensity } from "./react-zotero-sync/itemDensity";
 
 function styleBibliographyEntries(html: string): string {
   try {
@@ -44,24 +46,26 @@ function styleBibliographyEntries(html: string): string {
 
 export function bibliographyToHtml(
   content: string,
-  _compactMode = false,
+  density: ItemDensity = "expanded",
   isHtml = false,
 ): string {
   const body = isHtml
     ? styleBibliographyEntries(content)
     : escapeHtml(content).replace(/\r\n|\n/g, "<br>");
-  return `<section class="syllabus-print-bibliography" style="color:#111;padding-top:4px">
-  <h2 class="syllabus-print-bibliography-heading" style="font-size:20px;font-weight:700;margin:0 0 16px;letter-spacing:-0.02em">${getString("bibliography-heading")}</h2>
+  const headingSize = isDenseDensity(density) ? "18px" : "20px";
+  const headingMargin = density === "row" ? "0 0 10px" : "0 0 16px";
+  return `<section class="syllabus-print-bibliography" data-item-density="${density}" style="color:#111;padding-top:4px">
+  <h2 class="syllabus-print-bibliography-heading" style="font-size:${headingSize};font-weight:700;margin:${headingMargin};letter-spacing:-0.02em">${getString("bibliography-heading")}</h2>
   <div class="syllabus-print-bibliography-body" style="color:#111;font-size:12.5px;line-height:1.45">${body}</div>
 </section>`;
 }
 
 export function Bibliography({
   text,
-  compactMode = false,
+  density = "expanded",
 }: {
   text: string;
-  compactMode?: boolean;
+  density?: ItemDensity;
 }) {
   return (
     <section className="syllabus-print-bibliography">
@@ -69,7 +73,7 @@ export function Bibliography({
         <div
           className={twMerge(
             "font-semibold mt-12 mb-4",
-            compactMode ? "text-xl" : "text-2xl",
+            isDenseDensity(density) ? "text-xl" : "text-2xl",
           )}
         >
           {getString("bibliography-heading")}

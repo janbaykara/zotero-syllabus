@@ -5,7 +5,10 @@ import { twMerge } from "tailwind-merge";
 import { ChevronLeft } from "lucide-preact";
 import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
 import { SyllabusItemCard } from "./SyllabusItemCard";
-import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
+import {
+  useZoteroItemDensity,
+  type ItemDensity,
+} from "./react-zotero-sync/itemDensity";
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
@@ -115,7 +118,7 @@ export function selectItemInCollection(
 
 export function ClassReadingBlock({
   classReading,
-  compactMode,
+  density,
   showCollectionLink = true,
   showLibraryName = false,
   compactHeading = false,
@@ -123,7 +126,7 @@ export function ClassReadingBlock({
   onItemClick,
 }: {
   classReading: ClassReading;
-  compactMode: boolean;
+  density: ItemDensity;
   showCollectionLink?: boolean;
   showLibraryName?: boolean;
   compactHeading?: boolean;
@@ -217,7 +220,7 @@ export function ClassReadingBlock({
       <div
         className={twMerge(
           "space-y-2",
-          compactMode ? "space-y-2" : "space-y-4",
+          density !== "expanded" ? "space-y-2" : "space-y-4",
         )}
       >
         {classReading.items.map(({ item, assignment }) => {
@@ -231,8 +234,8 @@ export function ClassReadingBlock({
               collectionId={classReading.collectionId}
               classNumber={classReading.classNumber}
               assignment={assignment}
-              slim={compactMode || !priority || priority === "optional"}
-              compactMode={compactMode}
+              slim={density !== "expanded" || !priority || priority === "optional"}
+              density={density}
               isLocked={true}
               onClick={onItemClick}
               onContextMenu={(item, e) => {
@@ -277,7 +280,7 @@ export function ClassSubcollectionPage({
   classCollectionId: number;
   classNumber: number | null;
 }) {
-  const [compactMode] = useZoteroCompactMode();
+  const [density] = useZoteroItemDensity();
   const [parentTitle] = useZoteroCollectionTitle(parentCollectionId);
   const [syllabusMetadata] = useZoteroSyllabusMetadata(parentCollectionId);
   const syllabusItems = useZoteroCollectionItems(parentCollectionId);
@@ -357,7 +360,7 @@ export function ClassSubcollectionPage({
           {classReading ? (
             <ClassReadingBlock
               classReading={classReading}
-              compactMode={compactMode}
+              density={density}
               showCollectionLink={false}
               onItemClick={(item) =>
                 selectItemInCollection(item, classCollectionId)

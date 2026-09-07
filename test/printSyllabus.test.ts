@@ -78,4 +78,40 @@ describe("serializeSyllabusForPrint", function () {
       "No URL Paper",
     );
   });
+
+  it("applies denser item-card padding for row density than expanded", function () {
+    const markup = `
+      <div class="syllabus-item-card">
+        <div class="syllabus-item-title-row">
+          <div class="syllabus-item-title">Density Paper</div>
+        </div>
+      </div>
+    `;
+
+    const expandedRoot = document.createElement("div");
+    expandedRoot.setAttribute("data-item-density", "expanded");
+    expandedRoot.innerHTML = markup;
+
+    const rowRoot = document.createElement("div");
+    rowRoot.setAttribute("data-item-density", "row");
+    rowRoot.innerHTML = markup;
+
+    const expandedHtml = serializeSyllabusForPrint(expandedRoot, "expanded");
+    const rowHtml = serializeSyllabusForPrint(rowRoot, "row");
+
+    const expandedOut = document.createElement("div");
+    expandedOut.innerHTML = expandedHtml;
+    const rowOut = document.createElement("div");
+    rowOut.innerHTML = rowHtml;
+
+    const expandedCard = expandedOut.querySelector(
+      ".syllabus-item-card",
+    ) as HTMLElement;
+    const rowCard = rowOut.querySelector(".syllabus-item-card") as HTMLElement;
+    assert.ok(expandedCard);
+    assert.ok(rowCard);
+    assert.include(expandedCard.getAttribute("style") || "", "10px 14px");
+    assert.include(rowCard.getAttribute("style") || "", "2px 0");
+    assert.notInclude(rowCard.getAttribute("style") || "", "10px 14px");
+  });
 });

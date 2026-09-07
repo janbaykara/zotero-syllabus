@@ -61,7 +61,7 @@ import {
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { ProseText } from "./ProseText";
-import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
+import { useZoteroItemDensity } from "./react-zotero-sync/itemDensity";
 import { SlimSyllabusItemCard, useItemIdentifierSelection } from "./browsePage";
 import { SyllabusItemCard } from "./SyllabusItemCard";
 import { useSyllabusClassGroups } from "./classGroups";
@@ -182,7 +182,7 @@ export function GalleryPage({
   const [sortBy, setSortBy, sortByGlobal] = useGallerySortBy(viewKey);
   const [magazineTypeSize, setMagazineTypeSize, magazineTypeSizeGlobal] =
     useMagazineTypeSize(viewKey);
-  const [compactMode] = useZoteroCompactMode();
+  const [density] = useZoteroItemDensity();
   const [syllabusMetadata] = useZoteroSyllabusMetadata(collectionIdOrZero);
   const { classGroups, furtherReadingItems } = useSyllabusClassGroups(
     collectionIdOrZero,
@@ -644,7 +644,7 @@ export function GalleryPage({
     <div
       className={twMerge(
         "syllabus-gallery-cards flex flex-col",
-        compactMode ? "gap-2" : "gap-4",
+        density !== "expanded" ? "gap-2" : "gap-4",
       )}
     >
       {sortItems(uniqueItems(items), sortBy).map((item) => (
@@ -653,7 +653,7 @@ export function GalleryPage({
           item={item}
           collectionId={collectionIdOrZero}
           keyPrefix={keyPrefix}
-          compactMode={compactMode}
+          density={density}
           selectedIdentifiers={selectedIdentifiers}
           selectedItemIds={selectedItemIds}
           onIdentifierClick={handleIdentifierClick}
@@ -720,7 +720,7 @@ export function GalleryPage({
       <div
         className={twMerge(
           "syllabus-gallery-cards flex flex-col",
-          compactMode ? "gap-2" : "gap-4",
+          density !== "expanded" ? "gap-2" : "gap-4",
         )}
       >
         {sorted.map(({ item, assignment }) => {
@@ -735,8 +735,8 @@ export function GalleryPage({
               collectionId={collectionIdOrZero}
               classNumber={classNumber ?? undefined}
               assignment={assignment}
-              slim={compactMode || !priority || priority === "optional"}
-              compactMode={compactMode}
+              slim={density !== "expanded" || !priority || priority === "optional"}
+              density={density}
               readerMode={false}
               isLocked={true}
               selectedIdentifiers={selectedIdentifiers}
@@ -763,9 +763,10 @@ export function GalleryPage({
         layout === "magazine" &&
           magazineTypeSize === "large" &&
           "is-large-type",
-        compactMode && "compact-mode",
+        density !== "expanded" && `density-${density}`,
         fileDrop.isDraggingFile && "file-drag-over",
       )}
+      data-item-density={density}
       dir={getUiDir()}
       onDragEnter={fileDrop.onDragEnter}
       onDragOver={fileDrop.onDragOver}

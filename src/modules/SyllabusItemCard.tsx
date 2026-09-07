@@ -25,6 +25,7 @@ import { getItemCreatorLine, getItemField, getItemTitle } from "../utils/items";
 import { YoutubePlayer } from "./YoutubePlayer";
 import { getString } from "../utils/locale";
 import { isOsFileDrag } from "../utils/nativeFileDrop";
+import type { ItemDensity } from "./react-zotero-sync/itemDensity";
 
 export function SyllabusItemCard({
   className,
@@ -33,7 +34,7 @@ export function SyllabusItemCard({
   classNumber,
   assignment,
   slim = false,
-  compactMode = false,
+  density = "expanded",
   readerMode = false,
   isLocked = false,
   onDrop,
@@ -57,7 +58,7 @@ export function SyllabusItemCard({
   isZoteroSelected?: boolean;
   isIdentifierSelected?: boolean;
   slim?: boolean;
-  compactMode?: boolean;
+  density?: ItemDensity;
   readerMode?: boolean;
   isLocked?: boolean;
   onDrop?: (
@@ -114,11 +115,16 @@ export function SyllabusItemCard({
   const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(item.itemType);
   const author = getItemCreatorLine(item);
   const date = getItemField(item, "date");
+  const year = useMemo(() => {
+    const match = String(date || "").match(/\b(\d{4})\b/);
+    return match ? match[1] : "";
+  }, [date]);
   const publicationName = getItemField(item, "publicationTitle");
   const url = item.getField("url") || "";
   const youtubeSourceUrl = useMemo(() => youtubeUrlFromItem(item), [item]);
   const youtubeVideoId = youtubeVideoIdFromUrl(youtubeSourceUrl);
-  const showYoutubeEmbed = !compactMode && Boolean(youtubeVideoId);
+  const showYoutubeEmbed =
+    density === "expanded" && Boolean(youtubeVideoId);
   const [syllabusMetadata] = useZoteroSyllabusMetadata(collectionId);
   const readingTime = getReadingTimeSync(item, { roundUp: true });
 
@@ -139,14 +145,14 @@ export function SyllabusItemCard({
   const [bibliographicReference, setBibliographicReference] = useState("");
   useEffect(() => {
     (async () => {
-      if (slim) return;
+      if (slim || density !== "expanded") return;
       if (getPref("showBibliography")) {
         const cslStyle = syllabusMetadata.cslStyle || null;
         const ref = await generateBibliographicReference(item, true, cslStyle);
         setBibliographicReference(ref || "");
       }
     })();
-  }, [item, slim, syllabusMetadata.cslStyle]);
+  }, [item, slim, density, syllabusMetadata.cslStyle]);
 
   const viewableAttachments = useMemo(() => {
     return item
@@ -505,17 +511,24 @@ export function SyllabusItemCard({
       className={twMerge(
         "syllabus-item-card in-[.print]:scheme-light",
         "rounded-lg flex shrink-0",
-        showYoutubeEmbed ? "flex-col" : "flex-row items-start justify-between",
+        showYoutubeEmbed
+          ? "flex-col"
+          : density === "row"
+            ? "flex-row items-center"
+            : "flex-row items-start justify-between",
         "bg-background-sidepane text-primary",
+        density === "row" && "bg-transparent!",
         "relative",
         isLocked || showYoutubeEmbed ? "cursor-default" : "cursor-grab",
         // For hovering contextual btns
         "group relative",
-        compactMode
-          ? "px-4 py-1.5 gap-3"
-          : slim
-            ? "px-4 py-2.5 gap-4"
-            : "px-4 py-4 gap-4",
+        density === "row"
+          ? "px-2 py-0.5 gap-2 rounded-sm"
+          : density === "standard"
+            ? "px-4 py-1.5 gap-3"
+            : slim
+              ? "px-4 py-2.5 gap-4"
+              : "px-4 py-4 gap-4",
         isZoteroSelected &&
           !isIdentifierSelected &&
           "not-in-[.print]:outline-2! not-in-[.print]:outline-accent-blue",
@@ -556,7 +569,7 @@ export function SyllabusItemCard({
           checked={assignmentStatus === "done"}
           onChange={handleAssignmentStatusToggle}
           className={twMerge(
-            "absolute right-full mr-1 w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden",
+            "absolute right-full top-1/2 -translate-y-1/2 mr-1 w-4 h-4 cursor-pointer shrink-0 in-[.print]:hidden",
             isZotero8OrLater() ? "md:mr-2!" : "mr-2!",
           )}
           title={
@@ -579,7 +592,16 @@ export function SyllabusItemCard({
                 "flex w-full flex-row items-start justify-between gap-4",
                 isLocked ? "cursor-default" : "cursor-grab",
               )
-            : "contents"
+            : density === "row"
+              ? "grid w-full min-w-0 items-center gap-x-2"
+              : "contents"
+        }
+        style={
+          density === "row" && !showYoutubeEmbed
+            ? {
+                gridTemplateColumns: "16px minmax(0, 1fr) auto",
+              }
+            : undefined
         }
         draggable={!isLocked && showYoutubeEmbed}
         onDragStart={
@@ -590,137 +612,334 @@ export function SyllabusItemCard({
         <div
           className={twMerge(
             "syllabus-item-thumbnail grow-0 shrink-0 in-[.print]:hidden",
-            compactMode ? "size-6" : slim ? "size-10" : "size-20",
-            // !compactMode ? "self-center" : "mt-0.5"
+            density === "row"
+              ? "size-4! min-w-4! max-w-4! flex items-center justify-center"
+              : density === "standard"
+                ? "size-6"
+                : slim
+                  ? "size-10"
+                  : "size-20",
             "self-center",
           )}
+          data-density={density === "row" ? "row" : undefined}
+          style={
+            density === "row"
+              ? {
+                  width: 16,
+                  height: 16,
+                  minWidth: 16,
+                  maxWidth: 16,
+                }
+              : undefined
+          }
         >
           <span
             className="icon icon-css icon-item-type cell-icon"
             data-item-type={item.itemType}
             style={{
-              width: "100%",
-              height: "100%",
+              width: density === "row" ? 16 : "100%",
+              height: density === "row" ? 16 : "100%",
+              minWidth: density === "row" ? 16 : undefined,
+              maxWidth: density === "row" ? 16 : undefined,
+              padding: density === "row" ? 0 : undefined,
+              margin: density === "row" ? 0 : undefined,
+              boxSizing: "border-box",
+              display: "block",
               backgroundOrigin:
                 "padding-box, padding-box, padding-box, padding-box",
               backgroundPositionX: "50%, 50%, 50%, 50%",
               backgroundPositionY: "50%, 50%, 50%, 50%",
               backgroundRepeat: "no-repeat, repeat, repeat, repeat",
-              backgroundSize: "contain, 0px, 0px, 0px",
+              backgroundSize:
+                density === "row"
+                  ? "16px 16px, 0px, 0px, 0px"
+                  : "contain, 0px, 0px, 0px",
               filter: isIdentifierSelected
                 ? "invert(0.85) brightness(2.5) contrast(1) hue-rotate(175deg)"
                 : undefined,
             }}
           />
         </div>
-        <div
-          className={twMerge(
-            "syllabus-item-text grow flex flex-col",
-            compactMode ? "gap-0.5" : !slim ? "gap-1" : "gap-0.25",
-          )}
-        >
-          {compactMode ? (
-            <>
-              <div className="syllabus-item-title-row flex flex-row gap-2 items-baseline justify-between">
-                <div
-                  className={twMerge(
-                    "syllabus-item-title text-base font-medium grow wrap-break-word",
-                    readerMode && assignmentStatus === "done"
-                      ? "line-through"
-                      : "",
-                  )}
-                >
-                  {title}
-                </div>
-                {!!priority && (
-                  <PriorityIcon
-                    id={priority}
-                    colors={!isIdentifierSelected}
-                    className="shrink-0 grow-0 text-right block"
-                    collectionId={collectionId}
-                  />
-                )}
-              </div>
-              <div className="syllabus-item-metadata text-secondary flex flex-row gap-4">
-                <span className="flex flex-row gap-1 flex-wrap character-separator [--character-separator:'•']">
-                  {author && <span>{author}</span>}
-                  {date && <span>{date}</span>}
-                  {itemTypeLabel && (
-                    <span className="text-secondary">{itemTypeLabel}</span>
-                  )}
-                  {publicationName && (
-                    <span>
-                      {getString("item-in-publication", {
-                        args: { name: publicationName },
-                      })}
-                    </span>
-                  )}
-                  {readingTime && <span>{formatReadingTime(readingTime)}</span>}
-                </span>
-              </div>
-              {classInstruction && (
-                <div className="syllabus-item-description">
-                  <ProseText text={classInstruction} />
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <div className="flex flex-row gap-3 items-baseline justify-start">
-                {!!priority && (
-                  <div className="grow-0 shrink-0">
+        {density === "row" ? (
+          <div
+            className={twMerge(
+              "syllabus-item-title text-[14px] font-medium truncate min-w-0 leading-none",
+              readerMode && assignmentStatus === "done" ? "line-through" : "",
+            )}
+          >
+            {title}
+          </div>
+        ) : (
+          <div
+            className={twMerge(
+              "syllabus-item-text grow min-w-0 flex flex-col",
+              density === "standard"
+                ? "gap-0.5"
+                : !slim
+                  ? "gap-1"
+                  : "gap-0.25",
+            )}
+          >
+            {density === "standard" ? (
+              <>
+                <div className="syllabus-item-title-row flex flex-row gap-2 items-baseline justify-between">
+                  <div
+                    className={twMerge(
+                      "syllabus-item-title text-base font-medium grow wrap-break-word",
+                      readerMode && assignmentStatus === "done"
+                        ? "line-through"
+                        : "",
+                    )}
+                  >
+                    {title}
+                  </div>
+                  {!!priority && (
                     <PriorityIcon
                       id={priority}
                       colors={!isIdentifierSelected}
+                      className="shrink-0 grow-0 text-right block"
                       collectionId={collectionId}
                     />
-                  </div>
-                )}
-                {!slim && itemTypeLabel && (
-                  <div className="grow-0 shrink-0">
-                    <span className="text-secondary">{itemTypeLabel}</span>
-                  </div>
-                )}
-                {!!readStatusName && (
-                  <div className="grow-0 shrink-0">
-                    <ReadStatusIcon readStatusName={readStatusName} />
-                  </div>
-                )}
-              </div>
-              <div className="syllabus-item-title-row">
-                <div
-                  className={twMerge(
-                    "syllabus-item-title",
-                    !slim ? "text-xl font-medium" : "text-lg font-medium",
-                    readerMode && assignmentStatus === "done"
-                      ? "line-through"
-                      : "",
                   )}
-                >
-                  {title}
                 </div>
-              </div>
-              <div className="syllabus-item-metadata text-secondary">
-                {metadataParts.length > 0 && (
-                  <span>{metadataParts.join(" • ")}</span>
+                <div className="syllabus-item-metadata text-secondary flex flex-row gap-4">
+                  <span className="flex flex-row gap-1 flex-wrap character-separator [--character-separator:'•']">
+                    {author && <span>{author}</span>}
+                    {date && <span>{date}</span>}
+                    {itemTypeLabel && (
+                      <span className="text-secondary">{itemTypeLabel}</span>
+                    )}
+                    {publicationName && (
+                      <span>
+                        {getString("item-in-publication", {
+                          args: { name: publicationName },
+                        })}
+                      </span>
+                    )}
+                    {readingTime && (
+                      <span>{formatReadingTime(readingTime)}</span>
+                    )}
+                  </span>
+                </div>
+                {classInstruction && (
+                  <div className="syllabus-item-description">
+                    <ProseText text={classInstruction} />
+                  </div>
                 )}
+              </>
+            ) : (
+              <>
+                <div className="flex flex-row gap-3 items-baseline justify-start">
+                  {!!priority && (
+                    <div className="grow-0 shrink-0">
+                      <PriorityIcon
+                        id={priority}
+                        colors={!isIdentifierSelected}
+                        collectionId={collectionId}
+                      />
+                    </div>
+                  )}
+                  {!slim && itemTypeLabel && (
+                    <div className="grow-0 shrink-0">
+                      <span className="text-secondary">{itemTypeLabel}</span>
+                    </div>
+                  )}
+                  {!!readStatusName && (
+                    <div className="grow-0 shrink-0">
+                      <ReadStatusIcon readStatusName={readStatusName} />
+                    </div>
+                  )}
+                </div>
+                <div className="syllabus-item-title-row">
+                  <div
+                    className={twMerge(
+                      "syllabus-item-title",
+                      !slim ? "text-xl font-medium" : "text-lg font-medium",
+                      readerMode && assignmentStatus === "done"
+                        ? "line-through"
+                        : "",
+                    )}
+                  >
+                    {title}
+                  </div>
+                </div>
+                <div className="syllabus-item-metadata text-secondary">
+                  {metadataParts.length > 0 && (
+                    <span>{metadataParts.join(" • ")}</span>
+                  )}
+                </div>
+                {!slim && bibliographicReference && (
+                  <div className="syllabus-item-reference">
+                    {bibliographicReference}
+                  </div>
+                )}
+                {classInstruction && (
+                  <div className="syllabus-item-description">
+                    <ProseText text={classInstruction} />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+        {density === "row" && (
+          <div className="flex flex-row items-center gap-2 shrink-0 min-w-0">
+            {(author || year) && (
+              <div className="syllabus-item-metadata text-secondary text-[13px] shrink-0 text-right flex flex-row gap-1.5 items-center justify-end character-separator [--character-separator:'·'] leading-none whitespace-nowrap">
+                {author && <span>{author}</span>}
+                {year && <span>{year}</span>}
               </div>
-              {!slim && bibliographicReference && (
-                <div className="syllabus-item-reference">
-                  {bibliographicReference}
-                </div>
-              )}
-              {classInstruction && (
-                <div className="syllabus-item-description">
-                  <ProseText text={classInstruction} />
-                </div>
-              )}
-            </>
-          )}
-        </div>
-        {(!!viewableAttachments?.length || uniqueUrls.length > 0) && (
+            )}
+            {!!priority && (
+              <PriorityIcon
+                id={priority}
+                colors={!isIdentifierSelected}
+                className="shrink-0 grow-0 items-center!"
+                collectionId={collectionId}
+              />
+            )}
+            {(!!viewableAttachments?.length || uniqueUrls.length > 0) && (
+              <div
+                className="syllabus-item-actions shrink-0 inline-flex flex-row gap-1 items-center in-[.print]:hidden [&_.syllabus-action-label]:hidden"
+                draggable={false}
+              >
+                {viewableAttachments.map((viewableAttachment) => {
+                  const getAttachmentLabel = (
+                    type:
+                      | "pdf"
+                      | "snapshot"
+                      | "epub"
+                      | "html"
+                      | "doc"
+                      | "txt"
+                      | "zip"
+                      | "file",
+                  ) => {
+                    switch (type) {
+                      case "pdf":
+                        return getString("attachment-pdf");
+                      case "snapshot":
+                        return getString("attachment-snapshot");
+                      case "epub":
+                        return getString("attachment-epub");
+                      case "html":
+                        return getString("attachment-html");
+                      case "doc":
+                        return getString("attachment-doc");
+                      case "txt":
+                        return getString("attachment-txt");
+                      case "zip":
+                        return getString("attachment-zip");
+                      case "file":
+                        return getString("attachment-file");
+                      default:
+                        return getString("attachment-view");
+                    }
+                  };
+
+                  const getAttachmentIconType = (
+                    type:
+                      | "pdf"
+                      | "snapshot"
+                      | "epub"
+                      | "html"
+                      | "doc"
+                      | "txt"
+                      | "zip"
+                      | "file",
+                  ) => {
+                    switch (type) {
+                      case "pdf":
+                        return "attachmentPDF";
+                      case "epub":
+                        return "attachmentEPUB";
+                      case "snapshot":
+                      case "html":
+                        return "attachmentSnapshot";
+                      case "doc":
+                        return "attachmentDocument";
+                      case "txt":
+                        return "attachmentText";
+                      case "zip":
+                        return "attachmentZIP";
+                      case "file":
+                        return "attachmentFile";
+                      default:
+                        return "attachmentFile";
+                    }
+                  };
+
+                  const attachmentLabel = getAttachmentLabel(
+                    viewableAttachment.type,
+                  );
+                  const iconType = getAttachmentIconType(
+                    viewableAttachment.type,
+                  );
+
+                  return (
+                    <div className="focus-states-target in-[.print]:hidden">
+                      <button
+                        className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
+                        onClick={() =>
+                          handleAttachmentClick(viewableAttachment)
+                        }
+                        title={getString("attachment-open", {
+                          args: { label: attachmentLabel },
+                        })}
+                        aria-label={getString("attachment-open", {
+                          args: { label: attachmentLabel },
+                        })}
+                      >
+                        <span
+                          className="syllabus-action-icon icon icon-css icon-attachment-type"
+                          data-item-type={iconType}
+                          aria-label={getString("attachment-open", {
+                            args: { label: attachmentLabel },
+                          })}
+                        />
+                        <span className="syllabus-action-label">
+                          {attachmentLabel}
+                        </span>
+                      </button>
+                    </div>
+                  );
+                })}
+                {uniqueUrls.map((urlInfo, index) => (
+                  <div
+                    key={`url-${index}`}
+                    className="focus-states-target in-[.print]:hidden"
+                  >
+                    <button
+                      className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
+                      onClick={urlInfo.onClick}
+                      title={getString("attachment-open", {
+                        args: { label: urlInfo.label },
+                      })}
+                      aria-label={getString("attachment-open", {
+                        args: { label: urlInfo.label },
+                      })}
+                    >
+                      <span
+                        className="syllabus-action-icon icon icon-css icon-attachment-type"
+                        data-item-type="attachmentLink"
+                        aria-label={getString("attachment-open", {
+                          args: { label: urlInfo.label },
+                        })}
+                      />
+                      <span className="syllabus-action-label">
+                        {urlInfo.label}
+                      </span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {density !== "row" &&
+          (!!viewableAttachments?.length || uniqueUrls.length > 0) && (
           <div
-            className="syllabus-item-actions shrink-0 inline-flex flex-row gap-1 in-[.print]:hidden"
+            className="syllabus-item-actions shrink-0 inline-flex flex-row gap-1 items-center in-[.print]:hidden"
             draggable={false}
           >
             {/* Attachment buttons */}

@@ -9,7 +9,10 @@ import {
   selectCollectionInLibrary,
   selectItemInCollection,
 } from "./ClassReadingBlock";
-import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
+import {
+  useZoteroItemDensity,
+  type ItemDensity,
+} from "./react-zotero-sync/itemDensity";
 import { useSyllabi } from "./react-zotero-sync/useSyllabi";
 import { formatReadingDate, toLocalDateKey } from "../utils/dates";
 import { isZotero8OrLater } from "../utils/zotero";
@@ -49,7 +52,7 @@ export function ReadingScheduleDayPage({
 }: {
   collectionId: number;
 }) {
-  const [compactMode] = useZoteroCompactMode();
+  const [density] = useZoteroItemDensity();
   const allSyllabi = useSyllabi();
   const context = useMemo(
     () => getReadingScheduleCollectionContext(collectionId),
@@ -194,7 +197,7 @@ export function ReadingScheduleDayPage({
             nextDateKey={nextDateKey}
             onPrev={() => prevDateKey && goToDate(prevDateKey)}
             onNext={() => nextDateKey && goToDate(nextDateKey)}
-            compactMode={compactMode}
+            density={density}
           />
 
           {classReadings.length === 0 ? (
@@ -209,7 +212,7 @@ export function ReadingScheduleDayPage({
                 <ClassReadingBlock
                   key={`${classReading.collectionId}-${classReading.classNumber}`}
                   classReading={classReading}
-                  compactMode={compactMode}
+                  density={density}
                   onCollectionClick={() =>
                     selectCollectionInLibrary(classReading.collectionId)
                   }
@@ -232,14 +235,14 @@ function DayNavHeader({
   nextDateKey,
   onPrev,
   onNext,
-  compactMode,
+  density,
 }: {
   dateKey: string | null;
   prevDateKey: string | null;
   nextDateKey: string | null;
   onPrev: () => void;
   onNext: () => void;
-  compactMode: boolean;
+  density: ItemDensity;
 }) {
   return (
     <div className="flex items-center justify-between gap-4">
@@ -249,7 +252,7 @@ function DayNavHeader({
         disabled={!prevDateKey}
         className={twMerge(
           "flex items-center gap-1 bg-transparent! border-none p-0 cursor-pointer text-secondary hover:text-primary disabled:opacity-30 disabled:cursor-default disabled:hover:text-secondary",
-          compactMode ? "text-sm" : "text-base",
+          density !== "expanded" ? "text-sm" : "text-base",
         )}
         title={prevDateKey ? formatReadingDate(prevDateKey) : undefined}
       >
@@ -260,7 +263,7 @@ function DayNavHeader({
       <div
         className={twMerge(
           "text-center text-secondary font-medium",
-          compactMode ? "text-xl" : "text-2xl",
+          density !== "expanded" ? "text-xl" : "text-2xl",
         )}
       >
         {dateKey ? formatReadingDate(dateKey) : getString("schedule-no-dates")}
@@ -272,7 +275,7 @@ function DayNavHeader({
         disabled={!nextDateKey}
         className={twMerge(
           "flex items-center gap-1 bg-transparent! border-none p-0 cursor-pointer text-secondary hover:text-primary disabled:opacity-30 disabled:cursor-default disabled:hover:text-secondary",
-          compactMode ? "text-sm" : "text-base",
+          density !== "expanded" ? "text-sm" : "text-base",
         )}
         title={nextDateKey ? formatReadingDate(nextDateKey) : undefined}
       >

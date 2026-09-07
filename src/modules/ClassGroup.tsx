@@ -1,3 +1,4 @@
+import type { ItemDensity } from "./react-zotero-sync/itemDensity";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
 import type { JSX } from "preact";
@@ -39,7 +40,7 @@ export interface ClassGroupComponentProps {
   ) => Promise<void>;
   onDragOver: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
   onDragLeave: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
-  compactMode?: boolean;
+  density?: ItemDensity;
   readerMode?: boolean;
   isLocked?: boolean;
   onResetSortOrder?: () => void;
@@ -82,7 +83,7 @@ export function ClassGroupComponent({
   onDrop,
   onDragOver,
   onDragLeave,
-  compactMode = false,
+  density = "expanded",
   readerMode = false,
   isLocked = false,
   onResetSortOrder,
@@ -248,7 +249,7 @@ export function ClassGroupComponent({
             <div
               className={twMerge(
                 "container-padded rounded-xs mb-1",
-                // compactMode ? "py-0.5" : "py-1",
+                // density !== "expanded" ? "py-0.5" : "py-1",
               )}
             >
               <div className="syllabus-class-heading flex gap-2 items-baseline justify-start w-full relative">
@@ -276,7 +277,7 @@ export function ClassGroupComponent({
                 <div
                   className={twMerge(
                     "syllabus-class-header shrink-0 uppercase text-secondary font-semibold",
-                    compactMode ? "text-sm" : "text-lg",
+                    density !== "expanded" ? "text-sm" : "text-lg",
                   )}
                 >
                   {singularCapitalized} {classNumber}
@@ -284,7 +285,7 @@ export function ClassGroupComponent({
                 <div
                   className={twMerge(
                     "w-full font-semibold",
-                    compactMode ? "text-xl" : "text-2xl",
+                    density !== "expanded" ? "text-xl" : "text-2xl",
                   )}
                 >
                   <TextInput
@@ -305,7 +306,7 @@ export function ClassGroupComponent({
                       onSave={(date) =>
                         onClassReadingDateSave(classNumber, date)
                       }
-                      compactMode={compactMode}
+                      density={density}
                     />
                   )}
                   {FEATURE_FLAG.READING_SCHEDULE && isLocked && readingDate && (
@@ -376,7 +377,7 @@ export function ClassGroupComponent({
           </div>
           <div className="container-padded">
             <div
-              className={twMerge(compactMode ? "text-base" : "text-lg pt-2")}
+              className={twMerge(density !== "expanded" ? "text-base" : "text-lg pt-2")}
             >
               <TextInput
                 elementType="textarea"
@@ -393,12 +394,12 @@ export function ClassGroupComponent({
         </>
       )}
       <div
-        className={twMerge("container-padded", compactMode ? "mt-0" : "mt-2")}
+        className={twMerge("container-padded", density !== "expanded" ? "mt-0" : "mt-2")}
       >
         <div
           className={twMerge(
             "syllabus-class-items box-border! rounded-lg",
-            compactMode ? "mt-1 space-y-2 p-1 -m-1" : "mt-4 space-y-4 p-2 -m-2",
+            density !== "expanded" ? "mt-1 space-y-2 p-1 -m-1" : "mt-4 space-y-4 p-2 -m-2",
             "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:outline-accent-blue! data-[dropzone-active='true']:text-accent-blue! transition-all duration-200 outline-transparent outline-2! outline-dashed!",
             !isZotero8OrLater() && "compat-space-y",
           )}
@@ -410,7 +411,7 @@ export function ClassGroupComponent({
             <div
               className={twMerge(
                 "text-center bg-quinary/50 rounded-md p-8 text-secondary border-2 border-dashed border-tertiary/50 in-[.print]:hidden",
-                compactMode ? "p-4" : "p-8",
+                density !== "expanded" ? "p-4" : "p-8",
               )}
             >
               {getString("class-dropzone-hint", {
@@ -443,8 +444,8 @@ export function ClassGroupComponent({
                   collectionId={collectionId}
                   classNumber={classNumber ?? undefined}
                   assignment={assignment}
-                  slim={compactMode || !priority || priority === "optional"}
-                  compactMode={compactMode}
+                  slim={density !== "expanded" || !priority || priority === "optional"}
+                  density={density}
                   readerMode={readerMode}
                   isLocked={isLocked}
                   selectedIdentifiers={selectedIdentifiers}

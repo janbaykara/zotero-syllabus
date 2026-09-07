@@ -9,7 +9,7 @@ declare namespace _ZoteroTypes {
     PluginPrefsMap: {
       "enable": boolean;
       "showBibliography": boolean;
-      "compactMode": boolean;
+      "itemDensity": string;
       "readerMode": boolean;
       "shouldColourSyllabusRows": boolean;
       "debugMode": boolean;

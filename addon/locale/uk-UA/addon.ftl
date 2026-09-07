@@ -135,8 +135,10 @@ status-not-done = Не виконано
 # Syllabus page
 page-toc-title = Зміст
 placeholder-add-title = Додати назву…
-page-compact-enable = Увімкнути компактний режим
-page-compact-disable = Вимкнути компактний режим
+page-density-cycle = Перемкнути на { $next }
+page-density-row = Рядок
+page-density-standard = Стандартна
+page-density-expanded = Розширена
 page-reader-enable = Увімкнути режим читання
 page-reader-disable = Вимкнути режим читання
 page-export = Експортувати файл силабуса

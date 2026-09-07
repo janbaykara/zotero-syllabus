@@ -135,8 +135,10 @@ status-not-done = Niet afgerond
 # Syllabus page
 page-toc-title = Inhoudsopgave
 placeholder-add-title = Een titel toevoegen…
-page-compact-enable = Compacte modus inschakelen
-page-compact-disable = Compacte modus uitschakelen
+page-density-cycle = Overschakelen naar { $next }
+page-density-row = Rij
+page-density-standard = Standaard
+page-density-expanded = Uitgebreid
 page-reader-enable = Leesmodus inschakelen
 page-reader-disable = Leesmodus uitschakelen
 page-export = Syllabusbestand exporteren

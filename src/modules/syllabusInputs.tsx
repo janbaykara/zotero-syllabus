@@ -1,3 +1,4 @@
+import type { ItemDensity } from "./react-zotero-sync/itemDensity";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
 import { useState, useEffect, useLayoutEffect, useRef } from "preact/hooks";
@@ -12,12 +13,12 @@ export function ReadingDateInput({
   initialValue,
   defaultDate,
   onSave,
-  compactMode = false,
+  density = "expanded",
 }: {
   initialValue?: SettingsClassMetadata["readingDate"]; // ISO date string
   defaultDate?: SettingsClassMetadata["readingDate"]; // ISO date string from previous class
   onSave: (date: string | undefined) => void | Promise<void>;
-  compactMode?: boolean;
+  density?: ItemDensity;
 }) {
   const [value, setValue] = useState(
     initialValue ? new Date(initialValue).toISOString().split("T")[0] : "",
@@ -72,7 +73,7 @@ export function ReadingDateInput({
       <label
         className={twMerge(
           "text-tertiary shrink-0",
-          compactMode ? "text-sm" : "text-base",
+          density !== "expanded" ? "text-sm" : "text-base",
         )}
       >
         {value ? (
@@ -93,7 +94,7 @@ export function ReadingDateInput({
         onFocus={handleFocus}
         className={twMerge(
           "px-2 py-1 border border-quinary rounded-md bg-background text-secondary focus:outline-3 focus:outline-accent-blue focus:outline-offset-2",
-          compactMode ? "text-sm" : "text-base",
+          density !== "expanded" ? "text-sm" : "text-base",
         )}
         placeholder={getString("placeholder-select-date")}
       />

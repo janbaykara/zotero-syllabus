@@ -55,7 +55,10 @@ import type { GalleryLayout } from "./galleryLayout";
 import { GalleryTile } from "./GalleryPage";
 import { MagazineGrid, type MagazineTileClick } from "./MagazineTile";
 import { SlimSyllabusItemCard, useItemIdentifierSelection } from "./browsePage";
-import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
+import {
+  useZoteroItemDensity,
+  type ItemDensity,
+} from "./react-zotero-sync/itemDensity";
 import { GalleryViewportProvider } from "./galleryVisibility";
 import {
   findActiveGalleryGroupId,
@@ -760,7 +763,7 @@ function ExplorerShelfBody({
   keyPrefix,
   template,
   collectionId,
-  compactMode,
+  density,
   selectedIdentifiers,
   selectedItemIds,
   onClick,
@@ -773,7 +776,7 @@ function ExplorerShelfBody({
   keyPrefix: string;
   template: MagazineSectionTemplate;
   collectionId: number;
-  compactMode: boolean;
+  density: ItemDensity;
   selectedIdentifiers: Set<string>;
   selectedItemIds: number[] | null;
   onClick: MagazineTileClick;
@@ -813,7 +816,7 @@ function ExplorerShelfBody({
       <div
         className={twMerge(
           "syllabus-gallery-cards flex flex-col",
-          compactMode ? "gap-2" : "gap-4",
+          density !== "expanded" ? "gap-2" : "gap-4",
         )}
       >
         {items.map((item) => (
@@ -822,7 +825,7 @@ function ExplorerShelfBody({
             item={item}
             collectionId={collectionId}
             keyPrefix={keyPrefix}
-            compactMode={compactMode}
+            density={density}
             selectedIdentifiers={selectedIdentifiers}
             selectedItemIds={selectedItemIds}
             onIdentifierClick={onIdentifierClick}
@@ -862,10 +865,10 @@ function ExplorerDeadlineDate({ isoDate }: { isoDate: string }) {
 
 function ExplorerDeadlineShelf({
   groups,
-  compactMode,
+  density,
 }: {
   groups: ReturnType<typeof groupUpcomingReadingsByCourse>;
-  compactMode: boolean;
+  density: ItemDensity;
 }) {
   if (!groups.length) {
     return (
@@ -903,7 +906,7 @@ function ExplorerDeadlineShelf({
                 ) : null}
                 <ClassReadingBlock
                   classReading={classReading}
-                  compactMode={compactMode}
+                  density={density}
                   showCollectionLink={false}
                   compactHeading
                   onCollectionClick={() =>
@@ -930,7 +933,7 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
   );
   const data = useExplorerQueryData(libraryID, visibleShelves);
   const allSyllabi = useSyllabi();
-  const [compactMode] = useZoteroCompactMode();
+  const [density] = useZoteroItemDensity();
   const { selectedIdentifiers, selectedItemIds, handleIdentifierClick } =
     useItemIdentifierSelection();
   const pageRef = useRef<HTMLDivElement>(null);
@@ -1173,7 +1176,7 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
   );
 
   const bodyProps = {
-    compactMode,
+    density,
     selectedIdentifiers,
     selectedItemIds,
     onClick: handleClick,
@@ -1188,8 +1191,9 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
       tabIndex={-1}
       className={twMerge(
         "syllabus-page syllabus-explorer-page syllabus-magazine-page overflow-y-auto overflow-x-hidden h-full bg-background focus:outline-none",
-        compactMode && "compact-mode",
+        density !== "expanded" && `density-${density}`,
       )}
+      data-item-density={density}
       dir={getUiDir()}
     >
       <div className="pb-12">
@@ -1405,7 +1409,7 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                   {shelf.type === "upcoming-deadlines" ? (
                     <ExplorerDeadlineShelf
                       groups={upcomingDeadlineGroups}
-                      compactMode={compactMode}
+                      density={density}
                     />
                   ) : shelf.type === "recent-annotations" &&
                     shelf.layout !== "magazine" ? (

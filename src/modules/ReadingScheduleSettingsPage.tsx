@@ -5,7 +5,7 @@ import { twMerge } from "tailwind-merge";
 import { isZotero8OrLater } from "../utils/zotero";
 import { getString, getUiDir } from "../utils/locale";
 import { confirmPrompt } from "../utils/window";
-import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
+import { useZoteroItemDensity } from "./react-zotero-sync/itemDensity";
 import { useReadingScheduleCollectionPref } from "./react-zotero-sync/readingScheduleCollectionPref";
 
 interface ReadingScheduleSettingsPageProps {
@@ -28,7 +28,7 @@ function confirmReadingScheduleCollectionToggle(enable: boolean): boolean {
 export function ReadingScheduleSettingsPage({
   onBack,
 }: ReadingScheduleSettingsPageProps) {
-  const [compactMode] = useZoteroCompactMode();
+  const [density] = useZoteroItemDensity();
   const [generateCollection, setGenerateCollection] =
     useReadingScheduleCollectionPref();
 
@@ -90,7 +90,7 @@ export function ReadingScheduleSettingsPage({
             <label
               className={twMerge(
                 "flex items-center gap-3 cursor-pointer",
-                compactMode ? "text-sm" : "text-base",
+                density !== "expanded" ? "text-sm" : "text-base",
               )}
             >
               <input

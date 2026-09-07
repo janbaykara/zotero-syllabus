@@ -21,11 +21,6 @@
     data-l10n-id="pref-should-colour-syllabus-rows"
   />
   <checkbox
-    id="zotero-prefpane-__addonRef__-compactMode"
-    preference="compactMode"
-    data-l10n-id="pref-compact-mode"
-  />
-  <checkbox
     id="zotero-prefpane-__addonRef__-debugMode"
     preference="debugMode"
     data-l10n-id="pref-debug-mode"
@@ -40,6 +35,23 @@
     preference="customIcons"
     data-l10n-id="pref-custom-icons"
   />
+  <hbox align="center">
+    <html:label
+      data-l10n-id="pref-item-density"
+      control="zotero-prefpane-__addonRef__-itemDensity"
+    />
+    <menulist
+      id="zotero-prefpane-__addonRef__-itemDensity"
+      native="true"
+      preference="itemDensity"
+    >
+      <menupopup>
+        <menuitem value="row" data-l10n-id="pref-item-density-row" />
+        <menuitem value="standard" data-l10n-id="pref-item-density-standard" />
+        <menuitem value="expanded" data-l10n-id="pref-item-density-expanded" />
+      </menupopup>
+    </menulist>
+  </hbox>
   <hbox align="center">
     <html:label
       data-l10n-id="pref-default-gallery-layout"

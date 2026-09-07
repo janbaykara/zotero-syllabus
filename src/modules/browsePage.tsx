@@ -3,12 +3,49 @@ import { h } from "preact";
 import { useCallback, useState } from "preact/hooks";
 import type { ComponentChildren, JSX } from "preact";
 import { twMerge } from "tailwind-merge";
-import { Maximize2, Minimize2 } from "lucide-preact";
+import { Maximize2, Rows2, Rows3 } from "lucide-preact";
 import { isZotero8OrLater } from "../utils/zotero";
 import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
-import { useZoteroCompactMode } from "./react-zotero-sync/compactMode";
+import {
+  nextItemDensity,
+  useZoteroItemDensity,
+  type ItemDensity,
+} from "./react-zotero-sync/itemDensity";
 import { SyllabusItemCard } from "./SyllabusItemCard";
 import { getString, getUiDir } from "../utils/locale";
+import type { FluentMessageId } from "../../typings/i10n";
+
+const DENSITY_LABEL_IDS: Record<ItemDensity, FluentMessageId> = {
+  row: "page-density-row",
+  standard: "page-density-standard",
+  expanded: "page-density-expanded",
+};
+
+export function densityLabel(density: ItemDensity): string {
+  return getString(DENSITY_LABEL_IDS[density]);
+}
+
+export function densityCycleTitle(current: ItemDensity): string {
+  return getString("page-density-cycle", {
+    args: { next: densityLabel(nextItemDensity(current)) },
+  });
+}
+
+function DensityIcon({
+  density,
+  className,
+}: {
+  density: ItemDensity;
+  className?: string;
+}) {
+  if (density === "row") {
+    return <Rows3 size={20} className={className} />;
+  }
+  if (density === "standard") {
+    return <Rows2 size={20} className={className} />;
+  }
+  return <Maximize2 size={20} className={className} />;
+}
 
 export function useItemIdentifierSelection() {
   const selectedItemIds = useZoteroSelectedItemIds();
@@ -70,34 +107,33 @@ export function useItemIdentifierSelection() {
 }
 
 export function useBrowsePageChrome() {
-  const [compactMode, setCompactMode] = useZoteroCompactMode();
+  const [density, , cycleDensity] = useZoteroItemDensity();
   const selection = useItemIdentifierSelection();
-  const toggleCompactMode = useCallback(() => {
-    setCompactMode(!compactMode);
-  }, [compactMode, setCompactMode]);
 
-  return { compactMode, toggleCompactMode, ...selection };
+  return { density, cycleDensity, ...selection };
 }
 
 export function BrowsePageLayout({
   title,
-  compactMode,
-  onToggleCompact,
+  density,
+  onCycleDensity,
   contentClassName,
   children,
 }: {
   title: string;
-  compactMode: boolean;
-  onToggleCompact: () => void;
+  density: ItemDensity;
+  onCycleDensity: () => void;
   contentClassName?: string;
   children: ComponentChildren;
 }) {
+  const cycleTitle = densityCycleTitle(density);
   return (
     <div
       className={twMerge(
         "syllabus-page overflow-y-auto overflow-x-hidden h-full in-[.print]:scheme-light relative",
-        compactMode && "compact-mode",
+        `density-${density}`,
       )}
+      data-item-density={density}
       dir={getUiDir()}
     >
       <div className="pb-12">
@@ -116,29 +152,14 @@ export function BrowsePageLayout({
               <div className="inline-flex items-center gap-2.5 shrink grow-0">
                 <div
                   className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                  title={
-                    compactMode
-                      ? getString("page-compact-disable")
-                      : getString("page-compact-enable")
-                  }
-                  aria-label={
-                    compactMode
-                      ? getString("page-compact-disable")
-                      : getString("page-compact-enable")
-                  }
-                  onClick={onToggleCompact}
+                  title={cycleTitle}
+                  aria-label={cycleTitle}
+                  onClick={onCycleDensity}
                 >
-                  {compactMode ? (
-                    <Maximize2
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  ) : (
-                    <Minimize2
-                      size={20}
-                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                    />
-                  )}
+                  <DensityIcon
+                    density={density}
+                    className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                  />
                 </div>
               </div>
             </div>
@@ -162,7 +183,7 @@ export function SlimSyllabusItemCard({
   item,
   collectionId,
   keyPrefix,
-  compactMode,
+  density,
   selectedIdentifiers,
   selectedItemIds,
   onIdentifierClick,
@@ -171,7 +192,7 @@ export function SlimSyllabusItemCard({
   item: Zotero.Item;
   collectionId: number;
   keyPrefix: string;
-  compactMode: boolean;
+  density: ItemDensity;
   selectedIdentifiers: Set<string>;
   selectedItemIds: number[] | null;
   onIdentifierClick: (
@@ -191,7 +212,7 @@ export function SlimSyllabusItemCard({
       collectionId={collectionId}
       classNumber={undefined}
       slim={true}
-      compactMode={compactMode}
+      density={density}
       readerMode={false}
       isLocked={true}
       selectedIdentifiers={selectedIdentifiers}
