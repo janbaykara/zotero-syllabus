@@ -1,6 +1,36 @@
 import { getItemField, getItemTitle } from "./items";
 import { compareLocale } from "./locale";
 
+async function ensureStylesLoaded(): Promise<boolean> {
+  try {
+    if (
+      typeof Zotero.Styles?.initialized === "function" &&
+      Zotero.Styles.initialized()
+    ) {
+      return true;
+    }
+    if (typeof Zotero.Styles?.init === "function") {
+      await Zotero.Styles.init();
+      return true;
+    }
+  } catch (error) {
+    ztoolkit.log("Error initializing citation styles:", error);
+  }
+  return typeof Zotero.Styles?.initialized === "function"
+    ? Boolean(Zotero.Styles.initialized())
+    : false;
+}
+
+function getVisibleStyleUrls(): string[] {
+  try {
+    const styles = Zotero.Styles.getVisible() as Array<{ url: string }>;
+    return styles.map((style) => style.url).filter(Boolean);
+  } catch (error) {
+    ztoolkit.log("Error reading visible citation styles:", error);
+    return [];
+  }
+}
+
 /**
  * Get all available CSL styles
  * @returns Array of style objects with name and url
@@ -149,10 +179,12 @@ export async function generateBibliographicReference(
     }
   }
 
+  await ensureStylesLoaded();
+
   // Fallback to the last visible style if quick copy style is not set or failed
-  const styles = Zotero.Styles.getVisible() as Array<{ url: string }>;
-  if (styles.length > 0) {
-    const result = await tryWithStyle(styles[styles.length - 1].url);
+  const styleUrls = getVisibleStyleUrls();
+  if (styleUrls.length > 0) {
+    const result = await tryWithStyle(styleUrls[styleUrls.length - 1]);
     if (result) {
       return result;
     }
@@ -179,6 +211,8 @@ export async function generateBibliographyForPrint(
   if (!regularItems.length) {
     return null;
   }
+
+  await ensureStylesLoaded();
 
   const fromQuickCopy = async (
     url: string,
@@ -213,9 +247,9 @@ export async function generateBibliographyForPrint(
   if (quickCopyStyle && !urls.includes(quickCopyStyle)) {
     urls.push(quickCopyStyle);
   }
-  const styles = Zotero.Styles.getVisible() as Array<{ url: string }>;
-  if (styles.length) {
-    const last = styles[styles.length - 1].url;
+  const styleUrls = getVisibleStyleUrls();
+  if (styleUrls.length) {
+    const last = styleUrls[styleUrls.length - 1];
     if (last && !urls.includes(last)) {
       urls.push(last);
     }

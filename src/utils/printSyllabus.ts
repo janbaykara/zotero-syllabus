@@ -178,7 +178,12 @@ type FormField = Element & {
 };
 
 function asElement(node: Node | Element | null): Element | null {
-  return node instanceof Element ? node : null;
+  // Plugin chrome modules may not expose the Element constructor, so avoid
+  // `instanceof Element` (throws ReferenceError: Element is not defined).
+  if (!node || node.nodeType !== 1 /* Node.ELEMENT_NODE */) {
+    return null;
+  }
+  return node as Element;
 }
 
 function asFormField(node: Node | Element | null): FormField | null {
@@ -839,9 +844,8 @@ async function loadHtmlInHiddenBrowser(html: string): Promise<{
   let browser = await tryLoad(temp.path);
   if (!browser) {
     ztoolkit.log("HiddenBrowser file load failed, trying data URI");
-    browser = await tryLoad(
-      `data:text/html;charset=utf-8,${encodeURIComponent(html)}`,
-    );
+    const dataUri = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+    browser = await tryLoad(dataUri);
   }
   if (!browser) {
     try {
