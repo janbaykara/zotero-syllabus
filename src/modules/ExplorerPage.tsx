@@ -1355,7 +1355,7 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                         )}
                       </button>
                     ) : shelf.type === "recent-annotations" ? (
-                      <div className="flex items-center gap-2">
+                      <div className="inline-flex items-center gap-2 shrink-0">
                         <button
                           type="button"
                           className="syllabus-explorer-customize syllabus-explorer-shelf-goto"
