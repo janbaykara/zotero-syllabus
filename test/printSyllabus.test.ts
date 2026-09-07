@@ -25,12 +25,7 @@ describe("serializeSyllabusForPrint", function () {
     institutionMirror.className = "hidden in-[.print]:block";
     institutionMirror.textContent = "stale-institution";
 
-    masthead.append(
-      codeInput,
-      codeMirror,
-      institutionInput,
-      institutionMirror,
-    );
+    masthead.append(codeInput, codeMirror, institutionInput, institutionMirror);
     root.append(masthead);
 
     const html = serializeSyllabusForPrint(root);

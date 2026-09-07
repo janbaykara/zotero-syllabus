@@ -735,7 +735,9 @@ export function GalleryPage({
               collectionId={collectionIdOrZero}
               classNumber={classNumber ?? undefined}
               assignment={assignment}
-              slim={density !== "expanded" || !priority || priority === "optional"}
+              slim={
+                density !== "expanded" || !priority || priority === "optional"
+              }
               density={density}
               readerMode={false}
               isLocked={true}

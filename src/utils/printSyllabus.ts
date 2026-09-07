@@ -433,27 +433,29 @@ function polishMasthead(root: ParentNode): void {
 
 /** Turn item titles into clickable links when the card has a web URL. */
 function linkItemTitles(root: ParentNode): void {
-  root.querySelectorAll(".syllabus-item-card[data-print-url]").forEach((card) => {
-    const href = (card.getAttribute("data-print-url") || "").trim();
-    if (!/^https?:\/\//i.test(href)) {
-      return;
-    }
-    const title = card.querySelector(".syllabus-item-title");
-    if (!title || title.querySelector("a")) {
-      return;
-    }
-    const text = (title.textContent || "").trim();
-    if (!text) {
-      return;
-    }
-    const anchor = title.ownerDocument.createElement("a");
-    anchor.setAttribute("href", href);
-    anchor.className = "syllabus-item-print-link";
-    while (title.firstChild) {
-      anchor.appendChild(title.firstChild);
-    }
-    title.appendChild(anchor);
-  });
+  root
+    .querySelectorAll(".syllabus-item-card[data-print-url]")
+    .forEach((card) => {
+      const href = (card.getAttribute("data-print-url") || "").trim();
+      if (!/^https?:\/\//i.test(href)) {
+        return;
+      }
+      const title = card.querySelector(".syllabus-item-title");
+      if (!title || title.querySelector("a")) {
+        return;
+      }
+      const text = (title.textContent || "").trim();
+      if (!text) {
+        return;
+      }
+      const anchor = title.ownerDocument.createElement("a");
+      anchor.setAttribute("href", href);
+      anchor.className = "syllabus-item-print-link";
+      while (title.firstChild) {
+        anchor.appendChild(title.firstChild);
+      }
+      title.appendChild(anchor);
+    });
 }
 
 function polishLinks(root: ParentNode): void {
@@ -586,7 +588,11 @@ function applyInlinePrintStyles(
     if (classes.includes("syllabus-item-title-row")) {
       setPrintStyle(el, {
         "font-size":
-          density === "row" ? "13px" : density === "standard" ? "13.5px" : "14.5px",
+          density === "row"
+            ? "13px"
+            : density === "standard"
+              ? "13.5px"
+              : "14.5px",
         "font-weight": density === "row" ? "500" : "600",
         "line-height": "1.35",
         "margin-bottom": density === "row" ? "0" : "3px",

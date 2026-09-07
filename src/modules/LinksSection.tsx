@@ -94,7 +94,12 @@ export function LinksSection({
 
   return (
     <div className="container-padded">
-      <div className={twMerge("py-2", density !== "expanded" ? "text-base" : "text-lg")}>
+      <div
+        className={twMerge(
+          "py-2",
+          density !== "expanded" ? "text-base" : "text-lg",
+        )}
+      >
         <div className="flex flex-col gap-2">
           {rows.map((row) => {
             const isDraftRow = "draft" in row;

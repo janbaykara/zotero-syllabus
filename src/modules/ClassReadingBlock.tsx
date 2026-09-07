@@ -234,7 +234,9 @@ export function ClassReadingBlock({
               collectionId={classReading.collectionId}
               classNumber={classReading.classNumber}
               assignment={assignment}
-              slim={density !== "expanded" || !priority || priority === "optional"}
+              slim={
+                density !== "expanded" || !priority || priority === "optional"
+              }
               density={density}
               isLocked={true}
               onClick={onItemClick}

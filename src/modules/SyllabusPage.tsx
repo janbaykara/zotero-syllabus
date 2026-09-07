@@ -367,7 +367,10 @@ function SyllabusSaveFormatMenu({
   const popoverStyle = useSaveFormatPopover(open, setOpen, rootRef);
 
   return (
-    <div className="syllabus-save-format relative grow-0 shrink-0" ref={rootRef}>
+    <div
+      className="syllabus-save-format relative grow-0 shrink-0"
+      ref={rootRef}
+    >
       <div
         className="flex items-center in-[.print]:hidden cursor-pointer"
         title={getString("page-print")}
@@ -1737,11 +1740,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           : `none (${items.length} items)`,
       );
       const bibliographyHtml = bibliography
-        ? bibliographyToHtml(
-            bibliography.content,
-            density,
-            bibliography.isHtml,
-          )
+        ? bibliographyToHtml(bibliography.content, density, bibliography.isHtml)
         : "";
       const innerHTML = serializeSyllabusForPrint(syllabusPageElement, density);
       ztoolkit.log(
@@ -2274,7 +2273,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                 <div
                   className={twMerge(
                     "flex flex-row items-baseline gap-2 font-semibold",
-                    density !== "expanded" ? "text-xl mt-8 mb-2" : "text-2xl mt-12 mb-4",
+                    density !== "expanded"
+                      ? "text-xl mt-8 mb-2"
+                      : "text-2xl mt-12 mb-4",
                   )}
                 >
                   {getString("further-reading-heading")}

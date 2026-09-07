@@ -128,7 +128,11 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
             >
               {getString("schedule-empty-title")}
             </div>
-            <p className={twMerge(density !== "expanded" ? "text-base" : "text-lg")}>
+            <p
+              className={twMerge(
+                density !== "expanded" ? "text-base" : "text-lg",
+              )}
+            >
               {getString("schedule-empty-desc")}
             </p>
             {getPref("debugMode") && (

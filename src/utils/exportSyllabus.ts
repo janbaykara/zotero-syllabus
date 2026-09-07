@@ -102,7 +102,10 @@ export function runsFromNode(root: Node | null | undefined): ExportInline[] {
 }
 
 function runsText(runs: ExportInline[]): string {
-  return runs.map((run) => run.text).join("").trim();
+  return runs
+    .map((run) => run.text)
+    .join("")
+    .trim();
 }
 
 function pushBlock(blocks: ExportBlock[], block: ExportBlock): void {
@@ -293,7 +296,7 @@ export function blocksFromPrintableHtml(html: string): ExportBlock[] {
 
 function escapeMarkdown(text: string): string {
   // Escape only characters that commonly break prose or link labels.
-  return text.replace(/([\\`*_{}\[\]<>])/g, "\\$1");
+  return text.replace(/([\\`*_{}[\]<>])/g, "\\$1");
 }
 
 function inlineToMarkdown(runs: ExportInline[]): string {
@@ -335,10 +338,15 @@ export function blocksToMarkdown(blocks: ExportBlock[]): string {
     lines.push(text);
     lines.push("");
   }
-  return `${lines.join("\n").replace(/\n{3,}/g, "\n\n").trim()}\n`;
+  return `${lines
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()}\n`;
 }
 
-function inlineToDocxChildren(runs: ExportInline[]): (TextRun | ExternalHyperlink)[] {
+function inlineToDocxChildren(
+  runs: ExportInline[],
+): (TextRun | ExternalHyperlink)[] {
   return runs.map((run) => {
     if (run.type === "link") {
       return new ExternalHyperlink({
@@ -453,12 +461,9 @@ export async function saveSyllabusExport(opts: {
   }
 
   const bytes = await blocksToDocxBytes(blocks, title);
-  return saveBinaryToFile(
-    filename,
-    bytes,
-    getString("dialog-save-word"),
-    [[getString("file-filter-word"), "*.docx"]],
-  );
+  return saveBinaryToFile(filename, bytes, getString("dialog-save-word"), [
+    [getString("file-filter-word"), "*.docx"],
+  ]);
 }
 
 export async function saveSyllabusPdf(opts: {
