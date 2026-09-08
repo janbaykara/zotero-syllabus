@@ -949,7 +949,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     const handleGlobalDragStart = (e: DragEvent) => {
       // Only track drags that originate from syllabus items
       const target = e.target as HTMLElement | null;
-      const card = target?.closest?.(".syllabus-item-card") as HTMLElement | null;
+      const card = target?.closest?.(
+        ".syllabus-item-card",
+      ) as HTMLElement | null;
       if (!card) {
         return;
       }
