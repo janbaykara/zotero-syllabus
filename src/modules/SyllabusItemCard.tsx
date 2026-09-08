@@ -673,7 +673,7 @@ export function SyllabusItemCard({
         {density === "row" ? (
           <div
             className={twMerge(
-              "syllabus-item-title text-[14px] font-medium truncate min-w-0 leading-none",
+              "syllabus-item-title text-[14px] font-medium truncate min-w-0 leading-snug",
               readerMode && assignmentStatus === "done" ? "line-through" : "",
             )}
           >
@@ -791,7 +791,7 @@ export function SyllabusItemCard({
         {density === "row" && (
           <div className="flex flex-row items-center gap-2 shrink-0 min-w-0">
             {(author || year) && (
-              <div className="syllabus-item-metadata text-secondary text-[13px] shrink-0 text-right flex flex-row gap-1.5 items-center justify-end character-separator [--character-separator:'·'] leading-none whitespace-nowrap">
+              <div className="syllabus-item-metadata text-secondary text-[13px] shrink-0 text-right flex flex-row gap-1.5 items-center justify-end character-separator [--character-separator:'·'] leading-snug whitespace-nowrap">
                 {author && <span>{author}</span>}
                 {year && <span>{year}</span>}
               </div>
