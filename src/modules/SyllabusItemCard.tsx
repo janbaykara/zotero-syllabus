@@ -39,6 +39,7 @@ export function SyllabusItemCard({
   isLocked = false,
   onDrop,
   onDragOver,
+  dropEdge = null,
   onClick: customOnClick,
   onContextMenu: customOnContextMenu,
   selectedIdentifiers = new Set(),
@@ -66,6 +67,8 @@ export function SyllabusItemCard({
     insertBefore: boolean,
   ) => void;
   onDragOver?: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
+  /** Visual insert line while another item is dragged over this card. */
+  dropEdge?: "before" | "after" | null;
   onClick?: (
     item: Zotero.Item,
     e?: JSX.TargetedMouseEvent<HTMLElement>,
@@ -461,6 +464,7 @@ export function SyllabusItemCard({
       e.dataTransfer.dropEffect = "move";
     }
     if (onDragOver) {
+      // Parent uses clientY + currentTarget bounds to place the drop line.
       onDragOver(e);
     }
   };
@@ -534,10 +538,17 @@ export function SyllabusItemCard({
         isIdentifierSelected && "not-in-[.print]:bg-accent-blue! scheme-dark",
         // isZoteroSelected && isIdentifierSelected && "outline-none!",
         readerMode && assignmentStatus === "done" ? "opacity-40" : "",
+        dropEdge === "before" && "is-drop-before",
+        dropEdge === "after" && "is-drop-after",
         className,
       )}
       data-item-id={item.id}
       data-syllabus-identifier={identifier}
+      data-syllabus-class-number={
+        classNumber != null && classNumber !== undefined
+          ? String(classNumber)
+          : ""
+      }
       data-print-url={
         /^https?:\/\//i.test(String(url).trim())
           ? String(url).trim()

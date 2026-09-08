@@ -84,6 +84,7 @@ import { SyllabusItemCard } from "./SyllabusItemCard";
 import { bibliographyToHtml } from "./Bibliography";
 import { LinksSection } from "./LinksSection";
 import { ClassGroupComponent } from "./ClassGroup";
+import type { ItemDropIndicator } from "./ClassGroup";
 import { shouldCaptureCustomViewKeyboard } from "./galleryKeyboardNav";
 import {
   isItemContextMenuKey,
@@ -464,6 +465,36 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
   // Track drag state for showing "Add to Class X" dropzone
   const [isDragging, setIsDragging] = useState(false);
+  const [dropIndicator, setDropIndicator] = useState<ItemDropIndicator | null>(
+    null,
+  );
+  const [draggingIdentifiers, setDraggingIdentifiers] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [draggingSourceClass, setDraggingSourceClass] = useState<number | null>(
+    null,
+  );
+
+  const handleDropIndicatorChange = useCallback(
+    (indicator: ItemDropIndicator | null) => {
+      setDropIndicator((current) => {
+        if (current == null && indicator == null) {
+          return current;
+        }
+        if (
+          current &&
+          indicator &&
+          current.classNumber === indicator.classNumber &&
+          current.identifier === indicator.identifier &&
+          current.edge === indicator.edge
+        ) {
+          return current;
+        }
+        return indicator;
+      });
+    },
+    [],
+  );
 
   const fileDrop = useOsFileDropHandlers({
     onOsFileDrop: async (event) => {
@@ -514,6 +545,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   const [selectedIdentifiers, setSelectedIdentifiers] = useState<Set<string>>(
     new Set(),
   );
+  const selectedIdentifiersRef = useRef(selectedIdentifiers);
+  selectedIdentifiersRef.current = selectedIdentifiers;
   const syllabusPageRef = useRef<HTMLDivElement>(null);
   const pendingNavScrollRef = useRef<{
     identifier: string;
@@ -906,21 +939,45 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
   // Set up global drag event listeners
   useEffect(() => {
+    const clearDragUi = () => {
+      setIsDragging(false);
+      setDropIndicator(null);
+      setDraggingIdentifiers(new Set());
+      setDraggingSourceClass(null);
+    };
+
     const handleGlobalDragStart = (e: DragEvent) => {
       // Only track drags that originate from syllabus items
-      const target = e.target as HTMLElement;
-      if (target?.closest?.(".syllabus-item[draggable='true']")) {
-        setIsDragging(true);
+      const target = e.target as HTMLElement | null;
+      const card = target?.closest?.(".syllabus-item-card") as HTMLElement | null;
+      if (!card) {
+        return;
       }
+      setIsDragging(true);
+      const identifier = card.dataset.syllabusIdentifier;
+      if (identifier) {
+        const selected = selectedIdentifiersRef.current;
+        if (selected.has(identifier) && selected.size > 0) {
+          setDraggingIdentifiers(new Set(selected));
+        } else {
+          setDraggingIdentifiers(new Set([identifier]));
+        }
+      }
+      const classAttr = card.dataset.syllabusClassNumber;
+      setDraggingSourceClass(
+        classAttr !== undefined && classAttr !== ""
+          ? parseInt(classAttr, 10)
+          : null,
+      );
     };
 
     const handleGlobalDragEnd = () => {
-      setIsDragging(false);
+      clearDragUi();
     };
 
     const handleGlobalDrop = () => {
       // Reset drag state when drop occurs
-      setIsDragging(false);
+      clearDragUi();
     };
 
     // Listen to drag events on the document
@@ -1110,6 +1167,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       }
     }
     e.currentTarget.dataset.dropzoneActive = "false";
+    setDropIndicator(null);
 
     if (!e.dataTransfer) return;
     const itemIdStr = e.dataTransfer.getData("text/plain");
@@ -1490,22 +1548,52 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           "page",
         );
 
-        // Add to target class order at the end (using assignment ID)
-        // The assignment will be updated to the new class, so use the same ID
+        // Add to target class order at the drop line (or end if no target item)
         if (sourceAssignmentId) {
-          const targetOrder = SyllabusManager.getClassItemOrder(
+          let targetOrder = SyllabusManager.getClassItemOrder(
             collectionId,
             targetClassNumberValue,
           );
-          if (!targetOrder.includes(sourceAssignmentId)) {
-            const updatedTargetOrder = [...targetOrder, sourceAssignmentId];
-            await SyllabusManager.setClassItemOrder(
-              collectionId,
-              targetClassNumberValue,
-              updatedTargetOrder,
-              "page",
+          if (targetOrder.length === 0) {
+            const group = classGroups.find(
+              (g) => g.classNumber === targetClassNumberValue,
             );
+            targetOrder =
+              group?.itemAssignments
+                .map(({ assignment }) => assignment.id)
+                .filter((id): id is string => Boolean(id)) ?? [];
           }
+          targetOrder = targetOrder.filter((id) => id !== sourceAssignmentId);
+
+          let inserted = false;
+          if (targetItemId !== undefined) {
+            const targetItem = syllabusItems.find(
+              (item) => item.zoteroItem.id === targetItemId,
+            );
+            const targetAssignmentId = targetItem?.assignments.find(
+              (a) => a.classNumber === targetClassNumberValue && a.id,
+            )?.id;
+            const targetIndex = targetAssignmentId
+              ? targetOrder.findIndex((id) => id === targetAssignmentId)
+              : -1;
+            if (targetIndex !== -1) {
+              if (insertBefore) {
+                targetOrder.splice(targetIndex, 0, sourceAssignmentId);
+              } else {
+                targetOrder.splice(targetIndex + 1, 0, sourceAssignmentId);
+              }
+              inserted = true;
+            }
+          }
+          if (!inserted) {
+            targetOrder.push(sourceAssignmentId);
+          }
+          await SyllabusManager.setClassItemOrder(
+            collectionId,
+            targetClassNumberValue,
+            targetOrder,
+            "page",
+          );
         }
         // Force immediate re-render
         setItemOrderVersion((v) => v + 1);
@@ -2153,6 +2241,10 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
+                dropIndicator={dropIndicator}
+                onDropIndicatorChange={handleDropIndicatorChange}
+                draggingIdentifiers={draggingIdentifiers}
+                draggingSourceClass={draggingSourceClass}
                 density={density}
                 readerMode={readerMode}
                 isLocked={isLocked}

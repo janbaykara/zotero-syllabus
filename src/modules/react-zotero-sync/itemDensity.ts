@@ -16,6 +16,7 @@ export const ITEM_DENSITY_CYCLE: ItemDensity[] = [
 ];
 
 const LEGACY_COMPACT_PREF = `${config.prefsPrefix}.compactMode`;
+const LEGACY_ITEM_DENSITY_PREF = `${config.prefsPrefix}.itemDensity`;
 
 export function coerceItemDensity(value: unknown): ItemDensity {
   if (value === "row" || value === "standard" || value === "expanded") {
@@ -25,16 +26,12 @@ export function coerceItemDensity(value: unknown): ItemDensity {
 }
 
 export function getItemDensity(): ItemDensity {
-  const raw = getPrefValue("itemDensity");
-  if (raw === "row" || raw === "standard" || raw === "expanded") {
-    return raw;
-  }
-  return "expanded";
+  return coerceItemDensity(getPrefValue("defaultItemDensity"));
 }
 
 export function setItemDensity(density: ItemDensity): void {
-  setPref("itemDensity", density);
-  zoteroCache.invalidatePref(getPrefKey("itemDensity"));
+  setPref("defaultItemDensity", density);
+  zoteroCache.invalidatePref(getPrefKey("defaultItemDensity"));
 }
 
 export function nextItemDensity(current: ItemDensity): ItemDensity {
@@ -55,25 +52,43 @@ export function isDenseDensity(density: ItemDensity): boolean {
 }
 
 /**
- * One-time: users who had compactMode enabled become `standard` density.
- * Clears the legacy boolean so defaults for the new pref are not overridden again.
+ * One-time: migrate legacy prefs into `defaultItemDensity`.
+ * - plain `itemDensity` string → same value on the new key
+ * - `compactMode=true` → `standard` (pre-density installs)
  */
 export function migrateCompactModeToItemDensity(): void {
   try {
-    const legacy = Zotero.Prefs.get(LEGACY_COMPACT_PREF, true);
-    if (legacy !== true && legacy !== "true") {
-      return;
+    const legacyDensity = Zotero.Prefs.get(LEGACY_ITEM_DENSITY_PREF, true);
+    if (
+      legacyDensity === "row" ||
+      legacyDensity === "standard" ||
+      legacyDensity === "expanded"
+    ) {
+      setItemDensity(legacyDensity);
+    } else {
+      const legacyCompact = Zotero.Prefs.get(LEGACY_COMPACT_PREF, true);
+      if (legacyCompact === true || legacyCompact === "true") {
+        setItemDensity("standard");
+      }
     }
-    setPref("itemDensity", "standard");
-    zoteroCache.invalidatePref(getPrefKey("itemDensity"));
-    Zotero.Prefs.clear(LEGACY_COMPACT_PREF, true);
+
+    try {
+      Zotero.Prefs.clear(LEGACY_ITEM_DENSITY_PREF, true);
+    } catch {
+      /* ignore */
+    }
+    try {
+      Zotero.Prefs.clear(LEGACY_COMPACT_PREF, true);
+    } catch {
+      /* ignore */
+    }
   } catch (err) {
     ztoolkit.log("migrateCompactModeToItemDensity failed", err);
   }
 }
 
 function createItemDensityStore() {
-  const prefKey = getPrefKey("itemDensity");
+  const prefKey = getPrefKey("defaultItemDensity");
 
   function getSnapshot() {
     return getItemDensity();

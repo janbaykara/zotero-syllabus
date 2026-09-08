@@ -17,6 +17,13 @@ import { getString } from "../utils/locale";
 import { isZotero8OrLater } from "../utils/zotero";
 import { TextInput, ReadingDateInput } from "./syllabusInputs";
 import { SyllabusItemCard } from "./SyllabusItemCard";
+import { isOsFileDrag } from "../utils/nativeFileDrop";
+
+export type ItemDropIndicator = {
+  classNumber: number | null;
+  identifier: string;
+  edge: "before" | "after";
+};
 
 export interface ClassGroupComponentProps {
   classNumber?: number | null;
@@ -40,6 +47,10 @@ export interface ClassGroupComponentProps {
   ) => Promise<void>;
   onDragOver: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
   onDragLeave: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
+  dropIndicator?: ItemDropIndicator | null;
+  onDropIndicatorChange?: (indicator: ItemDropIndicator | null) => void;
+  draggingIdentifiers?: Set<string>;
+  draggingSourceClass?: number | null;
   density?: ItemDensity;
   readerMode?: boolean;
   isLocked?: boolean;
@@ -83,6 +94,10 @@ export function ClassGroupComponent({
   onDrop,
   onDragOver,
   onDragLeave,
+  dropIndicator = null,
+  onDropIndicatorChange,
+  draggingIdentifiers = new Set(),
+  draggingSourceClass = null,
   density = "expanded",
   readerMode = false,
   isLocked = false,
@@ -203,6 +218,121 @@ export function ClassGroupComponent({
       }
     }
   };
+
+  const classNumberKey = classNumber ?? null;
+
+  const assignmentIdentifier = (assignmentId: string) =>
+    `assignment:${assignmentId}`;
+
+  /** Place the insert line from a Y position over this class's item list. */
+  const updateDropIndicatorFromY = (
+    clientY: number,
+    cardsRoot: HTMLElement,
+  ) => {
+    if (!onDropIndicatorChange) {
+      return;
+    }
+    const cards = Array.from(
+      cardsRoot.querySelectorAll(":scope > .syllabus-item-card"),
+    ) as HTMLElement[];
+    if (cards.length === 0) {
+      onDropIndicatorChange(null);
+      return;
+    }
+    for (const card of cards) {
+      const identifier = card.dataset.syllabusIdentifier;
+      if (!identifier) {
+        continue;
+      }
+      const rect = card.getBoundingClientRect();
+      if (clientY < rect.top + rect.height / 2) {
+        onDropIndicatorChange({
+          classNumber: classNumberKey,
+          identifier,
+          edge: "before",
+        });
+        return;
+      }
+    }
+    const last = cards[cards.length - 1];
+    const identifier = last.dataset.syllabusIdentifier;
+    if (identifier) {
+      onDropIndicatorChange({
+        classNumber: classNumberKey,
+        identifier,
+        edge: "after",
+      });
+    }
+  };
+
+  const handleItemsDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
+    onDragOver(e);
+    if (isOsFileDrag(e.dataTransfer)) {
+      return;
+    }
+    updateDropIndicatorFromY(e.clientY, e.currentTarget);
+  };
+
+  const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
+    // Keep dropzone effectAllowed / preventDefault behavior from the page.
+    onDragOver(e);
+    if (isOsFileDrag(e.dataTransfer)) {
+      return;
+    }
+    // Use the list scanner so each gap has a single line (before next /
+    // after last), matching the Home configure popover — not both
+    // "after this" and "before next" in the same gap.
+    const root = e.currentTarget.parentElement;
+    if (root instanceof HTMLElement) {
+      updateDropIndicatorFromY(e.clientY, root);
+    }
+  };
+
+  const handleItemsDragLeave = (e: JSX.TargetedDragEvent<HTMLElement>) => {
+    onDragLeave(e);
+    const rect = e.currentTarget.getBoundingClientRect();
+    const { clientX: x, clientY: y } = e;
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      onDropIndicatorChange?.(null);
+    }
+  };
+
+  // Hide the line when it would not change order within the same class.
+  const visibleDropIndicator = (() => {
+    if (
+      !dropIndicator ||
+      dropIndicator.classNumber !== classNumberKey ||
+      itemAssignments.length === 0
+    ) {
+      return null;
+    }
+    const sameClass =
+      draggingSourceClass !== null &&
+      draggingSourceClass !== undefined &&
+      draggingSourceClass === classNumberKey;
+    if (!sameClass || draggingIdentifiers.size !== 1) {
+      return dropIndicator;
+    }
+    const draggedId = [...draggingIdentifiers][0];
+    const from = itemAssignments.findIndex(
+      ({ assignment }) =>
+        assignment.id != null &&
+        assignmentIdentifier(assignment.id) === draggedId,
+    );
+    const toItem = itemAssignments.findIndex(
+      ({ assignment }) =>
+        assignment.id != null &&
+        assignmentIdentifier(assignment.id) === dropIndicator.identifier,
+    );
+    if (from < 0 || toItem < 0) {
+      return dropIndicator;
+    }
+    const to = dropIndicator.edge === "after" ? toItem + 1 : toItem;
+    if (to === from || to === from + 1) {
+      return null;
+    }
+    return dropIndicator;
+  })();
 
   // Generate ID for TOC navigation
   const tocId = classNumber ? `toc-class-${classNumber}` : null;
@@ -410,9 +540,35 @@ export function ClassGroupComponent({
             "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:outline-accent-blue! data-[dropzone-active='true']:text-accent-blue! transition-all duration-200 outline-transparent outline-2! outline-dashed!",
             !isZotero8OrLater() && "compat-space-y",
           )}
-          onDrop={isLocked ? undefined : (e) => onDrop(e, classNumber ?? null)}
-          onDragOver={isLocked ? undefined : onDragOver}
-          onDragLeave={isLocked ? undefined : onDragLeave}
+          onDrop={
+            isLocked
+              ? undefined
+              : (e) => {
+                  if (
+                    dropIndicator &&
+                    dropIndicator.classNumber === classNumberKey
+                  ) {
+                    const target = itemAssignments.find(
+                      ({ assignment }) =>
+                        assignment.id != null &&
+                        `assignment:${assignment.id}` ===
+                          dropIndicator.identifier,
+                    );
+                    if (target) {
+                      void onDrop(
+                        e,
+                        classNumber ?? null,
+                        target.item.id,
+                        dropIndicator.edge === "before",
+                      );
+                      return;
+                    }
+                  }
+                  void onDrop(e, classNumber ?? null);
+                }
+          }
+          onDragOver={isLocked ? undefined : handleItemsDragOver}
+          onDragLeave={isLocked ? undefined : handleItemsDragLeave}
         >
           {!isLocked && itemAssignments.length === 0 && classNumber !== null ? (
             <div
@@ -469,7 +625,13 @@ export function ClassGroupComponent({
                   onDrop={(e, insertBefore) =>
                     onDrop(e, classNumber ?? null, item.id, insertBefore)
                   }
-                  onDragOver={onDragOver}
+                  onDragOver={handleItemDragOver}
+                  dropEdge={
+                    visibleDropIndicator?.identifier ===
+                    `assignment:${assignment.id}`
+                      ? visibleDropIndicator.edge
+                      : null
+                  }
                   isZoteroSelected={selectedItemIds?.includes(item.id) || false}
                   isIdentifierSelected={selectedIdentifiers.has(
                     `assignment:${assignment.id}`,

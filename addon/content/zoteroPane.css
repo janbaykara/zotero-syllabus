@@ -118,6 +118,27 @@
   opacity: 1;
 }
 
+.syllabus-item-card.is-drop-before::before,
+.syllabus-item-card.is-drop-after::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  left: 0.25rem;
+  right: 0.25rem;
+  height: 3px;
+  pointer-events: none;
+  background: var(--accent-blue, #2255e0);
+  border-radius: 2px;
+}
+
+.syllabus-item-card.is-drop-before::before {
+  top: -1px;
+}
+
+.syllabus-item-card.is-drop-after::after {
+  bottom: -1px;
+}
+
 .syllabus-gallery-sticky {
   padding-bottom: 0.5rem;
 }
