@@ -142,3 +142,33 @@
   width: 5em;
   margin-inline-start: 4px;
 }
+
+.syllabus-pref-reset {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 2px 8px;
+}
+
+.syllabus-pref-reset-button {
+  appearance: none;
+  font: inherit;
+  font-size: 0.95em;
+  padding: 6px 12px;
+  cursor: pointer;
+  color: var(--fill-primary, inherit);
+  background: color-mix(in srgb, var(--fill-quinary, #888) 35%, transparent);
+  border: 1px solid
+    color-mix(in srgb, var(--fill-quaternary, #888) 55%, transparent);
+  border-radius: 6px;
+}
+
+.syllabus-pref-reset-button:hover {
+  background: color-mix(in srgb, var(--fill-quinary, #888) 50%, transparent);
+}
+
+.syllabus-pref-reset-button:focus-visible {
+  outline: 2px solid var(--accent-color, #2c6bed);
+  outline-offset: 2px;
+}

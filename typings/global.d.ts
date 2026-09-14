@@ -42,6 +42,13 @@ declare const Services: {
   };
   scriptloader?: any;
   io?: any;
+  prefs: {
+    getBranch: (root: string) => {
+      getChildList: (startingAt: string) => string[];
+    };
+    prefHasUserValue: (prefName: string) => boolean;
+    clearUserPref: (prefName: string) => void;
+  };
   dirsvc: {
     get: (key: string, iface: any) => any;
   };

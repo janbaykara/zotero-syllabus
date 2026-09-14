@@ -57,6 +57,44 @@ export function clearPref(key: string) {
 }
 
 /**
+ * Relative pref names under the plugin branch (including nested keys like
+ * `galleryLayout.<id>`). Forward-looking: whatever is currently stored.
+ */
+export function listPluginPrefNames(): string[] {
+  try {
+    const branch = Services.prefs.getBranch(`${PREFS_PREFIX}.`);
+    return branch.getChildList("");
+  } catch (error) {
+    ztoolkit.log("listPluginPrefNames failed:", error);
+    return [];
+  }
+}
+
+/**
+ * Clear every user-set value under the plugin prefs prefix so defaults from
+ * `addon/prefs.js` (and any future defaults) apply again. Does not delete
+ * library data (syllabus notes, items, collections).
+ */
+export function resetAllPluginPrefs(): string[] {
+  const names = listPluginPrefNames();
+  const cleared: string[] = [];
+  for (const name of names) {
+    const fullKey = `${PREFS_PREFIX}.${name}`;
+    try {
+      if (Services.prefs.prefHasUserValue(fullKey)) {
+        // Prefer Zotero.Prefs.clear so plugin/Zotero caches stay consistent.
+        Zotero.Prefs.clear(fullKey, true);
+        cleared.push(name);
+      }
+    } catch (error) {
+      ztoolkit.log("Failed to clear pref:", fullKey, error);
+    }
+    zoteroCache.invalidatePref(fullKey);
+  }
+  return cleared;
+}
+
+/**
  * Get the full preference key with prefix.
  * @param key
  */

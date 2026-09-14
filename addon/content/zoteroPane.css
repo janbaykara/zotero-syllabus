@@ -2819,3 +2819,72 @@
   font-size: 0.75rem;
   line-height: 1.25;
 }
+
+/* Optional-features showcase toggle (user guide) */
+.syllabus-optional-feature-toggle {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 6px 10px 6px 6px;
+  border: 1px solid
+    color-mix(in srgb, var(--fill-primary, #111) 14%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fill-quinary, #888) 28%, transparent);
+  color: var(--fill-primary, inherit);
+  font: inherit;
+  font-size: 0.95em;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.syllabus-optional-feature-toggle:hover {
+  background: color-mix(in srgb, var(--fill-quinary, #888) 40%, transparent);
+}
+
+.syllabus-optional-feature-toggle:focus-visible {
+  outline: 2px solid var(--accent-blue, #2255e0);
+  outline-offset: 2px;
+}
+
+.syllabus-optional-feature-toggle-track {
+  position: relative;
+  box-sizing: border-box;
+  width: 36px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fill-primary, #111) 22%, transparent);
+  transition: background-color 0.15s ease;
+}
+
+.syllabus-optional-feature-toggle[data-state="on"]
+  .syllabus-optional-feature-toggle-track {
+  background: var(--accent-blue, #2255e0);
+}
+
+.syllabus-optional-feature-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  inset-inline-start: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition:
+    inset-inline-start 0.15s ease,
+    inset-inline-end 0.15s ease;
+}
+
+.syllabus-optional-feature-toggle[data-state="on"]
+  .syllabus-optional-feature-toggle-thumb {
+  inset-inline-start: calc(100% - 20px);
+}
+
+.syllabus-optional-feature-toggle-label {
+  min-width: 2.2em;
+  padding-inline-end: 4px;
+}

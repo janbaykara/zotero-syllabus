@@ -32,6 +32,9 @@ const PLAYGROUND_COLLECTION_NAME = "Syllabus Tour";
 const TOUR_EVENT_OPEN_SETTINGS = "syllabus-tour-open-settings";
 const TOUR_EVENT_CLOSE_SETTINGS = "syllabus-tour-close-settings";
 
+/** Last MenuManager ID returned by registerMenu (CSS-escaped pluginID-menuID). */
+let registeredHelpMenuID: string | null = null;
+
 /** Packaged under addon/content/images/guide/ for chrome:// access in the tour. */
 type GuideImage =
   | "classes.png"
@@ -437,24 +440,38 @@ function registerUserGuideHelpMenu() {
   };
 
   if (typeof Zotero.MenuManager?.registerMenu === "function") {
-    try {
-      Zotero.MenuManager.unregisterMenu(`${config.addonRef}-menuHelp`);
-    } catch {
-      // ignore if not registered yet
+    const menuID = `${config.addonRef}-menuHelp`;
+    const idsToUnregister = new Set(
+      [registeredHelpMenuID, `${CSS.escape(config.addonID)}-${menuID}`].filter(
+        Boolean,
+      ) as string[],
+    );
+    for (const id of idsToUnregister) {
+      Zotero.MenuManager.unregisterMenu(id);
     }
-    Zotero.MenuManager.registerMenu({
-      menuID: `${config.addonRef}-menuHelp`,
-      pluginID: config.addonID,
-      target: "main/menubar/help",
-      menus: [
-        {
-          menuType: "menuitem",
-          l10nID: `${config.addonRef}-menuHelp-openUserGuide`,
-          icon: `chrome://${config.addonRef}/content/icons/favicon.png`,
-          onCommand,
-        },
-      ],
-    });
+    registeredHelpMenuID =
+      Zotero.MenuManager.registerMenu({
+        menuID,
+        pluginID: config.addonID,
+        target: "main/menubar/help",
+        menus: [
+          {
+            menuType: "menuitem",
+            l10nID: `${config.addonRef}-menuHelp-openUserGuide`,
+            icon: `chrome://${config.addonRef}/content/icons/favicon.png`,
+            onShowing: (_event, context) => {
+              // Ensure a label if document.l10n missed the plugin FTL
+              if (!context.menuElem?.getAttribute("label")) {
+                context.menuElem?.setAttribute(
+                  "label",
+                  getString("menuHelp-openUserGuide"),
+                );
+              }
+            },
+            onCommand,
+          },
+        ],
+      }) || null;
     return;
   }
 
@@ -516,20 +533,42 @@ function appendFeatureToggle(
   if (existing) {
     existing.remove();
   }
+
   const button = doc.createElement("button");
   button.type = "button";
+  button.className = "syllabus-optional-feature-toggle";
   button.setAttribute("data-optional-feature-toggle", id);
-  const syncLabel = () => {
-    button.textContent = getString("optional-features-toggle", {
-      args: { state: choices[id] ? "on" : "off" },
+
+  const track = doc.createElement("span");
+  track.className = "syllabus-optional-feature-toggle-track";
+  track.setAttribute("aria-hidden", "true");
+  const thumb = doc.createElement("span");
+  thumb.className = "syllabus-optional-feature-toggle-thumb";
+  track.appendChild(thumb);
+
+  const label = doc.createElement("span");
+  label.className = "syllabus-optional-feature-toggle-label";
+
+  button.append(track, label);
+
+  const sync = () => {
+    const on = !!choices[id];
+    button.setAttribute("aria-pressed", on ? "true" : "false");
+    button.dataset.state = on ? "on" : "off";
+    const hint = getString("optional-features-toggle", {
+      args: { state: on ? "on" : "off" },
     });
+    button.title = hint;
+    button.setAttribute("aria-label", hint);
+    label.textContent = getString(
+      on ? "optional-features-enabled" : "optional-features-disabled",
+    );
   };
-  syncLabel();
-  button.style.cssText =
-    "appearance: auto; font: inherit; padding: 8px 14px; min-width: 14em; cursor: pointer; margin-top: 12px; display: block;";
+  sync();
+
   button.addEventListener("click", () => {
     choices[id] = !choices[id];
-    syncLabel();
+    sync();
   });
   body.appendChild(button);
 }

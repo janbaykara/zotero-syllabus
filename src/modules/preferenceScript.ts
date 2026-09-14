@@ -1,5 +1,13 @@
 import { config } from "../../package.json";
-import { getPrefValue, setPref } from "../utils/prefs";
+import { getPrefValue, resetAllPluginPrefs, setPref } from "../utils/prefs";
+import { confirmPrompt } from "../utils/window";
+import { refreshOptionalFeatureChrome } from "./optionalFeatures";
+
+type PrefKey = Parameters<typeof getPrefValue>[0];
+
+type PrefsDocumentL10n = {
+  formatValues: (ids: string[]) => Promise<(string | null)[]>;
+};
 
 const ISSUES_URL = "https://github.com/janbaykara/zotero-syllabus/issues";
 const REDDIT_URL =
@@ -69,6 +77,15 @@ function bindPrefEvents() {
     doc.getElementById(`${config.addonRef}-pref-link-reddit`),
     REDDIT_URL,
   );
+
+  const resetButton = doc.getElementById(`${config.addonRef}-pref-reset`);
+  if (resetButton && !(resetButton as HTMLElement).dataset.syllabusBound) {
+    (resetButton as HTMLElement).dataset.syllabusBound = "1";
+    resetButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      void handleResetPlugin();
+    });
+  }
 }
 
 function bindLaunchLink(el: Element | null, url: string) {
@@ -79,4 +96,85 @@ function bindLaunchLink(el: Element | null, url: string) {
     event.stopPropagation();
     Zotero.launchURL(url);
   });
+}
+
+async function handleResetPlugin() {
+  const prefsWin = addon.data.prefs?.window;
+  const [title, message] = await formatPrefsL10n([
+    "pref-reset-confirm-title",
+    "pref-reset-confirm-message",
+  ]);
+  const confirmed = confirmPrompt(title, message);
+  if (!confirmed) {
+    return;
+  }
+
+  const cleared = resetAllPluginPrefs();
+  ztoolkit.log("Reset plugin prefs:", cleared);
+
+  refreshOptionalFeatureChrome();
+
+  if (prefsWin) {
+    syncWpmInput(prefsWin);
+    syncBoundControls(prefsWin);
+  }
+
+  const mainWin = Zotero.getMainWindow();
+  if (mainWin) {
+    try {
+      const { showUserGuide } = await import("./userGuide");
+      await showUserGuide(mainWin, false);
+    } catch (error) {
+      ztoolkit.log("Error showing user guide after reset:", error);
+    }
+  }
+}
+
+async function formatPrefsL10n(ids: string[]): Promise<string[]> {
+  const win = addon.data.prefs?.window;
+  const l10n = (win?.document as Document & { l10n?: PrefsDocumentL10n })
+    ?.l10n;
+  if (l10n?.formatValues) {
+    try {
+      const values = await l10n.formatValues(ids);
+      return ids.map((id, i) => values[i] || id);
+    } catch (error) {
+      ztoolkit.log("formatPrefsL10n failed:", error);
+    }
+  }
+  return ids;
+}
+
+/** Refresh preference-bound controls after clearing user prefs. */
+function syncBoundControls(win: Window) {
+  const checkboxes = Array.from(
+    win.document.querySelectorAll("checkbox[preference]"),
+  );
+  for (const el of checkboxes) {
+    const checkbox = el as XULElement & { checked: boolean };
+    const prefName = checkbox.getAttribute("preference");
+    if (!prefName) continue;
+    try {
+      checkbox.checked = !!getPrefValue(prefName as PrefKey);
+    } catch {
+      // Pref may not be in PluginPrefsMap
+    }
+  }
+
+  const menulists = Array.from(
+    win.document.querySelectorAll("menulist[preference]"),
+  );
+  for (const el of menulists) {
+    const list = el as XULElement & { value: string };
+    const prefName = list.getAttribute("preference");
+    if (!prefName) continue;
+    try {
+      const value = getPrefValue(prefName as PrefKey);
+      if (value != null) {
+        list.value = String(value);
+      }
+    } catch {
+      // ignore
+    }
+  }
 }

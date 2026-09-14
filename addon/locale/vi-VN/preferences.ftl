@@ -64,3 +64,9 @@ pref-gallery-layout-card =
     .label = Thẻ
 pref-wpm = Từ mỗi phút
 pref-wpm-desc = Used to estimate reading time from page or word counts.
+pref-reset = Reset plugin
+pref-reset-desc =
+    Clear all Zotero Syllabus preferences back to defaults and show the first-run setup again. Your library items and syllabus notes are not deleted.
+pref-reset-confirm-title = Reset Zotero Syllabus?
+pref-reset-confirm-message =
+    This clears all plugin preferences (views, tours, gallery defaults, and related settings) and reopens the first-run chooser. Syllabus notes and items in your library are kept.

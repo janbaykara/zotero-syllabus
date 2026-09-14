@@ -304,12 +304,14 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
   // Register stylesheets
   registerStyleSheet(win);
 
+  // Fluent must be in the document before any DOM that uses data-l10n-id
+  // (Help menu, item-pane section headers, etc.)
+  const mainWindowFtl = `${addon.data.config.addonRef}-mainWindow.ftl`;
+  win.MozXULElement.insertFTLIfNeeded(mainWindowFtl);
+  await win.document.l10n?.addResourceIds?.([mainWindowFtl]);
+
   SyllabusManager.onMainWindowLoad(win);
   registerUserGuideHelpMenu();
-
-  win.MozXULElement.insertFTLIfNeeded(
-    `${addon.data.config.addonRef}-mainWindow.ftl`,
-  );
 
   // First-run / outdated tour — wait for toolbar chrome to exist
   Zotero.Promise.delay(800).then(() => {
