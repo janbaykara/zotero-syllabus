@@ -4,7 +4,6 @@ import { getCachedPref, zoteroCache } from "./cache";
 type PluginPrefsMap = _ZoteroTypes.Prefs["PluginPrefsMap"];
 
 export const PREFS_KEYS: (keyof PluginPrefsMap)[] = [
-  "enable",
   "showBibliography",
   "defaultItemDensity",
   "readerMode",

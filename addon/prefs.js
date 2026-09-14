@@ -1,4 +1,3 @@
-pref("enable", true);
 pref("showBibliography", false);
 pref("defaultItemDensity", "expanded");
 pref("readerMode", false);

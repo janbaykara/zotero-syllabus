@@ -260,7 +260,6 @@ export type FluentMessageId =
   | 'pref-debug-mode'
   | 'pref-default-gallery-layout'
   | 'pref-default-item-density'
-  | 'pref-enable'
   | 'pref-enable-explorer'
   | 'pref-enable-gallery'
   | 'pref-enable-reading-schedule'
