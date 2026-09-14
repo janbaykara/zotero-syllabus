@@ -2425,6 +2425,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                       slim={true}
                       density={density}
                       readerMode={readerMode}
+                      isLocked={isLocked}
                       selectedIdentifiers={selectedIdentifiers}
                       onIdentifierClick={handleIdentifierClick}
                       onContextMenu={handleContextMenu}
