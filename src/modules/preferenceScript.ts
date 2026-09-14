@@ -1,4 +1,6 @@
 import { config } from "../../package.json";
+import type { FluentMessageId } from "../../typings/i10n";
+import { getLocaleID } from "../utils/locale";
 import { getPrefValue, resetAllPluginPrefs, setPref } from "../utils/prefs";
 import { confirmPrompt } from "../utils/window";
 import { refreshOptionalFeatureChrome } from "./optionalFeatures";
@@ -130,19 +132,40 @@ async function handleResetPlugin() {
   }
 }
 
-async function formatPrefsL10n(ids: string[]): Promise<string[]> {
+async function formatPrefsL10n(ids: FluentMessageId[]): Promise<string[]> {
+  const prefixed = ids.map((id) => getLocaleID(id));
   const win = addon.data.prefs?.window;
   const l10n = (win?.document as Document & { l10n?: PrefsDocumentL10n })
     ?.l10n;
   if (l10n?.formatValues) {
     try {
-      const values = await l10n.formatValues(ids);
-      return ids.map((id, i) => values[i] || id);
+      const values = await l10n.formatValues(prefixed);
+      if (values.every((value) => !!value)) {
+        return values as string[];
+      }
     } catch (error) {
       ztoolkit.log("formatPrefsL10n failed:", error);
     }
   }
-  return ids;
+
+  // document.l10n can miss plugin FTLs; Localization() resolves them reliably
+  try {
+    const LocalizationCtor =
+      typeof Localization === "undefined"
+        ? ztoolkit.getGlobal("Localization")
+        : Localization;
+    const bundle = new LocalizationCtor(
+      [`${config.addonRef}-preferences.ftl`],
+      true,
+    );
+    const messages = bundle.formatMessagesSync(
+      prefixed.map((id) => ({ id })),
+    ) as Array<{ value: string | null } | null>;
+    return prefixed.map((id, i) => messages[i]?.value || id);
+  } catch (error) {
+    ztoolkit.log("formatPrefsL10n Localization fallback failed:", error);
+    return prefixed;
+  }
 }
 
 /** Refresh preference-bound controls after clearing user prefs. */

@@ -1326,6 +1326,15 @@ export class SyllabusManager {
       }
     }
 
+    // A single radio (e.g. only Table on a non-syllabus with Gallery off) is
+    // useless — hide the group entirely. Create Syllabus can still show.
+    const visibleRadios = viewModeButtons.filter((button) => !button.hidden);
+    if (visibleRadios.length <= 1) {
+      for (const button of viewModeButtons) {
+        button.hidden = true;
+      }
+    }
+
     const createButton = doc.getElementById(
       "syllabus-create-syllabus-button",
     ) as XULButtonElement | null;
@@ -1334,6 +1343,12 @@ export class SyllabusManager {
     }
 
     const anyRadioVisible = viewModeButtons.some((button) => !button.hidden);
+    const radioGroup = doc.getElementById(
+      "syllabus-view-mode-group",
+    ) as HTMLElement | null;
+    if (radioGroup) {
+      radioGroup.hidden = !anyRadioVisible;
+    }
     const hideChrome = hideAll || (!anyRadioVisible && !showCreate);
     for (const id of [
       "syllabus-view-mode-cluster",
