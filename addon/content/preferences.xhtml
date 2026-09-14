@@ -1,100 +1,332 @@
 <linkset>
   <html:link rel="localization" href="__addonRef__-preferences.ftl" />
 </linkset>
-<groupbox
+<vbox
+  class="syllabus-pref-pane"
   onload="Zotero.__addonInstance__.hooks.onPrefsEvent('load', { window })"
 >
-  <label><html:h2 data-l10n-id="pref-title"></html:h2></label>
-  <label><html:h2 data-l10n-id="pref-views-title"></html:h2></label>
-  <checkbox
-    id="zotero-prefpane-__addonRef__-enableSyllabus"
-    preference="enableSyllabus"
-    data-l10n-id="pref-enable-syllabus"
-  />
-  <checkbox
-    id="zotero-prefpane-__addonRef__-enableGallery"
-    preference="enableGallery"
-    data-l10n-id="pref-enable-gallery"
-  />
-  <checkbox
-    id="zotero-prefpane-__addonRef__-enableExplorer"
-    preference="enableExplorer"
-    data-l10n-id="pref-enable-explorer"
-  />
-  <checkbox
-    id="zotero-prefpane-__addonRef__-enableReadingSchedule"
-    preference="enableReadingSchedule"
-    data-l10n-id="pref-enable-reading-schedule"
-  />
-  <checkbox
-    id="zotero-prefpane-__addonRef__-showBibliography"
-    preference="showBibliography"
-    data-l10n-id="pref-show-bibliography"
-  />
-  <checkbox
-    id="zotero-prefpane-__addonRef__-shouldColourSyllabusRows"
-    preference="shouldColourSyllabusRows"
-    data-l10n-id="pref-should-colour-syllabus-rows"
-  />
-  <checkbox
-    id="zotero-prefpane-__addonRef__-debugMode"
-    preference="debugMode"
-    data-l10n-id="pref-debug-mode"
-  />
-  <checkbox
-    id="zotero-prefpane-__addonRef__-generateReadingScheduleCollection"
-    preference="generateReadingScheduleCollection"
-    data-l10n-id="pref-generate-reading-schedule-collection"
-  />
-  <checkbox
-    id="zotero-prefpane-__addonRef__-customIcons"
-    preference="customIcons"
-    data-l10n-id="pref-custom-icons"
-  />
-  <hbox align="center">
-    <html:label
-      data-l10n-id="pref-default-item-density"
-      control="zotero-prefpane-__addonRef__-defaultItemDensity"
-    />
-    <menulist
-      id="zotero-prefpane-__addonRef__-defaultItemDensity"
-      native="true"
-      preference="defaultItemDensity"
-    >
-      <menupopup>
-        <menuitem value="row" data-l10n-id="pref-item-density-row" />
-        <menuitem value="standard" data-l10n-id="pref-item-density-standard" />
-        <menuitem value="expanded" data-l10n-id="pref-item-density-expanded" />
-      </menupopup>
-    </menulist>
-  </hbox>
-  <hbox align="center">
-    <html:label
-      data-l10n-id="pref-default-gallery-layout"
-      control="zotero-prefpane-__addonRef__-defaultGalleryLayout"
-    />
-    <menulist
-      id="zotero-prefpane-__addonRef__-defaultGalleryLayout"
-      native="true"
-      preference="defaultGalleryLayout"
-    >
-      <menupopup>
-        <menuitem value="cover" data-l10n-id="pref-gallery-layout-cover" />
-        <menuitem
-          value="magazine"
-          data-l10n-id="pref-gallery-layout-magazine"
+  <html:div class="syllabus-pref-intro">
+    <html:p
+      class="syllabus-pref-goal"
+      data-l10n-id="pref-goal"
+    ></html:p>
+    <html:p class="syllabus-pref-links">
+      <html:a
+        class="syllabus-pref-link"
+        id="__addonRef__-pref-link-issues"
+        href="https://github.com/janbaykara/zotero-syllabus/issues"
+        data-l10n-id="pref-link-issues"
+      ></html:a>
+      <html:span data-l10n-id="pref-link-separator"></html:span>
+      <html:a
+        class="syllabus-pref-link"
+        id="__addonRef__-pref-link-reddit"
+        href="https://www.reddit.com/r/zotero/comments/1w3eu97/zotero_syllabus_a_plugin_for_students_to_organise/"
+        data-l10n-id="pref-link-reddit"
+      ></html:a>
+    </html:p>
+    <html:p
+      class="syllabus-pref-help"
+      data-l10n-id="pref-help"
+      data-l10n-args='{"time": "__buildTime__","name": "__addonName__","version":"__buildVersion__"}'
+    ></html:p>
+  </html:div>
+
+  <!-- Syllabus -->
+  <html:section class="syllabus-pref-card">
+    <html:div class="syllabus-pref-card-header">
+      <html:div class="syllabus-pref-card-heading">
+        <html:img
+          class="syllabus-pref-card-icon"
+          src="chrome://__addonRef__/content/icons/graduation-cap.svg"
+          alt=""
         />
-        <menuitem value="card" data-l10n-id="pref-gallery-layout-card" />
-      </menupopup>
-    </menulist>
-  </hbox>
-  <hbox class="virtualized-table-container" flex="1" height="300px">
-    <html:div id="__addonRef__-table-container" />
-  </hbox>
-</groupbox>
-<vbox>
-  <html:label
-    data-l10n-id="pref-help"
-    data-l10n-args='{"time": "__buildTime__","name": "__addonName__","version":"__buildVersion__"}'
-  ></html:label>
+        <html:h2
+          class="syllabus-pref-card-title"
+          data-l10n-id="pref-syllabus-title"
+        ></html:h2>
+      </html:div>
+      <html:img
+        class="syllabus-pref-card-demo"
+        src="chrome://__addonRef__/content/images/guide/classes.png"
+        alt=""
+        data-l10n-id="pref-syllabus-demo-alt"
+      />
+    </html:div>
+    <html:div class="syllabus-pref-row syllabus-pref-row-checkbox">
+      <html:div class="syllabus-pref-row-main">
+        <checkbox
+          id="zotero-prefpane-__addonRef__-enableSyllabus"
+          preference="enableSyllabus"
+          data-l10n-id="pref-enable-syllabus"
+        />
+      </html:div>
+      <html:p
+        class="syllabus-pref-desc"
+        data-l10n-id="pref-enable-syllabus-desc"
+      ></html:p>
+    </html:div>
+    <html:div class="syllabus-pref-row syllabus-pref-row-checkbox">
+      <html:div class="syllabus-pref-row-main">
+        <checkbox
+          id="zotero-prefpane-__addonRef__-showBibliography"
+          preference="showBibliography"
+          data-l10n-id="pref-show-bibliography"
+        />
+      </html:div>
+      <html:p
+        class="syllabus-pref-desc"
+        data-l10n-id="pref-show-bibliography-desc"
+      ></html:p>
+    </html:div>
+    <html:div class="syllabus-pref-row syllabus-pref-row-checkbox">
+      <html:div class="syllabus-pref-row-main">
+        <checkbox
+          id="zotero-prefpane-__addonRef__-shouldColourSyllabusRows"
+          preference="shouldColourSyllabusRows"
+          data-l10n-id="pref-should-colour-syllabus-rows"
+        />
+      </html:div>
+      <html:p
+        class="syllabus-pref-desc"
+        data-l10n-id="pref-should-colour-syllabus-rows-desc"
+      ></html:p>
+    </html:div>
+    <html:div class="syllabus-pref-row">
+      <html:div class="syllabus-pref-row-main">
+        <html:label
+          data-l10n-id="pref-default-item-density"
+          control="zotero-prefpane-__addonRef__-defaultItemDensity"
+        />
+        <menulist
+          id="zotero-prefpane-__addonRef__-defaultItemDensity"
+          native="true"
+          preference="defaultItemDensity"
+        >
+          <menupopup>
+            <menuitem value="row" data-l10n-id="pref-item-density-row" />
+            <menuitem
+              value="standard"
+              data-l10n-id="pref-item-density-standard"
+            />
+            <menuitem
+              value="expanded"
+              data-l10n-id="pref-item-density-expanded"
+            />
+          </menupopup>
+        </menulist>
+      </html:div>
+      <html:p
+        class="syllabus-pref-desc"
+        data-l10n-id="pref-default-item-density-desc"
+      ></html:p>
+    </html:div>
+  </html:section>
+
+  <!-- Reading Schedule -->
+  <html:section class="syllabus-pref-card">
+    <html:div class="syllabus-pref-card-header">
+      <html:div class="syllabus-pref-card-heading">
+        <html:img
+          class="syllabus-pref-card-icon"
+          src="chrome://__addonRef__/content/icons/calendar.svg"
+          alt=""
+        />
+        <html:h2
+          class="syllabus-pref-card-title"
+          data-l10n-id="pref-reading-schedule-title"
+        ></html:h2>
+      </html:div>
+      <html:img
+        class="syllabus-pref-card-demo"
+        src="chrome://__addonRef__/content/images/guide/reading.png"
+        alt=""
+        data-l10n-id="pref-reading-schedule-demo-alt"
+      />
+    </html:div>
+    <html:div class="syllabus-pref-row syllabus-pref-row-checkbox">
+      <html:div class="syllabus-pref-row-main">
+        <checkbox
+          id="zotero-prefpane-__addonRef__-enableReadingSchedule"
+          preference="enableReadingSchedule"
+          data-l10n-id="pref-enable-reading-schedule"
+        />
+      </html:div>
+      <html:p
+        class="syllabus-pref-desc"
+        data-l10n-id="pref-enable-reading-schedule-desc"
+      ></html:p>
+    </html:div>
+    <html:div class="syllabus-pref-row syllabus-pref-row-checkbox">
+      <html:div class="syllabus-pref-row-main">
+        <checkbox
+          id="zotero-prefpane-__addonRef__-generateReadingScheduleCollection"
+          preference="generateReadingScheduleCollection"
+          data-l10n-id="pref-generate-reading-schedule-collection"
+        />
+      </html:div>
+      <html:p
+        class="syllabus-pref-desc"
+        data-l10n-id="pref-generate-reading-schedule-collection-desc"
+      ></html:p>
+    </html:div>
+  </html:section>
+
+  <!-- Gallery -->
+  <html:section class="syllabus-pref-card">
+    <html:div class="syllabus-pref-card-header">
+      <html:div class="syllabus-pref-card-heading">
+        <html:img
+          class="syllabus-pref-card-icon"
+          src="chrome://__addonRef__/content/icons/gallery-grid.svg"
+          alt=""
+        />
+        <html:h2
+          class="syllabus-pref-card-title"
+          data-l10n-id="pref-gallery-title"
+        ></html:h2>
+      </html:div>
+      <html:img
+        class="syllabus-pref-card-demo"
+        src="chrome://__addonRef__/content/images/guide/gallery-small.png"
+        alt=""
+        data-l10n-id="pref-gallery-demo-alt"
+      />
+    </html:div>
+    <html:div class="syllabus-pref-row syllabus-pref-row-checkbox">
+      <html:div class="syllabus-pref-row-main">
+        <checkbox
+          id="zotero-prefpane-__addonRef__-enableGallery"
+          preference="enableGallery"
+          data-l10n-id="pref-enable-gallery"
+        />
+      </html:div>
+      <html:p
+        class="syllabus-pref-desc"
+        data-l10n-id="pref-enable-gallery-desc"
+      ></html:p>
+    </html:div>
+    <html:div class="syllabus-pref-row">
+      <html:div class="syllabus-pref-row-main">
+        <html:label
+          data-l10n-id="pref-default-gallery-layout"
+          control="zotero-prefpane-__addonRef__-defaultGalleryLayout"
+        />
+        <menulist
+          id="zotero-prefpane-__addonRef__-defaultGalleryLayout"
+          native="true"
+          preference="defaultGalleryLayout"
+        >
+          <menupopup>
+            <menuitem value="cover" data-l10n-id="pref-gallery-layout-cover" />
+            <menuitem
+              value="magazine"
+              data-l10n-id="pref-gallery-layout-magazine"
+            />
+            <menuitem value="card" data-l10n-id="pref-gallery-layout-card" />
+          </menupopup>
+        </menulist>
+      </html:div>
+      <html:p
+        class="syllabus-pref-desc"
+        data-l10n-id="pref-default-gallery-layout-desc"
+      ></html:p>
+    </html:div>
+  </html:section>
+
+  <!-- Home -->
+  <html:section class="syllabus-pref-card">
+    <html:div class="syllabus-pref-card-header">
+      <html:div class="syllabus-pref-card-heading">
+        <html:img
+          class="syllabus-pref-card-icon"
+          src="chrome://__addonRef__/content/icons/home.svg"
+          alt=""
+        />
+        <html:h2
+          class="syllabus-pref-card-title"
+          data-l10n-id="pref-home-title"
+        ></html:h2>
+      </html:div>
+      <html:img
+        class="syllabus-pref-card-demo"
+        src="chrome://__addonRef__/content/images/guide/home-annotations.png"
+        alt=""
+        data-l10n-id="pref-home-demo-alt"
+      />
+    </html:div>
+    <html:div class="syllabus-pref-row syllabus-pref-row-checkbox">
+      <html:div class="syllabus-pref-row-main">
+        <checkbox
+          id="zotero-prefpane-__addonRef__-enableExplorer"
+          preference="enableExplorer"
+          data-l10n-id="pref-enable-explorer"
+        />
+      </html:div>
+      <html:p
+        class="syllabus-pref-desc"
+        data-l10n-id="pref-enable-explorer-desc"
+      ></html:p>
+    </html:div>
+  </html:section>
+
+  <!-- Advanced -->
+  <html:section class="syllabus-pref-card">
+    <html:div class="syllabus-pref-card-header">
+      <html:div class="syllabus-pref-card-heading">
+        <html:img
+          class="syllabus-pref-card-icon"
+          src="chrome://__addonRef__/content/icons/advanced-gear.svg"
+          alt=""
+        />
+        <html:h2
+          class="syllabus-pref-card-title"
+          data-l10n-id="pref-advanced-title"
+        ></html:h2>
+      </html:div>
+    </html:div>
+    <html:div class="syllabus-pref-row syllabus-pref-row-checkbox">
+      <html:div class="syllabus-pref-row-main">
+        <checkbox
+          id="zotero-prefpane-__addonRef__-customIcons"
+          preference="customIcons"
+          data-l10n-id="pref-custom-icons"
+        />
+      </html:div>
+      <html:p
+        class="syllabus-pref-desc"
+        data-l10n-id="pref-custom-icons-desc"
+      ></html:p>
+    </html:div>
+    <html:div class="syllabus-pref-row">
+      <html:div class="syllabus-pref-row-main">
+        <html:label
+          data-l10n-id="pref-wpm"
+          control="zotero-prefpane-__addonRef__-wpm"
+        />
+        <html:input
+          id="zotero-prefpane-__addonRef__-wpm"
+          class="syllabus-pref-wpm-input"
+          type="number"
+          min="60"
+          max="1000"
+          step="10"
+        />
+      </html:div>
+      <html:p class="syllabus-pref-desc" data-l10n-id="pref-wpm-desc"></html:p>
+    </html:div>
+    <html:div class="syllabus-pref-row syllabus-pref-row-checkbox">
+      <html:div class="syllabus-pref-row-main">
+        <checkbox
+          id="zotero-prefpane-__addonRef__-debugMode"
+          preference="debugMode"
+          data-l10n-id="pref-debug-mode"
+        />
+      </html:div>
+      <html:p
+        class="syllabus-pref-desc"
+        data-l10n-id="pref-debug-mode-desc"
+      ></html:p>
+    </html:div>
+  </html:section>
 </vbox>

@@ -703,6 +703,7 @@ export class SyllabusManager {
       src: rootURI + "content/preferences.xhtml",
       label: getString("app-name"),
       image: `chrome://${addon.data.config.addonRef}/content/icons/favicon.png`,
+      stylesheets: [rootURI + "content/preferences.css"],
     });
   }
 
@@ -1303,22 +1304,23 @@ export class SyllabusManager {
       !!selectedCollection &&
       !syllabusChrome;
     const isLibraryRoot = viewScopeSupportsExplorer(scope);
+    const explorerEnabled = isOptionalFeatureEnabled("explorer");
 
     for (const button of viewModeButtons) {
       const buttonMode = button.getAttribute("data-view-mode");
       if (isLibraryRoot) {
+        // My Library only offers Table / Home. Without Home, hide the whole
+        // switcher rather than a lone Table radio.
         button.hidden =
           hideAll ||
-          (buttonMode !== "collection" && buttonMode !== "explorer") ||
-          (buttonMode === "explorer" &&
-            !isOptionalFeatureEnabled("explorer"));
+          !explorerEnabled ||
+          (buttonMode !== "collection" && buttonMode !== "explorer");
       } else if (buttonMode === "explorer") {
         button.hidden = true;
       } else if (buttonMode === "syllabus") {
         button.hidden = hideAll || !syllabusChrome;
       } else if (buttonMode === "gallery") {
-        button.hidden =
-          hideAll || !isOptionalFeatureEnabled("gallery");
+        button.hidden = hideAll || !isOptionalFeatureEnabled("gallery");
       } else {
         button.hidden = hideAll;
       }

@@ -1,5 +1,9 @@
 import { config } from "../../package.json";
-import { getPref, PREFS_KEYS } from "../utils/prefs";
+import { getPrefValue, setPref } from "../utils/prefs";
+
+const ISSUES_URL = "https://github.com/janbaykara/zotero-syllabus/issues";
+const REDDIT_URL =
+  "https://www.reddit.com/r/zotero/comments/1w3eu97/zotero_syllabus_a_plugin_for_students_to_organise/";
 
 export async function registerPrefsScripts(_window: Window) {
   // This function is called when the prefs window is opened
@@ -18,25 +22,61 @@ export async function registerPrefsScripts(_window: Window) {
 }
 
 async function updatePrefsUI() {
-  // You can initialize some UI elements on prefs window
-  // with addon.data.prefs.window.document
-  // Or bind some events to the elements
-  if (addon.data.prefs?.window == undefined) return;
-  // Preferences UI can be customized here if needed
+  const win = addon.data.prefs?.window;
+  if (!win) return;
   ztoolkit.log("Preference window loaded");
+  syncWpmInput(win);
+}
+
+function syncWpmInput(win: Window) {
+  const input = win.document.getElementById(
+    `zotero-prefpane-${config.addonRef}-wpm`,
+  ) as HTMLInputElement | null;
+  if (!input) return;
+  const wpm = Number(getPrefValue("wpm"));
+  input.value = String(Number.isFinite(wpm) && wpm > 0 ? wpm : 220);
 }
 
 function bindPrefEvents() {
-  for (const pref of PREFS_KEYS) {
-    // addon.data
-    //   .prefs!.window.document?.querySelector(
-    //     `#zotero-prefpane-${config.addonRef}-${pref}`,
-    //   )
-    //   ?.addEventListener("command", (e: Event) => {
-    //     ztoolkit.log(e);
-    //     addon.data.prefs!.window.alert(
-    //       `Successfully changed to ${(e.target as XUL.Checkbox).checked}!`,
-    //     );
-    //   });
+  const win = addon.data.prefs?.window;
+  if (!win) return;
+  const doc = win.document;
+
+  const wpmInput = doc.getElementById(
+    `zotero-prefpane-${config.addonRef}-wpm`,
+  ) as HTMLInputElement | null;
+  if (wpmInput && !wpmInput.dataset.syllabusBound) {
+    wpmInput.dataset.syllabusBound = "1";
+    const commit = () => {
+      const raw = Number(wpmInput.value);
+      if (!Number.isFinite(raw)) {
+        syncWpmInput(win);
+        return;
+      }
+      const clamped = Math.min(1000, Math.max(60, Math.round(raw)));
+      wpmInput.value = String(clamped);
+      setPref("wpm", clamped);
+    };
+    wpmInput.addEventListener("change", commit);
+    wpmInput.addEventListener("blur", commit);
   }
+
+  bindLaunchLink(
+    doc.getElementById(`${config.addonRef}-pref-link-issues`),
+    ISSUES_URL,
+  );
+  bindLaunchLink(
+    doc.getElementById(`${config.addonRef}-pref-link-reddit`),
+    REDDIT_URL,
+  );
+}
+
+function bindLaunchLink(el: Element | null, url: string) {
+  if (!el || (el as HTMLElement).dataset.syllabusBound) return;
+  (el as HTMLElement).dataset.syllabusBound = "1";
+  el.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    Zotero.launchURL(url);
+  });
 }

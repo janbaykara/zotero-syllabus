@@ -1,0 +1,144 @@
+/* Zotero Syllabus preferences — card layout inspired by macOS Settings */
+
+.syllabus-pref-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0 12px;
+  max-width: 560px;
+}
+
+.syllabus-pref-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 2px 2px;
+}
+
+.syllabus-pref-goal {
+  margin: 0;
+  font-size: 1em;
+  line-height: 1.4;
+  color: var(--fill-primary, inherit);
+}
+
+.syllabus-pref-links {
+  margin: 0;
+  font-size: 0.92em;
+  line-height: 1.45;
+  color: var(--fill-secondary, #777);
+}
+
+.syllabus-pref-link {
+  color: var(--accent-color, #2c6bed);
+  cursor: pointer;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+}
+
+.syllabus-pref-help {
+  margin: 0;
+  opacity: 0.75;
+  font-size: 0.9em;
+  color: var(--fill-secondary, #777);
+}
+
+.syllabus-pref-card {
+  background: color-mix(in srgb, var(--fill-quinary, #888) 42%, transparent);
+  border: 1px solid
+    color-mix(in srgb, var(--fill-quaternary, #888) 45%, transparent);
+  border-radius: 10px;
+  padding: 4px 0;
+  overflow: hidden;
+}
+
+@media (prefers-color-scheme: dark) {
+  .syllabus-pref-card {
+    background: color-mix(in srgb, var(--fill-quinary, #aaa) 28%, transparent);
+  }
+}
+
+.syllabus-pref-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+}
+
+.syllabus-pref-card-heading {
+  flex: 6 1 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.syllabus-pref-card-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  -moz-context-properties: fill, stroke, fill-opacity;
+  fill: var(--fill-secondary, #666);
+  stroke: var(--fill-secondary, #666);
+}
+
+.syllabus-pref-card-title {
+  margin: 0;
+  font-size: 1.15em;
+  font-weight: 600;
+  color: var(--fill-primary, inherit);
+}
+
+.syllabus-pref-card-demo {
+  flex: 4 1 0;
+  display: block;
+  width: auto;
+  max-width: 40%;
+  height: 72px;
+  margin: 0;
+  object-fit: cover;
+  object-position: top center;
+  border-radius: 8px;
+  border: 1px solid
+    color-mix(in srgb, var(--fill-quaternary, #888) 50%, transparent);
+  background: var(--material-background, #fff);
+  box-sizing: border-box;
+}
+
+.syllabus-pref-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px 12px;
+  border-top: 1px solid
+    color-mix(in srgb, var(--fill-quaternary, #888) 35%, transparent);
+}
+
+.syllabus-pref-row:first-of-type {
+  border-top: none;
+}
+
+.syllabus-pref-row-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.syllabus-pref-desc {
+  margin: 0;
+  padding-inline-start: 0;
+  font-size: 0.92em;
+  line-height: 1.35;
+  color: var(--fill-secondary, #777);
+  max-width: 42em;
+}
+
+.syllabus-pref-wpm-input {
+  width: 5em;
+  margin-inline-start: 4px;
+}
