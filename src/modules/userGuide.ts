@@ -15,7 +15,10 @@ import {
   type OptionalFeatureChoices,
   type OptionalFeatureId,
 } from "./optionalFeatures";
-import { getSelectedCollection, libraryIdForNewCollection } from "../utils/zotero";
+import {
+  getSelectedCollection,
+  libraryIdForNewCollection,
+} from "../utils/zotero";
 import { setLibraryViewMode } from "./explorerConfig";
 
 export {

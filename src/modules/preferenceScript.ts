@@ -135,8 +135,7 @@ async function handleResetPlugin() {
 async function formatPrefsL10n(ids: FluentMessageId[]): Promise<string[]> {
   const prefixed = ids.map((id) => getLocaleID(id));
   const win = addon.data.prefs?.window;
-  const l10n = (win?.document as Document & { l10n?: PrefsDocumentL10n })
-    ?.l10n;
+  const l10n = (win?.document as Document & { l10n?: PrefsDocumentL10n })?.l10n;
   if (l10n?.formatValues) {
     try {
       const values = await l10n.formatValues(prefixed);

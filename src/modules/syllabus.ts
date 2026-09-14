@@ -441,7 +441,9 @@ export class SyllabusManager {
     for (const win of Zotero.getMainWindows() as _ZoteroTypes.MainWindow[]) {
       if (!isOptionalFeatureEnabled("readingSchedule")) {
         try {
-          const existing = win.Zotero_Tabs?._getTab("syllabus-reading-list-tab");
+          const existing = win.Zotero_Tabs?._getTab(
+            "syllabus-reading-list-tab",
+          );
           if (existing?.tab) {
             win.Zotero_Tabs.close("syllabus-reading-list-tab");
           }
@@ -1299,10 +1301,7 @@ export class SyllabusManager {
     const syllabusEnabled = isOptionalFeatureEnabled("syllabus");
     const syllabusChrome = syllabusEnabled ? syllabusViewModeChrome() : null;
     const showCreate =
-      !hideAll &&
-      syllabusEnabled &&
-      !!selectedCollection &&
-      !syllabusChrome;
+      !hideAll && syllabusEnabled && !!selectedCollection && !syllabusChrome;
     const isLibraryRoot = viewScopeSupportsExplorer(scope);
     const explorerEnabled = isOptionalFeatureEnabled("explorer");
 
