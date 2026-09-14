@@ -7,7 +7,16 @@ import { ensureClassRecord, orderedClassIds } from "../utils/schemas";
 import { mutateCollectionDocument } from "./syllabusNote";
 import { SyllabusManager } from "./syllabus";
 import { FEATURE_FLAG } from "./featureFlags";
-import { getSelectedCollection } from "../utils/zotero";
+import {
+  applyOptionalFeatureChoices,
+  getDefaultOptionalFeatureChoices,
+  isOptionalFeatureEnabled,
+  isOptionalFeaturesPromptDone,
+  type OptionalFeatureChoices,
+  type OptionalFeatureId,
+} from "./optionalFeatures";
+import { getSelectedCollection, libraryIdForNewCollection } from "../utils/zotero";
+import { setLibraryViewMode } from "./explorerConfig";
 
 export {
   showUserGuide,
@@ -29,7 +38,9 @@ type GuideImage =
   | "module.png"
   | "drag-drop.gif"
   | "editing.png"
-  | "reading.png";
+  | "reading.png"
+  | "gallery.png"
+  | "home.png";
 
 function guideChromeUrl(filename: GuideImage): string {
   return `chrome://${config.addonRef}/content/images/guide/${filename}`;
@@ -456,16 +467,83 @@ function registerUserGuideHelpMenu() {
   });
 }
 
-async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
-  if (!force && getPref("latestTourVersion") == LATEST_TOUR_VERSION) {
-    return;
+type ShowcaseFeature = {
+  id: OptionalFeatureId;
+  titleId: FluentMessageId;
+  descId: FluentMessageId;
+  image: GuideImage;
+};
+
+function showcaseFeatures(): ShowcaseFeature[] {
+  const features: ShowcaseFeature[] = [
+    {
+      id: "syllabus",
+      titleId: "optional-features-syllabus-title",
+      descId: "optional-features-syllabus-desc",
+      image: "classes.png",
+    },
+    {
+      id: "gallery",
+      titleId: "optional-features-gallery-title",
+      descId: "optional-features-gallery-desc",
+      image: "gallery.png",
+    },
+    {
+      id: "explorer",
+      titleId: "optional-features-explorer-title",
+      descId: "optional-features-explorer-desc",
+      image: "home.png",
+    },
+  ];
+  if (FEATURE_FLAG.READING_SCHEDULE) {
+    features.push({
+      id: "readingSchedule",
+      titleId: "optional-features-reading-schedule-title",
+      descId: "optional-features-reading-schedule-desc",
+      image: "reading.png",
+    });
   }
-  setPref("latestTourVersion", LATEST_TOUR_VERSION);
+  return features;
+}
 
+function appendFeatureToggle(
+  body: HTMLElement,
+  choices: OptionalFeatureChoices,
+  id: OptionalFeatureId,
+) {
+  const doc = body.ownerDocument;
+  const existing = body.querySelector("[data-optional-feature-toggle]");
+  if (existing) {
+    existing.remove();
+  }
+  const button = doc.createElement("button");
+  button.type = "button";
+  button.setAttribute("data-optional-feature-toggle", id);
+  const syncLabel = () => {
+    button.textContent = getString("optional-features-toggle", {
+      args: { state: choices[id] ? "on" : "off" },
+    });
+  };
+  syncLabel();
+  button.style.cssText =
+    "appearance: auto; font: inherit; padding: 8px 14px; min-width: 14em; cursor: pointer; margin-top: 12px; display: block;";
+  button.addEventListener("click", () => {
+    choices[id] = !choices[id];
+    syncLabel();
+  });
+  body.appendChild(button);
+}
+
+async function showOptionalFeaturesShowcase(
+  win: _ZoteroTypes.MainWindow,
+): Promise<void> {
   const doc = win.document;
-  let playgroundCollection: Zotero.Collection | null = null;
-
+  const choices = getDefaultOptionalFeatureChoices();
+  if (!FEATURE_FLAG.READING_SCHEDULE) {
+    choices.readingSchedule = false;
+  }
   const guide = new ztoolkit.Guide();
+  let aborted = false;
 
   guide.addStep({
     title: getString("userGuide-start-title"),
@@ -479,199 +557,333 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
     closeBtnText: getString("userGuide-start-close"),
     showProgress: true,
     onCloseClick: () => {
+      aborted = true;
       clearPref("latestTourVersion");
     },
   });
 
   guide.addStep({
-    title: getString("userGuide-collection-title"),
-    description: getString("userGuide-collection-desc"),
-    element: "#zotero-collections-tree",
-    showButtons: ["prev", "next"],
-    showProgress: true,
-    onBeforeRender: async () => {
-      win.Zotero_Tabs?.select("zotero-pane");
-      playgroundCollection =
-        await resolvePlaygroundCollection(playgroundCollection);
-    },
-  });
-
-  guide.addStep({
-    title: getString("userGuide-syllabusButton-title"),
-    description: guideStepDescription(
-      "userGuide-syllabusButton-desc",
-      "module.png",
-      300,
-    ),
-    element: () => findSyllabusTourToolbarTarget(win) || doc.documentElement!,
-    showButtons: ["prev", "next"],
-    showProgress: true,
-    onBeforeRender: async () => {
-      win.Zotero_Tabs?.select("zotero-pane");
-      playgroundCollection =
-        await resolvePlaygroundCollection(playgroundCollection);
-      await waitForElement(win, () => findSyllabusTourToolbarTarget(win));
-    },
-    onExit: async () => {
-      playgroundCollection =
-        await resolvePlaygroundCollection(playgroundCollection);
-      await enableSyllabusViewForTour(playgroundCollection);
-    },
-  });
-
-  guide.addStep({
-    title: getString("userGuide-addClass-title"),
-    description: getString("userGuide-addClass-desc"),
-    // Center so the coachmark stays readable while the empty state may reflow.
+    title: getString("optional-features-intro-title"),
+    description: getString("optional-features-intro-desc"),
     position: "center",
-    element: () =>
-      doc.querySelector('[data-tour="syllabus-add-class"]') ||
-      doc.documentElement!,
     showButtons: ["prev", "next"],
     showProgress: true,
-    onMask: ({ mask }) => {
-      const target = doc.querySelector('[data-tour="syllabus-add-class"]');
-      if (target) {
-        mask(target);
-      }
-    },
-    onBeforeRender: async () => {
-      requestTourCloseSettings(win);
-      await waitForElement(win, '[data-tour="syllabus-add-class"]');
-    },
-    // Run on Next (while the tip is still visible), not onExit after hide —
-    // otherwise the card vanishes and the action feels like it auto-skipped.
-    onNextClick: async () => {
-      playgroundCollection =
-        await resolvePlaygroundCollection(playgroundCollection);
-      await ensureTourClass(playgroundCollection, 1);
-    },
   });
 
-  guide.addStep({
-    title: getString("userGuide-assign-title"),
-    description: guideStepDescription(
-      "userGuide-assign-desc",
-      "drag-drop.gif",
-      280,
-    ),
-    // Keep this teaching card centered — anchoring to Further reading (often
-    // near the bottom) plus live DOM updates felt like skipped windows.
-    position: "center",
-    element: () =>
-      doc.querySelector('[data-tour="syllabus-further-reading"]') ||
-      doc.querySelector('[data-tour="syllabus-class-group"]') ||
-      doc.documentElement!,
-    showButtons: ["prev", "next"],
-    showProgress: true,
-    onMask: ({ mask }) => {
-      const target =
-        doc.querySelector('[data-tour="syllabus-further-reading"]') ||
-        doc.querySelector('[data-tour="syllabus-class-group"]');
-      if (target) {
-        mask(target);
-      }
-    },
-    onBeforeRender: async () => {
-      requestTourCloseSettings(win);
-      // Ensure class exists from the previous step, but do not assign yet —
-      // let the user read this tip and click Next first.
-      playgroundCollection =
-        await resolvePlaygroundCollection(playgroundCollection);
-      await waitForElement(
-        win,
-        () =>
-          doc.querySelector('[data-tour="syllabus-further-reading"]') ||
-          doc.querySelector('[data-tour="syllabus-class-group"]'),
-      );
-      await settleTourUi(200);
-    },
-    onNextClick: async () => {
-      playgroundCollection =
-        await resolvePlaygroundCollection(playgroundCollection);
-      await ensureTourClassAndAssignment(playgroundCollection);
-    },
-  });
-
-  guide.addStep({
-    title: getString("userGuide-itemPane-title"),
-    description: guideStepDescription(
-      "userGuide-itemPane-desc",
-      "editing.png",
-      280,
-    ),
-    // Keep the panel centered — anchoring to the side/bottom item pane
-    // often pushes Next/Done off-screen so users can't continue.
-    position: "center",
-    element: () =>
-      doc.querySelector('[data-tour="syllabus-item-pane"]') ||
-      doc.querySelector("#zotero-item-pane") ||
-      doc.documentElement!,
-    showButtons: ["prev", "next"],
-    showProgress: true,
-    onMask: ({ mask }) => {
-      const target =
-        doc.querySelector('[data-tour="syllabus-item-pane"]') ||
-        doc.querySelector("#zotero-item-pane");
-      if (target) {
-        mask(target);
-      }
-    },
-    onBeforeRender: async () => {
-      requestTourCloseSettings(win);
-      playgroundCollection =
-        await resolvePlaygroundCollection(playgroundCollection);
-      // Assignment happens on Next of the previous step — only select here.
-      await selectTourAssignedItem(playgroundCollection);
-      await waitForElement(
-        win,
-        () =>
-          doc.querySelector('[data-tour="syllabus-item-pane"]') ||
-          doc.querySelector("#zotero-item-pane"),
-      );
-      await settleTourUi(200);
-    },
-  });
-
-  if (FEATURE_FLAG.READING_SCHEDULE) {
+  for (const feature of showcaseFeatures()) {
     guide.addStep({
-      title: getString("userGuide-readingDate-title"),
-      description: getString("userGuide-readingDate-desc"),
+      title: getString(feature.titleId),
+      description: guideStepDescription(feature.descId, feature.image, 320),
+      position: "center",
+      showButtons: ["prev", "next"],
+      showProgress: true,
+      onRender: ({ state }) => {
+        const body = (state.controller as unknown as { _body?: HTMLElement })
+          ._body;
+        if (!body) {
+          return;
+        }
+        appendFeatureToggle(body, choices, feature.id);
+      },
+    });
+  }
+
+  guide.addStep({
+    title: getString("optional-features-continue-title"),
+    description: getString("optional-features-continue-desc"),
+    position: "center",
+    showButtons: ["prev", "close"],
+    closeBtnText: getString("nav-next"),
+    showProgress: true,
+    onCloseClick: () => {
+      // Continue into the adaptive guide
+    },
+  });
+
+  await guide.show(doc);
+  if (aborted) {
+    return;
+  }
+  applyOptionalFeatureChoices(choices);
+}
+
+async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
+  if (!force && getPref("latestTourVersion") == LATEST_TOUR_VERSION) {
+    return;
+  }
+  setPref("latestTourVersion", LATEST_TOUR_VERSION);
+
+  if (!force && !isOptionalFeaturesPromptDone()) {
+    await showOptionalFeaturesShowcase(win);
+    // Remind me later cleared the tour pref — stop here.
+    if (getPref("latestTourVersion") != LATEST_TOUR_VERSION) {
+      return;
+    }
+  }
+
+  const doc = win.document;
+  let playgroundCollection: Zotero.Collection | null = null;
+  const enableSyllabus = isOptionalFeatureEnabled("syllabus");
+  const enableSchedule = isOptionalFeatureEnabled("readingSchedule");
+  const enableExplorer = isOptionalFeatureEnabled("explorer");
+  const hasHandsOn = enableSyllabus || enableSchedule || enableExplorer;
+
+  const guide = new ztoolkit.Guide();
+
+  if (force) {
+    guide.addStep({
+      title: getString("userGuide-start-title"),
+      description: guideStepDescription(
+        "userGuide-start-desc",
+        "classes.png",
+        340,
+      ),
+      position: "center",
+      showButtons: ["next", "close"],
+      closeBtnText: getString("userGuide-start-close"),
+      showProgress: true,
+      onCloseClick: () => {
+        clearPref("latestTourVersion");
+      },
+    });
+  }
+
+  if (enableSyllabus) {
+    guide.addStep({
+      title: getString("userGuide-collection-title"),
+      description: getString("userGuide-collection-desc"),
+      element: "#zotero-collections-tree",
+      showButtons: ["prev", "next"],
+      showProgress: true,
+      onBeforeRender: async () => {
+        win.Zotero_Tabs?.select("zotero-pane");
+        playgroundCollection =
+          await resolvePlaygroundCollection(playgroundCollection);
+      },
+    });
+
+    guide.addStep({
+      title: getString("userGuide-syllabusButton-title"),
+      description: guideStepDescription(
+        "userGuide-syllabusButton-desc",
+        "module.png",
+        300,
+      ),
+      element: () => findSyllabusTourToolbarTarget(win) || doc.documentElement!,
+      showButtons: ["prev", "next"],
+      showProgress: true,
+      onBeforeRender: async () => {
+        win.Zotero_Tabs?.select("zotero-pane");
+        playgroundCollection =
+          await resolvePlaygroundCollection(playgroundCollection);
+        await waitForElement(win, () => findSyllabusTourToolbarTarget(win));
+      },
+      onExit: async () => {
+        playgroundCollection =
+          await resolvePlaygroundCollection(playgroundCollection);
+        await enableSyllabusViewForTour(playgroundCollection);
+      },
+    });
+
+    guide.addStep({
+      title: getString("userGuide-addClass-title"),
+      description: getString("userGuide-addClass-desc"),
       position: "center",
       element: () =>
-        doc.querySelector('[data-tour="syllabus-class-reading-date"]') ||
+        doc.querySelector('[data-tour="syllabus-add-class"]') ||
         doc.documentElement!,
       showButtons: ["prev", "next"],
       showProgress: true,
       onMask: ({ mask }) => {
-        const target = doc.querySelector(
-          '[data-tour="syllabus-class-reading-date"]',
-        );
+        const target = doc.querySelector('[data-tour="syllabus-add-class"]');
         if (target) {
           mask(target);
         }
       },
       onBeforeRender: async () => {
-        // Show the tip immediately — no syllabus remount here (that caused a
-        // glitchy flash). Setup + setting the date happen on Next.
         requestTourCloseSettings(win);
+        await waitForElement(win, '[data-tour="syllabus-add-class"]');
       },
       onNextClick: async () => {
         playgroundCollection =
           await resolvePlaygroundCollection(playgroundCollection);
-        if (SyllabusManager.getCollectionViewMode() !== "syllabus") {
-          await enableSyllabusViewForTour(playgroundCollection);
-        } else {
-          await selectPlaygroundCollection(playgroundCollection);
-        }
-        await ensureTourClassReadingDate(playgroundCollection, 1);
+        await ensureTourClass(playgroundCollection, 1);
       },
     });
 
     guide.addStep({
-      title: getString("userGuide-readingSchedule-title"),
+      title: getString("userGuide-assign-title"),
       description: guideStepDescription(
-        "userGuide-readingSchedule-desc",
+        "userGuide-assign-desc",
+        "drag-drop.gif",
+        280,
+      ),
+      position: "center",
+      element: () =>
+        doc.querySelector('[data-tour="syllabus-further-reading"]') ||
+        doc.querySelector('[data-tour="syllabus-class-group"]') ||
+        doc.documentElement!,
+      showButtons: ["prev", "next"],
+      showProgress: true,
+      onMask: ({ mask }) => {
+        const target =
+          doc.querySelector('[data-tour="syllabus-further-reading"]') ||
+          doc.querySelector('[data-tour="syllabus-class-group"]');
+        if (target) {
+          mask(target);
+        }
+      },
+      onBeforeRender: async () => {
+        requestTourCloseSettings(win);
+        playgroundCollection =
+          await resolvePlaygroundCollection(playgroundCollection);
+        await waitForElement(
+          win,
+          () =>
+            doc.querySelector('[data-tour="syllabus-further-reading"]') ||
+            doc.querySelector('[data-tour="syllabus-class-group"]'),
+        );
+        await settleTourUi(200);
+      },
+      onNextClick: async () => {
+        playgroundCollection =
+          await resolvePlaygroundCollection(playgroundCollection);
+        await ensureTourClassAndAssignment(playgroundCollection);
+      },
+    });
+
+    guide.addStep({
+      title: getString("userGuide-itemPane-title"),
+      description: guideStepDescription(
+        "userGuide-itemPane-desc",
+        "editing.png",
+        280,
+      ),
+      position: "center",
+      element: () =>
+        doc.querySelector('[data-tour="syllabus-item-pane"]') ||
+        doc.querySelector("#zotero-item-pane") ||
+        doc.documentElement!,
+      showButtons: ["prev", "next"],
+      showProgress: true,
+      onMask: ({ mask }) => {
+        const target =
+          doc.querySelector('[data-tour="syllabus-item-pane"]') ||
+          doc.querySelector("#zotero-item-pane");
+        if (target) {
+          mask(target);
+        }
+      },
+      onBeforeRender: async () => {
+        requestTourCloseSettings(win);
+        playgroundCollection =
+          await resolvePlaygroundCollection(playgroundCollection);
+        await selectTourAssignedItem(playgroundCollection);
+        await waitForElement(
+          win,
+          () =>
+            doc.querySelector('[data-tour="syllabus-item-pane"]') ||
+            doc.querySelector("#zotero-item-pane"),
+        );
+        await settleTourUi(200);
+      },
+    });
+
+    if (enableSchedule) {
+      guide.addStep({
+        title: getString("userGuide-readingDate-title"),
+        description: getString("userGuide-readingDate-desc"),
+        position: "center",
+        element: () =>
+          doc.querySelector('[data-tour="syllabus-class-reading-date"]') ||
+          doc.documentElement!,
+        showButtons: ["prev", "next"],
+        showProgress: true,
+        onMask: ({ mask }) => {
+          const target = doc.querySelector(
+            '[data-tour="syllabus-class-reading-date"]',
+          );
+          if (target) {
+            mask(target);
+          }
+        },
+        onBeforeRender: async () => {
+          requestTourCloseSettings(win);
+        },
+        onNextClick: async () => {
+          playgroundCollection =
+            await resolvePlaygroundCollection(playgroundCollection);
+          if (SyllabusManager.getCollectionViewMode() !== "syllabus") {
+            await enableSyllabusViewForTour(playgroundCollection);
+          } else {
+            await selectPlaygroundCollection(playgroundCollection);
+          }
+          await ensureTourClassReadingDate(playgroundCollection, 1);
+        },
+      });
+
+      guide.addStep({
+        title: getString("userGuide-readingSchedule-title"),
+        description: guideStepDescription(
+          "userGuide-readingSchedule-desc",
+          "reading.png",
+          300,
+        ),
+        position: "center",
+        element: () =>
+          doc.querySelector("#syllabus-reading-schedule-tab-button") ||
+          doc.documentElement!,
+        showButtons: ["prev", "next"],
+        showProgress: true,
+        onMask: ({ mask }) => {
+          const target = doc.querySelector(
+            "#syllabus-reading-schedule-tab-button",
+          );
+          if (target) {
+            mask(target);
+          }
+        },
+        onBeforeRender: async () => {
+          requestTourCloseSettings(win);
+          await waitForElement(
+            win,
+            () => doc.querySelector("#syllabus-reading-schedule-tab-button"),
+            3000,
+          );
+        },
+        onNextClick: async () => {
+          SyllabusManager.openReadingListTab();
+          await settleTourUi(400);
+        },
+      });
+    }
+
+    guide.addStep({
+      title: getString("userGuide-subcollections-title"),
+      description: getString("userGuide-subcollections-desc"),
+      element: () =>
+        doc.querySelector('[data-tour="syllabus-class-subcollections"]') ||
+        doc.querySelector('[data-tour="syllabus-settings-button"]') ||
+        doc.documentElement!,
+      showButtons: ["prev", "next"],
+      showProgress: true,
+      onBeforeRender: async () => {
+        win.Zotero_Tabs?.select("zotero-pane");
+        playgroundCollection =
+          await resolvePlaygroundCollection(playgroundCollection);
+        await enableSyllabusViewForTour(playgroundCollection);
+        requestTourOpenSettings(win);
+        await waitForElement(
+          win,
+          '[data-tour="syllabus-class-subcollections"]',
+        );
+      },
+    });
+  } else if (enableSchedule) {
+    guide.addStep({
+      title: getString("userGuide-readingSchedule-light-title"),
+      description: guideStepDescription(
+        "userGuide-readingSchedule-light-desc",
         "reading.png",
         300,
       ),
@@ -690,8 +902,8 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
         }
       },
       onBeforeRender: async () => {
-        requestTourCloseSettings(win);
-        // Date was just set on the previous Next — avoid remounting again.
+        win.Zotero_Tabs?.select("zotero-pane");
+        SyllabusManager.setupReadingScheduleTabBarButton(win);
         await waitForElement(
           win,
           () => doc.querySelector("#syllabus-reading-schedule-tab-button"),
@@ -705,42 +917,70 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
     });
   }
 
-  guide.addStep({
-    title: getString("userGuide-subcollections-title"),
-    description: getString("userGuide-subcollections-desc"),
-    element: () =>
-      doc.querySelector('[data-tour="syllabus-class-subcollections"]') ||
-      doc.querySelector('[data-tour="syllabus-settings-button"]') ||
-      doc.documentElement!,
-    showButtons: ["prev", "next"],
-    showProgress: true,
-    onBeforeRender: async () => {
-      win.Zotero_Tabs?.select("zotero-pane");
-      playgroundCollection =
-        await resolvePlaygroundCollection(playgroundCollection);
-      // Settings live inside Syllabus view — switch back if we left for Items
-      // or the Reading Schedule tab.
-      await enableSyllabusViewForTour(playgroundCollection);
-      requestTourOpenSettings(win);
-      await waitForElement(win, '[data-tour="syllabus-class-subcollections"]');
-    },
-  });
+  if (enableExplorer) {
+    guide.addStep({
+      title: getString("userGuide-home-title"),
+      description: guideStepDescription("userGuide-home-desc", "home.png", 320),
+      position: "center",
+      element: () =>
+        doc.querySelector("#syllabus-view-mode-explorer") ||
+        doc.documentElement!,
+      showButtons: ["prev", "next"],
+      showProgress: true,
+      onBeforeRender: async () => {
+        win.Zotero_Tabs?.select("zotero-pane");
+        const libraryID = libraryIdForNewCollection();
+        try {
+          const zp = ztoolkit.getGlobal("ZoteroPane") as {
+            collectionsView?: { selectLibrary?: (id: number) => void } | false;
+          };
+          const collectionsView = zp?.collectionsView;
+          if (collectionsView && typeof collectionsView === "object") {
+            collectionsView.selectLibrary?.(libraryID);
+          }
+        } catch {
+          // Library selection may fail in headless environments
+        }
+        setLibraryViewMode(libraryID, "explorer");
+        SyllabusManager.setupToggleButton();
+        await SyllabusManager.setupPage();
+        await waitForElement(
+          win,
+          () =>
+            doc.querySelector("#syllabus-view-mode-explorer") ||
+            doc.querySelector("#syllabus-custom-view"),
+          4000,
+        );
+        await settleTourUi(200);
+      },
+    });
+  }
 
-  guide.addStep({
-    title: getString("userGuide-finish-title"),
-    description: guideStepDescription(
-      "userGuide-finish-desc",
-      "module.png",
-      320,
-    ),
-    position: "center",
-    showButtons: ["prev", "close"],
-    showProgress: true,
-    onBeforeRender: async () => {
-      requestTourCloseSettings(win);
-      await Zotero.Promise.delay(50);
-    },
-  });
+  if (hasHandsOn) {
+    guide.addStep({
+      title: getString("userGuide-finish-title"),
+      description: guideStepDescription(
+        "userGuide-finish-desc",
+        "module.png",
+        320,
+      ),
+      position: "center",
+      showButtons: ["prev", "close"],
+      showProgress: true,
+      onBeforeRender: async () => {
+        requestTourCloseSettings(win);
+        await Zotero.Promise.delay(50);
+      },
+    });
+  } else {
+    guide.addStep({
+      title: getString("userGuide-finish-prefs-title"),
+      description: getString("userGuide-finish-prefs-desc"),
+      position: "center",
+      showButtons: ["close"],
+      showProgress: true,
+    });
+  }
 
   await guide.show(doc);
 }

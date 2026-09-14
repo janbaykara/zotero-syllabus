@@ -1,4 +1,13 @@
 pref-title = Zotero Syllabus
+pref-views-title = 보기
+pref-enable-syllabus =
+    .label = 강의계획서 보기
+pref-enable-gallery =
+    .label = 갤러리 보기
+pref-enable-explorer =
+    .label = 홈 보기
+pref-enable-reading-schedule =
+    .label = 읽기 일정 탭
 pref-enable =
     .label = 사용
 pref-show-bibliography =

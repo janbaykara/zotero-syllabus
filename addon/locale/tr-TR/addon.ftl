@@ -63,6 +63,30 @@ userGuide-start-title = Zotero Syllabus’a hoş geldiniz
 userGuide-start-desc =
     Herhangi bir Zotero koleksiyonunu ders okuma listesine dönüştürün — derslere göre düzenleyin, öncelikleri belirleyin ve sıradaki okumayı izleyin.
 userGuide-start-close = Daha sonra hatırlat
+optional-features-intro-title = Choose your views
+optional-features-intro-desc =
+    Pick which surfaces to show. You can change these anytime in Preferences. Syllabus view is recommended to get started.
+optional-features-syllabus-title = Syllabus view
+optional-features-syllabus-desc =
+    Structure a collection by class session, drag readings into place, and edit priorities and instructions.
+optional-features-gallery-title = Gallery view
+optional-features-gallery-desc =
+    Browse a collection as covers, magazine spreads, or cards — great for finding the next thing to open.
+optional-features-explorer-title = Home view
+optional-features-explorer-desc =
+    A library home with shelves for recent items, upcoming deadlines, and more.
+optional-features-reading-schedule-title = Reading Schedule
+optional-features-reading-schedule-desc =
+    A calendar tab that gathers class due dates across your syllabi so you can see what’s next.
+optional-features-enabled = On
+optional-features-disabled = Off
+optional-features-toggle = { $state ->
+    [on] On — click to turn off
+   *[off] Off — click to turn on
+}
+optional-features-continue-title = Ready to continue
+optional-features-continue-desc =
+    Next we’ll walk through the views you enabled. You can change these later under Preferences → Zotero Syllabus → Views.
 userGuide-collection-title = Bir koleksiyondan başlayın
 userGuide-collection-desc =
     İzlenceler koleksiyonlarda yaşar. Birkaç örnek okuma içeren bir “İzlence Turu” deneme koleksiyonu açacağız.
@@ -84,12 +108,21 @@ userGuide-readingDate-desc =
 userGuide-readingSchedule-title = Okuma Takvimi’ni açın
 userGuide-readingSchedule-desc =
     Okuma Takvimi, izlencelerinizdeki teslim tarihli dersleri bir araya getirir. İleri, yaklaşanları görmeniz için onu açar.
+userGuide-readingSchedule-light-title = Open Reading Schedule
+userGuide-readingSchedule-light-desc =
+    The Reading Schedule tab gathers class due dates across your syllabi. Next opens it from the tab bar.
+userGuide-home-title = Home view
+userGuide-home-desc =
+    At the library root, switch to Home for shelves of recent items and upcoming deadlines. Next selects your library home.
 userGuide-subcollections-title = İsteğe bağlı: ders klasörleri
 userGuide-subcollections-desc =
     Her ders için klasör yansıması ister misiniz? Ayarlar’da Ders alt koleksiyonlarını etkinleştirin. Eklentinin alt klasörleri yönetmesini istemiyorsanız kapalı bırakın.
 userGuide-finish-title = Hazırsınız
 userGuide-finish-desc =
     Bu turu istediğiniz zaman Yardım → Zotero Syllabus Kullanıcı Kılavuzunu Aç menüsünden yeniden açabilirsiniz. İyi çalışmalar!
+userGuide-finish-prefs-title = You’re set
+userGuide-finish-prefs-desc =
+    Turn views on or off anytime in Preferences → Zotero Syllabus → Views. You can reopen this tour from Help.
 userGuide-empty-title = Bu koleksiyonu derse göre düzenleyin
 userGuide-empty-desc =
     Her hafta veya oturum için ders ekleyin, ardından okuma atayın. Kısa bir rehberli tura da katılabilirsiniz.

@@ -1,4 +1,13 @@
 pref-title = Zotero Syllabus
+pref-views-title = Visualizzazioni
+pref-enable-syllabus =
+    .label = Vista programma
+pref-enable-gallery =
+    .label = Vista galleria
+pref-enable-explorer =
+    .label = Vista Home
+pref-enable-reading-schedule =
+    .label = Scheda Calendario di lettura
 pref-enable =
     .label = Attiva
 pref-show-bibliography =

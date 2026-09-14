@@ -14,6 +14,11 @@ declare namespace _ZoteroTypes {
       "shouldColourSyllabusRows": boolean;
       "debugMode": boolean;
       "wpm": number;
+      "enableSyllabus": boolean;
+      "enableGallery": boolean;
+      "enableExplorer": boolean;
+      "enableReadingSchedule": boolean;
+      "optionalFeaturesPromptDone": boolean;
       "latestTourVersion": number;
       "latestGalleryTourVersion": number;
       "defaultGalleryLayout": string;

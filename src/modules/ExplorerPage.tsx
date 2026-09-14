@@ -41,6 +41,7 @@ import {
   selectItemInCollection,
   selectSavedSearchInLibrary,
 } from "./ClassReadingBlock";
+import { isOptionalFeatureEnabled } from "./optionalFeatures";
 import { ExplorerAnnotationShelf } from "./annotationTiles";
 import {
   buildClassReadings,
@@ -1312,17 +1313,27 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                             <span>{heading}</span>
                           </button>
                         ) : shelf.type === "upcoming-deadlines" ? (
-                          <button
-                            type="button"
-                            className="syllabus-explorer-collection-link"
-                            onClick={() => openReadingScheduleTab()}
-                          >
-                            <span
-                              className="icon icon-css icon-calendar syllabus-gallery-group-icon"
-                              aria-hidden="true"
-                            />
-                            <span>{heading}</span>
-                          </button>
+                          isOptionalFeatureEnabled("readingSchedule") ? (
+                            <button
+                              type="button"
+                              className="syllabus-explorer-collection-link"
+                              onClick={() => openReadingScheduleTab()}
+                            >
+                              <span
+                                className="icon icon-css icon-calendar syllabus-gallery-group-icon"
+                                aria-hidden="true"
+                              />
+                              <span>{heading}</span>
+                            </button>
+                          ) : (
+                            <span className="inline-flex items-center gap-1">
+                              <span
+                                className="icon icon-css icon-calendar syllabus-gallery-group-icon"
+                                aria-hidden="true"
+                              />
+                              <span>{heading}</span>
+                            </span>
+                          )
                         ) : (
                           <span>{heading}</span>
                         )}
@@ -1335,7 +1346,8 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                         <div className="h-4" />
                       )}
                     </div>
-                    {shelf.type === "upcoming-deadlines" ? (
+                    {shelf.type === "upcoming-deadlines" &&
+                    isOptionalFeatureEnabled("readingSchedule") ? (
                       <button
                         type="button"
                         className="syllabus-explorer-customize syllabus-explorer-shelf-goto"

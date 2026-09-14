@@ -13,6 +13,7 @@ import {
   setGalleryGroupBy,
   type GalleryGroupBy,
 } from "./galleryGroupBy";
+import { isOptionalFeatureEnabled } from "./optionalFeatures";
 
 export {
   GALLERY_TOUR_EVENT_OPEN_SETTINGS,
@@ -119,6 +120,9 @@ async function maybeShowGalleryTour(
   viewKey: string,
 ): Promise<void> {
   if (!viewKey || galleryTourInProgress || isGalleryTourDone()) {
+    return;
+  }
+  if (!isOptionalFeatureEnabled("gallery")) {
     return;
   }
   if ((__env__ as string) === "test") {

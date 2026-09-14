@@ -63,6 +63,30 @@ userGuide-start-title = Добро пожаловать в Zotero Syllabus
 userGuide-start-desc =
     Превратите любую коллекцию Zotero в список литературы курса — организуйте по занятиям, задайте приоритеты и отслеживайте, что читать дальше.
 userGuide-start-close = Напомнить позже
+optional-features-intro-title = Choose your views
+optional-features-intro-desc =
+    Pick which surfaces to show. You can change these anytime in Preferences. Syllabus view is recommended to get started.
+optional-features-syllabus-title = Syllabus view
+optional-features-syllabus-desc =
+    Structure a collection by class session, drag readings into place, and edit priorities and instructions.
+optional-features-gallery-title = Gallery view
+optional-features-gallery-desc =
+    Browse a collection as covers, magazine spreads, or cards — great for finding the next thing to open.
+optional-features-explorer-title = Home view
+optional-features-explorer-desc =
+    A library home with shelves for recent items, upcoming deadlines, and more.
+optional-features-reading-schedule-title = Reading Schedule
+optional-features-reading-schedule-desc =
+    A calendar tab that gathers class due dates across your syllabi so you can see what’s next.
+optional-features-enabled = On
+optional-features-disabled = Off
+optional-features-toggle = { $state ->
+    [on] On — click to turn off
+   *[off] Off — click to turn on
+}
+optional-features-continue-title = Ready to continue
+optional-features-continue-desc =
+    Next we’ll walk through the views you enabled. You can change these later under Preferences → Zotero Syllabus → Views.
 userGuide-collection-title = Начните с коллекции
 userGuide-collection-desc =
     Силлабусы привязаны к коллекциям. Мы откроем учебную коллекцию «Экскурсия по силлабусу» с несколькими образцами литературы.
@@ -84,12 +108,21 @@ userGuide-readingDate-desc =
 userGuide-readingSchedule-title = Откройте «График чтения»
 userGuide-readingSchedule-desc =
     «График чтения» собирает занятия со сроками из всех ваших силлабусов. «Далее» откроет его, чтобы показать предстоящее.
+userGuide-readingSchedule-light-title = Open Reading Schedule
+userGuide-readingSchedule-light-desc =
+    The Reading Schedule tab gathers class due dates across your syllabi. Next opens it from the tab bar.
+userGuide-home-title = Home view
+userGuide-home-desc =
+    At the library root, switch to Home for shelves of recent items and upcoming deadlines. Next selects your library home.
 userGuide-subcollections-title = По желанию: папки занятий
 userGuide-subcollections-desc =
     Нужны зеркальные папки для каждого занятия? Включите «Подколлекции занятий» в настройках. Оставьте выключенным, если дополнение не должно управлять дочерними папками.
 userGuide-finish-title = Всё готово
 userGuide-finish-desc =
     Эту экскурсию можно снова открыть в любой момент: Справка → Открыть руководство пользователя Zotero Syllabus. Успехов в учёбе!
+userGuide-finish-prefs-title = You’re set
+userGuide-finish-prefs-desc =
+    Turn views on or off anytime in Preferences → Zotero Syllabus → Views. You can reopen this tour from Help.
 userGuide-empty-title = Организуйте эту коллекцию по занятиям
 userGuide-empty-desc =
     Добавьте занятия для каждой недели или сессии, затем назначьте литературу. Можно также пройти краткую экскурсию.

@@ -1,4 +1,13 @@
 pref-title = Zotero Syllabus
+pref-views-title = 视图
+pref-enable-syllabus =
+    .label = 教学大纲视图
+pref-enable-gallery =
+    .label = 图库视图
+pref-enable-explorer =
+    .label = 主页视图
+pref-enable-reading-schedule =
+    .label = 阅读计划标签页
 pref-enable =
     .label = 开启
 pref-show-bibliography =

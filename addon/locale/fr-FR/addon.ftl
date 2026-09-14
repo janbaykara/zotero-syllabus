@@ -63,6 +63,30 @@ userGuide-start-title = Bienvenue dans Zotero Syllabus
 userGuide-start-desc =
     Transformez n’importe quelle collection Zotero en liste de lectures du cours — organisez par séance, définissez des priorités et suivez ce qu’il reste à lire.
 userGuide-start-close = Me le rappeler plus tard
+optional-features-intro-title = Choose your views
+optional-features-intro-desc =
+    Pick which surfaces to show. You can change these anytime in Preferences. Syllabus view is recommended to get started.
+optional-features-syllabus-title = Syllabus view
+optional-features-syllabus-desc =
+    Structure a collection by class session, drag readings into place, and edit priorities and instructions.
+optional-features-gallery-title = Gallery view
+optional-features-gallery-desc =
+    Browse a collection as covers, magazine spreads, or cards — great for finding the next thing to open.
+optional-features-explorer-title = Home view
+optional-features-explorer-desc =
+    A library home with shelves for recent items, upcoming deadlines, and more.
+optional-features-reading-schedule-title = Reading Schedule
+optional-features-reading-schedule-desc =
+    A calendar tab that gathers class due dates across your syllabi so you can see what’s next.
+optional-features-enabled = On
+optional-features-disabled = Off
+optional-features-toggle = { $state ->
+    [on] On — click to turn off
+   *[off] Off — click to turn on
+}
+optional-features-continue-title = Ready to continue
+optional-features-continue-desc =
+    Next we’ll walk through the views you enabled. You can change these later under Preferences → Zotero Syllabus → Views.
 userGuide-collection-title = Partir d’une collection
 userGuide-collection-desc =
     Les syllabus sont liés aux collections. Nous ouvrirons une collection d’essai « Syllabus Tour » avec quelques lectures d’exemple.
@@ -84,12 +108,21 @@ userGuide-readingDate-desc =
 userGuide-readingSchedule-title = Ouvrir le Planning des lectures
 userGuide-readingSchedule-desc =
     Le Planning des lectures rassemble les séances avec date d’échéance de tous vos syllabus. Suivant l’ouvre pour voir ce qui arrive.
+userGuide-readingSchedule-light-title = Open Reading Schedule
+userGuide-readingSchedule-light-desc =
+    The Reading Schedule tab gathers class due dates across your syllabi. Next opens it from the tab bar.
+userGuide-home-title = Home view
+userGuide-home-desc =
+    At the library root, switch to Home for shelves of recent items and upcoming deadlines. Next selects your library home.
 userGuide-subcollections-title = Facultatif : dossiers de séance
 userGuide-subcollections-desc =
     Vous voulez un miroir de dossier par séance ? Activez Sous-collections de séance dans les Paramètres. Laissez désactivé sauf si vous voulez que le module gère les dossiers enfants.
 userGuide-finish-title = Vous êtes prêt
 userGuide-finish-desc =
     Rouvrez cette visite à tout moment depuis Aide → Ouvrir le guide d’utilisation de Zotero Syllabus. Bonnes études !
+userGuide-finish-prefs-title = You’re set
+userGuide-finish-prefs-desc =
+    Turn views on or off anytime in Preferences → Zotero Syllabus → Views. You can reopen this tour from Help.
 userGuide-empty-title = Organiser cette collection par séance
 userGuide-empty-desc =
     Ajoutez des séances pour chaque semaine ou session, puis attribuez les lectures. Vous pouvez aussi suivre une courte visite guidée.

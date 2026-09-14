@@ -1,4 +1,13 @@
 pref-title = Zotero Syllabus
+pref-views-title = Görünümler
+pref-enable-syllabus =
+    .label = İzlence görünümü
+pref-enable-gallery =
+    .label = Galeri görünümü
+pref-enable-explorer =
+    .label = Ana sayfa görünümü
+pref-enable-reading-schedule =
+    .label = Okuma Takvimi sekmesi
 pref-enable =
     .label = Etkinleştir
 pref-show-bibliography =

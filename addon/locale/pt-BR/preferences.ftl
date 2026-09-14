@@ -1,4 +1,13 @@
 pref-title = Zotero Syllabus
+pref-views-title = Visualizações
+pref-enable-syllabus =
+    .label = Visualização do programa
+pref-enable-gallery =
+    .label = Visualização de galeria
+pref-enable-explorer =
+    .label = Visualização inicial
+pref-enable-reading-schedule =
+    .label = Aba Cronograma de leitura
 pref-enable =
     .label = Ativar
 pref-show-bibliography =

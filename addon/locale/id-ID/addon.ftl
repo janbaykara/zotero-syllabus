@@ -63,6 +63,30 @@ userGuide-start-title = Selamat datang di Zotero Syllabus
 userGuide-start-desc =
     Ubah koleksi Zotero mana pun menjadi daftar bacaan mata kuliah — susun menurut kelas, tetapkan prioritas, dan lacak bacaan berikutnya.
 userGuide-start-close = Ingatkan nanti
+optional-features-intro-title = Choose your views
+optional-features-intro-desc =
+    Pick which surfaces to show. You can change these anytime in Preferences. Syllabus view is recommended to get started.
+optional-features-syllabus-title = Syllabus view
+optional-features-syllabus-desc =
+    Structure a collection by class session, drag readings into place, and edit priorities and instructions.
+optional-features-gallery-title = Gallery view
+optional-features-gallery-desc =
+    Browse a collection as covers, magazine spreads, or cards — great for finding the next thing to open.
+optional-features-explorer-title = Home view
+optional-features-explorer-desc =
+    A library home with shelves for recent items, upcoming deadlines, and more.
+optional-features-reading-schedule-title = Reading Schedule
+optional-features-reading-schedule-desc =
+    A calendar tab that gathers class due dates across your syllabi so you can see what’s next.
+optional-features-enabled = On
+optional-features-disabled = Off
+optional-features-toggle = { $state ->
+    [on] On — click to turn off
+   *[off] Off — click to turn on
+}
+optional-features-continue-title = Ready to continue
+optional-features-continue-desc =
+    Next we’ll walk through the views you enabled. You can change these later under Preferences → Zotero Syllabus → Views.
 userGuide-collection-title = Mulai dari sebuah koleksi
 userGuide-collection-desc =
     Silabus melekat pada koleksi. Kami akan membuka koleksi latihan “Tur Silabus” dengan beberapa bacaan contoh.
@@ -84,12 +108,21 @@ userGuide-readingDate-desc =
 userGuide-readingSchedule-title = Buka Jadwal Bacaan
 userGuide-readingSchedule-desc =
     Jadwal Bacaan menghimpun kelas yang memiliki tenggat di seluruh silabus Anda. Berikutnya membukanya agar Anda melihat yang akan datang.
+userGuide-readingSchedule-light-title = Open Reading Schedule
+userGuide-readingSchedule-light-desc =
+    The Reading Schedule tab gathers class due dates across your syllabi. Next opens it from the tab bar.
+userGuide-home-title = Home view
+userGuide-home-desc =
+    At the library root, switch to Home for shelves of recent items and upcoming deadlines. Next selects your library home.
 userGuide-subcollections-title = Opsional: folder kelas
 userGuide-subcollections-desc =
     Ingin cermin folder per kelas? Aktifkan Subkoleksi kelas di Pengaturan. Biarkan nonaktif kecuali Anda ingin pengaya mengelola folder turunan.
 userGuide-finish-title = Anda siap
 userGuide-finish-desc =
     Buka kembali tur ini kapan saja dari Bantuan → Buka Panduan Pengguna Zotero Syllabus. Selamat belajar!
+userGuide-finish-prefs-title = You’re set
+userGuide-finish-prefs-desc =
+    Turn views on or off anytime in Preferences → Zotero Syllabus → Views. You can reopen this tour from Help.
 userGuide-empty-title = Susun koleksi ini menurut kelas
 userGuide-empty-desc =
     Tambahkan kelas untuk setiap minggu atau sesi, lalu tetapkan bacaan. Anda juga dapat mengikuti tur berpandu singkat.

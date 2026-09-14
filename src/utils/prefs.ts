@@ -11,6 +11,11 @@ export const PREFS_KEYS: (keyof PluginPrefsMap)[] = [
   "shouldColourSyllabusRows",
   "debugMode",
   "wpm",
+  "enableSyllabus",
+  "enableGallery",
+  "enableExplorer",
+  "enableReadingSchedule",
+  "optionalFeaturesPromptDone",
   "generateReadingScheduleCollection",
   "customIcons",
 ];

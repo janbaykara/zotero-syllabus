@@ -1,4 +1,13 @@
 pref-title = Zotero Syllabus
+pref-views-title = Tampilan
+pref-enable-syllabus =
+    .label = Tampilan silabus
+pref-enable-gallery =
+    .label = Tampilan galeri
+pref-enable-explorer =
+    .label = Tampilan Beranda
+pref-enable-reading-schedule =
+    .label = Tab Jadwal Baca
 pref-enable =
     .label = Aktifkan
 pref-show-bibliography =

@@ -1,4 +1,13 @@
 pref-title = Zotero Syllabus
+pref-views-title = طرق العرض
+pref-enable-syllabus =
+    .label = عرض المنهج
+pref-enable-gallery =
+    .label = عرض المعرض
+pref-enable-explorer =
+    .label = عرض الصفحة الرئيسية
+pref-enable-reading-schedule =
+    .label = علامة تبويب جدول القراءة
 pref-enable =
     .label = تمكين
 pref-show-bibliography =

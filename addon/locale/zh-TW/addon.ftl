@@ -63,6 +63,30 @@ userGuide-start-title = 歡迎使用 Zotero Syllabus
 userGuide-start-desc =
     將任意 Zotero 分類變成課程閱讀清單——按課堂組織、設定優先順序，並追蹤接下來要讀什麼。
 userGuide-start-close = 以後再說
+optional-features-intro-title = Choose your views
+optional-features-intro-desc =
+    Pick which surfaces to show. You can change these anytime in Preferences. Syllabus view is recommended to get started.
+optional-features-syllabus-title = Syllabus view
+optional-features-syllabus-desc =
+    Structure a collection by class session, drag readings into place, and edit priorities and instructions.
+optional-features-gallery-title = Gallery view
+optional-features-gallery-desc =
+    Browse a collection as covers, magazine spreads, or cards — great for finding the next thing to open.
+optional-features-explorer-title = Home view
+optional-features-explorer-desc =
+    A library home with shelves for recent items, upcoming deadlines, and more.
+optional-features-reading-schedule-title = Reading Schedule
+optional-features-reading-schedule-desc =
+    A calendar tab that gathers class due dates across your syllabi so you can see what’s next.
+optional-features-enabled = On
+optional-features-disabled = Off
+optional-features-toggle = { $state ->
+    [on] On — click to turn off
+   *[off] Off — click to turn on
+}
+optional-features-continue-title = Ready to continue
+optional-features-continue-desc =
+    Next we’ll walk through the views you enabled. You can change these later under Preferences → Zotero Syllabus → Views.
 userGuide-collection-title = 從分類開始
 userGuide-collection-desc =
     教學大綱建立在分類上。我們將開啟一個「Syllabus Tour」練習分類，並放入幾篇範例閱讀。
@@ -84,12 +108,21 @@ userGuide-readingDate-desc =
 userGuide-readingSchedule-title = 開啟閱讀日程
 userGuide-readingSchedule-desc =
     「閱讀日程」會彙整各教學大綱中帶截止日期的課堂。下一步將開啟它，方便查看接下來的安排。
+userGuide-readingSchedule-light-title = Open Reading Schedule
+userGuide-readingSchedule-light-desc =
+    The Reading Schedule tab gathers class due dates across your syllabi. Next opens it from the tab bar.
+userGuide-home-title = Home view
+userGuide-home-desc =
+    At the library root, switch to Home for shelves of recent items and upcoming deadlines. Next selects your library home.
 userGuide-subcollections-title = 選用：課堂資料夾
 userGuide-subcollections-desc =
     需要按課堂鏡像資料夾嗎？在設定中啟用「課堂子分類」。除非希望外掛管理子資料夾，否則請保持關閉。
 userGuide-finish-title = 準備就緒
 userGuide-finish-desc =
     可隨時透過「說明 → 開啟 Zotero Syllabus 使用指南」重新開啟本教學。祝學習順利！
+userGuide-finish-prefs-title = You’re set
+userGuide-finish-prefs-desc =
+    Turn views on or off anytime in Preferences → Zotero Syllabus → Views. You can reopen this tour from Help.
 userGuide-empty-title = 按課堂組織此分類
 userGuide-empty-desc =
     為每週或每節課新增課堂，然後指派閱讀。也可以先跟隨簡短引導教學。

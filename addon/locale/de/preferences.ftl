@@ -1,4 +1,13 @@
 pref-title = Zotero Syllabus
+pref-views-title = Ansichten
+pref-enable-syllabus =
+    .label = Lehrplanansicht
+pref-enable-gallery =
+    .label = Galerieansicht
+pref-enable-explorer =
+    .label = Startansicht
+pref-enable-reading-schedule =
+    .label = Lektüreplan-Tab
 pref-enable =
     .label = Aktivieren
 pref-show-bibliography =

@@ -1,4 +1,13 @@
 pref-title = Zotero Syllabus
+pref-views-title = Chế độ xem
+pref-enable-syllabus =
+    .label = Chế độ xem đề cương
+pref-enable-gallery =
+    .label = Chế độ xem thư viện ảnh
+pref-enable-explorer =
+    .label = Chế độ xem Trang chủ
+pref-enable-reading-schedule =
+    .label = Tab Lịch đọc
 pref-enable =
     .label = Bật
 pref-show-bibliography =

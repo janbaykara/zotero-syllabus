@@ -38,6 +38,14 @@ import { parseXULTemplate } from "../utils/ui";
 import { TabManager } from "../utils/tabManager";
 import { FEATURE_FLAG } from "./featureFlags";
 import {
+  coerceEnabledViewMode,
+  isOptionalFeatureEnabled,
+  migrateOptionalFeatures,
+  registerOptionalFeaturesChromeRefresh,
+  registerOptionalFeaturesPrefObserver,
+  unregisterOptionalFeaturesPrefObserver,
+} from "./optionalFeatures";
+import {
   ItemSyllabusDataEntity,
   ItemSyllabusAssignmentEntity,
   SettingsClassMetadataSchema,
@@ -406,6 +414,11 @@ export class SyllabusManager {
       );
     });
     this.registerPrefs();
+    registerOptionalFeaturesChromeRefresh(() => {
+      this.refreshOptionalFeatureChrome();
+    });
+    migrateOptionalFeatures();
+    registerOptionalFeaturesPrefObserver();
     registerCustomIconsPrefObserver(() => {
       for (const win of Zotero.getMainWindows() as _ZoteroTypes.MainWindow[]) {
         this.syncReadingScheduleTabIcon(win);
@@ -421,6 +434,34 @@ export class SyllabusManager {
     Zotero.Promise.delay(10000).then(() => {
       installReadingListTranslators(rootURI);
     });
+  }
+
+  /** Rebuild view chrome after optional-feature prefs change. */
+  static refreshOptionalFeatureChrome(): void {
+    for (const win of Zotero.getMainWindows() as _ZoteroTypes.MainWindow[]) {
+      if (!isOptionalFeatureEnabled("readingSchedule")) {
+        try {
+          const existing = win.Zotero_Tabs?._getTab("syllabus-reading-list-tab");
+          if (existing?.tab) {
+            win.Zotero_Tabs.close("syllabus-reading-list-tab");
+          }
+        } catch {
+          // Tab may not exist
+        }
+        this.removeReadingScheduleTabBarButton(win);
+      }
+    }
+    const mode = this.getCollectionViewMode();
+    const coerced = coerceEnabledViewMode(mode) as CollectionViewMode;
+    if (coerced !== mode) {
+      void this.setCollectionViewMode(coerced).then(() => {
+        this.setupToggleButton();
+        void this.setupPage();
+      });
+      return;
+    }
+    this.setupToggleButton();
+    void this.setupPage();
   }
 
   static onMainWindowLoad(win: _ZoteroTypes.MainWindow) {
@@ -632,6 +673,7 @@ export class SyllabusManager {
 
   static onShutdown() {
     ztoolkit.log("SyllabusManager.onShutdown");
+    unregisterOptionalFeaturesPrefObserver();
     unregisterCustomIconsPrefObserver();
     this.unregisterNotifier();
     for (const mainWindow of Zotero.getMainWindows() as _ZoteroTypes.MainWindow[]) {
@@ -758,7 +800,8 @@ export class SyllabusManager {
       // Do not persist — clearing the filter restores explorer if preferred.
       if (
         getLibraryViewMode(libraryID) === "explorer" &&
-        !itemsViewIsFilteredForTreeViewID(scope.viewKey)
+        !itemsViewIsFilteredForTreeViewID(scope.viewKey) &&
+        isOptionalFeatureEnabled("explorer")
       ) {
         return "explorer";
       }
@@ -771,7 +814,7 @@ export class SyllabusManager {
     if (scope.kind === "collection") {
       const selectedCollection = scope.collection;
       if (getReadingScheduleCollectionContext(selectedCollection.id)) {
-        return "syllabus";
+        return isOptionalFeatureEnabled("syllabus") ? "syllabus" : "collection";
       }
 
       const collectionId = scope.viewKey;
@@ -786,7 +829,7 @@ export class SyllabusManager {
         viewModes[collectionId] = "gallery";
         Zotero.Prefs.set(prefKey, JSON.stringify(viewModes), true);
         zoteroCache.invalidatePref(prefKey);
-        return "gallery";
+        return isOptionalFeatureEnabled("gallery") ? "gallery" : "collection";
       }
       if (stored !== undefined && stored !== null) {
         return SyllabusManager.coerceViewModeForCollection(
@@ -805,7 +848,7 @@ export class SyllabusManager {
         }
       }
       if (isAutoManagedCollection(selectedCollection.id)) {
-        return "syllabus";
+        return isOptionalFeatureEnabled("syllabus") ? "syllabus" : "collection";
       }
       return "collection";
     }
@@ -816,7 +859,9 @@ export class SyllabusManager {
     const viewModes =
       getCachedPref(prefKey, z.record(z.string(), z.unknown())) || {};
     const mode = coerceCollectionViewMode(viewModes[scope.viewKey]);
-    return mode === "syllabus" || mode === "explorer" ? "collection" : mode;
+    const resolved =
+      mode === "syllabus" || mode === "explorer" ? "collection" : mode;
+    return coerceEnabledViewMode(resolved) as CollectionViewMode;
   }
 
   static coerceViewModeForCollection(
@@ -824,23 +869,25 @@ export class SyllabusManager {
     value: unknown,
   ): CollectionViewMode {
     const mode = coerceCollectionViewMode(value);
-    return mode === "explorer" ? "collection" : mode;
+    const withoutExplorer = mode === "explorer" ? "collection" : mode;
+    return coerceEnabledViewMode(withoutExplorer) as CollectionViewMode;
   }
 
   static async setCollectionViewMode(mode: CollectionViewMode): Promise<void> {
+    const enabledMode = coerceEnabledViewMode(mode) as CollectionViewMode;
     const scope = getSelectedViewScope();
     if (viewScopeSupportsExplorer(scope)) {
-      if (mode === "explorer" || mode === "collection") {
+      if (enabledMode === "explorer" || enabledMode === "collection") {
         const libraryID = scope.libraryID || libraryIdForNewCollection();
-        setLibraryViewMode(libraryID, mode as LibraryViewMode);
+        setLibraryViewMode(libraryID, enabledMode as LibraryViewMode);
       }
       return;
     }
-    if (mode === "explorer" || !viewScopeSupportsGallery(scope)) {
+    if (enabledMode === "explorer" || !viewScopeSupportsGallery(scope)) {
       return;
     }
 
-    if (mode === "syllabus") {
+    if (enabledMode === "syllabus") {
       if (scope.kind !== "collection") {
         return;
       }
@@ -848,16 +895,16 @@ export class SyllabusManager {
       if (!enabled) {
         return;
       }
-      this.writeCollectionViewMode(scope.collection, mode);
+      this.writeCollectionViewMode(scope.collection, enabledMode);
       return;
     }
 
     if (scope.kind === "collection") {
-      this.writeCollectionViewMode(scope.collection, mode);
+      this.writeCollectionViewMode(scope.collection, enabledMode);
       return;
     }
 
-    this.writeViewModeForKey(scope.viewKey, mode);
+    this.writeViewModeForKey(scope.viewKey, enabledMode);
   }
 
   static writeViewModeForKey(viewKey: string, mode: CollectionViewMode): void {
@@ -886,14 +933,25 @@ export class SyllabusManager {
     const scope = getSelectedViewScope();
     if (viewScopeSupportsExplorer(scope)) {
       const current = SyllabusManager.getCollectionViewMode();
-      await SyllabusManager.setCollectionViewMode(
-        current === "explorer" ? "collection" : "explorer",
-      );
+      const next =
+        current === "explorer" || !isOptionalFeatureEnabled("explorer")
+          ? "collection"
+          : "explorer";
+      await SyllabusManager.setCollectionViewMode(next);
       return SyllabusManager.getCollectionViewMode();
     }
-    const modes = syllabusViewModeChrome()
+    let modes = syllabusViewModeChrome()
       ? COLLECTION_VIEW_MODES
       : COLLECTION_VIEW_MODES.filter((mode) => mode !== "syllabus");
+    modes = modes.filter((mode) => {
+      if (mode === "collection") return true;
+      if (mode === "gallery") return isOptionalFeatureEnabled("gallery");
+      if (mode === "syllabus") return isOptionalFeatureEnabled("syllabus");
+      return true;
+    });
+    if (modes.length === 1) {
+      return SyllabusManager.getCollectionViewMode();
+    }
     const current = SyllabusManager.getCollectionViewMode();
     const index = Math.max(0, modes.indexOf(current));
     const next = modes[(index + 1) % modes.length];
@@ -932,7 +990,10 @@ export class SyllabusManager {
     win = win || Zotero.getMainWindow();
     const doc = win.document;
     SyllabusManager.removeReadingScheduleTabBarButton(win);
-    if (!FEATURE_FLAG.READING_SCHEDULE) {
+    if (
+      !FEATURE_FLAG.READING_SCHEDULE ||
+      !isOptionalFeatureEnabled("readingSchedule")
+    ) {
       return;
     }
 
@@ -1035,7 +1096,9 @@ export class SyllabusManager {
       el.remove();
     }
 
-    const syllabusChrome = syllabusViewModeChrome();
+    const syllabusChrome = isOptionalFeatureEnabled("syllabus")
+      ? syllabusViewModeChrome()
+      : null;
     const viewModeOptions: {
       mode: CollectionViewMode;
       label: string;
@@ -1046,29 +1109,41 @@ export class SyllabusManager {
         label: getString("view-tab-table"),
         tooltip: getString("view-tab-table-tooltip"),
       },
-      {
+    ];
+    if (isOptionalFeatureEnabled("gallery")) {
+      viewModeOptions.push({
         mode: "gallery",
         label: getString("view-tab-gallery"),
         tooltip: getString("view-tab-gallery-tooltip"),
-      },
-      {
+      });
+    }
+    if (isOptionalFeatureEnabled("explorer")) {
+      viewModeOptions.push({
         mode: "explorer",
         label: getString("view-tab-explorer"),
         tooltip: getString("view-tab-explorer-tooltip"),
-      },
-      {
+      });
+    }
+    if (isOptionalFeatureEnabled("syllabus")) {
+      viewModeOptions.push({
         mode: "syllabus",
         ...(syllabusChrome ?? {
           label: getString("view-tab-syllabus"),
           tooltip: getString("view-tab-syllabus-tooltip"),
         }),
-      },
-    ];
+      });
+    }
+
+    // Never show a lone Table radio — only build radios when another view exists.
+    const showViewRadios = viewModeOptions.some(
+      (option) => option.mode !== "collection",
+    );
+    const radiosToBuild = showViewRadios ? viewModeOptions : [];
 
     const group = createXulElement(doc, "hbox", "syllabus-view-mode-group");
     group.setAttribute("align", "stretch");
 
-    for (const option of viewModeOptions) {
+    for (const option of radiosToBuild) {
       const button = ztoolkit.UI.createElement(doc, "toolbarbutton", {
         id: `syllabus-view-mode-${option.mode}`,
         classList: ["syllabus-view-mode-button"],
@@ -1126,7 +1201,9 @@ export class SyllabusManager {
     const cluster = createXulElement(doc, "hbox", "syllabus-view-mode-cluster");
     cluster.setAttribute("align", "center");
     cluster.setAttribute("flex", "0");
-    cluster.appendChild(group);
+    if (showViewRadios) {
+      cluster.appendChild(group);
+    }
     cluster.appendChild(createButton);
 
     const spacerStart = createXulElement(
@@ -1201,8 +1278,6 @@ export class SyllabusManager {
       doc.querySelectorAll(".syllabus-view-mode-button"),
     ) as XULButtonElement[];
 
-    if (!viewModeButtons.length) return;
-
     const scope = getSelectedViewScope();
     const selectedCollection =
       scope.kind === "collection" ? scope.collection : null;
@@ -1220,19 +1295,30 @@ export class SyllabusManager {
       ? getReadingScheduleCollectionContext(selectedCollection.id)
       : null;
     const hideAll = !!(hideViewModesInLibrary || readingScheduleContext);
-    const syllabusChrome = syllabusViewModeChrome();
-    const showCreate = !hideAll && !!selectedCollection && !syllabusChrome;
+    const syllabusEnabled = isOptionalFeatureEnabled("syllabus");
+    const syllabusChrome = syllabusEnabled ? syllabusViewModeChrome() : null;
+    const showCreate =
+      !hideAll &&
+      syllabusEnabled &&
+      !!selectedCollection &&
+      !syllabusChrome;
     const isLibraryRoot = viewScopeSupportsExplorer(scope);
 
     for (const button of viewModeButtons) {
       const buttonMode = button.getAttribute("data-view-mode");
       if (isLibraryRoot) {
         button.hidden =
-          hideAll || (buttonMode !== "collection" && buttonMode !== "explorer");
+          hideAll ||
+          (buttonMode !== "collection" && buttonMode !== "explorer") ||
+          (buttonMode === "explorer" &&
+            !isOptionalFeatureEnabled("explorer"));
       } else if (buttonMode === "explorer") {
         button.hidden = true;
       } else if (buttonMode === "syllabus") {
         button.hidden = hideAll || !syllabusChrome;
+      } else if (buttonMode === "gallery") {
+        button.hidden =
+          hideAll || !isOptionalFeatureEnabled("gallery");
       } else {
         button.hidden = hideAll;
       }
@@ -1245,7 +1331,8 @@ export class SyllabusManager {
       createButton.hidden = !showCreate;
     }
 
-    const hideChrome = hideAll;
+    const anyRadioVisible = viewModeButtons.some((button) => !button.hidden);
+    const hideChrome = hideAll || (!anyRadioVisible && !showCreate);
     for (const id of [
       "syllabus-view-mode-cluster",
       "syllabus-view-spacer-start",
@@ -3099,6 +3186,9 @@ export class SyllabusManager {
    * Open and render the reading list tab
    */
   static openReadingListTab() {
+    if (!isOptionalFeatureEnabled("readingSchedule")) {
+      return;
+    }
     const win = Zotero.getMainWindow();
     if (this.readingScheduleTab) {
       this.readingScheduleTab.open(win);

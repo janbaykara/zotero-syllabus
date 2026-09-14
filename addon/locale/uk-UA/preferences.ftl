@@ -1,4 +1,13 @@
 pref-title = Zotero Syllabus
+pref-views-title = Подання
+pref-enable-syllabus =
+    .label = Вигляд силабуса
+pref-enable-gallery =
+    .label = Вигляд галереї
+pref-enable-explorer =
+    .label = Домашній вигляд
+pref-enable-reading-schedule =
+    .label = Вкладка розкладу читання
 pref-enable =
     .label = Увімкнути
 pref-show-bibliography =

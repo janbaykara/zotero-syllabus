@@ -1,4 +1,13 @@
 pref-title = Zotero Syllabus
+pref-views-title = 表示
+pref-enable-syllabus =
+    .label = シラバス表示
+pref-enable-gallery =
+    .label = ギャラリー表示
+pref-enable-explorer =
+    .label = ホーム表示
+pref-enable-reading-schedule =
+    .label = 読書スケジュールタブ
 pref-enable =
     .label = 有効にする
 pref-show-bibliography =

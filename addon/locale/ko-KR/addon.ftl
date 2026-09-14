@@ -63,6 +63,30 @@ userGuide-start-title = Zotero Syllabus에 오신 것을 환영합니다
 userGuide-start-desc =
     어떤 Zotero 컬렉션이든 강의 읽기 목록으로 바꿀 수 있습니다. 수업별로 정리하고, 우선순위를 정하고, 다음에 읽을 것을 추적하세요.
 userGuide-start-close = 나중에 알림
+optional-features-intro-title = Choose your views
+optional-features-intro-desc =
+    Pick which surfaces to show. You can change these anytime in Preferences. Syllabus view is recommended to get started.
+optional-features-syllabus-title = Syllabus view
+optional-features-syllabus-desc =
+    Structure a collection by class session, drag readings into place, and edit priorities and instructions.
+optional-features-gallery-title = Gallery view
+optional-features-gallery-desc =
+    Browse a collection as covers, magazine spreads, or cards — great for finding the next thing to open.
+optional-features-explorer-title = Home view
+optional-features-explorer-desc =
+    A library home with shelves for recent items, upcoming deadlines, and more.
+optional-features-reading-schedule-title = Reading Schedule
+optional-features-reading-schedule-desc =
+    A calendar tab that gathers class due dates across your syllabi so you can see what’s next.
+optional-features-enabled = On
+optional-features-disabled = Off
+optional-features-toggle = { $state ->
+    [on] On — click to turn off
+   *[off] Off — click to turn on
+}
+optional-features-continue-title = Ready to continue
+optional-features-continue-desc =
+    Next we’ll walk through the views you enabled. You can change these later under Preferences → Zotero Syllabus → Views.
 userGuide-collection-title = 컬렉션에서 시작
 userGuide-collection-desc =
     강의계획서는 컬렉션에 있습니다. 샘플 읽기가 몇 편 들어 있는 “Syllabus Tour” 연습 컬렉션을 엽니다.
@@ -84,12 +108,21 @@ userGuide-readingDate-desc =
 userGuide-readingSchedule-title = 읽기 일정 열기
 userGuide-readingSchedule-desc =
     읽기 일정은 강의계획서 전반에서 마감일이 있는 수업을 모읍니다. 다음을 누르면 열어 다가올 일정을 볼 수 있습니다.
+userGuide-readingSchedule-light-title = Open Reading Schedule
+userGuide-readingSchedule-light-desc =
+    The Reading Schedule tab gathers class due dates across your syllabi. Next opens it from the tab bar.
+userGuide-home-title = Home view
+userGuide-home-desc =
+    At the library root, switch to Home for shelves of recent items and upcoming deadlines. Next selects your library home.
 userGuide-subcollections-title = 선택 사항: 수업 폴더
 userGuide-subcollections-desc =
     수업마다 폴더 미러가 필요하신가요? 설정에서 수업 하위 컬렉션을 켜세요. 플러그인이 하위 폴더를 관리하기를 원하지 않으면 꺼 두세요.
 userGuide-finish-title = 준비되었습니다
 userGuide-finish-desc =
     도움말 → Zotero Syllabus 사용자 가이드 열기에서 언제든 이 투어를 다시 열 수 있습니다. 공부 잘 하세요!
+userGuide-finish-prefs-title = You’re set
+userGuide-finish-prefs-desc =
+    Turn views on or off anytime in Preferences → Zotero Syllabus → Views. You can reopen this tour from Help.
 userGuide-empty-title = 이 컬렉션을 수업별로 정리
 userGuide-empty-desc =
     주 또는 회차마다 수업을 추가한 뒤 읽기 자료를 배정하세요. 짧은 안내 투어도 이용할 수 있습니다.

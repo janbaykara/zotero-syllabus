@@ -1,4 +1,13 @@
 pref-title = Zotero Syllabus
+pref-views-title = Weergaven
+pref-enable-syllabus =
+    .label = Syllabusweergave
+pref-enable-gallery =
+    .label = Galerijweergave
+pref-enable-explorer =
+    .label = Startweergave
+pref-enable-reading-schedule =
+    .label = Tabblad Leesschema
 pref-enable =
     .label = Inschakelen
 pref-show-bibliography =
