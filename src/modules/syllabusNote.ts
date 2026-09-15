@@ -61,6 +61,7 @@ import {
 import {
   buildReadingScheduleDesiredByLibrary,
   clearManagedReadingScheduleCollection,
+  enqueuePinnedReadingScheduleSync,
   enqueueReadingScheduleCollectionSync,
   getReadingScheduleCollectionContext,
   handleReadingScheduleCollectionChange,
@@ -2623,6 +2624,11 @@ export function initializeSyllabusNotes(): void {
         if (extrasToAbsorb.length > 0) {
           absorbSyllabusExtraFromItems(extrasToAbsorb).catch((error) => {
             ztoolkit.log("Error absorbing syllabus Extra into note:", error);
+          });
+        }
+        if (event === "add" || event === "modify" || event === "trash") {
+          enqueuePinnedReadingScheduleSync().catch((error) => {
+            ztoolkit.log("Error syncing pinned reading schedule folder:", error);
           });
         }
       }

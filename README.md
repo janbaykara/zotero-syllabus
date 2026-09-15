@@ -138,6 +138,8 @@ Right-click an item to re-assign class number or priority.
 
 ![Reading schedule](doc/images/reading.png)
 
+Pin individual items or whole syllabi to a **Pinned** section on Reading Schedule and the library Homepage (next incomplete reading from each pinned syllabus). With the Reading Schedule collection enabled, pinned items also appear in a `Pinned` folder.
+
 #### And keep track of what you've read already
 
 ![Reading schedule view with reading status](doc/images/checkboxes.png)

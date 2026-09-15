@@ -173,13 +173,15 @@ page-density-cycle = Chuyển sang { $next }
 page-density-row = Hàng
 page-density-standard = Tiêu chuẩn
 page-density-expanded = Mở rộng
-page-reader-enable = Bật chế độ đọc
-page-reader-disable = Tắt chế độ đọc
+page-reader-enable = Bật hộp kiểm
+page-reader-disable = Tắt hộp kiểm
 page-export = Xuất tệp đề cương
 page-import = Nhập tệp đề cương
 page-edit-settings = Sửa cài đặt đề cương
 page-lock = Khóa đề cương
 page-unlock = Mở khóa đề cương
+page-view-options-aria = Syllabus view options
+page-view-checkboxes = Checkboxes
 page-print = Lưu đề cương dưới dạng PDF, Word, Markdown hoặc HTML
 page-save-pdf = PDF
 page-save-word = Word
@@ -261,6 +263,11 @@ item-pane-select-collection = Chọn một bộ sưu tập để xem bài tập 
 
 # Settings
 settings-title = Cài đặt đề cương
+settings-view = View
+settings-view-desc = Density and checkboxes for this syllabus.
+settings-density = Density
+settings-file = Syllabus file
+settings-file-desc = Export or import a .syllabus metadata file for this collection.
 settings-back = Quay lại chế độ xem đề cương
 settings-nomenclature = Cách gọi
 settings-nomenclature-desc = Chọn thuật ngữ dùng cho từng buổi (vd. “tuần”, “buổi học”, “phiên”, “phần”).
@@ -379,7 +386,6 @@ schedule-empty-desc = Thêm ngày đọc vào các buổi học để xem chúng
 schedule-this-week = Tuần này
 schedule-next-week = Tuần sau
 schedule-settings-title = Cài đặt Lịch đọc
-schedule-settings-back = Quay lại lịch đọc
 schedule-settings-library = Bộ sưu tập thư viện
 schedule-settings-desc =
     Tắt theo mặc định. Khi bật, một bộ sưu tập cấp cao “Lịch đọc” được giữ trong Thư viện của tôi với thư mục cho mỗi ngày đọc gần đây và sắp tới. Thư mục được tạo, đổi tên và điền tự động. Tắt sẽ xóa bộ sưu tập đó; mục đề cương vẫn được giữ.
@@ -392,6 +398,24 @@ schedule-of-collection = của { $name }
 schedule-of-collection-in-library = của { $collection } ({ $library })
 schedule-open-syllabus = Mở đề cương { $title }
 class-folder-managed-banner = Tự quản lý từ đề cương này. Chỉnh sửa trong thư mục này sẽ bị ghi đè.
+
+# Pinned (Reading Schedule)
+pinned-section-heading = Pinned
+pinned-item-label = Pinned item
+pinned-next-up-from = Next up from { $name }
+pinned-menu-pin-item = Add to Pinned
+pinned-menu-unpin-item = Remove from Pinned
+pinned-menu-pin-syllabus = Pin syllabus
+pinned-menu-unpin-syllabus = Unpin syllabus
+pinned-unpin-item = Unpin
+pinned-unpin-syllabus = Unpin syllabus
+pinned-edit-intention = Edit intention
+pinned-unpin-note-title = Remove from Pinned?
+pinned-unpin-note-message =
+    This item has an intention note. Keep the note, delete it, or cancel.
+pinned-unpin-keep = Keep note
+pinned-unpin-delete = Delete note
+pinned-unpin-cancel = Cancel
 
 # Columns
 column-reading-instructions = Hướng dẫn đọc
@@ -471,6 +495,8 @@ explorer-add-collection = Collection…
 explorer-add-saved-search = Saved search…
 explorer-shelf-upcoming-deadlines = Upcoming reading deadlines
 explorer-shelf-upcoming-deadlines-desc = Due this week, or the next deadline within a month.
+explorer-shelf-pinned = Pinned
+explorer-shelf-pinned-desc = Items you’ve pinned, and the next unread assignment from each pinned syllabus.
 explorer-go-to-reading-schedule = Go to Reading Schedule
 explorer-go-to-my-annotations = See all
 explorer-shelf-watch-now = Watch now

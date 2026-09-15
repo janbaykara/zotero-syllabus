@@ -38,6 +38,15 @@ import { parseXULTemplate } from "../utils/ui";
 import { TabManager } from "../utils/tabManager";
 import { FEATURE_FLAG } from "./featureFlags";
 import {
+  isPinnedItem,
+  isPinnedSyllabus,
+  PINNED_TAG,
+  setPinnedItem,
+  setPinnedSyllabus,
+  unpinItemWithNotePrompt,
+  notifyPinnedChanges,
+} from "./pinned";
+import {
   coerceEnabledViewMode,
   isOptionalFeatureEnabled,
   migrateOptionalFeatures,
@@ -91,12 +100,14 @@ import {
   collectionHasSyllabusNote,
   ensureSyllabusNoteForUser,
   whenSyllabusNotesReady,
+  SYLLABUS_NOTE_TAG,
 } from "./syllabusNote";
 import { getItemTitle, readItemNote } from "../utils/items";
 import { migrateLegacyCollectionMetadataPrefs } from "./migratePrefsToNotes";
 import {
   getReadingScheduleCollectionContext,
   isManagedReadingScheduleCollection,
+  enqueuePinnedReadingScheduleSync,
 } from "./readingScheduleCollection";
 import {
   getCollectionTreeKind,
@@ -170,6 +181,19 @@ function migrateLegacyBrowseViewMode(
 }
 
 const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
+
+function isPinnedSyllabusNoteCandidate(item: Zotero.Item): boolean {
+  try {
+    return (
+      item.isNote() &&
+      item.isTopLevelItem() &&
+      !item.deleted &&
+      item.hasTag(SYLLABUS_NOTE_TAG)
+    );
+  } catch {
+    return false;
+  }
+}
 
 /** Label for the Syllabus/Checklist view radio, or null when that view is not available. */
 function syllabusViewModeChrome(): { label: string; tooltip: string } | null {
@@ -606,6 +630,7 @@ export class SyllabusManager {
     this.setupContextMenuSetPriority();
     this.setupContextMenuSetClassNumber();
     this.setupContextMenuSetStatus();
+    this.setupContextMenuPinned();
   }
 
   static onNotify(
@@ -1848,6 +1873,154 @@ export class SyllabusManager {
           commandListener: createStatusHandler(null),
         },
       ],
+    });
+  }
+
+  static setupContextMenuPinned() {
+    ztoolkit.Menu.unregister("syllabus-pin-item-menu");
+    ztoolkit.Menu.unregister("syllabus-pin-collection-menu");
+
+    const selectedRegularItems = (): Zotero.Item[] => {
+      try {
+        const items = ztoolkit.getGlobal("ZoteroPane").getSelectedItems() || [];
+        return items.filter((item) => {
+          try {
+            return item.isRegularItem();
+          } catch {
+            return false;
+          }
+        });
+      } catch {
+        return [];
+      }
+    };
+
+    const selectedSyllabusNotes = (): Zotero.Item[] => {
+      try {
+        const items = ztoolkit.getGlobal("ZoteroPane").getSelectedItems() || [];
+        return items.filter((item) => isPinnedSyllabusNoteCandidate(item));
+      } catch {
+        return [];
+      }
+    };
+
+    ztoolkit.Menu.register("item", {
+      tag: "menuitem",
+      id: "syllabus-pin-item-menu",
+      label: getString("pinned-menu-pin-item"),
+      isHidden: () => {
+        return (
+          selectedRegularItems().length === 0 &&
+          selectedSyllabusNotes().length === 0
+        );
+      },
+      onShowing: (elem) => {
+        const regular = selectedRegularItems();
+        if (regular.length > 0) {
+          const allPinned = regular.every((item) => isPinnedItem(item));
+          elem.setAttribute(
+            "label",
+            allPinned
+              ? getString("pinned-menu-unpin-item")
+              : getString("pinned-menu-pin-item"),
+          );
+          return;
+        }
+        const notes = selectedSyllabusNotes();
+        if (notes.length > 0) {
+          const allPinned = notes.every((item) => {
+            try {
+              return item.hasTag(PINNED_TAG);
+            } catch {
+              return false;
+            }
+          });
+          elem.setAttribute(
+            "label",
+            allPinned
+              ? getString("pinned-menu-unpin-syllabus")
+              : getString("pinned-menu-pin-syllabus"),
+          );
+        }
+      },
+      commandListener: async () => {
+        const regular = selectedRegularItems();
+        if (regular.length > 0) {
+          const allPinned = regular.every((item) => isPinnedItem(item));
+          if (allPinned) {
+            for (const item of regular) {
+              await unpinItemWithNotePrompt(item);
+            }
+          } else {
+            for (const item of regular) {
+              if (!isPinnedItem(item)) {
+                await setPinnedItem(item, true);
+              }
+            }
+          }
+          enqueuePinnedReadingScheduleSync();
+          return;
+        }
+
+        const notes = selectedSyllabusNotes();
+        if (notes.length === 0) {
+          return;
+        }
+        const allPinned = notes.every((item) => {
+          try {
+            return item.hasTag(PINNED_TAG);
+          } catch {
+            return false;
+          }
+        });
+        for (const note of notes) {
+          if (allPinned) {
+            note.removeTag(PINNED_TAG);
+          } else if (!note.hasTag(PINNED_TAG)) {
+            note.addTag(PINNED_TAG);
+          }
+          await note.saveTx({ skipSelect: true });
+        }
+        notifyPinnedChanges();
+        enqueuePinnedReadingScheduleSync();
+      },
+    });
+
+    ztoolkit.Menu.register("collection", {
+      tag: "menuitem",
+      id: "syllabus-pin-collection-menu",
+      label: getString("pinned-menu-pin-syllabus"),
+      isHidden: () => {
+        const collection = getSelectedCollection();
+        return !collection || !collectionHasSyllabusNote(collection);
+      },
+      onShowing: (elem) => {
+        const collection = getSelectedCollection();
+        if (!collection) {
+          return;
+        }
+        const pinned = isPinnedSyllabus(collection);
+        elem.setAttribute(
+          "label",
+          pinned
+            ? getString("pinned-menu-unpin-syllabus")
+            : getString("pinned-menu-pin-syllabus"),
+        );
+      },
+      commandListener: async () => {
+        const collection = getSelectedCollection();
+        if (!collection) {
+          return;
+        }
+        const pinned = isPinnedSyllabus(collection);
+        const ok = await setPinnedSyllabus(collection, !pinned);
+        if (!ok && !pinned) {
+          ztoolkit.log(
+            "Could not pin syllabus: no Syllabus note on collection",
+          );
+        }
+        enqueuePinnedReadingScheduleSync();
+      },
     });
   }
 

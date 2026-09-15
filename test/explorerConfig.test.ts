@@ -8,10 +8,11 @@ import {
 } from "../src/modules/explorerConfig";
 
 describe("explorer shelves", function () {
-  it("puts upcoming deadlines first on the default homepage", function () {
+  it("puts pinned and upcoming deadlines first on the default homepage", function () {
     assert.deepEqual(
       defaultExplorerShelves().map((shelf) => shelf.type),
       [
+        "pinned",
         "upcoming-deadlines",
         "watch-now",
         "listen-now",
@@ -46,7 +47,7 @@ describe("explorer shelves", function () {
     );
   });
 
-  it("replaces the previous media default with upcoming deadlines first", function () {
+  it("replaces the previous media default with pinned and deadlines first", function () {
     const shelves = coerceExplorerShelves([
       { id: "watch-now", type: "watch-now", layout: "cover" },
       { id: "listen-now", type: "listen-now", layout: "cover" },
@@ -122,6 +123,10 @@ describe("explorer shelves", function () {
       ],
       1,
       ["ROOT"],
+    );
+    assert.include(
+      merged.map((shelf) => shelf.type),
+      "pinned",
     );
     assert.include(
       merged.map((shelf) => shelf.type),
@@ -213,6 +218,35 @@ describe("explorer shelves", function () {
       "magazine",
       "card",
     ]);
+  });
+
+  it("upgrades the pre-pinned default homepage to include Pinned", function () {
+    const shelves = coerceExplorerShelves([
+      {
+        id: "upcoming-deadlines",
+        type: "upcoming-deadlines",
+        layout: "card",
+      },
+      { id: "watch-now", type: "watch-now", layout: "cover" },
+      { id: "listen-now", type: "listen-now", layout: "cover" },
+      {
+        id: "recently-read",
+        type: "recently-read",
+        layout: "cover",
+        days: 30,
+        limit: 10,
+      },
+      {
+        id: "recently-added",
+        type: "recently-added",
+        layout: "magazine",
+        days: 14,
+      },
+    ]);
+    assert.deepEqual(
+      shelves.map((shelf) => shelf.type),
+      defaultExplorerShelves().map((shelf) => shelf.type),
+    );
   });
 
   it("defaults recent-annotations size to small without changing shelf depth", function () {

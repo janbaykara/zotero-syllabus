@@ -1,8 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
-import { useMemo, useState } from "preact/hooks";
+import { useMemo } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
-import { Settings } from "lucide-preact";
 import {
   ClassReadingBlock,
   selectCollectionInLibrary,
@@ -23,6 +22,7 @@ import {
   startOfWeek,
 } from "date-fns";
 import { useZoteroItemDensity } from "./react-zotero-sync/itemDensity";
+import type { ItemDensity } from "./react-zotero-sync/itemDensity";
 import { useSyllabi } from "./react-zotero-sync/useSyllabi";
 import { getPref } from "../utils/prefs";
 import { isSameWeek } from "date-fns/fp";
@@ -33,15 +33,56 @@ import {
 } from "../utils/dates";
 import { hasMultipleNonFeedLibraries, isZotero8OrLater } from "../utils/zotero";
 import { getString, getUiDir } from "../utils/locale";
-import { ReadingScheduleSettingsPage } from "./ReadingScheduleSettingsPage";
+import { ReadingScheduleSettingsMenu } from "./ReadingScheduleSettingsMenu";
+import { PinnedSection, usePinnedScheduleData } from "./PinnedSection";
+import { DensityIcon, densityCycleTitle } from "./browsePage";
 
 setDefaultOptions({
   weekStartsOn: 1,
 });
 
+function ReadingScheduleHeader({
+  density,
+  onCycleDensity,
+}: {
+  density: ItemDensity;
+  onCycleDensity: () => void;
+}) {
+  const cycleTitle = densityCycleTitle(density);
+  return (
+    <div
+      className={twMerge(
+        "sticky top-0 z-20 bg-background py-1",
+        isZotero8OrLater() ? "pt-4 md:pt-8" : "pt-8",
+      )}
+    >
+      <div className="container-padded bg-background">
+        <div className="flex flex-row items-center gap-2 justify-between">
+          <div className={twMerge("font-semibold text-3xl")}>
+            {getString("view-tab-reading-schedule")}
+          </div>
+          <div className="inline-flex items-center gap-2.5 shrink grow-0">
+            <div
+              className="grow-0 shrink-0 flex items-center cursor-pointer"
+              title={cycleTitle}
+              aria-label={cycleTitle}
+              onClick={onCycleDensity}
+            >
+              <DensityIcon
+                density={density}
+                className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+              />
+            </div>
+            <ReadingScheduleSettingsMenu />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
-  const [density] = useZoteroItemDensity();
-  const [showSettings, setShowSettings] = useState(false);
+  const [density, , cycleDensity] = useZoteroItemDensity();
 
   const allSyllabi = useSyllabi();
   const syllabi = useMemo(
@@ -49,12 +90,14 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
     [allSyllabi, libraryID],
   );
 
+  const { pinnedItems, nextUp, reload } = usePinnedScheduleData(libraryID);
+  const hasPinned = pinnedItems.length > 0 || nextUp.length > 0;
+
   const readingsByWeek = useMemo(
     () => collectClassReadingsByWeek(syllabi),
     [syllabi],
   );
 
-  // Convert to sorted array for rendering, filtering out past weeks
   const sortedWeeks = useMemo(() => {
     const currentWeekStartKey = toLocalDateKey(startOfWeek(new Date()));
 
@@ -74,50 +117,26 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
   const showLibrarySource =
     libraryID == null &&
     hasMultipleNonFeedLibraries() &&
-    syllabiSpanMultipleLibraries(syllabi);
+    (syllabiSpanMultipleLibraries(syllabi) ||
+      new Set([
+        ...pinnedItems.map((item) => item.libraryID),
+        ...nextUp.map((reading) => reading.libraryID),
+      ]).size > 1);
 
-  if (showSettings) {
-    return (
-      <ReadingScheduleSettingsPage onBack={() => setShowSettings(false)} />
-    );
-  }
-
-  const settingsButton = (
-    <div
-      className="grow-0 shrink-0 flex items-center cursor-pointer"
-      title={getString("schedule-edit-settings")}
-      aria-label={getString("schedule-edit-settings")}
-      data-tour="reading-schedule-settings-button"
-      onClick={() => setShowSettings(true)}
-    >
-      <Settings
-        size={20}
-        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-      />
-    </div>
-  );
-
-  if (sortedWeeks.length === 0) {
+  if (sortedWeeks.length === 0 && !hasPinned) {
     return (
       <div
-        className="syllabus-page overflow-y-auto overflow-x-hidden h-full"
+        className={twMerge(
+          "syllabus-page overflow-y-auto overflow-x-hidden h-full",
+          `density-${density}`,
+        )}
+        data-item-density={density}
         dir={getUiDir()}
       >
-        <div
-          className={twMerge(
-            "sticky top-0 z-20 bg-background py-1",
-            isZotero8OrLater() ? "pt-4 md:pt-8" : "pt-8",
-          )}
-        >
-          <div className="container-padded bg-background">
-            <div className="flex flex-row items-center gap-2 justify-between">
-              <div className={twMerge("font-semibold text-3xl")}>
-                {getString("view-tab-reading-schedule")}
-              </div>
-              {settingsButton}
-            </div>
-          </div>
-        </div>
+        <ReadingScheduleHeader
+          density={density}
+          onCycleDensity={cycleDensity}
+        />
         <div className="container-padded py-12">
           <div className="text-center text-secondary">
             <div
@@ -159,98 +178,112 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
 
   return (
     <div
-      className="syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background"
+      className={twMerge(
+        "syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background",
+        `density-${density}`,
+      )}
+      data-item-density={density}
       dir={getUiDir()}
     >
       <div className="pb-12">
-        <div
-          className={twMerge(
-            "sticky top-0 z-20 bg-background py-1",
-            isZotero8OrLater() ? "pt-4 md:pt-8" : "pt-8",
-          )}
-        >
-          <div className="container-padded bg-background">
-            <div className="flex flex-row items-center gap-2 justify-between">
-              <div className={twMerge("font-semibold text-3xl")}>
-                {getString("view-tab-reading-schedule")}
-              </div>
-              {settingsButton}
-            </div>
-          </div>
-        </div>
+        <ReadingScheduleHeader
+          density={density}
+          onCycleDensity={cycleDensity}
+        />
 
-        <p className="container-padded text-secondary text-lg">
-          {getString("schedule-empty-desc")}
-        </p>
+        <PinnedSection
+          density={density}
+          showLibraryName={showLibrarySource}
+          pinnedItems={pinnedItems}
+          nextUp={nextUp}
+          onChanged={reload}
+        />
 
-        <div className={twMerge("flex flex-col gap-8 mt-8")}>
-          {sortedWeeks.map((weekStartKey) => {
-            const weekData = readingsByWeek.get(weekStartKey)!;
-            const sortedDates = Array.from(weekData.keys()).sort(
-              (a, b) =>
-                parseReadingDate(a).getTime() - parseReadingDate(b).getTime(),
-            );
+        {sortedWeeks.length > 0 ? (
+          <>
+            <p className="container-padded text-secondary text-lg">
+              {getString("schedule-empty-desc")}
+            </p>
 
-            const weekStartDate = parseReadingDate(weekStartKey);
+            <div className={twMerge("flex flex-col gap-8 mt-8")}>
+              {sortedWeeks.map((weekStartKey) => {
+                const weekData = readingsByWeek.get(weekStartKey)!;
+                const sortedDates = Array.from(weekData.keys()).sort(
+                  (a, b) =>
+                    parseReadingDate(a).getTime() -
+                    parseReadingDate(b).getTime(),
+                );
 
-            return (
-              <div key={weekStartKey} className="syllabus-class-group">
-                <div
-                  className={twMerge(
-                    "container-padded",
-                    "text-3xl sticky top-12 z-10 py-2 bg-background text-tertiary",
-                    isZotero8OrLater() ? "md:top-16" : "top-12",
-                  )}
-                >
-                  <WeekHeader weekStartDate={weekStartDate} />
-                </div>
+                const weekStartDate = parseReadingDate(weekStartKey);
 
-                <div className="container-padded">
-                  <div className="space-y-12 my-6">
-                    {sortedDates.map((dateTimestamp) => {
-                      const classReadings = weekData.get(dateTimestamp)!;
+                return (
+                  <div key={weekStartKey} className="syllabus-class-group">
+                    <div
+                      className={twMerge(
+                        "container-padded",
+                        "text-3xl sticky top-12 z-10 py-2 bg-background text-tertiary",
+                        isZotero8OrLater() ? "md:top-16" : "top-12",
+                      )}
+                    >
+                      <WeekHeader weekStartDate={weekStartDate} />
+                    </div>
 
-                      return (
-                        <div key={dateTimestamp}>
-                          <div
-                            className={twMerge("mb-3 text-secondary text-2xl")}
-                          >
-                            {formatReadingDate(
-                              dateTimestamp,
-                              !isThisMonth(parseReadingDate(dateTimestamp)),
-                            )}
-                          </div>
+                    <div className="container-padded">
+                      <div className="space-y-12 my-6">
+                        {sortedDates.map((dateTimestamp) => {
+                          const classReadings = weekData.get(dateTimestamp)!;
 
-                          <div className="space-y-8">
-                            {classReadings.map((classReading) => (
-                              <ClassReadingBlock
-                                key={`${classReading.collectionId}-${classReading.classNumber}`}
-                                classReading={classReading}
-                                density={density}
-                                showLibraryName={showLibrarySource}
-                                onCollectionClick={() =>
-                                  handleCollectionClick(
-                                    classReading.collectionId,
-                                  )
-                                }
-                                onItemClick={(item) =>
-                                  handleItemClick(
-                                    item,
-                                    classReading.collectionId,
-                                  )
-                                }
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
+                          return (
+                            <div key={dateTimestamp}>
+                              <div
+                                className={twMerge(
+                                  "mb-3 text-secondary text-2xl",
+                                )}
+                              >
+                                {formatReadingDate(
+                                  dateTimestamp,
+                                  !isThisMonth(
+                                    parseReadingDate(dateTimestamp),
+                                  ),
+                                )}
+                              </div>
+
+                              <div className="space-y-8">
+                                {classReadings.map((classReading) => (
+                                  <ClassReadingBlock
+                                    key={`${classReading.collectionId}-${classReading.classNumber}`}
+                                    classReading={classReading}
+                                    density={density}
+                                    showLibraryName={showLibrarySource}
+                                    onCollectionClick={() =>
+                                      handleCollectionClick(
+                                        classReading.collectionId,
+                                      )
+                                    }
+                                    onItemClick={(item) =>
+                                      handleItemClick(
+                                        item,
+                                        classReading.collectionId,
+                                      )
+                                    }
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <p className="container-padded text-secondary text-lg mt-4">
+            {getString("schedule-empty-desc")}
+          </p>
+        )}
       </div>
     </div>
   );

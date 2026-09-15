@@ -7,6 +7,7 @@ import {
 export type CollectionTreeKind =
   | "reading-schedule-root"
   | "calendar-date"
+  | "pinned"
   | "class-folder"
   | "syllabus";
 
@@ -51,6 +52,9 @@ export function getCollectionTreeKind(
   }
   if (reading?.kind === "date") {
     return "calendar-date";
+  }
+  if (reading?.kind === "pinned") {
+    return "pinned";
   }
   if (isManagedClassFolderCollection(collectionId)) {
     return "class-folder";

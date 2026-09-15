@@ -173,13 +173,15 @@ page-density-cycle = Mudar para { $next }
 page-density-row = Linha
 page-density-standard = Padrão
 page-density-expanded = Expandido
-page-reader-enable = Ativar o modo de leitura
-page-reader-disable = Desativar o modo de leitura
+page-reader-enable = Ativar caixas de seleção
+page-reader-disable = Desativar caixas de seleção
 page-export = Exportar ficheiro do programa
 page-import = Importar ficheiro do programa
 page-edit-settings = Editar definições do programa
 page-lock = Bloquear o programa
 page-unlock = Desbloquear o programa
+page-view-options-aria = Syllabus view options
+page-view-checkboxes = Checkboxes
 page-print = Guardar o programa como PDF, Word, Markdown ou HTML
 page-save-pdf = PDF
 page-save-word = Word
@@ -261,6 +263,11 @@ item-pane-select-collection = Selecione uma coleção para ver os trabalhos do p
 
 # Settings
 settings-title = Definições do programa de curso
+settings-view = View
+settings-view-desc = Density and checkboxes for this syllabus.
+settings-density = Density
+settings-file = Syllabus file
+settings-file-desc = Export or import a .syllabus metadata file for this collection.
 settings-back = Voltar à vista de programa
 settings-nomenclature = Nomenclatura
 settings-nomenclature-desc = Escolha o termo usado para as sessões individuais (p. ex., «semana», «aula», «sessão», «secção»).
@@ -379,7 +386,6 @@ schedule-empty-desc = Adicione datas de leitura às aulas para as ver aqui.
 schedule-this-week = Esta semana
 schedule-next-week = Semana seguinte
 schedule-settings-title = Definições do Calendário de leituras
-schedule-settings-back = Voltar ao calendário de leituras
 schedule-settings-library = Coleção da biblioteca
 schedule-settings-desc =
     Desativado por omissão. Quando ativado, é mantida em A Minha Biblioteca uma coleção de primeiro nível «Calendário de leituras» com uma pasta para cada data de leitura recente e futura. As pastas são criadas, renomeadas e preenchidas automaticamente. Desativar elimina essa coleção; os itens dos programas de curso mantêm-se.
@@ -392,6 +398,24 @@ schedule-of-collection = de { $name }
 schedule-of-collection-in-library = de { $collection } ({ $library })
 schedule-open-syllabus = Abrir o programa de { $title }
 class-folder-managed-banner = Gestão automática a partir deste programa. As edições nesta pasta são sobrescritas.
+
+# Pinned (Reading Schedule)
+pinned-section-heading = Pinned
+pinned-item-label = Pinned item
+pinned-next-up-from = Next up from { $name }
+pinned-menu-pin-item = Add to Pinned
+pinned-menu-unpin-item = Remove from Pinned
+pinned-menu-pin-syllabus = Pin syllabus
+pinned-menu-unpin-syllabus = Unpin syllabus
+pinned-unpin-item = Unpin
+pinned-unpin-syllabus = Unpin syllabus
+pinned-edit-intention = Edit intention
+pinned-unpin-note-title = Remove from Pinned?
+pinned-unpin-note-message =
+    This item has an intention note. Keep the note, delete it, or cancel.
+pinned-unpin-keep = Keep note
+pinned-unpin-delete = Delete note
+pinned-unpin-cancel = Cancel
 
 # Columns
 column-reading-instructions = Instruções de leitura
@@ -471,6 +495,8 @@ explorer-add-collection = Collection…
 explorer-add-saved-search = Saved search…
 explorer-shelf-upcoming-deadlines = Upcoming reading deadlines
 explorer-shelf-upcoming-deadlines-desc = Due this week, or the next deadline within a month.
+explorer-shelf-pinned = Pinned
+explorer-shelf-pinned-desc = Items you’ve pinned, and the next unread assignment from each pinned syllabus.
 explorer-go-to-reading-schedule = Go to Reading Schedule
 explorer-go-to-my-annotations = See all
 explorer-shelf-watch-now = Watch now

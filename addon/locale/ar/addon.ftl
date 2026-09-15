@@ -173,13 +173,15 @@ page-density-cycle = التبديل إلى { $next }
 page-density-row = صف
 page-density-standard = قياسي
 page-density-expanded = موسّع
-page-reader-enable = تمكين وضع القراءة
-page-reader-disable = تعطيل وضع القراءة
+page-reader-enable = تمكين خانات الاختيار
+page-reader-disable = تعطيل خانات الاختيار
 page-export = تصدير ملف المنهاج
 page-import = استيراد ملف المنهاج
 page-edit-settings = تحرير إعدادات المنهاج
 page-lock = قفل المنهاج
 page-unlock = إلغاء قفل المنهاج
+page-view-options-aria = Syllabus view options
+page-view-checkboxes = Checkboxes
 page-print = حفظ المنهاج كـ PDF أو Word أو Markdown أو HTML
 page-save-pdf = PDF
 page-save-word = Word
@@ -261,6 +263,11 @@ item-pane-select-collection = حدد مجموعة لعرض تكليفات الم
 
 # Settings
 settings-title = إعدادات المنهاج
+settings-view = View
+settings-view-desc = Density and checkboxes for this syllabus.
+settings-density = Density
+settings-file = Syllabus file
+settings-file-desc = Export or import a .syllabus metadata file for this collection.
 settings-back = العودة إلى عرض المنهاج
 settings-nomenclature = المصطلح
 settings-nomenclature-desc = اختر المصطلح المستخدم للإشارة إلى الجلسات الفردية (مثل «أسبوع»، «محاضرة»، «جلسة»، «قسم»).
@@ -379,7 +386,6 @@ schedule-empty-desc = أضف تواريخ قراءة إلى المحاضرات �
 schedule-this-week = هذا الأسبوع
 schedule-next-week = الأسبوع القادم
 schedule-settings-title = إعدادات جدول القراءات
-schedule-settings-back = العودة إلى جدول القراءات
 schedule-settings-library = مجموعة المكتبة
 schedule-settings-desc =
     معطّل افتراضيًا. عند التمكين، تُحفظ في مكتبتي مجموعة علوية باسم «جدول القراءات» مع مجلد لكل تاريخ قراءة قريب أو قادم. تُنشأ المجلدات ويُعاد تسميتها وتُملأ تلقائيًا. إلغاء التفعيل يحذف تلك المجموعة؛ وتبقى عناصر المناهج في مكانها.
@@ -392,6 +398,24 @@ schedule-of-collection = من { $name }
 schedule-of-collection-in-library = من { $collection } ({ $library })
 schedule-open-syllabus = فتح منهاج { $title }
 class-folder-managed-banner = يُدار تلقائيًا من هذا المنهاج. تُستبدل التعديلات في هذا المجلد.
+
+# Pinned (Reading Schedule)
+pinned-section-heading = Pinned
+pinned-item-label = Pinned item
+pinned-next-up-from = Next up from { $name }
+pinned-menu-pin-item = Add to Pinned
+pinned-menu-unpin-item = Remove from Pinned
+pinned-menu-pin-syllabus = Pin syllabus
+pinned-menu-unpin-syllabus = Unpin syllabus
+pinned-unpin-item = Unpin
+pinned-unpin-syllabus = Unpin syllabus
+pinned-edit-intention = Edit intention
+pinned-unpin-note-title = Remove from Pinned?
+pinned-unpin-note-message =
+    This item has an intention note. Keep the note, delete it, or cancel.
+pinned-unpin-keep = Keep note
+pinned-unpin-delete = Delete note
+pinned-unpin-cancel = Cancel
 
 # Columns
 column-reading-instructions = تعليمات القراءة
@@ -471,6 +495,8 @@ explorer-add-collection = Collection…
 explorer-add-saved-search = Saved search…
 explorer-shelf-upcoming-deadlines = Upcoming reading deadlines
 explorer-shelf-upcoming-deadlines-desc = Due this week, or the next deadline within a month.
+explorer-shelf-pinned = Pinned
+explorer-shelf-pinned-desc = Items you’ve pinned, and the next unread assignment from each pinned syllabus.
 explorer-go-to-reading-schedule = Go to Reading Schedule
 explorer-go-to-my-annotations = See all
 explorer-shelf-watch-now = Watch now

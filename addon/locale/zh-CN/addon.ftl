@@ -171,13 +171,15 @@ page-density-cycle = 切换到{ $next }
 page-density-row = 行
 page-density-standard = 标准
 page-density-expanded = 展开
-page-reader-enable = 启用阅读模式
-page-reader-disable = 关闭阅读模式
+page-reader-enable = 启用复选框
+page-reader-disable = 关闭复选框
 page-export = 导出教学大纲文件
 page-import = 导入教学大纲文件
 page-edit-settings = 编辑教学大纲设置
 page-lock = 锁定教学大纲
 page-unlock = 解锁教学大纲
+page-view-options-aria = Syllabus view options
+page-view-checkboxes = Checkboxes
 page-print = 将教学大纲另存为 PDF、Word、Markdown 或 HTML
 page-save-pdf = PDF
 page-save-word = Word
@@ -259,6 +261,11 @@ item-pane-select-collection = 选择一个分类以查看教学大纲作业
 
 # Settings
 settings-title = 教学大纲设置
+settings-view = View
+settings-view-desc = Density and checkboxes for this syllabus.
+settings-density = Density
+settings-file = Syllabus file
+settings-file-desc = Export or import a .syllabus metadata file for this collection.
 settings-back = 返回教学大纲视图
 settings-nomenclature = 称谓
 settings-nomenclature-desc = 选择用于指称各次课的用语（例如“周”“课堂”“单元”“节”）。
@@ -377,7 +384,6 @@ schedule-empty-desc = 为课堂添加阅读日期即可在此查看。
 schedule-this-week = 本周
 schedule-next-week = 下周
 schedule-settings-title = 阅读日程设置
-schedule-settings-back = 返回阅读日程
 schedule-settings-library = 文库分类
 schedule-settings-desc =
     默认关闭。启用后，将在“我的文库”中保留顶层“阅读日程”分类，并为每个近期和即将到来的阅读日期各建一个文件夹。文件夹会自动创建、重命名并填充。关闭此选项将删除该分类；教学大纲中的条目会保留。
@@ -390,6 +396,24 @@ schedule-of-collection = 属于 { $name }
 schedule-of-collection-in-library = 属于 { $collection }（{ $library }）
 schedule-open-syllabus = 打开 { $title } 的教学大纲
 class-folder-managed-banner = 由此教学大纲自动管理。此文件夹中的更改会被覆盖。
+
+# Pinned (Reading Schedule)
+pinned-section-heading = Pinned
+pinned-item-label = Pinned item
+pinned-next-up-from = Next up from { $name }
+pinned-menu-pin-item = Add to Pinned
+pinned-menu-unpin-item = Remove from Pinned
+pinned-menu-pin-syllabus = Pin syllabus
+pinned-menu-unpin-syllabus = Unpin syllabus
+pinned-unpin-item = Unpin
+pinned-unpin-syllabus = Unpin syllabus
+pinned-edit-intention = Edit intention
+pinned-unpin-note-title = Remove from Pinned?
+pinned-unpin-note-message =
+    This item has an intention note. Keep the note, delete it, or cancel.
+pinned-unpin-keep = Keep note
+pinned-unpin-delete = Delete note
+pinned-unpin-cancel = Cancel
 
 # Columns
 column-reading-instructions = 阅读说明
@@ -465,6 +489,8 @@ explorer-add-collection = 分类…
 explorer-add-saved-search = 保存的检索…
 explorer-shelf-upcoming-deadlines = 即将到来的阅读截止日期
 explorer-shelf-upcoming-deadlines-desc = 本周到期，若无则显示一个月内的下一个截止日期。
+explorer-shelf-pinned = Pinned
+explorer-shelf-pinned-desc = Items you’ve pinned, and the next unread assignment from each pinned syllabus.
 explorer-go-to-reading-schedule = 前往阅读日程
 explorer-go-to-my-annotations = 查看全部
 explorer-shelf-watch-now = 立即观看

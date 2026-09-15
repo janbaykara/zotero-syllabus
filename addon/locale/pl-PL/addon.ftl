@@ -173,13 +173,15 @@ page-density-cycle = Przełącz na { $next }
 page-density-row = Wiersz
 page-density-standard = Standardowa
 page-density-expanded = Rozszerzona
-page-reader-enable = Włącz tryb czytnika
-page-reader-disable = Wyłącz tryb czytnika
+page-reader-enable = Włącz pola wyboru
+page-reader-disable = Wyłącz pola wyboru
 page-export = Eksportuj plik sylabusa
 page-import = Importuj plik sylabusa
 page-edit-settings = Edytuj ustawienia sylabusa
 page-lock = Zablokuj sylabus
 page-unlock = Odblokuj sylabus
+page-view-options-aria = Syllabus view options
+page-view-checkboxes = Checkboxes
 page-print = Zapisz sylabus jako PDF, Word, Markdown lub HTML
 page-save-pdf = PDF
 page-save-word = Word
@@ -261,6 +263,11 @@ item-pane-select-collection = Wybierz kolekcję, aby zobaczyć zadania sylabusa
 
 # Settings
 settings-title = Ustawienia sylabusa
+settings-view = View
+settings-view-desc = Density and checkboxes for this syllabus.
+settings-density = Density
+settings-file = Syllabus file
+settings-file-desc = Export or import a .syllabus metadata file for this collection.
 settings-back = Powrót do widoku sylabusa
 settings-nomenclature = Nazewnictwo
 settings-nomenclature-desc = Wybierz termin na pojedyncze spotkania (np. „tydzień”, „zajęcia”, „sesja”, „sekcja”).
@@ -379,7 +386,6 @@ schedule-empty-desc = Dodaj terminy lektur do zajęć, aby zobaczyć je tutaj.
 schedule-this-week = W tym tygodniu
 schedule-next-week = W przyszłym tygodniu
 schedule-settings-title = Ustawienia harmonogramu lektur
-schedule-settings-back = Powrót do harmonogramu lektur
 schedule-settings-library = Kolekcja w bibliotece
 schedule-settings-desc =
     Domyślnie wyłączone. Po włączeniu w bibliotece Moja biblioteka utrzymywana jest nadrzędna kolekcja „Harmonogram lektur” z folderem dla każdej niedawnej i nadchodzącej daty lektury. Foldery są tworzone, przemianowywane i wypełniane automatycznie. Wyłączenie tej opcji usuwa tę kolekcję; pozycje sylabusów pozostają na miejscu.
@@ -392,6 +398,24 @@ schedule-of-collection = z { $name }
 schedule-of-collection-in-library = z { $collection } ({ $library })
 schedule-open-syllabus = Otwórz sylabus: { $title }
 class-folder-managed-banner = Zarządzane automatycznie na podstawie tego sylabusa. Zmiany w tym folderze zostaną nadpisane.
+
+# Pinned (Reading Schedule)
+pinned-section-heading = Pinned
+pinned-item-label = Pinned item
+pinned-next-up-from = Next up from { $name }
+pinned-menu-pin-item = Add to Pinned
+pinned-menu-unpin-item = Remove from Pinned
+pinned-menu-pin-syllabus = Pin syllabus
+pinned-menu-unpin-syllabus = Unpin syllabus
+pinned-unpin-item = Unpin
+pinned-unpin-syllabus = Unpin syllabus
+pinned-edit-intention = Edit intention
+pinned-unpin-note-title = Remove from Pinned?
+pinned-unpin-note-message =
+    This item has an intention note. Keep the note, delete it, or cancel.
+pinned-unpin-keep = Keep note
+pinned-unpin-delete = Delete note
+pinned-unpin-cancel = Cancel
 
 # Columns
 column-reading-instructions = Instrukcje lektury
@@ -477,6 +501,8 @@ explorer-add-collection = Collection…
 explorer-add-saved-search = Saved search…
 explorer-shelf-upcoming-deadlines = Upcoming reading deadlines
 explorer-shelf-upcoming-deadlines-desc = Due this week, or the next deadline within a month.
+explorer-shelf-pinned = Pinned
+explorer-shelf-pinned-desc = Items you’ve pinned, and the next unread assignment from each pinned syllabus.
 explorer-go-to-reading-schedule = Go to Reading Schedule
 explorer-go-to-my-annotations = See all
 explorer-shelf-watch-now = Watch now

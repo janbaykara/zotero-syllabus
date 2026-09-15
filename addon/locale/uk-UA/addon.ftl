@@ -173,13 +173,15 @@ page-density-cycle = Перемкнути на { $next }
 page-density-row = Рядок
 page-density-standard = Стандартна
 page-density-expanded = Розширена
-page-reader-enable = Увімкнути режим читання
-page-reader-disable = Вимкнути режим читання
+page-reader-enable = Увімкнути прапорці
+page-reader-disable = Вимкнути прапорці
 page-export = Експортувати файл силабуса
 page-import = Імпортувати файл силабуса
 page-edit-settings = Змінити параметри силабуса
 page-lock = Заблокувати силабус
 page-unlock = Розблокувати силабус
+page-view-options-aria = Syllabus view options
+page-view-checkboxes = Checkboxes
 page-print = Зберегти силабус як PDF, Word, Markdown або HTML
 page-save-pdf = PDF
 page-save-word = Word
@@ -261,6 +263,11 @@ item-pane-select-collection = Виберіть колекцію, щоб пере
 
 # Settings
 settings-title = Параметри силабуса
+settings-view = View
+settings-view-desc = Density and checkboxes for this syllabus.
+settings-density = Density
+settings-file = Syllabus file
+settings-file-desc = Export or import a .syllabus metadata file for this collection.
 settings-back = Назад до вигляду силабуса
 settings-nomenclature = Найменування
 settings-nomenclature-desc = Виберіть термін для окремих занять (напр., «тиждень», «заняття», «сесія», «розділ»).
@@ -379,7 +386,6 @@ schedule-empty-desc = Додайте дати читання до занять, 
 schedule-this-week = Цього тижня
 schedule-next-week = Наступного тижня
 schedule-settings-title = Параметри графіка читання
-schedule-settings-back = Назад до графіка читання
 schedule-settings-library = Колекція в бібліотеці
 schedule-settings-desc =
     Типово вимкнено. Якщо увімкнено, у «Моя бібліотека» підтримується колекція верхнього рівня «Графік читання» з текою для кожної недавньої та майбутньої дати читання. Теки створюються, перейменовуються й заповнюються автоматично. Вимкнення вилучає цю колекцію; записи силабусів залишаються на місці.
@@ -392,6 +398,24 @@ schedule-of-collection = з { $name }
 schedule-of-collection-in-library = з { $collection } ({ $library })
 schedule-open-syllabus = Відкрити силабус: { $title }
 class-folder-managed-banner = Керується автоматично на основі цього силабуса. Зміни в цій теці буде перезаписано.
+
+# Pinned (Reading Schedule)
+pinned-section-heading = Pinned
+pinned-item-label = Pinned item
+pinned-next-up-from = Next up from { $name }
+pinned-menu-pin-item = Add to Pinned
+pinned-menu-unpin-item = Remove from Pinned
+pinned-menu-pin-syllabus = Pin syllabus
+pinned-menu-unpin-syllabus = Unpin syllabus
+pinned-unpin-item = Unpin
+pinned-unpin-syllabus = Unpin syllabus
+pinned-edit-intention = Edit intention
+pinned-unpin-note-title = Remove from Pinned?
+pinned-unpin-note-message =
+    This item has an intention note. Keep the note, delete it, or cancel.
+pinned-unpin-keep = Keep note
+pinned-unpin-delete = Delete note
+pinned-unpin-cancel = Cancel
 
 # Columns
 column-reading-instructions = Інструкції з читання
@@ -477,6 +501,8 @@ explorer-add-collection = Collection…
 explorer-add-saved-search = Saved search…
 explorer-shelf-upcoming-deadlines = Upcoming reading deadlines
 explorer-shelf-upcoming-deadlines-desc = Due this week, or the next deadline within a month.
+explorer-shelf-pinned = Pinned
+explorer-shelf-pinned-desc = Items you’ve pinned, and the next unread assignment from each pinned syllabus.
 explorer-go-to-reading-schedule = Go to Reading Schedule
 explorer-go-to-my-annotations = See all
 explorer-shelf-watch-now = Watch now

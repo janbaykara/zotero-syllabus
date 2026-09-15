@@ -9,6 +9,7 @@ import {
 } from "./galleryLayout";
 
 export const EXPLORER_SHELF_TYPES = [
+  "pinned",
   "upcoming-deadlines",
   "watch-now",
   "listen-now",
@@ -45,6 +46,15 @@ const PREVIOUS_DEFAULT_SHELF_TYPES = [
   "recently-added",
 ] as const;
 
+/** Defaults before the Pinned shelf was added. */
+const PRE_PINNED_DEFAULT_SHELF_TYPES = [
+  "upcoming-deadlines",
+  "watch-now",
+  "listen-now",
+  "recently-read",
+  "recently-added",
+] as const;
+
 export type ExplorerShelfType = (typeof EXPLORER_SHELF_TYPES)[number];
 
 export type LibraryViewMode = "collection" | "explorer";
@@ -68,6 +78,7 @@ type ExplorerShelfBase = {
 
 export type ExplorerShelf = ExplorerShelfBase &
   (
+    | { type: "pinned" }
     | { type: "upcoming-deadlines" }
     | { type: "watch-now" }
     | { type: "listen-now" }
@@ -117,6 +128,7 @@ export function defaultLayoutForShelfType(
   type: ExplorerShelfType,
 ): GalleryLayout {
   switch (type) {
+    case "pinned":
     case "upcoming-deadlines":
       return "card";
     case "recently-added":
@@ -138,6 +150,7 @@ export function layoutsForExplorerShelf(
     case "watch-now":
     case "listen-now":
       return ["cover"];
+    case "pinned":
     case "upcoming-deadlines":
       return [];
     default:
@@ -158,6 +171,7 @@ function resolveShelfLayout(
 
 export function defaultExplorerShelves(): ExplorerShelf[] {
   return [
+    { id: "pinned", type: "pinned", layout: "card" },
     { id: "upcoming-deadlines", type: "upcoming-deadlines", layout: "card" },
     { id: "watch-now", type: "watch-now", layout: "cover" },
     { id: "listen-now", type: "listen-now", layout: "cover" },
@@ -181,6 +195,7 @@ export const EXPLORER_SHELF_MENU_TYPES: Exclude<
   ExplorerShelfType,
   "collection" | "saved-search"
 >[] = [
+  "pinned",
   "upcoming-deadlines",
   "watch-now",
   "listen-now",
@@ -222,6 +237,9 @@ export function coerceExplorerShelf(value: unknown): ExplorerShelf | null {
   const id = raw.id;
   let shelf: ExplorerShelf | null = null;
   switch (raw.type) {
+    case "pinned":
+      shelf = { id, type: "pinned", layout };
+      break;
     case "upcoming-deadlines":
       shelf = { id, type: "upcoming-deadlines", layout };
       break;
@@ -303,11 +321,16 @@ export function coerceExplorerShelf(value: unknown): ExplorerShelf | null {
 
 function collapseDuplicateShelves(shelves: ExplorerShelf[]): ExplorerShelf[] {
   const unique = new Set<
-    "upcoming-deadlines" | "watch-now" | "listen-now" | "recently-added"
+    | "pinned"
+    | "upcoming-deadlines"
+    | "watch-now"
+    | "listen-now"
+    | "recently-added"
   >();
   const next: ExplorerShelf[] = [];
   for (const shelf of shelves) {
     if (
+      shelf.type === "pinned" ||
       shelf.type === "upcoming-deadlines" ||
       shelf.type === "watch-now" ||
       shelf.type === "listen-now" ||
@@ -342,7 +365,8 @@ export function coerceExplorerShelves(value: unknown): ExplorerShelf[] {
   const types = rawShelfTypes(parsed.data);
   if (
     types.join(",") === LEGACY_DEFAULT_SHELF_TYPES.join(",") ||
-    types.join(",") === PREVIOUS_DEFAULT_SHELF_TYPES.join(",")
+    types.join(",") === PREVIOUS_DEFAULT_SHELF_TYPES.join(",") ||
+    types.join(",") === PRE_PINNED_DEFAULT_SHELF_TYPES.join(",")
   ) {
     return defaultExplorerShelves();
   }

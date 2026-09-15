@@ -173,13 +173,15 @@ page-density-cycle = { $next }(으)로 전환
 page-density-row = 행
 page-density-standard = 표준
 page-density-expanded = 확장
-page-reader-enable = 리더 모드 켜기
-page-reader-disable = 리더 모드 끄기
+page-reader-enable = 체크박스 켜기
+page-reader-disable = 체크박스 끄기
 page-export = 강의계획서 파일 내보내기
 page-import = 강의계획서 파일 가져오기
 page-edit-settings = 강의계획서 설정 편집
 page-lock = 강의계획서 잠그기
 page-unlock = 강의계획서 잠금 해제
+page-view-options-aria = Syllabus view options
+page-view-checkboxes = Checkboxes
 page-print = 강의계획을 PDF, Word, Markdown 또는 HTML로 저장
 page-save-pdf = PDF
 page-save-word = Word
@@ -261,6 +263,11 @@ item-pane-select-collection = 컬렉션을 선택하여 강의계획서 과제 �
 
 # Settings
 settings-title = 강의계획서 설정
+settings-view = View
+settings-view-desc = Density and checkboxes for this syllabus.
+settings-density = Density
+settings-file = Syllabus file
+settings-file-desc = Export or import a .syllabus metadata file for this collection.
 settings-back = 강의계획서 보기로 돌아가기
 settings-nomenclature = 명칭
 settings-nomenclature-desc = 개별 회차를 가리키는 용어를 선택하세요(예: “주”, “수업”, “회차”, “섹션”).
@@ -379,7 +386,6 @@ schedule-empty-desc = 수업에 읽기 날짜를 추가하면 여기에 표시�
 schedule-this-week = 이번 주
 schedule-next-week = 다음 주
 schedule-settings-title = 읽기 일정 설정
-schedule-settings-back = 읽기 일정으로 돌아가기
 schedule-settings-library = 라이브러리 컬렉션
 schedule-settings-desc =
     기본적으로 꺼져 있습니다. 켜면 내 라이브러리에 최상위 “읽기 일정” 컬렉션이 유지되며, 최근 및 다가오는 각 읽기 날짜마다 폴더가 생깁니다. 폴더는 자동으로 만들고, 이름을 바꾸며, 채웁니다. 끄면 해당 컬렉션이 삭제됩니다. 강의계획서 항목은 그대로 남습니다.
@@ -392,6 +398,24 @@ schedule-of-collection = { $name }의
 schedule-of-collection-in-library = { $collection } ({ $library })의
 schedule-open-syllabus = { $title } 강의계획서 열기
 class-folder-managed-banner = 이 강의계획서에서 자동 관리됩니다. 이 폴더의 편집은 덮어쓰입니다.
+
+# Pinned (Reading Schedule)
+pinned-section-heading = Pinned
+pinned-item-label = Pinned item
+pinned-next-up-from = Next up from { $name }
+pinned-menu-pin-item = Add to Pinned
+pinned-menu-unpin-item = Remove from Pinned
+pinned-menu-pin-syllabus = Pin syllabus
+pinned-menu-unpin-syllabus = Unpin syllabus
+pinned-unpin-item = Unpin
+pinned-unpin-syllabus = Unpin syllabus
+pinned-edit-intention = Edit intention
+pinned-unpin-note-title = Remove from Pinned?
+pinned-unpin-note-message =
+    This item has an intention note. Keep the note, delete it, or cancel.
+pinned-unpin-keep = Keep note
+pinned-unpin-delete = Delete note
+pinned-unpin-cancel = Cancel
 
 # Columns
 column-reading-instructions = 읽기 안내
@@ -471,6 +495,8 @@ explorer-add-collection = Collection…
 explorer-add-saved-search = Saved search…
 explorer-shelf-upcoming-deadlines = Upcoming reading deadlines
 explorer-shelf-upcoming-deadlines-desc = Due this week, or the next deadline within a month.
+explorer-shelf-pinned = Pinned
+explorer-shelf-pinned-desc = Items you’ve pinned, and the next unread assignment from each pinned syllabus.
 explorer-go-to-reading-schedule = Go to Reading Schedule
 explorer-go-to-my-annotations = See all
 explorer-shelf-watch-now = Watch now

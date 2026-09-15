@@ -173,13 +173,15 @@ page-density-cycle = { $next }に切り替え
 page-density-row = 行
 page-density-standard = 標準
 page-density-expanded = 拡大
-page-reader-enable = リーダーモードを有効にする
-page-reader-disable = リーダーモードを無効にする
+page-reader-enable = チェックボックスを有効にする
+page-reader-disable = チェックボックスを無効にする
 page-export = シラバスファイルを書き出す
 page-import = シラバスファイルを読み込む
 page-edit-settings = シラバス設定を編集
 page-lock = シラバスをロック
 page-unlock = シラバスのロックを解除
+page-view-options-aria = Syllabus view options
+page-view-checkboxes = Checkboxes
 page-print = シラバスを PDF、Word、Markdown、または HTML として保存
 page-save-pdf = PDF
 page-save-word = Word
@@ -261,6 +263,11 @@ item-pane-select-collection = コレクションを選択してシラバスの�
 
 # Settings
 settings-title = シラバス設定
+settings-view = View
+settings-view-desc = Density and checkboxes for this syllabus.
+settings-density = Density
+settings-file = Syllabus file
+settings-file-desc = Export or import a .syllabus metadata file for this collection.
 settings-back = シラバスビューに戻る
 settings-nomenclature = 呼称
 settings-nomenclature-desc = 各回を指す用語を選びます（例：「週」「授業」「回」「セクション」）。
@@ -379,7 +386,6 @@ schedule-empty-desc = 授業に読書日を追加すると、ここに表示さ�
 schedule-this-week = 今週
 schedule-next-week = 来週
 schedule-settings-title = 読書スケジュール設定
-schedule-settings-back = 読書スケジュールに戻る
 schedule-settings-library = ライブラリコレクション
 schedule-settings-desc =
     既定ではオフです。オンにすると、マイライブラリに最上位の「読書スケジュール」コレクションが維持され、直近および今後の各読書日にフォルダが作られます。フォルダは自動的に作成・改名・充填されます。オフにするとそのコレクションは削除されます。シラバスのアイテムはそのまま残ります。
@@ -392,6 +398,24 @@ schedule-of-collection = { $name } の
 schedule-of-collection-in-library = { $collection }（{ $library }）の
 schedule-open-syllabus = { $title } のシラバスを開く
 class-folder-managed-banner = このシラバスから自動管理されています。このフォルダ内の編集は上書きされます。
+
+# Pinned (Reading Schedule)
+pinned-section-heading = Pinned
+pinned-item-label = Pinned item
+pinned-next-up-from = Next up from { $name }
+pinned-menu-pin-item = Add to Pinned
+pinned-menu-unpin-item = Remove from Pinned
+pinned-menu-pin-syllabus = Pin syllabus
+pinned-menu-unpin-syllabus = Unpin syllabus
+pinned-unpin-item = Unpin
+pinned-unpin-syllabus = Unpin syllabus
+pinned-edit-intention = Edit intention
+pinned-unpin-note-title = Remove from Pinned?
+pinned-unpin-note-message =
+    This item has an intention note. Keep the note, delete it, or cancel.
+pinned-unpin-keep = Keep note
+pinned-unpin-delete = Delete note
+pinned-unpin-cancel = Cancel
 
 # Columns
 column-reading-instructions = 読書の指示
@@ -471,6 +495,8 @@ explorer-add-collection = Collection…
 explorer-add-saved-search = Saved search…
 explorer-shelf-upcoming-deadlines = Upcoming reading deadlines
 explorer-shelf-upcoming-deadlines-desc = Due this week, or the next deadline within a month.
+explorer-shelf-pinned = Pinned
+explorer-shelf-pinned-desc = Items you’ve pinned, and the next unread assignment from each pinned syllabus.
 explorer-go-to-reading-schedule = Go to Reading Schedule
 explorer-go-to-my-annotations = See all
 explorer-shelf-watch-now = Watch now

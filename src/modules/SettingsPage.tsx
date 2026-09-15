@@ -1,12 +1,18 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
-import { useState, useEffect, useCallback, useMemo } from "preact/hooks";
+import { useState, useEffect, useCallback, useMemo, useRef } from "preact/hooks";
+import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
+import { formatDate } from "date-fns";
+import slugify from "slugify";
+import { Download, Upload } from "lucide-preact";
 import { isZotero8OrLater } from "../utils/zotero";
 import { getString, getUiDir } from "../utils/locale";
+import { saveToFile } from "../utils/file";
 import { SyllabusManager } from "./syllabus";
 import pluralize from "pluralize";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
+import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useDebouncedEffect } from "../utils/react/useDebouncedEffect";
 import { Priority, PrioritySchema } from "../utils/schemas";
 import { uuidv7 } from "uuidv7";
@@ -19,6 +25,58 @@ import {
 interface SettingsPageProps {
   collectionId: number;
   onBack: () => void;
+}
+
+async function importSyllabusMetadataFromFile(
+  collectionId: number,
+  file: File,
+): Promise<void> {
+  try {
+    const fileContents = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result;
+        if (typeof content === "string") {
+          resolve(content);
+        } else if (content instanceof ArrayBuffer) {
+          resolve(new TextDecoder("utf-8").decode(content));
+        } else {
+          reject(new Error("Failed to read file contents"));
+        }
+      };
+      reader.onerror = () => reject(new Error("Error reading file"));
+      reader.readAsText(file);
+    });
+
+    await SyllabusManager.importSyllabusMetadata(
+      collectionId,
+      fileContents,
+      "page",
+    );
+
+    ztoolkit.log("Successfully imported and merged syllabus metadata");
+
+    new ztoolkit.ProgressWindow(getString("progress-import-success-title"), {
+      closeOnClick: true,
+      closeTime: 3000,
+    })
+      .createLine({
+        text: getString("progress-import-success-text"),
+        type: "success",
+      })
+      .show();
+  } catch (error) {
+    new ztoolkit.ProgressWindow(getString("progress-import-error-title"), {
+      closeOnClick: true,
+      closeTime: 5000,
+    })
+      .createLine({
+        text: error instanceof Error ? error.message : String(error),
+        type: "fail",
+      })
+      .show();
+    ztoolkit.log("Import processing error:", error);
+  }
 }
 
 export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
@@ -36,6 +94,8 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
     setCslStyle,
     setCreateSubcollections,
   ] = useZoteroSyllabusMetadata(collectionId);
+  const [title] = useZoteroCollectionTitle(collectionId);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Use local state for immediate UI feedback, but save immediately
   const priorities =
@@ -151,11 +211,48 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
     [setCslStyle],
   );
 
+  const handleExport = async () => {
+    try {
+      const rdf = await SyllabusManager.prepareExportData(collectionId);
+      const dateStr = formatDate(new Date(), "yyyy-MM-dd");
+      const titleSlug = slugify(title || "syllabus", {
+        lower: true,
+        strict: true,
+      });
+      const filename = `${titleSlug}-${dateStr}.syllabus`;
+      await saveToFile(filename, rdf, getString("dialog-save-export"));
+    } catch (err) {
+      ztoolkit.log("Error exporting syllabus metadata:", err);
+    }
+  };
+
+  const handleFileInputChange = async (
+    e: JSX.TargetedEvent<HTMLInputElement>,
+  ) => {
+    const target = e.target as HTMLInputElement;
+    const selectedFile = target.files?.[0];
+    target.value = "";
+    if (!selectedFile) {
+      return;
+    }
+    await importSyllabusMetadataFromFile(collectionId, selectedFile);
+  };
+
+  const actionButtonClass =
+    "inline-flex items-center gap-2 px-3 py-2 rounded-md border border-quinary bg-background text-primary hover:bg-quinary cursor-pointer";
+
   return (
     <div
       className="syllabus-page overflow-y-auto overflow-x-hidden h-full"
       dir={getUiDir()}
     >
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".syllabus"
+        style={{ display: "none" }}
+        onChange={handleFileInputChange}
+      />
       <div className="pb-12">
         <div
           className={twMerge(
@@ -182,6 +279,35 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
         </div>
 
         <div className="container-padded mt-8 space-y-8">
+          <section className="space-y-4">
+            <h2 className="text-2xl font-semibold">
+              {getString("settings-file")}
+            </h2>
+            <p className="text-secondary">{getString("settings-file-desc")}</p>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                className={actionButtonClass}
+                title={getString("page-export")}
+                aria-label={getString("page-export")}
+                onClick={() => void handleExport()}
+              >
+                <Upload size={18} aria-hidden="true" />
+                <span>{getString("page-export")}</span>
+              </button>
+              <button
+                type="button"
+                className={actionButtonClass}
+                title={getString("page-import")}
+                aria-label={getString("page-import")}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Download size={18} aria-hidden="true" />
+                <span>{getString("page-import")}</span>
+              </button>
+            </div>
+          </section>
+
           {/* Nomenclature Section */}
           <section className="space-y-4">
             <h2 className="text-2xl font-semibold">

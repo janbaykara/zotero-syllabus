@@ -173,13 +173,15 @@ page-density-cycle = Переключить на { $next }
 page-density-row = Строка
 page-density-standard = Стандартная
 page-density-expanded = Расширенная
-page-reader-enable = Включить режим чтения
-page-reader-disable = Выключить режим чтения
+page-reader-enable = Включить флажки
+page-reader-disable = Выключить флажки
 page-export = Экспортировать файл силлабуса
 page-import = Импортировать файл силлабуса
 page-edit-settings = Изменить параметры силлабуса
 page-lock = Заблокировать силлабус
 page-unlock = Разблокировать силлабус
+page-view-options-aria = Syllabus view options
+page-view-checkboxes = Checkboxes
 page-print = Сохранить силубус как PDF, Word, Markdown или HTML
 page-save-pdf = PDF
 page-save-word = Word
@@ -261,6 +263,11 @@ item-pane-select-collection = Выберите коллекцию, чтобы у
 
 # Settings
 settings-title = Параметры силлабуса
+settings-view = View
+settings-view-desc = Density and checkboxes for this syllabus.
+settings-density = Density
+settings-file = Syllabus file
+settings-file-desc = Export or import a .syllabus metadata file for this collection.
 settings-back = Назад к виду силлабуса
 settings-nomenclature = Наименования
 settings-nomenclature-desc = Выберите термин для отдельных занятий (напр., «неделя», «занятие», «сессия», «раздел»).
@@ -379,7 +386,6 @@ schedule-empty-desc = Добавьте даты чтения к занятиям
 schedule-this-week = На этой неделе
 schedule-next-week = На следующей неделе
 schedule-settings-title = Параметры графика чтения
-schedule-settings-back = Назад к графику чтения
 schedule-settings-library = Коллекция в библиотеке
 schedule-settings-desc =
     По умолчанию выключено. При включении в «Моя библиотека» поддерживается коллекция верхнего уровня «График чтения» с папкой для каждой недавней и предстоящей даты чтения. Папки создаются, переименовываются и заполняются автоматически. Отключение удаляет эту коллекцию; записи силлабусов остаются на месте.
@@ -392,6 +398,24 @@ schedule-of-collection = из { $name }
 schedule-of-collection-in-library = из { $collection } ({ $library })
 schedule-open-syllabus = Открыть силлабус: { $title }
 class-folder-managed-banner = Управляется автоматически на основе этого силлабуса. Правки в этой папке будут перезаписаны.
+
+# Pinned (Reading Schedule)
+pinned-section-heading = Pinned
+pinned-item-label = Pinned item
+pinned-next-up-from = Next up from { $name }
+pinned-menu-pin-item = Add to Pinned
+pinned-menu-unpin-item = Remove from Pinned
+pinned-menu-pin-syllabus = Pin syllabus
+pinned-menu-unpin-syllabus = Unpin syllabus
+pinned-unpin-item = Unpin
+pinned-unpin-syllabus = Unpin syllabus
+pinned-edit-intention = Edit intention
+pinned-unpin-note-title = Remove from Pinned?
+pinned-unpin-note-message =
+    This item has an intention note. Keep the note, delete it, or cancel.
+pinned-unpin-keep = Keep note
+pinned-unpin-delete = Delete note
+pinned-unpin-cancel = Cancel
 
 # Columns
 column-reading-instructions = Инструкции по чтению
@@ -477,6 +501,8 @@ explorer-add-collection = Collection…
 explorer-add-saved-search = Saved search…
 explorer-shelf-upcoming-deadlines = Upcoming reading deadlines
 explorer-shelf-upcoming-deadlines-desc = Due this week, or the next deadline within a month.
+explorer-shelf-pinned = Pinned
+explorer-shelf-pinned-desc = Items you’ve pinned, and the next unread assignment from each pinned syllabus.
 explorer-go-to-reading-schedule = Go to Reading Schedule
 explorer-go-to-my-annotations = See all
 explorer-shelf-watch-now = Watch now

@@ -173,13 +173,15 @@ page-density-cycle = 切換到{ $next }
 page-density-row = 列
 page-density-standard = 標準
 page-density-expanded = 展開
-page-reader-enable = 啟用閱讀模式
-page-reader-disable = 關閉閱讀模式
+page-reader-enable = 啟用核取方塊
+page-reader-disable = 關閉核取方塊
 page-export = 匯出教學大綱檔案
 page-import = 匯入教學大綱檔案
 page-edit-settings = 編輯教學大綱設定
 page-lock = 鎖定教學大綱
 page-unlock = 解鎖教學大綱
+page-view-options-aria = Syllabus view options
+page-view-checkboxes = Checkboxes
 page-print = 將教學大綱另存為 PDF、Word、Markdown 或 HTML
 page-save-pdf = PDF
 page-save-word = Word
@@ -261,6 +263,11 @@ item-pane-select-collection = 選取一個分類以檢視教學大綱作業
 
 # Settings
 settings-title = 教學大綱設定
+settings-view = View
+settings-view-desc = Density and checkboxes for this syllabus.
+settings-density = Density
+settings-file = Syllabus file
+settings-file-desc = Export or import a .syllabus metadata file for this collection.
 settings-back = 返回教學大綱檢視
 settings-nomenclature = 稱謂
 settings-nomenclature-desc = 選擇用於指稱各次課的用語（例如「週」「課堂」「單元」「節」）。
@@ -379,7 +386,6 @@ schedule-empty-desc = 為課堂新增閱讀日期即可在此查看。
 schedule-this-week = 本週
 schedule-next-week = 下週
 schedule-settings-title = 閱讀日程設定
-schedule-settings-back = 返回閱讀日程
 schedule-settings-library = 文獻庫分類
 schedule-settings-desc =
     預設關閉。啟用後，將在「我的文獻庫」中保留頂層「閱讀日程」分類，並為每個近期和即將到來的閱讀日期各建一個資料夾。資料夾會自動建立、重新命名並填入。關閉此選項將刪除該分類；教學大綱中的條目會保留。
@@ -392,6 +398,24 @@ schedule-of-collection = 屬於 { $name }
 schedule-of-collection-in-library = 屬於 { $collection }（{ $library }）
 schedule-open-syllabus = 開啟 { $title } 的教學大綱
 class-folder-managed-banner = 由此教學大綱自動管理。此資料夾中的變更會被覆寫。
+
+# Pinned (Reading Schedule)
+pinned-section-heading = Pinned
+pinned-item-label = Pinned item
+pinned-next-up-from = Next up from { $name }
+pinned-menu-pin-item = Add to Pinned
+pinned-menu-unpin-item = Remove from Pinned
+pinned-menu-pin-syllabus = Pin syllabus
+pinned-menu-unpin-syllabus = Unpin syllabus
+pinned-unpin-item = Unpin
+pinned-unpin-syllabus = Unpin syllabus
+pinned-edit-intention = Edit intention
+pinned-unpin-note-title = Remove from Pinned?
+pinned-unpin-note-message =
+    This item has an intention note. Keep the note, delete it, or cancel.
+pinned-unpin-keep = Keep note
+pinned-unpin-delete = Delete note
+pinned-unpin-cancel = Cancel
 
 # Columns
 column-reading-instructions = 閱讀說明
@@ -471,6 +495,8 @@ explorer-add-collection = Collection…
 explorer-add-saved-search = Saved search…
 explorer-shelf-upcoming-deadlines = Upcoming reading deadlines
 explorer-shelf-upcoming-deadlines-desc = Due this week, or the next deadline within a month.
+explorer-shelf-pinned = Pinned
+explorer-shelf-pinned-desc = Items you’ve pinned, and the next unread assignment from each pinned syllabus.
 explorer-go-to-reading-schedule = Go to Reading Schedule
 explorer-go-to-my-annotations = See all
 explorer-shelf-watch-now = Watch now

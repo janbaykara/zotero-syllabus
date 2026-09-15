@@ -17,6 +17,14 @@ import { useSyllabusDocumentGeneration } from "./react-zotero-sync/collectionDoc
 import { formatReadingDate } from "../utils/dates";
 import { getString, getUiDir, compareLocale } from "../utils/locale";
 import { TextInput } from "./syllabusInputs";
+import {
+  isPinnedItem,
+  openIntentionNote,
+  setPinnedItem,
+  unpinItemWithNotePrompt,
+} from "./pinned";
+import { enqueuePinnedReadingScheduleSync } from "./readingScheduleCollection";
+import { Pin, PinOff, BookOpen } from "lucide-preact";
 
 interface ItemPaneProps {
   editable: boolean;
@@ -388,6 +396,7 @@ function ItemPaneContent({
       data-tour="syllabus-item-pane"
       dir={getUiDir()}
     >
+      <PinnedItemPaneControls item={itemVersion.item} />
       {allAssignmentsByCollection.map((group) => {
         const isCurrentCollection = group.collectionId === currentCollectionId;
         return (
@@ -779,6 +788,78 @@ function AssignmentEditor({
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function PinnedItemPaneControls({ item }: { item: Zotero.Item }) {
+  const [pinned, setPinned] = useState(() => isPinnedItem(item));
+  const [busy, setBusy] = useState(false);
+
+  try {
+    if (!item.isRegularItem()) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+
+  const handleToggle = async () => {
+    setBusy(true);
+    try {
+      if (pinned) {
+        const ok = await unpinItemWithNotePrompt(item);
+        if (ok) {
+          setPinned(false);
+        }
+      } else {
+        await setPinnedItem(item, true);
+        setPinned(true);
+      }
+      enqueuePinnedReadingScheduleSync();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-row items-center gap-2 mb-1">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => void handleToggle()}
+        className={twMerge(
+          "px-2 py-1 text-xs font-medium rounded-md cursor-pointer border-0",
+          pinned ? "bg-quinary text-primary" : "bg-transparent text-secondary",
+          busy ? "opacity-30 cursor-not-allowed" : "",
+        )}
+        title={
+          pinned
+            ? getString("pinned-unpin-item")
+            : getString("pinned-menu-pin-item")
+        }
+      >
+        <span className="flex items-center gap-2">
+          {pinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
+          {pinned
+            ? getString("pinned-unpin-item")
+            : getString("pinned-menu-pin-item")}
+        </span>
+      </button>
+      {pinned ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void openIntentionNote(item)}
+          className="px-2 py-1 text-xs font-medium rounded-md cursor-pointer border-0 bg-transparent text-secondary hover:bg-quinary"
+          title={getString("pinned-edit-intention")}
+        >
+          <span className="flex items-center gap-2">
+            <BookOpen className="w-4 h-4" />
+            {getString("pinned-edit-intention")}
+          </span>
+        </button>
+      ) : null}
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { refreshManagedCollectionBanner } from "./managedCollectionBanner";
 const ICON_BY_KIND = {
   "reading-schedule-root": "calendar",
   "calendar-date": "calendar-date",
+  pinned: "library",
   "class-folder": "syllabus-class-date",
   syllabus: "syllabus-collection",
 } as const;
@@ -16,6 +17,7 @@ const ICON_BY_KIND = {
 const ROW_CLASS_BY_KIND = {
   "reading-schedule-root": "syllabus-tree-reading-schedule",
   "calendar-date": "syllabus-tree-calendar-date",
+  pinned: "syllabus-tree-pinned",
   "class-folder": "syllabus-tree-class-folder",
   syllabus: "syllabus-tree-syllabus",
 } as const;
@@ -27,6 +29,7 @@ function getTooltipByKind(): Record<CollectionTreeKind, string> {
   return {
     "reading-schedule-root": getString("tree-tooltip-reading-schedule"),
     "calendar-date": getString("tree-tooltip-auto-managed"),
+    pinned: getString("tree-tooltip-auto-managed"),
     "class-folder": getString("tree-tooltip-auto-managed"),
     syllabus: getString("tree-tooltip-syllabus"),
   };

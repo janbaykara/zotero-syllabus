@@ -37,6 +37,7 @@ export function SyllabusItemCard({
   density = "expanded",
   readerMode = false,
   isLocked = false,
+  hideHoverActions = false,
   isFurtherReading = false,
   onDrop,
   onDragOver,
@@ -63,6 +64,8 @@ export function SyllabusItemCard({
   density?: ItemDensity;
   readerMode?: boolean;
   isLocked?: boolean;
+  /** Hide the group-hover action bar (duplicate / unassign / etc.). */
+  hideHoverActions?: boolean;
   /** True when rendered in the Further reading section (for drag reorder). */
   isFurtherReading?: boolean;
   onDrop?: (
@@ -1099,7 +1102,7 @@ export function SyllabusItemCard({
           title={title}
         />
       ) : null}
-      {!isLocked && (
+      {!isLocked && !hideHoverActions && (
         <div
           className={twMerge(
             "hidden group-hover:flex absolute top-full left-1/2 -translate-x-1/2 p-2 pt-0 z-20 in-[.print]:hidden! w-auto",

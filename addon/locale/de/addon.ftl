@@ -173,13 +173,15 @@ page-density-cycle = Wechseln zu { $next }
 page-density-row = Zeile
 page-density-standard = Standard
 page-density-expanded = Erweitert
-page-reader-enable = Lesemodus aktivieren
-page-reader-disable = Lesemodus deaktivieren
+page-reader-enable = Kontrollkästchen aktivieren
+page-reader-disable = Kontrollkästchen deaktivieren
 page-export = Lehrplan-Datei exportieren
 page-import = Lehrplan-Datei importieren
 page-edit-settings = Lehrplaneinstellungen bearbeiten
 page-lock = Lehrplan sperren
 page-unlock = Lehrplan entsperren
+page-view-options-aria = Syllabus view options
+page-view-checkboxes = Checkboxes
 page-print = Syllabus als PDF, Word, Markdown oder HTML speichern
 page-save-pdf = PDF
 page-save-word = Word
@@ -261,6 +263,11 @@ item-pane-select-collection = Wählen Sie eine Sammlung, um Lehrplan-Aufgaben an
 
 # Settings
 settings-title = Lehrplaneinstellungen
+settings-view = View
+settings-view-desc = Dichte und Kontrollkästchen für diesen Lehrplan.
+settings-density = Density
+settings-file = Syllabus file
+settings-file-desc = Export or import a .syllabus metadata file for this collection.
 settings-back = Zurück zur Lehrplan-Ansicht
 settings-nomenclature = Bezeichnung
 settings-nomenclature-desc = Wählen Sie die Bezeichnung für einzelne Termine (z. B. „Woche“, „Klasse“, „Sitzung“, „Abschnitt“).
@@ -379,7 +386,6 @@ schedule-empty-desc = Fügen Sie Sitzungen Lesedaten hinzu, um sie hier zu sehen
 schedule-this-week = Diese Woche
 schedule-next-week = Nächste Woche
 schedule-settings-title = Lektüreplan-Einstellungen
-schedule-settings-back = Zurück zum Lektüreplan
 schedule-settings-library = Bibliothekssammlung
 schedule-settings-desc =
     Standardmäßig aus. Wenn aktiviert, wird in Meine Bibliothek eine Sammlung oberster Ebene „Lektüreplan“ mit einem Ordner für jedes kürzliche und bevorstehende Lesedatum geführt. Ordner werden automatisch angelegt, umbenannt und gefüllt. Das Deaktivieren löscht diese Sammlung; Einträge in den Lehrplänen bleiben erhalten.
@@ -392,6 +398,24 @@ schedule-of-collection = von { $name }
 schedule-of-collection-in-library = von { $collection } ({ $library })
 schedule-open-syllabus = Lehrplan für { $title } öffnen
 class-folder-managed-banner = Automatisch aus diesem Lehrplan verwaltet. Änderungen in diesem Ordner werden überschrieben.
+
+# Pinned (Reading Schedule)
+pinned-section-heading = Pinned
+pinned-item-label = Pinned item
+pinned-next-up-from = Next up from { $name }
+pinned-menu-pin-item = Add to Pinned
+pinned-menu-unpin-item = Remove from Pinned
+pinned-menu-pin-syllabus = Pin syllabus
+pinned-menu-unpin-syllabus = Unpin syllabus
+pinned-unpin-item = Unpin
+pinned-unpin-syllabus = Unpin syllabus
+pinned-edit-intention = Edit intention
+pinned-unpin-note-title = Remove from Pinned?
+pinned-unpin-note-message =
+    This item has an intention note. Keep the note, delete it, or cancel.
+pinned-unpin-keep = Keep note
+pinned-unpin-delete = Delete note
+pinned-unpin-cancel = Cancel
 
 # Columns
 column-reading-instructions = Lesehinweise
@@ -471,6 +495,8 @@ explorer-add-collection = Sammlung…
 explorer-add-saved-search = Gespeicherte Suche…
 explorer-shelf-upcoming-deadlines = Anstehende Lektürefristen
 explorer-shelf-upcoming-deadlines-desc = Fällig in dieser Woche, sonst der nächste Termin innerhalb eines Monats.
+explorer-shelf-pinned = Pinned
+explorer-shelf-pinned-desc = Items you’ve pinned, and the next unread assignment from each pinned syllabus.
 explorer-go-to-reading-schedule = Zum Lektüreplan
 explorer-go-to-my-annotations = Alle anzeigen
 explorer-shelf-watch-now = Jetzt ansehen

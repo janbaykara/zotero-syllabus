@@ -173,13 +173,15 @@ page-density-cycle = { $next } görünümüne geç
 page-density-row = Satır
 page-density-standard = Standart
 page-density-expanded = Genişletilmiş
-page-reader-enable = Okuyucu kipini etkinleştir
-page-reader-disable = Okuyucu kipini kapat
+page-reader-enable = Onay kutularını etkinleştir
+page-reader-disable = Onay kutularını kapat
 page-export = İzlence dosyasını dışa aktar
 page-import = İzlence dosyasını içe aktar
 page-edit-settings = İzlence ayarlarını düzenle
 page-lock = İzlenceyi kilitle
 page-unlock = İzlencenin kilidini aç
+page-view-options-aria = Syllabus view options
+page-view-checkboxes = Checkboxes
 page-print = Müfredatı PDF, Word, Markdown veya HTML olarak kaydet
 page-save-pdf = PDF
 page-save-word = Word
@@ -261,6 +263,11 @@ item-pane-select-collection = İzlence ödevlerini görmek için bir koleksiyon 
 
 # Settings
 settings-title = İzlence Ayarları
+settings-view = View
+settings-view-desc = Density and checkboxes for this syllabus.
+settings-density = Density
+settings-file = Syllabus file
+settings-file-desc = Export or import a .syllabus metadata file for this collection.
 settings-back = İzlence görünümüne dön
 settings-nomenclature = Adlandırma
 settings-nomenclature-desc = Tekil oturumlar için kullanılacak terimi seçin (ör. “hafta”, “ders”, “oturum”, “bölüm”).
@@ -379,7 +386,6 @@ schedule-empty-desc = Burada görmek için derslere okuma tarihleri ekleyin.
 schedule-this-week = Bu hafta
 schedule-next-week = Gelecek hafta
 schedule-settings-title = Okuma Takvimi Ayarları
-schedule-settings-back = Okuma takvimine dön
 schedule-settings-library = Kitaplık koleksiyonu
 schedule-settings-desc =
     Varsayılan olarak kapalıdır. Etkinleştirildiğinde Kitaplığım içinde her yakın ve yaklaşan okuma tarihi için bir klasör içeren üst düzey bir “Okuma Takvimi” koleksiyonu tutulur. Klasörler otomatik olarak oluşturulur, yeniden adlandırılır ve doldurulur. Kapatmak bu koleksiyonu siler; izlence öğeleri yerinde kalır.
@@ -392,6 +398,24 @@ schedule-of-collection = { $name } koleksiyonundan
 schedule-of-collection-in-library = { $collection } koleksiyonundan ({ $library })
 schedule-open-syllabus = { $title } izlencesini aç
 class-folder-managed-banner = Bu izlenceden otomatik yönetilir. Bu klasördeki düzenlemelerin üzerine yazılır.
+
+# Pinned (Reading Schedule)
+pinned-section-heading = Pinned
+pinned-item-label = Pinned item
+pinned-next-up-from = Next up from { $name }
+pinned-menu-pin-item = Add to Pinned
+pinned-menu-unpin-item = Remove from Pinned
+pinned-menu-pin-syllabus = Pin syllabus
+pinned-menu-unpin-syllabus = Unpin syllabus
+pinned-unpin-item = Unpin
+pinned-unpin-syllabus = Unpin syllabus
+pinned-edit-intention = Edit intention
+pinned-unpin-note-title = Remove from Pinned?
+pinned-unpin-note-message =
+    This item has an intention note. Keep the note, delete it, or cancel.
+pinned-unpin-keep = Keep note
+pinned-unpin-delete = Delete note
+pinned-unpin-cancel = Cancel
 
 # Columns
 column-reading-instructions = Okuma yönergeleri
@@ -471,6 +495,8 @@ explorer-add-collection = Collection…
 explorer-add-saved-search = Saved search…
 explorer-shelf-upcoming-deadlines = Upcoming reading deadlines
 explorer-shelf-upcoming-deadlines-desc = Due this week, or the next deadline within a month.
+explorer-shelf-pinned = Pinned
+explorer-shelf-pinned-desc = Items you’ve pinned, and the next unread assignment from each pinned syllabus.
 explorer-go-to-reading-schedule = Go to Reading Schedule
 explorer-go-to-my-annotations = See all
 explorer-shelf-watch-now = Watch now

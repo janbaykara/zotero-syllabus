@@ -111,6 +111,16 @@ On startup, folders are ensured for every syllabus that has the setting on. New 
 
 Class-folder Syllabus view is a single-class page (same class renderer as the Reading Schedule) with a link back to the parent. Document reads/writes for a class folder resolve to the parent note (`getClassSubcollectionContext` / `resolveSyllabusRoot`). Unmanaged nested collections do not inherit that note: they are ordinary folders until turned into their own syllabus.
 
+## Pinned (Reading Schedule)
+
+The Reading Schedule UI has a **Pinned** section above the calendar. The library Homepage (Explorer) has a matching **Pinned** shelf (enabled by default; toggleable in shelf settings):
+
+- **Pinned items** — regular items tagged `pinned`. Optional intention = child note tagged `zotero-syllabus-pinned-intention`.
+- **Next up from a pinned syllabus** — the collection’s Syllabus note also has tag `pinned`; the UI shows the first assignment in `classOrder` / `itemOrder` whose status is not `done`.
+- When **Generate Reading Schedule collection** is on, a child folder named `Pinned` under each library’s `Reading Schedule` root mirrors pinned **items** only (next-up is derived in the UI).
+
+Pin state is tags only (not syllabus JSON). See [`src/modules/pinned.ts`](../src/modules/pinned.ts). Syllabus pages expose pin/unpin next to Print / Lock / Settings.
+
 ## Practical rules
 
 - Do not persist hydrated `classNumber` on assignments; identity is `classId`.
@@ -135,7 +145,7 @@ That works in Preact TSX (render, `title`, `placeholder`, `aria-label`) and in p
 
 Prefs XHTML uses `data-l10n-id` against `preferences.ftl`. Keep `{ $vars }` and Fluent attributes (`.label`) unchanged when translating.
 
-Do **not** localize stored library identifiers: syllabus note title `Syllabus`, managed collection `Reading Schedule`, playground `Syllabus Tour`, or the “Plugin data (do not edit)” note heading. Display chrome for those concepts still goes through Fluent. The product name **Zotero Syllabus** is not translated.
+Do **not** localize stored library identifiers: syllabus note title `Syllabus`, managed collection `Reading Schedule`, managed child folder `Pinned`, playground `Syllabus Tour`, tags `zotero-syllabus` / `pinned` / `zotero-syllabus-pinned-intention`, or the “Plugin data (do not edit)” note heading. Display chrome for those concepts still goes through Fluent. The product name **Zotero Syllabus** is not translated.
 
 ## Reading-list connectors
 

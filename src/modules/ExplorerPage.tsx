@@ -22,6 +22,7 @@ import {
   Image,
   LayoutList,
   Newspaper,
+  Pin,
   Rss,
   Sparkles,
   Video,
@@ -86,11 +87,13 @@ import {
 } from "./explorerQueries";
 import { isAudioGalleryItem, isVideoGalleryItem } from "../utils/itemCover";
 import type { MagazineSectionTemplate } from "./magazineDesks";
+import { PinnedSection, usePinnedScheduleData } from "./PinnedSection";
 
 const SHELF_TITLE_IDS: Record<
   Exclude<ExplorerShelfType, "collection" | "saved-search">,
   FluentMessageId
 > = {
+  pinned: "explorer-shelf-pinned",
   "upcoming-deadlines": "explorer-shelf-upcoming-deadlines",
   "watch-now": "explorer-shelf-watch-now",
   "listen-now": "explorer-shelf-listen-now",
@@ -147,6 +150,7 @@ const PRESET_ICONS: Record<
   Exclude<ExplorerShelfType, "collection" | "saved-search">,
   typeof BookOpen
 > = {
+  pinned: Pin,
   "upcoming-deadlines": Calendar,
   "watch-now": Video,
   "listen-now": Headphones,
@@ -617,6 +621,8 @@ function ExplorerShelfSettingsMenu({
 
 function shelfDescription(shelf: ExplorerShelf): string | null {
   switch (shelf.type) {
+    case "pinned":
+      return getString("explorer-shelf-pinned-desc");
     case "upcoming-deadlines":
       return getString("explorer-shelf-upcoming-deadlines-desc");
     case "watch-now":
@@ -961,6 +967,12 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
       ),
     [allSyllabi, libraryID],
   );
+  const {
+    pinnedItems,
+    nextUp,
+    reload: reloadPinned,
+  } = usePinnedScheduleData(libraryID);
+  const hasPinned = pinnedItems.length > 0 || nextUp.length > 0;
 
   const videos = useMemo(
     () => data.recentItems.filter((item) => isVideoGalleryItem(item)),
@@ -1025,6 +1037,8 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
             .filter((item): item is Zotero.Item => !!item);
         case "upcoming-deadlines":
           return [];
+        case "pinned":
+          return [];
         case "collection":
           return readCollectionItems(
             shelf.libraryID,
@@ -1058,14 +1072,21 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
       const empty =
         shelf.type === "upcoming-deadlines"
           ? upcomingDeadlineGroups.length === 0
-          : items.length === 0;
+          : shelf.type === "pinned"
+            ? !hasPinned
+            : items.length === 0;
       if (empty) {
         continue;
       }
       rows.push({ shelf, items });
     }
     return rows;
-  }, [itemsForShelf, upcomingDeadlineGroups.length, visibleShelves]);
+  }, [
+    hasPinned,
+    itemsForShelf,
+    upcomingDeadlineGroups.length,
+    visibleShelves,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1334,6 +1355,16 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                               <span>{heading}</span>
                             </span>
                           )
+                        ) : shelf.type === "pinned" ? (
+                          <span className="inline-flex items-center gap-1">
+                            <Pin
+                              size={16}
+                              strokeWidth={2}
+                              className="syllabus-gallery-group-icon"
+                              aria-hidden="true"
+                            />
+                            <span>{heading}</span>
+                          </span>
                         ) : (
                           <span>{heading}</span>
                         )}
@@ -1422,6 +1453,15 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                     <ExplorerDeadlineShelf
                       groups={upcomingDeadlineGroups}
                       density={density}
+                    />
+                  ) : shelf.type === "pinned" ? (
+                    <PinnedSection
+                      density={density}
+                      showLibraryName={false}
+                      pinnedItems={pinnedItems}
+                      nextUp={nextUp}
+                      onChanged={reloadPinned}
+                      embedded
                     />
                   ) : shelf.type === "recent-annotations" &&
                     shelf.layout !== "magazine" ? (

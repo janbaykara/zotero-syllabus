@@ -173,13 +173,15 @@ page-density-cycle = Overschakelen naar { $next }
 page-density-row = Rij
 page-density-standard = Standaard
 page-density-expanded = Uitgebreid
-page-reader-enable = Leesmodus inschakelen
-page-reader-disable = Leesmodus uitschakelen
+page-reader-enable = Selectievakjes inschakelen
+page-reader-disable = Selectievakjes uitschakelen
 page-export = Syllabusbestand exporteren
 page-import = Syllabusbestand importeren
 page-edit-settings = Syllabusinstellingen bewerken
 page-lock = Syllabus vergrendelen
 page-unlock = Syllabus ontgrendelen
+page-view-options-aria = Syllabus view options
+page-view-checkboxes = Checkboxes
 page-print = Syllabus opslaan als PDF, Word, Markdown of HTML
 page-save-pdf = PDF
 page-save-word = Word
@@ -261,6 +263,11 @@ item-pane-select-collection = Selecteer een collectie om syllabustoewijzingen te
 
 # Settings
 settings-title = Syllabusinstellingen
+settings-view = View
+settings-view-desc = Density and checkboxes for this syllabus.
+settings-density = Density
+settings-file = Syllabus file
+settings-file-desc = Export or import a .syllabus metadata file for this collection.
 settings-back = Terug naar syllabusweergave
 settings-nomenclature = Benaming
 settings-nomenclature-desc = Kies de term voor afzonderlijke sessies (bijv. “week”, “college”, “bijeenkomst”, “onderdeel”).
@@ -379,7 +386,6 @@ schedule-empty-desc = Voeg leesdata toe aan bijeenkomsten om ze hier te zien.
 schedule-this-week = Deze week
 schedule-next-week = Volgende week
 schedule-settings-title = Instellingen van het leesschema
-schedule-settings-back = Terug naar het leesschema
 schedule-settings-library = Bibliotheekcollectie
 schedule-settings-desc =
     Standaard uit. Als dit aanstaat, wordt in Mijn bibliotheek een collectie op het hoogste niveau “Leesschema” bijgehouden, met een map voor elke recente en komende leesdatum. Mappen worden automatisch aangemaakt, hernoemd en gevuld. Uitschakelen verwijdert die collectie; items in syllabi blijven staan.
@@ -392,6 +398,24 @@ schedule-of-collection = van { $name }
 schedule-of-collection-in-library = van { $collection } ({ $library })
 schedule-open-syllabus = Syllabus van { $title } openen
 class-folder-managed-banner = Automatisch beheerd vanuit deze syllabus. Wijzigingen in deze map worden overschreven.
+
+# Pinned (Reading Schedule)
+pinned-section-heading = Pinned
+pinned-item-label = Pinned item
+pinned-next-up-from = Next up from { $name }
+pinned-menu-pin-item = Add to Pinned
+pinned-menu-unpin-item = Remove from Pinned
+pinned-menu-pin-syllabus = Pin syllabus
+pinned-menu-unpin-syllabus = Unpin syllabus
+pinned-unpin-item = Unpin
+pinned-unpin-syllabus = Unpin syllabus
+pinned-edit-intention = Edit intention
+pinned-unpin-note-title = Remove from Pinned?
+pinned-unpin-note-message =
+    This item has an intention note. Keep the note, delete it, or cancel.
+pinned-unpin-keep = Keep note
+pinned-unpin-delete = Delete note
+pinned-unpin-cancel = Cancel
 
 # Columns
 column-reading-instructions = Leesaanwijzingen
@@ -471,6 +495,8 @@ explorer-add-collection = Collection…
 explorer-add-saved-search = Saved search…
 explorer-shelf-upcoming-deadlines = Upcoming reading deadlines
 explorer-shelf-upcoming-deadlines-desc = Due this week, or the next deadline within a month.
+explorer-shelf-pinned = Pinned
+explorer-shelf-pinned-desc = Items you’ve pinned, and the next unread assignment from each pinned syllabus.
 explorer-go-to-reading-schedule = Go to Reading Schedule
 explorer-go-to-my-annotations = See all
 explorer-shelf-watch-now = Watch now

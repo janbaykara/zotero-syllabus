@@ -173,13 +173,15 @@ page-density-cycle = Beralih ke { $next }
 page-density-row = Baris
 page-density-standard = Standar
 page-density-expanded = Diperluas
-page-reader-enable = Aktifkan mode baca
-page-reader-disable = Nonaktifkan mode baca
+page-reader-enable = Aktifkan kotak centang
+page-reader-disable = Nonaktifkan kotak centang
 page-export = Ekspor berkas silabus
 page-import = Impor berkas silabus
 page-edit-settings = Sunting pengaturan silabus
 page-lock = Kunci silabus
 page-unlock = Buka kunci silabus
+page-view-options-aria = Syllabus view options
+page-view-checkboxes = Checkboxes
 page-print = Simpan silabus sebagai PDF, Word, Markdown, atau HTML
 page-save-pdf = PDF
 page-save-word = Word
@@ -261,6 +263,11 @@ item-pane-select-collection = Pilih koleksi untuk melihat tugas silabus
 
 # Settings
 settings-title = Pengaturan silabus
+settings-view = View
+settings-view-desc = Density and checkboxes for this syllabus.
+settings-density = Density
+settings-file = Syllabus file
+settings-file-desc = Export or import a .syllabus metadata file for this collection.
 settings-back = Kembali ke tampilan silabus
 settings-nomenclature = Tata nama
 settings-nomenclature-desc = Pilih istilah untuk merujuk sesi individual (mis. “minggu”, “kelas”, “sesi”, “bagian”).
@@ -379,7 +386,6 @@ schedule-empty-desc = Tambahkan tanggal bacaan ke kelas agar tampil di sini.
 schedule-this-week = Minggu ini
 schedule-next-week = Minggu depan
 schedule-settings-title = Pengaturan Jadwal Bacaan
-schedule-settings-back = Kembali ke jadwal bacaan
 schedule-settings-library = Koleksi pustaka
 schedule-settings-desc =
     Nonaktif secara bawaan. Jika diaktifkan, koleksi tingkat atas “Jadwal Bacaan” dipertahankan di Pustaka Saya dengan folder untuk setiap tanggal bacaan yang baru lalu dan yang akan datang. Folder dibuat, diganti namanya, dan diisi secara otomatis. Menonaktifkan opsi ini menghapus koleksi tersebut; item silabus tetap di tempatnya.
@@ -392,6 +398,24 @@ schedule-of-collection = dari { $name }
 schedule-of-collection-in-library = dari { $collection } ({ $library })
 schedule-open-syllabus = Buka silabus { $title }
 class-folder-managed-banner = Dikelola otomatis dari silabus ini. Suntingan di folder ini akan ditimpa.
+
+# Pinned (Reading Schedule)
+pinned-section-heading = Pinned
+pinned-item-label = Pinned item
+pinned-next-up-from = Next up from { $name }
+pinned-menu-pin-item = Add to Pinned
+pinned-menu-unpin-item = Remove from Pinned
+pinned-menu-pin-syllabus = Pin syllabus
+pinned-menu-unpin-syllabus = Unpin syllabus
+pinned-unpin-item = Unpin
+pinned-unpin-syllabus = Unpin syllabus
+pinned-edit-intention = Edit intention
+pinned-unpin-note-title = Remove from Pinned?
+pinned-unpin-note-message =
+    This item has an intention note. Keep the note, delete it, or cancel.
+pinned-unpin-keep = Keep note
+pinned-unpin-delete = Delete note
+pinned-unpin-cancel = Cancel
 
 # Columns
 column-reading-instructions = Instruksi bacaan
@@ -471,6 +495,8 @@ explorer-add-collection = Collection…
 explorer-add-saved-search = Saved search…
 explorer-shelf-upcoming-deadlines = Upcoming reading deadlines
 explorer-shelf-upcoming-deadlines-desc = Due this week, or the next deadline within a month.
+explorer-shelf-pinned = Pinned
+explorer-shelf-pinned-desc = Items you’ve pinned, and the next unread assignment from each pinned syllabus.
 explorer-go-to-reading-schedule = Go to Reading Schedule
 explorer-go-to-my-annotations = See all
 explorer-shelf-watch-now = Watch now

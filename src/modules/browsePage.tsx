@@ -31,7 +31,7 @@ export function densityCycleTitle(current: ItemDensity): string {
   });
 }
 
-function DensityIcon({
+export function DensityIcon({
   density,
   className,
 }: {

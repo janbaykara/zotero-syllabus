@@ -8,7 +8,7 @@ Do not add hardcoded user-visible text in TS, TSX, XHTML, or progress windows.
 2. Copy the same key into **every** folder under `addon/locale/` (`de`, `pt-BR`, `es-ES`, `fr-FR`, `zh-CN`, …). German is `de`, not `de-DE`. Arabic is `ar`.
 3. Look it up with `getString("the-key")` or `getString("the-key", { args: { name } })` from `src/utils/locale.ts`. Safe in Preact JSX.
 4. Call `getString` at render/use time, never at module scope (`initLocale` runs at startup).
-5. Do not rename stored identifiers: note title `"Syllabus"`, collection `"Reading Schedule"`, playground `"Syllabus Tour"`, plugin JSON heading.
+5. Do not rename stored identifiers: note title `"Syllabus"`, collection `"Reading Schedule"`, child folder `"Pinned"`, playground `"Syllabus Tour"`, plugin JSON heading, tags `zotero-syllabus`, `pinned`, `zotero-syllabus-pinned-intention`.
 6. Keep the product name `Zotero Syllabus` untranslated.
 
 Details: [doc/TECHNICAL.md](doc/TECHNICAL.md#localization) and `.cursor/rules/localization.mdc`.

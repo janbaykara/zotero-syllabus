@@ -30,11 +30,7 @@ import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata"
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
 import { useZoteroItemsViewRegularItemIds } from "./react-zotero-sync/itemsViewItems";
 import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
-import {
-  nextItemDensity,
-  useZoteroItemDensity,
-} from "./react-zotero-sync/itemDensity";
-import { densityCycleTitle } from "./browsePage";
+import { useZoteroItemDensity } from "./react-zotero-sync/itemDensity";
 import { useZoteroReaderMode } from "./react-zotero-sync/readerMode";
 import { isZotero8OrLater } from "../utils/zotero";
 import { getItemTitle, sortItems } from "../utils/items";
@@ -44,28 +40,26 @@ import {
   useFurtherReadingSortBy,
   type FurtherReadingSortBy,
 } from "./furtherReadingSort";
-import { formatDate } from "date-fns";
 import {
   ArrowUpDown,
   Printer,
   Settings,
   Lock,
   Unlock,
-  Maximize2,
   List,
-  Rows2,
-  Rows3,
-  Download,
-  Upload,
-  Menu,
-  ListTodo,
+  Pin,
+  PinOff,
 } from "lucide-preact";
 import { TableOfContents } from "./TableOfContents";
-import { saveToFile } from "../utils/file";
 import {
   buildPrintableHtml,
   serializeSyllabusForPrint,
 } from "../utils/printSyllabus";
+import {
+  isPinnedSyllabus,
+  setPinnedSyllabus,
+  subscribePinnedChanges,
+} from "./pinned";
 import {
   saveSyllabusExport,
   saveSyllabusPdf,
@@ -77,8 +71,12 @@ import { ClassSubcollectionPage } from "./ClassReadingBlock";
 import { getClassSubcollectionContext } from "./syllabusNote";
 import { ReadingSchedule } from "./ReadingSchedule";
 import { ReadingScheduleDayPage } from "./ReadingScheduleDayPage";
-import { getReadingScheduleCollectionContext } from "./readingScheduleCollection";
+import {
+  enqueuePinnedReadingScheduleSync,
+  getReadingScheduleCollectionContext,
+} from "./readingScheduleCollection";
 import { useSyllabusDocumentGeneration } from "./react-zotero-sync/collectionDocument";
+import { SyllabusViewMenu } from "./SyllabusViewMenu";
 import { TextInput } from "./syllabusInputs";
 import { SyllabusItemCard } from "./SyllabusItemCard";
 import { bibliographyToHtml } from "./Bibliography";
@@ -109,6 +107,9 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
   useSyllabusDocumentGeneration();
   const readingSchedule = getReadingScheduleCollectionContext(collectionId);
   if (readingSchedule?.kind === "root") {
+    return <ReadingSchedule libraryID={readingSchedule.root.libraryID} />;
+  }
+  if (readingSchedule?.kind === "pinned") {
     return <ReadingSchedule libraryID={readingSchedule.root.libraryID} />;
   }
   if (readingSchedule) {
@@ -515,13 +516,44 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   const [itemOrderVersion, setItemOrderVersion] = useState(0);
 
   // Item density — reactive to preference changes
-  const [density, , cycleDensity] = useZoteroItemDensity();
+  const [density] = useZoteroItemDensity();
 
   // Reader mode state - reactive to preference changes
-  const [readerMode, setReaderMode] = useZoteroReaderMode();
+  const [readerMode] = useZoteroReaderMode();
 
   // Settings view state
   const [showSettings, setShowSettings] = useState(false);
+
+  const [isPinned, setIsPinned] = useState(() => {
+    const collection = getCachedCollectionById(collectionId);
+    return collection ? isPinnedSyllabus(collection) : false;
+  });
+
+  useEffect(() => {
+    const refresh = () => {
+      const collection = getCachedCollectionById(collectionId);
+      setIsPinned(collection ? isPinnedSyllabus(collection) : false);
+    };
+    refresh();
+    return subscribePinnedChanges(refresh);
+  }, [collectionId]);
+
+  const handleTogglePin = async () => {
+    const collection =
+      getCachedCollectionById(collectionId) ||
+      Zotero.Collections.get(collectionId);
+    if (!collection) {
+      return;
+    }
+    const next = !isPinned;
+    const ok = await setPinnedSyllabus(collection, next);
+    if (ok) {
+      setIsPinned(next);
+      enqueuePinnedReadingScheduleSync();
+    } else if (next) {
+      ztoolkit.log("Could not pin syllabus: no Syllabus note on collection");
+    }
+  };
 
   useEffect(() => {
     const win = Zotero.getMainWindow();
@@ -922,21 +954,6 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       pane.selectItems(Array.from(itemIds));
     }
   }, [selectedIdentifiers, syllabusItems]);
-
-  // Ref for hidden file input for import
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const toggleDensity = () => {
-    const next = nextItemDensity(density);
-    ztoolkit.log("toggleDensity", { density, next });
-    cycleDensity();
-  };
-
-  const toggleReaderMode = () => {
-    const nextMode = !readerMode;
-    ztoolkit.log("toggleReaderMode", { readerMode, nextMode });
-    setReaderMode(nextMode);
-  };
 
   // Set up global drag event listeners
   useEffect(() => {
@@ -1903,43 +1920,6 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     return max !== null ? max + 1 : 1;
   }, [collectionId, syllabusMetadata, items]);
 
-  const handleExport = async () => {
-    try {
-      const rdf = await SyllabusManager.prepareExportData(collectionId);
-      const dateStr = formatDate(new Date(), "yyyy-MM-dd");
-      const titleSlug = slugify(title || "syllabus", {
-        lower: true,
-        strict: true,
-      });
-      const filename = `${titleSlug}-${dateStr}.syllabus`;
-      await saveToFile(filename, rdf, getString("dialog-save-export"));
-    } catch (err) {
-      ztoolkit.log("Error exporting syllabus metadata:", err);
-    }
-  };
-
-  const handleImport = () => {
-    // Trigger the hidden file input
-    fileInputRef.current?.click();
-  };
-
-  const handleFileInputChange = async (
-    e: JSX.TargetedEvent<HTMLInputElement>,
-  ) => {
-    const target = e.target as HTMLInputElement;
-    const selectedFile = target.files?.[0];
-
-    // Reset the input so the same file can be selected again
-    target.value = "";
-
-    if (!selectedFile) {
-      // User cancelled file selection
-      return;
-    }
-
-    await importSyllabusMetadataFromFile(collectionId, selectedFile);
-  };
-
   const handleExportFormat = async (format: SyllabusExportFormat) => {
     const syllabusPageElement = syllabusPageRef.current;
     if (!syllabusPageElement) {
@@ -2103,14 +2083,6 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
   return (
     <>
-      {/* Hidden file input for import */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".syllabus"
-        style={{ display: "none" }}
-        onChange={handleFileInputChange}
-      />
       <div
         ref={syllabusPageRef}
         tabIndex={-1}
@@ -2186,94 +2158,22 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   </div>
                 </div>
                 <div className="inline-flex items-center gap-2.5 shrink grow-0">
+                  <SyllabusViewMenu />
                   {!isLocked && (
-                    <>
-                      <div
-                        className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                        title={densityCycleTitle(density)}
-                        aria-label={densityCycleTitle(density)}
-                        onClick={toggleDensity}
-                      >
-                        {density === "row" ? (
-                          <Rows3
-                            size={20}
-                            className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                          />
-                        ) : density === "standard" ? (
-                          <Rows2
-                            size={20}
-                            className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                          />
-                        ) : (
-                          <Maximize2
-                            size={20}
-                            className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                          />
-                        )}
-                      </div>
-                      <div
-                        className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                        title={
-                          readerMode
-                            ? getString("page-reader-disable")
-                            : getString("page-reader-enable")
-                        }
-                        aria-label={
-                          readerMode
-                            ? getString("page-reader-disable")
-                            : getString("page-reader-enable")
-                        }
-                        aria-pressed={readerMode}
-                        onClick={toggleReaderMode}
-                      >
-                        {readerMode ? (
-                          <ListTodo
-                            size={20}
-                            className="text-primary hover:text-primary hover:bg-quinary rounded p-1"
-                          />
-                        ) : (
-                          <Menu
-                            size={20}
-                            className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                          />
-                        )}
-                      </div>
-                      <div
-                        className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                        title={getString("page-export")}
-                        aria-label={getString("page-export")}
-                        onClick={handleExport}
-                      >
-                        <Upload
-                          size={20}
-                          className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                        />
-                      </div>
-                      <div
-                        className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                        title={getString("page-import")}
-                        aria-label={getString("page-import")}
-                        onClick={handleImport}
-                      >
-                        <Download
-                          size={20}
-                          className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                        />
-                      </div>
-                      <div
-                        className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                        title={getString("page-edit-settings")}
-                        aria-label={getString("page-edit-settings")}
-                        data-tour="syllabus-settings-button"
-                        onClick={() => setShowSettings(true)}
-                      >
-                        <Settings
-                          size={20}
-                          className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                        />
-                      </div>
-                    </>
+                    <div
+                      className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
+                      title={getString("page-edit-settings")}
+                      aria-label={getString("page-edit-settings")}
+                      data-tour="syllabus-settings-button"
+                      onClick={() => setShowSettings(true)}
+                    >
+                      <Settings
+                        size={20}
+                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
+                    </div>
                   )}
+                  <SyllabusSaveFormatMenu onSelect={handleExportFormat} />
                   <div
                     className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
                     title={
@@ -2301,7 +2201,33 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                       />
                     )}
                   </div>
-                  <SyllabusSaveFormatMenu onSelect={handleExportFormat} />
+                  <div
+                    className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
+                    title={
+                      isPinned
+                        ? getString("pinned-menu-unpin-syllabus")
+                        : getString("pinned-menu-pin-syllabus")
+                    }
+                    aria-label={
+                      isPinned
+                        ? getString("pinned-menu-unpin-syllabus")
+                        : getString("pinned-menu-pin-syllabus")
+                    }
+                    aria-pressed={isPinned}
+                    onClick={() => void handleTogglePin()}
+                  >
+                    {isPinned ? (
+                      <PinOff
+                        size={20}
+                        className="text-primary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
+                    ) : (
+                      <Pin
+                        size={20}
+                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

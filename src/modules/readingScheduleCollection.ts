@@ -22,6 +22,8 @@ import { getPrefKey, getPrefValue, setPref } from "../utils/prefs";
 import { itemBelongsInCollection, libraryIsEditable } from "../utils/zotero";
 
 export const READING_SCHEDULE_COLLECTION_NAME = "Reading Schedule";
+/** Stored child folder for pinned items. Do not localize. */
+export const PINNED_FOLDER_NAME = "Pinned";
 const LEGACY_READING_SCHEDULE_COLLECTION_NAME = "Reading schedule";
 
 function isReadingScheduleRootName(name: string): boolean {
@@ -44,6 +46,8 @@ type ManagedDateFolder = {
 
 const managedDateFolders = new Map<number, ManagedDateFolder>();
 const managedRootByLibrary = new Map<number, number>();
+/** libraryID → pinned folder collection id */
+const managedPinnedByLibrary = new Map<number, number>();
 let syncChain: Promise<void> = Promise.resolve();
 let syncHoldDepth = 0;
 /** Stays true after depth hits 0 long enough to cover deferred Zotero notifiers. */
@@ -51,6 +55,8 @@ let syncHoldLatched = false;
 let prefObserverID: symbol | null = null;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingGetDesired: (() => ReadingScheduleDesiredByLibrary) | null = null;
+/** Last successful desired getter so pin toggles can re-sync without a new note write. */
+let lastGetDesired: (() => ReadingScheduleDesiredByLibrary) | null = null;
 let debounceWaiters: Array<() => void> = [];
 
 export type ReadingScheduleDesiredItems = Map<string, number[]>;
@@ -67,6 +73,11 @@ export type ReadingScheduleSource = {
 function trimKey(key: string | undefined | null): string | undefined {
   const trimmed = (key || "").trim();
   return trimmed || undefined;
+}
+
+async function pinnedItemIdsForLibrary(libraryID: number): Promise<number[]> {
+  const { listPinnedItemIds } = await import("./pinned");
+  return listPinnedItemIds(libraryID);
 }
 
 function holdSync(): void {
@@ -97,7 +108,7 @@ export function isManagedReadingScheduleCollection(
 }
 
 export type ReadingScheduleCollectionContext = {
-  kind: "root" | "date";
+  kind: "root" | "date" | "pinned";
   root: Zotero.Collection;
   dateKey: string | null;
   collection: Zotero.Collection;
@@ -135,6 +146,16 @@ export function getReadingScheduleCollectionContext(
   }
 
   if (collection.parentID === root.id) {
+    if (collection.name === PINNED_FOLDER_NAME) {
+      rememberRoot(root);
+      rememberPinnedFolder(collection);
+      return {
+        kind: "pinned",
+        root,
+        dateKey: null,
+        collection,
+      };
+    }
     const dateKey = dateKeyFromFolderName(collection.name);
     if (dateKey) {
       rememberRoot(root);
@@ -146,6 +167,21 @@ export function getReadingScheduleCollectionContext(
         collection,
       };
     }
+  }
+
+  const managedPinnedId = managedPinnedByLibrary.get(root.libraryID);
+  if (
+    managedPinnedId === collection.id &&
+    managedRootByLibrary.get(root.libraryID) === root.id
+  ) {
+    rememberRoot(root);
+    rememberPinnedFolder(collection);
+    return {
+      kind: "pinned",
+      root,
+      dateKey: null,
+      collection,
+    };
   }
 
   const managed = managedDateFolders.get(collectionId);
@@ -486,12 +522,17 @@ function rememberDateFolder(child: Zotero.Collection, dateKey: string): void {
   managedDateFolders.set(child.id, { key: child.key, dateKey });
 }
 
+function rememberPinnedFolder(child: Zotero.Collection): void {
+  managedPinnedByLibrary.set(child.libraryID, child.id);
+}
+
 function forgetCollection(collectionId: number): void {
   for (const [libraryID, rootId] of managedRootByLibrary) {
     if (rootId !== collectionId) {
       continue;
     }
     managedRootByLibrary.delete(libraryID);
+    managedPinnedByLibrary.delete(libraryID);
     for (const [id] of [...managedDateFolders]) {
       const child =
         getCachedCollectionById(id) || Zotero.Collections.get(id) || null;
@@ -501,12 +542,19 @@ function forgetCollection(collectionId: number): void {
     }
     return;
   }
+  for (const [libraryID, pinnedId] of managedPinnedByLibrary) {
+    if (pinnedId === collectionId) {
+      managedPinnedByLibrary.delete(libraryID);
+      return;
+    }
+  }
   managedDateFolders.delete(collectionId);
 }
 
 function forgetManagedMaps(): void {
   managedDateFolders.clear();
   managedRootByLibrary.clear();
+  managedPinnedByLibrary.clear();
 }
 
 export function clearManagedReadingScheduleCollection(): void {
@@ -826,6 +874,10 @@ async function ensureReadingScheduleCollection(
     if (namedReadingScheduleCollections(libraryID).length) {
       libraryIDs.add(libraryID);
     }
+    const pinned = await pinnedItemIdsForLibrary(libraryID);
+    if (pinned.length) {
+      libraryIDs.add(libraryID);
+    }
   }
 
   holdSync();
@@ -836,9 +888,11 @@ async function ensureReadingScheduleCollection(
       }
       const desired = desiredByLibrary.get(libraryID) || new Map();
       const isUserLibrary = libraryID === Zotero.Libraries.userLibraryID;
+      const hasPinned = (await pinnedItemIdsForLibrary(libraryID)).length > 0;
       if (
         !isUserLibrary &&
         desired.size === 0 &&
+        !hasPinned &&
         !storedRoot(libraryID) &&
         namedReadingScheduleCollections(libraryID).length === 0
       ) {
@@ -851,34 +905,96 @@ async function ensureReadingScheduleCollection(
   }
 }
 
+function findPinnedChild(
+  parent: Zotero.Collection,
+): Zotero.Collection | undefined {
+  for (const child of parent.getChildCollections()) {
+    if (child.deleted) {
+      continue;
+    }
+    if (child.name === PINNED_FOLDER_NAME) {
+      return child;
+    }
+  }
+  return undefined;
+}
+
+async function ensurePinnedChild(
+  parent: Zotero.Collection,
+  existing: Zotero.Collection | undefined,
+): Promise<{ child: Zotero.Collection; mutated: boolean }> {
+  if (!existing) {
+    const child = new Zotero.Collection({
+      name: PINNED_FOLDER_NAME,
+      libraryID: parent.libraryID,
+      parentID: parent.id,
+    });
+    await saveCollection(child);
+    rememberPinnedFolder(child);
+    return { child, mutated: true };
+  }
+
+  let dirty = false;
+  if (existing.name !== PINNED_FOLDER_NAME) {
+    existing.name = PINNED_FOLDER_NAME;
+    dirty = true;
+  }
+  if (existing.parentID !== parent.id) {
+    existing.parentID = parent.id;
+    dirty = true;
+  }
+  if (dirty) {
+    await saveCollection(existing);
+  }
+  rememberPinnedFolder(existing);
+  return { child: existing, mutated: dirty };
+}
+
 async function syncLibraryReadingSchedule(
   libraryID: number,
   desired: ReadingScheduleDesiredItems,
 ): Promise<boolean> {
   const root = await ensureRootCollection(libraryID);
+  const pinnedIds = await pinnedItemIdsForLibrary(libraryID);
   const { byDate, duplicates } = indexDateChildren(root);
+  const existingPinned = findPinnedChild(root);
   const plan = planDateFolderReconcile(byDate.keys(), desired.keys());
+  const wantPinned = pinnedIds.length > 0;
   const foldersNeedWork =
-    duplicates.length > 0 || plan.create.length > 0 || plan.erase.length > 0;
-  const namesNeedWork = plan.keep.some((dateKey) => {
-    const child = byDate.get(dateKey);
-    return (
-      !child ||
-      child.name !== readingScheduleDateFolderName(dateKey) ||
-      child.parentID !== root.id
-    );
-  });
+    duplicates.length > 0 ||
+    plan.create.length > 0 ||
+    plan.erase.length > 0 ||
+    (wantPinned && !existingPinned) ||
+    (!wantPinned && !!existingPinned);
+  const namesNeedWork =
+    plan.keep.some((dateKey) => {
+      const child = byDate.get(dateKey);
+      return (
+        !child ||
+        child.name !== readingScheduleDateFolderName(dateKey) ||
+        child.parentID !== root.id
+      );
+    }) ||
+    (!!existingPinned &&
+      (existingPinned.name !== PINNED_FOLDER_NAME ||
+        existingPinned.parentID !== root.id));
   const itemsNeedWork =
     !itemIdsMatch(regularItemIds(root), []) ||
     Array.from(desired.entries()).some(([dateKey, itemIds]) => {
       const child = byDate.get(dateKey);
       return !child || !itemIdsMatch(regularItemIds(child), itemIds);
-    });
+    }) ||
+    (wantPinned &&
+      existingPinned &&
+      !itemIdsMatch(regularItemIds(existingPinned), pinnedIds));
 
   if (!foldersNeedWork && !namesNeedWork && !itemsNeedWork) {
     rememberRoot(root);
     for (const [dateKey, child] of byDate) {
       rememberDateFolder(child, dateKey);
+    }
+    if (existingPinned) {
+      rememberPinnedFolder(existingPinned);
     }
     return false;
   }
@@ -939,6 +1055,24 @@ async function syncLibraryReadingSchedule(
     }
   }
 
+  let pinnedFolder = existingPinned;
+  if (wantPinned) {
+    try {
+      const { child, mutated } = await ensurePinnedChild(root, pinnedFolder);
+      pinnedFolder = child;
+      if (mutated) {
+        foldersMutated = true;
+      }
+    } catch (error) {
+      ztoolkit.log("Error ensuring pinned reading schedule folder:", error);
+    }
+  } else if (pinnedFolder) {
+    forgetCollection(pinnedFolder.id);
+    await eraseCollection(pinnedFolder);
+    pinnedFolder = undefined;
+    foldersMutated = true;
+  }
+
   try {
     await syncCollectionItems(root, []);
   } catch (error) {
@@ -957,6 +1091,14 @@ async function syncLibraryReadingSchedule(
     }
   }
 
+  if (pinnedFolder && wantPinned) {
+    try {
+      await syncCollectionItems(pinnedFolder, pinnedIds);
+    } catch (error) {
+      ztoolkit.log("Error syncing pinned reading schedule items:", error);
+    }
+  }
+
   return foldersMutated;
 }
 
@@ -965,6 +1107,7 @@ export function enqueueReadingScheduleCollectionSync(
   options: { immediate?: boolean } = {},
 ): Promise<void> {
   pendingGetDesired = getDesired;
+  lastGetDesired = getDesired;
   if (options.immediate) {
     return flushReadingScheduleCollectionSync();
   }
@@ -978,6 +1121,14 @@ export function enqueueReadingScheduleCollectionSync(
       flushReadingScheduleCollectionSync();
     }, SYNC_DEBOUNCE_MS);
   });
+}
+
+/** Re-sync after pin/unpin using the last known syllabus desired-set getter. */
+export function enqueuePinnedReadingScheduleSync(): Promise<void> {
+  if (!lastGetDesired) {
+    return Promise.resolve();
+  }
+  return enqueueReadingScheduleCollectionSync(lastGetDesired);
 }
 
 function flushReadingScheduleCollectionSync(): Promise<void> {
