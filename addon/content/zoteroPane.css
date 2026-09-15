@@ -113,6 +113,48 @@
   box-sizing: border-box !important;
 }
 
+/* Expanded density: Gallery cover art in place of the type icon. */
+.syllabus-item-thumbnail-cover {
+  flex: 0 0 auto;
+}
+
+.syllabus-item-thumbnail-cover .syllabus-gallery-cover-portrait,
+.syllabus-item-thumbnail-cover .syllabus-gallery-cover-video,
+.syllabus-item-thumbnail-cover .syllabus-gallery-cover-web,
+.syllabus-item-thumbnail-cover .syllabus-gallery-cover-square,
+.syllabus-item-thumbnail-cover .syllabus-gallery-cover-natural,
+.syllabus-item-thumbnail-cover .syllabus-gallery-cover-with-binder {
+  width: 100%;
+}
+
+.syllabus-item-thumbnail-cover .syllabus-gallery-web-caption {
+  display: none;
+}
+
+.syllabus-item-thumbnail-cover .syllabus-gallery-placeholder-face {
+  padding: 0.35rem;
+}
+
+.syllabus-item-thumbnail-cover .syllabus-gallery-placeholder-face .font-semibold {
+  font-size: 10px;
+  line-height: 1.25;
+  -webkit-line-clamp: 3;
+}
+
+.syllabus-item-thumbnail-cover .syllabus-gallery-placeholder-face .text-\[11px\] {
+  font-size: 9px;
+  -webkit-line-clamp: 1;
+}
+
+.syllabus-item-thumbnail-cover .syllabus-gallery-play-btn {
+  transform: scale(0.7);
+}
+
+.syllabus-item-thumbnail-cover .syllabus-gallery-duration {
+  font-size: 9px;
+  padding: 0.1rem 0.25rem;
+}
+
 /* Class-level dimming already applies; don't stack item opacity on top. */
 .opacity-40 .syllabus-item-card.opacity-40 {
   opacity: 1;
@@ -1575,6 +1617,72 @@
   white-space: nowrap;
 }
 
+.syllabus-magazine-assignment-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  margin-bottom: 0.28rem;
+}
+
+.syllabus-magazine-context {
+  font-family: system-ui, sans-serif;
+  font-size: calc(11px * var(--magazine-type-scale, 1));
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.04em;
+  color: var(--fill-secondary, inherit);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 0.2rem;
+}
+
+.syllabus-magazine-title-row {
+  display: block;
+  min-width: 0;
+}
+
+.syllabus-magazine-title-row.has-checkbox {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+.syllabus-magazine-title-row.has-checkbox .syllabus-magazine-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.syllabus-magazine-title-checkbox {
+  margin-top: 0.35em;
+  flex-shrink: 0;
+}
+
+.syllabus-magazine-instruction {
+  margin-top: 0.4rem;
+  font-family: system-ui, sans-serif;
+  font-size: calc(0.92rem * var(--magazine-type-scale, 1));
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--fill-secondary, inherit);
+  white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.syllabus-magazine-tile[data-role="hero"] .syllabus-magazine-instruction {
+  -webkit-line-clamp: 4;
+}
+
+.syllabus-magazine-tile[data-role="compact"] .syllabus-magazine-instruction {
+  -webkit-line-clamp: 2;
+}
+
 .syllabus-magazine-abstract,
 .syllabus-magazine-meta {
   margin-top: 0.45rem;
@@ -1605,6 +1713,23 @@
   -webkit-line-clamp: 6;
 }
 
+/* Prefer instructions: shrink the blurb when both are present. */
+.syllabus-magazine-tile:has(.syllabus-magazine-instruction)
+  .syllabus-magazine-abstract {
+  -webkit-line-clamp: 3;
+  margin-top: 0.28rem;
+}
+
+.syllabus-magazine-tile[data-role="hero"]:has(.syllabus-magazine-instruction)
+  .syllabus-magazine-abstract {
+  -webkit-line-clamp: 4;
+}
+
+.syllabus-magazine-tile[data-role="compact"]:has(.syllabus-magazine-instruction)
+  .syllabus-magazine-abstract {
+  -webkit-line-clamp: 2;
+}
+
 .syllabus-magazine-meta {
   -webkit-line-clamp: 2;
 }
@@ -1631,6 +1756,26 @@
   .syllabus-magazine-tile[data-role="compact"]
   .syllabus-magazine-abstract {
   -webkit-line-clamp: 9;
+}
+
+.syllabus-magazine-page.is-large-type
+  .syllabus-magazine-tile:has(.syllabus-magazine-instruction)
+  .syllabus-magazine-abstract {
+  -webkit-line-clamp: 4;
+}
+
+.syllabus-magazine-page.is-large-type
+  .syllabus-magazine-tile[data-role="hero"]:has(.syllabus-magazine-instruction)
+  .syllabus-magazine-abstract {
+  -webkit-line-clamp: 5;
+}
+
+.syllabus-magazine-page.is-large-type
+  .syllabus-magazine-tile[data-role="compact"]:has(
+    .syllabus-magazine-instruction
+  )
+  .syllabus-magazine-abstract {
+  -webkit-line-clamp: 3;
 }
 
 .syllabus-magazine-page.is-large-type .syllabus-magazine-meta {

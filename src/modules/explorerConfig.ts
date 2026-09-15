@@ -150,9 +150,10 @@ export function layoutsForExplorerShelf(
     case "watch-now":
     case "listen-now":
       return ["cover"];
-    case "pinned":
     case "upcoming-deadlines":
       return [];
+    case "pinned":
+      return GALLERY_LAYOUT_MODES;
     default:
       return GALLERY_LAYOUT_MODES;
   }

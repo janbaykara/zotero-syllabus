@@ -10,11 +10,6 @@ import { getPref } from "../utils/prefs";
 import { generateBibliographicReference } from "../utils/cite";
 import { isZotero8OrLater } from "../utils/zotero";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
-import {
-  youtubeStartSeconds,
-  youtubeUrlFromItem,
-  youtubeVideoIdFromUrl,
-} from "../utils/youtube";
 import { ProseText } from "./ProseText";
 import {
   getItemReadStatusName,
@@ -22,7 +17,7 @@ import {
 } from "../zotero-reading-list/compat";
 import { getReadingTimeSync, formatReadingTime } from "../utils/readingTime";
 import { getItemCreatorLine, getItemField, getItemTitle } from "../utils/items";
-import { YoutubePlayer } from "./YoutubePlayer";
+import { GalleryCover } from "./GalleryCover";
 import { getString } from "../utils/locale";
 import { isOsFileDrag } from "../utils/nativeFileDrop";
 import type { ItemDensity } from "./react-zotero-sync/itemDensity";
@@ -44,6 +39,7 @@ export function SyllabusItemCard({
   dropEdge = null,
   onClick: customOnClick,
   onContextMenu: customOnContextMenu,
+  onReaderCheck,
   selectedIdentifiers = new Set(),
   onIdentifierClick,
   selectedForDrag = { assignments: [], itemIds: [] },
@@ -66,6 +62,11 @@ export function SyllabusItemCard({
   isLocked?: boolean;
   /** Hide the group-hover action bar (duplicate / unassign / etc.). */
   hideHoverActions?: boolean;
+  /**
+   * When set with readerMode, checkbox runs this instead of toggling
+   * assignment done status (e.g. confirm + unpin on Reading Schedule).
+   */
+  onReaderCheck?: () => void | Promise<void>;
   /** True when rendered in the Further reading section (for drag reorder). */
   isFurtherReading?: boolean;
   onDrop?: (
@@ -130,9 +131,6 @@ export function SyllabusItemCard({
   }, [date]);
   const publicationName = getItemField(item, "publicationTitle");
   const url = item.getField("url") || "";
-  const youtubeSourceUrl = useMemo(() => youtubeUrlFromItem(item), [item]);
-  const youtubeVideoId = youtubeVideoIdFromUrl(youtubeSourceUrl);
-  const showYoutubeEmbed = density === "expanded" && Boolean(youtubeVideoId);
   const [syllabusMetadata] = useZoteroSyllabusMetadata(collectionId);
   const readingTime = getReadingTimeSync(item, { roundUp: true });
 
@@ -504,6 +502,16 @@ export function SyllabusItemCard({
   ) => {
     e.stopPropagation();
 
+    if (onReaderCheck) {
+      try {
+        await onReaderCheck();
+      } catch (err) {
+        ztoolkit.log("Error handling reading checkbox:", err);
+      }
+      e.currentTarget.checked = false;
+      return;
+    }
+
     try {
       const newStatus = assignmentStatus === "done" ? null : "done";
       await SyllabusManager.setReadingStatus(
@@ -525,15 +533,13 @@ export function SyllabusItemCard({
       className={twMerge(
         "syllabus-item-card in-[.print]:scheme-light",
         "rounded-lg flex shrink-0",
-        showYoutubeEmbed
-          ? "flex-col"
-          : density === "row"
-            ? "flex-row items-start"
-            : "flex-row items-start justify-between",
+        density === "row"
+          ? "flex-row items-start"
+          : "flex-row items-start justify-between",
         "bg-background-sidepane text-primary",
         density === "row" && "bg-transparent!",
         "relative",
-        isLocked || showYoutubeEmbed ? "cursor-default" : "cursor-grab",
+        isLocked ? "cursor-default" : "cursor-grab",
         // For hovering contextual btns
         "group relative",
         density === "row"
@@ -565,7 +571,7 @@ export function SyllabusItemCard({
           ? String(url).trim()
           : undefined
       }
-      draggable={!isLocked && !showYoutubeEmbed}
+      draggable={!isLocked}
       onClick={(e) => {
         if (customOnClick) {
           customOnClick(item, e);
@@ -579,56 +585,50 @@ export function SyllabusItemCard({
         customOnContextMenu ? (e) => customOnContextMenu(item, e) : undefined
       }
       onDblClick={(e) => onDoubleClick(item, e)}
-      onDragStart={isLocked || showYoutubeEmbed ? undefined : handleDragStart}
-      onDragEnd={isLocked || showYoutubeEmbed ? undefined : handleDragEnd}
+      onDragStart={isLocked ? undefined : handleDragStart}
+      onDragEnd={isLocked ? undefined : handleDragEnd}
       onDragOver={isLocked ? undefined : handleItemDragOver}
       onDrop={isLocked ? undefined : handleItemDrop}
     >
       {readerMode && (
         <input
           type="checkbox"
-          checked={assignmentStatus === "done"}
+          checked={onReaderCheck ? false : assignmentStatus === "done"}
           onChange={handleAssignmentStatusToggle}
           className={twMerge(
             "absolute right-full top-1/2 -translate-y-1/2 mr-1 w-4 h-4 cursor-pointer shrink-0 in-[.print]:hidden",
             isZotero8OrLater() ? "md:mr-2!" : "mr-2!",
           )}
           title={
-            assignmentStatus === "done"
-              ? getString("mark-not-done")
-              : getString("mark-done")
+            onReaderCheck
+              ? getString("pinned-done-unpin-title")
+              : assignmentStatus === "done"
+                ? getString("mark-not-done")
+                : getString("mark-done")
           }
           aria-label={
-            assignmentStatus === "done"
-              ? getString("mark-not-done")
-              : getString("mark-done")
+            onReaderCheck
+              ? getString("pinned-done-unpin-title")
+              : assignmentStatus === "done"
+                ? getString("mark-not-done")
+                : getString("mark-done")
           }
           onClick={(e) => e.stopPropagation()}
         />
       )}
       <div
         className={
-          showYoutubeEmbed
-            ? twMerge(
-                "flex w-full flex-row items-start justify-between gap-4",
-                isLocked ? "cursor-default" : "cursor-grab",
-              )
-            : density === "row"
-              ? "grid w-full min-w-0 items-start gap-x-2"
-              : "contents"
+          density === "row"
+            ? "grid w-full min-w-0 items-start gap-x-2"
+            : "contents"
         }
         style={
-          density === "row" && !showYoutubeEmbed
+          density === "row"
             ? {
                 gridTemplateColumns: "16px minmax(0, 1fr)",
               }
             : undefined
         }
-        draggable={!isLocked && showYoutubeEmbed}
-        onDragStart={
-          !isLocked && showYoutubeEmbed ? handleDragStart : undefined
-        }
-        onDragEnd={!isLocked && showYoutubeEmbed ? handleDragEnd : undefined}
       >
         <div
           className={twMerge(
@@ -637,9 +637,10 @@ export function SyllabusItemCard({
               ? "size-4! min-w-4! max-w-4! h-[1.375rem]! max-h-[1.375rem]! flex items-center justify-center self-start"
               : density === "standard"
                 ? "size-6 self-center"
-                : slim
-                  ? "size-10 self-center"
-                  : "size-20 self-center",
+                : twMerge(
+                    "syllabus-item-thumbnail-cover self-start min-w-0",
+                    slim ? "w-16" : "w-24",
+                  ),
           )}
           data-density={density === "row" ? "row" : undefined}
           style={
@@ -653,32 +654,36 @@ export function SyllabusItemCard({
               : undefined
           }
         >
-          <span
-            className="icon icon-css icon-item-type cell-icon"
-            data-item-type={item.itemType}
-            style={{
-              width: density === "row" ? 16 : "100%",
-              height: density === "row" ? 16 : "100%",
-              minWidth: density === "row" ? 16 : undefined,
-              maxWidth: density === "row" ? 16 : undefined,
-              padding: density === "row" ? 0 : undefined,
-              margin: density === "row" ? 0 : undefined,
-              boxSizing: "border-box",
-              display: "block",
-              backgroundOrigin:
-                "padding-box, padding-box, padding-box, padding-box",
-              backgroundPositionX: "50%, 50%, 50%, 50%",
-              backgroundPositionY: "50%, 50%, 50%, 50%",
-              backgroundRepeat: "no-repeat, repeat, repeat, repeat",
-              backgroundSize:
-                density === "row"
-                  ? "16px 16px, 0px, 0px, 0px"
-                  : "contain, 0px, 0px, 0px",
-              filter: isIdentifierSelected
-                ? "invert(0.85) brightness(2.5) contrast(1) hue-rotate(175deg)"
-                : undefined,
-            }}
-          />
+          {density === "expanded" ? (
+            <GalleryCover item={item} selected={false} visible />
+          ) : (
+            <span
+              className="icon icon-css icon-item-type cell-icon"
+              data-item-type={item.itemType}
+              style={{
+                width: density === "row" ? 16 : "100%",
+                height: density === "row" ? 16 : "100%",
+                minWidth: density === "row" ? 16 : undefined,
+                maxWidth: density === "row" ? 16 : undefined,
+                padding: density === "row" ? 0 : undefined,
+                margin: density === "row" ? 0 : undefined,
+                boxSizing: "border-box",
+                display: "block",
+                backgroundOrigin:
+                  "padding-box, padding-box, padding-box, padding-box",
+                backgroundPositionX: "50%, 50%, 50%, 50%",
+                backgroundPositionY: "50%, 50%, 50%, 50%",
+                backgroundRepeat: "no-repeat, repeat, repeat, repeat",
+                backgroundSize:
+                  density === "row"
+                    ? "16px 16px, 0px, 0px, 0px"
+                    : "contain, 0px, 0px, 0px",
+                filter: isIdentifierSelected
+                  ? "invert(0.85) brightness(2.5) contrast(1) hue-rotate(175deg)"
+                  : undefined,
+              }}
+            />
+          )}
         </div>
         {density === "row" ? (
           <div className="syllabus-item-text grow min-w-0 flex flex-col gap-0.5">
@@ -1095,13 +1100,6 @@ export function SyllabusItemCard({
             </div>
           )}
       </div>
-      {showYoutubeEmbed && youtubeVideoId ? (
-        <YoutubePlayer
-          videoId={youtubeVideoId}
-          startSeconds={youtubeStartSeconds(youtubeSourceUrl)}
-          title={title}
-        />
-      ) : null}
       {!isLocked && !hideHoverActions && (
         <div
           className={twMerge(

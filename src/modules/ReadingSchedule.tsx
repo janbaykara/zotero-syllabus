@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
-import { useMemo } from "preact/hooks";
+import { useMemo, useRef } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
 import {
   ClassReadingBlock,
@@ -22,7 +22,6 @@ import {
   startOfWeek,
 } from "date-fns";
 import { useZoteroItemDensity } from "./react-zotero-sync/itemDensity";
-import type { ItemDensity } from "./react-zotero-sync/itemDensity";
 import { useSyllabi } from "./react-zotero-sync/useSyllabi";
 import { getPref } from "../utils/prefs";
 import { isSameWeek } from "date-fns/fp";
@@ -33,22 +32,24 @@ import {
 } from "../utils/dates";
 import { hasMultipleNonFeedLibraries, isZotero8OrLater } from "../utils/zotero";
 import { getString, getUiDir } from "../utils/locale";
-import { ReadingScheduleSettingsMenu } from "./ReadingScheduleSettingsMenu";
 import { PinnedSection, usePinnedScheduleData } from "./PinnedSection";
-import { DensityIcon, densityCycleTitle } from "./browsePage";
+import { SyllabusViewMenu } from "./SyllabusViewMenu";
+import { useGalleryLayout, type GalleryLayout } from "./galleryLayout";
+import { GalleryViewportProvider } from "./galleryVisibility";
 
 setDefaultOptions({
   weekStartsOn: 1,
 });
 
+const READING_SCHEDULE_LAYOUT_KEY = "reading-schedule";
+
 function ReadingScheduleHeader({
-  density,
-  onCycleDensity,
+  layout,
+  onLayoutChange,
 }: {
-  density: ItemDensity;
-  onCycleDensity: () => void;
+  layout: GalleryLayout;
+  onLayoutChange: (layout: GalleryLayout) => void;
 }) {
-  const cycleTitle = densityCycleTitle(density);
   return (
     <div
       className={twMerge(
@@ -62,18 +63,13 @@ function ReadingScheduleHeader({
             {getString("view-tab-reading-schedule")}
           </div>
           <div className="inline-flex items-center gap-2.5 shrink grow-0">
-            <div
-              className="grow-0 shrink-0 flex items-center cursor-pointer"
-              title={cycleTitle}
-              aria-label={cycleTitle}
-              onClick={onCycleDensity}
-            >
-              <DensityIcon
-                density={density}
-                className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-              />
-            </div>
-            <ReadingScheduleSettingsMenu />
+            <SyllabusViewMenu
+              showLayout
+              layout={layout}
+              onLayoutChange={onLayoutChange}
+              showCheckboxes={false}
+              showScheduleCollection
+            />
           </div>
         </div>
       </div>
@@ -82,7 +78,12 @@ function ReadingScheduleHeader({
 }
 
 export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
-  const [density, , cycleDensity] = useZoteroItemDensity();
+  const [density] = useZoteroItemDensity();
+  const [layout, setLayout] = useGalleryLayout(
+    READING_SCHEDULE_LAYOUT_KEY,
+    "card",
+  );
+  const pageRef = useRef<HTMLDivElement>(null);
 
   const allSyllabi = useSyllabi();
   const syllabi = useMemo(
@@ -133,10 +134,7 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
         data-item-density={density}
         dir={getUiDir()}
       >
-        <ReadingScheduleHeader
-          density={density}
-          onCycleDensity={cycleDensity}
-        />
+        <ReadingScheduleHeader layout={layout} onLayoutChange={setLayout} />
         <div className="container-padded py-12">
           <div className="text-center text-secondary">
             <div
@@ -178,33 +176,30 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
 
   return (
     <div
+      ref={pageRef}
       className={twMerge(
         "syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background",
         `density-${density}`,
+        layout === "magazine" && "syllabus-magazine-page",
       )}
       data-item-density={density}
       dir={getUiDir()}
     >
       <div className="pb-12">
-        <ReadingScheduleHeader
-          density={density}
-          onCycleDensity={cycleDensity}
-        />
+        <ReadingScheduleHeader layout={layout} onLayoutChange={setLayout} />
 
-        <PinnedSection
-          density={density}
-          showLibraryName={showLibrarySource}
-          pinnedItems={pinnedItems}
-          nextUp={nextUp}
-          onChanged={reload}
-        />
+        <GalleryViewportProvider rootRef={pageRef}>
+          <PinnedSection
+            density={density}
+            layout={layout}
+            showLibraryName={showLibrarySource}
+            pinnedItems={pinnedItems}
+            nextUp={nextUp}
+            onChanged={reload}
+            showUnpinCheckboxes
+          />
 
-        {sortedWeeks.length > 0 ? (
-          <>
-            <p className="container-padded text-secondary text-lg">
-              {getString("schedule-empty-desc")}
-            </p>
-
+          {sortedWeeks.length > 0 ? (
             <div className={twMerge("flex flex-col gap-8 mt-8")}>
               {sortedWeeks.map((weekStartKey) => {
                 const weekData = readingsByWeek.get(weekStartKey)!;
@@ -254,6 +249,7 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
                                     key={`${classReading.collectionId}-${classReading.classNumber}`}
                                     classReading={classReading}
                                     density={density}
+                                    layout={layout}
                                     showLibraryName={showLibrarySource}
                                     onCollectionClick={() =>
                                       handleCollectionClick(
@@ -278,12 +274,12 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
                 );
               })}
             </div>
-          </>
-        ) : (
-          <p className="container-padded text-secondary text-lg mt-4">
-            {getString("schedule-empty-desc")}
-          </p>
-        )}
+          ) : (
+            <p className="container-padded text-secondary text-lg mt-4">
+              {getString("schedule-empty-desc")}
+            </p>
+          )}
+        </GalleryViewportProvider>
       </div>
     </div>
   );

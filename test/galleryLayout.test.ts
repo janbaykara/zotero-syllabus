@@ -69,8 +69,8 @@ describe("gallery defaults", function () {
     }
   });
 
-  it("orders magazine before card", function () {
-    assert.deepEqual([...GALLERY_LAYOUT_MODES], ["cover", "magazine", "card"]);
+  it("orders layouts card → cover → magazine", function () {
+    assert.deepEqual([...GALLERY_LAYOUT_MODES], ["card", "cover", "magazine"]);
   });
 
   it("coerces unknown layouts to cover", function () {

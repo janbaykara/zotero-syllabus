@@ -133,6 +133,12 @@ import {
   getItemReadStatusName,
   getReadStatusMetadata,
 } from "../zotero-reading-list/compat";
+import {
+  ReadingDoneCheckbox,
+  ReadingPriorityBadge,
+  readingChromeEqual,
+  type ReadingTileChrome,
+} from "./readingAssignmentChrome";
 
 export type GalleryPageProps = {
   viewKey: string;
@@ -1349,6 +1355,12 @@ function galleryGroupByOptions(): GallerySegmentOption<GalleryGroupBy>[] {
 function galleryLayoutOptions(): GallerySegmentOption<GalleryLayout>[] {
   return [
     {
+      mode: "card",
+      label: getString("gallery-layout-card"),
+      title: getString("gallery-layout-card-title"),
+      Icon: LayoutList,
+    },
+    {
       mode: "cover",
       label: getString("gallery-layout-cover"),
       title: getString("gallery-layout-cover-title"),
@@ -1359,12 +1371,6 @@ function galleryLayoutOptions(): GallerySegmentOption<GalleryLayout>[] {
       label: getString("gallery-layout-magazine"),
       title: getString("gallery-layout-magazine-title"),
       Icon: Newspaper,
-    },
-    {
-      mode: "card",
-      label: getString("gallery-layout-card"),
-      title: getString("gallery-layout-card-title"),
-      Icon: LayoutList,
     },
   ];
 }
@@ -1743,6 +1749,7 @@ type GalleryTileProps = {
   item: Zotero.Item;
   selected: boolean;
   interactive?: boolean;
+  chrome?: ReadingTileChrome | null;
   onClick: (item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) => void;
   onDoubleClick: (item: Zotero.Item) => void;
   onContextMenu: (
@@ -1755,6 +1762,7 @@ export const GalleryTile = memo(function GalleryTile({
   item,
   selected,
   interactive = true,
+  chrome,
   onClick,
   onDoubleClick,
   onContextMenu,
@@ -1803,6 +1811,13 @@ export const GalleryTile = memo(function GalleryTile({
     };
   }, [visible, item]);
 
+  const instruction = chrome?.assignment?.classInstruction?.trim() || "";
+  const priorityId =
+    chrome?.showPriority === false
+      ? ""
+      : chrome?.assignment?.priority || "";
+  const done = chrome?.readerMode && chrome.assignment?.status === "done";
+
   return (
     <div
       ref={tileRef}
@@ -1810,8 +1825,9 @@ export const GalleryTile = memo(function GalleryTile({
       tabIndex={interactive ? -1 : undefined}
       data-item-id={item.id}
       className={twMerge(
-        "syllabus-gallery-tile group min-w-0 select-none",
+        "syllabus-gallery-tile group min-w-0 select-none relative",
         interactive && "cursor-pointer outline-none",
+        done && "opacity-40",
       )}
       title={title}
       onClick={interactive ? (e) => onClick(item, e) : undefined}
@@ -1820,8 +1836,38 @@ export const GalleryTile = memo(function GalleryTile({
     >
       <GalleryCover item={item} selected={selected} visible={visible} />
       <div className="syllabus-gallery-meta min-w-0 px-0.5">
-        <div className="text-sm font-medium text-primary leading-snug line-clamp-2">
-          {title}
+        {chrome?.contextLabel ? (
+          <div className="text-xs text-secondary truncate mb-0.5">
+            {chrome.contextLabel}
+          </div>
+        ) : null}
+        {priorityId ? (
+          <div className="mb-0.5 min-w-0">
+            <ReadingPriorityBadge
+              collectionId={chrome?.collectionId ?? 0}
+              priorityId={priorityId}
+              className="min-w-0 truncate"
+            />
+          </div>
+        ) : null}
+        <div
+          className={twMerge(
+            "min-w-0",
+            chrome?.readerMode && "flex flex-row items-start gap-1.5",
+          )}
+        >
+          {chrome?.readerMode ? (
+            <ReadingDoneCheckbox
+              item={item}
+              collectionId={chrome.collectionId}
+              assignment={chrome.assignment}
+              onReaderCheck={chrome.onReaderCheck}
+              className="mt-0.5 in-[.print]:hidden"
+            />
+          ) : null}
+          <div className="text-sm font-medium text-primary leading-snug line-clamp-2 min-w-0">
+            {title}
+          </div>
         </div>
         {hostname ? (
           <div className="syllabus-gallery-hostrow">
@@ -1841,6 +1887,11 @@ export const GalleryTile = memo(function GalleryTile({
         ) : creator ? (
           <div className="text-xs text-secondary truncate mt-0.5">
             {creator}
+          </div>
+        ) : null}
+        {instruction ? (
+          <div className="syllabus-gallery-instruction text-xs text-secondary mt-0.5 line-clamp-2 whitespace-pre-wrap">
+            {instruction}
           </div>
         ) : null}
         {progress ? (
@@ -1880,6 +1931,7 @@ function areGalleryTilePropsEqual(
     prev.item.dateModified === next.item.dateModified &&
     prev.selected === next.selected &&
     prev.interactive === next.interactive &&
+    readingChromeEqual(prev.chrome, next.chrome) &&
     prev.onClick === next.onClick &&
     prev.onDoubleClick === next.onDoubleClick &&
     prev.onContextMenu === next.onContextMenu

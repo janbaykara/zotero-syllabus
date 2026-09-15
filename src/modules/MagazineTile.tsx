@@ -30,6 +30,12 @@ import { useNearViewport } from "./galleryVisibility";
 import { GalleryCover } from "./GalleryCover";
 import type { MagazineSectionTemplate } from "./magazineDesks";
 import { assignMagazineRoles, type MagazineTileRole } from "./magazineLayout";
+import {
+  ReadingDoneCheckbox,
+  ReadingPriorityBadge,
+  readingChromeEqual,
+  type ReadingTileChrome,
+} from "./readingAssignmentChrome";
 
 export type MagazineTileClick = (
   item: Zotero.Item,
@@ -55,6 +61,7 @@ export type MagazineTileProps = {
   onContextMenu: MagazineTileClick;
   /** Shelf tiles are height-capped; skip highlights there. */
   showHighlights?: boolean;
+  chrome?: ReadingTileChrome | null;
 };
 
 export const MagazineTile = memo(function MagazineTile({
@@ -65,6 +72,7 @@ export const MagazineTile = memo(function MagazineTile({
   onDoubleClick,
   onContextMenu,
   showHighlights = true,
+  chrome,
 }: MagazineTileProps) {
   const tileRef = useRef<HTMLDivElement>(null);
   const visible = useNearViewport(tileRef);
@@ -152,6 +160,12 @@ export const MagazineTile = memo(function MagazineTile({
 
   const hasImage = cover.kind === "image";
   const fallbackMeta = [publication, date].filter(Boolean).join(" · ");
+  const instruction = chrome?.assignment?.classInstruction?.trim() || "";
+  const priorityId =
+    chrome?.showPriority === false
+      ? ""
+      : chrome?.assignment?.priority || "";
+  const done = chrome?.readerMode && chrome.assignment?.status === "done";
 
   let coverNode = null;
   if (useGalleryCover) {
@@ -196,9 +210,10 @@ export const MagazineTile = memo(function MagazineTile({
       data-item-id={item.id}
       data-role={role}
       className={twMerge(
-        "syllabus-magazine-tile group min-w-0 cursor-pointer outline-none select-none",
+        "syllabus-magazine-tile group min-w-0 cursor-pointer outline-none select-none relative",
         selected && "is-selected",
         playable && "is-playable",
+        done && "opacity-40",
       )}
       title={title}
       onClick={(e) => onClick(item, e)}
@@ -207,16 +222,46 @@ export const MagazineTile = memo(function MagazineTile({
     >
       {coverNode}
       <div className="syllabus-magazine-body">
+        {chrome?.contextLabel ? (
+          <div className="syllabus-magazine-context">{chrome.contextLabel}</div>
+        ) : null}
+        {priorityId ? (
+          <div className="syllabus-magazine-assignment-row">
+            <ReadingPriorityBadge
+              collectionId={chrome?.collectionId ?? 0}
+              priorityId={priorityId}
+            />
+          </div>
+        ) : null}
         {publication ? (
           <div className="syllabus-magazine-kicker">{publication}</div>
         ) : null}
-        <div className="syllabus-magazine-title">{title}</div>
+        <div
+          className={twMerge(
+            "syllabus-magazine-title-row",
+            chrome?.readerMode && "has-checkbox",
+          )}
+        >
+          {chrome?.readerMode ? (
+            <ReadingDoneCheckbox
+              item={item}
+              collectionId={chrome.collectionId}
+              assignment={chrome.assignment}
+              onReaderCheck={chrome.onReaderCheck}
+              className="syllabus-magazine-title-checkbox in-[.print]:hidden"
+            />
+          ) : null}
+          <div className="syllabus-magazine-title">{title}</div>
+        </div>
         {creator ? (
           <div className="syllabus-magazine-byline">{creator}</div>
         ) : null}
+        {instruction ? (
+          <div className="syllabus-magazine-instruction">{instruction}</div>
+        ) : null}
         {blurb ? (
           <div className="syllabus-magazine-abstract">{blurb}</div>
-        ) : fallbackMeta ? (
+        ) : !instruction && fallbackMeta ? (
           <div className="syllabus-magazine-meta">{fallbackMeta}</div>
         ) : null}
         {highlights.length > 0 ? (
@@ -262,7 +307,8 @@ function areMagazineTilePropsEqual(
     prev.onClick === next.onClick &&
     prev.onDoubleClick === next.onDoubleClick &&
     prev.onContextMenu === next.onContextMenu &&
-    prev.showHighlights === next.showHighlights
+    prev.showHighlights === next.showHighlights &&
+    readingChromeEqual(prev.chrome, next.chrome)
   );
 }
 
@@ -286,6 +332,7 @@ export function MagazineGrid({
   onClick,
   onDoubleClick,
   onContextMenu,
+  chromeByItemId,
 }: {
   items: Zotero.Item[];
   keyPrefix: string;
@@ -295,6 +342,7 @@ export function MagazineGrid({
   onClick: MagazineTileClick;
   onDoubleClick: (item: Zotero.Item) => void;
   onContextMenu: MagazineTileClick;
+  chromeByItemId?: ReadonlyMap<number, ReadingTileChrome> | null;
 }) {
   const sorted = sortItems(uniqueItems(items), sortBy);
   const roles = assignMagazineRoles(
@@ -316,6 +364,7 @@ export function MagazineGrid({
           onClick={onClick}
           onDoubleClick={onDoubleClick}
           onContextMenu={onContextMenu}
+          chrome={chromeByItemId?.get(item.id)}
         />
       ))}
     </div>

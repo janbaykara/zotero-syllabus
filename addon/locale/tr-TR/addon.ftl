@@ -416,6 +416,10 @@ pinned-unpin-note-message =
 pinned-unpin-keep = Keep note
 pinned-unpin-delete = Delete note
 pinned-unpin-cancel = Cancel
+pinned-done-unpin-title = Unpin this item?
+pinned-done-unpin-message = Remove this item from Pinned?
+pinned-done-unpin-syllabus-title = Unpin this syllabus?
+pinned-done-unpin-syllabus-message = Remove this syllabus from Pinned?
 
 # Columns
 column-reading-instructions = Okuma yönergeleri

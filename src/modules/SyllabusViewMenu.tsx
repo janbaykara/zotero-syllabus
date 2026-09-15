@@ -1,15 +1,26 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
-import { Maximize2, MoreHorizontal, Rows2, Rows3 } from "lucide-preact";
-import { getString } from "../utils/locale";
+import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import {
-  ITEM_DENSITY_CYCLE,
+  Image,
+  LayoutList,
+  Maximize2,
+  MoreHorizontal,
+  Newspaper,
+  Rows2,
+  Rows3,
+} from "lucide-preact";
+import { getString } from "../utils/locale";
+import { confirmPrompt } from "../utils/window";
+import {
+  ITEM_DENSITIES,
   useZoteroItemDensity,
   type ItemDensity,
 } from "./react-zotero-sync/itemDensity";
 import { useZoteroReaderMode } from "./react-zotero-sync/readerMode";
+import { useReadingScheduleCollectionPref } from "./react-zotero-sync/readingScheduleCollectionPref";
 import { densityLabel } from "./browsePage";
+import type { GalleryLayout } from "./galleryLayout";
 import type { FluentMessageId } from "../../typings/i10n";
 
 const DENSITY_ICONS: Record<
@@ -27,11 +38,80 @@ const DENSITY_TITLE_IDS: Record<ItemDensity, FluentMessageId> = {
   expanded: "page-density-expanded",
 };
 
-export function SyllabusViewMenu() {
+const LAYOUT_OPTIONS: {
+  mode: GalleryLayout;
+  labelKey: FluentMessageId;
+  titleKey: FluentMessageId;
+  Icon: typeof Image;
+}[] = [
+  {
+    mode: "card",
+    labelKey: "gallery-layout-card",
+    titleKey: "gallery-layout-card-title",
+    Icon: LayoutList,
+  },
+  {
+    mode: "cover",
+    labelKey: "gallery-layout-cover",
+    titleKey: "gallery-layout-cover-title",
+    Icon: Image,
+  },
+  {
+    mode: "magazine",
+    labelKey: "gallery-layout-magazine",
+    titleKey: "gallery-layout-magazine-title",
+    Icon: Newspaper,
+  },
+];
+
+function confirmReadingScheduleCollectionToggle(enable: boolean): boolean {
+  if (enable) {
+    return confirmPrompt(
+      getString("enable-reading-schedule-collection-title"),
+      getString("enable-reading-schedule-collection-message"),
+    );
+  }
+  return confirmPrompt(
+    getString("disable-reading-schedule-collection-title"),
+    getString("disable-reading-schedule-collection-message"),
+  );
+}
+
+export function SyllabusViewMenu({
+  showLayout = false,
+  layout = "card",
+  onLayoutChange,
+  showCheckboxes = true,
+  showScheduleCollection = false,
+}: {
+  /** Card / Cover / Magazine — Reading Schedule and locked syllabus. */
+  showLayout?: boolean;
+  layout?: GalleryLayout;
+  onLayoutChange?: (layout: GalleryLayout) => void;
+  showCheckboxes?: boolean;
+  /** Library “Reading Schedule” collection toggle (schedule page only). */
+  showScheduleCollection?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const [density, setDensity] = useZoteroItemDensity();
   const [readerMode, setReaderMode] = useZoteroReaderMode();
+  const [generateCollection, setGenerateCollection] =
+    useReadingScheduleCollectionPref();
+  const showDensity = !showLayout || layout === "card";
+
+  const handleGenerateCollectionChange = useCallback(
+    (checked: boolean) => {
+      if (checked === generateCollection) {
+        return;
+      }
+      if (!confirmReadingScheduleCollectionToggle(checked)) {
+        return;
+      }
+      setGenerateCollection(checked);
+    },
+    [generateCollection, setGenerateCollection],
+  );
 
   useEffect(() => {
     if (!open) {
@@ -82,56 +162,117 @@ export function SyllabusViewMenu() {
           data-tour="syllabus-view-settings"
         >
           <div className="syllabus-gallery-toolbar">
-            <div className="syllabus-gallery-toolbar-cluster">
-              <div className="syllabus-gallery-toolbar-heading">
-                <span className="syllabus-gallery-groupby-label">
-                  {getString("settings-density")}
-                </span>
-              </div>
-              <div
-                role="radiogroup"
-                aria-label={getString("settings-density")}
-                className="syllabus-gallery-groupby"
-              >
-                {ITEM_DENSITY_CYCLE.map((mode) => {
-                  const Icon = DENSITY_ICONS[mode];
-                  return (
+            {showLayout ? (
+              <div className="syllabus-gallery-toolbar-cluster">
+                <div className="syllabus-gallery-toolbar-heading">
+                  <span className="syllabus-gallery-groupby-label">
+                    {getString("gallery-menu-view")}
+                  </span>
+                </div>
+                <div
+                  role="radiogroup"
+                  aria-label={getString("gallery-menu-view")}
+                  className="syllabus-gallery-groupby"
+                >
+                  {LAYOUT_OPTIONS.map(({ mode, labelKey, titleKey, Icon }) => (
                     <button
                       key={mode}
                       type="button"
                       role="radio"
-                      aria-checked={density === mode}
-                      title={getString(DENSITY_TITLE_IDS[mode])}
+                      aria-checked={layout === mode}
+                      title={getString(titleKey)}
                       className="syllabus-gallery-groupby-btn"
-                      onClick={() => setDensity(mode)}
+                      onClick={() => onLayoutChange?.(mode)}
                     >
                       <Icon size={12} strokeWidth={2} aria-hidden="true" />
-                      {densityLabel(mode)}
+                      {getString(labelKey)}
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
-            </div>
-            <div className="syllabus-gallery-toolbar-cluster">
-              <label
-                className="flex items-center gap-2.5 cursor-pointer text-sm"
-                title={
-                  readerMode
-                    ? getString("page-reader-disable")
-                    : getString("page-reader-enable")
-                }
-              >
-                <input
-                  type="checkbox"
-                  checked={readerMode}
-                  onChange={(e) => setReaderMode(e.currentTarget.checked)}
-                  className="w-4 h-4 cursor-pointer accent-accent-green! shrink-0"
-                />
-                <span className="font-medium leading-snug">
-                  {getString("page-view-checkboxes")}
-                </span>
-              </label>
-            </div>
+            ) : null}
+            {showDensity ? (
+              <div className="syllabus-gallery-toolbar-cluster">
+                <div className="syllabus-gallery-toolbar-heading">
+                  <span className="syllabus-gallery-groupby-label">
+                    {getString("settings-density")}
+                  </span>
+                </div>
+                <div
+                  role="radiogroup"
+                  aria-label={getString("settings-density")}
+                  className="syllabus-gallery-groupby"
+                >
+                  {ITEM_DENSITIES.map((mode) => {
+                    const Icon = DENSITY_ICONS[mode];
+                    return (
+                      <button
+                        key={mode}
+                        type="button"
+                        role="radio"
+                        aria-checked={density === mode}
+                        title={getString(DENSITY_TITLE_IDS[mode])}
+                        className="syllabus-gallery-groupby-btn"
+                        onClick={() => setDensity(mode)}
+                      >
+                        <Icon size={12} strokeWidth={2} aria-hidden="true" />
+                        {densityLabel(mode)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+            {showCheckboxes ? (
+              <div className="syllabus-gallery-toolbar-cluster">
+                <label
+                  className="flex items-center gap-2.5 cursor-pointer text-sm"
+                  title={
+                    readerMode
+                      ? getString("page-reader-disable")
+                      : getString("page-reader-enable")
+                  }
+                >
+                  <input
+                    type="checkbox"
+                    checked={readerMode}
+                    onChange={(e) => setReaderMode(e.currentTarget.checked)}
+                    className="w-4 h-4 cursor-pointer accent-accent-green! shrink-0"
+                  />
+                  <span className="font-medium leading-snug">
+                    {getString("page-view-checkboxes")}
+                  </span>
+                </label>
+              </div>
+            ) : null}
+            {showScheduleCollection ? (
+              <div className="syllabus-gallery-toolbar-cluster">
+                <div className="syllabus-gallery-toolbar-heading">
+                  <span className="syllabus-gallery-groupby-label">
+                    {getString("schedule-settings-library")}
+                  </span>
+                </div>
+                <p className="text-secondary text-xs leading-snug m-0 max-w-72">
+                  {getString("schedule-settings-desc")}
+                </p>
+                <label
+                  className="flex items-start gap-2.5 cursor-pointer text-sm"
+                  data-tour="reading-schedule-generate-collection"
+                >
+                  <input
+                    type="checkbox"
+                    checked={generateCollection}
+                    onChange={(e) =>
+                      handleGenerateCollectionChange(e.currentTarget.checked)
+                    }
+                    className="w-4 h-4 mt-0.5 cursor-pointer accent-accent-green! shrink-0"
+                  />
+                  <span className="font-medium leading-snug">
+                    {getString("schedule-settings-checkbox")}
+                  </span>
+                </label>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}

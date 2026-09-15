@@ -4,7 +4,6 @@ import { useMemo } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
 import { ChevronLeft } from "lucide-preact";
 import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
-import { SyllabusItemCard } from "./SyllabusItemCard";
 import {
   useZoteroItemDensity,
   type ItemDensity,
@@ -24,7 +23,8 @@ import { TabManager } from "../utils/tabManager";
 import { classByNumber } from "../utils/schemas";
 import { getString, getUiDir } from "../utils/locale";
 import { ProseText } from "./ProseText";
-import { openZoteroItemContextMenu } from "../utils/itemContextMenu";
+import type { GalleryLayout } from "./galleryLayout";
+import { ReadingItemsLayout, readingContextLabel } from "./readingItemsLayout";
 
 export type ClassReading = {
   collectionId: number;
@@ -119,6 +119,7 @@ export function selectItemInCollection(
 export function ClassReadingBlock({
   classReading,
   density,
+  layout = "card",
   showCollectionLink = true,
   showLibraryName = false,
   compactHeading = false,
@@ -127,6 +128,7 @@ export function ClassReadingBlock({
 }: {
   classReading: ClassReading;
   density: ItemDensity;
+  layout?: GalleryLayout;
   showCollectionLink?: boolean;
   showLibraryName?: boolean;
   compactHeading?: boolean;
@@ -217,38 +219,38 @@ export function ClassReadingBlock({
           </div>
         )}
       </div>
-      <div
-        className={twMerge(
-          "space-y-2",
-          density !== "expanded" ? "space-y-2" : "space-y-4",
-        )}
-      >
-        {classReading.items.map(({ item, assignment }) => {
-          if (!assignment.id) return null;
-          const priority = assignment.priority || "";
-          const uniqueKey = `${item.id}-assignment-${assignment.id}`;
-          return (
-            <SyllabusItemCard
-              key={uniqueKey}
-              item={item}
-              collectionId={classReading.collectionId}
-              classNumber={classReading.classNumber}
-              assignment={assignment}
-              slim={
-                density !== "expanded" || !priority || priority === "optional"
-              }
-              density={density}
-              isLocked={true}
-              onClick={onItemClick}
-              onContextMenu={(item, e) => {
-                void openZoteroItemContextMenu(item, e);
-              }}
-              readerMode
-              className={onItemClick ? "cursor-pointer" : undefined}
-            />
-          );
-        })}
-      </div>
+      <ReadingItemsLayout
+        layout={layout}
+        density={density}
+        readerMode
+        isLocked
+        template="strip"
+        showPriority={false}
+        rows={classReading.items
+          .filter(({ assignment }) => !!assignment.id)
+          .map(({ item, assignment }) => ({
+            key: `${item.id}-assignment-${assignment.id}`,
+            item,
+            collectionId: classReading.collectionId,
+            assignment,
+            classNumber: classReading.classNumber,
+            slim:
+              density !== "expanded" ||
+              !assignment.priority ||
+              assignment.priority === "optional",
+            contextLabel: readingContextLabel({
+              collectionId: classReading.collectionId,
+              classNumber: classReading.classNumber,
+              classTitle: classReading.classTitle,
+              collectionName: classReading.collectionName,
+            }),
+          }))}
+        onItemClick={
+          onItemClick
+            ? (item) => onItemClick(item)
+            : undefined
+        }
+      />
     </div>
   );
 }

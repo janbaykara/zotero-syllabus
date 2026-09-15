@@ -53,6 +53,28 @@ describe("collectionPrefs", function () {
       assert.equal(removed, 0);
     });
 
+    it("can preserve named reading-schedule and syllabus layout keys", function () {
+      const { next, removed } = pruneStaleCollectionIdMap(
+        {
+          "12": "cover",
+          "reading-schedule": "magazine",
+          "syllabus:12": "card",
+          "99": "cover",
+        },
+        [12],
+        {
+          preserve: (key) =>
+            key === "reading-schedule" || key.startsWith("syllabus:"),
+        },
+      );
+      assert.deepEqual(next, {
+        "12": "cover",
+        "reading-schedule": "magazine",
+        "syllabus:12": "card",
+      });
+      assert.equal(removed, 1);
+    });
+
     it("keeps an empty map unchanged", function () {
       const { next, removed } = pruneStaleCollectionIdMap({}, [1]);
       assert.deepEqual(next, {});

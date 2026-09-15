@@ -77,6 +77,9 @@ import {
 } from "./readingScheduleCollection";
 import { useSyllabusDocumentGeneration } from "./react-zotero-sync/collectionDocument";
 import { SyllabusViewMenu } from "./SyllabusViewMenu";
+import { useGalleryLayout } from "./galleryLayout";
+import { GalleryViewportProvider } from "./galleryVisibility";
+import { ReadingItemsLayout } from "./readingItemsLayout";
 import { TextInput } from "./syllabusInputs";
 import { SyllabusItemCard } from "./SyllabusItemCard";
 import { bibliographyToHtml } from "./Bibliography";
@@ -520,6 +523,12 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
   // Reader mode state - reactive to preference changes
   const [readerMode] = useZoteroReaderMode();
+
+  const [browseLayout, setBrowseLayout] = useGalleryLayout(
+    `syllabus:${collectionId}`,
+    "card",
+  );
+  const effectiveLayout = isLocked ? browseLayout : "card";
 
   // Settings view state
   const [showSettings, setShowSettings] = useState(false);
@@ -2089,6 +2098,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         className={twMerge(
           "syllabus-page overflow-y-auto overflow-x-hidden h-full in-[.print]:scheme-light relative focus:outline-none",
           `density-${density}`,
+          isLocked && effectiveLayout === "magazine" && "syllabus-magazine-page",
           fileDrop.isDraggingFile && "file-drag-over",
         )}
         data-item-density={density}
@@ -2158,7 +2168,11 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   </div>
                 </div>
                 <div className="inline-flex items-center gap-2.5 shrink grow-0">
-                  <SyllabusViewMenu />
+                  <SyllabusViewMenu
+                    showLayout={isLocked}
+                    layout={browseLayout}
+                    onLayoutChange={setBrowseLayout}
+                  />
                   {!isLocked && (
                     <div
                       className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
@@ -2282,6 +2296,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
             density={density}
           />
 
+          <GalleryViewportProvider rootRef={syllabusPageRef}>
           <div
             className={twMerge(
               "syllabus-class-groups flex flex-col mb-12",
@@ -2315,6 +2330,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                 density={density}
                 readerMode={readerMode}
                 isLocked={isLocked}
+                layout={effectiveLayout}
                 onResetSortOrder={() => setItemOrderVersion((v) => v + 1)}
                 selectedIdentifiers={selectedIdentifiers}
                 onIdentifierClick={handleIdentifierClick}
@@ -2603,7 +2619,25 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                         }
                   }
                 >
-                  {furtherReadingItems.map(({ item, assignment }) => {
+                  {isLocked && effectiveLayout !== "card" ? (
+                    <ReadingItemsLayout
+                      layout={effectiveLayout}
+                      density={density}
+                      readerMode={readerMode}
+                      isLocked
+                      template="strip"
+                      rows={furtherReadingItems.map(({ item, assignment }) => ({
+                        key: `further-${item.id}-${assignment?.id || "item"}`,
+                        item,
+                        collectionId,
+                        assignment: assignment || {
+                          id: `further-${item.id}`,
+                        },
+                        slim: true,
+                      }))}
+                    />
+                  ) : (
+                    furtherReadingItems.map(({ item, assignment }) => {
                     const cardIdentifier = assignment?.id
                       ? `assignment:${assignment.id}`
                       : `item:${item.id}`;
@@ -2685,7 +2719,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                         )}
                       />
                     );
-                  })}
+                  })
+                  )}
                 </div>
               </div>
             )}
@@ -2705,6 +2740,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
               </div>
             )}
           </div>
+          </GalleryViewportProvider>
         </div>
       </div>
     </>

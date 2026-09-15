@@ -17,8 +17,15 @@ export type SpecialGalleryRowType = (typeof SPECIAL_GALLERY_ROW_TYPES)[number];
 /** Pref keys for saved searches, per-library specials, Recently Read, and the Feeds root (`S123`, `T1`, `Y1`, `F1`, …). Individual RSS feeds use Zotero’s `L{libraryID}` tree id and are kept via live library enumeration. */
 export const SPECIAL_VIEW_PREF_KEY = /^[SDURPTFY]\d+$/;
 
+/** Named gallery/syllabus view keys that are not collection ids (must survive pref pruning). */
+export const NAMED_VIEW_PREF_KEY = /^(reading-schedule|syllabus:\d+)$/;
+
 export function isSpecialViewPrefKey(key: string): boolean {
   return SPECIAL_VIEW_PREF_KEY.test(key);
+}
+
+export function isNamedViewPrefKey(key: string): boolean {
+  return NAMED_VIEW_PREF_KEY.test(key);
 }
 
 export type CollectionTreeRowLike = {

@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
-import { useEffect, useMemo, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
 import { ChevronLeft, ChevronRight } from "lucide-preact";
 import { SyllabusManager } from "./syllabus";
@@ -25,6 +25,10 @@ import {
   filterSyllabiByLibrary,
 } from "./classReadings";
 import { getString, getUiDir } from "../utils/locale";
+import { useGalleryLayout } from "./galleryLayout";
+import { GalleryViewportProvider } from "./galleryVisibility";
+
+const READING_SCHEDULE_LAYOUT_KEY = "reading-schedule";
 
 function pickInitialDateKey(
   availableKeys: string[],
@@ -53,6 +57,8 @@ export function ReadingScheduleDayPage({
   collectionId: number;
 }) {
   const [density] = useZoteroItemDensity();
+  const [layout] = useGalleryLayout(READING_SCHEDULE_LAYOUT_KEY, "card");
+  const pageRef = useRef<HTMLDivElement>(null);
   const allSyllabi = useSyllabi();
   const context = useMemo(
     () => getReadingScheduleCollectionContext(collectionId),
@@ -156,7 +162,13 @@ export function ReadingScheduleDayPage({
 
   return (
     <div
-      className="syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background"
+      ref={pageRef}
+      className={twMerge(
+        "syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background",
+        `density-${density}`,
+        layout === "magazine" && "syllabus-magazine-page",
+      )}
+      data-item-density={density}
       dir={getUiDir()}
     >
       <div className="pb-12">
@@ -207,21 +219,24 @@ export function ReadingScheduleDayPage({
                 : getString("schedule-window-empty")}
             </p>
           ) : (
-            <div className="space-y-8 mt-8">
-              {classReadings.map((classReading) => (
-                <ClassReadingBlock
-                  key={`${classReading.collectionId}-${classReading.classNumber}`}
-                  classReading={classReading}
-                  density={density}
-                  onCollectionClick={() =>
-                    selectCollectionInLibrary(classReading.collectionId)
-                  }
-                  onItemClick={(item) =>
-                    selectItemInCollection(item, classReading.collectionId)
-                  }
-                />
-              ))}
-            </div>
+            <GalleryViewportProvider rootRef={pageRef}>
+              <div className="space-y-8 mt-8">
+                {classReadings.map((classReading) => (
+                  <ClassReadingBlock
+                    key={`${classReading.collectionId}-${classReading.classNumber}`}
+                    classReading={classReading}
+                    density={density}
+                    layout={layout}
+                    onCollectionClick={() =>
+                      selectCollectionInLibrary(classReading.collectionId)
+                    }
+                    onItemClick={(item) =>
+                      selectItemInCollection(item, classReading.collectionId)
+                    }
+                  />
+                ))}
+              </div>
+            </GalleryViewportProvider>
           )}
         </div>
       </div>

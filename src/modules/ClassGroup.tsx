@@ -18,6 +18,9 @@ import { isZotero8OrLater } from "../utils/zotero";
 import { TextInput, ReadingDateInput } from "./syllabusInputs";
 import { SyllabusItemCard } from "./SyllabusItemCard";
 import { isOsFileDrag } from "../utils/nativeFileDrop";
+import type { GalleryLayout } from "./galleryLayout";
+import { ReadingItemsLayout } from "./readingItemsLayout";
+import { selectItemInCollection } from "./ClassReadingBlock";
 
 export type ItemDropIndicator = {
   classNumber: number | null;
@@ -56,6 +59,8 @@ export interface ClassGroupComponentProps {
   density?: ItemDensity;
   readerMode?: boolean;
   isLocked?: boolean;
+  /** Browse layout when locked (Card / Cover / Magazine). Ignored while editing. */
+  layout?: GalleryLayout;
   onResetSortOrder?: () => void;
   selectedIdentifiers?: Set<string>;
   onIdentifierClick?: (
@@ -103,6 +108,7 @@ export function ClassGroupComponent({
   density = "expanded",
   readerMode = false,
   isLocked = false,
+  layout = "card",
   onResetSortOrder,
   selectedIdentifiers = new Set(),
   onIdentifierClick,
@@ -588,6 +594,28 @@ export function ClassGroupComponent({
                 },
               })}
             </div>
+          ) : itemAssignments.length > 0 &&
+            isLocked &&
+            layout !== "card" ? (
+            <ReadingItemsLayout
+              layout={layout}
+              density={density}
+              readerMode={readerMode}
+              isLocked
+              template="strip"
+              rows={itemAssignments
+                .filter(({ assignment }) => !!assignment.id)
+                .map(({ item, assignment }) => ({
+                  key: `${item.id}-assignment-${assignment.id}`,
+                  item,
+                  collectionId,
+                  assignment,
+                  classNumber,
+                }))}
+              onItemClick={(item) =>
+                selectItemInCollection(item, collectionId)
+              }
+            />
           ) : itemAssignments.length > 0 ? (
             itemAssignments.map(({ item, assignment }) => {
               // Require assignment ID - if missing, skip this assignment

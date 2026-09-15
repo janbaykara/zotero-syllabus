@@ -1,7 +1,7 @@
 import * as z from "zod";
 import { config } from "../../package.json";
 import { getCachedPref, zoteroCache } from "./cache";
-import { isSpecialViewPrefKey } from "./viewScope";
+import { isNamedViewPrefKey, isSpecialViewPrefKey } from "./viewScope";
 import { getAllCollections, zoteroLibraryID } from "./zotero";
 
 const CollectionPrefMapSchema = z.record(z.string(), z.unknown());
@@ -147,9 +147,10 @@ export function pruneStaleCollectionPrefs(
     const map = getCachedPref(prefKey, CollectionPrefMapSchema) || {};
     const pruned = pruneStaleCollectionIdMap(map, live, {
       preserve: (key) =>
-        keepUnenumeratedSearches &&
-        key.startsWith("S") &&
-        isSpecialViewPrefKey(key),
+        isNamedViewPrefKey(key) ||
+        (keepUnenumeratedSearches &&
+          key.startsWith("S") &&
+          isSpecialViewPrefKey(key)),
     });
     if (pruned.removed === 0) {
       continue;

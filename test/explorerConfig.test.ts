@@ -213,10 +213,15 @@ describe("explorer shelves", function () {
     );
     assert.deepEqual(layoutsForExplorerShelf("watch-now"), ["cover"]);
     assert.deepEqual(layoutsForExplorerShelf("listen-now"), ["cover"]);
-    assert.deepEqual(layoutsForExplorerShelf("recently-read"), [
+    assert.deepEqual(layoutsForExplorerShelf("pinned"), [
+      "card",
       "cover",
       "magazine",
+    ]);
+    assert.deepEqual(layoutsForExplorerShelf("recently-read"), [
       "card",
+      "cover",
+      "magazine",
     ]);
   });
 

@@ -13,7 +13,7 @@ import {
 import { getCachedCollectionById, getCachedItem } from "../utils/cache";
 import { compareLocale, getString } from "../utils/locale";
 import { getItemTitle, isSyllabusMemberItem, readItemNote } from "../utils/items";
-import { confirmExPrompt } from "../utils/window";
+import { confirmExPrompt, confirmPrompt } from "../utils/window";
 import {
   getCollectionDocument,
   getSyllabusNoteId,
@@ -404,6 +404,44 @@ export async function unpinItemWithNotePrompt(
     }
   }
   await setPinnedItem(item, false);
+  return true;
+}
+
+/**
+ * Confirm unpin (checkbox “done” on the Reading Schedule pinned shelf).
+ * Intention notes still get the keep/delete prompt.
+ */
+export async function confirmUnpinPinnedItem(
+  item: Zotero.Item,
+): Promise<boolean> {
+  if (findIntentionNote(item)) {
+    return unpinItemWithNotePrompt(item);
+  }
+  if (
+    !confirmPrompt(
+      getString("pinned-done-unpin-title"),
+      getString("pinned-done-unpin-message"),
+    )
+  ) {
+    return false;
+  }
+  await setPinnedItem(item, false);
+  return true;
+}
+
+/** Confirm unpin for a class-based (syllabus) pin via checkbox. */
+export async function confirmUnpinPinnedSyllabus(
+  collection: Zotero.Collection,
+): Promise<boolean> {
+  if (
+    !confirmPrompt(
+      getString("pinned-done-unpin-syllabus-title"),
+      getString("pinned-done-unpin-syllabus-message"),
+    )
+  ) {
+    return false;
+  }
+  await setPinnedSyllabus(collection, false);
   return true;
 }
 

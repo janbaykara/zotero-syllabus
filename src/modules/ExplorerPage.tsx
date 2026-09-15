@@ -21,8 +21,11 @@ import {
   Highlighter,
   Image,
   LayoutList,
+  Maximize2,
   Newspaper,
   Pin,
+  Rows2,
+  Rows3,
   Rss,
   Sparkles,
   Video,
@@ -56,8 +59,9 @@ import type { FluentMessageId } from "../../typings/i10n";
 import type { GalleryLayout } from "./galleryLayout";
 import { GalleryTile } from "./GalleryPage";
 import { MagazineGrid, type MagazineTileClick } from "./MagazineTile";
-import { SlimSyllabusItemCard, useItemIdentifierSelection } from "./browsePage";
+import { SlimSyllabusItemCard, useItemIdentifierSelection, densityLabel } from "./browsePage";
 import {
+  ITEM_DENSITIES,
   useZoteroItemDensity,
   type ItemDensity,
 } from "./react-zotero-sync/itemDensity";
@@ -221,9 +225,24 @@ const LAYOUT_TITLE_IDS: Record<GalleryLayout, FluentMessageId> = {
 };
 
 const LAYOUT_ICONS: Record<GalleryLayout, typeof Image> = {
+  card: LayoutList,
   cover: Image,
   magazine: Newspaper,
-  card: LayoutList,
+};
+
+const DENSITY_ICONS: Record<
+  ItemDensity,
+  typeof Rows3 | typeof Rows2 | typeof Maximize2
+> = {
+  row: Rows3,
+  standard: Rows2,
+  expanded: Maximize2,
+};
+
+const DENSITY_TITLE_IDS: Record<ItemDensity, FluentMessageId> = {
+  row: "page-density-row",
+  standard: "page-density-standard",
+  expanded: "page-density-expanded",
 };
 
 function shelfShowsLayout(shelf: ExplorerShelf): boolean {
@@ -508,6 +527,8 @@ function ExplorerShelfSettingsMenu({
   const rootRef = useRef<HTMLDivElement>(null);
   const popoverStyle = useExplorerPopover(open, setOpen, rootRef);
   const titleId = `syllabus-explorer-shelf-settings-${shelf.id}`;
+  const [density, setDensity] = useZoteroItemDensity();
+  const showDensity = shelf.type === "pinned" && shelf.layout === "card";
 
   return (
     <div
@@ -563,6 +584,40 @@ function ExplorerShelfSettingsMenu({
               })}
             </div>
           </div>
+          {showDensity ? (
+            <div className="syllabus-explorer-shelf-setting">
+              <div className="syllabus-explorer-configure-heading">
+                {getString("settings-density")}
+              </div>
+              <div
+                role="radiogroup"
+                aria-label={getString("settings-density")}
+                className="syllabus-explorer-layout-toggle"
+              >
+                {ITEM_DENSITIES.map((mode) => {
+                  const Icon = DENSITY_ICONS[mode];
+                  const selected = density === mode;
+                  return (
+                    <button
+                      key={mode}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      title={getString(DENSITY_TITLE_IDS[mode])}
+                      className={twMerge(
+                        "syllabus-explorer-layout-btn",
+                        selected && "is-selected",
+                      )}
+                      onClick={() => setDensity(mode)}
+                    >
+                      <Icon size={12} strokeWidth={2} aria-hidden="true" />
+                      {densityLabel(mode)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
           {shelf.type === "recent-annotations" ? (
             <div className="syllabus-explorer-shelf-setting">
               <div className="syllabus-explorer-configure-heading">
@@ -1457,6 +1512,7 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                   ) : shelf.type === "pinned" ? (
                     <PinnedSection
                       density={density}
+                      layout={explorerShelfLayout(shelf)}
                       showLibraryName={false}
                       pinnedItems={pinnedItems}
                       nextUp={nextUp}

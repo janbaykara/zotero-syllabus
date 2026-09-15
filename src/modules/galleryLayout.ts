@@ -4,7 +4,7 @@ import { config } from "../../package.json";
 import { getCachedPref, zoteroCache } from "../utils/cache";
 import { getPref, getPrefKey, setPref } from "../utils/prefs";
 
-export const GALLERY_LAYOUT_MODES = ["cover", "magazine", "card"] as const;
+export const GALLERY_LAYOUT_MODES = ["card", "cover", "magazine"] as const;
 
 export type GalleryLayout = (typeof GALLERY_LAYOUT_MODES)[number];
 
@@ -35,11 +35,14 @@ export function setDefaultGalleryLayout(mode: GalleryLayout): void {
   zoteroCache.invalidatePref(getPrefKey("defaultGalleryLayout"));
 }
 
-export function getGalleryLayout(viewKey: string | number): GalleryLayout {
+export function getGalleryLayout(
+  viewKey: string | number,
+  unsetDefault?: GalleryLayout,
+): GalleryLayout {
   const map = getCachedPref(prefKey(), GalleryLayoutMapSchema) || {};
   const key = String(viewKey);
   if (!(key in map)) {
-    return getDefaultGalleryLayout();
+    return unsetDefault ?? getDefaultGalleryLayout();
   }
   return coerceGalleryLayout(map[key]);
 }
@@ -65,13 +68,14 @@ export function saveGalleryLayoutGlobally(
 
 export function useGalleryLayout(
   viewKey: string | number,
+  unsetDefault?: GalleryLayout,
 ): [
   GalleryLayout,
   (mode: GalleryLayout) => void,
   GalleryGlobalSetting<GalleryLayout>,
 ] {
   const [mode, setMode] = useState<GalleryLayout>(() =>
-    getGalleryLayout(viewKey),
+    getGalleryLayout(viewKey, unsetDefault),
   );
   const [globalValue, setGlobalValue] = useState<GalleryLayout>(() =>
     getDefaultGalleryLayout(),
@@ -79,7 +83,7 @@ export function useGalleryLayout(
 
   useEffect(() => {
     const refresh = () => {
-      setMode(getGalleryLayout(viewKey));
+      setMode(getGalleryLayout(viewKey, unsetDefault));
       setGlobalValue(getDefaultGalleryLayout());
     };
     refresh();
@@ -96,7 +100,7 @@ export function useGalleryLayout(
         Zotero.Prefs.unregisterObserver(observerID);
       }
     };
-  }, [viewKey]);
+  }, [viewKey, unsetDefault]);
 
   const setLayout = useCallback(
     (next: GalleryLayout) => {
