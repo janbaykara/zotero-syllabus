@@ -485,6 +485,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           current &&
           indicator &&
           current.classNumber === indicator.classNumber &&
+          current.zone === indicator.zone &&
           current.identifier === indicator.identifier &&
           current.edge === indicator.edge
         ) {
@@ -1024,6 +1025,10 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   );
 
   const furtherReadingItems = useMemo(() => {
+    // Manual drag order (synced on the syllabus note) wins over the local sort pref.
+    if (SyllabusManager.getFurtherReadingOrder(collectionId).length > 0) {
+      return unsortedFurtherReading;
+    }
     const byId = new Map(
       unsortedFurtherReading.map((entry) => [entry.item.id, entry]),
     );
@@ -1033,7 +1038,15 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     )
       .map((item) => byId.get(item.id))
       .filter((entry): entry is FurtherReadingEntry => entry != null);
-  }, [unsortedFurtherReading, furtherReadingSortBy]);
+  }, [
+    unsortedFurtherReading,
+    furtherReadingSortBy,
+    collectionId,
+    itemOrderVersion,
+  ]);
+
+  const furtherReadingHasManualOrder =
+    SyllabusManager.getFurtherReadingOrder(collectionId).length > 0;
 
   const navigableEntries = useMemo(
     () => getNavigableSyllabusEntries(visibleClassGroups, furtherReadingItems),
@@ -1145,6 +1158,75 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     );
   }, [selectedIdentifiers]);
 
+  const persistFurtherReadingOrder = useCallback(
+    async (
+      draggedItemIds: number[],
+      options: {
+        targetItemId?: number;
+        insertBefore?: boolean;
+        removeOnly?: boolean;
+      } = {},
+    ) => {
+      const draggedKeys = draggedItemIds
+        .map((id) => getCachedItem(id)?.key)
+        .filter((key): key is string => Boolean(key));
+      if (draggedKeys.length === 0) {
+        return;
+      }
+
+      let currentOrder = SyllabusManager.getFurtherReadingOrder(collectionId);
+
+      if (options.removeOnly) {
+        if (currentOrder.length === 0) {
+          return;
+        }
+        const next = currentOrder.filter((key) => !draggedKeys.includes(key));
+        if (next.length !== currentOrder.length) {
+          await SyllabusManager.setFurtherReadingOrder(
+            collectionId,
+            next,
+            "page",
+          );
+        }
+        return;
+      }
+
+      if (currentOrder.length === 0) {
+        currentOrder = furtherReadingItems.map((entry) => entry.item.key);
+      }
+
+      const newOrder = currentOrder.filter(
+        (key) => !draggedKeys.includes(key),
+      );
+      const keysToInsert = draggedKeys.filter(
+        (key, index) => draggedKeys.indexOf(key) === index,
+      );
+
+      if (options.targetItemId !== undefined) {
+        const targetKey = getCachedItem(options.targetItemId)?.key;
+        const targetIndex = targetKey ? newOrder.indexOf(targetKey) : -1;
+        if (targetIndex !== -1) {
+          if (options.insertBefore) {
+            newOrder.splice(targetIndex, 0, ...keysToInsert);
+          } else {
+            newOrder.splice(targetIndex + 1, 0, ...keysToInsert);
+          }
+        } else {
+          newOrder.push(...keysToInsert);
+        }
+      } else {
+        newOrder.push(...keysToInsert);
+      }
+
+      await SyllabusManager.setFurtherReadingOrder(
+        collectionId,
+        newOrder,
+        "page",
+      );
+    },
+    [collectionId, furtherReadingItems],
+  );
+
   const handleDrop = async (
     e: JSX.TargetedDragEvent<HTMLElement>,
     targetClassNumber: number | null,
@@ -1177,6 +1259,29 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
     const targetClassNumberValue =
       targetClassNumber === null ? undefined : targetClassNumber;
+
+    const fromFurtherReading =
+      e.dataTransfer.getData(
+        "application/x-syllabus-source-further-reading",
+      ) === "1";
+
+    // Reorder within Further reading (no assignment mutation)
+    if (
+      fromFurtherReading &&
+      targetClassNumber === null &&
+      targetItemId !== undefined
+    ) {
+      const itemIds = itemIdStr
+        .split(",")
+        .map((id) => parseInt(id, 10))
+        .filter((id) => !isNaN(id));
+      await persistFurtherReadingOrder(itemIds, {
+        targetItemId,
+        insertBefore,
+      });
+      setItemOrderVersion((v) => v + 1);
+      return;
+    }
 
     // Check for multiple assignment IDs (multi-select drag)
     const multipleAssignmentIdsStr = e.dataTransfer.getData(
@@ -1391,6 +1496,15 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
             newOrder,
             "page",
           );
+        }
+
+        if (fromFurtherReading && targetClassNumberValue !== undefined) {
+          await persistFurtherReadingOrder(itemIds, { removeOnly: true });
+        } else if (!fromFurtherReading && targetClassNumber === null) {
+          await persistFurtherReadingOrder(itemIds, {
+            targetItemId,
+            insertBefore,
+          });
         }
 
         setItemOrderVersion((v) => v + 1);
@@ -1665,6 +1779,19 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         { classNumber: targetClassNumberValue },
         "page",
       );
+
+      if (fromFurtherReading && targetClassNumberValue !== undefined) {
+        await persistFurtherReadingOrder([draggedItem.id], {
+          removeOnly: true,
+        });
+        setItemOrderVersion((v) => v + 1);
+      } else if (!fromFurtherReading && targetClassNumber === null) {
+        await persistFurtherReadingOrder([draggedItem.id], {
+          targetItemId,
+          insertBefore,
+        });
+        setItemOrderVersion((v) => v + 1);
+      }
     } else {
       // Dragging from "further reading" with NO assignment: create a new assignment (COPY)
       // Only create if we're dropping to a specific class (targetClassNumberValue is defined)
@@ -1720,11 +1847,23 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           }
         }
 
+        if (fromFurtherReading) {
+          await persistFurtherReadingOrder([draggedItem.id], {
+            removeOnly: true,
+          });
+          setItemOrderVersion((v) => v + 1);
+        }
+
         ztoolkit.log("Assignment created successfully");
       } else {
-        // Dropping to "further reading" with no assignment - nothing to do
+        // Dropping to "further reading" with no assignment - reorder/append only
+        await persistFurtherReadingOrder([draggedItem.id], {
+          targetItemId,
+          insertBefore,
+        });
+        setItemOrderVersion((v) => v + 1);
         ztoolkit.log(
-          "Dropping unassigned item to further reading - no action needed",
+          "Dropping unassigned item to further reading - updated order",
         );
       }
     }
@@ -2374,34 +2513,62 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                 >
                   {getString("further-reading-heading")}
                   {!isLocked && (
-                    <label className="ml-auto shrink-0 inline-flex items-center gap-1.5 in-[.print]:hidden font-normal text-sm text-secondary">
-                      <ArrowUpDown
-                        size={12}
-                        strokeWidth={2}
-                        aria-hidden="true"
-                      />
-                      <span>{getString("sort-label")}</span>
-                      <select
-                        value={furtherReadingSortBy}
-                        onChange={(e) =>
-                          setFurtherReadingSortBy(
-                            e.currentTarget.value as FurtherReadingSortBy,
-                          )
-                        }
-                        aria-label={getString("further-reading-sort-aria")}
-                        className="text-sm text-primary bg-background border border-quinary rounded px-1.5 py-0.5 cursor-pointer"
-                      >
-                        <option value="title">
-                          {getString("sort-by-title")}
-                        </option>
-                        <option value="creator">
-                          {getString("sort-by-creator")}
-                        </option>
-                        <option value="date">
-                          {getString("sort-by-date")}
-                        </option>
-                      </select>
-                    </label>
+                    <div className="ml-auto shrink-0 inline-flex items-center gap-1.5 in-[.print]:hidden font-normal text-sm text-secondary">
+                      {furtherReadingHasManualOrder && (
+                        <button
+                          type="button"
+                          className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
+                          onClick={async () => {
+                            await SyllabusManager.setFurtherReadingOrder(
+                              collectionId,
+                              [],
+                              "page",
+                            );
+                            setItemOrderVersion((v) => v + 1);
+                          }}
+                          title={getString("class-reset-sort")}
+                          aria-label={getString("class-reset-sort")}
+                        >
+                          <div className="text-lg text-center">⇅</div>
+                        </button>
+                      )}
+                      <label className="inline-flex items-center gap-1.5">
+                        <ArrowUpDown
+                          size={12}
+                          strokeWidth={2}
+                          aria-hidden="true"
+                        />
+                        <span>{getString("sort-label")}</span>
+                        <select
+                          value={furtherReadingSortBy}
+                          onChange={async (e) => {
+                            const next = e.currentTarget
+                              .value as FurtherReadingSortBy;
+                            if (furtherReadingHasManualOrder) {
+                              await SyllabusManager.setFurtherReadingOrder(
+                                collectionId,
+                                [],
+                                "page",
+                              );
+                              setItemOrderVersion((v) => v + 1);
+                            }
+                            setFurtherReadingSortBy(next);
+                          }}
+                          aria-label={getString("further-reading-sort-aria")}
+                          className="text-sm text-primary bg-background border border-quinary rounded px-1.5 py-0.5 cursor-pointer"
+                        >
+                          <option value="title">
+                            {getString("sort-by-title")}
+                          </option>
+                          <option value="creator">
+                            {getString("sort-by-creator")}
+                          </option>
+                          <option value="date">
+                            {getString("sort-by-date")}
+                          </option>
+                        </select>
+                      </label>
+                    </div>
                   )}
                 </div>
                 {density === "expanded" && (
@@ -2410,37 +2577,189 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   </p>
                 )}
                 <div
-                  className={density !== "expanded" ? "space-y-2" : "space-y-4"}
-                  onDrop={(e) => handleDrop(e, null)}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
+                  className={twMerge(
+                    "syllabus-class-items box-border! rounded-lg",
+                    density !== "expanded"
+                      ? "space-y-2 p-1 -m-1"
+                      : "space-y-4 p-2 -m-2",
+                    "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:outline-accent-blue! data-[dropzone-active='true']:text-accent-blue! transition-all duration-200 outline-transparent outline-2! outline-dashed!",
+                  )}
+                  onDrop={
+                    isLocked
+                      ? undefined
+                      : (e) => {
+                          if (
+                            dropIndicator?.zone === "further-reading" &&
+                            dropIndicator.identifier
+                          ) {
+                            const targetById = furtherReadingItems.find(
+                              ({ item, assignment }) => {
+                                const id = assignment?.id
+                                  ? `assignment:${assignment.id}`
+                                  : `item:${item.id}`;
+                                return id === dropIndicator.identifier;
+                              },
+                            );
+                            if (targetById) {
+                              void handleDrop(
+                                e,
+                                null,
+                                targetById.item.id,
+                                dropIndicator.edge === "before",
+                              );
+                              return;
+                            }
+                          }
+                          void handleDrop(e, null);
+                        }
+                  }
+                  onDragOver={
+                    isLocked
+                      ? undefined
+                      : (e) => {
+                          handleDragOver(e);
+                          if (isOsFileDrag(e.dataTransfer)) {
+                            return;
+                          }
+                          const cardsRoot = e.currentTarget;
+                          const cards = Array.from(
+                            cardsRoot.querySelectorAll(
+                              ":scope > .syllabus-item-card",
+                            ),
+                          ) as HTMLElement[];
+                          if (cards.length === 0) {
+                            handleDropIndicatorChange(null);
+                            return;
+                          }
+                          for (const card of cards) {
+                            const identifier = card.dataset.syllabusIdentifier;
+                            if (!identifier) {
+                              continue;
+                            }
+                            const rect = card.getBoundingClientRect();
+                            if (e.clientY < rect.top + rect.height / 2) {
+                              handleDropIndicatorChange({
+                                classNumber: null,
+                                zone: "further-reading",
+                                identifier,
+                                edge: "before",
+                              });
+                              return;
+                            }
+                          }
+                          const last = cards[cards.length - 1];
+                          const identifier = last.dataset.syllabusIdentifier;
+                          if (identifier) {
+                            handleDropIndicatorChange({
+                              classNumber: null,
+                              zone: "further-reading",
+                              identifier,
+                              edge: "after",
+                            });
+                          }
+                        }
+                  }
+                  onDragLeave={
+                    isLocked
+                      ? undefined
+                      : (e) => {
+                          handleDragLeave(e);
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const { clientX: x, clientY: y } = e;
+                          if (
+                            x < rect.left ||
+                            x > rect.right ||
+                            y < rect.top ||
+                            y > rect.bottom
+                          ) {
+                            handleDropIndicatorChange(null);
+                          }
+                        }
+                  }
                 >
-                  {furtherReadingItems.map(({ item, assignment }) => (
-                    <SyllabusItemCard
-                      key={item.id}
-                      item={item}
-                      collectionId={collectionId}
-                      classNumber={undefined}
-                      assignment={assignment}
-                      slim={true}
-                      density={density}
-                      readerMode={readerMode}
-                      isLocked={isLocked}
-                      selectedIdentifiers={selectedIdentifiers}
-                      onIdentifierClick={handleIdentifierClick}
-                      onContextMenu={handleContextMenu}
-                      selectedForDrag={selectedForDrag}
-                      onPriorityChange={handlePriorityChange}
-                      onDelete={handleDelete}
-                      onDuplicate={handleDuplicate}
-                      isZoteroSelected={
-                        selectedItemIds?.includes(item.id) || false
-                      }
-                      isIdentifierSelected={selectedIdentifiers.has(
-                        `item:${item.id}`,
-                      )}
-                    />
-                  ))}
+                  {furtherReadingItems.map(({ item, assignment }) => {
+                    const cardIdentifier = assignment?.id
+                      ? `assignment:${assignment.id}`
+                      : `item:${item.id}`;
+                    const visibleEdge =
+                      dropIndicator?.zone === "further-reading" &&
+                      dropIndicator.identifier === cardIdentifier
+                        ? dropIndicator.edge
+                        : null;
+                    return (
+                      <SyllabusItemCard
+                        key={item.id}
+                        item={item}
+                        collectionId={collectionId}
+                        classNumber={undefined}
+                        assignment={assignment}
+                        slim={true}
+                        density={density}
+                        readerMode={readerMode}
+                        isLocked={isLocked}
+                        isFurtherReading={true}
+                        selectedIdentifiers={selectedIdentifiers}
+                        onIdentifierClick={handleIdentifierClick}
+                        onContextMenu={handleContextMenu}
+                        selectedForDrag={selectedForDrag}
+                        onPriorityChange={handlePriorityChange}
+                        onDelete={handleDelete}
+                        onDuplicate={handleDuplicate}
+                        onDrop={(e, insertBefore) =>
+                          handleDrop(e, null, item.id, insertBefore)
+                        }
+                        onDragOver={(e) => {
+                          handleDragOver(e);
+                          if (isOsFileDrag(e.dataTransfer)) {
+                            return;
+                          }
+                          const root = e.currentTarget.parentElement;
+                          if (!(root instanceof HTMLElement)) {
+                            return;
+                          }
+                          const cards = Array.from(
+                            root.querySelectorAll(
+                              ":scope > .syllabus-item-card",
+                            ),
+                          ) as HTMLElement[];
+                          for (const card of cards) {
+                            const identifier =
+                              card.dataset.syllabusIdentifier;
+                            if (!identifier) {
+                              continue;
+                            }
+                            const rect = card.getBoundingClientRect();
+                            if (e.clientY < rect.top + rect.height / 2) {
+                              handleDropIndicatorChange({
+                                classNumber: null,
+                                zone: "further-reading",
+                                identifier,
+                                edge: "before",
+                              });
+                              return;
+                            }
+                          }
+                          const last = cards[cards.length - 1];
+                          const identifier = last?.dataset.syllabusIdentifier;
+                          if (identifier) {
+                            handleDropIndicatorChange({
+                              classNumber: null,
+                              zone: "further-reading",
+                              identifier,
+                              edge: "after",
+                            });
+                          }
+                        }}
+                        dropEdge={visibleEdge}
+                        isZoteroSelected={
+                          selectedItemIds?.includes(item.id) || false
+                        }
+                        isIdentifierSelected={selectedIdentifiers.has(
+                          cardIdentifier,
+                        )}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             )}

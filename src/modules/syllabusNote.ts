@@ -345,7 +345,51 @@ export function remapDocumentItemKeys(
   }
 
   const { itemIndex: _itemIndex, ...rest } = document;
-  return { ...rest, items: itemsOut };
+  const furtherReadingOrder = remapOrderKeys(
+    document.furtherReadingOrder,
+    (oldKey) => {
+      const meta = itemIndex[oldKey];
+      const indexed = identifiersFromFields({
+        doi: meta?.doi,
+        isbn: meta?.isbn,
+        pmid: meta?.pmid,
+        pmcid: meta?.pmcid,
+        arxiv: meta?.arxiv,
+      });
+      const title = meta?.title?.trim().toLowerCase();
+      return (
+        (indexed.doi && byDoi.get(indexed.doi)) ||
+        (indexed.isbn && byIsbn.get(indexed.isbn)) ||
+        (indexed.pmid && byPmid.get(indexed.pmid)) ||
+        (indexed.pmcid && byPmcid.get(indexed.pmcid)) ||
+        (indexed.arxiv && byArxiv.get(indexed.arxiv)) ||
+        (existingKeys.has(oldKey) ? oldKey : undefined) ||
+        (title && byTitle.get(title)) ||
+        oldKey
+      );
+    },
+  );
+  return { ...rest, items: itemsOut, furtherReadingOrder };
+}
+
+function remapOrderKeys(
+  order: string[] | undefined,
+  mapKey: (key: string) => string | undefined,
+): string[] | undefined {
+  if (!order?.length) {
+    return undefined;
+  }
+  const seen = new Set<string>();
+  const next: string[] = [];
+  for (const key of order) {
+    const mapped = mapKey(key) || key;
+    if (!mapped || seen.has(mapped)) {
+      continue;
+    }
+    seen.add(mapped);
+    next.push(mapped);
+  }
+  return next.length > 0 ? next : undefined;
 }
 
 const REPLACED_ITEM_PREDICATE = "dc:replaces";
@@ -369,7 +413,16 @@ export function remapDocumentItemKeysByMap(
     }
     remaps.push([oldKey, newKey]);
   }
-  if (!remaps.length) {
+
+  const furtherReadingOrder = remapOrderKeys(
+    document.furtherReadingOrder,
+    (oldKey) => keyMap[oldKey] || oldKey,
+  );
+  const orderChanged =
+    JSON.stringify(furtherReadingOrder || []) !==
+    JSON.stringify(document.furtherReadingOrder || []);
+
+  if (!remaps.length && !orderChanged) {
     return document;
   }
 
@@ -392,9 +445,12 @@ export function remapDocumentItemKeysByMap(
     }
   }
 
-  return itemIndex
-    ? { ...document, items: itemsOut, itemIndex }
-    : { ...document, items: itemsOut };
+  const next: CollectionSyllabusDocument = {
+    ...document,
+    items: itemsOut,
+    furtherReadingOrder,
+  };
+  return itemIndex ? { ...next, itemIndex } : next;
 }
 
 /**
@@ -407,11 +463,18 @@ export function omitDocumentItemKeys(
 ): CollectionSyllabusDocument {
   const gone = new Set<string>();
   for (const key of keys) {
-    if (key && key in (document.items || {})) {
+    if (key) {
       gone.add(key);
     }
   }
   if (!gone.size) {
+    return document;
+  }
+  const itemsHadMatch = [...gone].some((key) => key in (document.items || {}));
+  const orderHadMatch = document.furtherReadingOrder?.some((key) =>
+    gone.has(key),
+  );
+  if (!itemsHadMatch && !orderHadMatch) {
     return document;
   }
   const items: CollectionSyllabusDocument["items"] = {
@@ -426,7 +489,18 @@ export function omitDocumentItemKeys(
       delete itemIndex[key];
     }
   }
-  return itemIndex ? { ...document, items, itemIndex } : { ...document, items };
+  const furtherReadingOrder = document.furtherReadingOrder?.filter(
+    (key) => !gone.has(key),
+  );
+  const next: CollectionSyllabusDocument = {
+    ...document,
+    items,
+    furtherReadingOrder:
+      furtherReadingOrder && furtherReadingOrder.length > 0
+        ? furtherReadingOrder
+        : undefined,
+  };
+  return itemIndex ? { ...next, itemIndex } : next;
 }
 
 export function missingDocumentItemKeys(

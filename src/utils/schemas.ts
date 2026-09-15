@@ -449,6 +449,11 @@ const CollectionSyllabusDocumentV2Schema = SettingsSyllabusMetadataSchema.omit({
     .default(COLLECTION_SYLLABUS_DOCUMENT_VERSION),
   classes: transformClasses(StoredClassMetadataSchema),
   classOrder: z.array(z.string()).optional(),
+  /** Manual display order for further readings (Zotero item.keys). */
+  furtherReadingOrder: z
+    .array(z.string())
+    .optional()
+    .transform((order) => (order && order.length > 0 ? order : undefined)),
   items: z
     .record(z.string(), z.array(ItemSyllabusAssignmentEntity.latestSchema))
     .default(() => ({})),

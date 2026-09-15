@@ -76,6 +76,25 @@ function requestTourCloseSettings(win: Window = Zotero.getMainWindow()) {
   win?.dispatchEvent(new win.CustomEvent(TOUR_EVENT_CLOSE_SETTINGS));
 }
 
+/** Prev/Next plus Exit so the user can leave the tour from any mid step. */
+function exitableMidStepButtons(
+  win: Window,
+  onAbort?: () => void,
+): {
+  showButtons: ("prev" | "next" | "close")[];
+  closeBtnText: string;
+  onCloseClick: () => void;
+} {
+  return {
+    showButtons: ["prev", "next", "close"],
+    closeBtnText: getString("userGuide-exit"),
+    onCloseClick: () => {
+      requestTourCloseSettings(win);
+      onAbort?.();
+    },
+  };
+}
+
 async function waitForElement(
   win: _ZoteroTypes.MainWindow,
   finder: string | (() => Element | null | undefined),
@@ -608,7 +627,10 @@ async function showOptionalFeaturesShowcase(
     title: getString("optional-features-intro-title"),
     description: getString("optional-features-intro-desc"),
     position: "center",
-    showButtons: ["prev", "next"],
+    ...exitableMidStepButtons(win, () => {
+      aborted = true;
+      clearPref("latestTourVersion");
+    }),
     showProgress: true,
   });
 
@@ -617,7 +639,10 @@ async function showOptionalFeaturesShowcase(
       title: getString(feature.titleId),
       description: guideStepDescription(feature.descId, feature.image, 320),
       position: "center",
-      showButtons: ["prev", "next"],
+      ...exitableMidStepButtons(win, () => {
+        aborted = true;
+        clearPref("latestTourVersion");
+      }),
       showProgress: true,
       onRender: ({ state }) => {
         const body = (state.controller as unknown as { _body?: HTMLElement })
@@ -634,12 +659,11 @@ async function showOptionalFeaturesShowcase(
     title: getString("optional-features-continue-title"),
     description: getString("optional-features-continue-desc"),
     position: "center",
-    showButtons: ["prev", "close"],
-    closeBtnText: getString("nav-next"),
+    ...exitableMidStepButtons(win, () => {
+      aborted = true;
+      clearPref("latestTourVersion");
+    }),
     showProgress: true,
-    onCloseClick: () => {
-      // Continue into the adaptive guide
-    },
   });
 
   await guide.show(doc);
@@ -695,7 +719,7 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
       title: getString("userGuide-collection-title"),
       description: getString("userGuide-collection-desc"),
       element: "#zotero-collections-tree",
-      showButtons: ["prev", "next"],
+      ...exitableMidStepButtons(win),
       showProgress: true,
       onBeforeRender: async () => {
         win.Zotero_Tabs?.select("zotero-pane");
@@ -712,7 +736,7 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
         300,
       ),
       element: () => findSyllabusTourToolbarTarget(win) || doc.documentElement!,
-      showButtons: ["prev", "next"],
+      ...exitableMidStepButtons(win),
       showProgress: true,
       onBeforeRender: async () => {
         win.Zotero_Tabs?.select("zotero-pane");
@@ -734,7 +758,7 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
       element: () =>
         doc.querySelector('[data-tour="syllabus-add-class"]') ||
         doc.documentElement!,
-      showButtons: ["prev", "next"],
+      ...exitableMidStepButtons(win),
       showProgress: true,
       onMask: ({ mask }) => {
         const target = doc.querySelector('[data-tour="syllabus-add-class"]');
@@ -765,7 +789,7 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
         doc.querySelector('[data-tour="syllabus-further-reading"]') ||
         doc.querySelector('[data-tour="syllabus-class-group"]') ||
         doc.documentElement!,
-      showButtons: ["prev", "next"],
+      ...exitableMidStepButtons(win),
       showProgress: true,
       onMask: ({ mask }) => {
         const target =
@@ -806,7 +830,7 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
         doc.querySelector('[data-tour="syllabus-item-pane"]') ||
         doc.querySelector("#zotero-item-pane") ||
         doc.documentElement!,
-      showButtons: ["prev", "next"],
+      ...exitableMidStepButtons(win),
       showProgress: true,
       onMask: ({ mask }) => {
         const target =
@@ -839,7 +863,7 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
         element: () =>
           doc.querySelector('[data-tour="syllabus-class-reading-date"]') ||
           doc.documentElement!,
-        showButtons: ["prev", "next"],
+        ...exitableMidStepButtons(win),
         showProgress: true,
         onMask: ({ mask }) => {
           const target = doc.querySelector(
@@ -875,7 +899,7 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
         element: () =>
           doc.querySelector("#syllabus-reading-schedule-tab-button") ||
           doc.documentElement!,
-        showButtons: ["prev", "next"],
+        ...exitableMidStepButtons(win),
         showProgress: true,
         onMask: ({ mask }) => {
           const target = doc.querySelector(
@@ -907,7 +931,7 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
         doc.querySelector('[data-tour="syllabus-class-subcollections"]') ||
         doc.querySelector('[data-tour="syllabus-settings-button"]') ||
         doc.documentElement!,
-      showButtons: ["prev", "next"],
+      ...exitableMidStepButtons(win),
       showProgress: true,
       onBeforeRender: async () => {
         win.Zotero_Tabs?.select("zotero-pane");
@@ -933,7 +957,7 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
       element: () =>
         doc.querySelector("#syllabus-reading-schedule-tab-button") ||
         doc.documentElement!,
-      showButtons: ["prev", "next"],
+      ...exitableMidStepButtons(win),
       showProgress: true,
       onMask: ({ mask }) => {
         const target = doc.querySelector(
@@ -967,7 +991,7 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
       element: () =>
         doc.querySelector("#syllabus-view-mode-explorer") ||
         doc.documentElement!,
-      showButtons: ["prev", "next"],
+      ...exitableMidStepButtons(win),
       showProgress: true,
       onBeforeRender: async () => {
         win.Zotero_Tabs?.select("zotero-pane");
@@ -1025,4 +1049,5 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
   }
 
   await guide.show(doc);
+  requestTourCloseSettings(win);
 }

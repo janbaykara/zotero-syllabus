@@ -409,6 +409,7 @@ export type FluentMessageId =
   | 'userGuide-empty-desc'
   | 'userGuide-empty-title'
   | 'userGuide-empty-tour'
+  | 'userGuide-exit'
   | 'userGuide-finish-desc'
   | 'userGuide-finish-prefs-desc'
   | 'userGuide-finish-prefs-title'

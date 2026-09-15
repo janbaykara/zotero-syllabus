@@ -63,6 +63,7 @@ userGuide-start-title = Chào mừng đến với Zotero Syllabus
 userGuide-start-desc =
     Biến bất kỳ bộ sưu tập Zotero nào thành danh sách đọc học phần — sắp xếp theo buổi học, đặt mức ưu tiên và theo dõi bài cần đọc tiếp.
 userGuide-start-close = Nhắc tôi sau
+userGuide-exit = Thoát hướng dẫn
 optional-features-intro-title = Choose your views
 optional-features-intro-desc =
     Pick which surfaces to show. You can change these anytime in Preferences. Syllabus view is recommended to get started.

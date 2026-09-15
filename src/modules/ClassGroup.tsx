@@ -21,6 +21,8 @@ import { isOsFileDrag } from "../utils/nativeFileDrop";
 
 export type ItemDropIndicator = {
   classNumber: number | null;
+  /** Distinguishes further-reading drops from a null class group. */
+  zone?: "further-reading";
   identifier: string;
   edge: "before" | "after";
 };
@@ -301,6 +303,7 @@ export function ClassGroupComponent({
   const visibleDropIndicator = (() => {
     if (
       !dropIndicator ||
+      dropIndicator.zone === "further-reading" ||
       dropIndicator.classNumber !== classNumberKey ||
       itemAssignments.length === 0
     ) {
@@ -546,6 +549,7 @@ export function ClassGroupComponent({
               : (e) => {
                   if (
                     dropIndicator &&
+                    dropIndicator.zone !== "further-reading" &&
                     dropIndicator.classNumber === classNumberKey
                   ) {
                     const target = itemAssignments.find(

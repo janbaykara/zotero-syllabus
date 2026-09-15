@@ -63,6 +63,7 @@ userGuide-start-title = Zotero Syllabus へようこそ
 userGuide-start-desc =
     任意の Zotero コレクションを授業のリーディングリストにできます。授業ごとに整理し、優先度を設定し、次に読むものを把握しましょう。
 userGuide-start-close = あとで通知
+userGuide-exit = ツアーを終了
 optional-features-intro-title = Choose your views
 optional-features-intro-desc =
     Pick which surfaces to show. You can change these anytime in Preferences. Syllabus view is recommended to get started.

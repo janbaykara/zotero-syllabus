@@ -63,6 +63,7 @@ userGuide-start-title = Selamat datang di Zotero Syllabus
 userGuide-start-desc =
     Ubah koleksi Zotero mana pun menjadi daftar bacaan mata kuliah — susun menurut kelas, tetapkan prioritas, dan lacak bacaan berikutnya.
 userGuide-start-close = Ingatkan nanti
+userGuide-exit = Keluar dari tur
 optional-features-intro-title = Choose your views
 optional-features-intro-desc =
     Pick which surfaces to show. You can change these anytime in Preferences. Syllabus view is recommended to get started.

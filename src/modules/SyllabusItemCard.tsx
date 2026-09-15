@@ -37,6 +37,7 @@ export function SyllabusItemCard({
   density = "expanded",
   readerMode = false,
   isLocked = false,
+  isFurtherReading = false,
   onDrop,
   onDragOver,
   dropEdge = null,
@@ -62,6 +63,8 @@ export function SyllabusItemCard({
   density?: ItemDensity;
   readerMode?: boolean;
   isLocked?: boolean;
+  /** True when rendered in the Further reading section (for drag reorder). */
+  isFurtherReading?: boolean;
   onDrop?: (
     e: JSX.TargetedDragEvent<HTMLElement>,
     insertBefore: boolean,
@@ -314,6 +317,11 @@ export function SyllabusItemCard({
           "application/x-syllabus-source-class",
           String(classNumber),
         );
+      } else if (isFurtherReading) {
+        e.dataTransfer.setData(
+          "application/x-syllabus-source-further-reading",
+          "1",
+        );
       }
     }
     (e.currentTarget as HTMLElement).classList.add("syllabus-item-dragging");
@@ -517,7 +525,7 @@ export function SyllabusItemCard({
         showYoutubeEmbed
           ? "flex-col"
           : density === "row"
-            ? "flex-row items-center"
+            ? "flex-row items-start"
             : "flex-row items-start justify-between",
         "bg-background-sidepane text-primary",
         density === "row" && "bg-transparent!",
@@ -603,13 +611,13 @@ export function SyllabusItemCard({
                 isLocked ? "cursor-default" : "cursor-grab",
               )
             : density === "row"
-              ? "grid w-full min-w-0 items-center gap-x-2"
+              ? "grid w-full min-w-0 items-start gap-x-2"
               : "contents"
         }
         style={
           density === "row" && !showYoutubeEmbed
             ? {
-                gridTemplateColumns: "16px minmax(0, 1fr) auto",
+                gridTemplateColumns: "16px minmax(0, 1fr)",
               }
             : undefined
         }
@@ -623,20 +631,19 @@ export function SyllabusItemCard({
           className={twMerge(
             "syllabus-item-thumbnail grow-0 shrink-0 in-[.print]:hidden",
             density === "row"
-              ? "size-4! min-w-4! max-w-4! flex items-center justify-center"
+              ? "size-4! min-w-4! max-w-4! h-[1.375rem]! max-h-[1.375rem]! flex items-center justify-center self-start"
               : density === "standard"
-                ? "size-6"
+                ? "size-6 self-center"
                 : slim
-                  ? "size-10"
-                  : "size-20",
-            "self-center",
+                  ? "size-10 self-center"
+                  : "size-20 self-center",
           )}
           data-density={density === "row" ? "row" : undefined}
           style={
             density === "row"
               ? {
                   width: 16,
-                  height: 16,
+                  height: "1.375rem",
                   minWidth: 16,
                   maxWidth: 16,
                 }
@@ -671,13 +678,174 @@ export function SyllabusItemCard({
           />
         </div>
         {density === "row" ? (
-          <div
-            className={twMerge(
-              "syllabus-item-title text-[14px] font-medium truncate min-w-0 leading-snug",
-              readerMode && assignmentStatus === "done" ? "line-through" : "",
+          <div className="syllabus-item-text grow min-w-0 flex flex-col gap-0.5">
+            <div className="flex flex-row items-baseline gap-2 min-w-0">
+              <div
+                className={twMerge(
+                  "syllabus-item-title text-[14px] font-medium truncate min-w-0 leading-snug grow",
+                  readerMode && assignmentStatus === "done"
+                    ? "line-through"
+                    : "",
+                )}
+              >
+                {title}
+              </div>
+              {(author || year) && (
+                <div className="syllabus-item-metadata text-secondary text-[13px] shrink-0 text-right flex flex-row gap-1.5 items-baseline justify-end character-separator [--character-separator:'·'] leading-snug whitespace-nowrap">
+                  {author && <span>{author}</span>}
+                  {year && <span>{year}</span>}
+                </div>
+              )}
+              {!!priority && (
+                <PriorityIcon
+                  id={priority}
+                  colors={!isIdentifierSelected}
+                  className="shrink-0 grow-0 text-[12px] leading-snug"
+                  collectionId={collectionId}
+                />
+              )}
+              {(!!viewableAttachments?.length || uniqueUrls.length > 0) && (
+                <div
+                  className="syllabus-item-actions shrink-0 inline-flex flex-row gap-1 items-center self-center in-[.print]:hidden [&_.syllabus-action-label]:hidden"
+                  draggable={false}
+                >
+                  {viewableAttachments.map((viewableAttachment) => {
+                    const getAttachmentLabel = (
+                      type:
+                        | "pdf"
+                        | "snapshot"
+                        | "epub"
+                        | "html"
+                        | "doc"
+                        | "txt"
+                        | "zip"
+                        | "file",
+                    ) => {
+                      switch (type) {
+                        case "pdf":
+                          return getString("attachment-pdf");
+                        case "snapshot":
+                          return getString("attachment-snapshot");
+                        case "epub":
+                          return getString("attachment-epub");
+                        case "html":
+                          return getString("attachment-html");
+                        case "doc":
+                          return getString("attachment-doc");
+                        case "txt":
+                          return getString("attachment-txt");
+                        case "zip":
+                          return getString("attachment-zip");
+                        case "file":
+                          return getString("attachment-file");
+                        default:
+                          return getString("attachment-view");
+                      }
+                    };
+
+                    const getAttachmentIconType = (
+                      type:
+                        | "pdf"
+                        | "snapshot"
+                        | "epub"
+                        | "html"
+                        | "doc"
+                        | "txt"
+                        | "zip"
+                        | "file",
+                    ) => {
+                      switch (type) {
+                        case "pdf":
+                          return "attachmentPDF";
+                        case "epub":
+                          return "attachmentEPUB";
+                        case "snapshot":
+                        case "html":
+                          return "attachmentSnapshot";
+                        case "doc":
+                          return "attachmentDocument";
+                        case "txt":
+                          return "attachmentText";
+                        case "zip":
+                          return "attachmentZIP";
+                        case "file":
+                          return "attachmentFile";
+                        default:
+                          return "attachmentFile";
+                      }
+                    };
+
+                    const attachmentLabel = getAttachmentLabel(
+                      viewableAttachment.type,
+                    );
+                    const iconType = getAttachmentIconType(
+                      viewableAttachment.type,
+                    );
+
+                    return (
+                      <div className="focus-states-target in-[.print]:hidden">
+                        <button
+                          className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
+                          onClick={() =>
+                            handleAttachmentClick(viewableAttachment)
+                          }
+                          title={getString("attachment-open", {
+                            args: { label: attachmentLabel },
+                          })}
+                          aria-label={getString("attachment-open", {
+                            args: { label: attachmentLabel },
+                          })}
+                        >
+                          <span
+                            className="syllabus-action-icon icon icon-css icon-attachment-type"
+                            data-item-type={iconType}
+                            aria-label={getString("attachment-open", {
+                              args: { label: attachmentLabel },
+                            })}
+                          />
+                          <span className="syllabus-action-label">
+                            {attachmentLabel}
+                          </span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                  {uniqueUrls.map((urlInfo, index) => (
+                    <div
+                      key={`url-${index}`}
+                      className="focus-states-target in-[.print]:hidden"
+                    >
+                      <button
+                        className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
+                        onClick={urlInfo.onClick}
+                        title={getString("attachment-open", {
+                          args: { label: urlInfo.label },
+                        })}
+                        aria-label={getString("attachment-open", {
+                          args: { label: urlInfo.label },
+                        })}
+                      >
+                        <span
+                          className="syllabus-action-icon icon icon-css icon-attachment-type"
+                          data-item-type="attachmentLink"
+                          aria-label={getString("attachment-open", {
+                            args: { label: urlInfo.label },
+                          })}
+                        />
+                        <span className="syllabus-action-label">
+                          {urlInfo.label}
+                        </span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {classInstruction && (
+              <div className="syllabus-item-description text-secondary text-[12px] leading-snug">
+                <ProseText text={classInstruction} />
+              </div>
             )}
-          >
-            {title}
           </div>
         ) : (
           <div
@@ -785,160 +953,6 @@ export function SyllabusItemCard({
                   </div>
                 )}
               </>
-            )}
-          </div>
-        )}
-        {density === "row" && (
-          <div className="flex flex-row items-center gap-2 shrink-0 min-w-0">
-            {(author || year) && (
-              <div className="syllabus-item-metadata text-secondary text-[13px] shrink-0 text-right flex flex-row gap-1.5 items-center justify-end character-separator [--character-separator:'·'] leading-snug whitespace-nowrap">
-                {author && <span>{author}</span>}
-                {year && <span>{year}</span>}
-              </div>
-            )}
-            {!!priority && (
-              <PriorityIcon
-                id={priority}
-                colors={!isIdentifierSelected}
-                className="shrink-0 grow-0 items-center!"
-                collectionId={collectionId}
-              />
-            )}
-            {(!!viewableAttachments?.length || uniqueUrls.length > 0) && (
-              <div
-                className="syllabus-item-actions shrink-0 inline-flex flex-row gap-1 items-center in-[.print]:hidden [&_.syllabus-action-label]:hidden"
-                draggable={false}
-              >
-                {viewableAttachments.map((viewableAttachment) => {
-                  const getAttachmentLabel = (
-                    type:
-                      | "pdf"
-                      | "snapshot"
-                      | "epub"
-                      | "html"
-                      | "doc"
-                      | "txt"
-                      | "zip"
-                      | "file",
-                  ) => {
-                    switch (type) {
-                      case "pdf":
-                        return getString("attachment-pdf");
-                      case "snapshot":
-                        return getString("attachment-snapshot");
-                      case "epub":
-                        return getString("attachment-epub");
-                      case "html":
-                        return getString("attachment-html");
-                      case "doc":
-                        return getString("attachment-doc");
-                      case "txt":
-                        return getString("attachment-txt");
-                      case "zip":
-                        return getString("attachment-zip");
-                      case "file":
-                        return getString("attachment-file");
-                      default:
-                        return getString("attachment-view");
-                    }
-                  };
-
-                  const getAttachmentIconType = (
-                    type:
-                      | "pdf"
-                      | "snapshot"
-                      | "epub"
-                      | "html"
-                      | "doc"
-                      | "txt"
-                      | "zip"
-                      | "file",
-                  ) => {
-                    switch (type) {
-                      case "pdf":
-                        return "attachmentPDF";
-                      case "epub":
-                        return "attachmentEPUB";
-                      case "snapshot":
-                      case "html":
-                        return "attachmentSnapshot";
-                      case "doc":
-                        return "attachmentDocument";
-                      case "txt":
-                        return "attachmentText";
-                      case "zip":
-                        return "attachmentZIP";
-                      case "file":
-                        return "attachmentFile";
-                      default:
-                        return "attachmentFile";
-                    }
-                  };
-
-                  const attachmentLabel = getAttachmentLabel(
-                    viewableAttachment.type,
-                  );
-                  const iconType = getAttachmentIconType(
-                    viewableAttachment.type,
-                  );
-
-                  return (
-                    <div className="focus-states-target in-[.print]:hidden">
-                      <button
-                        className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
-                        onClick={() =>
-                          handleAttachmentClick(viewableAttachment)
-                        }
-                        title={getString("attachment-open", {
-                          args: { label: attachmentLabel },
-                        })}
-                        aria-label={getString("attachment-open", {
-                          args: { label: attachmentLabel },
-                        })}
-                      >
-                        <span
-                          className="syllabus-action-icon icon icon-css icon-attachment-type"
-                          data-item-type={iconType}
-                          aria-label={getString("attachment-open", {
-                            args: { label: attachmentLabel },
-                          })}
-                        />
-                        <span className="syllabus-action-label">
-                          {attachmentLabel}
-                        </span>
-                      </button>
-                    </div>
-                  );
-                })}
-                {uniqueUrls.map((urlInfo, index) => (
-                  <div
-                    key={`url-${index}`}
-                    className="focus-states-target in-[.print]:hidden"
-                  >
-                    <button
-                      className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
-                      onClick={urlInfo.onClick}
-                      title={getString("attachment-open", {
-                        args: { label: urlInfo.label },
-                      })}
-                      aria-label={getString("attachment-open", {
-                        args: { label: urlInfo.label },
-                      })}
-                    >
-                      <span
-                        className="syllabus-action-icon icon icon-css icon-attachment-type"
-                        data-item-type="attachmentLink"
-                        aria-label={getString("attachment-open", {
-                          args: { label: urlInfo.label },
-                        })}
-                      />
-                      <span className="syllabus-action-label">
-                        {urlInfo.label}
-                      </span>
-                    </button>
-                  </div>
-                ))}
-              </div>
             )}
           </div>
         )}
@@ -1316,7 +1330,7 @@ function PriorityIcon({
         }}
       />
       <span
-        className="rounded-md px-1 py-0.25"
+        className="rounded-md px-1 py-0.25 whitespace-nowrap"
         style={{
           backgroundColor: colors ? priorityColor + "15" : undefined,
           color: colors ? priorityColor : undefined,

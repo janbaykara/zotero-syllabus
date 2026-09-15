@@ -180,7 +180,35 @@ function gatherFurtherReadings(
       result.push({ itemKey, assignment });
     }
   }
-  return result;
+
+  const order = document.furtherReadingOrder;
+  if (!order?.length) {
+    return result;
+  }
+
+  const byKey = new Map<string, ClassReading>();
+  for (const row of result) {
+    if (!byKey.has(row.itemKey)) {
+      byKey.set(row.itemKey, row);
+    }
+  }
+  const used = new Set<string>();
+  const ordered: ClassReading[] = [];
+  for (const key of order) {
+    const row = byKey.get(key);
+    if (!row || used.has(key)) {
+      continue;
+    }
+    ordered.push(row);
+    used.add(key);
+  }
+  for (const row of result) {
+    if (!used.has(row.itemKey)) {
+      ordered.push(row);
+      used.add(row.itemKey);
+    }
+  }
+  return ordered;
 }
 
 function priorityMeta(

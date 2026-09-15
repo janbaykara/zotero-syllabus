@@ -56,6 +56,33 @@ function sortFurtherReadingEntries(
     .filter((entry): entry is FurtherReadingEntry => entry != null);
 }
 
+/** Apply stored item.key order; unknown keys are skipped, leftovers keep prior order. */
+export function applyFurtherReadingOrder<T extends { item: Zotero.Item }>(
+  entries: T[],
+  orderKeys: string[],
+): T[] {
+  if (!orderKeys.length || entries.length === 0) {
+    return entries;
+  }
+  const byKey = new Map(entries.map((entry) => [entry.item.key, entry]));
+  const ordered: T[] = [];
+  const used = new Set<string>();
+  for (const key of orderKeys) {
+    const entry = byKey.get(key);
+    if (!entry || used.has(key)) {
+      continue;
+    }
+    ordered.push(entry);
+    used.add(key);
+  }
+  for (const entry of entries) {
+    if (!used.has(entry.item.key)) {
+      ordered.push(entry);
+    }
+  }
+  return ordered;
+}
+
 /** No assigned readings and no class description. */
 export function isEmptyClassGroup(group: SyllabusClassGroup): boolean {
   const description = (group.syllabusMetadata?.description || "").trim();
@@ -165,7 +192,10 @@ export function useSyllabusClassGroups(
           itemAssignments: itemsByClass.get(classNumber) || [],
         }),
       ),
-      furtherReadingItems: sortFurtherReadingEntries(furtherReading),
+      furtherReadingItems: applyFurtherReadingOrder(
+        sortFurtherReadingEntries(furtherReading),
+        SyllabusManager.getFurtherReadingOrder(collectionId),
+      ),
     };
   }, [syllabusItems, collectionId, syllabusMetadata, itemOrderVersion]);
 }

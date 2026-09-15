@@ -19,6 +19,39 @@ export const PREFS_KEYS: (keyof PluginPrefsMap)[] = [
   "customIcons",
 ];
 
+/**
+ * Defaults from `addon/prefs.js`. Keep in sync when adding prefs.
+ * Used after reset so UI/code never see `undefined` (clearing a user value
+ * does not always surface the Mozilla default branch to `Zotero.Prefs.get`).
+ */
+export const PLUGIN_PREF_DEFAULTS: {
+  [K in keyof PluginPrefsMap]: PluginPrefsMap[K];
+} = {
+  showBibliography: false,
+  defaultItemDensity: "standard",
+  readerMode: false,
+  shouldColourSyllabusRows: false,
+  debugMode: false,
+  wpm: 220,
+  enableSyllabus: true,
+  enableGallery: false,
+  enableExplorer: false,
+  enableReadingSchedule: false,
+  optionalFeaturesPromptDone: false,
+  latestTourVersion: 0,
+  latestGalleryTourVersion: 0,
+  defaultGalleryLayout: "cover",
+  defaultGallerySort: "auto",
+  defaultGalleryGroupBy: "auto",
+  myAnnotationsLayout: "grid",
+  myAnnotationsSort: "lastRead",
+  myAnnotationsGroupBy: "none",
+  magazineTypeSize: "small",
+  generateReadingScheduleCollection: false,
+  readingScheduleCollectionKey: "",
+  customIcons: true,
+};
+
 const PREFS_PREFIX = config.prefsPrefix;
 
 /**
@@ -71,9 +104,9 @@ export function listPluginPrefNames(): string[] {
 }
 
 /**
- * Clear every user-set value under the plugin prefs prefix so defaults from
- * `addon/prefs.js` (and any future defaults) apply again. Does not delete
- * library data (syllabus notes, items, collections).
+ * Clear every user-set value under the plugin prefs prefix (including nested
+ * keys like `galleryLayout.<id>`), then re-apply `PLUGIN_PREF_DEFAULTS`.
+ * Does not delete library data (syllabus notes, items, collections).
  */
 export function resetAllPluginPrefs(): string[] {
   const names = listPluginPrefNames();
@@ -91,6 +124,18 @@ export function resetAllPluginPrefs(): string[] {
     }
     zoteroCache.invalidatePref(fullKey);
   }
+
+  // Explicitly write defaults: after clear, Prefs.get often returns undefined
+  // for plugin keys, and preference-bound checkboxes then persist `false`.
+  for (const key of Object.keys(PLUGIN_PREF_DEFAULTS) as (keyof PluginPrefsMap)[]) {
+    try {
+      setPref(key, PLUGIN_PREF_DEFAULTS[key]);
+    } catch (error) {
+      ztoolkit.log("Failed to restore default pref:", key, error);
+    }
+    zoteroCache.invalidatePref(getPrefKey(key));
+  }
+
   return cleared;
 }
 

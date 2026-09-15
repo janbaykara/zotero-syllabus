@@ -61,6 +61,7 @@ userGuide-start-title = 欢迎使用 Zotero Syllabus
 userGuide-start-desc =
     将任意 Zotero 分类变成课程阅读清单——按课堂组织、设置优先级，并跟踪接下来要读什么。
 userGuide-start-close = 以后再说
+userGuide-exit = 退出导览
 optional-features-intro-title = Choose your views
 optional-features-intro-desc =
     Pick which surfaces to show. You can change these anytime in Preferences. Syllabus view is recommended to get started.

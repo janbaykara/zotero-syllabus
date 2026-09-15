@@ -63,6 +63,7 @@ userGuide-start-title = Zotero Syllabus에 오신 것을 환영합니다
 userGuide-start-desc =
     어떤 Zotero 컬렉션이든 강의 읽기 목록으로 바꿀 수 있습니다. 수업별로 정리하고, 우선순위를 정하고, 다음에 읽을 것을 추적하세요.
 userGuide-start-close = 나중에 알림
+userGuide-exit = 둘러보기 종료
 optional-features-intro-title = Choose your views
 optional-features-intro-desc =
     Pick which surfaces to show. You can change these anytime in Preferences. Syllabus view is recommended to get started.

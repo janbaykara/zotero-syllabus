@@ -61,6 +61,7 @@ userGuide-start-title = Welcome to Zotero Syllabus
 userGuide-start-desc =
     Turn any Zotero collection into a course reading list — organize by class, set priorities, and track what to read next.
 userGuide-start-close = Remind me later
+userGuide-exit = Exit tour
 optional-features-intro-title = Choose your views
 optional-features-intro-desc =
     Pick which surfaces to show. You can change these anytime in Preferences. Syllabus view is recommended to get started.

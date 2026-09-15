@@ -1,7 +1,12 @@
 import { config } from "../../package.json";
 import type { FluentMessageId } from "../../typings/i10n";
 import { getLocaleID } from "../utils/locale";
-import { getPrefValue, resetAllPluginPrefs, setPref } from "../utils/prefs";
+import {
+  getPrefValue,
+  PLUGIN_PREF_DEFAULTS,
+  resetAllPluginPrefs,
+  setPref,
+} from "../utils/prefs";
 import { confirmPrompt } from "../utils/window";
 import { refreshOptionalFeatureChrome } from "./optionalFeatures";
 
@@ -167,7 +172,7 @@ async function formatPrefsL10n(ids: FluentMessageId[]): Promise<string[]> {
   }
 }
 
-/** Refresh preference-bound controls after clearing user prefs. */
+/** Refresh preference-bound controls after restoring defaults. */
 function syncBoundControls(win: Window) {
   const checkboxes = Array.from(
     win.document.querySelectorAll("checkbox[preference]"),
@@ -177,7 +182,9 @@ function syncBoundControls(win: Window) {
     const prefName = checkbox.getAttribute("preference");
     if (!prefName) continue;
     try {
-      checkbox.checked = !!getPrefValue(prefName as PrefKey);
+      const key = prefName as PrefKey;
+      const value = getPrefValue(key) ?? PLUGIN_PREF_DEFAULTS[key];
+      checkbox.checked = !!value;
     } catch {
       // Pref may not be in PluginPrefsMap
     }
@@ -191,7 +198,8 @@ function syncBoundControls(win: Window) {
     const prefName = list.getAttribute("preference");
     if (!prefName) continue;
     try {
-      const value = getPrefValue(prefName as PrefKey);
+      const key = prefName as PrefKey;
+      const value = getPrefValue(key) ?? PLUGIN_PREF_DEFAULTS[key];
       if (value != null) {
         list.value = String(value);
       }

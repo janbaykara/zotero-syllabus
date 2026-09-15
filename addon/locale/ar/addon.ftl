@@ -63,6 +63,7 @@ userGuide-start-title = مرحبًا بك في Zotero Syllabus
 userGuide-start-desc =
     حوّل أي مجموعة في Zotero إلى قائمة قراءات للمقرر — نظّمها حسب المحاضرة، وحدّد الأولويات، وتابع ما ينبغي قراءته تاليًا.
 userGuide-start-close = تذكيري لاحقًا
+userGuide-exit = إنهاء الجولة
 optional-features-intro-title = Choose your views
 optional-features-intro-desc =
     Pick which surfaces to show. You can change these anytime in Preferences. Syllabus view is recommended to get started.

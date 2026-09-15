@@ -2386,6 +2386,38 @@ export class SyllabusManager {
     );
   }
 
+  /**
+   * Manual order of further-reading items (Zotero item.keys), or [].
+   */
+  static getFurtherReadingOrder(
+    collectionId: number | GetByLibraryAndKeyArgs,
+  ): string[] {
+    return getCollectionDocument(collectionId).furtherReadingOrder || [];
+  }
+
+  /**
+   * Set manual order of further-reading items by item.key.
+   * Pass [] to clear and fall back to the local sort preference.
+   */
+  static async setFurtherReadingOrder(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    itemKeys: string[],
+    source: "page" | "item-pane" = "page",
+  ): Promise<void> {
+    await mutateCollectionDocument(
+      collectionId,
+      (document) => ({
+        ...document,
+        furtherReadingOrder: itemKeys.length > 0 ? itemKeys : undefined,
+      }),
+      { createNote: source === "page" ? "prompt" : "always" },
+    );
+    if (source !== "page") {
+      this.setupPage();
+    }
+    this.onClassListUpdate();
+  }
+
   static getSettingsCollectionDictionaryData(): SettingsCollectionDictionaryData {
     return getSyllabusCollectionDictionary();
   }
