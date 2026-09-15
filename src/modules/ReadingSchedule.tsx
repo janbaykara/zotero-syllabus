@@ -237,9 +237,7 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
                               >
                                 {formatReadingDate(
                                   dateTimestamp,
-                                  !isThisMonth(
-                                    parseReadingDate(dateTimestamp),
-                                  ),
+                                  !isThisMonth(parseReadingDate(dateTimestamp)),
                                 )}
                               </div>
 

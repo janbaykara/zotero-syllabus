@@ -2628,7 +2628,10 @@ export function initializeSyllabusNotes(): void {
         }
         if (event === "add" || event === "modify" || event === "trash") {
           enqueuePinnedReadingScheduleSync().catch((error) => {
-            ztoolkit.log("Error syncing pinned reading schedule folder:", error);
+            ztoolkit.log(
+              "Error syncing pinned reading schedule folder:",
+              error,
+            );
           });
         }
       }

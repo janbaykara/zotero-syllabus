@@ -245,11 +245,7 @@ export function ClassReadingBlock({
               collectionName: classReading.collectionName,
             }),
           }))}
-        onItemClick={
-          onItemClick
-            ? (item) => onItemClick(item)
-            : undefined
-        }
+        onItemClick={onItemClick ? (item) => onItemClick(item) : undefined}
       />
     </div>
   );

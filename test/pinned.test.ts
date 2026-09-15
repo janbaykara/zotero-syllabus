@@ -73,7 +73,8 @@ describe("pinned", function () {
     await collection.saveTx();
 
     try {
-      await collection.addItems([first.id, second.id]);
+      // Next-up resolves by library+key; items need not be in the collection.
+      // Do not call collection.addItems outside Zotero.DB.executeTransaction.
       const document = CollectionSyllabusDocumentSchema.parse({
         version: 2,
         classes: {

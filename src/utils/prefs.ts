@@ -127,7 +127,9 @@ export function resetAllPluginPrefs(): string[] {
 
   // Explicitly write defaults: after clear, Prefs.get often returns undefined
   // for plugin keys, and preference-bound checkboxes then persist `false`.
-  for (const key of Object.keys(PLUGIN_PREF_DEFAULTS) as (keyof PluginPrefsMap)[]) {
+  for (const key of Object.keys(
+    PLUGIN_PREF_DEFAULTS,
+  ) as (keyof PluginPrefsMap)[]) {
     try {
       setPref(key, PLUGIN_PREF_DEFAULTS[key]);
     } catch (error) {

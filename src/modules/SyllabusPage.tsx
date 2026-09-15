@@ -1221,9 +1221,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         currentOrder = furtherReadingItems.map((entry) => entry.item.key);
       }
 
-      const newOrder = currentOrder.filter(
-        (key) => !draggedKeys.includes(key),
-      );
+      const newOrder = currentOrder.filter((key) => !draggedKeys.includes(key));
       const keysToInsert = draggedKeys.filter(
         (key, index) => draggedKeys.indexOf(key) === index,
       );
@@ -2098,7 +2096,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         className={twMerge(
           "syllabus-page overflow-y-auto overflow-x-hidden h-full in-[.print]:scheme-light relative focus:outline-none",
           `density-${density}`,
-          isLocked && effectiveLayout === "magazine" && "syllabus-magazine-page",
+          isLocked &&
+            effectiveLayout === "magazine" &&
+            "syllabus-magazine-page",
           fileDrop.isDraggingFile && "file-drag-over",
         )}
         data-item-density={density}
@@ -2297,79 +2297,135 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           />
 
           <GalleryViewportProvider rootRef={syllabusPageRef}>
-          <div
-            className={twMerge(
-              "syllabus-class-groups flex flex-col mb-12",
-              density !== "expanded" ? "gap-10 mt-4" : "gap-12 mt-6",
-            )}
-          >
-            {isFiltered &&
-              visibleClassGroups.length === 0 &&
-              furtherReadingItems.length === 0 && (
-                <p className="container-padded text-secondary text-lg">
-                  {getString("gallery-empty-filtered")}
-                </p>
+            <div
+              className={twMerge(
+                "syllabus-class-groups flex flex-col mb-12",
+                density !== "expanded" ? "gap-10 mt-4" : "gap-12 mt-6",
               )}
-            {visibleClassGroups.map((group) => (
-              <ClassGroupComponent
-                key={group.classNumber ?? "null"}
-                classNumber={group.classNumber}
-                itemAssignments={group.itemAssignments}
-                collectionId={collectionId}
-                syllabusMetadata={syllabusMetadata}
-                onClassTitleSave={setClassTitle}
-                onClassDescriptionSave={setClassDescription}
-                onClassReadingDateSave={handleClassReadingDateSave}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                dropIndicator={dropIndicator}
-                onDropIndicatorChange={handleDropIndicatorChange}
-                draggingIdentifiers={draggingIdentifiers}
-                draggingSourceClass={draggingSourceClass}
-                density={density}
-                readerMode={readerMode}
-                isLocked={isLocked}
-                layout={effectiveLayout}
-                onResetSortOrder={() => setItemOrderVersion((v) => v + 1)}
-                selectedIdentifiers={selectedIdentifiers}
-                onIdentifierClick={handleIdentifierClick}
-                onContextMenu={handleContextMenu}
-                selectedForDrag={selectedForDrag}
-                onPriorityChange={handlePriorityChange}
-                onDelete={handleDelete}
-                onDuplicate={handleDuplicate}
-              />
-            ))}
-          </div>
+            >
+              {isFiltered &&
+                visibleClassGroups.length === 0 &&
+                furtherReadingItems.length === 0 && (
+                  <p className="container-padded text-secondary text-lg">
+                    {getString("gallery-empty-filtered")}
+                  </p>
+                )}
+              {visibleClassGroups.map((group) => (
+                <ClassGroupComponent
+                  key={group.classNumber ?? "null"}
+                  classNumber={group.classNumber}
+                  itemAssignments={group.itemAssignments}
+                  collectionId={collectionId}
+                  syllabusMetadata={syllabusMetadata}
+                  onClassTitleSave={setClassTitle}
+                  onClassDescriptionSave={setClassDescription}
+                  onClassReadingDateSave={handleClassReadingDateSave}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  dropIndicator={dropIndicator}
+                  onDropIndicatorChange={handleDropIndicatorChange}
+                  draggingIdentifiers={draggingIdentifiers}
+                  draggingSourceClass={draggingSourceClass}
+                  density={density}
+                  readerMode={readerMode}
+                  isLocked={isLocked}
+                  layout={effectiveLayout}
+                  onResetSortOrder={() => setItemOrderVersion((v) => v + 1)}
+                  selectedIdentifiers={selectedIdentifiers}
+                  onIdentifierClick={handleIdentifierClick}
+                  onContextMenu={handleContextMenu}
+                  selectedForDrag={selectedForDrag}
+                  onPriorityChange={handlePriorityChange}
+                  onDelete={handleDelete}
+                  onDuplicate={handleDuplicate}
+                />
+              ))}
+            </div>
 
-          <div className="container-padded">
-            {(() => {
-              const { singularCapitalized } =
-                SyllabusManager.getNomenclatureFormatted(collectionId);
-              const hasNoClasses = classGroups.length === 0;
+            <div className="container-padded">
+              {(() => {
+                const { singularCapitalized } =
+                  SyllabusManager.getNomenclatureFormatted(collectionId);
+                const hasNoClasses = classGroups.length === 0;
 
-              const addClassLabel = getString("page-add-class", {
-                args: {
-                  nomenclature: singularCapitalized,
-                  number: nextClassNumber,
-                },
-              });
+                const addClassLabel = getString("page-add-class", {
+                  args: {
+                    nomenclature: singularCapitalized,
+                    number: nextClassNumber,
+                  },
+                });
 
-              return (
-                <>
-                  {!isLocked && !isFiltered && hasNoClasses && (
-                    <div
-                      className="in-[.print]:hidden mb-6 rounded-lg border border-quinary bg-quinary/40 p-6 space-y-3"
-                      data-tour="syllabus-empty-state"
-                    >
-                      <div className="text-xl font-semibold text-primary">
-                        {getString("userGuide-empty-title")}
+                return (
+                  <>
+                    {!isLocked && !isFiltered && hasNoClasses && (
+                      <div
+                        className="in-[.print]:hidden mb-6 rounded-lg border border-quinary bg-quinary/40 p-6 space-y-3"
+                        data-tour="syllabus-empty-state"
+                      >
+                        <div className="text-xl font-semibold text-primary">
+                          {getString("userGuide-empty-title")}
+                        </div>
+                        <p className="text-secondary text-base m-0">
+                          {getString("userGuide-empty-desc")}
+                        </p>
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          <button
+                            className="syllabus-create-class-button"
+                            data-tour="syllabus-add-class"
+                            onClick={addClass}
+                            title={addClassLabel}
+                          >
+                            {addClassLabel}
+                          </button>
+                          <button
+                            type="button"
+                            className="px-3 py-1.5 rounded-md border border-quinary bg-background text-primary cursor-pointer hover:bg-quinary"
+                            onClick={() => {
+                              const win = Zotero.getMainWindow();
+                              if (win) {
+                                void showUserGuide(win, true);
+                              }
+                            }}
+                          >
+                            {getString("userGuide-empty-tour")}
+                          </button>
+                        </div>
                       </div>
-                      <p className="text-secondary text-base m-0">
-                        {getString("userGuide-empty-desc")}
-                      </p>
-                      <div className="flex flex-wrap gap-2 pt-1">
+                    )}
+
+                    {!isLocked && isDragging && density === "expanded" && (
+                      <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
+                        <div className="syllabus-class-header-container">
+                          <div className="syllabus-class-header">
+                            {getString("page-add-to-class", {
+                              args: {
+                                nomenclature: singularCapitalized,
+                                number: nextClassNumber,
+                              },
+                            })}
+                          </div>
+                        </div>
+                        <div
+                          className="syllabus-class-items syllabus-add-class-dropzone-items"
+                          onDrop={(e) => handleDrop(e, nextClassNumber)}
+                          onDragOver={handleDragOver}
+                          onDragLeave={handleDragLeave}
+                        >
+                          <div className="syllabus-add-class-dropzone-placeholder bg-quinary rounded-md p-16 text-secondary border-2 border-dashed border-secondary">
+                            {getString("page-drop-create-class", {
+                              args: {
+                                nomenclature: singularCapitalized,
+                                number: nextClassNumber,
+                              },
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {!isLocked && !hasNoClasses && (
+                      <div className="syllabus-create-class-control in-[.print]:hidden">
                         <button
                           className="syllabus-create-class-button"
                           data-tour="syllabus-add-class"
@@ -2378,368 +2434,317 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                         >
                           {addClassLabel}
                         </button>
-                        <button
-                          type="button"
-                          className="px-3 py-1.5 rounded-md border border-quinary bg-background text-primary cursor-pointer hover:bg-quinary"
-                          onClick={() => {
-                            const win = Zotero.getMainWindow();
-                            if (win) {
-                              void showUserGuide(win, true);
-                            }
-                          }}
-                        >
-                          {getString("userGuide-empty-tour")}
-                        </button>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </>
+                );
+              })()}
 
-                  {!isLocked && isDragging && density === "expanded" && (
-                    <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
-                      <div className="syllabus-class-header-container">
-                        <div className="syllabus-class-header">
-                          {getString("page-add-to-class", {
-                            args: {
-                              nomenclature: singularCapitalized,
-                              number: nextClassNumber,
-                            },
-                          })}
-                        </div>
-                      </div>
-                      <div
-                        className="syllabus-class-items syllabus-add-class-dropzone-items"
-                        onDrop={(e) => handleDrop(e, nextClassNumber)}
-                        onDragOver={handleDragOver}
-                        onDragLeave={handleDragLeave}
-                      >
-                        <div className="syllabus-add-class-dropzone-placeholder bg-quinary rounded-md p-16 text-secondary border-2 border-dashed border-secondary">
-                          {getString("page-drop-create-class", {
-                            args: {
-                              nomenclature: singularCapitalized,
-                              number: nextClassNumber,
-                            },
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {!isLocked && !hasNoClasses && (
-                    <div className="syllabus-create-class-control in-[.print]:hidden">
-                      <button
-                        className="syllabus-create-class-button"
-                        data-tour="syllabus-add-class"
-                        onClick={addClass}
-                        title={addClassLabel}
-                      >
-                        {addClassLabel}
-                      </button>
-                    </div>
-                  )}
-                </>
-              );
-            })()}
-
-            {furtherReadingItems.length > 0 && (
-              <div
-                className="syllabus-class-group in-[.print]:scheme-light"
-                data-tour="syllabus-further-reading"
-              >
+              {furtherReadingItems.length > 0 && (
                 <div
-                  className={twMerge(
-                    "flex flex-row items-baseline gap-2 font-semibold",
-                    density !== "expanded"
-                      ? "text-xl mt-8 mb-2"
-                      : "text-2xl mt-12 mb-4",
-                  )}
+                  className="syllabus-class-group in-[.print]:scheme-light"
+                  data-tour="syllabus-further-reading"
                 >
-                  {getString("further-reading-heading")}
-                  {!isLocked && (
-                    <div className="ml-auto shrink-0 inline-flex items-center gap-1.5 in-[.print]:hidden font-normal text-sm text-secondary">
-                      {furtherReadingHasManualOrder && (
-                        <button
-                          type="button"
-                          className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
-                          onClick={async () => {
-                            await SyllabusManager.setFurtherReadingOrder(
-                              collectionId,
-                              [],
-                              "page",
-                            );
-                            setItemOrderVersion((v) => v + 1);
-                          }}
-                          title={getString("class-reset-sort")}
-                          aria-label={getString("class-reset-sort")}
-                        >
-                          <div className="text-lg text-center">⇅</div>
-                        </button>
-                      )}
-                      <label className="inline-flex items-center gap-1.5">
-                        <ArrowUpDown
-                          size={12}
-                          strokeWidth={2}
-                          aria-hidden="true"
-                        />
-                        <span>{getString("sort-label")}</span>
-                        <select
-                          value={furtherReadingSortBy}
-                          onChange={async (e) => {
-                            const next = e.currentTarget
-                              .value as FurtherReadingSortBy;
-                            if (furtherReadingHasManualOrder) {
+                  <div
+                    className={twMerge(
+                      "flex flex-row items-baseline gap-2 font-semibold",
+                      density !== "expanded"
+                        ? "text-xl mt-8 mb-2"
+                        : "text-2xl mt-12 mb-4",
+                    )}
+                  >
+                    {getString("further-reading-heading")}
+                    {!isLocked && (
+                      <div className="ml-auto shrink-0 inline-flex items-center gap-1.5 in-[.print]:hidden font-normal text-sm text-secondary">
+                        {furtherReadingHasManualOrder && (
+                          <button
+                            type="button"
+                            className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
+                            onClick={async () => {
                               await SyllabusManager.setFurtherReadingOrder(
                                 collectionId,
                                 [],
                                 "page",
                               );
                               setItemOrderVersion((v) => v + 1);
-                            }
-                            setFurtherReadingSortBy(next);
-                          }}
-                          aria-label={getString("further-reading-sort-aria")}
-                          className="text-sm text-primary bg-background border border-quinary rounded px-1.5 py-0.5 cursor-pointer"
-                        >
-                          <option value="title">
-                            {getString("sort-by-title")}
-                          </option>
-                          <option value="creator">
-                            {getString("sort-by-creator")}
-                          </option>
-                          <option value="date">
-                            {getString("sort-by-date")}
-                          </option>
-                        </select>
-                      </label>
-                    </div>
+                            }}
+                            title={getString("class-reset-sort")}
+                            aria-label={getString("class-reset-sort")}
+                          >
+                            <div className="text-lg text-center">⇅</div>
+                          </button>
+                        )}
+                        <label className="inline-flex items-center gap-1.5">
+                          <ArrowUpDown
+                            size={12}
+                            strokeWidth={2}
+                            aria-hidden="true"
+                          />
+                          <span>{getString("sort-label")}</span>
+                          <select
+                            value={furtherReadingSortBy}
+                            onChange={async (e) => {
+                              const next = e.currentTarget
+                                .value as FurtherReadingSortBy;
+                              if (furtherReadingHasManualOrder) {
+                                await SyllabusManager.setFurtherReadingOrder(
+                                  collectionId,
+                                  [],
+                                  "page",
+                                );
+                                setItemOrderVersion((v) => v + 1);
+                              }
+                              setFurtherReadingSortBy(next);
+                            }}
+                            aria-label={getString("further-reading-sort-aria")}
+                            className="text-sm text-primary bg-background border border-quinary rounded px-1.5 py-0.5 cursor-pointer"
+                          >
+                            <option value="title">
+                              {getString("sort-by-title")}
+                            </option>
+                            <option value="creator">
+                              {getString("sort-by-creator")}
+                            </option>
+                            <option value="date">
+                              {getString("sort-by-date")}
+                            </option>
+                          </select>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                  {density === "expanded" && (
+                    <p className="text-secondary text-lg">
+                      {getString("further-reading-empty-desc")}
+                    </p>
                   )}
-                </div>
-                {density === "expanded" && (
-                  <p className="text-secondary text-lg">
-                    {getString("further-reading-empty-desc")}
-                  </p>
-                )}
-                <div
-                  className={twMerge(
-                    "syllabus-class-items box-border! rounded-lg",
-                    density !== "expanded"
-                      ? "space-y-2 p-1 -m-1"
-                      : "space-y-4 p-2 -m-2",
-                    "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:outline-accent-blue! data-[dropzone-active='true']:text-accent-blue! transition-all duration-200 outline-transparent outline-2! outline-dashed!",
-                  )}
-                  onDrop={
-                    isLocked
-                      ? undefined
-                      : (e) => {
-                          if (
-                            dropIndicator?.zone === "further-reading" &&
-                            dropIndicator.identifier
-                          ) {
-                            const targetById = furtherReadingItems.find(
-                              ({ item, assignment }) => {
-                                const id = assignment?.id
-                                  ? `assignment:${assignment.id}`
-                                  : `item:${item.id}`;
-                                return id === dropIndicator.identifier;
-                              },
-                            );
-                            if (targetById) {
-                              void handleDrop(
-                                e,
-                                null,
-                                targetById.item.id,
-                                dropIndicator.edge === "before",
+                  <div
+                    className={twMerge(
+                      "syllabus-class-items box-border! rounded-lg",
+                      density !== "expanded"
+                        ? "space-y-2 p-1 -m-1"
+                        : "space-y-4 p-2 -m-2",
+                      "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:outline-accent-blue! data-[dropzone-active='true']:text-accent-blue! transition-all duration-200 outline-transparent outline-2! outline-dashed!",
+                    )}
+                    onDrop={
+                      isLocked
+                        ? undefined
+                        : (e) => {
+                            if (
+                              dropIndicator?.zone === "further-reading" &&
+                              dropIndicator.identifier
+                            ) {
+                              const targetById = furtherReadingItems.find(
+                                ({ item, assignment }) => {
+                                  const id = assignment?.id
+                                    ? `assignment:${assignment.id}`
+                                    : `item:${item.id}`;
+                                  return id === dropIndicator.identifier;
+                                },
                               );
+                              if (targetById) {
+                                void handleDrop(
+                                  e,
+                                  null,
+                                  targetById.item.id,
+                                  dropIndicator.edge === "before",
+                                );
+                                return;
+                              }
+                            }
+                            void handleDrop(e, null);
+                          }
+                    }
+                    onDragOver={
+                      isLocked
+                        ? undefined
+                        : (e) => {
+                            handleDragOver(e);
+                            if (isOsFileDrag(e.dataTransfer)) {
                               return;
                             }
-                          }
-                          void handleDrop(e, null);
-                        }
-                  }
-                  onDragOver={
-                    isLocked
-                      ? undefined
-                      : (e) => {
-                          handleDragOver(e);
-                          if (isOsFileDrag(e.dataTransfer)) {
-                            return;
-                          }
-                          const cardsRoot = e.currentTarget;
-                          const cards = Array.from(
-                            cardsRoot.querySelectorAll(
-                              ":scope > .syllabus-item-card",
-                            ),
-                          ) as HTMLElement[];
-                          if (cards.length === 0) {
-                            handleDropIndicatorChange(null);
-                            return;
-                          }
-                          for (const card of cards) {
-                            const identifier = card.dataset.syllabusIdentifier;
-                            if (!identifier) {
-                              continue;
+                            const cardsRoot = e.currentTarget;
+                            const cards = Array.from(
+                              cardsRoot.querySelectorAll(
+                                ":scope > .syllabus-item-card",
+                              ),
+                            ) as HTMLElement[];
+                            if (cards.length === 0) {
+                              handleDropIndicatorChange(null);
+                              return;
                             }
-                            const rect = card.getBoundingClientRect();
-                            if (e.clientY < rect.top + rect.height / 2) {
+                            for (const card of cards) {
+                              const identifier =
+                                card.dataset.syllabusIdentifier;
+                              if (!identifier) {
+                                continue;
+                              }
+                              const rect = card.getBoundingClientRect();
+                              if (e.clientY < rect.top + rect.height / 2) {
+                                handleDropIndicatorChange({
+                                  classNumber: null,
+                                  zone: "further-reading",
+                                  identifier,
+                                  edge: "before",
+                                });
+                                return;
+                              }
+                            }
+                            const last = cards[cards.length - 1];
+                            const identifier = last.dataset.syllabusIdentifier;
+                            if (identifier) {
                               handleDropIndicatorChange({
                                 classNumber: null,
                                 zone: "further-reading",
                                 identifier,
-                                edge: "before",
+                                edge: "after",
                               });
-                              return;
                             }
                           }
-                          const last = cards[cards.length - 1];
-                          const identifier = last.dataset.syllabusIdentifier;
-                          if (identifier) {
-                            handleDropIndicatorChange({
-                              classNumber: null,
-                              zone: "further-reading",
-                              identifier,
-                              edge: "after",
-                            });
-                          }
-                        }
-                  }
-                  onDragLeave={
-                    isLocked
-                      ? undefined
-                      : (e) => {
-                          handleDragLeave(e);
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          const { clientX: x, clientY: y } = e;
-                          if (
-                            x < rect.left ||
-                            x > rect.right ||
-                            y < rect.top ||
-                            y > rect.bottom
-                          ) {
-                            handleDropIndicatorChange(null);
-                          }
-                        }
-                  }
-                >
-                  {isLocked && effectiveLayout !== "card" ? (
-                    <ReadingItemsLayout
-                      layout={effectiveLayout}
-                      density={density}
-                      readerMode={readerMode}
+                    }
+                    onDragLeave={
                       isLocked
-                      template="strip"
-                      rows={furtherReadingItems.map(({ item, assignment }) => ({
-                        key: `further-${item.id}-${assignment?.id || "item"}`,
-                        item,
-                        collectionId,
-                        assignment: assignment || {
-                          id: `further-${item.id}`,
-                        },
-                        slim: true,
-                      }))}
-                    />
-                  ) : (
-                    furtherReadingItems.map(({ item, assignment }) => {
-                    const cardIdentifier = assignment?.id
-                      ? `assignment:${assignment.id}`
-                      : `item:${item.id}`;
-                    const visibleEdge =
-                      dropIndicator?.zone === "further-reading" &&
-                      dropIndicator.identifier === cardIdentifier
-                        ? dropIndicator.edge
-                        : null;
-                    return (
-                      <SyllabusItemCard
-                        key={item.id}
-                        item={item}
-                        collectionId={collectionId}
-                        classNumber={undefined}
-                        assignment={assignment}
-                        slim={true}
+                        ? undefined
+                        : (e) => {
+                            handleDragLeave(e);
+                            const rect =
+                              e.currentTarget.getBoundingClientRect();
+                            const { clientX: x, clientY: y } = e;
+                            if (
+                              x < rect.left ||
+                              x > rect.right ||
+                              y < rect.top ||
+                              y > rect.bottom
+                            ) {
+                              handleDropIndicatorChange(null);
+                            }
+                          }
+                    }
+                  >
+                    {isLocked && effectiveLayout !== "card" ? (
+                      <ReadingItemsLayout
+                        layout={effectiveLayout}
                         density={density}
                         readerMode={readerMode}
-                        isLocked={isLocked}
-                        isFurtherReading={true}
-                        selectedIdentifiers={selectedIdentifiers}
-                        onIdentifierClick={handleIdentifierClick}
-                        onContextMenu={handleContextMenu}
-                        selectedForDrag={selectedForDrag}
-                        onPriorityChange={handlePriorityChange}
-                        onDelete={handleDelete}
-                        onDuplicate={handleDuplicate}
-                        onDrop={(e, insertBefore) =>
-                          handleDrop(e, null, item.id, insertBefore)
-                        }
-                        onDragOver={(e) => {
-                          handleDragOver(e);
-                          if (isOsFileDrag(e.dataTransfer)) {
-                            return;
-                          }
-                          const root = e.currentTarget.parentElement;
-                          if (!(root instanceof HTMLElement)) {
-                            return;
-                          }
-                          const cards = Array.from(
-                            root.querySelectorAll(
-                              ":scope > .syllabus-item-card",
-                            ),
-                          ) as HTMLElement[];
-                          for (const card of cards) {
-                            const identifier =
-                              card.dataset.syllabusIdentifier;
-                            if (!identifier) {
-                              continue;
-                            }
-                            const rect = card.getBoundingClientRect();
-                            if (e.clientY < rect.top + rect.height / 2) {
-                              handleDropIndicatorChange({
-                                classNumber: null,
-                                zone: "further-reading",
-                                identifier,
-                                edge: "before",
-                              });
-                              return;
-                            }
-                          }
-                          const last = cards[cards.length - 1];
-                          const identifier = last?.dataset.syllabusIdentifier;
-                          if (identifier) {
-                            handleDropIndicatorChange({
-                              classNumber: null,
-                              zone: "further-reading",
-                              identifier,
-                              edge: "after",
-                            });
-                          }
-                        }}
-                        dropEdge={visibleEdge}
-                        isZoteroSelected={
-                          selectedItemIds?.includes(item.id) || false
-                        }
-                        isIdentifierSelected={selectedIdentifiers.has(
-                          cardIdentifier,
+                        isLocked
+                        template="strip"
+                        rows={furtherReadingItems.map(
+                          ({ item, assignment }) => ({
+                            key: `further-${item.id}-${assignment?.id || "item"}`,
+                            item,
+                            collectionId,
+                            assignment: assignment || {
+                              id: `further-${item.id}`,
+                            },
+                            slim: true,
+                          }),
                         )}
                       />
-                    );
-                  })
-                  )}
+                    ) : (
+                      furtherReadingItems.map(({ item, assignment }) => {
+                        const cardIdentifier = assignment?.id
+                          ? `assignment:${assignment.id}`
+                          : `item:${item.id}`;
+                        const visibleEdge =
+                          dropIndicator?.zone === "further-reading" &&
+                          dropIndicator.identifier === cardIdentifier
+                            ? dropIndicator.edge
+                            : null;
+                        return (
+                          <SyllabusItemCard
+                            key={item.id}
+                            item={item}
+                            collectionId={collectionId}
+                            classNumber={undefined}
+                            assignment={assignment}
+                            slim={true}
+                            density={density}
+                            readerMode={readerMode}
+                            isLocked={isLocked}
+                            isFurtherReading={true}
+                            selectedIdentifiers={selectedIdentifiers}
+                            onIdentifierClick={handleIdentifierClick}
+                            onContextMenu={handleContextMenu}
+                            selectedForDrag={selectedForDrag}
+                            onPriorityChange={handlePriorityChange}
+                            onDelete={handleDelete}
+                            onDuplicate={handleDuplicate}
+                            onDrop={(e, insertBefore) =>
+                              handleDrop(e, null, item.id, insertBefore)
+                            }
+                            onDragOver={(e) => {
+                              handleDragOver(e);
+                              if (isOsFileDrag(e.dataTransfer)) {
+                                return;
+                              }
+                              const root = e.currentTarget.parentElement;
+                              if (!(root instanceof HTMLElement)) {
+                                return;
+                              }
+                              const cards = Array.from(
+                                root.querySelectorAll(
+                                  ":scope > .syllabus-item-card",
+                                ),
+                              ) as HTMLElement[];
+                              for (const card of cards) {
+                                const identifier =
+                                  card.dataset.syllabusIdentifier;
+                                if (!identifier) {
+                                  continue;
+                                }
+                                const rect = card.getBoundingClientRect();
+                                if (e.clientY < rect.top + rect.height / 2) {
+                                  handleDropIndicatorChange({
+                                    classNumber: null,
+                                    zone: "further-reading",
+                                    identifier,
+                                    edge: "before",
+                                  });
+                                  return;
+                                }
+                              }
+                              const last = cards[cards.length - 1];
+                              const identifier =
+                                last?.dataset.syllabusIdentifier;
+                              if (identifier) {
+                                handleDropIndicatorChange({
+                                  classNumber: null,
+                                  zone: "further-reading",
+                                  identifier,
+                                  edge: "after",
+                                });
+                              }
+                            }}
+                            dropEdge={visibleEdge}
+                            isZoteroSelected={
+                              selectedItemIds?.includes(item.id) || false
+                            }
+                            isIdentifierSelected={selectedIdentifiers.has(
+                              cardIdentifier,
+                            )}
+                          />
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {getPref("debugMode") && (
-              <div className="text-secondary text-sm">
-                <h3>Debug info</h3>
-                <pre>
-                  {JSON.stringify(
-                    {
-                      syllabusMetadata,
-                    },
-                    null,
-                    2,
-                  )}
-                </pre>
-              </div>
-            )}
-          </div>
+              {getPref("debugMode") && (
+                <div className="text-secondary text-sm">
+                  <h3>Debug info</h3>
+                  <pre>
+                    {JSON.stringify(
+                      {
+                        syllabusMetadata,
+                      },
+                      null,
+                      2,
+                    )}
+                  </pre>
+                </div>
+              )}
+            </div>
           </GalleryViewportProvider>
         </div>
       </div>

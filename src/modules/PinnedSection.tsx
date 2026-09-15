@@ -157,9 +157,7 @@ export function PinnedSection({
   return (
     <div
       className={embedded ? undefined : "container-padded mt-6 mb-2"}
-      data-tour={
-        embedded ? "explorer-shelf-pinned" : "reading-schedule-pinned"
-      }
+      data-tour={embedded ? "explorer-shelf-pinned" : "reading-schedule-pinned"}
     >
       {embedded ? null : (
         <div className="text-3xl text-tertiary mb-4 flex items-center gap-2">
@@ -413,8 +411,10 @@ function NextUpRow({
       />
       {reading.classTitle ? (
         <div className="text-tertiary text-sm mt-1">
-          {SyllabusManager.getNomenclatureFormatted(reading.collection.id)
-            .singularCapitalized}{" "}
+          {
+            SyllabusManager.getNomenclatureFormatted(reading.collection.id)
+              .singularCapitalized
+          }{" "}
           {reading.classNumber}
           {reading.classTitle ? `: ${reading.classTitle}` : ""}
         </div>

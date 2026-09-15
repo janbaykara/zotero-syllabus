@@ -12,7 +12,11 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 
 function messageForCollection(collectionId: number): string {
   const kind = getCollectionTreeKind(collectionId);
-  if (kind === "reading-schedule-root" || kind === "calendar-date" || kind === "pinned") {
+  if (
+    kind === "reading-schedule-root" ||
+    kind === "calendar-date" ||
+    kind === "pinned"
+  ) {
     return getString("managed-folder-banner-schedule");
   }
   return getString("managed-folder-banner-class");

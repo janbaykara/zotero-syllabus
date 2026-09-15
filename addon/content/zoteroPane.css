@@ -135,13 +135,17 @@
   padding: 0.35rem;
 }
 
-.syllabus-item-thumbnail-cover .syllabus-gallery-placeholder-face .font-semibold {
+.syllabus-item-thumbnail-cover
+  .syllabus-gallery-placeholder-face
+  .font-semibold {
   font-size: 10px;
   line-height: 1.25;
   -webkit-line-clamp: 3;
 }
 
-.syllabus-item-thumbnail-cover .syllabus-gallery-placeholder-face .text-\[11px\] {
+.syllabus-item-thumbnail-cover
+  .syllabus-gallery-placeholder-face
+  .text-\[11px\] {
   font-size: 9px;
   -webkit-line-clamp: 1;
 }

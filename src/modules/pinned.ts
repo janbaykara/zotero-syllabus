@@ -12,7 +12,11 @@ import {
 } from "../utils/schemas";
 import { getCachedCollectionById, getCachedItem } from "../utils/cache";
 import { compareLocale, getString } from "../utils/locale";
-import { getItemTitle, isSyllabusMemberItem, readItemNote } from "../utils/items";
+import {
+  getItemTitle,
+  isSyllabusMemberItem,
+  readItemNote,
+} from "../utils/items";
 import { confirmExPrompt, confirmPrompt } from "../utils/window";
 import {
   getCollectionDocument,
@@ -264,7 +268,9 @@ function childNoteIds(item: Zotero.Item): number[] {
     ).getNotes;
     if (typeof getNotes === "function") {
       const ids = getNotes.call(item, false);
-      return Array.isArray(ids) ? ids.filter((id) => typeof id === "number") : [];
+      return Array.isArray(ids)
+        ? ids.filter((id) => typeof id === "number")
+        : [];
     }
   } catch {
     // Fall through.
@@ -327,23 +333,29 @@ export function noteHtmlToPlainText(html: string): string {
     .replace(/<\/\s*p\s*>/gi, "\n\n")
     .replace(/<\/\s*div\s*>/gi, "\n");
   const stripped = withBreaks.replace(/<[^>]+>/g, "");
+  const normalize = (text: string) =>
+    text
+      .replace(/\u00A0/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
   try {
-    const unescape = (Zotero.Utilities as { unescapeHTML?: (s: string) => string })
-      ?.unescapeHTML;
+    const unescape = (
+      Zotero.Utilities as { unescapeHTML?: (s: string) => string }
+    )?.unescapeHTML;
     if (typeof unescape === "function") {
-      return unescape(stripped).replace(/\n{3,}/g, "\n\n").trim();
+      return normalize(unescape(stripped));
     }
   } catch {
     // Fall through.
   }
-  return stripped
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  return normalize(
+    stripped
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"'),
+  );
 }
 
 export function readIntentionText(item: Zotero.Item): string {
@@ -517,8 +529,8 @@ export function getNextUpAssignment(
         if (assignment.status === "done") {
           continue;
         }
-        const item = Zotero.Items.getByLibraryAndKey(libraryID, itemKey);
-        if (!item || !isSyllabusMemberItem(item)) {
+        const item = resolveLibraryItem(libraryID, itemKey);
+        if (!item) {
           continue;
         }
         entries.push({ item, assignment });
@@ -543,6 +555,35 @@ export function getNextUpAssignment(
     }
   }
 
+  return null;
+}
+
+function resolveLibraryItem(
+  libraryID: number,
+  itemKey: string,
+): Zotero.Item | null {
+  if (!itemKey) {
+    return null;
+  }
+  try {
+    const byKey = Zotero.Items.getByLibraryAndKey(libraryID, itemKey);
+    if (byKey && isSyllabusMemberItem(byKey)) {
+      return byKey;
+    }
+  } catch {
+    // Fall through.
+  }
+  try {
+    const id = Zotero.Items.getIDFromLibraryAndKey(libraryID, itemKey);
+    if (typeof id === "number" && id > 0) {
+      const item = getCachedItem(id) || Zotero.Items.get(id);
+      if (item && isSyllabusMemberItem(item)) {
+        return item;
+      }
+    }
+  } catch {
+    // Fall through.
+  }
   return null;
 }
 

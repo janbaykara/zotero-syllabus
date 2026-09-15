@@ -594,9 +594,7 @@ export function ClassGroupComponent({
                 },
               })}
             </div>
-          ) : itemAssignments.length > 0 &&
-            isLocked &&
-            layout !== "card" ? (
+          ) : itemAssignments.length > 0 && isLocked && layout !== "card" ? (
             <ReadingItemsLayout
               layout={layout}
               density={density}
@@ -612,9 +610,7 @@ export function ClassGroupComponent({
                   assignment,
                   classNumber,
                 }))}
-              onItemClick={(item) =>
-                selectItemInCollection(item, collectionId)
-              }
+              onItemClick={(item) => selectItemInCollection(item, collectionId)}
             />
           ) : itemAssignments.length > 0 ? (
             itemAssignments.map(({ item, assignment }) => {

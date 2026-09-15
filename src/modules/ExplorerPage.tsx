@@ -59,7 +59,11 @@ import type { FluentMessageId } from "../../typings/i10n";
 import type { GalleryLayout } from "./galleryLayout";
 import { GalleryTile } from "./GalleryPage";
 import { MagazineGrid, type MagazineTileClick } from "./MagazineTile";
-import { SlimSyllabusItemCard, useItemIdentifierSelection, densityLabel } from "./browsePage";
+import {
+  SlimSyllabusItemCard,
+  useItemIdentifierSelection,
+  densityLabel,
+} from "./browsePage";
 import {
   ITEM_DENSITIES,
   useZoteroItemDensity,
@@ -1136,12 +1140,7 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
       rows.push({ shelf, items });
     }
     return rows;
-  }, [
-    hasPinned,
-    itemsForShelf,
-    upcomingDeadlineGroups.length,
-    visibleShelves,
-  ]);
+  }, [hasPinned, itemsForShelf, upcomingDeadlineGroups.length, visibleShelves]);
 
   useEffect(() => {
     let cancelled = false;

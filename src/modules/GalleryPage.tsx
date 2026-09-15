@@ -1813,9 +1813,7 @@ export const GalleryTile = memo(function GalleryTile({
 
   const instruction = chrome?.assignment?.classInstruction?.trim() || "";
   const priorityId =
-    chrome?.showPriority === false
-      ? ""
-      : chrome?.assignment?.priority || "";
+    chrome?.showPriority === false ? "" : chrome?.assignment?.priority || "";
   const done = chrome?.readerMode && chrome.assignment?.status === "done";
 
   return (

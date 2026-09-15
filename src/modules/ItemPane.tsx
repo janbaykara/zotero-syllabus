@@ -840,7 +840,11 @@ function PinnedItemPaneControls({ item }: { item: Zotero.Item }) {
         }
       >
         <span className="flex items-center gap-2">
-          {pinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
+          {pinned ? (
+            <PinOff className="w-4 h-4" />
+          ) : (
+            <Pin className="w-4 h-4" />
+          )}
           {pinned
             ? getString("pinned-unpin-item")
             : getString("pinned-menu-pin-item")}
