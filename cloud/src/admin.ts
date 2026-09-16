@@ -4,7 +4,8 @@ import {
   syllabusStatsKey,
   type ViewStats,
 } from "./analytics";
-import { objectKey } from "./paths";
+import { PathError, objectKey, userSyllabusPrefix } from "./paths";
+import { reconcileUsage } from "./quota";
 import { syllabusMetaFromCustomMetadata } from "./syllabusMeta";
 
 export type PublishedSyllabus = {
@@ -276,6 +277,11 @@ export function renderAdminHtml(report: AdminReport): string {
         const citeCell = views.available
           ? formatCount(counts?.citationDownloads ?? 0)
           : "—";
+        const label =
+          r.title.trim() ||
+          r.courseCode.trim() ||
+          r.collectionKey ||
+          r.publicUrl;
         return `<tr>
   <td>${cellOrDash(r.title)}</td>
   <td>${cellOrDash(r.courseCode)}</td>
@@ -288,6 +294,11 @@ export function renderAdminHtml(report: AdminReport): string {
   <td class="num">${citeCell}</td>
   <td class="mono">${escapeHtml(r.libraryId)}</td>
   <td class="mono">${escapeHtml(r.collectionKey)}</td>
+  <td><button type="button" class="delete"
+    data-user-id="${escapeHtml(r.userId)}"
+    data-library-id="${escapeHtml(r.libraryId)}"
+    data-collection-key="${escapeHtml(r.collectionKey)}"
+    data-label="${escapeHtml(label)}">Delete</button></td>
 </tr>`;
       })
       .join("\n");
@@ -310,6 +321,7 @@ export function renderAdminHtml(report: AdminReport): string {
         <th class="num">Citations (30d)</th>
         <th>Library</th>
         <th>Collection</th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
@@ -393,11 +405,23 @@ ${trs}
     td.num, th.num { text-align: right; white-space: nowrap; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
     a { color: #1d4ed8; word-break: break-all; }
+    button.delete {
+      font: inherit; font-size: 12px;
+      padding: 0.25rem 0.55rem;
+      color: #991b1b;
+      background: #fff;
+      border: 1px solid #fecaca;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    button.delete:hover { background: #fef2f2; }
+    button.delete:disabled { opacity: 0.55; cursor: wait; }
   </style>
 </head>
 <body>
   <h1>Syllabus publish admin</h1>
-  <p class="muted">Storage and attachment counts from R2. Title / code / institution come from index.html metadata (re-publish to populate older syllabi). Page views, file downloads, and citation exports (RIS/BIB/RDF) are last-30-day totals from Analytics Engine.</p>
+  <p class="muted">Storage and attachment counts from R2. Title / code / institution come from index.html metadata (re-publish to populate older syllabi). Page views, file downloads, and citation exports (RIS/BIB/RDF) are last-30-day totals from Analytics Engine. Delete removes all R2 objects for that syllabus (public URLs then 404); the publisher can re-publish from the plugin.</p>
   <div class="totals">
     <div><strong>${report.syllabi.length}</strong><span>Syllabi</span></div>
     <div><strong>${report.userCount}</strong><span>Users</span></div>
@@ -409,8 +433,57 @@ ${trs}
   </div>
   ${renderDailyChart(views)}
   ${body}
+  <script>
+  (function () {
+    var key = new URLSearchParams(location.search).get("key") || "";
+    document.querySelectorAll("button.delete").forEach(function (btn) {
+      btn.addEventListener("click", async function () {
+        var userId = btn.getAttribute("data-user-id") || "";
+        var libraryId = btn.getAttribute("data-library-id") || "";
+        var collectionKey = btn.getAttribute("data-collection-key") || "";
+        var label = btn.getAttribute("data-label") || collectionKey;
+        if (!key || !userId || !libraryId || !collectionKey) return;
+        if (!confirm("Delete published syllabus?\\n\\n" + label + "\\n\\nThis cannot be undone.")) {
+          return;
+        }
+        btn.disabled = true;
+        try {
+          var url = new URL("/admin/syllabus", location.origin);
+          url.searchParams.set("key", key);
+          url.searchParams.set("userId", userId);
+          url.searchParams.set("libraryId", libraryId);
+          url.searchParams.set("collectionKey", collectionKey);
+          var res = await fetch(url.toString(), { method: "DELETE" });
+          var body = await res.json().catch(function () { return {}; });
+          if (!res.ok) {
+            throw new Error(body.message || body.error || ("HTTP " + res.status));
+          }
+          location.reload();
+        } catch (err) {
+          alert("Delete failed: " + (err && err.message ? err.message : String(err)));
+          btn.disabled = false;
+        }
+      });
+    });
+  })();
+  </script>
 </body>
 </html>`;
+}
+
+function adminJson(data: unknown, status = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+    },
+  });
+}
+
+function requireAdminKey(request: Request, env: Env): boolean {
+  const url = new URL(request.url);
+  return adminKeyMatches(url.searchParams.get("key"), env.ADMIN_DASHBOARD_SECRET);
 }
 
 export async function handleAdminDashboard(
@@ -418,13 +491,8 @@ export async function handleAdminDashboard(
   env: Env,
   publicBaseUrl: string,
 ): Promise<Response> {
-  const url = new URL(request.url);
-  const key = url.searchParams.get("key");
-  if (!adminKeyMatches(key, env.ADMIN_DASHBOARD_SECRET)) {
-    return new Response(JSON.stringify({ error: "not_found" }), {
-      status: 404,
-      headers: { "content-type": "application/json; charset=utf-8" },
-    });
+  if (!requireAdminKey(request, env)) {
+    return adminJson({ error: "not_found" }, 404);
   }
 
   const report = await listPublishedSyllabi(env, publicBaseUrl);
@@ -436,4 +504,41 @@ export async function handleAdminDashboard(
       "x-robots-tag": "noindex, nofollow",
     },
   });
+}
+
+/** Wipe one published syllabus (all R2 keys under the prefix). Admin secret required. */
+export async function handleAdminDeleteSyllabus(
+  request: Request,
+  env: Env,
+): Promise<Response> {
+  if (!requireAdminKey(request, env)) {
+    return adminJson({ error: "not_found" }, 404);
+  }
+
+  const url = new URL(request.url);
+  const userId = url.searchParams.get("userId") || "";
+  const libraryId = url.searchParams.get("libraryId") || "";
+  const collectionKey = url.searchParams.get("collectionKey") || "";
+
+  let prefix: string;
+  try {
+    prefix = userSyllabusPrefix(userId, libraryId, collectionKey);
+  } catch (e) {
+    if (e instanceof PathError) {
+      return adminJson({ error: "bad_path", message: e.message }, 400);
+    }
+    throw e;
+  }
+
+  let cursor: string | undefined;
+  let deleted = 0;
+  do {
+    const listed = await env.BUCKET.list({ prefix, cursor, limit: 1000 });
+    await Promise.all(listed.objects.map((obj) => env.BUCKET.delete(obj.key)));
+    deleted += listed.objects.length;
+    cursor = listed.truncated ? listed.cursor : undefined;
+  } while (cursor);
+
+  const usageBytes = await reconcileUsage(env, userId);
+  return adminJson({ ok: true, deleted, usageBytes });
 }
