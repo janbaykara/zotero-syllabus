@@ -241,7 +241,7 @@ export function coerceExplorerShelf(value: unknown): ExplorerShelf | null {
       : defaultLayoutForShelfType(type),
   );
   const id = raw.id;
-  let shelf: ExplorerShelf | null = null;
+  let shelf: ExplorerShelf;
   switch (raw.type) {
     case "pinned":
       shelf = { id, type: "pinned", layout };

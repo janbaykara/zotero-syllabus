@@ -16,8 +16,8 @@ jobs:
     # You can customize any of the inputs here.
     # If you omit an input, its default value will be used.
     with:
-      build: "npm run build"
-      release: "npm run release"
+      build: "pnpm run build"
+      release: "pnpm run release"
     secrets: inherit
 
   release-notes:

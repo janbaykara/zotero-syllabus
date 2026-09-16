@@ -39,7 +39,7 @@ export function decodeMetaHeader(raw: string | null | undefined): string {
   try {
     decoded = decodeURIComponent(raw);
   } catch {
-    decoded = raw;
+    // Keep the raw value when decoding fails.
   }
   return sanitizeMetaField(decoded);
 }

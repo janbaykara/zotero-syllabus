@@ -179,7 +179,7 @@ async function collectItemHighlights(
   item: Zotero.Item,
 ): Promise<ItemHighlight[]> {
   await loadChildItems(item);
-  let ids: number[] = [];
+  let ids: number[];
   try {
     ids = item.getAttachments();
   } catch {

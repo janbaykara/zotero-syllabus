@@ -99,8 +99,7 @@ export {
 } from "./syllabusNoteHtml";
 
 type CollectionIdentifier =
-  | number
-  | Parameters<typeof Zotero.Collections.getByLibraryAndKey>;
+  number | Parameters<typeof Zotero.Collections.getByLibraryAndKey>;
 
 export const SYLLABUS_NOTE_TAG = "zotero-syllabus";
 export const SYLLABUS_NOTE_TITLE = "Syllabus";
@@ -342,8 +341,7 @@ export async function buildSyllabusExportPayload(
 function resolveImportedItemKey(
   oldKey: string,
   meta:
-    | NonNullable<CollectionSyllabusDocument["itemIndex"]>[string]
-    | undefined,
+    NonNullable<CollectionSyllabusDocument["itemIndex"]>[string] | undefined,
   maps: {
     byExportId: Map<string, string>;
     byDoi: Map<string, string>;
@@ -868,7 +866,7 @@ async function survivorFromCollectionMates(
     // Trashed items may already be removed from collections.
   }
   for (const collection of collections) {
-    let children: Zotero.Item[] = [];
+    let children: Zotero.Item[];
     try {
       const raw = collection.getChildItems();
       children = Array.isArray(raw) ? raw : [];
@@ -1485,7 +1483,7 @@ function collectionNoteCandidates(
   collection: Zotero.Collection,
   includeDeleted = false,
 ): Zotero.Item[] {
-  let children: Zotero.Item[] = [];
+  let children: Zotero.Item[];
   try {
     children = collection.getChildItems(false, includeDeleted);
   } catch (error) {

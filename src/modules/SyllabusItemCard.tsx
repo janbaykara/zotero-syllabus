@@ -224,14 +224,7 @@ export function SyllabusItemCard({
       .filter(Boolean) as Array<{
       item: Zotero.Item;
       type:
-        | "pdf"
-        | "snapshot"
-        | "epub"
-        | "html"
-        | "doc"
-        | "txt"
-        | "zip"
-        | "file";
+        "pdf" | "snapshot" | "epub" | "html" | "doc" | "txt" | "zip" | "file";
     }>;
   }, [item, slim]);
 

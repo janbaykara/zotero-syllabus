@@ -30,7 +30,7 @@ function buildNode(collection: Zotero.Collection): SubcollectionNode {
       })
       .sort((a, b) => compareLocale(a.name || "", b.name || ""));
   } catch {
-    childCollections = [];
+    // Keep empty when child collections cannot be read.
   }
 
   let items: Zotero.Item[] = [];
@@ -43,7 +43,7 @@ function buildNode(collection: Zotero.Collection): SubcollectionNode {
       }
     });
   } catch {
-    items = [];
+    // Keep empty when child items cannot be read.
   }
 
   return {

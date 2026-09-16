@@ -133,10 +133,7 @@ enum SyllabusSettingsKey {
 }
 
 export type CollectionViewMode =
-  | "collection"
-  | "gallery"
-  | "syllabus"
-  | "explorer";
+  "collection" | "gallery" | "syllabus" | "explorer";
 
 const COLLECTION_VIEW_MODES: CollectionViewMode[] = [
   "collection",
@@ -1092,7 +1089,7 @@ export class SyllabusManager {
     try {
       tabOpen = !!win.Zotero_Tabs?._getTab("syllabus-reading-list-tab")?.tab;
     } catch {
-      tabOpen = false;
+      // Keep false when the tab lookup fails.
     }
     button.setAttribute("data-tab-open", tabOpen ? "true" : "false");
   }
@@ -3774,6 +3771,7 @@ export class SyllabusManager {
     } catch (parseError) {
       throw new Error(
         `importSyllabusMetadata: The file is not a valid syllabus note or JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+        { cause: parseError },
       );
     }
 

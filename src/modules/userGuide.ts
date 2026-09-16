@@ -246,7 +246,7 @@ async function ensurePlaygroundSampleItems(
     return;
   }
 
-  let regularItems: Zotero.Item[] = [];
+  let regularItems: Zotero.Item[];
   try {
     regularItems = collection.getChildItems().filter((item) => {
       try {

@@ -734,7 +734,7 @@ function readCollectionItems(
   try {
     recursive = !!Zotero.Prefs.get("recursiveCollections");
   } catch {
-    recursive = false;
+    // Keep false when the preference is unavailable.
   }
   if (!recursive) {
     return collection
@@ -755,7 +755,7 @@ function readCollectionItems(
     try {
       children = col.getChildCollections();
     } catch {
-      children = [];
+      // Keep empty when child collections cannot be read.
     }
     for (const child of children) {
       walk(child);
@@ -791,7 +791,7 @@ function librarySavedSearches(libraryID: number): Zotero.Search[] {
 function libraryCollections(
   libraryID: number,
 ): Array<{ collection: Zotero.Collection; depth: number }> {
-  let all: Zotero.Collection[] = [];
+  let all: Zotero.Collection[];
   try {
     all = Zotero.Collections.getByLibrary(libraryID).filter(
       (collection) => collection && !collection.deleted,

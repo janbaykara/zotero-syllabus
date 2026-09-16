@@ -169,7 +169,6 @@ export async function registerSyllabusInfoColumn() {
 
       // Generate color for left border based on class number
       let currentClassNumber: string | null = null;
-      let currentCollectionId: string | null = null;
       let isFirstInClassGroup = false;
 
       if (parts.length >= 5) {
@@ -178,7 +177,7 @@ export async function registerSyllabusInfoColumn() {
         const classTitle = parts[3];
         const collectionId = parts[4];
         currentClassNumber = classNumber || null;
-        currentCollectionId = collectionId || null;
+        const currentCollectionId = collectionId || null;
 
         // Check if this is the first item in a class group
         // Reset tracking if collection changed

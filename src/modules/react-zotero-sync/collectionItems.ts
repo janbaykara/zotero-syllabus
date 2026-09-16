@@ -78,7 +78,7 @@ function collectRegularItems(
     try {
       children = col.getChildCollections();
     } catch {
-      children = [];
+      // Keep empty when child collections cannot be read.
     }
     for (const child of children) {
       walk(child);
@@ -277,7 +277,7 @@ function itemInCollectionTree(
     return true;
   }
   const walk = (col: Zotero.Collection): boolean => {
-    let children: Zotero.Collection[] = [];
+    let children: Zotero.Collection[];
     try {
       children = col.getChildCollections();
     } catch {
@@ -298,7 +298,7 @@ function collectionIsDescendantOf(
   root: Zotero.Collection,
 ): boolean {
   const walk = (col: Zotero.Collection): boolean => {
-    let children: Zotero.Collection[] = [];
+    let children: Zotero.Collection[];
     try {
       children = col.getChildCollections();
     } catch {

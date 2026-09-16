@@ -54,7 +54,7 @@ export function mediaFeaturesFromItem(
   try {
     dateAdded = String(item.dateAdded || "");
   } catch {
-    dateAdded = "";
+    // Keep empty when dateAdded is unavailable.
   }
   return {
     id: item.id,

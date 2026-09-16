@@ -372,7 +372,7 @@ async function trashDuplicateEmptyImportCollections(
       collection.name === destination.name,
   );
   for (const sibling of siblings) {
-    let children: Zotero.Item[] = [];
+    let children: Zotero.Item[];
     try {
       children = sibling.getChildItems();
     } catch {

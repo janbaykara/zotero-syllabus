@@ -43,8 +43,7 @@ export type MemberItemOptions = {
 function getItemsView(): ItemsViewLike | null {
   try {
     const pane = ztoolkit.getGlobal("ZoteroPane") as
-      | { itemsView?: ItemsViewLike }
-      | undefined;
+      { itemsView?: ItemsViewLike } | undefined;
     return pane?.itemsView ?? null;
   } catch {
     return null;

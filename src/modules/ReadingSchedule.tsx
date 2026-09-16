@@ -283,8 +283,8 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
 
 function WeekHeader({ weekStartDate }: { weekStartDate: Date }) {
   const start = startOfWeek(weekStartDate);
-  let str = "";
   ztoolkit.log("WeekHeader: start:", differenceInDays(start, new Date()));
+  let str: string;
   if (isThisWeek(start)) {
     str = getString("schedule-this-week");
   } else if (isSameWeek(start, addWeeks(new Date(), 1))) {

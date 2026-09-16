@@ -85,10 +85,7 @@ export type OtherViewScope = {
 };
 
 export type ViewScope =
-  | CollectionViewScope
-  | SpecialViewScope
-  | LibraryViewScope
-  | OtherViewScope;
+  CollectionViewScope | SpecialViewScope | LibraryViewScope | OtherViewScope;
 
 function callFlag(fn: (() => boolean) | undefined): boolean {
   if (typeof fn !== "function") {

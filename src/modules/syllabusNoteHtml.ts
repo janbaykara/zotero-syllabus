@@ -278,7 +278,7 @@ function doiForReading(
   try {
     fromItem = item ? String(item.getField("DOI") || "").trim() : "";
   } catch {
-    fromItem = "";
+    // Keep empty when DOI is unavailable.
   }
   const fromIndex = (document.itemIndex?.[itemKey]?.doi || "").trim();
   return fromItem || fromIndex;

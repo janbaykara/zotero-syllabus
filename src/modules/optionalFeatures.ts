@@ -3,10 +3,7 @@ import { zoteroCache } from "../utils/cache";
 import { FEATURE_FLAG } from "./featureFlags";
 
 export type OptionalFeatureId =
-  | "syllabus"
-  | "gallery"
-  | "explorer"
-  | "readingSchedule";
+  "syllabus" | "gallery" | "explorer" | "readingSchedule";
 
 export type OptionalFeatureChoices = Record<OptionalFeatureId, boolean>;
 

@@ -269,7 +269,7 @@ export async function searchRecentlyReadItems(
     try {
       attachmentIds = item.getAttachments();
     } catch {
-      attachmentIds = [];
+      // Keep empty when attachments cannot be read.
     }
     for (const attId of attachmentIds) {
       const att = resolveItem(attId);
@@ -294,7 +294,7 @@ export async function searchRecentFeedItems(
   try {
     feeds = Zotero.Feeds?.getAll?.() || [];
   } catch {
-    feeds = [];
+    // Keep empty when feeds cannot be read.
   }
   if (!feeds.length) {
     try {
@@ -302,7 +302,7 @@ export async function searchRecentFeedItems(
         (library) => library.libraryType === "feed",
       );
     } catch {
-      feeds = [];
+      // Keep empty when libraries cannot be read.
     }
   }
   const items: Zotero.Item[] = [];
@@ -352,13 +352,13 @@ export async function searchRecentAnnotations(
     try {
       text = String(item.annotationText || item.annotationComment || "").trim();
     } catch {
-      text = "";
+      // Keep empty when annotation text is unavailable.
     }
     let color = DEFAULT_HIGHLIGHT_COLOR;
     try {
       color = normalizeHighlightColor(String(item.annotationColor || ""));
     } catch {
-      color = DEFAULT_HIGHLIGHT_COLOR;
+      // Keep the default color when annotation color is unavailable.
     }
     let parent: Zotero.Item | null = null;
     try {
@@ -370,7 +370,7 @@ export async function searchRecentAnnotations(
         parent = grand && isSyllabusMemberItem(grand) ? grand : parent;
       }
     } catch {
-      parent = null;
+      // Keep null when parent lookup fails.
     }
     rows.push({
       id: item.id,
@@ -402,7 +402,7 @@ async function annotationsForParent(
   parent: Zotero.Item,
 ): Promise<ExplorerAnnotation[]> {
   await loadChildItems(parent);
-  let attachmentIds: number[] = [];
+  let attachmentIds: number[];
   try {
     attachmentIds = parent.getAttachments();
   } catch {
@@ -422,7 +422,7 @@ async function annotationsForParent(
       continue;
     }
     await loadChildItems(att);
-    let annotations: Zotero.Item[] = [];
+    let annotations: Zotero.Item[];
     try {
       annotations = att.getAnnotations(false) || [];
     } catch {
@@ -440,13 +440,13 @@ async function annotationsForParent(
       try {
         text = String(ann.annotationText || ann.annotationComment || "").trim();
       } catch {
-        text = "";
+        // Keep empty when annotation text is unavailable.
       }
       let color = DEFAULT_HIGHLIGHT_COLOR;
       try {
         color = normalizeHighlightColor(String(ann.annotationColor || ""));
       } catch {
-        color = DEFAULT_HIGHLIGHT_COLOR;
+        // Keep the default color when annotation color is unavailable.
       }
       rows.push({
         id: ann.id,
@@ -464,7 +464,7 @@ async function annotationsForParent(
 
 function maxLastReadForParent(parent: Zotero.Item): number {
   let best = 0;
-  let attachmentIds: number[] = [];
+  let attachmentIds: number[];
   try {
     attachmentIds = parent.getAttachments();
   } catch {

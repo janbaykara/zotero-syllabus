@@ -182,7 +182,7 @@ function itemsFromSnapshot(
   snapshot: string,
   options?: { includeDeleted?: boolean; includeFeedItems?: boolean },
 ): TreeRowGalleryItem[] {
-  let parsed: Array<{ id?: number }> = [];
+  let parsed: Array<{ id?: number }>;
   try {
     parsed = JSON.parse(snapshot) as Array<{ id?: number }>;
   } catch {

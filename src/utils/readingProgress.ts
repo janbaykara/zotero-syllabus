@@ -20,7 +20,7 @@ export function getPrimaryAttachmentProgress(
   try {
     last = pdf ? String(pdf.getAttachmentLastPageIndex() ?? "") : "";
   } catch {
-    last = "";
+    // Keep empty when last-page index is unavailable.
   }
   const stamp = `${item.id}:${item.dateModified || ""}:${last}`;
   const cached = progressMemo.get(item.id);

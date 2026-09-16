@@ -1,11 +1,7 @@
 export type NavDirection = "left" | "right" | "up" | "down";
 
 export type GalleryNavKey =
-  | NavDirection
-  | "home"
-  | "end"
-  | "pageup"
-  | "pagedown";
+  NavDirection | "home" | "end" | "pageup" | "pagedown";
 
 export type NavRect = {
   top: number;

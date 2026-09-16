@@ -165,7 +165,7 @@ class ZoteroCache {
       return value;
     }
 
-    let value: T | undefined = undefined;
+    let value: T | undefined;
     try {
       value = Zotero.Prefs.get(key, true) as T;
       const obj = JSON.parse(String(value || "{}"));

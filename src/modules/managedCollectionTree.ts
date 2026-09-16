@@ -56,8 +56,7 @@ type CollectionsView = {
 let prototypePatched = false;
 let patchedPrototype: CollectionsView | null = null;
 let originalGetIconName:
-  | ((this: CollectionsView, index: number) => string | null)
-  | null = null;
+  ((this: CollectionsView, index: number) => string | null) | null = null;
 let prefObserverID: symbol | null = null;
 
 export function areCustomIconsEnabled(): boolean {
@@ -118,8 +117,7 @@ function collectionsViewForWindow(
   win: _ZoteroTypes.MainWindow,
 ): CollectionsView | null {
   const view = win.ZoteroPane?.collectionsView as unknown as
-    | CollectionsView
-    | undefined;
+    CollectionsView | undefined;
   if (!view?.getIconName || !view.renderItem || !view.getRow) {
     return null;
   }

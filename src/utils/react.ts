@@ -88,8 +88,7 @@ export function renderComponent(
 /** Tear down a Preact root so its document listeners cannot outlive the view. */
 export function unmountComponent(win: _ZoteroTypes.MainWindow, rootId: string) {
   const unmountMap = (win as any).__preactUnmountMap as
-    | Map<string, RootMeta>
-    | undefined;
+    Map<string, RootMeta> | undefined;
   if (!unmountMap) {
     return;
   }

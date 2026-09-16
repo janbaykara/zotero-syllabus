@@ -12,3 +12,7 @@ Do not add hardcoded user-visible text in TS, TSX, XHTML, or progress windows.
 6. Keep the product name `Zotero Syllabus` untranslated.
 
 Details: [doc/TECHNICAL.md](doc/TECHNICAL.md#localization) and `.cursor/rules/localization.mdc`.
+
+## Lint / package manager
+
+Use **pnpm** only (`pnpm-lock.yaml`). CI runs `pnpm run lint:check` with a fresh install from that lockfile. After pulling dep changes, run `pnpm install` before linting. Prefer `pnpm lint:fix` locally, then confirm with `pnpm lint:check` (what CI runs). Do not introduce `package-lock.json`.

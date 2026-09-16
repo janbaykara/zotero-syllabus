@@ -124,7 +124,7 @@ export function getItemBlurb(item: Zotero.Item): Promise<string> {
 }
 
 async function readAttachmentBlurb(item: Zotero.Item): Promise<string> {
-  let ids: number[] = [];
+  let ids: number[];
   try {
     ids = item.getAttachments();
   } catch {
@@ -154,7 +154,7 @@ async function readOneAttachmentBlurb(
   try {
     path = (await att.getFilePathAsync()) || "";
   } catch {
-    path = "";
+    // Keep empty when the attachment path is unavailable.
   }
   if (!path) {
     return "";

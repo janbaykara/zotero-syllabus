@@ -255,10 +255,12 @@ pnpm start
 | Command                            | Purpose                                     |
 | ---------------------------------- | ------------------------------------------- |
 | `pnpm start`                       | Run in development mode                     |
-| `pnpm run build`                   | Production build                            |
+| `pnpm run build`                   | Production build (includes `lint:check`)    |
 | `pnpm test`                        | Test suite (launches Zotero)                |
-| `pnpm run lint:check` / `lint:fix` | Format and lint                             |
+| `pnpm run lint:check` / `lint:fix` | Format and lint (same rules as CI)          |
 | `pnpm run release`                 | Build the `.xpi` and prepare a distribution |
+
+Use **pnpm** only (`packageManager` + `pnpm-lock.yaml`). After pulling dependency changes, run `pnpm install` so local `lint:fix` / `lint:check` match CI. Do not commit `package-lock.json`.
 
 ## Project structure
 

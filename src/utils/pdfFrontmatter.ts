@@ -584,7 +584,7 @@ function bestFallbackPage(pages: string[]): string {
  */
 export function firstPdfContentText(raw: string): string {
   const pages = splitPdfCachePages(raw).filter(Boolean);
-  let picked = "";
+  let picked: string;
   if (pages.length > 1) {
     const scan = pages.slice(0, MAX_PAGES_TO_SCAN);
     const ranked: Array<{ rank: number; index: number; page: string }> = [];

@@ -148,12 +148,12 @@ function itemStamp(item: Zotero.Item): string {
   try {
     url = item.getField("url") || "";
   } catch {
-    url = "";
+    // Keep empty when url is unavailable.
   }
   try {
     isbn = item.getField("ISBN") || "";
   } catch {
-    isbn = "";
+    // Keep empty when ISBN is unavailable.
   }
   return `${item.id}:${item.itemType}:${url}:${isbn}:${attachments}`;
 }
@@ -357,7 +357,7 @@ export function itemLikelyHasCover(item: Zotero.Item): boolean {
   try {
     isbn = String(item.getField("ISBN") || "");
   } catch {
-    isbn = "";
+    // Keep empty when ISBN is unavailable.
   }
   return itemFeaturesLikelyHaveCover({
     itemType: item.itemType,
@@ -1269,7 +1269,7 @@ async function fetchIsbnCover(item: Zotero.Item): Promise<string | null> {
 }
 
 function listIsbns(item: Zotero.Item): string[] {
-  let raw = "";
+  let raw: string;
   try {
     raw = String(item.getField("ISBN") || "");
   } catch {

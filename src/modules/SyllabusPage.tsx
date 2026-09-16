@@ -589,8 +589,7 @@ function PublishStatusBanner({
 }
 
 type SaveMenuAction =
-  | { kind: "export"; format: SyllabusExportFormat }
-  | { kind: "publish" };
+  { kind: "export"; format: SyllabusExportFormat } | { kind: "publish" };
 
 function SyllabusSaveFormatMenu({
   onSelect,

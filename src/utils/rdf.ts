@@ -183,7 +183,7 @@ export function fallbackItemsAsZoteroRdf(
       try {
         exportId = ids.get(item.key) || "";
       } catch {
-        exportId = "";
+        // Keep empty when export id lookup fails.
       }
       const extra = appendExportIdToExtra(field(item, "extra"), exportId);
       if (extra) {

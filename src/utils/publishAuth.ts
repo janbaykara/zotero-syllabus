@@ -91,7 +91,7 @@ async function httpJson<T>(
   });
   const status = xhr.status || 0;
   const text = String(xhr.responseText || "");
-  let data: unknown = null;
+  let data: unknown;
   try {
     data = text ? JSON.parse(text) : null;
   } catch {
@@ -121,7 +121,7 @@ export async function startZoteroPublishAuth(): Promise<{
         ? (err as { data?: { error?: string } }).data
         : undefined;
     if (data?.error === "oauth_not_configured") {
-      throw new Error("publish_oauth_not_configured");
+      throw new Error("publish_oauth_not_configured", { cause: err });
     }
     throw err;
   }
@@ -218,7 +218,7 @@ export async function listPublishObjects(opts: {
       { size?: number; fingerprint?: string | null; etag?: string | null }
     >;
     error?: string;
-  } = {};
+  };
   try {
     data = text ? JSON.parse(text) : {};
   } catch {
@@ -283,7 +283,7 @@ export async function deletePublishSyllabus(opts: {
     deleted?: number;
     usageBytes?: number;
     error?: string;
-  } = {};
+  };
   try {
     data = text ? JSON.parse(text) : {};
   } catch {
@@ -353,7 +353,7 @@ export async function putPublishObject(opts: {
     usageBytes?: number;
     quotaBytes?: number;
     error?: string;
-  } = {};
+  };
   try {
     data = text ? JSON.parse(text) : {};
   } catch {

@@ -291,9 +291,7 @@ function resolveCollectionFromPrefKey(key: string): Zotero.Collection | null {
 }
 
 function readCollectionMetadataPref():
-  | Record<string, unknown>
-  | "missing"
-  | "invalid" {
+  Record<string, unknown> | "missing" | "invalid" {
   let raw: unknown;
   try {
     raw = Zotero.Prefs.get(COLLECTION_METADATA_PREF, true);

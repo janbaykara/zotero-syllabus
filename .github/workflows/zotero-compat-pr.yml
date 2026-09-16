@@ -100,8 +100,8 @@ jobs:
     needs: confirm-version-bump
     uses: zotero-plugin-dev/workflows/.github/workflows/release-plugin.yml@main
     with:
-      build: "npm run build"
-      release: "npm run release"
+      build: "pnpm run build"
+      release: "pnpm run release"
     secrets: inherit
 
   release-notes:

@@ -17,7 +17,7 @@ jobs:
       - name: Setup JS
         uses: zotero-plugin-dev/workflows/setup-js@main
       - name: Run Lint
-        run: npm run lint:check
+        run: pnpm run lint:check
 
   build:
     runs-on: ubuntu-latest
@@ -27,7 +27,7 @@ jobs:
       - name: Setup JS
         uses: zotero-plugin-dev/workflows/setup-js@main
       - name: Run Build
-        run: npm run build
+        run: pnpm run build
       - name: Upload build result
         uses: actions/upload-artifact@v4
         with:
@@ -41,4 +41,4 @@ jobs:
     steps:
       - name: Setup JS
         uses: zotero-plugin-dev/workflows/setup-js@main
-      - run: npm run test
+      - run: pnpm run test

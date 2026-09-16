@@ -439,7 +439,7 @@ describe("syllabus smoke", function () {
       await master.loadDataType("relation");
       replaced = master.getRelationsByPredicate("dc:replaces") || [];
     } catch {
-      replaced = [];
+      // Keep empty when relations cannot be loaded.
     }
     const loserDeleted = (() => {
       try {

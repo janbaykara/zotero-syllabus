@@ -13,8 +13,7 @@ import { openSyllabusPrintDialog } from "./printSyllabus";
 export type SyllabusExportFormat = "pdf" | "docx" | "markdown" | "html";
 
 export type ExportInline =
-  | { type: "text"; text: string }
-  | { type: "link"; text: string; href: string };
+  { type: "text"; text: string } | { type: "link"; text: string; href: string };
 
 export type ExportBlock =
   | { type: "heading"; level: 1 | 2 | 3; runs: ExportInline[] }

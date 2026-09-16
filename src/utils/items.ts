@@ -343,12 +343,7 @@ export function sortItemsByDateAdded(items: Zotero.Item[]): Zotero.Item[] {
 }
 
 export type ItemSortMode =
-  | "auto"
-  | "lastRead"
-  | "title"
-  | "creator"
-  | "date"
-  | "dateAdded";
+  "auto" | "lastRead" | "title" | "creator" | "date" | "dateAdded";
 
 export function sortItems(
   items: Zotero.Item[],

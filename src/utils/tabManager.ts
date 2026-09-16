@@ -147,7 +147,7 @@ export class TabManager<TParams = any> {
     tabResult.container.appendChild(rootElement);
 
     // Get tab instance
-    let tabInstance: _ZoteroTypes.TabInstance | null = null;
+    let tabInstance: _ZoteroTypes.TabInstance | null;
     try {
       tabInstance = tabs._getTab(tabId)?.tab || null;
     } catch {
