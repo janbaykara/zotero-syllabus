@@ -160,7 +160,12 @@ export function ClassReadingBlock({
   return (
     <div className={twMerge(classStatus === "done" ? "opacity-40" : "")}>
       <div
-        className={twMerge(readingContentWidthClass("card"), "relative mb-2")}
+        className={twMerge(
+          layout === "card"
+            ? readingContentWidthClass("card")
+            : "w-full min-w-0 max-w-full",
+          "relative mb-2",
+        )}
       >
         <div className="flex flex-col gap-2">
           <div>

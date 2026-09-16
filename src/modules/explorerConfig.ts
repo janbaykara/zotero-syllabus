@@ -120,6 +120,11 @@ function shelvesPrefKey() {
   return `${config.prefsPrefix}.explorerShelves`;
 }
 
+/** One-time bump: deadlines shelf was locked to Card; default is now Cover. */
+function deadlinesLayoutMigrationKey() {
+  return `${config.prefsPrefix}.explorerDeadlinesCoverDefault`;
+}
+
 function libraryViewPrefKey() {
   return `${config.prefsPrefix}.libraryViewModes`;
 }
@@ -129,8 +134,9 @@ export function defaultLayoutForShelfType(
 ): GalleryLayout {
   switch (type) {
     case "pinned":
-    case "upcoming-deadlines":
       return "card";
+    case "upcoming-deadlines":
+      return "cover";
     case "recently-added":
     case "recent-in-feed":
     case "collection":
@@ -150,9 +156,8 @@ export function layoutsForExplorerShelf(
     case "watch-now":
     case "listen-now":
       return ["cover"];
-    case "upcoming-deadlines":
-      return [];
     case "pinned":
+    case "upcoming-deadlines":
       return GALLERY_LAYOUT_MODES;
     default:
       return GALLERY_LAYOUT_MODES;
@@ -173,7 +178,7 @@ function resolveShelfLayout(
 export function defaultExplorerShelves(): ExplorerShelf[] {
   return [
     { id: "pinned", type: "pinned", layout: "card" },
-    { id: "upcoming-deadlines", type: "upcoming-deadlines", layout: "card" },
+    { id: "upcoming-deadlines", type: "upcoming-deadlines", layout: "cover" },
     { id: "watch-now", type: "watch-now", layout: "cover" },
     { id: "listen-now", type: "listen-now", layout: "cover" },
     {
@@ -381,10 +386,44 @@ export function coerceExplorerShelves(value: unknown): ExplorerShelf[] {
 
 export function getExplorerShelves(): ExplorerShelf[] {
   const raw = getCachedPref(shelvesPrefKey(), ExplorerShelvesSchema);
-  if (raw == null) {
-    return defaultExplorerShelves();
+  const shelves =
+    raw == null ? defaultExplorerShelves() : coerceExplorerShelves(raw);
+  return migrateUpcomingDeadlinesCoverDefault(shelves);
+}
+
+/**
+ * Before layout options existed, Upcoming deadlines always stored `card`.
+ * Remap that forced default to Cover once; after that, Card is a real choice.
+ */
+function migrateUpcomingDeadlinesCoverDefault(
+  shelves: ExplorerShelf[],
+): ExplorerShelf[] {
+  const key = deadlinesLayoutMigrationKey();
+  try {
+    if (Zotero.Prefs.get(key, true)) {
+      return shelves;
+    }
+  } catch {
+    return shelves;
   }
-  return coerceExplorerShelves(raw);
+
+  const next = shelves.map((shelf) =>
+    shelf.type === "upcoming-deadlines" && shelf.layout === "card"
+      ? { ...shelf, layout: "cover" as const }
+      : shelf,
+  );
+  const changed = next.some(
+    (shelf, index) => shelf.layout !== shelves[index]?.layout,
+  );
+  if (changed) {
+    setExplorerShelves(next);
+  }
+  try {
+    Zotero.Prefs.set(key, true, true);
+  } catch {
+    return changed ? next : shelves;
+  }
+  return changed ? next : shelves;
 }
 
 export function setExplorerShelves(shelves: ExplorerShelf[]): void {

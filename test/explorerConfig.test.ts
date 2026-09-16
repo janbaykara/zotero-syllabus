@@ -218,11 +218,29 @@ describe("explorer shelves", function () {
       "cover",
       "magazine",
     ]);
+    assert.deepEqual(layoutsForExplorerShelf("upcoming-deadlines"), [
+      "card",
+      "cover",
+      "magazine",
+    ]);
     assert.deepEqual(layoutsForExplorerShelf("recently-read"), [
       "card",
       "cover",
       "magazine",
     ]);
+  });
+
+  it("defaults upcoming deadlines to cover layout", function () {
+    assert.equal(
+      defaultExplorerShelves().find(
+        (shelf) => shelf.type === "upcoming-deadlines",
+      )?.layout,
+      "cover",
+    );
+    const shelves = coerceExplorerShelves([
+      { id: "upcoming-deadlines", type: "upcoming-deadlines" },
+    ]);
+    assert.equal(shelves[0]?.layout, "cover");
   });
 
   it("upgrades the pre-pinned default homepage to include Pinned", function () {

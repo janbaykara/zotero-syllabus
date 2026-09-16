@@ -1951,6 +1951,24 @@
   gap: 1.75rem;
 }
 
+/* Home shelf already has page padding; don't centre a nested reading column. */
+.syllabus-explorer-deadlines .container-padded,
+.syllabus-explorer-deadlines .container-padded-wide,
+[data-tour="explorer-shelf-pinned"] .container-padded,
+[data-tour="explorer-shelf-pinned"] .container-padded-wide {
+  max-width: none;
+  margin-inline: 0;
+  padding-inline: 0;
+}
+
+.syllabus-explorer-deadlines .syllabus-gallery-grid.is-centered,
+.syllabus-explorer-deadlines .syllabus-magazine-grid.is-centered,
+[data-tour="explorer-shelf-pinned"] .syllabus-gallery-grid.is-centered,
+[data-tour="explorer-shelf-pinned"] .syllabus-magazine-grid.is-centered {
+  margin-inline: 0;
+  justify-content: start;
+}
+
 .syllabus-explorer-deadline-course {
   display: flex;
   flex-direction: column;

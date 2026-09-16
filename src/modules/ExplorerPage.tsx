@@ -532,7 +532,9 @@ function ExplorerShelfSettingsMenu({
   const popoverStyle = useExplorerPopover(open, setOpen, rootRef);
   const titleId = `syllabus-explorer-shelf-settings-${shelf.id}`;
   const [density, setDensity] = useZoteroItemDensity();
-  const showDensity = shelf.type === "pinned" && shelf.layout === "card";
+  const showDensity =
+    (shelf.type === "pinned" || shelf.type === "upcoming-deadlines") &&
+    shelf.layout === "card";
 
   return (
     <div
@@ -932,9 +934,11 @@ function ExplorerDeadlineDate({ isoDate }: { isoDate: string }) {
 function ExplorerDeadlineShelf({
   groups,
   density,
+  layout,
 }: {
   groups: ReturnType<typeof groupUpcomingReadingsByCourse>;
   density: ItemDensity;
+  layout: GalleryLayout;
 }) {
   if (!groups.length) {
     return (
@@ -973,6 +977,7 @@ function ExplorerDeadlineShelf({
                 <ClassReadingBlock
                   classReading={classReading}
                   density={density}
+                  layout={layout}
                   showCollectionLink={false}
                   compactHeading
                   onCollectionClick={() =>
@@ -1433,28 +1438,40 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                     </div>
                     {shelf.type === "upcoming-deadlines" &&
                     isOptionalFeatureEnabled("readingSchedule") ? (
-                      <button
-                        type="button"
-                        className="syllabus-explorer-customize syllabus-explorer-shelf-goto"
-                        onClick={() => openReadingScheduleTab()}
-                      >
-                        <span>
-                          {getString("explorer-go-to-reading-schedule")}
-                        </span>
-                        {getUiDir() === "rtl" ? (
-                          <ChevronLeft
-                            size={12}
-                            strokeWidth={2}
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          <ChevronRight
-                            size={12}
-                            strokeWidth={2}
-                            aria-hidden="true"
-                          />
-                        )}
-                      </button>
+                      <div className="inline-flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          className="syllabus-explorer-customize syllabus-explorer-shelf-goto"
+                          onClick={() => openReadingScheduleTab()}
+                        >
+                          <span>
+                            {getString("explorer-go-to-reading-schedule")}
+                          </span>
+                          {getUiDir() === "rtl" ? (
+                            <ChevronLeft
+                              size={12}
+                              strokeWidth={2}
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <ChevronRight
+                              size={12}
+                              strokeWidth={2}
+                              aria-hidden="true"
+                            />
+                          )}
+                        </button>
+                        <ExplorerShelfSettingsMenu
+                          shelf={shelf}
+                          onChange={(next) =>
+                            setShelves(
+                              shelves.map((row) =>
+                                row.id === next.id ? next : row,
+                              ),
+                            )
+                          }
+                        />
+                      </div>
                     ) : shelf.type === "recent-annotations" ? (
                       <div className="inline-flex items-center gap-2 shrink-0">
                         <button
@@ -1507,6 +1524,7 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                     <ExplorerDeadlineShelf
                       groups={upcomingDeadlineGroups}
                       density={density}
+                      layout={explorerShelfLayout(shelf)}
                     />
                   ) : shelf.type === "pinned" ? (
                     <PinnedSection
