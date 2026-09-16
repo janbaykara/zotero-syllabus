@@ -25,7 +25,11 @@ const JWT_TTL_SEC = 60 * 60 * 24 * 30; // 30 days
 const OAUTH_STATE_TTL = 60 * 15; // 15 minutes
 const POLL_READY_TTL = 60 * 5;
 
-function json(data: unknown, status = 200, extraHeaders: HeadersInit = {}): Response {
+function json(
+  data: unknown,
+  status = 200,
+  extraHeaders: HeadersInit = {},
+): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
@@ -166,10 +170,7 @@ export default {
   },
 };
 
-async function handleAuthStart(
-  request: Request,
-  env: Env,
-): Promise<Response> {
+async function handleAuthStart(request: Request, env: Env): Promise<Response> {
   if (!env.ZOTERO_OAUTH_CLIENT_KEY || !env.ZOTERO_OAUTH_CLIENT_SECRET) {
     return json({ error: "oauth_not_configured" }, 503);
   }
@@ -263,11 +264,7 @@ async function handleAuthCallback(
     });
 
     const userId =
-      access.userID ||
-      access.userId ||
-      access.userid ||
-      access.UserID ||
-      "";
+      access.userID || access.userId || access.userid || access.UserID || "";
     if (!userId) {
       console.error("OAuth access response keys:", Object.keys(access));
       return html(
@@ -321,10 +318,7 @@ function escapeHtml(text: string): string {
     .replace(/"/g, "&quot;");
 }
 
-async function handleAuthPoll(
-  request: Request,
-  env: Env,
-): Promise<Response> {
+async function handleAuthPoll(request: Request, env: Env): Promise<Response> {
   const state = new URL(request.url).searchParams.get("state") || "";
   if (!state) {
     return json({ error: "missing_state" }, 400);
@@ -427,16 +421,12 @@ async function handleListSyllabusObjects(
   });
 }
 
-async function handleHeadObject(
-  request: Request,
-  env: Env,
-): Promise<Response> {
+async function handleHeadObject(request: Request, env: Env): Promise<Response> {
   const auth = await requireUser(request, env);
   if (auth instanceof Response) return auth;
 
   const libraryId = request.headers.get("x-syllabus-library-id") || "";
-  const collectionKey =
-    request.headers.get("x-syllabus-collection-key") || "";
+  const collectionKey = request.headers.get("x-syllabus-collection-key") || "";
   const relPath = request.headers.get("x-object-path") || "";
 
   let key: string;
@@ -474,16 +464,12 @@ async function handleHeadObject(
   });
 }
 
-async function handlePutObject(
-  request: Request,
-  env: Env,
-): Promise<Response> {
+async function handlePutObject(request: Request, env: Env): Promise<Response> {
   const auth = await requireUser(request, env);
   if (auth instanceof Response) return auth;
 
   const libraryId = request.headers.get("x-syllabus-library-id") || "";
-  const collectionKey =
-    request.headers.get("x-syllabus-collection-key") || "";
+  const collectionKey = request.headers.get("x-syllabus-collection-key") || "";
   const relPath = request.headers.get("x-object-path") || "";
   const fingerprint = sanitizeFingerprint(
     request.headers.get("x-object-fingerprint") || "",
@@ -508,10 +494,7 @@ async function handlePutObject(
     return json({ error: "empty_body" }, 400);
   }
   if (newSize > maxObject) {
-    return json(
-      { error: "object_too_large", maxObjectBytes: maxObject },
-      413,
-    );
+    return json({ error: "object_too_large", maxObjectBytes: maxObject }, 413);
   }
 
   const oldSize = await headSize(env, key);
@@ -594,9 +577,7 @@ async function handleDeleteSyllabus(
   let deleted = 0;
   do {
     const listed = await env.BUCKET.list({ prefix, cursor, limit: 1000 });
-    await Promise.all(
-      listed.objects.map((obj) => env.BUCKET.delete(obj.key)),
-    );
+    await Promise.all(listed.objects.map((obj) => env.BUCKET.delete(obj.key)));
     deleted += listed.objects.length;
     cursor = listed.truncated ? listed.cursor : undefined;
   } while (cursor);
@@ -605,10 +586,7 @@ async function handleDeleteSyllabus(
   return json({ ok: true, deleted, usageBytes: usage });
 }
 
-async function handlePublicGet(
-  request: Request,
-  env: Env,
-): Promise<Response> {
+async function handlePublicGet(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const parsed = parsePublicPath(url.pathname);
   if (!parsed) {

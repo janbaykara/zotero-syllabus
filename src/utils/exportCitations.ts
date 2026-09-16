@@ -25,27 +25,17 @@ function field(item: Zotero.Item, name: string): string {
   }
 }
 
-function creatorsLine(
-  item: Zotero.Item,
-  style: "ris" | "bib",
-): string[] {
+function creatorsLine(item: Zotero.Item, style: "ris" | "bib"): string[] {
   const creators = item.getCreators?.() || [];
   const lines: string[] = [];
   for (const c of creators) {
     const last = String(c.lastName || "").trim();
     const first = String(c.firstName || "").trim();
     if (!last && !first) continue;
+    const name = first ? `${last}, ${first}` : last;
     if (style === "ris") {
-      const name = first ? `${last}, ${first}` : last;
-      const tag =
-        c.creatorType === "editor"
-          ? "ED"
-          : c.creatorType === "translator"
-            ? "A4"
-            : "AU";
-      lines.push(`${tag}  - ${name}`);
+      lines.push(`AU  - ${name}`);
     } else {
-      const name = first ? `${last}, ${first}` : last;
       lines.push(name);
     }
   }
@@ -91,7 +81,8 @@ export function fallbackItemsAsRis(items: Zotero.Item[]): string {
     if (title) lines.push(`TI  - ${title}`);
     const date = field(item, "date");
     if (date) lines.push(`PY  - ${date}`);
-    const publication = field(item, "publicationTitle") || field(item, "publisher");
+    const publication =
+      field(item, "publicationTitle") || field(item, "publisher");
     if (publication) lines.push(`T2  - ${publication}`);
     const doi = field(item, "DOI");
     if (doi) lines.push(`DO  - ${doi}`);
@@ -220,9 +211,7 @@ export async function exportItemsWithTranslator(
         });
       }
     } catch (err) {
-      finish(() =>
-        reject(err instanceof Error ? err : new Error(String(err))),
-      );
+      finish(() => reject(err instanceof Error ? err : new Error(String(err))));
     }
   });
 }

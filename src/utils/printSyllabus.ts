@@ -998,15 +998,14 @@ export async function serializeSyllabusForPublish(
     ...options,
     mode: "publish",
   });
-  const { embedPublishCoverImages, embedPublishItemTypeIcons, replacePublishMetadataWithCitations } =
-    await import("./publishHtmlEnhance");
+  const {
+    embedPublishCoverImages,
+    embedPublishItemTypeIcons,
+    replacePublishMetadataWithCitations,
+  } = await import("./publishHtmlEnhance");
   await embedPublishItemTypeIcons(clone, resolved);
   await embedPublishCoverImages(clone);
-  await replacePublishMetadataWithCitations(
-    clone,
-    resolved,
-    options?.cslStyle,
-  );
+  await replacePublishMetadataWithCitations(clone, resolved, options?.cslStyle);
   return clone.innerHTML;
 }
 

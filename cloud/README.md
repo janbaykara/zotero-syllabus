@@ -101,17 +101,17 @@ Match the Worker origin exactly (no trailing slash).
 
 ## API (Worker)
 
-| Method | Path | Auth | Purpose |
-|--------|------|------|---------|
-| POST | `/auth/zotero/start` | — | Start OAuth; returns `{ authorizeUrl, state }` |
-| GET | `/auth/zotero/callback` | — | OAuth redirect target |
-| GET | `/auth/zotero/poll?state=` | — | Plugin polls for JWT |
-| GET | `/v1/me` | Bearer JWT | Usage / quota |
-| GET/HEAD | `/v1/objects` | Bearer JWT | Single-object metadata |
-| GET | `/v1/syllabus/objects` | Bearer JWT | Fast list of object sizes under a syllabus (for skip-unchanged) |
-| PUT | `/v1/objects` | Bearer JWT | Upload one object (`X-Object-Path`, optional `X-Object-Fingerprint`, library/collection headers). Allowed paths: `index.html`, `bibliography.ris`, `bibliography.bib`, `files/{key}.{ext}` |
-| DELETE | `/v1/syllabus?libraryId=&collectionKey=` | Bearer JWT | Delete one published syllabus prefix |
-| GET | `/u/{userId}/{libraryId}/{collectionKey}/…` | — | Public HTML / files |
-| GET | `/health` | — | Liveness |
+| Method   | Path                                        | Auth       | Purpose                                                                                                                                                                                    |
+| -------- | ------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| POST     | `/auth/zotero/start`                        | —          | Start OAuth; returns `{ authorizeUrl, state }`                                                                                                                                             |
+| GET      | `/auth/zotero/callback`                     | —          | OAuth redirect target                                                                                                                                                                      |
+| GET      | `/auth/zotero/poll?state=`                  | —          | Plugin polls for JWT                                                                                                                                                                       |
+| GET      | `/v1/me`                                    | Bearer JWT | Usage / quota                                                                                                                                                                              |
+| GET/HEAD | `/v1/objects`                               | Bearer JWT | Single-object metadata                                                                                                                                                                     |
+| GET      | `/v1/syllabus/objects`                      | Bearer JWT | Fast list of object sizes under a syllabus (for skip-unchanged)                                                                                                                            |
+| PUT      | `/v1/objects`                               | Bearer JWT | Upload one object (`X-Object-Path`, optional `X-Object-Fingerprint`, library/collection headers). Allowed paths: `index.html`, `bibliography.ris`, `bibliography.bib`, `files/{key}.{ext}` |
+| DELETE   | `/v1/syllabus?libraryId=&collectionKey=`    | Bearer JWT | Delete one published syllabus prefix                                                                                                                                                       |
+| GET      | `/u/{userId}/{libraryId}/{collectionKey}/…` | —          | Public HTML / files                                                                                                                                                                        |
+| GET      | `/health`                                   | —          | Liveness                                                                                                                                                                                   |
 
 Identity uses Zotero OAuth with `identity=1` (userID without creating a long-lived Zotero library API key for the app).

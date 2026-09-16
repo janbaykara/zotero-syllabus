@@ -16,10 +16,7 @@ function b64(bytes: ArrayBuffer): string {
   return btoa(bin);
 }
 
-async function hmacSha1(
-  key: string,
-  data: string,
-): Promise<string> {
+async function hmacSha1(key: string, data: string): Promise<string> {
   const cryptoKey = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(key),
@@ -81,11 +78,9 @@ export async function oauthSignedRequest(opts: {
     .map((k) => `${percentEncode(k)}=${percentEncode(oauthParams[k])}`)
     .join("&");
 
-  const base = [
-    method,
-    percentEncode(url),
-    percentEncode(paramString),
-  ].join("&");
+  const base = [method, percentEncode(url), percentEncode(paramString)].join(
+    "&",
+  );
 
   const signingKey = `${percentEncode(consumerSecret)}&${percentEncode(tokenSecret)}`;
   oauthParams.oauth_signature = await hmacSha1(signingKey, base);
@@ -94,10 +89,7 @@ export async function oauthSignedRequest(opts: {
     "OAuth " +
     Object.keys(oauthParams)
       .sort()
-      .map(
-        (k) =>
-          `${percentEncode(k)}="${percentEncode(oauthParams[k])}"`,
-      )
+      .map((k) => `${percentEncode(k)}="${percentEncode(oauthParams[k])}"`)
       .join(", ");
 
   const res = await fetch(url, {
@@ -114,9 +106,6 @@ export async function oauthSignedRequest(opts: {
   return parseForm(text);
 }
 
-export const ZOTERO_REQUEST_TOKEN =
-  "https://www.zotero.org/oauth/request";
-export const ZOTERO_ACCESS_TOKEN =
-  "https://www.zotero.org/oauth/access";
-export const ZOTERO_AUTHORIZE =
-  "https://www.zotero.org/oauth/authorize";
+export const ZOTERO_REQUEST_TOKEN = "https://www.zotero.org/oauth/request";
+export const ZOTERO_ACCESS_TOKEN = "https://www.zotero.org/oauth/access";
+export const ZOTERO_AUTHORIZE = "https://www.zotero.org/oauth/authorize";

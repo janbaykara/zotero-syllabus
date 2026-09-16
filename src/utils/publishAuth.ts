@@ -123,7 +123,10 @@ export async function pollZoteroPublishAuth(
   | { status: "expired" }
   | { status: "ready"; token: string; userId: string; expiresAt: number }
 > {
-  return httpJson("GET", `/auth/zotero/poll?state=${encodeURIComponent(state)}`);
+  return httpJson(
+    "GET",
+    `/auth/zotero/poll?state=${encodeURIComponent(state)}`,
+  );
 }
 
 /**

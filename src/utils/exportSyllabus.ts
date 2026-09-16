@@ -75,9 +75,7 @@ export function runsFromNode(root: Node | null | undefined): ExportInline[] {
       const href = (el.getAttribute("href") || "").trim();
       const text = normalizeWhitespace(el.textContent || "");
       const isHttp = /^https?:\/\//i.test(href);
-      const isPublishFile = /^files\/[A-Za-z0-9._-]+\.[A-Za-z0-9]+$/.test(
-        href,
-      );
+      const isPublishFile = /^files\/[A-Za-z0-9._-]+\.[A-Za-z0-9]+$/.test(href);
       if (text && (isHttp || isPublishFile)) {
         runs.push({ type: "link", text, href });
         return;
@@ -142,10 +140,7 @@ function titleRunsWithOptionalLink(
   if (!runs.length) {
     return [];
   }
-  if (
-    /^https?:\/\//i.test(href) &&
-    !runs.some((run) => run.type === "link")
-  ) {
+  if (/^https?:\/\//i.test(href) && !runs.some((run) => run.type === "link")) {
     return [{ type: "link", text: runsText(runs), href }];
   }
   return runs;

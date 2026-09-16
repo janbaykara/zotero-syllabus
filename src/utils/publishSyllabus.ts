@@ -68,7 +68,11 @@ export function pickBestPublishAttachment(
     const path = (att.attachmentPath || "").toLowerCase();
     let s = 0;
     if (linkMode === 0 || linkMode === undefined) s += 10;
-    if (att.isPDFAttachment?.() || type.includes("pdf") || path.endsWith(".pdf")) {
+    if (
+      att.isPDFAttachment?.() ||
+      type.includes("pdf") ||
+      path.endsWith(".pdf")
+    ) {
       s += 50;
     } else if (
       att.isEPUBAttachment?.() ||
@@ -240,12 +244,8 @@ export async function publishSyllabusToCloud(opts: {
 
   let publicUrl = "";
   const citationUploads = [
-    ...(hasRis
-      ? [{ relPath: PUBLISH_BIBLIOGRAPHY_RIS, text: risText }]
-      : []),
-    ...(hasBib
-      ? [{ relPath: PUBLISH_BIBLIOGRAPHY_BIB, text: bibText }]
-      : []),
+    ...(hasRis ? [{ relPath: PUBLISH_BIBLIOGRAPHY_RIS, text: risText }] : []),
+    ...(hasBib ? [{ relPath: PUBLISH_BIBLIOGRAPHY_BIB, text: bibText }] : []),
   ];
   const total = picks.length + citationUploads.length + 1;
   let done = 0;

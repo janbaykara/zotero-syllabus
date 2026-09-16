@@ -72,9 +72,11 @@ export async function verifyJwt(
     return null;
   }
   try {
-    const payload = JSON.parse(
-      new TextDecoder().decode(b64urlToBytes(p)),
-    ) as { sub?: string; iat?: number; exp?: number };
+    const payload = JSON.parse(new TextDecoder().decode(b64urlToBytes(p))) as {
+      sub?: string;
+      iat?: number;
+      exp?: number;
+    };
     if (!payload.sub || typeof payload.exp !== "number") {
       return null;
     }

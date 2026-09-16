@@ -1,7 +1,10 @@
 import type { Env } from "./types";
 import { userRootPrefix } from "./paths";
 
-export function parseIntEnv(value: string | undefined, fallback: number): number {
+export function parseIntEnv(
+  value: string | undefined,
+  fallback: number,
+): number {
   const n = Number.parseInt(String(value || ""), 10);
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
@@ -40,10 +43,7 @@ export async function reconcileUsage(
   return total;
 }
 
-export async function headSize(
-  env: Env,
-  key: string,
-): Promise<number> {
+export async function headSize(env: Env, key: string): Promise<number> {
   const obj = await env.BUCKET.head(key);
   return obj?.size ?? 0;
 }
