@@ -118,6 +118,8 @@ const documentCache = new Map<string, CachedDocument>();
 const collectionRefByNoteId = new Map<number, string>();
 const documentWrites = createReentrantSerialQueue();
 const documentListeners = new Set<() => void>();
+let syllabusNoteDetachedHandler: ((collectionRef: string) => void) | null =
+  null;
 
 let indexBuilt = false;
 let itemDataReady = false;
@@ -162,6 +164,13 @@ export function subscribeToSyllabusDocumentChanges(
   return () => {
     documentListeners.delete(listener);
   };
+}
+
+/** Fires when a syllabus note is trashed, deleted, or otherwise detached. */
+export function registerSyllabusNoteDetachedHandler(
+  handler: ((collectionRef: string) => void) | null,
+): void {
+  syllabusNoteDetachedHandler = handler;
 }
 
 function notifyDocumentListeners(): void {
@@ -1143,7 +1152,11 @@ function logSyllabusError(message: string, error: unknown): void {
     error instanceof Error
       ? `${error.name}: ${error.message}\n${error.stack || ""}`
       : String(error);
-  ztoolkit.log(message, detail);
+  try {
+    ztoolkit.log(message, detail);
+  } catch {
+    // ztoolkit may be unavailable in the test runner sandbox.
+  }
   try {
     Zotero.log(`${message} ${detail}`, "error");
   } catch {
@@ -1448,10 +1461,15 @@ function detachNoteFromCache(noteId: number): void {
   if (!cached || cached.noteId !== noteId) {
     return;
   }
-  cached.noteId = null;
-  cached.noteVersion = 0;
+  // Drop ghost syllabus state: the standalone note is primary.
+  documentCache.set(ref, emptyCachedDocument(ref));
   documentGeneration++;
   notifyDocumentListeners();
+  try {
+    syllabusNoteDetachedHandler?.(ref);
+  } catch (error) {
+    Zotero.debug(`Syllabus note-detached handler error: ${String(error)}`);
+  }
 }
 
 function resolveCollection(
@@ -2010,8 +2028,17 @@ async function getSyllabusNoteForWrite(
     return { note: live, created: false };
   }
 
+  // Trashing the standalone note disables the syllabus. Do not un-trash on
+  // incidental writes (legacy prefs sync, absorb, remap). Only restore when
+  // the user explicitly re-enables (prompt) or import/tour forces a note (always).
   const trashed = findSyllabusNoteUncached(collection, true);
   if (trashed) {
+    if (createNote !== "always" && createNote !== "prompt") {
+      return null;
+    }
+    if (!mayCreateSyllabusNote(collection, createNote)) {
+      return null;
+    }
     try {
       trashed.deleted = false;
     } catch (error) {
@@ -2140,10 +2167,14 @@ export async function mutateCollectionDocument(
         options.createNote ?? "legacy",
       );
       if (!got) {
-        ztoolkit.log(
-          "Skipping syllabus write; collection is not a syllabus",
-          collection.id,
-        );
+        try {
+          ztoolkit.log(
+            "Skipping syllabus write; collection is not a syllabus",
+            collection.id,
+          );
+        } catch {
+          // ztoolkit may be unavailable in the test runner sandbox.
+        }
         return documentCache.get(ref)?.document || emptyCollectionDocument();
       }
       const { note, created } = got;
@@ -2704,6 +2735,7 @@ export function shutdownSyllabusNotes(): void {
     notifierID = null;
   }
   unregisterReadingSchedulePrefObserver();
+  syllabusNoteDetachedHandler = null;
   documentCache.clear();
   collectionRefByNoteId.clear();
   documentWrites.clear();

@@ -492,10 +492,11 @@ const PRINT_DOCUMENT_CSS = `
     text-decoration: underline;
     text-underline-offset: 2px;
   }
-  body[data-item-density="row"] .syllabus-item-description,
-  body[data-item-density="row"] .syllabus-item-reference,
-  .density-row .syllabus-item-description,
-  .density-row .syllabus-item-reference {
+  /* Print row density stays compact; Online HTML still shows instructions. */
+  body:not(.publish-layout)[data-item-density="row"] .syllabus-item-description,
+  body:not(.publish-layout)[data-item-density="row"] .syllabus-item-reference,
+  body.density-row:not(.publish-layout) .syllabus-item-description,
+  body.density-row:not(.publish-layout) .syllabus-item-reference {
     display: none !important;
   }
   .uppercase { text-transform: uppercase; }
@@ -1483,8 +1484,10 @@ export async function buildPrintableHtml({
   citationDownloads?: {
     risHref?: string;
     bibHref?: string;
+    rdfHref?: string;
     risLabel: string;
     bibLabel: string;
+    rdfLabel: string;
   };
   layout?: "print" | "publish";
   /** Share-card / SEO description (publish only). */
@@ -1507,6 +1510,11 @@ export async function buildPrintableHtml({
   ].join(";");
 
   const downloadLinks: string[] = [];
+  if (citationDownloads?.rdfHref) {
+    downloadLinks.push(
+      `<a class="syllabus-publish-download" href="${escapeHtml(citationDownloads.rdfHref)}" download="${escapeHtml(citationDownloads.rdfHref)}">${escapeHtml(citationDownloads.rdfLabel)}</a>`,
+    );
+  }
   if (citationDownloads?.risHref) {
     downloadLinks.push(
       `<a class="syllabus-publish-download" href="${escapeHtml(citationDownloads.risHref)}" download="${escapeHtml(citationDownloads.risHref)}">${escapeHtml(citationDownloads.risLabel)}</a>`,

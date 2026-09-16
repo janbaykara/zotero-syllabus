@@ -477,6 +477,7 @@ publish-unpublish-confirm =
 progress-publish-unpublish-failed = Could not unpublish syllabus
 publish-html-download-ris = Download RIS
 publish-html-download-bib = Download BibTeX
+publish-html-download-rdf = Zotero RDF
 publish-html-published-at = published { $date } at { $time }
 publish-html-credit = Published with { $syllabus }, a plugin for organising reading lists from items you store in { $zotero } reference manager
 dialog-save-pdf = 儲存教學大綱 PDF

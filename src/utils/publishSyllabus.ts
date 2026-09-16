@@ -19,7 +19,9 @@ import {
 import {
   exportItemsAsBibTeX,
   exportItemsAsRis,
+  itemsWithSyllabusNote,
   PUBLISH_BIBLIOGRAPHY_BIB,
+  PUBLISH_BIBLIOGRAPHY_RDF,
   PUBLISH_BIBLIOGRAPHY_RIS,
 } from "./exportCitations";
 import { getString } from "./locale";
@@ -29,6 +31,7 @@ import {
   bytesContentFingerprint,
   extractPublishShareDescription,
 } from "./publishOgImage";
+import { getRDFStringForCollection } from "./rdf";
 
 export type PublishAttachmentPick = {
   itemId: number;
@@ -196,13 +199,24 @@ export async function publishSyllabusToCloud(opts: {
   });
 
   opts.onProgress?.("citations");
+  const citationItems = itemsWithSyllabusNote(opts.collectionId, opts.items);
   const citationsPromise = Promise.all([
-    exportItemsAsRis(opts.items).catch((err) => {
+    exportItemsAsRis(citationItems).catch((err) => {
       ztoolkit.log("RIS export failed:", err);
       return "";
     }),
-    exportItemsAsBibTeX(opts.items).catch((err) => {
+    exportItemsAsBibTeX(citationItems).catch((err) => {
       ztoolkit.log("BibTeX export failed:", err);
+      return "";
+    }),
+    (async () => {
+      // Export collection RDF with notes (includes standalone syllabus note).
+      // Do not mutateCollectionDocument here — that rewrites the note and flashes
+      // the live Syllabus page during publish.
+      const rdf = await getRDFStringForCollection(collection);
+      return typeof rdf === "string" ? rdf : "";
+    })().catch((err) => {
+      ztoolkit.log("RDF export failed:", err);
       return "";
     }),
   ]);
@@ -225,23 +239,30 @@ export async function publishSyllabusToCloud(opts: {
   const bibliographyPromise =
     opts.bibliographyHtmlPromise ?? Promise.resolve(opts.bibliographyHtml);
 
-  const [[risText, bibText], innerHTML, listed, bibliographyHtml, ogImageBytes] =
-    await Promise.all([
-      citationsPromise,
-      htmlPromise,
-      remoteListPromise,
-      bibliographyPromise,
-      ogImagePromise,
-    ]);
+  const [
+    [risText, bibText, rdfText],
+    innerHTML,
+    listed,
+    bibliographyHtml,
+    ogImageBytes,
+  ] = await Promise.all([
+    citationsPromise,
+    htmlPromise,
+    remoteListPromise,
+    bibliographyPromise,
+    ogImagePromise,
+  ]);
   ztoolkit.log(
     `publish prepare finished in ${Date.now() - prepareStarted}ms ` +
       `(attachments=${picks.length}, ris=${risText.length}, bib=${bibText.length}, ` +
+      `rdf=${rdfText.length}, ` +
       `remoteKeys=${listed ? Object.keys(listed.objects || {}).length : "n/a"}, ` +
       `ogImage=${ogImageBytes ? ogImageBytes.byteLength : 0})`,
   );
 
   const hasRis = Boolean(risText.trim());
   const hasBib = Boolean(bibText.trim());
+  const hasRdf = Boolean(rdfText.trim());
   const description = extractPublishShareDescription(opts.pageElement);
 
   let publicUrl =
@@ -254,6 +275,7 @@ export async function publishSyllabusToCloud(opts: {
   const citationUploads = [
     ...(hasRis ? [{ relPath: PUBLISH_BIBLIOGRAPHY_RIS, text: risText }] : []),
     ...(hasBib ? [{ relPath: PUBLISH_BIBLIOGRAPHY_BIB, text: bibText }] : []),
+    ...(hasRdf ? [{ relPath: PUBLISH_BIBLIOGRAPHY_RDF, text: rdfText }] : []),
   ];
   const total =
     picks.length + citationUploads.length + (ogImageBytes ? 1 : 0) + 1;
@@ -261,6 +283,7 @@ export async function publishSyllabusToCloud(opts: {
 
   const remoteObjects = listed?.objects || {};
   let ogImageReady = false;
+  const uploadedCitationPaths = new Set<string>();
 
   // Citation exports are small; skip when byte length matches remote.
   for (const citation of citationUploads) {
@@ -268,17 +291,27 @@ export async function publishSyllabusToCloud(opts: {
     const bytes = new TextEncoder().encode(citation.text);
     const remote = remoteObjects[citation.relPath];
     if (remote && remote.size === bytes.byteLength) {
+      uploadedCitationPaths.add(citation.relPath);
       done += 1;
       continue;
     }
-    const result = await putPublishObject({
-      token: session.token,
-      libraryId,
-      collectionKey,
-      relPath: citation.relPath,
-      bytes,
-    });
-    publicUrl = result.publicUrl || publicUrl;
+    try {
+      const result = await putPublishObject({
+        token: session.token,
+        libraryId,
+        collectionKey,
+        relPath: citation.relPath,
+        bytes,
+      });
+      publicUrl = result.publicUrl || publicUrl;
+      uploadedCitationPaths.add(citation.relPath);
+    } catch (err) {
+      // RDF may 400 until the worker allowlist is deployed; don't abort publish.
+      ztoolkit.log(
+        `Citation upload failed for ${citation.relPath} (continuing):`,
+        err,
+      );
+    }
     done += 1;
   }
 
@@ -358,6 +391,15 @@ export async function publishSyllabusToCloud(opts: {
     done += 1;
   }
 
+  const showRis = uploadedCitationPaths.has(PUBLISH_BIBLIOGRAPHY_RIS);
+  const showBib = uploadedCitationPaths.has(PUBLISH_BIBLIOGRAPHY_BIB);
+  const showRdf = uploadedCitationPaths.has(PUBLISH_BIBLIOGRAPHY_RDF);
+  if (hasRdf && !showRdf) {
+    ztoolkit.log(
+      "RDF was generated but not uploaded; omitting Zotero RDF download link",
+    );
+  }
+
   const htmlContent = await buildPrintableHtml({
     title: opts.title || "Syllabus",
     innerHTML,
@@ -368,12 +410,14 @@ export async function publishSyllabusToCloud(opts: {
     canonicalUrl: publicUrl,
     ogImageUrl: ogImageReady ? `${publicUrl}${PUBLISH_OG_IMAGE}` : undefined,
     citationDownloads:
-      hasRis || hasBib
+      showRis || showBib || showRdf
         ? {
-            risHref: hasRis ? PUBLISH_BIBLIOGRAPHY_RIS : undefined,
-            bibHref: hasBib ? PUBLISH_BIBLIOGRAPHY_BIB : undefined,
+            risHref: showRis ? PUBLISH_BIBLIOGRAPHY_RIS : undefined,
+            bibHref: showBib ? PUBLISH_BIBLIOGRAPHY_BIB : undefined,
+            rdfHref: showRdf ? PUBLISH_BIBLIOGRAPHY_RDF : undefined,
             risLabel: getString("publish-html-download-ris"),
             bibLabel: getString("publish-html-download-bib"),
+            rdfLabel: getString("publish-html-download-rdf"),
           }
         : undefined,
   });

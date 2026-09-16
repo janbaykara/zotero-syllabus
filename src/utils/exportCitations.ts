@@ -1,7 +1,13 @@
-/** Export regular items as RIS / BibTeX for published syllabus downloads. */
+/** Export items as RIS / BibTeX for published syllabus downloads. */
+
+import { readItemNote } from "./items";
 
 const RIS_TRANSLATOR_ID = "32d59d2d-b65a-4da4-b0a3-bdd3cfb979e7";
 const BIBTEX_TRANSLATOR_ID = "9cb70025-a888-4a29-a210-93ec52da40d4";
+
+/** Stored identifiers — not UI copy (see AGENTS.md). */
+const SYLLABUS_NOTE_TAG = "zotero-syllabus";
+const SYLLABUS_NOTE_TITLE = "Syllabus";
 
 /** Keep short: a hung Translate.Export used to block publish for a full minute. */
 const EXPORT_TIMEOUT_MS = 12_000;
@@ -59,10 +65,119 @@ function bibKey(item: Zotero.Item, index: number): string {
   return `${last || "item"}${year}${index + 1}`;
 }
 
+/** Resolve the collection's standalone syllabus note, if present. */
+export function resolveSyllabusNoteItem(
+  collectionId: number,
+): Zotero.Item | null {
+  try {
+    const collection = Zotero.Collections.get(collectionId);
+    if (!collection) return null;
+    const children = collection.getChildItems(false, false) || [];
+    for (const item of children) {
+      if (!item?.isNote?.() || item.deleted) continue;
+      if (typeof item.isTopLevelItem === "function" && !item.isTopLevelItem()) {
+        continue;
+      }
+      try {
+        if (item.hasTag?.(SYLLABUS_NOTE_TAG)) return item;
+      } catch {
+        // ignore tag errors
+      }
+      try {
+        const title = String(item.getField?.("title") || "").trim();
+        if (
+          title === SYLLABUS_NOTE_TITLE ||
+          title.startsWith(SYLLABUS_NOTE_TITLE)
+        ) {
+          return item;
+        }
+      } catch {
+        // ignore
+      }
+      const html = readItemNote(item);
+      if (
+        html.includes('data-zotero-syllabus="1"') ||
+        html.includes("Plugin data (do not edit)")
+      ) {
+        return item;
+      }
+    }
+    return null;
+  } catch (err) {
+    ztoolkit.log("resolveSyllabusNoteItem failed:", err);
+    return null;
+  }
+}
+
+/**
+ * Regular bibliographic items plus the standalone syllabus note (when found).
+ * Used so RIS/BibTeX downloads can round-trip a syllabus into Zotero.
+ */
+export function itemsWithSyllabusNote(
+  collectionId: number,
+  items: Zotero.Item[],
+): Zotero.Item[] {
+  const regular = regularItemsOnly(items);
+  const note = resolveSyllabusNoteItem(collectionId);
+  if (!note) return regular;
+  if (regular.some((item) => item.id === note.id)) return regular;
+  return [...regular, note];
+}
+
+/** RIS record for a standalone note (Zotero imports TY - NOTE as a note item). */
+export function fallbackNoteAsRis(note: Zotero.Item): string {
+  const title = field(note, "title") || "Syllabus";
+  const body = readItemNote(note).replace(/\r\n/g, "\n").trim();
+  const lines = [`TY  - NOTE`, `TI  - ${title}`];
+  if (body) {
+    for (const line of body.split("\n")) {
+      lines.push(`N1  - ${line}`);
+    }
+  }
+  lines.push("ER  - ");
+  return lines.join("\n");
+}
+
+/** BibTeX @misc carrying note HTML so a syllabus note survives import. */
+export function fallbackNoteAsBibTeX(note: Zotero.Item): string {
+  const title = field(note, "title") || "Syllabus";
+  const body = readItemNote(note).trim();
+  const fields: string[] = [`  title = {${escapeBibTeX(title)}}`];
+  if (body) {
+    // Preserve newlines as literal \\n so HTML structure survives a round-trip.
+    const escaped = body
+      .replace(/\\/g, "\\\\")
+      .replace(/[{}]/g, (ch) => `\\${ch}`)
+      .replace(/\r\n/g, "\n")
+      .replace(/\n/g, "\\n");
+    fields.push(`  note = {${escaped}}`);
+  }
+  return `@misc{zoteroSyllabusNote,\n${fields.join(",\n")}\n}`;
+}
+
+function appendNoteExport(
+  text: string,
+  noteBlock: string,
+): string {
+  const base = text.trimEnd();
+  const note = noteBlock.trim();
+  if (!note) return text;
+  if (!base) return `${note}\n`;
+  return `${base}\n\n${note}\n`;
+}
+
 /** Minimal RIS when Zotero translators are unavailable or fail. */
 export function fallbackItemsAsRis(items: Zotero.Item[]): string {
   const blocks: string[] = [];
-  for (const item of regularItemsOnly(items)) {
+  for (const item of items) {
+    if (!item || item.deleted || item.isFeedItem) continue;
+    if (item.isNote?.()) {
+      blocks.push(fallbackNoteAsRis(item));
+      continue;
+    }
+    if (!(typeof item.isRegularItem === "function" && item.isRegularItem())) {
+      continue;
+    }
     const type = item.itemType || "document";
     const ty =
       type === "journalArticle"
@@ -97,8 +212,16 @@ export function fallbackItemsAsRis(items: Zotero.Item[]): string {
 /** Minimal BibTeX when Zotero translators are unavailable or fail. */
 export function fallbackItemsAsBibTeX(items: Zotero.Item[]): string {
   const blocks: string[] = [];
-  const exportItems = regularItemsOnly(items);
-  exportItems.forEach((item, index) => {
+  let regularIndex = 0;
+  for (const item of items) {
+    if (!item || item.deleted || item.isFeedItem) continue;
+    if (item.isNote?.()) {
+      blocks.push(fallbackNoteAsBibTeX(item));
+      continue;
+    }
+    if (!(typeof item.isRegularItem === "function" && item.isRegularItem())) {
+      continue;
+    }
     const type = item.itemType || "document";
     const entryType =
       type === "journalArticle"
@@ -126,9 +249,10 @@ export function fallbackItemsAsBibTeX(items: Zotero.Item[]): string {
     const url = field(item, "url");
     if (url) fields.push(`  url = {${escapeBibTeX(url)}}`);
     blocks.push(
-      `@${entryType}{${bibKey(item, index)},\n${fields.join(",\n")}\n}`,
+      `@${entryType}{${bibKey(item, regularIndex)},\n${fields.join(",\n")}\n}`,
     );
-  });
+    regularIndex += 1;
+  }
   return blocks.length ? `${blocks.join("\n\n")}\n` : "";
 }
 
@@ -163,7 +287,7 @@ export async function exportItemsWithTranslator(
   const translation = new Zotero.Translate.Export();
   translation.setItems(exportItems);
   if (typeof translation.setDisplayOptions === "function") {
-    translation.setDisplayOptions({});
+    translation.setDisplayOptions({ exportNotes: true });
   }
   const translator = await resolveTranslator(translatorID);
   const ok = translation.setTranslator(translator as never);
@@ -216,27 +340,58 @@ export async function exportItemsWithTranslator(
   });
 }
 
-export async function exportItemsAsRis(items: Zotero.Item[]): Promise<string> {
+/**
+ * Export regular items via translator, then append the standalone syllabus note
+ * so citation downloads can be loaded back into Zotero with syllabus structure.
+ */
+async function exportWithSyllabusNote(
+  items: Zotero.Item[],
+  translatorID: string,
+  fallback: (items: Zotero.Item[]) => string,
+  noteAsFallback: (note: Zotero.Item) => string,
+): Promise<string> {
+  const notes = items.filter((item) => item?.isNote?.());
+  const regular = regularItemsOnly(items);
+  let text = "";
   try {
-    const text = await exportItemsWithTranslator(items, RIS_TRANSLATOR_ID);
-    if (text.trim()) return text;
+    if (regular.length) {
+      text = await exportItemsWithTranslator(regular, translatorID);
+    }
+    if (!text.trim()) {
+      text = fallback([...regular, ...notes]);
+      return text;
+    }
   } catch (err) {
-    ztoolkit.log("RIS translator export failed; using fallback:", err);
+    ztoolkit.log("Citation translator export failed; using fallback:", err);
+    return fallback([...regular, ...notes]);
   }
-  return fallbackItemsAsRis(items);
+  // Translators typically skip standalone notes — append explicitly.
+  for (const note of notes) {
+    text = appendNoteExport(text, noteAsFallback(note));
+  }
+  return text.endsWith("\n") ? text : `${text}\n`;
+}
+
+export async function exportItemsAsRis(items: Zotero.Item[]): Promise<string> {
+  return exportWithSyllabusNote(
+    items,
+    RIS_TRANSLATOR_ID,
+    fallbackItemsAsRis,
+    fallbackNoteAsRis,
+  );
 }
 
 export async function exportItemsAsBibTeX(
   items: Zotero.Item[],
 ): Promise<string> {
-  try {
-    const text = await exportItemsWithTranslator(items, BIBTEX_TRANSLATOR_ID);
-    if (text.trim()) return text;
-  } catch (err) {
-    ztoolkit.log("BibTeX translator export failed; using fallback:", err);
-  }
-  return fallbackItemsAsBibTeX(items);
+  return exportWithSyllabusNote(
+    items,
+    BIBTEX_TRANSLATOR_ID,
+    fallbackItemsAsBibTeX,
+    fallbackNoteAsBibTeX,
+  );
 }
 
 export const PUBLISH_BIBLIOGRAPHY_RIS = "bibliography.ris";
 export const PUBLISH_BIBLIOGRAPHY_BIB = "bibliography.bib";
+export const PUBLISH_BIBLIOGRAPHY_RDF = "bibliography.rdf";

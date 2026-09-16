@@ -3298,5 +3298,6 @@ export function renderSyllabusPage(
     rootElement,
     <SyllabusPage collectionId={collectionId} />,
     "syllabus-custom-view",
+    `syllabus:${collectionId}`,
   );
 }

@@ -142,10 +142,51 @@ export async function embedPublishCoverImages(root: ParentNode): Promise<void> {
   }
 }
 
+const PUBLISH_INSTRUCTION_SELECTOR =
+  ".syllabus-item-description, .syllabus-gallery-instruction, .syllabus-magazine-instruction";
+
+/**
+ * Insert citation so reading instructions stay underneath it.
+ * Prefer the instruction’s parent (gallery meta / magazine body / text col).
+ */
+export function placePublishCitationBeforeInstructions(
+  card: Element,
+  meta: HTMLElement,
+  density: ItemDensity,
+): void {
+  // Drop expanded in-card reference so it cannot sit between citation and instructions.
+  card.querySelectorAll(".syllabus-item-reference").forEach((el) => {
+    el.remove();
+  });
+
+  if (density === "row") {
+    const textCol = card.querySelector(".syllabus-item-text");
+    const title = card.querySelector(".syllabus-item-title");
+    const titleLine = title?.parentElement;
+    if (titleLine && textCol && titleLine !== textCol) {
+      titleLine.classList.add("syllabus-publish-title-line");
+    }
+  }
+
+  const instruction = card.querySelector(PUBLISH_INSTRUCTION_SELECTOR);
+  if (instruction?.parentElement) {
+    instruction.parentElement.insertBefore(meta, instruction);
+    return;
+  }
+
+  if (density === "row" || !meta.isConnected) {
+    const textCol = card.querySelector(".syllabus-item-text");
+    const galleryMeta = card.querySelector(".syllabus-gallery-meta");
+    const magazineBody = card.querySelector(".syllabus-magazine-body");
+    (textCol || galleryMeta || magazineBody || card).appendChild(meta);
+  }
+}
+
 /**
  * Put a bibliographic citation under each reading.
  * Row: citation on its own line under the title (not beside it).
  * Standard/expanded: replace the metadata block; drop duplicate reference lines.
+ * Reading instructions always follow the citation when both are present.
  */
 export async function replacePublishMetadataWithCitations(
   root: ParentNode,
@@ -197,26 +238,6 @@ export async function replacePublishMetadataWithCitations(
       "shrink-0",
     );
 
-    if (density === "row") {
-      const textCol = card.querySelector(".syllabus-item-text");
-      const title = card.querySelector(".syllabus-item-title");
-      const titleLine = title?.parentElement;
-      if (titleLine && textCol && titleLine !== textCol) {
-        titleLine.classList.add("syllabus-publish-title-line");
-      }
-      if (textCol) {
-        textCol.appendChild(meta);
-      } else {
-        card.appendChild(meta);
-      }
-    } else if (!meta.isConnected) {
-      const textCol = card.querySelector(".syllabus-item-text");
-      (textCol || card).appendChild(meta);
-    }
-
-    // Avoid duplicating the expanded in-card reference line.
-    card.querySelectorAll(".syllabus-item-reference").forEach((el) => {
-      el.remove();
-    });
+    placePublishCitationBeforeInstructions(card, meta, density);
   }
 }

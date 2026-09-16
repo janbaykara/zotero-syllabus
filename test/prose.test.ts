@@ -9,7 +9,7 @@ describe("prose markdown", function () {
     assert.match(html, /<p>First paragraph\.<\/p>/);
     assert.match(
       html,
-      /<p>Second line soft-break<br\s*\/?>\s*still second\.<\/p>/,
+      /<p>Second line soft-break<br \/>\s*still second\.<\/p>/,
     );
   });
 

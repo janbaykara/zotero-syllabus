@@ -529,4 +529,35 @@ describe("syllabus smoke", function () {
       }
     }
   });
+
+  it("does not reinstate a trashed standalone syllabus note on incidental writes", async function () {
+    collection = await createCollection("Smoke Syllabus Trash");
+    await mutateCollectionDocument(
+      collection,
+      (document) => ({
+        ...document,
+        courseCode: "TRASH101",
+      }),
+      { createNote: "always" },
+    );
+    assert.isTrue(collectionHasSyllabusNote(collection));
+    const noteId = getSyllabusNoteId(collection);
+    assert.isNumber(noteId);
+    const note = Zotero.Items.get(noteId!);
+    assert.ok(note);
+    items.push(note);
+
+    note.deleted = true;
+    await note.saveTx();
+
+    assert.isFalse(collectionHasSyllabusNote(collection));
+
+    // Incidental write (same path setupPage used to take) must not un-trash
+    // or create a replacement note.
+    await mutateCollectionDocument(collection, (document) => document, {
+      createNote: "legacy",
+    });
+    assert.isFalse(collectionHasSyllabusNote(collection));
+    assert.isTrue(Zotero.Items.get(noteId!)!.deleted);
+  });
 });

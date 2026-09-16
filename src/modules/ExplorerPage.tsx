@@ -1559,5 +1559,6 @@ export function renderExplorerPage(
     rootElement,
     <ExplorerPage libraryID={libraryID} />,
     "syllabus-custom-view",
+    `explorer:${libraryID}`,
   );
 }

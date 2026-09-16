@@ -1952,5 +1952,6 @@ export function renderGalleryPage(
     rootElement,
     <GalleryPage {...props} />,
     "syllabus-custom-view",
+    `gallery:${props.viewKey}`,
   );
 }

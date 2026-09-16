@@ -100,6 +100,7 @@ import {
   collectionHasSyllabusNote,
   ensureSyllabusNoteForUser,
   whenSyllabusNotesReady,
+  registerSyllabusNoteDetachedHandler,
   SYLLABUS_NOTE_TAG,
 } from "./syllabusNote";
 import { getItemTitle, readItemNote } from "../utils/items";
@@ -431,6 +432,19 @@ export class SyllabusManager {
   static onStartup(rootURI: string) {
     ztoolkit.log("SyllabusManager.onStartup");
     initializeSyllabusNotes();
+    // Chrome refresh when the selected collection's syllabus note is removed.
+    registerSyllabusNoteDetachedHandler((collectionRef) => {
+      // Defer past the item save/notifier stack.
+      Zotero.Promise.delay(0)
+        .then(() => {
+          SyllabusManager.onSyllabusNoteDetached(collectionRef);
+        })
+        .catch((error: unknown) => {
+          Zotero.debug(
+            `Error handling syllabus note removal: ${String(error)}`,
+          );
+        });
+    });
     void migrateLegacyCollectionMetadataPrefs().catch((error) => {
       ztoolkit.log(
         "Error migrating collectionMetadata prefs to syllabus notes:",
@@ -789,14 +803,14 @@ export class SyllabusManager {
   }
 
   static setupSyllabusViewReloadListener() {
-    // Re-render custom view when collection or sort changes
-    // setupUI() calls setupPage() which re-renders React component
-    // Once mounted, React stores handle all data updates automatically
+    // Re-sync custom view when collection or sort changes. Prefer setupPage
+    // only — full setupUI() rebuilds the toolbar and reloads the item pane,
+    // which flashes the syllabus on every ZoteroPane reload.
     const pane = ztoolkit.getGlobal("ZoteroPane");
     if (pane) {
       pane.addReloadListener(() => {
         Zotero.Promise.delay(100).then(() => {
-          SyllabusManager.setupUI();
+          void SyllabusManager.setupPage();
         });
       });
     }
@@ -1295,6 +1309,42 @@ export class SyllabusManager {
     SyllabusManager.updateViewModeButtons();
   }
 
+  /**
+   * When the standalone syllabus note is trashed/deleted for the selected
+   * collection, leave syllabus view and refresh tab chrome.
+   */
+  static onSyllabusNoteDetached(collectionRef: string): void {
+    try {
+      const scope = getSelectedViewScope();
+      if (scope.kind !== "collection") {
+        return;
+      }
+      const collection = scope.collection;
+      if (`${collection.libraryID}:${collection.key}` !== collectionRef) {
+        return;
+      }
+      if (
+        isManagedReadingScheduleCollection(collection.id) ||
+        isAutoManagedCollection(collection.id)
+      ) {
+        return;
+      }
+      if (SyllabusManager.getCollectionViewMode() === "syllabus") {
+        SyllabusManager.writeCollectionViewMode(collection, "collection");
+        void SyllabusManager.setupPage().catch((error: unknown) => {
+          Zotero.debug(
+            `Error leaving syllabus view after note removal: ${String(error)}`,
+          );
+        });
+      }
+      if (Zotero.getMainWindow()?.document) {
+        SyllabusManager.updateButtonVisibility();
+      }
+    } catch (error) {
+      Zotero.debug(`Error handling syllabus note removal: ${String(error)}`);
+    }
+  }
+
   // Function to update button visibility based on current state
   static updateButtonVisibility() {
     const w = Zotero.getMainWindow();
@@ -1387,8 +1437,12 @@ export class SyllabusManager {
   }
 
   // Function to render a completely custom syllabus view
+  static setupPageGeneration = 0;
+  static lastSetupPageKey: string | null = null;
+
   static async setupPage() {
     ztoolkit.log("SyllabusManager.setupPage");
+    const generation = ++this.setupPageGeneration;
     try {
       /**
        * Lead with a hide/show check
@@ -1412,30 +1466,41 @@ export class SyllabusManager {
       // Check if we should show custom view
       // Show if: gallery or syllabus is enabled AND we have a collection
       const viewMode = SyllabusManager.getCollectionViewMode();
+      // Standalone note is primary: if it is gone, leave syllabus mode — do not
+      // recreate or un-trash the note on navigation.
       if (
         viewMode === "syllabus" &&
         selectedCollection &&
         !isManagedReadingScheduleCollection(selectedCollection.id) &&
+        !isAutoManagedCollection(selectedCollection.id) &&
         !collectionHasSyllabusNote(selectedCollection)
       ) {
-        await mutateCollectionDocument(
+        SyllabusManager.writeCollectionViewMode(
           selectedCollection,
-          (document) => document,
-          { createNote: "legacy" },
+          "collection",
         );
-        if (!collectionHasSyllabusNote(selectedCollection)) {
-          SyllabusManager.writeCollectionViewMode(
-            selectedCollection,
-            "collection",
-          );
-          SyllabusManager.updateViewModeButtons();
-        }
+        SyllabusManager.updateViewModeButtons();
+      }
+      if (generation !== this.setupPageGeneration) {
+        return;
       }
       const resolvedViewMode = SyllabusManager.getCollectionViewMode();
       const shouldShowCustomView =
         (resolvedViewMode === "gallery" && viewScopeSupportsGallery(scope)) ||
         (resolvedViewMode === "syllabus" && !!selectedCollection) ||
         (resolvedViewMode === "explorer" && viewScopeSupportsExplorer(scope));
+
+      const setupKey = shouldShowCustomView
+        ? `${resolvedViewMode}:${scope.viewKey}:${selectedCollection?.id ?? ""}`
+        : `hidden:${scope.viewKey}`;
+      if (setupKey === this.lastSetupPageKey) {
+        // Same target already showing — Preact stores keep the tree live.
+        updateManagedCollectionBanner(w, {
+          collectionId: selectedCollection?.id ?? null,
+          itemsListVisible: !shouldShowCustomView,
+        });
+        return;
+      }
 
       // Find or create custom syllabus view container
       let customView = doc.getElementById(
@@ -1506,12 +1571,43 @@ export class SyllabusManager {
         }
       }
 
+      if (generation !== this.setupPageGeneration) {
+        return;
+      }
+      this.lastSetupPageKey = setupKey;
+
       updateManagedCollectionBanner(w, {
         collectionId: selectedCollection?.id ?? null,
         itemsListVisible: !shouldShowCustomView,
       });
     } catch (e) {
       ztoolkit.log("Error in setupPage:", e);
+      this.lastSetupPageKey = null;
+      // Restore the items tree if we hid it before a failed custom-view render.
+      try {
+        const w = Zotero.getMainWindow();
+        const doc = w?.document;
+        const itemsTree = doc?.getElementById(
+          "zotero-items-tree",
+        ) as HTMLElement | null;
+        const customView = doc?.getElementById(
+          "syllabus-custom-view",
+        ) as HTMLElement | null;
+        if (itemsTree) {
+          itemsTree.style.display = "";
+        }
+        if (customView) {
+          customView.style.display = "none";
+        }
+        if (w) {
+          unmountComponent(w, "syllabus-custom-view");
+        }
+      } catch (restoreErr) {
+        ztoolkit.log(
+          "Error restoring items tree after setupPage failure:",
+          restoreErr,
+        );
+      }
     }
   }
 

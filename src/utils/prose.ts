@@ -22,6 +22,7 @@ const BLOCKED_MD_RULES = [
 function createMarkdown(breaks: boolean) {
   const md = new MarkdownIt({
     html: false,
+    xhtmlOut: true,
     linkify: true,
     breaks,
     typographer: false,

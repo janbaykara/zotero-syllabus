@@ -372,6 +372,7 @@ export type FluentMessageId =
   | 'progress-translator-install-error'
   | 'publish-html-credit'
   | 'publish-html-download-bib'
+  | 'publish-html-download-rdf'
   | 'publish-html-download-ris'
   | 'publish-html-published-at'
   | 'publish-status-auth'

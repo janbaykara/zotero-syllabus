@@ -35,6 +35,8 @@ Schema: `CollectionSyllabusDocument` in [`src/utils/schemas.ts`](../src/utils/sc
 
 Reads on the UI hot path must not call `getNote()`. [`src/modules/syllabusNote.ts`](../src/modules/syllabusNote.ts) keeps an in-memory cache, rebuilt at startup and updated after writes / note notifiers. Mutations go through `mutateCollectionDocument`, which serialises writes per collection, persists the note, then syncs class folders.
 
+The standalone note is primary. Trashing or deleting it disables the syllabus for that collection: the Syllabus tab goes away, view mode falls back to Items, and incidental writes (`createNote: "legacy"`) must not un-trash or recreate it. Re-enabling requires an explicit path (`Create Syllabus` / `prompt`, or import/tour with `always`), which may restore the trashed note.
+
 UI metadata is a projection of the document (`classesToNumberKeyed`): number-keyed classes **without** `subcollectionKey`. Merging UI edits back (`mergeNumberKeyedClasses`) keeps existing class IDs and folder keys.
 
 ## Item merges
@@ -196,7 +198,7 @@ users/{zoteroUserId}/syllabi/{libraryID}/{collectionKey}/files/{attachmentKey}.{
 
 The Worker ignores any client-supplied owner and forces `users/{jwt.sub}/…`. Path traversal and keys outside that prefix are rejected.
 
-**Publish pipeline (plugin).** Build printable HTML from the live syllabus DOM ([`serializeSyllabusForPublish`](../src/utils/printSyllabus.ts) / [`buildPrintableHtml`](../src/utils/printSyllabus.ts)), pick best attachments (PDF → EPUB → other), rewrite title links to relative `files/…` paths when a file was uploaded (else keep existing `http(s)` item URLs), upload `bibliography.ris` / `bibliography.bib` plus files then `index.html` last via [`publishSyllabus.ts`](../src/utils/publishSyllabus.ts). Hosted HTML keeps the active density layout (row / standard / expanded) including item-type icons and covers; for **standard** and **expanded**, author/date metadata is replaced with a per-item bibliographic citation. Share cards use the syllabus description (Open Graph / Twitter meta) plus an optional `og-image.jpg` collage of up to four reading covers. Skip-unchanged uses one `GET /v1/syllabus/objects` list (size + `fingerprint` metadata) rather than per-file probes. Share URL:
+**Publish pipeline (plugin).** Build printable HTML from the live syllabus DOM ([`serializeSyllabusForPublish`](../src/utils/printSyllabus.ts) / [`buildPrintableHtml`](../src/utils/printSyllabus.ts)), pick best attachments (PDF → EPUB → other), rewrite title links to relative `files/…` paths when a file was uploaded (else keep existing `http(s)` item URLs), upload `bibliography.ris` / `bibliography.bib` / `bibliography.rdf` (RDF includes the syllabus note for re-import) plus files then `index.html` last via [`publishSyllabus.ts`](../src/utils/publishSyllabus.ts). Hosted HTML keeps the active density layout (row / standard / expanded) including item-type icons and covers; for **standard** and **expanded**, author/date metadata is replaced with a per-item bibliographic citation. Share cards use the syllabus description (Open Graph / Twitter meta) plus an optional `og-image.jpg` collage of up to four reading covers. Skip-unchanged uses one `GET /v1/syllabus/objects` list (size + `fingerprint` metadata) rather than per-file probes. Share URL:
 
 ```text
 https://<worker>/u/{zoteroUserId}/{libraryID}/{collectionKey}/
