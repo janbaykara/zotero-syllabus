@@ -127,6 +127,11 @@
   width: 100%;
 }
 
+/* Expanded cards: square web/OG thumbs (gallery keeps 1.91:1). */
+.syllabus-item-thumbnail-cover .syllabus-gallery-cover-web {
+  aspect-ratio: 1 / 1;
+}
+
 .syllabus-item-thumbnail-cover .syllabus-gallery-web-caption {
   display: none;
 }
