@@ -1,0 +1,186 @@
+/* Publish-only cover helpers (prepended by scripts/build-css.js).
+ * Tailwind utility remaps, 6rem expanded-card slot, print !important restores.
+ * Semantic rules: addon/content/galleryCover.css
+ */
+
+/* Utilities used by GalleryCover / PlaceholderFace (not in print base CSS) */
+body.publish-layout .syllabus-item-thumbnail-cover .relative { position: relative; }
+body.publish-layout .syllabus-item-thumbnail-cover .absolute { position: absolute; }
+body.publish-layout .syllabus-item-thumbnail-cover .inset-0 { inset: 0; }
+body.publish-layout .syllabus-item-thumbnail-cover .w-full { width: 100%; }
+body.publish-layout .syllabus-item-thumbnail-cover .h-full { height: 100%; }
+body.publish-layout .syllabus-item-thumbnail-cover .h-auto { height: auto; }
+body.publish-layout .syllabus-item-thumbnail-cover .min-w-0 { min-width: 0; }
+body.publish-layout .syllabus-item-thumbnail-cover .flex-1 { flex: 1 1 0%; }
+body.publish-layout .syllabus-item-thumbnail-cover .overflow-hidden { overflow: hidden; }
+body.publish-layout .syllabus-item-thumbnail-cover .rounded-\[3px\],
+body.publish-layout .syllabus-item-thumbnail-cover [class*="rounded-[3px]"] { border-radius: 3px; }
+body.publish-layout .syllabus-item-thumbnail-cover .bg-quinary { background: #e8e8ea; }
+body.publish-layout .syllabus-item-thumbnail-cover .text-white { color: #fff !important; }
+body.publish-layout .syllabus-item-thumbnail-cover .text-white * { color: inherit !important; }
+body.publish-layout .syllabus-item-thumbnail-cover .font-semibold { font-weight: 600; }
+body.publish-layout .syllabus-item-thumbnail-cover .leading-snug { line-height: 1.375; }
+body.publish-layout .syllabus-item-thumbnail-cover .drop-shadow-sm {
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.05));
+}
+body.publish-layout .syllabus-item-thumbnail-cover .opacity-85 { opacity: 0.85; }
+body.publish-layout .syllabus-item-thumbnail-cover .p-3 { padding: 0.75rem; }
+body.publish-layout .syllabus-item-thumbnail-cover .justify-between { justify-content: space-between; }
+body.publish-layout .syllabus-item-thumbnail-cover .object-cover { object-fit: cover; }
+body.publish-layout .syllabus-item-thumbnail-cover .object-contain { object-fit: contain; }
+body.publish-layout .syllabus-item-thumbnail-cover .bg-white { background: #fff; }
+body.publish-layout .syllabus-item-thumbnail-cover .block { display: block; }
+body.publish-layout .syllabus-item-thumbnail-cover .shadow-card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+body.publish-layout .syllabus-item-thumbnail-cover .line-clamp-2,
+body.publish-layout .syllabus-item-thumbnail-cover .line-clamp-3,
+body.publish-layout .syllabus-item-thumbnail-cover .line-clamp-4 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .line-clamp-2 { -webkit-line-clamp: 2; }
+body.publish-layout .syllabus-item-thumbnail-cover .line-clamp-3 { -webkit-line-clamp: 3; }
+body.publish-layout .syllabus-item-thumbnail-cover .line-clamp-4 { -webkit-line-clamp: 4; }
+body.publish-layout .syllabus-item-thumbnail-cover .text-\[11px\],
+body.publish-layout .syllabus-item-thumbnail-cover [class*="text-[11px]"] { font-size: 11px; }
+body.publish-layout .syllabus-item-thumbnail-cover .text-\[12px\],
+body.publish-layout .syllabus-item-thumbnail-cover [class*="text-[12px]"] { font-size: 12px; }
+body.publish-layout .syllabus-item-thumbnail-cover .text-\[13px\],
+body.publish-layout .syllabus-item-thumbnail-cover [class*="text-[13px]"] { font-size: 13px; }
+
+/* Slot sizing inside expanded syllabus cards */
+body.publish-layout .syllabus-item-thumbnail-cover {
+  width: 6rem;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+/* Print base CSS forces .flex/.h-full to position:static + height:auto — restore cover geometry */
+body.publish-layout .syllabus-item-thumbnail-cover .relative {
+  position: relative !important;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .absolute,
+body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-journal,
+body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-placeholder-face,
+body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-book-spine,
+body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-page-fold,
+body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-play,
+body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-web-caption {
+  position: absolute !important;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .h-full {
+  height: 100% !important;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .overflow-hidden {
+  overflow: hidden !important;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-cover-portrait,
+body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-cover-video,
+body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-cover-web,
+body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-cover-square,
+body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-cover-natural,
+body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-cover-with-binder {
+  align-self: stretch;
+  position: relative !important;
+  height: auto !important;
+}
+
+/* Cover face geometry (Tailwind supplies these in-app) */
+body.publish-layout .syllabus-gallery-cover-portrait,
+body.publish-layout .syllabus-gallery-cover-video,
+body.publish-layout .syllabus-gallery-cover-web,
+body.publish-layout .syllabus-gallery-cover-square,
+body.publish-layout .syllabus-gallery-cover-natural {
+  position: relative !important;
+  overflow: hidden !important;
+  border-radius: 3px;
+  background: #e8e8ea;
+}
+body.publish-layout .syllabus-gallery-cover-portrait::after,
+body.publish-layout .syllabus-gallery-cover-video::after,
+body.publish-layout .syllabus-gallery-cover-web::after,
+body.publish-layout .syllabus-gallery-cover-square::after,
+body.publish-layout .syllabus-gallery-cover-natural::after {
+  position: absolute !important;
+}
+body.publish-layout .syllabus-gallery-cover-natural {
+  height: auto !important;
+}
+body.publish-layout .syllabus-gallery-play {
+  position: absolute !important;
+  display: flex !important;
+}
+body.publish-layout .syllabus-gallery-duration {
+  color: #fff !important;
+}
+body.publish-layout .syllabus-gallery-book-spine {
+  position: absolute !important;
+}
+body.publish-layout .syllabus-gallery-journal {
+  position: absolute !important;
+  display: flex !important;
+  flex-direction: column !important;
+  color: #161616 !important;
+  z-index: 0;
+}
+body.publish-layout .syllabus-gallery-journal * {
+  color: inherit;
+}
+body.publish-layout .syllabus-gallery-journal-edition {
+  color: #444 !important;
+}
+body.publish-layout .syllabus-gallery-journal-author {
+  color: #333 !important;
+}
+body.publish-layout .syllabus-gallery-journal.is-contemporary::before {
+  display: block !important;
+}
+body.publish-layout .syllabus-gallery-journal-head {
+  display: flex !important;
+}
+body.publish-layout .syllabus-gallery-journal-mark {
+  display: flex !important;
+  color: #fff !important;
+}
+body.publish-layout .syllabus-gallery-journal.is-contemporary .syllabus-gallery-journal-edition {
+  color: #5a5a5a !important;
+}
+body.publish-layout .syllabus-gallery-journal.is-contemporary .syllabus-gallery-journal-author {
+  color: #3a3a3a !important;
+}
+body.publish-layout .syllabus-gallery-journal-abstract {
+  color: #4a4a4a !important;
+}
+body.publish-layout .syllabus-gallery-page-fold {
+  position: absolute !important;
+}
+body.publish-layout .syllabus-gallery-placeholder-face {
+  position: absolute !important;
+  inset: 0;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between;
+  color: #fff !important;
+  z-index: 0;
+}
+body.publish-layout .syllabus-gallery-cover-with-binder {
+  display: flex !important;
+  flex-direction: row !important;
+  position: relative !important;
+}
+body.publish-layout .syllabus-gallery-cover-with-binder .syllabus-gallery-cover-face {
+  position: relative !important;
+  overflow: hidden !important;
+}
+body.publish-layout .syllabus-gallery-binder {
+  display: flex !important;
+  flex-direction: column !important;
+}
+body.publish-layout .syllabus-gallery-web-caption {
+  position: absolute !important;
+  color: #fff !important;
+}
+body.publish-layout .syllabus-gallery-web-caption-title {
+  color: #fff !important;
+}

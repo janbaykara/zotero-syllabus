@@ -1,5 +1,6 @@
 import { assert } from "chai";
 import { serializeSyllabusForPrint } from "../src/utils/printSyllabus";
+import { PUBLISH_COVER_CSS } from "../src/utils/publishCoverStyles.generated";
 
 describe("serializeSyllabusForPrint", function () {
   it("keeps distinct course code and institution in the masthead", function () {
@@ -144,5 +145,26 @@ describe("serializeSyllabusForPrint", function () {
     assert.include(expandedCard.getAttribute("style") || "", "10px 14px");
     assert.include(rowCard.getAttribute("style") || "", "2px 0");
     assert.notInclude(rowCard.getAttribute("style") || "", "10px 14px");
+  });
+});
+
+describe("PUBLISH_COVER_CSS", function () {
+  it("includes shared galleryCover rules under body.publish-layout", function () {
+    assert.include(
+      PUBLISH_COVER_CSS,
+      "body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-cover-web",
+    );
+    assert.match(
+      PUBLISH_COVER_CSS,
+      /body\.publish-layout \.syllabus-item-thumbnail-cover \.syllabus-gallery-cover-web\s*\{\s*aspect-ratio:\s*1\s*\/\s*1/,
+    );
+    assert.include(
+      PUBLISH_COVER_CSS,
+      "body.publish-layout .syllabus-gallery-cover-portrait",
+    );
+    assert.match(
+      PUBLISH_COVER_CSS,
+      /body\.publish-layout \.syllabus-gallery-cover-portrait\s*\{\s*aspect-ratio:\s*2\s*\/\s*3/,
+    );
   });
 });

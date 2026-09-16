@@ -23,7 +23,7 @@
   "packageManager": "pnpm@10.25.0",
   "scripts": {
     "build:css": "node scripts/build-css.js",
-    "watch:css": "npx @tailwindcss/cli -i ./src/tailwind.css -o ./addon/content/tailwind.css --watch",
+    "watch:css": "concurrently -n tw,cover -c blue,magenta \"npx @tailwindcss/cli -i ./src/tailwind.css -o ./addon/content/tailwind.css --watch\" \"node scripts/build-css.js --watch-publish-cover\"",
     "start": "concurrently \"pnpm watch:css\" \"zotero-plugin serve\"",
     "build": "NODE_ENV=production pnpm build:css && pnpm lint:fix && NODE_ENV=production pnpm zotero-plugin build && NODE_ENV=production pnpm tsc --noEmit",
     "lint:check": "prettier --check . && eslint .",

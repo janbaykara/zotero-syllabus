@@ -9,7 +9,7 @@ import {
   publishHrefIconKind,
   svgForPublishHrefKind,
 } from "./zoteroAttachmentIcons";
-import { PUBLISH_COVER_CSS } from "./publishCoverStyles";
+import { PUBLISH_COVER_CSS } from "./publishCoverStyles.generated";
 import { PLUGIN_REPO_URL } from "../modules/syllabusNoteHtml";
 import { proseToDisplayHtml } from "./prose";
 
