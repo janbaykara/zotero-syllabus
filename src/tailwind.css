@@ -60,10 +60,7 @@
   );
 
   /* Publish status banner — light lavender / dark purple tint */
-  --color-publish: light-dark(
-    oklch(97.7% 0.014 308.299),
-    oklch(28% 0.06 305)
-  );
+  --color-publish: light-dark(oklch(97.7% 0.014 308.299), oklch(28% 0.06 305));
   --color-publish-border: light-dark(
     oklch(82.7% 0.119 306.383),
     oklch(48% 0.1 305)

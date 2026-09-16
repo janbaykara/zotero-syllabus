@@ -341,7 +341,9 @@ export async function buildSyllabusExportPayload(
 
 function resolveImportedItemKey(
   oldKey: string,
-  meta: NonNullable<CollectionSyllabusDocument["itemIndex"]>[string] | undefined,
+  meta:
+    | NonNullable<CollectionSyllabusDocument["itemIndex"]>[string]
+    | undefined,
   maps: {
     byExportId: Map<string, string>;
     byDoi: Map<string, string>;
@@ -454,9 +456,7 @@ export function remapDocumentItemKeys(
   return { ...rest, items: itemsOut, furtherReadingOrder };
 }
 
-function itemAssignmentSignature(
-  document: CollectionSyllabusDocument,
-): string {
+function itemAssignmentSignature(document: CollectionSyllabusDocument): string {
   const keys = Object.keys(document.items || {}).sort();
   const parts = keys.map((key) => {
     const ids = (document.items[key] || [])
@@ -2695,7 +2695,11 @@ function handleNoteChange(item: Zotero.Item, event: string): void {
 
   const tagged = itemHasSyllabusTag(item);
   const looksLike =
-    tagged === true ? true : tagged === false ? looksLikeSyllabusNote(item) : null;
+    tagged === true
+      ? true
+      : tagged === false
+        ? looksLikeSyllabusNote(item)
+        : null;
   if (tagged === false && !looksLike) {
     detachNoteFromCache(item.id);
     return;

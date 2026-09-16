@@ -78,7 +78,9 @@ describe("fallback Zotero RDF", function () {
 
   it("replaceSyllabusNoteHtmlInRdf swaps memo bodies", function () {
     const original = fallbackItemsAsZoteroRdf([
-      mockNote('<pre data-zotero-syllabus="1">{"version":2,"courseCode":"OLD"}</pre>'),
+      mockNote(
+        '<pre data-zotero-syllabus="1">{"version":2,"courseCode":"OLD"}</pre>',
+      ),
     ]);
     const next = replaceSyllabusNoteHtmlInRdf(
       original,

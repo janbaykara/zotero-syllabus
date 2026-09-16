@@ -194,9 +194,7 @@ function fallbackHighlights(commits) {
     .filter((s) => !SKIP_HIGHLIGHT_RE.test(s))
     .slice(0, 3);
   const subjects =
-    picks.length > 0
-      ? picks
-      : commits.slice(0, 3).map((c) => c.subject);
+    picks.length > 0 ? picks : commits.slice(0, 3).map((c) => c.subject);
   return joinAsProse(subjects);
 }
 
@@ -211,9 +209,7 @@ function cleanAiProse(text) {
     .filter((line) => !/^(here('|’)s|summary|highlights)\b/i.test(line));
   if (lines.length === 0) return "";
 
-  const bulletLines = lines.filter((line) =>
-    /^[-*•]\s+|^\d+\.\s+/.test(line),
-  );
+  const bulletLines = lines.filter((line) => /^[-*•]\s+|^\d+\.\s+/.test(line));
   if (
     bulletLines.length > 0 &&
     bulletLines.length >= Math.ceil(lines.length / 2)

@@ -1,9 +1,6 @@
 /** Export items as RIS / BibTeX for published syllabus downloads. */
 
-import {
-  appendExportIdToExtra,
-  SYLLABUS_EXPORT_ID_KEY,
-} from "./identifiers";
+import { appendExportIdToExtra, SYLLABUS_EXPORT_ID_KEY } from "./identifiers";
 import { readItemNote } from "./items";
 
 const RIS_TRANSLATOR_ID = "32d59d2d-b65a-4da4-b0a3-bdd3cfb979e7";
@@ -23,9 +20,7 @@ export type CitationExportOptions = {
   exportIdByItemKey?: Map<string, string> | Record<string, string>;
 };
 
-function exportIdMap(
-  options?: CitationExportOptions,
-): Map<string, string> {
+function exportIdMap(options?: CitationExportOptions): Map<string, string> {
   if (!options?.exportIdByItemKey) {
     return new Map();
   }
@@ -35,10 +30,7 @@ function exportIdMap(
   return new Map(Object.entries(options.exportIdByItemKey));
 }
 
-function exportIdForItem(
-  item: Zotero.Item,
-  ids: Map<string, string>,
-): string {
+function exportIdForItem(item: Zotero.Item, ids: Map<string, string>): string {
   try {
     return ids.get(item.key) || "";
   } catch {
@@ -354,10 +346,7 @@ export function injectExportIdsIntoRis(
     if (!isNote && itemIdx < regular.length) {
       const exportId = exportIdForItem(regular[itemIdx], ids);
       itemIdx += 1;
-      if (
-        exportId &&
-        !block.includes(`${SYLLABUS_EXPORT_ID_KEY}:`)
-      ) {
+      if (exportId && !block.includes(`${SYLLABUS_EXPORT_ID_KEY}:`)) {
         block += `\nN1  - ${SYLLABUS_EXPORT_ID_KEY}: ${exportId}`;
       }
     }
@@ -403,9 +392,7 @@ export function injectExportIdsIntoBibTeX(
       }
       const line = `  extra = {${SYLLABUS_EXPORT_ID_KEY}: ${exportId}}`;
       const trimmedBody = body.trimEnd();
-      const nextBody = trimmedBody
-        ? `${trimmedBody},\n${line}`
-        : `\n${line}`;
+      const nextBody = trimmedBody ? `${trimmedBody},\n${line}` : `\n${line}`;
       return `@${type}{${key},${nextBody}\n}`;
     },
   );
@@ -502,10 +489,7 @@ export async function exportItemsWithTranslator(
 async function exportWithSyllabusNote(
   items: Zotero.Item[],
   translatorID: string,
-  fallback: (
-    items: Zotero.Item[],
-    options?: CitationExportOptions,
-  ) => string,
+  fallback: (items: Zotero.Item[], options?: CitationExportOptions) => string,
   noteAsFallback: (note: Zotero.Item, overrideHtml?: string) => string,
   injectIds: (
     text: string,
@@ -535,10 +519,7 @@ async function exportWithSyllabusNote(
   }
   // Translators typically skip standalone notes — append explicitly.
   for (const note of notes) {
-    text = appendNoteExport(
-      text,
-      noteAsFallback(note, options?.noteHtml),
-    );
+    text = appendNoteExport(text, noteAsFallback(note, options?.noteHtml));
   }
   return text.endsWith("\n") ? text : `${text}\n`;
 }

@@ -1,7 +1,4 @@
-import {
-  appendExportIdToExtra,
-  SYLLABUS_EXPORT_ID_KEY,
-} from "./identifiers";
+import { appendExportIdToExtra, SYLLABUS_EXPORT_ID_KEY } from "./identifiers";
 import { readItemNote } from "./items";
 
 /** Official Zotero RDF export translator (when built-ins are available). */
