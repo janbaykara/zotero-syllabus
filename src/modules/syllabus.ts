@@ -1904,10 +1904,26 @@ export class SyllabusManager {
       }
     };
 
+    const pinIcon = "chrome://zotero/skin/16/universal/pin.svg";
+    // Data URI: extension chrome:// SVGs often fail as menuitem list-style-image.
+    const pinOffIcon = `data:image/svg+xml,${encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M9.45442 0.747313C8.91526 0.208154 7.99526 0.446553 7.78579 1.1797L7.07966 3.65115L0.896869 6.74255C0.286372 7.04779 0.154333 7.86144 0.636975 8.34408L3.79293 11.5L0 15.2929L9.87947e-05 16L0.707182 16L4.50004 12.2071L7.65592 15.363C8.13856 15.8457 8.9522 15.7136 9.25745 15.1031L12.3488 8.92033L14.8203 8.21421C15.5534 8.00474 15.7918 7.08473 15.2527 6.54558L9.45442 0.747313ZM8.74732 1.45442L14.5456 7.25268L11.8626 8.01924L11.6512 8.07966L11.5528 8.27639L8.36302 14.6559L1.34408 7.63697L7.72361 4.44721L7.92034 4.34885L7.98076 4.13736L8.74732 1.45442Z" fill="context-fill"/><path d="M1.4 2.8 2.8 1.4 14.6 13.2 13.2 14.6Z" fill="context-fill"/></svg>`,
+    )}`;
+    const setPinMenuIcon = (elem: Element, unpin: boolean) => {
+      const url = unpin ? pinOffIcon : pinIcon;
+      try {
+        const el = elem as HTMLElement;
+        el.style.setProperty("list-style-image", `url("${url}")`);
+      } catch {
+        // Ignore if the host menuitem has no style object.
+      }
+    };
+
     ztoolkit.Menu.register("item", {
       tag: "menuitem",
       id: "syllabus-pin-item-menu",
       label: getString("pinned-menu-pin-item"),
+      icon: pinIcon,
       isHidden: () => {
         return (
           selectedRegularItems().length === 0 &&
@@ -1924,6 +1940,7 @@ export class SyllabusManager {
               ? getString("pinned-menu-unpin-item")
               : getString("pinned-menu-pin-item"),
           );
+          setPinMenuIcon(elem, allPinned);
           return;
         }
         const notes = selectedSyllabusNotes();
@@ -1941,6 +1958,7 @@ export class SyllabusManager {
               ? getString("pinned-menu-unpin-syllabus")
               : getString("pinned-menu-pin-syllabus"),
           );
+          setPinMenuIcon(elem, allPinned);
         }
       },
       commandListener: async () => {
@@ -1990,6 +2008,7 @@ export class SyllabusManager {
       tag: "menuitem",
       id: "syllabus-pin-collection-menu",
       label: getString("pinned-menu-pin-syllabus"),
+      icon: pinIcon,
       isHidden: () => {
         const collection = getSelectedCollection();
         return !collection || !collectionHasSyllabusNote(collection);
@@ -2006,6 +2025,7 @@ export class SyllabusManager {
             ? getString("pinned-menu-unpin-syllabus")
             : getString("pinned-menu-pin-syllabus"),
         );
+        setPinMenuIcon(elem, pinned);
       },
       commandListener: async () => {
         const collection = getSelectedCollection();
