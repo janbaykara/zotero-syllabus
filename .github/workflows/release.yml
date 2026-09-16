@@ -19,3 +19,11 @@ jobs:
       build: "npm run build"
       release: "npm run release"
     secrets: inherit
+
+  release-notes:
+    needs: create-release
+    continue-on-error: true
+    uses: ./.github/workflows/release-notes.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets: inherit
