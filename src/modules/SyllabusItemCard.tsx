@@ -619,7 +619,7 @@ export function SyllabusItemCard({
       <div
         className={
           density === "row"
-            ? "grid w-full min-w-0 items-start gap-x-2"
+            ? "syllabus-item-row-grid grid w-full min-w-0 items-start gap-x-2"
             : "contents"
         }
         style={

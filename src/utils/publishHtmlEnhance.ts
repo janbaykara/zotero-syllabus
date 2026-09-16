@@ -64,6 +64,14 @@ function svgToDataUri(svg: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
+async function itemTypeIconDataUri(
+  itemType: string,
+  size: 16 | 28,
+): Promise<string | null> {
+  const svg = await svgForItemType(itemType, size);
+  return svg ? svgToDataUri(svg) : null;
+}
+
 async function blobOrHttpToDataUri(src: string): Promise<string | null> {
   if (!src || src.startsWith("data:")) {
     return src || null;
@@ -100,12 +108,12 @@ export async function embedPublishItemTypeIcons(
   ) as Element[];
   for (const icon of icons) {
     const itemType = icon.getAttribute("data-item-type") || "document";
-    const svg = await svgForItemType(itemType, size);
-    if (!svg) continue;
+    const dataUri = await itemTypeIconDataUri(itemType, size);
+    if (!dataUri) continue;
     const doc = icon.ownerDocument;
     if (!doc) continue;
     const img = doc.createElement("img");
-    img.src = svgToDataUri(svg);
+    img.src = dataUri;
     img.alt = "";
     img.width = size;
     img.height = size;
@@ -135,17 +143,15 @@ export async function embedPublishCoverImages(root: ParentNode): Promise<void> {
 }
 
 /**
- * For standard/expanded publish: put a bibliographic citation where metadata was.
- * Row density keeps author · year.
+ * Put a bibliographic citation under each reading.
+ * Row: citation on its own line under the title (not beside it).
+ * Standard/expanded: replace the metadata block; drop duplicate reference lines.
  */
 export async function replacePublishMetadataWithCitations(
   root: ParentNode,
   density: ItemDensity,
   cslStyle?: string | null,
 ): Promise<void> {
-  if (density === "row") {
-    return;
-  }
   const cards = Array.from(
     root.querySelectorAll(
       ".syllabus-item-card[data-item-id], .syllabus-gallery-tile[data-item-id], .syllabus-magazine-tile[data-item-id]",
@@ -167,11 +173,45 @@ export async function replacePublishMetadataWithCitations(
     }
     if (!citation.trim()) continue;
 
-    const meta = card.querySelector(".syllabus-item-metadata");
-    if (meta) {
-      meta.textContent = citation.trim();
-      meta.classList.add("syllabus-publish-citation");
+    const doc = card.ownerDocument;
+    if (!doc) continue;
+
+    let meta = card.querySelector(".syllabus-item-metadata") as HTMLElement | null;
+    if (!meta) {
+      meta = doc.createElement("div");
+      meta.className = "syllabus-item-metadata";
     }
+    meta.textContent = citation.trim();
+    meta.classList.add("syllabus-publish-citation");
+    // Row author·year was a character-separator flex; citation is plain text.
+    meta.classList.remove(
+      "flex",
+      "flex-row",
+      "character-separator",
+      "items-baseline",
+      "justify-end",
+      "text-right",
+      "whitespace-nowrap",
+      "shrink-0",
+    );
+
+    if (density === "row") {
+      const textCol = card.querySelector(".syllabus-item-text");
+      const title = card.querySelector(".syllabus-item-title");
+      const titleLine = title?.parentElement;
+      if (titleLine && textCol && titleLine !== textCol) {
+        titleLine.classList.add("syllabus-publish-title-line");
+      }
+      if (textCol) {
+        textCol.appendChild(meta);
+      } else {
+        card.appendChild(meta);
+      }
+    } else if (!meta.isConnected) {
+      const textCol = card.querySelector(".syllabus-item-text");
+      (textCol || card).appendChild(meta);
+    }
+
     // Avoid duplicating the expanded in-card reference line.
     card.querySelectorAll(".syllabus-item-reference").forEach((el) => {
       el.remove();

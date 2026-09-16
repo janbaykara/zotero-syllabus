@@ -1,7 +1,7 @@
 import { assert } from "chai";
 import { isPrintableItemHref } from "../src/utils/printSyllabus";
 import { runsFromNode } from "../src/utils/exportSyllabus";
-import { publishFileIconKind } from "../src/utils/zoteroAttachmentIcons";
+import { publishFileIconKind, publishHrefIconKind } from "../src/utils/zoteroAttachmentIcons";
 import { remoteMatchesLocal } from "../src/utils/publishFileFingerprints";
 
 describe("publish link hrefs", function () {
@@ -22,6 +22,15 @@ describe("publish link hrefs", function () {
     assert.isNull(publishFileIconKind("files/KEY.png"));
     assert.isNull(publishFileIconKind("https://example.edu/a.pdf"));
     assert.isNull(publishFileIconKind("files/../x.pdf"));
+  });
+
+  it("maps external URLs to a link icon kind", function () {
+    assert.equal(publishHrefIconKind("https://doi.org/10.1000/xyz"), "link");
+    assert.equal(publishHrefIconKind("http://example.edu/paper"), "link");
+    assert.equal(publishHrefIconKind("files/ABCD1234.pdf"), "pdf");
+    assert.equal(publishHrefIconKind("files/KEY.epub"), "epub");
+    assert.isNull(publishHrefIconKind("files/KEY.png"));
+    assert.isNull(publishHrefIconKind(""));
   });
 
   it("matches R2 metadata to local fingerprints", function () {

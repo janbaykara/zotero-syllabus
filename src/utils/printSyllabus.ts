@@ -1,13 +1,18 @@
 import { pickSavePath } from "./file";
 import { getString } from "./locale";
+import { formatDate } from "date-fns";
 import {
   coerceItemDensity,
   type ItemDensity,
 } from "../modules/react-zotero-sync/itemDensity";
 import {
-  publishFileIconKind,
-  svgForPublishFileKind,
+  publishHrefIconKind,
+  svgForPublishHrefKind,
 } from "./zoteroAttachmentIcons";
+import { PUBLISH_COVER_CSS } from "./publishCoverStyles";
+import { PLUGIN_REPO_URL } from "../modules/syllabusNoteHtml";
+
+const ZOTERO_HOME_URL = "https://www.zotero.org/";
 
 type PrintBrowsingContext = {
   print: (settings: unknown) => Promise<unknown>;
@@ -64,10 +69,13 @@ const PRINT_DOCUMENT_CSS = `
     font-size: 14px;
     line-height: 1.45;
   }
-  body, body * {
+  body:not(.publish-layout),
+  body:not(.publish-layout) * {
     color: #111;
   }
-  *::before, *::after {
+  /* Print flattens chrome; publish keeps gallery cover ::before/::after */
+  body:not(.publish-layout) *::before,
+  body:not(.publish-layout) *::after {
     display: none !important;
     content: none !important;
   }
@@ -136,7 +144,8 @@ const PRINT_DOCUMENT_CSS = `
     }
   }
   .syllabus-publish-file-icon {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     vertical-align: -0.15em;
     margin-inline-start: 0.35em;
     line-height: 0;
@@ -145,6 +154,10 @@ const PRINT_DOCUMENT_CSS = `
     width: 16px;
     height: 16px;
     display: block;
+  }
+  body.publish-layout .syllabus-publish-title-line .syllabus-publish-file-icon {
+    margin-inline-start: auto;
+    vertical-align: baseline;
   }
   .syllabus-page,
   .syllabus-class-groups,
@@ -170,14 +183,77 @@ const PRINT_DOCUMENT_CSS = `
     height: auto !important;
     max-height: none !important;
     overflow: visible !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   body.publish-layout[data-item-density="row"] .syllabus-item-card {
     display: block !important;
   }
+  /* Text column fills the card so short titles still push the file icon right */
+  body.publish-layout .syllabus-item-text {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  body.publish-layout .syllabus-publish-title-line,
+  body.publish-layout .syllabus-item-title-row,
+  body.publish-layout .syllabus-magazine-title-row,
+  body.publish-layout .syllabus-gallery-title-row {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: baseline !important;
+    gap: 0.5rem;
+    width: 100% !important;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  body.publish-layout .syllabus-item-title {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+  /* Row: item-type icon | title+citation column */
+  body.publish-layout[data-item-density="row"] .syllabus-item-row-grid {
+    display: grid !important;
+    grid-template-columns: 16px minmax(0, 1fr);
+    column-gap: 0.5rem;
+    align-items: start;
+    width: 100%;
+  }
+  body.publish-layout[data-item-density="row"] .syllabus-item-thumbnail {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 1.25rem;
+    margin: 0;
+    padding: 0;
+  }
+  body.publish-layout[data-item-density="row"] .syllabus-item-text {
+    gap: 0.15rem;
+  }
+  body.publish-layout .syllabus-publish-file-icon {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin-inline-start: auto;
+    line-height: 0;
+    text-decoration: none;
+    color: inherit;
+  }
+  body.publish-layout[data-item-density="row"] .syllabus-publish-citation {
+    display: block;
+    margin: 0;
+    padding: 0;
+    color: #4b5563;
+    font-size: 12px;
+    line-height: 1.35;
+  }
   body.publish-layout .syllabus-item-card .contents {
     display: contents !important;
   }
-  body.publish-layout .syllabus-item-card .flex {
+  body.publish-layout .syllabus-item-card .flex:not(.syllabus-item-text) {
     display: flex !important;
     flex: initial !important;
   }
@@ -203,25 +279,91 @@ const PRINT_DOCUMENT_CSS = `
   body.publish-layout .syllabus-item-thumbnail-cover {
     width: 6rem;
     flex-shrink: 0;
+    align-self: flex-start;
   }
   body.publish-layout .syllabus-item-thumbnail-cover img {
-    max-width: 100%;
+    max-width: none !important;
     max-height: none !important;
-    height: auto;
+  }
+  body.publish-layout .syllabus-item-thumbnail-cover img.absolute,
+  body.publish-layout .syllabus-item-thumbnail-cover img.h-full {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100% !important;
+    display: block;
+  }
+  body.publish-layout .syllabus-item-thumbnail-cover img.object-cover {
+    object-fit: cover;
+  }
+  body.publish-layout .syllabus-item-thumbnail-cover img.object-contain {
+    object-fit: contain;
+  }
+  body.publish-layout .syllabus-item-thumbnail-cover img.h-auto {
+    position: relative;
+    width: 100%;
+    height: auto !important;
     display: block;
   }
   body.publish-layout .syllabus-publish-citation {
     display: block;
   }
+  /* Hosted page: allow copy/paste; no syllabus reorder chrome */
+  body.publish-layout,
+  body.publish-layout * {
+    -webkit-user-select: text !important;
+    user-select: text !important;
+    -webkit-user-drag: none !important;
+    user-drag: none !important;
+  }
+  body.publish-layout .cursor-grab,
+  body.publish-layout .cursor-grabbing {
+    cursor: auto !important;
+  }
+  body.publish-layout a {
+    cursor: pointer;
+  }
+  body.publish-layout .syllabus-publish-credit {
+    max-width: 56rem;
+    margin: 0 auto;
+    padding: 1.25rem 2.5rem 2rem;
+    box-sizing: border-box;
+    font-size: 11px;
+    line-height: 1.45;
+    color: #9ca3af;
+    text-align: left;
+  }
+  body.publish-layout .syllabus-publish-credit a {
+    color: #6b7280;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  body.publish-layout .syllabus-publish-credit a:hover {
+    color: #374151;
+  }
   .syllabus-class-group + .syllabus-class-group {
     margin-top: 1.75rem;
   }
-  /* Space after course description / links before the first class */
-  .syllabus-class-groups {
+  /* Hosted HTML only — in-app SyllabusPage keeps its own tighter spacing */
+  body.publish-layout .syllabus-class-groups {
     margin-top: 2.5rem;
   }
-  body[data-item-density="row"] .syllabus-class-groups,
-  .density-row .syllabus-class-groups {
+  body.publish-layout .syllabus-collection-description {
+    margin-top: 1.25rem;
+  }
+  body.publish-layout .syllabus-collection-links {
+    margin-top: 1.25rem;
+  }
+  body.publish-layout[data-item-density="row"] .syllabus-class-groups {
+    margin-top: 2rem;
+  }
+  body.publish-layout .syllabus-class-group + .syllabus-class-group {
+    margin-top: 2.75rem;
+  }
+  body.publish-layout[data-item-density="standard"] .syllabus-class-group + .syllabus-class-group {
+    margin-top: 2.25rem;
+  }
+  body.publish-layout[data-item-density="row"] .syllabus-class-group + .syllabus-class-group {
     margin-top: 2rem;
   }
   body[data-item-density="standard"] .syllabus-class-group + .syllabus-class-group,
@@ -356,6 +498,27 @@ export function escapeHtml(text: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+/** Strip reorder/drag affordances from hosted HTML so text can be selected. */
+function disablePublishDragChrome(root: ParentNode): void {
+  const dragClasses = [
+    "cursor-grab",
+    "cursor-grabbing",
+    "select-none",
+    "is-drop-before",
+    "is-drop-after",
+    "syllabus-item-dragging",
+    "file-drag-over",
+  ];
+  root.querySelectorAll("[draggable]").forEach((el) => {
+    el.removeAttribute("draggable");
+  });
+  root.querySelectorAll("*").forEach((el) => {
+    for (const name of dragClasses) {
+      el.classList.remove(name);
+    }
+  });
 }
 
 function classListHas(el: Element, name: string): boolean {
@@ -614,6 +777,64 @@ function polishMasthead(root: ParentNode): void {
   });
 }
 
+/** Hosted HTML: “published 01 Sep 2026 at 2.34pm” on the course/institution line. */
+function insertPublishTimestamp(root: ParentNode, when = new Date()): void {
+  const meta = asElement(root.querySelector(".syllabus-masthead-meta"));
+  if (!meta?.ownerDocument) {
+    return;
+  }
+  const date = formatDate(when, "dd MMM yyyy");
+  const hours24 = when.getHours();
+  const minutes = String(when.getMinutes()).padStart(2, "0");
+  const hours12 = hours24 % 12 || 12;
+  const ampm = hours24 >= 12 ? "pm" : "am";
+  const time = `${hours12}.${minutes}${ampm}`;
+  const doc = meta.ownerDocument;
+  const hasMetaText = [...meta.children].some((kid) =>
+    Boolean(kid.textContent?.trim()),
+  );
+  if (hasMetaText) {
+    meta.appendChild(doc.createTextNode(" · "));
+  }
+  const el = doc.createElement("span");
+  el.className = "syllabus-publish-timestamp";
+  el.textContent = getString("publish-html-published-at", {
+    args: { date, time },
+  });
+  setPrintStyle(el, {
+    display: "inline",
+    color: "#555",
+    "font-size": "13px",
+    "font-weight": "500",
+  });
+  meta.appendChild(el);
+}
+
+/**
+ * Syllabus “links” are clickable spans in-app (Zotero.launchURL). Turn URL
+ * text into real anchors for hosted / printable HTML.
+ */
+function promoteSyllabusUrlLinks(root: ParentNode): void {
+  root.querySelectorAll(".underline").forEach((el) => {
+    if (el.closest("a") || el.tagName === "A") {
+      return;
+    }
+    const text = (el.textContent || "").trim();
+    if (!/^https?:\/\//i.test(text)) {
+      return;
+    }
+    const doc = el.ownerDocument;
+    if (!doc) return;
+    const anchor = doc.createElement("a");
+    anchor.setAttribute("href", text);
+    anchor.setAttribute("target", "_blank");
+    anchor.setAttribute("rel", "noopener noreferrer");
+    anchor.className = el.className;
+    anchor.textContent = text;
+    el.replaceWith(anchor);
+  });
+}
+
 /** True for http(s) URLs or relative hosted files paths (publish). */
 export function isPrintableItemHref(href: string): boolean {
   const value = href.trim();
@@ -676,21 +897,35 @@ function linkItemTitles(root: ParentNode): void {
       anchor.appendChild(title.firstChild);
     }
 
-    const fileKind = publishFileIconKind(href);
-    if (fileKind) {
-      const fileLabel = getString(
-        fileKind === "pdf" ? "attachment-pdf" : "attachment-epub",
+    const iconKind = publishHrefIconKind(href);
+    if (iconKind) {
+      const iconLabel = getString(
+        iconKind === "pdf"
+          ? "attachment-pdf"
+          : iconKind === "epub"
+            ? "attachment-epub"
+            : "attachment-url",
       );
-      anchor.setAttribute("title", fileLabel);
-      anchor.setAttribute("aria-label", `${text} — ${fileLabel}`);
-      const icon = doc.createElement("span");
-      icon.className = "syllabus-publish-file-icon";
-      icon.setAttribute("aria-hidden", "true");
-      icon.innerHTML = svgForPublishFileKind(fileKind);
-      anchor.appendChild(icon);
+      anchor.setAttribute("title", iconLabel);
+      anchor.setAttribute("aria-label", `${text} — ${iconLabel}`);
     }
 
     title.appendChild(anchor);
+
+    // File / link glyph sits on the title line (right), not inside the link text.
+    if (iconKind) {
+      const icon = doc.createElement("span");
+      icon.className = "syllabus-publish-file-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.innerHTML = svgForPublishHrefKind(iconKind);
+      const titleLine = title.parentElement;
+      if (titleLine && titleLine !== host) {
+        titleLine.classList.add("syllabus-publish-title-line");
+        titleLine.appendChild(icon);
+      } else {
+        title.appendChild(icon);
+      }
+    }
   };
 
   root
@@ -782,7 +1017,8 @@ function applyInlinePrintStyles(
       });
     }
     if (classes.includes("syllabus-class-groups")) {
-      // Keep header / description / links from sitting on top of Class 1.
+      // Publish: keep description / links from sitting on Class 1.
+      // Print / in-app clone: preserve the tighter desktop spacing.
       setPrintStyle(el, {
         "margin-top":
           mode === "publish"
@@ -790,14 +1026,31 @@ function applyInlinePrintStyles(
               ? "2rem"
               : "2.75rem"
             : density === "row"
-              ? "1.25rem"
-              : "1.75rem",
+              ? "4px"
+              : "8px",
       });
+    }
+    if (
+      mode === "publish" &&
+      (classes.includes("syllabus-collection-description") ||
+        classes.includes("syllabus-collection-links"))
+    ) {
+      setPrintStyle(el, { "margin-top": "1.25rem" });
     }
     if (classes.includes("syllabus-class-group")) {
       setPrintStyle(el, {
         "margin-bottom":
-          density === "row" ? "12px" : density === "standard" ? "18px" : "26px",
+          mode === "publish"
+            ? density === "row"
+              ? "2rem"
+              : density === "standard"
+                ? "2.25rem"
+                : "2.75rem"
+            : density === "row"
+              ? "12px"
+              : density === "standard"
+                ? "18px"
+                : "26px",
       });
     }
     if (classes.includes("syllabus-class-items")) {
@@ -814,6 +1067,8 @@ function applyInlinePrintStyles(
             padding: "2px 0",
             "border-radius": "0",
             margin: "0 0 2px",
+            width: "100%",
+            "box-sizing": "border-box",
             "overflow-wrap": "anywhere",
           });
         } else if (density === "standard") {
@@ -829,6 +1084,8 @@ function applyInlinePrintStyles(
             padding: "6px 10px",
             "border-radius": "6px",
             margin: "0 0 4px",
+            width: "100%",
+            "box-sizing": "border-box",
             "overflow-wrap": "anywhere",
           });
         } else {
@@ -844,6 +1101,8 @@ function applyInlinePrintStyles(
             padding: "10px 14px",
             "border-radius": "8px",
             margin: "0 0 8px",
+            width: "100%",
+            "box-sizing": "border-box",
             "overflow-wrap": "anywhere",
           });
         }
@@ -888,11 +1147,57 @@ function applyInlinePrintStyles(
         });
       }
     }
-    if (classes.includes("syllabus-item-thumbnail") && mode === "publish") {
+    if (classes.includes("syllabus-item-row-grid") && mode === "publish") {
       setPrintStyle(el, {
-        display: "block",
-        "flex-shrink": "0",
+        display: "grid",
+        "grid-template-columns": "16px minmax(0, 1fr)",
+        "column-gap": "0.5rem",
+        "align-items": "start",
+        width: "100%",
       });
+    }
+    if (
+      (classes.includes("syllabus-publish-title-line") ||
+        classes.includes("syllabus-item-title-row") ||
+        classes.includes("syllabus-magazine-title-row") ||
+        classes.includes("syllabus-gallery-title-row")) &&
+      mode === "publish"
+    ) {
+      setPrintStyle(el, {
+        display: "flex",
+        "flex-direction": "row",
+        "align-items": "baseline",
+        gap: "0.5rem",
+        width: "100%",
+        "min-width": "0",
+        "box-sizing": "border-box",
+      });
+    }
+    if (classes.includes("syllabus-item-text") && mode === "publish") {
+      setPrintStyle(el, {
+        display: "flex",
+        "flex-direction": "column",
+        flex: "1 1 auto",
+        "min-width": "0",
+        width: "100%",
+      });
+    }
+    if (classes.includes("syllabus-item-thumbnail") && mode === "publish") {
+      if (density === "row") {
+        setPrintStyle(el, {
+          display: "flex",
+          "align-items": "center",
+          "justify-content": "center",
+          "flex-shrink": "0",
+          width: "16px",
+          height: "1.25rem",
+        });
+      } else {
+        setPrintStyle(el, {
+          display: "block",
+          "flex-shrink": "0",
+        });
+      }
     }
     if (
       classes.includes("syllabus-publish-item-type-icon") ||
@@ -905,11 +1210,31 @@ function applyInlinePrintStyles(
         height: density === "row" ? "16px" : "24px",
       });
     }
+    if (classes.includes("syllabus-publish-file-icon") && mode === "publish") {
+      setPrintStyle(el, {
+        display: "inline-flex",
+        "align-items": "center",
+        "flex-shrink": "0",
+        "margin-left": "auto",
+        "line-height": "0",
+        "text-decoration": "none",
+        color: "inherit",
+      });
+    }
     if (classes.includes("syllabus-publish-citation")) {
       setPrintStyle(el, {
+        display: "block",
         color: "#4b5563",
-        "font-size": density === "standard" ? "12.5px" : "13px",
+        "font-size":
+          density === "row" ? "12px" : density === "standard" ? "12.5px" : "13px",
         "line-height": "1.4",
+        ...(density === "row" ? { "margin-top": "0" } : {}),
+      });
+    }
+    if (classes.includes("syllabus-item-title") && mode === "publish") {
+      setPrintStyle(el, {
+        flex: "1 1 auto",
+        "min-width": "0",
       });
     }
     if (classes.includes("syllabus-item-title-row")) {
@@ -985,8 +1310,8 @@ export function serializeSyllabusForPrint(
 }
 
 /**
- * Publish HTML: keep density layout + icons, and (standard/expanded) show
- * bibliographic citations instead of author/date metadata.
+ * Publish HTML: keep density layout + icons, and show bibliographic citations
+ * (including under the title in row density).
  */
 export async function serializeSyllabusForPublish(
   source: HTMLElement,
@@ -1028,6 +1353,7 @@ function prepareSyllabusClone(
     clone.querySelectorAll(".syllabus-item-thumbnail").forEach((el) => {
       el.classList.remove("in-[.print]:hidden");
     });
+    disablePublishDragChrome(clone);
   }
   removeScreenOnlyElements(clone);
   replaceFormControlsWithText(clone);
@@ -1039,6 +1365,10 @@ function prepareSyllabusClone(
   applyInlinePrintStyles(clone, resolved, mode);
   polishClassHeadings(clone);
   polishMasthead(clone);
+  if (mode === "publish") {
+    insertPublishTimestamp(clone);
+  }
+  promoteSyllabusUrlLinks(clone);
   polishLinks(clone);
   return clone;
 }
@@ -1090,6 +1420,9 @@ export async function buildPrintableHtml({
     ? `<div class="syllabus-publish-downloads">${downloadLinks.join("")}</div>`
     : "";
 
+  const creditHtml =
+    layout === "publish" ? buildPublishCreditHtml() : "";
+
   const bodyClass = [
     "print",
     `density-${resolved}`,
@@ -1104,7 +1437,12 @@ export async function buildPrintableHtml({
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${safeTitle}</title>
-  <style type="text/css">${PRINT_DOCUMENT_CSS}</style>
+  <style type="text/css">${PRINT_DOCUMENT_CSS}${layout === "publish" ? PUBLISH_COVER_CSS : ""}</style>
+  ${
+    layout === "publish"
+      ? `<script>(function(){function stop(e){e.preventDefault();}document.addEventListener("dragstart",stop,true);document.addEventListener("dragover",stop,true);document.addEventListener("drop",stop,true);})();</script>`
+      : ""
+  }
 </head>
 <body class="${bodyClass}" data-item-density="${resolved}" style="${bodyStyle}">
   <div class="syllabus-page" data-item-density="${resolved}" style="position:relative;max-width:56rem;margin-left:auto;margin-right:auto;padding:2.5rem 2.5rem 4rem;background:#fff;min-height:100vh;box-sizing:border-box">
@@ -1116,8 +1454,24 @@ export async function buildPrintableHtml({
       ? `<div class="syllabus-print-page-break" style="break-after:page;page-break-after:always;height:0"></div><div class="syllabus-print-bibliography" style="max-width:56rem;margin-left:auto;margin-right:auto;padding:0.15in 2.5rem 2rem;box-sizing:border-box;font-family:${PRINT_FONT};color:#111">${bibliographyHtml}</div>`
       : ""
   }
+  ${creditHtml}
 </body>
 </html>`;
+}
+
+/** Small credit line for hosted HTML (product names stay untranslated). */
+function buildPublishCreditHtml(): string {
+  const syllabusMarker = "\uE000";
+  const zoteroMarker = "\uE001";
+  const label = getString("publish-html-credit", {
+    args: { syllabus: syllabusMarker, zotero: zoteroMarker },
+  });
+  const syllabusLink = `<a href="${escapeHtml(PLUGIN_REPO_URL)}" target="_blank" rel="noopener noreferrer">Zotero Syllabus</a>`;
+  const zoteroLink = `<a href="${escapeHtml(ZOTERO_HOME_URL)}" target="_blank" rel="noopener noreferrer">Zotero</a>`;
+  const body = escapeHtml(label)
+    .replace(syllabusMarker, syllabusLink)
+    .replace(zoteroMarker, zoteroLink);
+  return `<footer class="syllabus-publish-credit">${body}</footer>`;
 }
 
 function cc(contract: string): {

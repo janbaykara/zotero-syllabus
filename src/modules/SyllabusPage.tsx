@@ -2712,7 +2712,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
             <div
               className={twMerge(
                 "syllabus-class-groups flex flex-col mb-12",
-                density !== "expanded" ? "gap-10 mt-10" : "gap-12 mt-12",
+                density !== "expanded" ? "gap-10 mt-4" : "gap-12 mt-6",
               )}
             >
               {isFiltered &&

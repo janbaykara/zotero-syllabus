@@ -1,6 +1,6 @@
 /**
  * Zotero item-type attachment icons (16px light), from
- * chrome://zotero/skin/item-type/16/light/attachment-{pdf,epub}.svg
+ * chrome://zotero/skin/item-type/16/light/attachment-{pdf,epub,web-link}.svg
  * Bundled so published HTML can show them outside Zotero chrome.
  */
 
@@ -8,19 +8,38 @@ export const ZOTERO_ATTACHMENT_PDF_SVG = `<svg width="16" height="16" viewBox="0
 
 export const ZOTERO_ATTACHMENT_EPUB_SVG = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path opacity="0.5" d="M14 2H15C15.2652 2 15.5196 2.10536 15.7071 2.29289C15.8946 2.48043 16 2.73478 16 3V15C16 15.2652 15.8946 15.5196 15.7071 15.7071C15.5196 15.8946 15.2652 16 15 16H5C4.73481 15.9999 4.48049 15.8945 4.293 15.707L2.293 13.707C2.10545 13.5195 2.00006 13.2652 2 13V1C2 0.734784 2.10536 0.48043 2.29289 0.292893C2.48043 0.105357 2.73478 0 3 0H13C13.2652 0 13.5196 0.105357 13.7071 0.292893C13.8946 0.48043 14 0.734784 14 1V2Z" fill="white"/><path d="M14 2V13C14 13.5523 13.5523 14 13 14H4L5 15H15V3L14 2Z" fill="#EBEBEB"/><path opacity="0.2" d="M15 2H14L15 3V15H5L4 14H13C13.2652 14 13.5196 13.8946 13.7071 13.7071C13.8946 13.5196 14 13.2652 14 13V1C14 0.734784 13.8946 0.48043 13.7071 0.292893C13.5196 0.105357 13.2652 0 13 0L3 0C2.73478 0 2.48043 0.105357 2.29289 0.292893C2.10536 0.48043 2 0.734784 2 1V13C2.00006 13.2652 2.10545 13.5195 2.293 13.707L4.293 15.707C4.48049 15.8945 4.73481 15.9999 5 16H15C15.2652 16 15.5196 15.8946 15.7071 15.7071C15.8946 15.5196 16 15.2652 16 15V3C16 2.73478 15.8946 2.48043 15.7071 2.29289C15.5196 2.10536 15.2652 2 15 2ZM5 1H13V13H5V1ZM3 1H4V13H3V1Z" fill="black"/><path d="M13 1H5V13H13V1Z" fill="white"/><path d="M4 1H3V13H4V1Z" fill="white"/><path d="M8 4H1V6H8V4Z" fill="#B0E5C3"/><path d="M8 4V6H1V4H8ZM9 3H0V7H9V3Z" fill="#39BF68"/></svg>`;
 
-/** Kind for a published relative files/… attachment link. */
-export function publishFileIconKind(href: string): "pdf" | "epub" | null {
-  const value = href.trim().toLowerCase();
-  if (!/^files\/[a-z0-9._-]+\.[a-z0-9]+$/.test(value)) {
+export const ZOTERO_ATTACHMENT_WEB_LINK_SVG = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path opacity="0.5" d="M9.5 10C10.2161 9.9978 10.9152 10.2187 11.5 10.632C12.0043 10.275 12.5955 10.0604 13.2114 10.011C13.8273 9.96154 14.4452 10.079 15 10.351V2C15 1.73478 14.8946 1.48043 14.7071 1.29289C14.5196 1.10536 14.2652 1 14 1H1C0.734784 1 0.48043 1.10536 0.292893 1.29289C0.105357 1.48043 0 1.73478 0 2L0 15H6.351C6.12289 14.5327 6.00293 14.02 6 13.5C6 12.5717 6.36875 11.6815 7.02513 11.0251C7.6815 10.3687 8.57174 10 9.5 10Z" fill="white"/><path d="M7.5 13.5C7.5 12.9696 7.71071 12.4609 8.08579 12.0858C8.46086 11.7107 8.96957 11.5 9.5 11.5C10.0304 11.5 10.5391 11.7107 10.9142 12.0858C11.2893 12.4609 11.5 12.9696 11.5 13.5C11.5 12.9696 11.7107 12.4609 12.0858 12.0858C12.4609 11.7107 12.9696 11.5 13.5 11.5C13.669 11.5021 13.8371 11.5259 14 11.571V2H1V14H7.571C7.52594 13.8371 7.50207 13.669 7.5 13.5Z" fill="white"/><path opacity="0.04" d="M14 2H1V5H14V2Z" fill="black"/><path d="M3 3H2V4H3V3Z" fill="#E24940"/><path d="M5 3H4V4H5V3Z" fill="#E0A32A"/><path d="M7 3H6V4H7V3Z" fill="#28AD31"/><path d="M9.5 10C10.2161 9.9978 10.9152 10.2187 11.5 10.632C11.8049 10.4177 12.1426 10.2546 12.5 10.149V8.5H2.5V12.5H6.163C6.37666 11.78 6.81663 11.148 7.41771 10.6977C8.01878 10.2474 8.74896 10.0027 9.5 10Z" fill="#B3C7F5"/><path opacity="0.2" d="M6.051 14H1V6H14V10.051C14.3467 10.0995 14.6839 10.2007 15 10.351V2C15 1.73478 14.8946 1.48043 14.7071 1.29289C14.5196 1.10536 14.2652 1 14 1H1C0.734784 1 0.48043 1.10536 0.292893 1.29289C0.105357 1.48043 0 1.73478 0 2L0 15H6.351C6.2007 14.6839 6.09954 14.3467 6.051 14ZM1 2H14V5H1V2Z" fill="black"/><path d="M6.351 12H3V9H12V10.342C12.3162 10.1919 12.6534 10.0907 13 10.042V8H2V13H6.051C6.09954 12.6533 6.2007 12.3161 6.351 12Z" fill="#4072E5"/><path fill-rule="evenodd" clip-rule="evenodd" d="M9.5 11C10.3178 11 11.0439 11.3927 11.5 11.9998C11.9561 11.3927 12.6822 11 13.5 11C14.8807 11 16 12.1193 16 13.5C16 14.8807 14.8807 16 13.5 16C12.6822 16 11.9561 15.6073 11.5 15.0002C11.0439 15.6073 10.3178 16 9.5 16C8.11929 16 7 14.8807 7 13.5C7 12.1193 8.11929 11 9.5 11ZM10.9146 13H9.5C9.22386 13 9 13.2239 9 13.5C9 13.7761 9.22386 14 9.5 14H10.9146C10.7087 14.5826 10.1531 15 9.5 15C8.67157 15 8 14.3284 8 13.5C8 12.6716 8.67157 12 9.5 12C10.1531 12 10.7087 12.4174 10.9146 13ZM12.0854 14H13.5C13.7761 14 14 13.7761 14 13.5C14 13.2239 13.7761 13 13.5 13H12.0854C12.2913 12.4174 12.8469 12 13.5 12C14.3284 12 15 12.6716 15 13.5C15 14.3284 14.3284 15 13.5 15C12.8469 15 12.2913 14.5826 12.0854 14Z" fill="#888888"/></svg>`;
+
+export type PublishHrefIconKind = "pdf" | "epub" | "link";
+
+/** Kind for a published files/… attachment or external http(s) URL. */
+export function publishHrefIconKind(href: string): PublishHrefIconKind | null {
+  const value = href.trim();
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) {
+    return "link";
+  }
+  const lower = value.toLowerCase();
+  if (!/^files\/[a-z0-9._-]+\.[a-z0-9]+$/.test(lower)) {
     return null;
   }
-  if (value.endsWith(".pdf")) return "pdf";
-  if (value.endsWith(".epub")) return "epub";
+  if (lower.endsWith(".pdf")) return "pdf";
+  if (lower.endsWith(".epub")) return "epub";
   return null;
 }
 
+/** @deprecated Prefer publishHrefIconKind */
+export function publishFileIconKind(href: string): "pdf" | "epub" | null {
+  const kind = publishHrefIconKind(href);
+  return kind === "pdf" || kind === "epub" ? kind : null;
+}
+
+export function svgForPublishHrefKind(kind: PublishHrefIconKind): string {
+  if (kind === "pdf") return ZOTERO_ATTACHMENT_PDF_SVG;
+  if (kind === "epub") return ZOTERO_ATTACHMENT_EPUB_SVG;
+  return ZOTERO_ATTACHMENT_WEB_LINK_SVG;
+}
+
 export function svgForPublishFileKind(kind: "pdf" | "epub"): string {
-  return kind === "pdf"
-    ? ZOTERO_ATTACHMENT_PDF_SVG
-    : ZOTERO_ATTACHMENT_EPUB_SVG;
+  return svgForPublishHrefKind(kind);
 }

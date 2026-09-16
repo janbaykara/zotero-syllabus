@@ -93,7 +93,7 @@ export function LinksSection({
   ];
 
   return (
-    <div className="container-padded">
+    <div className="container-padded syllabus-collection-links">
       <div
         className={twMerge(
           "py-2",
