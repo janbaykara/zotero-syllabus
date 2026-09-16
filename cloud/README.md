@@ -15,7 +15,8 @@ Static syllabus hosting on **Cloudflare R2** behind a gatekeeper Worker. Users s
 
 1. Create or sign in to a Cloudflare account (prefer a dedicated account for blast-radius isolation).
 2. Enable **Workers**, **R2**, and **Workers KV**.
-3. Under **Billing**, set a **spending alert** (and a hard spend limit if available).
+3. For admin view analytics, enable **Analytics Engine** at [Workers → Analytics Engine](https://dash.cloudflare.com/?to=/:account/workers/analytics-engine) (otherwise `wrangler deploy` fails with code **10089** once the `ANALYTICS` binding is in `wrangler.toml`).
+4. Under **Billing**, set a **spending alert** (and a hard spend limit if available).
 
 ### 2. R2 bucket
 
@@ -49,9 +50,20 @@ npx wrangler secret put ZOTERO_OAUTH_CLIENT_KEY
 npx wrangler secret put ZOTERO_OAUTH_CLIENT_SECRET
 # Optional: ops dashboard at /admin?key=…
 npx wrangler secret put ADMIN_DASHBOARD_SECRET
+# Optional: page views / file / citation downloads on the admin dashboard (Analytics Engine SQL)
+npx wrangler secret put CF_ACCOUNT_ID
+npx wrangler secret put CF_ANALYTICS_API_TOKEN
 ```
 
 Generate a long random `JWT_SECRET`. OAuth client values come from the next step.
+
+For admin traffic charts, enable Analytics Engine and set `CF_ACCOUNT_ID` / `CF_ANALYTICS_API_TOKEN` so `/admin` can query it:
+
+0. **Enable Analytics Engine** (required once per account) — [Workers → Analytics Engine](https://dash.cloudflare.com/?to=/:account/workers/analytics-engine). Without this, `wrangler deploy` fails with code **10089** (`You need to enable Analytics Engine`).
+1. **`CF_ACCOUNT_ID`** — Cloudflare account id (32-character hex). In the dashboard: [Workers & Pages](https://dash.cloudflare.com/?to=/:account/workers-and-pages) → **Account details** → copy **Account ID**. Docs: [Find account and zone IDs](https://developers.cloudflare.com/fundamentals/account/find-account-and-zone-ids/).
+2. **`CF_ANALYTICS_API_TOKEN`** — API token with **Account** → **Account Analytics** → **Read**. Create one from [API Tokens](https://dash.cloudflare.com/profile/api-tokens) (**Create Token** → **Custom token**), or use this [pre-filled Account Analytics Read token](https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%5D&accountId=%2A&zoneId=all&name=Syllabus%20views%20SQL). Docs: [Create API token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/).
+
+The Worker writes hits to the `syllabus_views` Analytics Engine dataset (binding in `wrangler.toml`); without the SQL secrets the admin page still loads storage tables and shows views as unavailable.
 
 ### 6. Zotero OAuth app
 
@@ -101,21 +113,21 @@ Match the Worker origin exactly (no trailing slash).
 - Rotate `JWT_SECRET` / OAuth secrets if leaked (users must re-auth on next Publish).
 - Watch R2 Class A operations and storage; tune per-user quota.
 - Users can revoke the OAuth app under zotero.org settings; clearing `publishJwt` / related prefs in Zotero also drops the local session.
-- **Admin dashboard** (optional): set `ADMIN_DASHBOARD_SECRET`, then open `https://<PUBLIC_BASE_URL>/admin?key=<secret>`. Lists published syllabi with public URLs, per-syllabus storage size, and attachment file counts (from an R2 scan). Wrong/missing key returns 404. Prefer a long random secret — query keys can appear in access logs / browser history. Read throughput is not on this page; use the Cloudflare dashboard for bandwidth.
+- **Admin dashboard** (optional): set `ADMIN_DASHBOARD_SECRET`, then open `https://<PUBLIC_BASE_URL>/admin?key=<secret>`. Lists published syllabi with title / course code / institution (from `index.html` R2 customMetadata), public URLs, per-syllabus storage size, attachment file counts, and (when `CF_ACCOUNT_ID` + `CF_ANALYTICS_API_TOKEN` are set) last-30-day page views, file downloads, and citation exports (RIS/BIB/RDF) from Analytics Engine. Wrong/missing admin key returns 404. Prefer a long random secret — query keys can appear in access logs / browser history. Older publishes show empty title/code/institution until re-synced.
 - OAuth poll handoff stores the short-lived JWT under `_oauth/ready/{state}.json` in R2 (strongly consistent). Do not move that back to KV alone — edge caching made the plugin stick on “Waiting for Zotero sign-in” after the browser already finished.
 
 ## API (Worker)
 
 | Method   | Path                                        | Auth         | Purpose                                                                                                                                                                                    |
 | -------- | ------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| GET      | `/admin?key=`                               | Admin secret | Ops HTML: syllabus count, storage, files, public links (404 if secret unset/wrong)                                                                                                         |
+| GET      | `/admin?key=`                               | Admin secret | Ops HTML: title/code/institution, syllabus count, storage, files, public links, page views / file / citation downloads (30d) when Analytics secrets set (404 if secret unset/wrong)        |
 | POST     | `/auth/zotero/start`                        | —            | Start OAuth; returns `{ authorizeUrl, state }`                                                                                                                                             |
 | GET      | `/auth/zotero/callback`                     | —            | OAuth redirect target                                                                                                                                                                      |
 | GET      | `/auth/zotero/poll?state=`                  | —            | Plugin polls for JWT                                                                                                                                                                       |
 | GET      | `/v1/me`                                    | Bearer JWT   | Usage / quota                                                                                                                                                                              |
 | GET/HEAD | `/v1/objects`                               | Bearer JWT   | Single-object metadata                                                                                                                                                                     |
 | GET      | `/v1/syllabus/objects`                      | Bearer JWT   | Fast list of object sizes under a syllabus (for skip-unchanged)                                                                                                                            |
-| PUT      | `/v1/objects`                               | Bearer JWT   | Upload one object (`X-Object-Path`, optional `X-Object-Fingerprint`, library/collection headers). Allowed paths: `index.html`, `bibliography.ris`, `bibliography.bib`, `bibliography.rdf`, `og-image.jpg`, `files/{key}.{ext}` |
+| PUT      | `/v1/objects`                               | Bearer JWT   | Upload one object (`X-Object-Path`, optional `X-Object-Fingerprint`, library/collection headers; for `index.html` optional `X-Syllabus-Title` / `X-Syllabus-Course-Code` / `X-Syllabus-Institution`, percent-encoded). Allowed paths: `index.html`, `bibliography.ris`, `bibliography.bib`, `bibliography.rdf`, `og-image.jpg`, `files/{key}.{ext}` |
 | DELETE   | `/v1/syllabus?libraryId=&collectionKey=`    | Bearer JWT   | Wipe one published syllabus (all R2 keys under the prefix); public URLs then 404. Plugin **Unpublish** calls this.                                                                         |
 | GET      | `/u/{userId}/{libraryId}/{collectionKey}/…` | —            | Public HTML / files                                                                                                                                                                        |
 | GET      | `/health`                                   | —            | Liveness                                                                                                                                                                                   |

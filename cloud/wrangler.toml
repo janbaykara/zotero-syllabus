@@ -16,6 +16,13 @@ bucket_name = "zotero-syllabus"
 binding = "KV"
 id = "2e2fabf0fe244c3080729ac6a3d9e1d5"
 
+# Dataset is created automatically on first writeDataPoint.
+# Enable Analytics Engine first (wrangler error 10089 if not):
+#   https://dash.cloudflare.com/?to=/:account/workers/analytics-engine
+[[analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "syllabus_views"
+
 [vars]
 PUBLIC_BASE_URL = "https://read.zotero-syllabus.workers.dev"
 USER_QUOTA_BYTES = "209715200"
@@ -27,4 +34,7 @@ MAX_FILES_PER_PUBLISH = "200"
 #   npx wrangler secret put ZOTERO_OAUTH_CLIENT_KEY
 #   npx wrangler secret put ZOTERO_OAUTH_CLIENT_SECRET
 #   npx wrangler secret put ADMIN_DASHBOARD_SECRET
+# Optional (admin view/download charts via Analytics Engine SQL API):
+#   npx wrangler secret put CF_ACCOUNT_ID
+#   npx wrangler secret put CF_ANALYTICS_API_TOKEN
 # Then open: https://<PUBLIC_BASE_URL>/admin?key=<that-secret>

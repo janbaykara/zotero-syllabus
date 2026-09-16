@@ -1,5 +1,6 @@
 import type { Env, OAuthPending, OAuthReady } from "./types";
 import { handleAdminDashboard } from "./admin";
+import { recordPublicHit } from "./analytics";
 import { randomId, signJwt, verifyJwt } from "./jwt";
 import {
   ZOTERO_ACCESS_TOKEN,
@@ -21,9 +22,24 @@ import {
   reconcileUsage,
   setUsageBytes,
 } from "./quota";
+import {
+  SYLLABUS_META_HEADER_NAMES,
+  customMetadataFromSyllabusMeta,
+  syllabusMetaFromHeaders,
+} from "./syllabusMeta";
 
 const JWT_TTL_SEC = 60 * 60 * 24 * 30; // 30 days
 const OAUTH_STATE_TTL = 60 * 15; // 15 minutes
+
+const CORS_ALLOW_HEADERS = [
+  "authorization",
+  "content-type",
+  "x-syllabus-library-id",
+  "x-syllabus-collection-key",
+  "x-object-path",
+  "x-object-fingerprint",
+  ...SYLLABUS_META_HEADER_NAMES,
+].join(", ");
 
 /** Strongly consistent handshake object (KV is eventually consistent). */
 function oauthReadyR2Key(state: string): string {
@@ -40,8 +56,7 @@ function json(
     headers: {
       "content-type": "application/json; charset=utf-8",
       "access-control-allow-origin": "*",
-      "access-control-allow-headers":
-        "authorization, content-type, x-syllabus-library-id, x-syllabus-collection-key, x-object-path, x-object-fingerprint",
+      "access-control-allow-headers": CORS_ALLOW_HEADERS,
       "access-control-allow-methods": "GET, HEAD, POST, PUT, DELETE, OPTIONS",
       ...extraHeaders,
     },
@@ -70,8 +85,7 @@ function corsPreflight(): Response {
     status: 204,
     headers: {
       "access-control-allow-origin": "*",
-      "access-control-allow-headers":
-        "authorization, content-type, x-syllabus-library-id, x-syllabus-collection-key, x-object-path, x-object-fingerprint",
+      "access-control-allow-headers": CORS_ALLOW_HEADERS,
       "access-control-allow-methods": "GET, HEAD, POST, PUT, DELETE, OPTIONS",
       "access-control-max-age": "86400",
     },
@@ -567,6 +581,16 @@ async function handlePutObject(request: Request, env: Env): Promise<Response> {
   if (fingerprint) {
     customMetadata.fingerprint = fingerprint;
   }
+  // Display fields for the admin dashboard — only on the published HTML page.
+  if (relPath === "index.html") {
+    const syllabusMeta = syllabusMetaFromHeaders(request.headers);
+    if (syllabusMeta) {
+      Object.assign(
+        customMetadata,
+        customMetadataFromSyllabusMeta(syllabusMeta),
+      );
+    }
+  }
 
   await env.BUCKET.put(key, buf, {
     httpMetadata: { contentType: contentTypeForPath(relPath) },
@@ -648,6 +672,7 @@ async function handlePublicGet(request: Request, env: Env): Promise<Response> {
   if (!obj) {
     return text("Not found", 404);
   }
+  recordPublicHit(env, parsed);
   const headers = new Headers();
   headers.set(
     "content-type",

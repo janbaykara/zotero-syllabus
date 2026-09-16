@@ -312,6 +312,12 @@ export async function putPublishObject(opts: {
   relPath: string;
   bytes: Uint8Array;
   fingerprint?: string | null;
+  /** Stored on index.html customMetadata for the admin dashboard. */
+  syllabusMeta?: {
+    title?: string;
+    courseCode?: string;
+    institution?: string;
+  } | null;
 }): Promise<{ publicUrl: string; usageBytes: number; quotaBytes: number }> {
   const base = getPublishApiBaseUrl();
   const headers: Record<string, string> = {
@@ -324,6 +330,14 @@ export async function putPublishObject(opts: {
   };
   if (opts.fingerprint) {
     headers["X-Object-Fingerprint"] = opts.fingerprint;
+  }
+  if (opts.relPath === "index.html" && opts.syllabusMeta) {
+    const title = encodeSyllabusMetaHeader(opts.syllabusMeta.title);
+    const courseCode = encodeSyllabusMetaHeader(opts.syllabusMeta.courseCode);
+    const institution = encodeSyllabusMetaHeader(opts.syllabusMeta.institution);
+    if (title) headers["X-Syllabus-Title"] = title;
+    if (courseCode) headers["X-Syllabus-Course-Code"] = courseCode;
+    if (institution) headers["X-Syllabus-Institution"] = institution;
   }
   const xhr = await Zotero.HTTP.request("PUT", `${base}/v1/objects`, {
     headers,
@@ -359,4 +373,14 @@ export async function putPublishObject(opts: {
     usageBytes: Number(data.usageBytes || 0),
     quotaBytes: Number(data.quotaBytes || 0),
   };
+}
+
+/** Percent-encode for ASCII-safe HTTP headers (Worker decodes). */
+function encodeSyllabusMetaHeader(value: string | null | undefined): string {
+  const cleaned = (value || "")
+    .replace(/[\u0000-\u001F\u007F]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 512);
+  return cleaned ? encodeURIComponent(cleaned) : "";
 }

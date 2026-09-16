@@ -165,6 +165,8 @@ export async function publishSyllabusToCloud(opts: {
   pageElement: HTMLElement;
   density: ItemDensity;
   title: string;
+  courseCode?: string | null;
+  institution?: string | null;
   bibliographyHtml: string;
   /** Optional: start bibliography work in parallel with other prepare steps. */
   bibliographyHtmlPromise?: Promise<string>;
@@ -430,6 +432,11 @@ export async function publishSyllabusToCloud(opts: {
     collectionKey,
     relPath: "index.html",
     bytes: htmlBytes,
+    syllabusMeta: {
+      title: opts.title || "Syllabus",
+      courseCode: opts.courseCode || "",
+      institution: opts.institution || "",
+    },
   });
   publicUrl = result.publicUrl || publicUrl;
 

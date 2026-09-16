@@ -210,7 +210,7 @@ Relative links resolve against that page URL. No paid domain is required (`*.wor
 
 **Quota.** R2 has no per-prefix caps. The Worker tracks `usage:{userId}` in KV, measures actual upload bytes, and rejects when projected usage exceeds `USER_QUOTA_BYTES` (default 200 MB). Set a Cloudflare **billing alert / spend limit** on the account as a backstop; that does not replace per-user quotas in the product.
 
-**Admin dashboard.** Optional secret-gated HTML at `GET /admin?key=<ADMIN_DASHBOARD_SECRET>` (Worker secret). Scans R2 for published syllabi and shows public URLs, per-syllabus storage size, and `files/` attachment counts. Unset or wrong key → 404. Does not include Cloudflare read throughput (use the Cloudflare dashboard).
+**Admin dashboard.** Optional secret-gated HTML at `GET /admin?key=<ADMIN_DASHBOARD_SECRET>` (Worker secret). Scans R2 for published syllabi and shows title / course code / institution (from `index.html` customMetadata via per-object `head` after a cheap key list), public URLs, per-syllabus storage size, and `files/` attachment counts. Successful public `GET`s of `index.html`, `files/*`, and `bibliography.{ris,bib,rdf}` are written to Workers Analytics Engine (`syllabus_views`); with `CF_ACCOUNT_ID` + `CF_ANALYTICS_API_TOKEN` (Account Analytics Read) the dashboard also shows last-30-day page views, file downloads, citation exports, and a daily chart. Unset or wrong admin key → 404.
 
 **UI entry.** Printer / save menu on [`SyllabusPage.tsx`](../src/modules/SyllabusPage.tsx): export formats plus **Publish online…**. Copyright confirm, then OAuth if needed, then upload. When a syllabus is already published, the status banner shows the public link plus **Sync changes** and **Unpublish**. Prefs: `publishApiBaseUrl`, `publishJwt`, `publishUserId`, `publishJwtExpiresAt`, `publishUrls` (see [`addon/prefs.js`](../addon/prefs.js)).
 
@@ -218,7 +218,7 @@ Relative links resolve against that page URL. No paid domain is required (`*.wor
 
 Do this once before Publish works in a build you ship (or for local staging).
 
-1. **Cloudflare account** — Prefer a dedicated account. Enable Workers, R2, and Workers KV. Set a billing spending alert (and hard limit if available).
+1. **Cloudflare account** — Prefer a dedicated account. Enable Workers, R2, Workers KV, and (for admin view analytics) [Analytics Engine](https://dash.cloudflare.com/?to=/:account/workers/analytics-engine) — without it, deploy fails with wrangler code **10089**. Set a billing spending alert (and hard limit if available).
 2. **R2 bucket** — Create a **private** bucket (e.g. `zotero-syllabus-publish`). Do not enable public bucket access; the Worker serves reads.
 3. **KV namespace** — Create one for usage counters and OAuth state (e.g. `SYLLABUS_USAGE`). Put its id in [`cloud/wrangler.toml`](../cloud/wrangler.toml).
 4. **Deploy the Worker** from `cloud/`: `pnpm install`, set `PUBLIC_BASE_URL` / quota vars in `wrangler.toml`, then:
@@ -228,9 +228,12 @@ Do this once before Publish works in a build you ship (or for local staging).
    npx wrangler secret put ZOTERO_OAUTH_CLIENT_SECRET
    # Optional ops dashboard: /admin?key=…
    npx wrangler secret put ADMIN_DASHBOARD_SECRET
+   # Optional: admin page views / file / citation downloads (Analytics Engine SQL)
+   npx wrangler secret put CF_ACCOUNT_ID
+   npx wrangler secret put CF_ANALYTICS_API_TOKEN
    npx wrangler deploy
    ```
-   Confirm `GET /health` returns `{"ok":true}`.
+   Confirm `GET /health` returns `{"ok":true}`. See [`cloud/README.md`](../cloud/README.md) for where to copy the account id and create the Analytics API token.
 5. **Zotero OAuth app** — Register at [zotero.org/oauth/apps](https://www.zotero.org/oauth/apps). Callback: `https://<your-worker>/auth/zotero/callback`. Client key/secret → Worker secrets only (never the XPI or git).
 6. **Point the plugin** — Set `extensions.zotero.syllabus.publishApiBaseUrl` (or the default in `addon/prefs.js`) to the Worker origin. Replace the shipped `…REPLACE.workers.dev` placeholder; until then the UI reports publish as unconfigured.
 7. **Smoke test** — Publish a small syllabus with one PDF (OAuth opens automatically if needed) → open `/u/…/` in a private window → confirm a second Zotero account cannot write under the first user’s prefix → confirm over-quota fails cleanly.

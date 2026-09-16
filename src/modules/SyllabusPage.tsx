@@ -2385,6 +2385,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         pageElement: syllabusPageElement,
         density,
         title: title || "Syllabus",
+        courseCode: syllabusMetadata.courseCode || "",
+        institution: syllabusMetadata.institution || "",
         bibliographyHtml: "",
         bibliographyHtmlPromise,
         cslStyle: syllabusMetadata.cslStyle || null,
