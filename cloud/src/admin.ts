@@ -282,18 +282,23 @@ export function renderAdminHtml(report: AdminReport): string {
           r.courseCode.trim() ||
           r.collectionKey ||
           r.publicUrl;
+        const viewSort = views.available ? String(counts?.pageViews ?? 0) : "";
+        const dlSort = views.available
+          ? String(counts?.fileDownloads ?? 0)
+          : "";
+        const citeSort = views.available
+          ? String(counts?.citationDownloads ?? 0)
+          : "";
         return `<tr>
-  <td>${cellOrDash(r.title)}</td>
-  <td>${cellOrDash(r.courseCode)}</td>
-  <td>${cellOrDash(r.institution)}</td>
-  <td><a href="${escapeHtml(r.publicUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.publicUrl)}</a></td>
-  <td class="num">${escapeHtml(formatBytes(r.bytes))}</td>
-  <td class="num">${r.files}</td>
-  <td class="num">${viewCell}</td>
-  <td class="num">${dlCell}</td>
-  <td class="num">${citeCell}</td>
-  <td class="mono">${escapeHtml(r.libraryId)}</td>
-  <td class="mono">${escapeHtml(r.collectionKey)}</td>
+  <td data-sort="${escapeHtml(r.title.trim().toLowerCase())}">${cellOrDash(r.title)}</td>
+  <td data-sort="${escapeHtml(r.courseCode.trim().toLowerCase())}">${cellOrDash(r.courseCode)}</td>
+  <td data-sort="${escapeHtml(r.institution.trim().toLowerCase())}">${cellOrDash(r.institution)}</td>
+  <td data-sort="${escapeHtml(r.publicUrl.toLowerCase())}"><a href="${escapeHtml(r.publicUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.publicUrl)}</a></td>
+  <td class="num" data-sort="${r.bytes}" data-sort-type="num">${escapeHtml(formatBytes(r.bytes))}</td>
+  <td class="num" data-sort="${r.files}" data-sort-type="num">${r.files}</td>
+  <td class="num" data-sort="${escapeHtml(viewSort)}" data-sort-type="num">${viewCell}</td>
+  <td class="num" data-sort="${escapeHtml(dlSort)}" data-sort-type="num">${dlCell}</td>
+  <td class="num" data-sort="${escapeHtml(citeSort)}" data-sort-type="num">${citeCell}</td>
   <td><button type="button" class="delete"
     data-user-id="${escapeHtml(r.userId)}"
     data-library-id="${escapeHtml(r.libraryId)}"
@@ -307,20 +312,18 @@ export function renderAdminHtml(report: AdminReport): string {
     <span class="muted">— ${rows.length} ${rows.length === 1 ? "syllabus" : "syllabi"},
     ${escapeHtml(formatBytes(userBytes))}, ${userFiles} file${userFiles === 1 ? "" : "s"}</span>
   </h2>
-  <table>
+  <table class="sortable">
     <thead>
       <tr>
-        <th>Title</th>
-        <th>Code</th>
-        <th>Institution</th>
-        <th>Public URL</th>
-        <th class="num">Size</th>
-        <th class="num">Files</th>
-        <th class="num">Views (30d)</th>
-        <th class="num">Downloads (30d)</th>
-        <th class="num">Citations (30d)</th>
-        <th>Library</th>
-        <th>Collection</th>
+        <th scope="col" data-col="0"><button type="button" class="sort">Title</button></th>
+        <th scope="col" data-col="1"><button type="button" class="sort">Code</button></th>
+        <th scope="col" data-col="2"><button type="button" class="sort">Institution</button></th>
+        <th scope="col" data-col="3"><button type="button" class="sort">Public URL</button></th>
+        <th scope="col" class="num" data-col="4"><button type="button" class="sort">Size</button></th>
+        <th scope="col" class="num" data-col="5"><button type="button" class="sort">Files</button></th>
+        <th scope="col" class="num" data-col="6"><button type="button" class="sort">Views (30d)</button></th>
+        <th scope="col" class="num" data-col="7"><button type="button" class="sort">Downloads (30d)</button></th>
+        <th scope="col" class="num" data-col="8"><button type="button" class="sort">Citations (30d)</button></th>
         <th></th>
       </tr>
     </thead>
@@ -403,8 +406,28 @@ ${trs}
       letter-spacing: 0.04em; color: #4b5563; }
     tr:last-child td { border-bottom: 0; }
     td.num, th.num { text-align: right; white-space: nowrap; }
+    th.num .sort { justify-content: flex-end; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
     a { color: #1d4ed8; word-break: break-all; }
+    button.sort {
+      display: inline-flex; align-items: center; gap: 0.25rem;
+      width: 100%; margin: 0; padding: 0;
+      font: inherit; font-size: inherit; font-weight: inherit;
+      letter-spacing: inherit; text-transform: inherit; text-align: inherit;
+      color: inherit; background: none; border: 0; cursor: pointer;
+    }
+    button.sort::after {
+      content: ""; width: 0.45em; opacity: 0.35;
+      border-left: 0.3em solid transparent;
+      border-right: 0.3em solid transparent;
+      border-bottom: 0.35em solid currentColor;
+    }
+    th[aria-sort="ascending"] button.sort::after { opacity: 1; }
+    th[aria-sort="descending"] button.sort::after {
+      opacity: 1;
+      border-bottom: 0;
+      border-top: 0.35em solid currentColor;
+    }
     button.delete {
       font: inherit; font-size: 12px;
       padding: 0.25rem 0.55rem;
@@ -463,6 +486,53 @@ ${trs}
           alert("Delete failed: " + (err && err.message ? err.message : String(err)));
           btn.disabled = false;
         }
+      });
+    });
+
+    function cellValue(td) {
+      if (!td) return { empty: true, num: 0, text: "" };
+      var raw = td.getAttribute("data-sort");
+      if (raw == null) raw = (td.textContent || "").trim();
+      var empty = raw === "";
+      if (td.getAttribute("data-sort-type") === "num") {
+        var n = empty ? Number.NEGATIVE_INFINITY : Number(raw);
+        return { empty: empty, num: Number.isFinite(n) ? n : Number.NEGATIVE_INFINITY, text: raw };
+      }
+      return { empty: empty, num: 0, text: String(raw).toLowerCase() };
+    }
+
+    function compareCells(a, b, col, dir) {
+      var av = cellValue(a.children[col]);
+      var bv = cellValue(b.children[col]);
+      if (av.empty !== bv.empty) return av.empty ? 1 : -1;
+      var td = a.children[col];
+      var cmp;
+      if (td && td.getAttribute("data-sort-type") === "num") {
+        cmp = av.num - bv.num;
+      } else {
+        cmp = av.text < bv.text ? -1 : av.text > bv.text ? 1 : 0;
+      }
+      return dir === "desc" ? -cmp : cmp;
+    }
+
+    document.querySelectorAll("table.sortable").forEach(function (table) {
+      var tbody = table.tBodies[0];
+      if (!tbody) return;
+      table.querySelectorAll("thead th[data-col]").forEach(function (th) {
+        var btn = th.querySelector("button.sort");
+        if (!btn) return;
+        btn.addEventListener("click", function () {
+          var col = Number(th.getAttribute("data-col"));
+          var current = th.getAttribute("aria-sort");
+          var dir = current === "ascending" ? "desc" : "asc";
+          table.querySelectorAll("thead th[data-col]").forEach(function (other) {
+            other.removeAttribute("aria-sort");
+          });
+          th.setAttribute("aria-sort", dir === "asc" ? "ascending" : "descending");
+          var rows = Array.prototype.slice.call(tbody.rows);
+          rows.sort(function (a, b) { return compareCells(a, b, col, dir); });
+          rows.forEach(function (row) { tbody.appendChild(row); });
+        });
       });
     });
   })();
