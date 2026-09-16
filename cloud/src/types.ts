@@ -8,6 +8,8 @@ export interface Env {
   USER_QUOTA_BYTES: string;
   MAX_OBJECT_BYTES: string;
   MAX_FILES_PER_PUBLISH: string;
+  /** Optional. When set, GET /admin?key=… serves the publish ops dashboard. */
+  ADMIN_DASHBOARD_SECRET?: string;
 }
 
 export type OAuthPending = {

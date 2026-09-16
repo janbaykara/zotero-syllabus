@@ -26,3 +26,5 @@ MAX_FILES_PER_PUBLISH = "200"
 #   npx wrangler secret put JWT_SECRET
 #   npx wrangler secret put ZOTERO_OAUTH_CLIENT_KEY
 #   npx wrangler secret put ZOTERO_OAUTH_CLIENT_SECRET
+#   npx wrangler secret put ADMIN_DASHBOARD_SECRET
+# Then open: https://<PUBLIC_BASE_URL>/admin?key=<that-secret>

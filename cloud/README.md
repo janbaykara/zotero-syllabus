@@ -47,6 +47,8 @@ Copy the namespace **id** into [`wrangler.toml`](wrangler.toml) under `[[kv_name
 npx wrangler secret put JWT_SECRET
 npx wrangler secret put ZOTERO_OAUTH_CLIENT_KEY
 npx wrangler secret put ZOTERO_OAUTH_CLIENT_SECRET
+# Optional: ops dashboard at /admin?key=…
+npx wrangler secret put ADMIN_DASHBOARD_SECRET
 ```
 
 Generate a long random `JWT_SECRET`. OAuth client values come from the next step.
@@ -98,20 +100,22 @@ Match the Worker origin exactly (no trailing slash).
 - Rotate `JWT_SECRET` / OAuth secrets if leaked (users must re-auth on next Publish).
 - Watch R2 Class A operations and storage; tune per-user quota.
 - Users can revoke the OAuth app under zotero.org settings; clearing `publishJwt` / related prefs in Zotero also drops the local session.
+- **Admin dashboard** (optional): set `ADMIN_DASHBOARD_SECRET`, then open `https://<PUBLIC_BASE_URL>/admin?key=<secret>`. Lists published syllabi with public URLs, per-syllabus storage size, and attachment file counts (from an R2 scan). Wrong/missing key returns 404. Prefer a long random secret — query keys can appear in access logs / browser history. Read throughput is not on this page; use the Cloudflare dashboard for bandwidth.
 
 ## API (Worker)
 
-| Method   | Path                                        | Auth       | Purpose                                                                                                                                                                                    |
-| -------- | ------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| POST     | `/auth/zotero/start`                        | —          | Start OAuth; returns `{ authorizeUrl, state }`                                                                                                                                             |
-| GET      | `/auth/zotero/callback`                     | —          | OAuth redirect target                                                                                                                                                                      |
-| GET      | `/auth/zotero/poll?state=`                  | —          | Plugin polls for JWT                                                                                                                                                                       |
-| GET      | `/v1/me`                                    | Bearer JWT | Usage / quota                                                                                                                                                                              |
-| GET/HEAD | `/v1/objects`                               | Bearer JWT | Single-object metadata                                                                                                                                                                     |
-| GET      | `/v1/syllabus/objects`                      | Bearer JWT | Fast list of object sizes under a syllabus (for skip-unchanged)                                                                                                                            |
-| PUT      | `/v1/objects`                               | Bearer JWT | Upload one object (`X-Object-Path`, optional `X-Object-Fingerprint`, library/collection headers). Allowed paths: `index.html`, `bibliography.ris`, `bibliography.bib`, `files/{key}.{ext}` |
-| DELETE   | `/v1/syllabus?libraryId=&collectionKey=`    | Bearer JWT | Delete one published syllabus prefix                                                                                                                                                       |
-| GET      | `/u/{userId}/{libraryId}/{collectionKey}/…` | —          | Public HTML / files                                                                                                                                                                        |
-| GET      | `/health`                                   | —          | Liveness                                                                                                                                                                                   |
+| Method   | Path                                        | Auth         | Purpose                                                                                                                                                                                    |
+| -------- | ------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GET      | `/admin?key=`                               | Admin secret | Ops HTML: syllabus count, storage, files, public links (404 if secret unset/wrong)                                                                                                         |
+| POST     | `/auth/zotero/start`                        | —            | Start OAuth; returns `{ authorizeUrl, state }`                                                                                                                                             |
+| GET      | `/auth/zotero/callback`                     | —            | OAuth redirect target                                                                                                                                                                      |
+| GET      | `/auth/zotero/poll?state=`                  | —            | Plugin polls for JWT                                                                                                                                                                       |
+| GET      | `/v1/me`                                    | Bearer JWT   | Usage / quota                                                                                                                                                                              |
+| GET/HEAD | `/v1/objects`                               | Bearer JWT   | Single-object metadata                                                                                                                                                                     |
+| GET      | `/v1/syllabus/objects`                      | Bearer JWT   | Fast list of object sizes under a syllabus (for skip-unchanged)                                                                                                                            |
+| PUT      | `/v1/objects`                               | Bearer JWT   | Upload one object (`X-Object-Path`, optional `X-Object-Fingerprint`, library/collection headers). Allowed paths: `index.html`, `bibliography.ris`, `bibliography.bib`, `files/{key}.{ext}` |
+| DELETE   | `/v1/syllabus?libraryId=&collectionKey=`    | Bearer JWT   | Delete one published syllabus prefix                                                                                                                                                       |
+| GET      | `/u/{userId}/{libraryId}/{collectionKey}/…` | —            | Public HTML / files                                                                                                                                                                        |
+| GET      | `/health`                                   | —            | Liveness                                                                                                                                                                                   |
 
 Identity uses Zotero OAuth with `identity=1` (userID without creating a long-lived Zotero library API key for the app).

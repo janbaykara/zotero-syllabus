@@ -206,6 +206,8 @@ Relative links resolve against that page URL. No paid domain is required (`*.wor
 
 **Quota.** R2 has no per-prefix caps. The Worker tracks `usage:{userId}` in KV, measures actual upload bytes, and rejects when projected usage exceeds `USER_QUOTA_BYTES` (default 200 MB). Set a Cloudflare **billing alert / spend limit** on the account as a backstop; that does not replace per-user quotas in the product.
 
+**Admin dashboard.** Optional secret-gated HTML at `GET /admin?key=<ADMIN_DASHBOARD_SECRET>` (Worker secret). Scans R2 for published syllabi and shows public URLs, per-syllabus storage size, and `files/` attachment counts. Unset or wrong key → 404. Does not include Cloudflare read throughput (use the Cloudflare dashboard).
+
 **UI entry.** Printer / save menu on [`SyllabusPage.tsx`](../src/modules/SyllabusPage.tsx): export formats plus **Publish online…**. Copyright confirm, then OAuth if needed, then upload. Prefs: `publishApiBaseUrl`, `publishJwt`, `publishUserId`, `publishJwtExpiresAt` (see [`addon/prefs.js`](../addon/prefs.js)).
 
 ### First-time cloud setup
@@ -220,6 +222,8 @@ Do this once before Publish works in a build you ship (or for local staging).
    npx wrangler secret put JWT_SECRET
    npx wrangler secret put ZOTERO_OAUTH_CLIENT_KEY
    npx wrangler secret put ZOTERO_OAUTH_CLIENT_SECRET
+   # Optional ops dashboard: /admin?key=…
+   npx wrangler secret put ADMIN_DASHBOARD_SECRET
    npx wrangler deploy
    ```
    Confirm `GET /health` returns `{"ok":true}`.

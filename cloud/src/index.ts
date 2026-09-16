@@ -1,4 +1,5 @@
 import type { Env, OAuthPending, OAuthReady } from "./types";
+import { handleAdminDashboard } from "./admin";
 import { randomId, signJwt, verifyJwt } from "./jwt";
 import {
   ZOTERO_ACCESS_TOKEN,
@@ -120,6 +121,10 @@ export default {
 
       if (path === "/health" && request.method === "GET") {
         return json({ ok: true });
+      }
+
+      if (path === "/admin" && request.method === "GET") {
+        return handleAdminDashboard(request, env, publicBase(env, request));
       }
 
       if (path === "/auth/zotero/start" && request.method === "POST") {
