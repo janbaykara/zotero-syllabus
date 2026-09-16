@@ -101,6 +101,7 @@ Match the Worker origin exactly (no trailing slash).
 - Watch R2 Class A operations and storage; tune per-user quota.
 - Users can revoke the OAuth app under zotero.org settings; clearing `publishJwt` / related prefs in Zotero also drops the local session.
 - **Admin dashboard** (optional): set `ADMIN_DASHBOARD_SECRET`, then open `https://<PUBLIC_BASE_URL>/admin?key=<secret>`. Lists published syllabi with public URLs, per-syllabus storage size, and attachment file counts (from an R2 scan). Wrong/missing key returns 404. Prefer a long random secret — query keys can appear in access logs / browser history. Read throughput is not on this page; use the Cloudflare dashboard for bandwidth.
+- OAuth poll handoff stores the short-lived JWT under `_oauth/ready/{state}.json` in R2 (strongly consistent). Do not move that back to KV alone — edge caching made the plugin stick on “Waiting for Zotero sign-in” after the browser already finished.
 
 ## API (Worker)
 

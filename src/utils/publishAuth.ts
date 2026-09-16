@@ -56,13 +56,23 @@ function setPublishSession(opts: {
 async function httpJson<T>(
   method: string,
   path: string,
-  opts?: { body?: unknown; token?: string; headers?: Record<string, string> },
+  opts?: {
+    body?: unknown;
+    token?: string;
+    headers?: Record<string, string>;
+    /** When true, bypass Zotero/HTTP caches (needed for OAuth poll). */
+    noCache?: boolean;
+  },
 ): Promise<T> {
   const base = getPublishApiBaseUrl();
   const headers: Record<string, string> = {
     Accept: "application/json",
     ...(opts?.headers || {}),
   };
+  if (opts?.noCache) {
+    headers["Cache-Control"] = "no-cache, no-store";
+    headers.Pragma = "no-cache";
+  }
   if (opts?.token) {
     headers.Authorization = `Bearer ${opts.token}`;
   }
@@ -77,6 +87,7 @@ async function httpJson<T>(
     responseType: "text",
     timeout: 120000,
     successCodes: false,
+    ...(opts?.noCache ? { noCache: true } : {}),
   });
   const status = xhr.status || 0;
   const text = String(xhr.responseText || "");
@@ -123,10 +134,20 @@ export async function pollZoteroPublishAuth(
   | { status: "expired" }
   | { status: "ready"; token: string; userId: string; expiresAt: number }
 > {
-  return httpJson(
-    "GET",
-    `/auth/zotero/poll?state=${encodeURIComponent(state)}`,
-  );
+  // Cache-bust + noCache: repeated identical GETs were reusable as "pending".
+  const path = `/auth/zotero/poll?state=${encodeURIComponent(state)}&_=${Date.now()}`;
+  try {
+    return await httpJson("GET", path, { noCache: true });
+  } catch (err) {
+    const status =
+      err && typeof err === "object" && "status" in err
+        ? Number((err as { status?: number }).status)
+        : 0;
+    if (status === 410) {
+      return { status: "expired" };
+    }
+    throw err;
+  }
 }
 
 /**

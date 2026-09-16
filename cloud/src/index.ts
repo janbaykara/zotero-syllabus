@@ -24,7 +24,11 @@ import {
 
 const JWT_TTL_SEC = 60 * 60 * 24 * 30; // 30 days
 const OAUTH_STATE_TTL = 60 * 15; // 15 minutes
-const POLL_READY_TTL = 60 * 5;
+
+/** Strongly consistent handshake object (KV is eventually consistent). */
+function oauthReadyR2Key(state: string): string {
+  return `_oauth/ready/${state}.json`;
+}
 
 function json(
   data: unknown,
@@ -291,10 +295,12 @@ async function handleAuthCallback(
       expiresAt: now + JWT_TTL_SEC,
       createdAt: Date.now(),
     };
-    await env.KV.put(`oauth:ready:${state}`, JSON.stringify(ready), {
-      expirationTtl: POLL_READY_TTL,
+    // R2 is strongly consistent — plugin poll must see this immediately.
+    // KV alone is eventually consistent and often stays "pending" after sign-in.
+    await env.BUCKET.put(oauthReadyR2Key(state), JSON.stringify(ready), {
+      httpMetadata: { contentType: "application/json" },
     });
-    await env.KV.delete(`oauth:pending:${state}`);
+    // Keep pending in KV until poll consumes ready (avoids false "expired").
     await env.KV.delete(`oauth:token:${oauthToken}`);
 
     return html(`<!DOCTYPE html>
@@ -328,23 +334,58 @@ async function handleAuthPoll(request: Request, env: Env): Promise<Response> {
   if (!state) {
     return json({ error: "missing_state" }, 400);
   }
+
+  const noStore = { "cache-control": "no-store, no-cache, must-revalidate" };
+
+  // Prefer R2 (strong consistency) over KV for the ready token.
+  const readyObj = await env.BUCKET.get(oauthReadyR2Key(state));
+  if (readyObj) {
+    const ready = (await readyObj.json()) as OAuthReady;
+    const ageMs = Date.now() - (ready.createdAt || 0);
+    if (ageMs > 5 * 60 * 1000) {
+      await env.BUCKET.delete(oauthReadyR2Key(state));
+      await env.KV.delete(`oauth:pending:${state}`);
+      return json({ status: "expired" }, 410, noStore);
+    }
+    await env.BUCKET.delete(oauthReadyR2Key(state));
+    await env.KV.delete(`oauth:pending:${state}`);
+    // Legacy KV ready key from older deploys
+    await env.KV.delete(`oauth:ready:${state}`);
+    return json(
+      {
+        status: "ready",
+        token: ready.token,
+        userId: ready.userId,
+        expiresAt: ready.expiresAt,
+      },
+      200,
+      noStore,
+    );
+  }
+
+  // Fallback: older workers wrote ready only to KV
   const readyRaw = await env.KV.get(`oauth:ready:${state}`);
   if (readyRaw) {
     const ready = JSON.parse(readyRaw) as OAuthReady;
-    // One-time: delete after successful poll
     await env.KV.delete(`oauth:ready:${state}`);
-    return json({
-      status: "ready",
-      token: ready.token,
-      userId: ready.userId,
-      expiresAt: ready.expiresAt,
-    });
+    await env.KV.delete(`oauth:pending:${state}`);
+    return json(
+      {
+        status: "ready",
+        token: ready.token,
+        userId: ready.userId,
+        expiresAt: ready.expiresAt,
+      },
+      200,
+      noStore,
+    );
   }
+
   const pending = await env.KV.get(`oauth:pending:${state}`);
   if (pending) {
-    return json({ status: "pending" });
+    return json({ status: "pending" }, 200, noStore);
   }
-  return json({ status: "expired" }, 410);
+  return json({ status: "expired" }, 410, noStore);
 }
 
 async function handleMe(request: Request, env: Env): Promise<Response> {
