@@ -1,7 +1,13 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
 import type { JSX } from "preact";
-import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 import { twMerge } from "tailwind-merge";
 import { openItemBestAttachment } from "../utils/items";
 import { openZoteroItemContextMenu } from "../utils/itemContextMenu";
@@ -230,10 +236,7 @@ export function ReadingItemsLayout({
       );
 
     return (
-      <div
-        ref={wrapRef}
-        className={readingContentWidthClass(layout, pack)}
-      >
+      <div ref={wrapRef} className={readingContentWidthClass(layout, pack)}>
         {grid}
       </div>
     );

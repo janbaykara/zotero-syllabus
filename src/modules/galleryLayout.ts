@@ -37,10 +37,10 @@ export function readingTilesFitCount(
   const gap = 1.25 * rootFontPx;
   const gaps = READING_NARROW_MAX_ITEMS - 1;
   // Match readingTileWidthCss(), including the 1px subpixel slack.
-  const tile =
-    ((56 - gaps * 1.25) / READING_NARROW_MAX_ITEMS) * rootFontPx - 1;
+  const tile = ((56 - gaps * 1.25) / READING_NARROW_MAX_ITEMS) * rootFontPx - 1;
   // Match container-padded-wide horizontal padding (px-6 / md:px-10).
-  const pad = (containerWidthPx >= 48 * rootFontPx ? 2.5 : 1.5) * 2 * rootFontPx;
+  const pad =
+    (containerWidthPx >= 48 * rootFontPx ? 2.5 : 1.5) * 2 * rootFontPx;
   const available = Math.max(0, containerWidthPx - pad);
   return Math.max(1, Math.floor((available + gap) / (tile + gap)));
 }
