@@ -1,3 +1,7 @@
+import {
+  appendExportIdToExtra,
+  SYLLABUS_EXPORT_ID_KEY,
+} from "./identifiers";
 import { readItemNote } from "./items";
 
 /** Official Zotero RDF export translator (when built-ins are available). */
@@ -15,6 +19,23 @@ const RDF_NS = {
   foaf: "http://xmlns.com/foaf/0.1/",
   prism: "http://prismstandard.org/namespaces/1.2/basic/",
 };
+
+export type RdfExportOptions = {
+  /** Override syllabus note HTML (export snapshot with fresh itemIndex). */
+  noteHtml?: string;
+  /** item.key → export-local id stamped into Extra. */
+  exportIdByItemKey?: Map<string, string> | Record<string, string>;
+};
+
+function exportIdMap(options?: RdfExportOptions): Map<string, string> {
+  if (!options?.exportIdByItemKey) {
+    return new Map();
+  }
+  if (options.exportIdByItemKey instanceof Map) {
+    return options.exportIdByItemKey;
+  }
+  return new Map(Object.entries(options.exportIdByItemKey));
+}
 
 export function isRdfFile(contents: string): boolean {
   const trimmed = contents.trim();
@@ -92,13 +113,27 @@ function tagsXml(item: Zotero.Item): string {
   }
 }
 
+function noteHtmlForItem(
+  item: Zotero.Item,
+  options?: RdfExportOptions,
+): string {
+  if (typeof options?.noteHtml === "string" && item.isNote?.()) {
+    return options.noteHtml;
+  }
+  return readItemNote(item);
+}
+
 /**
  * Minimal Zotero RDF when Translate.Export / built-in translators are
  * unavailable (observed on Zotero 10 scaffold builds). Produces notes as
  * bib:Memo with rdf:value — matching Zotero RDF.js — so syllabus notes
  * round-trip through File → Import / plugin import.
  */
-export function fallbackItemsAsZoteroRdf(items: Zotero.Item[]): string {
+export function fallbackItemsAsZoteroRdf(
+  items: Zotero.Item[],
+  options?: RdfExportOptions,
+): string {
+  const ids = exportIdMap(options);
   const blocks: string[] = [];
   let index = 0;
   for (const item of items) {
@@ -112,7 +147,7 @@ export function fallbackItemsAsZoteroRdf(items: Zotero.Item[]): string {
 
     if (item.isNote?.()) {
       const title = field(item, "title") || "Syllabus";
-      const body = readItemNote(item);
+      const body = noteHtmlForItem(item, options);
       parts.push(`<dc:title>${escapeXml(title)}</dc:title>`);
       if (body) {
         parts.push(`<rdf:value>${escapeXml(body)}</rdf:value>`);
@@ -147,6 +182,21 @@ export function fallbackItemsAsZoteroRdf(items: Zotero.Item[]): string {
           `<dc:identifier><dcterms:URI><rdf:value>${escapeXml(url)}</rdf:value></dcterms:URI></dc:identifier>`,
         );
       }
+      let exportId = "";
+      try {
+        exportId = ids.get(item.key) || "";
+      } catch {
+        exportId = "";
+      }
+      const extra = appendExportIdToExtra(field(item, "extra"), exportId);
+      if (extra) {
+        parts.push(`<dc:description>${escapeXml(extra)}</dc:description>`);
+      }
+      if (exportId) {
+        parts.push(
+          `<dc:identifier>${escapeXml(SYLLABUS_EXPORT_ID_KEY)} ${escapeXml(exportId)}</dc:identifier>`,
+        );
+      }
       parts.push(tagsXml(item));
     } else {
       continue;
@@ -163,6 +213,41 @@ export function fallbackItemsAsZoteroRdf(items: Zotero.Item[]): string {
     .map(([prefix, uri]) => `xmlns:${prefix}="${uri}"`)
     .join(" ");
   return `<?xml version="1.0"?>\n<rdf:RDF ${ns}>\n${blocks.join("\n")}\n</rdf:RDF>\n`;
+}
+
+/**
+ * Replace the syllabus note body in translator RDF when we have an export
+ * snapshot. Matches bib:Memo / note blocks that already carry syllabus markup.
+ */
+export function replaceSyllabusNoteHtmlInRdf(
+  rdf: string,
+  noteHtml: string,
+): string {
+  if (!rdf.trim() || typeof noteHtml !== "string") {
+    return rdf;
+  }
+  const escaped = escapeXml(noteHtml);
+  const markers = [
+    'data-zotero-syllabus="1"',
+    "data-zotero-syllabus=",
+    "Plugin data (do not edit)",
+  ];
+  return rdf.replace(
+    /<(bib:Memo|rdf:Description)([^>]*)>([\s\S]*?)<\/\1>/gi,
+    (full, tag: string, attrs: string, inner: string) => {
+      if (!markers.some((m) => inner.includes(m) || full.includes(m))) {
+        return full;
+      }
+      if (/<rdf:value>[\s\S]*?<\/rdf:value>/i.test(inner)) {
+        const next = inner.replace(
+          /<rdf:value>[\s\S]*?<\/rdf:value>/i,
+          `<rdf:value>${escaped}</rdf:value>`,
+        );
+        return `<${tag}${attrs}>${next}</${tag}>`;
+      }
+      return `<${tag}${attrs}>${inner}<rdf:value>${escaped}</rdf:value></${tag}>`;
+    },
+  );
 }
 
 async function exportRdfWithTranslator(items: Zotero.Item[]): Promise<string> {
@@ -239,6 +324,7 @@ async function exportRdfWithTranslator(items: Zotero.Item[]): Promise<string> {
 
 export async function getRDFStringForCollection(
   collection: Zotero.Collection,
+  options?: RdfExportOptions,
 ): Promise<string> {
   const items = (collection.getChildItems() || []).filter(
     (item): item is Zotero.Item =>
@@ -247,8 +333,13 @@ export async function getRDFStringForCollection(
   ztoolkit.log("getRDFStringForCollection: items count:", items.length);
 
   try {
-    const text = await exportRdfWithTranslator(items);
-    if (text.trim()) return text;
+    let text = await exportRdfWithTranslator(items);
+    if (text.trim()) {
+      if (typeof options?.noteHtml === "string") {
+        text = replaceSyllabusNoteHtmlInRdf(text, options.noteHtml);
+      }
+      return text;
+    }
   } catch (err) {
     ztoolkit.log(
       "RDF translator export failed; using Zotero RDF fallback:",
@@ -256,7 +347,7 @@ export async function getRDFStringForCollection(
     );
   }
 
-  const fallback = fallbackItemsAsZoteroRdf(items);
+  const fallback = fallbackItemsAsZoteroRdf(items, options);
   if (!fallback.trim()) {
     throw new Error("RDF export produced no content");
   }

@@ -455,8 +455,10 @@ function PublishStatusBanner({
 
   const canSync = Boolean(url) && !busy;
   const isError = status.kind === "error";
-  const actionHover = isError ? "hover:bg-red-100" : "hover:bg-purple-100";
-  const actionColor = isError ? "text-red-900" : "text-purple-900";
+  const actionHover = isError
+    ? "hover:bg-publish-error-hover"
+    : "hover:bg-publish-hover";
+  const actionColor = isError ? "text-publish-error-fg" : "text-publish-fg";
   const busyHeading =
     status.kind === "unpublishing"
       ? getString("publish-status-heading-unpublishing")
@@ -467,8 +469,8 @@ function PublishStatusBanner({
       className={twMerge(
         "syllabus-publish-banner in-[.print]:hidden w-full rounded border px-3 py-2 text-base",
         isError
-          ? "border-red-300 bg-red-50 text-red-900"
-          : "border-purple-300 bg-purple-50 text-purple-900",
+          ? "border-publish-error-border bg-publish-error text-publish-error-fg"
+          : "border-publish-border bg-publish text-publish-fg",
       )}
       role="status"
       aria-live="polite"

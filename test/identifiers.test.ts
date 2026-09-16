@@ -1,5 +1,7 @@
 import { assert } from "chai";
 import {
+  appendExportIdToExtra,
+  exportIdFromText,
   identifiersFromFields,
   isbn10To13,
   normalizeArxiv,
@@ -7,6 +9,7 @@ import {
   normalizeIsbn,
   normalizePmcid,
   normalizePmid,
+  SYLLABUS_EXPORT_ID_KEY,
 } from "../src/utils/identifiers";
 
 describe("identifiers", function () {
@@ -110,6 +113,27 @@ describe("identifiers", function () {
       assert.equal(
         identifiersFromFields({ archiveID: "hep-th/9901001" }).arxiv,
         "hep-th/9901001",
+      );
+    });
+  });
+
+  describe("exportId helpers", function () {
+    it("reads and appends zotero-syllabus-id Extra lines", function () {
+      assert.equal(exportIdFromText(""), "");
+      assert.equal(
+        exportIdFromText(`${SYLLABUS_EXPORT_ID_KEY}: export-abc`),
+        "export-abc",
+      );
+      assert.equal(
+        appendExportIdToExtra("DOI: 10.1/x", "export-1"),
+        `DOI: 10.1/x\n${SYLLABUS_EXPORT_ID_KEY}: export-1`,
+      );
+      assert.equal(
+        appendExportIdToExtra(
+          `${SYLLABUS_EXPORT_ID_KEY}: export-1`,
+          "export-1",
+        ),
+        `${SYLLABUS_EXPORT_ID_KEY}: export-1`,
       );
     });
   });

@@ -166,6 +166,47 @@ export type ItemLookupIds = {
   arxiv: string;
 };
 
+/** Extra / citation field key for export-local syllabus reading ids. */
+export const SYLLABUS_EXPORT_ID_KEY = "zotero-syllabus-id";
+
+const EXPORT_ID_LINE = new RegExp(
+  `(?:^|\\n)\\s*${SYLLABUS_EXPORT_ID_KEY}\\s*:\\s*(\\S+)`,
+  "i",
+);
+const EXPORT_ID_TAG = new RegExp(`^${SYLLABUS_EXPORT_ID_KEY}:(.+)$`, "i");
+
+/** Read an export-local id from Extra text (or N1/abstract blobs). */
+export function exportIdFromText(text: string | null | undefined): string {
+  const raw = String(text || "");
+  if (!raw) {
+    return "";
+  }
+  const map = extraKeyedFields(raw);
+  const fromMap = (map.get(SYLLABUS_EXPORT_ID_KEY) || "").trim();
+  if (fromMap) {
+    return fromMap;
+  }
+  const match = raw.match(EXPORT_ID_LINE);
+  return match ? match[1].trim() : "";
+}
+
+/** Append `zotero-syllabus-id: …` to Extra without duplicating. */
+export function appendExportIdToExtra(
+  extra: string | null | undefined,
+  exportId: string,
+): string {
+  const id = String(exportId || "").trim();
+  if (!id) {
+    return String(extra || "");
+  }
+  const base = String(extra || "").trim();
+  if (exportIdFromText(base) === id) {
+    return base;
+  }
+  const line = `${SYLLABUS_EXPORT_ID_KEY}: ${id}`;
+  return base ? `${base}\n${line}` : line;
+}
+
 /**
  * Collect canonical identifiers from common Zotero fields (DOI, ISBN, Extra,
  * URL, preprint archiveID) so import remap can match across variants.
@@ -221,4 +262,38 @@ export function identifiersFromFields(fields: {
       pmcidFromText(blob),
     arxiv,
   };
+}
+
+/** Resolve export-local id from Extra, abstract/notes blobs, or a dedicated tag. */
+export function exportIdFromItem(item: Zotero.Item): string {
+  try {
+    const fromExtra = exportIdFromText(item.getField?.("extra"));
+    if (fromExtra) {
+      return fromExtra;
+    }
+  } catch {
+    // ignore
+  }
+  try {
+    const fromAbstract = exportIdFromText(item.getField?.("abstractNote"));
+    if (fromAbstract) {
+      return fromAbstract;
+    }
+  } catch {
+    // ignore
+  }
+  try {
+    const tags = item.getTags?.() || [];
+    for (const entry of tags) {
+      const tag =
+        typeof entry === "string" ? entry : String(entry?.tag || "").trim();
+      const match = tag.match(EXPORT_ID_TAG);
+      if (match) {
+        return match[1].trim();
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return "";
 }

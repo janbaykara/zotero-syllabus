@@ -59,6 +59,40 @@
     rgba(255, 255, 255, 0.2509803922)
   );
 
+  /* Publish status banner — light lavender / dark purple tint */
+  --color-publish: light-dark(
+    oklch(97.7% 0.014 308.299),
+    oklch(28% 0.06 305)
+  );
+  --color-publish-border: light-dark(
+    oklch(82.7% 0.119 306.383),
+    oklch(48% 0.1 305)
+  );
+  --color-publish-fg: light-dark(
+    oklch(38.1% 0.176 304.987),
+    oklch(90% 0.05 305)
+  );
+  --color-publish-hover: light-dark(
+    oklch(94.6% 0.033 307.174),
+    oklch(36% 0.08 305)
+  );
+  --color-publish-error: light-dark(
+    oklch(97.1% 0.013 17.38),
+    oklch(28% 0.06 25)
+  );
+  --color-publish-error-border: light-dark(
+    oklch(80.8% 0.114 19.571),
+    oklch(48% 0.1 25)
+  );
+  --color-publish-error-fg: light-dark(
+    oklch(39.6% 0.141 25.723),
+    oklch(90% 0.05 25)
+  );
+  --color-publish-error-hover: light-dark(
+    oklch(93.6% 0.032 17.717),
+    oklch(36% 0.08 25)
+  );
+
   --box-shadow-card:
     0 0.25px 0.75px light-dark(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.2)),
     0 2px 6px light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.4));

@@ -467,6 +467,8 @@ const CollectionSyllabusDocumentV2Schema = SettingsSyllabusMetadataSchema.omit({
         pmid: z.string().optional().nullable(),
         pmcid: z.string().optional().nullable(),
         arxiv: z.string().optional().nullable(),
+        /** Export-local id for citation round-trips when DOI/ISBN/etc. are absent. */
+        exportId: z.string().optional().nullable(),
       }),
     )
     .optional(),

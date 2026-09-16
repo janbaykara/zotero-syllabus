@@ -32,6 +32,7 @@ import {
   extractPublishShareDescription,
 } from "./publishOgImage";
 import { getRDFStringForCollection } from "./rdf";
+import { buildSyllabusExportPayload } from "../modules/syllabusNote";
 
 export type PublishAttachmentPick = {
   itemId: number;
@@ -202,26 +203,42 @@ export async function publishSyllabusToCloud(opts: {
 
   opts.onProgress?.("citations");
   const citationItems = itemsWithSyllabusNote(opts.collectionId, opts.items);
-  const citationsPromise = Promise.all([
-    exportItemsAsRis(citationItems).catch((err) => {
-      ztoolkit.log("RIS export failed:", err);
-      return "";
-    }),
-    exportItemsAsBibTeX(citationItems).catch((err) => {
-      ztoolkit.log("BibTeX export failed:", err);
-      return "";
-    }),
-    (async () => {
-      // Export collection RDF with notes (includes standalone syllabus note).
-      // Do not mutateCollectionDocument here — that rewrites the note and flashes
-      // the live Syllabus page during publish.
-      const rdf = await getRDFStringForCollection(collection);
-      return typeof rdf === "string" ? rdf : "";
-    })().catch((err) => {
-      ztoolkit.log("RDF export failed:", err);
-      return "";
-    }),
-  ]);
+  // Fresh itemIndex + exportIds in note HTML only — do not rewrite the live note
+  // (that flashes the Syllabus page during publish).
+  const exportPayloadPromise = buildSyllabusExportPayload(collection).catch(
+    (err) => {
+      ztoolkit.log("buildSyllabusExportPayload failed:", err);
+      return null;
+    },
+  );
+  const citationsPromise = exportPayloadPromise.then((payload) => {
+    const citationOptions = payload
+      ? {
+          noteHtml: payload.noteHtml,
+          exportIdByItemKey: payload.exportIdByItemKey,
+        }
+      : undefined;
+    return Promise.all([
+      exportItemsAsRis(citationItems, citationOptions).catch((err) => {
+        ztoolkit.log("RIS export failed:", err);
+        return "";
+      }),
+      exportItemsAsBibTeX(citationItems, citationOptions).catch((err) => {
+        ztoolkit.log("BibTeX export failed:", err);
+        return "";
+      }),
+      (async () => {
+        const rdf = await getRDFStringForCollection(
+          collection,
+          citationOptions,
+        );
+        return typeof rdf === "string" ? rdf : "";
+      })().catch((err) => {
+        ztoolkit.log("RDF export failed:", err);
+        return "";
+      }),
+    ]);
+  });
 
   opts.onProgress?.("html");
   const htmlPromise = serializeSyllabusForPublish(

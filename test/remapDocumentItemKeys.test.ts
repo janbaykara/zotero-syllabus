@@ -196,6 +196,34 @@ describe("syllabusNote remapping", function () {
       }
     });
 
+    it("matches exportId from Extra ahead of title", async function () {
+      const item = new Zotero.Item("document");
+      item.libraryID = Zotero.Libraries.userLibraryID;
+      item.setField("title", "Untitled Handout");
+      item.setField("extra", "zotero-syllabus-id: export-shared-1");
+      await item.saveTx();
+      items.push(item);
+
+      const document = CollectionSyllabusDocumentSchema.parse({
+        version: 2,
+        classes: {
+          "class-1": { number: 1, title: "Intro", status: null },
+        },
+        items: {
+          oldKey: [{ id: "a1", classId: "class-1", priority: "essential" }],
+        },
+        itemIndex: {
+          oldKey: {
+            title: "Different Title On Export",
+            exportId: "export-shared-1",
+          },
+        },
+      });
+      const result = remapDocumentItemKeys(document, [item]);
+      assert.equal(Object.keys(result.items)[0], item.key);
+      assert.isUndefined(result.items.oldKey);
+    });
+
     it("matches a doi.org URL to a bare DOI in the item index", async function () {
       const item = new Zotero.Item("journalArticle");
       item.libraryID = Zotero.Libraries.userLibraryID;

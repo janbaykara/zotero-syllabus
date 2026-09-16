@@ -48,7 +48,7 @@ Zotero does **not** fire a merge notifier with an old→new map. `removeDuplicat
 Do not confuse this with:
 
 - `mergeNumberKeyedClasses` — merging class _records_ when UI metadata is written back.
-- `remapDocumentItemKeys` — RDF **import** remapping via DOI/ISBN/title and `itemIndex`, not live library merges.
+- `remapDocumentItemKeys` — RDF/RIS/BIB **import** remapping via `itemIndex` (`exportId`, DOI/ISBN/PMID/PMCID/arXiv, unique title), not live library merges. Publish builds a fresh `itemIndex` into citation downloads without rewriting the live note. Orphan keys after File → Import are healed when the note (or co-imported items) land.
 
 ### What we do
 

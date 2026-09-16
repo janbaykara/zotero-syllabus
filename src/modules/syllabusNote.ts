@@ -4,6 +4,7 @@
  */
 
 import { config } from "../../package.json";
+import { uuidv7 } from "uuidv7";
 import { getString } from "../utils/locale";
 import { confirmPrompt } from "../utils/window";
 import {
@@ -41,6 +42,7 @@ import {
   readItemNote,
 } from "../utils/items";
 import {
+  exportIdFromItem,
   identifiersFromFields,
   type ItemLookupIds,
 } from "../utils/identifiers";
@@ -104,6 +106,10 @@ export const SYLLABUS_NOTE_TAG = "zotero-syllabus";
 export const SYLLABUS_NOTE_TITLE = "Syllabus";
 export const SYLLABUS_EXTRA_KEY = "syllabus";
 export const SYLLABUS_NOTE_PRE_ATTR = "data-zotero-syllabus";
+
+export function generateExportId(): string {
+  return `export-${uuidv7()}`;
+}
 
 type CachedDocument = {
   collectionRef: string;
@@ -252,6 +258,7 @@ function lookupIdsFromItem(item: Zotero.Item): ItemLookupIds {
 function indexEntryFromIds(
   title: string,
   ids: ItemLookupIds,
+  exportId?: string | null,
 ): NonNullable<CollectionSyllabusDocument["itemIndex"]>[string] {
   return {
     title,
@@ -260,6 +267,7 @@ function indexEntryFromIds(
     ...(ids.pmid ? { pmid: ids.pmid } : {}),
     ...(ids.pmcid ? { pmcid: ids.pmcid } : {}),
     ...(ids.arxiv ? { arxiv: ids.arxiv } : {}),
+    ...(exportId ? { exportId } : {}),
   };
 }
 
@@ -267,18 +275,104 @@ export function buildItemIndex(
   collection: Zotero.Collection,
   document: CollectionSyllabusDocument,
 ): NonNullable<CollectionSyllabusDocument["itemIndex"]> {
+  const prior = document.itemIndex || {};
   const index: NonNullable<CollectionSyllabusDocument["itemIndex"]> = {};
   for (const itemKey of Object.keys(document.items || {})) {
     const item = Zotero.Items.getByLibraryAndKey(collection.libraryID, itemKey);
     if (!item || !isSyllabusMemberItem(item)) {
       continue;
     }
+    const reused = String(prior[itemKey]?.exportId || "").trim();
     index[itemKey] = indexEntryFromIds(
       getItemTitle(item),
       lookupIdsFromItem(item),
+      reused || generateExportId(),
     );
   }
   return index;
+}
+
+/** Document copy with a fresh itemIndex (no live-note write). */
+export function documentWithExportItemIndex(
+  collection: Zotero.Collection,
+  document: CollectionSyllabusDocument,
+): CollectionSyllabusDocument {
+  return {
+    ...document,
+    itemIndex: buildItemIndex(collection, document),
+  };
+}
+
+export type SyllabusExportPayload = {
+  document: CollectionSyllabusDocument;
+  noteHtml: string;
+  exportIdByItemKey: Map<string, string>;
+};
+
+/**
+ * Build citation-export payload: refreshed itemIndex (with exportIds) and note
+ * HTML, without mutating the live syllabus note.
+ */
+export async function buildSyllabusExportPayload(
+  collection: Zotero.Collection,
+  document?: CollectionSyllabusDocument,
+): Promise<SyllabusExportPayload> {
+  const base = document || getCollectionDocument(collection);
+  const withIndex = documentWithExportItemIndex(collection, base);
+  let noteHtml: string;
+  try {
+    noteHtml = await serializeSyllabusNote(withIndex, collection);
+  } catch (error) {
+    ztoolkit.log(
+      "Error serializing export syllabus note; using JSON fallback:",
+      error,
+    );
+    noteHtml = serializeSyllabusNoteFallback(withIndex);
+  }
+  const exportIdByItemKey = new Map<string, string>();
+  for (const [key, meta] of Object.entries(withIndex.itemIndex || {})) {
+    const id = String(meta?.exportId || "").trim();
+    if (id) {
+      exportIdByItemKey.set(key, id);
+    }
+  }
+  return { document: withIndex, noteHtml, exportIdByItemKey };
+}
+
+function resolveImportedItemKey(
+  oldKey: string,
+  meta: NonNullable<CollectionSyllabusDocument["itemIndex"]>[string] | undefined,
+  maps: {
+    byExportId: Map<string, string>;
+    byDoi: Map<string, string>;
+    byIsbn: Map<string, string>;
+    byPmid: Map<string, string>;
+    byPmcid: Map<string, string>;
+    byArxiv: Map<string, string>;
+    byTitle: Map<string, string>;
+    existingKeys: Set<string>;
+  },
+): string {
+  const exportId = String(meta?.exportId || "").trim();
+  const indexed = identifiersFromFields({
+    doi: meta?.doi,
+    isbn: meta?.isbn,
+    pmid: meta?.pmid,
+    pmcid: meta?.pmcid,
+    arxiv: meta?.arxiv,
+  });
+  const title = meta?.title?.trim().toLowerCase();
+  return (
+    (exportId && maps.byExportId.get(exportId)) ||
+    (indexed.doi && maps.byDoi.get(indexed.doi)) ||
+    (indexed.isbn && maps.byIsbn.get(indexed.isbn)) ||
+    (indexed.pmid && maps.byPmid.get(indexed.pmid)) ||
+    (indexed.pmcid && maps.byPmcid.get(indexed.pmcid)) ||
+    (indexed.arxiv && maps.byArxiv.get(indexed.arxiv)) ||
+    (maps.existingKeys.has(oldKey) ? oldKey : undefined) ||
+    (title && maps.byTitle.get(title)) ||
+    oldKey
+  );
 }
 
 export function remapDocumentItemKeys(
@@ -292,6 +386,7 @@ export function remapDocumentItemKeys(
       return false;
     }
   });
+  const byExportId = new Map<string, string>();
   const byDoi = new Map<string, string>();
   const byIsbn = new Map<string, string>();
   const byPmid = new Map<string, string>();
@@ -302,6 +397,10 @@ export function remapDocumentItemKeys(
   const existingKeys = new Set<string>();
   for (const item of regularItems) {
     existingKeys.add(item.key);
+    const exportId = exportIdFromItem(item);
+    if (exportId) {
+      byExportId.set(exportId, item.key);
+    }
     const ids = lookupIdsFromItem(item);
     const title = getItemTitle(item).toLowerCase();
     if (ids.doi) {
@@ -330,56 +429,129 @@ export function remapDocumentItemKeys(
     }
   }
 
+  const maps = {
+    byExportId,
+    byDoi,
+    byIsbn,
+    byPmid,
+    byPmcid,
+    byArxiv,
+    byTitle,
+    existingKeys,
+  };
   const itemIndex = document.itemIndex || {};
   const itemsOut: CollectionSyllabusDocument["items"] = {};
   for (const [oldKey, assignments] of Object.entries(document.items || {})) {
-    const meta = itemIndex[oldKey];
-    const indexed = identifiersFromFields({
-      doi: meta?.doi,
-      isbn: meta?.isbn,
-      pmid: meta?.pmid,
-      pmcid: meta?.pmcid,
-      arxiv: meta?.arxiv,
-    });
-    const title = meta?.title?.trim().toLowerCase();
-    const newKey =
-      (indexed.doi && byDoi.get(indexed.doi)) ||
-      (indexed.isbn && byIsbn.get(indexed.isbn)) ||
-      (indexed.pmid && byPmid.get(indexed.pmid)) ||
-      (indexed.pmcid && byPmcid.get(indexed.pmcid)) ||
-      (indexed.arxiv && byArxiv.get(indexed.arxiv)) ||
-      (existingKeys.has(oldKey) ? oldKey : undefined) ||
-      (title && byTitle.get(title)) ||
-      oldKey;
+    const newKey = resolveImportedItemKey(oldKey, itemIndex[oldKey], maps);
     itemsOut[newKey] = [...(itemsOut[newKey] || []), ...assignments];
   }
 
   const { itemIndex: _itemIndex, ...rest } = document;
   const furtherReadingOrder = remapOrderKeys(
     document.furtherReadingOrder,
-    (oldKey) => {
-      const meta = itemIndex[oldKey];
-      const indexed = identifiersFromFields({
-        doi: meta?.doi,
-        isbn: meta?.isbn,
-        pmid: meta?.pmid,
-        pmcid: meta?.pmcid,
-        arxiv: meta?.arxiv,
-      });
-      const title = meta?.title?.trim().toLowerCase();
-      return (
-        (indexed.doi && byDoi.get(indexed.doi)) ||
-        (indexed.isbn && byIsbn.get(indexed.isbn)) ||
-        (indexed.pmid && byPmid.get(indexed.pmid)) ||
-        (indexed.pmcid && byPmcid.get(indexed.pmcid)) ||
-        (indexed.arxiv && byArxiv.get(indexed.arxiv)) ||
-        (existingKeys.has(oldKey) ? oldKey : undefined) ||
-        (title && byTitle.get(title)) ||
-        oldKey
-      );
-    },
+    (oldKey) => resolveImportedItemKey(oldKey, itemIndex[oldKey], maps),
   );
   return { ...rest, items: itemsOut, furtherReadingOrder };
+}
+
+function itemAssignmentSignature(
+  document: CollectionSyllabusDocument,
+): string {
+  const keys = Object.keys(document.items || {}).sort();
+  const parts = keys.map((key) => {
+    const ids = (document.items[key] || [])
+      .map((row) => row.id || "")
+      .sort()
+      .join(",");
+    return `${key}:${ids}`;
+  });
+  const order = (document.furtherReadingOrder || []).join(",");
+  return `${parts.join("|")}#${order}`;
+}
+
+/** True when any assignment key does not resolve to a live collection member. */
+export function documentHasOrphanItemKeys(
+  collection: Zotero.Collection,
+  document: CollectionSyllabusDocument,
+): boolean {
+  for (const key of Object.keys(document.items || {})) {
+    const item = Zotero.Items.getByLibraryAndKey(collection.libraryID, key);
+    if (!item || !isSyllabusMemberItem(item)) {
+      return true;
+    }
+  }
+  for (const key of document.furtherReadingOrder || []) {
+    const item = Zotero.Items.getByLibraryAndKey(collection.libraryID, key);
+    if (!item || !isSyllabusMemberItem(item)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Remap orphaned item.keys onto co-imported / sibling items via itemIndex
+ * (exportId, DOI, ISBN, …). Returns the same document object when unchanged.
+ */
+export function healDocumentItemKeys(
+  collection: Zotero.Collection,
+  document: CollectionSyllabusDocument,
+  items?: Zotero.Item[],
+): CollectionSyllabusDocument {
+  if (!documentHasOrphanItemKeys(collection, document)) {
+    return document;
+  }
+  let candidates = items;
+  if (!candidates) {
+    try {
+      candidates = (collection.getChildItems(false, false) || []).filter(
+        (item) => {
+          try {
+            return isSyllabusMemberItem(item);
+          } catch {
+            return false;
+          }
+        },
+      );
+    } catch {
+      candidates = [];
+    }
+  }
+  if (!candidates.length) {
+    return document;
+  }
+  const remapped = remapDocumentItemKeys(document, candidates);
+  if (itemAssignmentSignature(remapped) === itemAssignmentSignature(document)) {
+    return document;
+  }
+  return remapped;
+}
+
+function queueHealDocumentItemKeys(
+  collection: Zotero.Collection,
+  items?: Zotero.Item[],
+): void {
+  const collectionId = collection.id;
+  afterDatabaseTransaction()
+    .then(async () => {
+      const live =
+        getCachedCollectionById(collectionId) ||
+        Zotero.Collections.get(collectionId);
+      if (!live) {
+        return;
+      }
+      const current = getCollectionDocument(live);
+      const healed = healDocumentItemKeys(live, current, items);
+      if (healed === current) {
+        return;
+      }
+      await mutateCollectionDocument(live, () => healed, {
+        createNote: "legacy",
+      });
+    })
+    .catch((error) => {
+      ztoolkit.log("Error healing syllabus item keys after import:", error);
+    });
 }
 
 function remapOrderKeys(
@@ -2522,11 +2694,17 @@ function handleNoteChange(item: Zotero.Item, event: string): void {
   }
 
   const tagged = itemHasSyllabusTag(item);
-  if (tagged === false) {
+  const looksLike =
+    tagged === true ? true : tagged === false ? looksLikeSyllabusNote(item) : null;
+  if (tagged === false && !looksLike) {
     detachNoteFromCache(item.id);
     return;
   }
-  if (tagged === null && !collectionRefByNoteId.has(item.id)) {
+  if (
+    tagged === null &&
+    !collectionRefByNoteId.has(item.id) &&
+    !looksLikeSyllabusNote(item)
+  ) {
     return;
   }
 
@@ -2568,6 +2746,9 @@ function handleNoteChange(item: Zotero.Item, event: string): void {
     }
     if (parsed) {
       setCacheEntry(ref, item.id, item.version, parsed);
+      if (documentHasOrphanItemKeys(collection, parsed)) {
+        queueHealDocumentItemKeys(collection);
+      }
     }
   }
 }
@@ -2635,6 +2816,7 @@ export function initializeSyllabusNotes(): void {
         }
 
         const extrasToAbsorb: Zotero.Item[] = [];
+        const collectionsToHeal = new Map<number, Zotero.Item[]>();
         for (const id of numericIds) {
           const item = getCachedItem(id) || Zotero.Items.get(id);
           if (!item) {
@@ -2650,12 +2832,33 @@ export function initializeSyllabusNotes(): void {
             (event === "add" || event === "modify")
           ) {
             extrasToAbsorb.push(item);
+            if (event === "add") {
+              for (const collectionId of item.getCollections() || []) {
+                const bucket = collectionsToHeal.get(collectionId) || [];
+                bucket.push(item);
+                collectionsToHeal.set(collectionId, bucket);
+              }
+            }
           }
         }
         if (extrasToAbsorb.length > 0) {
           absorbSyllabusExtraFromItems(extrasToAbsorb).catch((error) => {
             ztoolkit.log("Error absorbing syllabus Extra into note:", error);
           });
+        }
+        for (const [collectionId, addedItems] of collectionsToHeal) {
+          const collection =
+            getCachedCollectionById(collectionId) ||
+            Zotero.Collections.get(collectionId);
+          if (!collection) {
+            continue;
+          }
+          const ref = collectionRefFromCollection(collection);
+          const cached = documentCache.get(ref)?.document;
+          if (!cached || !documentHasOrphanItemKeys(collection, cached)) {
+            continue;
+          }
+          queueHealDocumentItemKeys(collection, addedItems);
         }
         if (event === "add" || event === "modify" || event === "trash") {
           enqueuePinnedReadingScheduleSync().catch((error) => {

@@ -1,5 +1,10 @@
 import { assert } from "chai";
-import { fallbackItemsAsZoteroRdf, isRdfFile } from "../src/utils/rdf";
+import {
+  fallbackItemsAsZoteroRdf,
+  isRdfFile,
+  replaceSyllabusNoteHtmlInRdf,
+} from "../src/utils/rdf";
+import { SYLLABUS_EXPORT_ID_KEY } from "../src/utils/identifiers";
 
 function mockNote(html: string, title = "Syllabus"): Zotero.Item {
   return {
@@ -17,9 +22,10 @@ function mockNote(html: string, title = "Syllabus"): Zotero.Item {
   } as unknown as Zotero.Item;
 }
 
-function mockBook(title: string): Zotero.Item {
+function mockBook(title: string, key = "BOOKKEY1"): Zotero.Item {
   return {
     id: 1,
+    key,
     deleted: false,
     isFeedItem: false,
     itemType: "book",
@@ -53,5 +59,32 @@ describe("fallback Zotero RDF", function () {
     assert.include(rdf, "data-zotero-syllabus");
     assert.include(rdf, "<dc:subject>zotero-syllabus</dc:subject>");
     assert.include(rdf, "<foaf:surname>Doe</foaf:surname>");
+  });
+
+  it("stamps export ids and note HTML overrides", function () {
+    const snapshot =
+      '<pre data-zotero-syllabus="1">{"version":2,"itemIndex":{"BOOKKEY1":{"exportId":"export-9"}}}</pre>';
+    const rdf = fallbackItemsAsZoteroRdf(
+      [mockBook("Reading"), mockNote("live-html")],
+      {
+        noteHtml: snapshot,
+        exportIdByItemKey: { BOOKKEY1: "export-9" },
+      },
+    );
+    assert.include(rdf, `${SYLLABUS_EXPORT_ID_KEY} export-9`);
+    assert.include(rdf, "exportId");
+    assert.notInclude(rdf, "live-html");
+  });
+
+  it("replaceSyllabusNoteHtmlInRdf swaps memo bodies", function () {
+    const original = fallbackItemsAsZoteroRdf([
+      mockNote('<pre data-zotero-syllabus="1">{"version":2,"courseCode":"OLD"}</pre>'),
+    ]);
+    const next = replaceSyllabusNoteHtmlInRdf(
+      original,
+      '<pre data-zotero-syllabus="1">{"version":2,"itemIndex":{}}</pre>',
+    );
+    assert.include(next, "itemIndex");
+    assert.notInclude(next, "courseCode");
   });
 });

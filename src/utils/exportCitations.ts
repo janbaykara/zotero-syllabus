@@ -1,5 +1,9 @@
 /** Export items as RIS / BibTeX for published syllabus downloads. */
 
+import {
+  appendExportIdToExtra,
+  SYLLABUS_EXPORT_ID_KEY,
+} from "./identifiers";
 import { readItemNote } from "./items";
 
 const RIS_TRANSLATOR_ID = "32d59d2d-b65a-4da4-b0a3-bdd3cfb979e7";
@@ -11,6 +15,36 @@ const SYLLABUS_NOTE_TITLE = "Syllabus";
 
 /** Keep short: a hung Translate.Export used to block publish for a full minute. */
 const EXPORT_TIMEOUT_MS = 12_000;
+
+export type CitationExportOptions = {
+  /** Override syllabus note HTML (export snapshot with fresh itemIndex). */
+  noteHtml?: string;
+  /** item.key → export-local id stamped into Extra / citation fields. */
+  exportIdByItemKey?: Map<string, string> | Record<string, string>;
+};
+
+function exportIdMap(
+  options?: CitationExportOptions,
+): Map<string, string> {
+  if (!options?.exportIdByItemKey) {
+    return new Map();
+  }
+  if (options.exportIdByItemKey instanceof Map) {
+    return options.exportIdByItemKey;
+  }
+  return new Map(Object.entries(options.exportIdByItemKey));
+}
+
+function exportIdForItem(
+  item: Zotero.Item,
+  ids: Map<string, string>,
+): string {
+  try {
+    return ids.get(item.key) || "";
+  } catch {
+    return "";
+  }
+}
 
 function regularItemsOnly(items: Zotero.Item[]): Zotero.Item[] {
   return items.filter(
@@ -63,6 +97,13 @@ function bibKey(item: Zotero.Item, index: number): string {
     .slice(0, 24);
   const year = (field(item, "date").match(/\d{4}/) || ["nodate"])[0];
   return `${last || "item"}${year}${index + 1}`;
+}
+
+function noteBody(note: Zotero.Item, overrideHtml?: string): string {
+  if (typeof overrideHtml === "string") {
+    return overrideHtml;
+  }
+  return readItemNote(note);
 }
 
 /** Resolve the collection's standalone syllabus note, if present. */
@@ -125,10 +166,13 @@ export function itemsWithSyllabusNote(
 }
 
 /** RIS record for a standalone note (Zotero imports TY - NOTE as a note item). */
-export function fallbackNoteAsRis(note: Zotero.Item): string {
+export function fallbackNoteAsRis(
+  note: Zotero.Item,
+  overrideHtml?: string,
+): string {
   const title = field(note, "title") || "Syllabus";
-  const body = readItemNote(note).replace(/\r\n/g, "\n").trim();
-  const lines = [`TY  - NOTE`, `TI  - ${title}`];
+  const body = noteBody(note, overrideHtml).replace(/\r\n/g, "\n").trim();
+  const lines = [`TY  - NOTE`, `TI  - ${title}`, `KW  - ${SYLLABUS_NOTE_TAG}`];
   if (body) {
     for (const line of body.split("\n")) {
       lines.push(`N1  - ${line}`);
@@ -139,10 +183,16 @@ export function fallbackNoteAsRis(note: Zotero.Item): string {
 }
 
 /** BibTeX @misc carrying note HTML so a syllabus note survives import. */
-export function fallbackNoteAsBibTeX(note: Zotero.Item): string {
+export function fallbackNoteAsBibTeX(
+  note: Zotero.Item,
+  overrideHtml?: string,
+): string {
   const title = field(note, "title") || "Syllabus";
-  const body = readItemNote(note).trim();
-  const fields: string[] = [`  title = {${escapeBibTeX(title)}}`];
+  const body = noteBody(note, overrideHtml).trim();
+  const fields: string[] = [
+    `  title = {${escapeBibTeX(title)}}`,
+    `  keywords = {${SYLLABUS_NOTE_TAG}}`,
+  ];
   if (body) {
     // Preserve newlines as literal \\n so HTML structure survives a round-trip.
     const escaped = body
@@ -164,12 +214,16 @@ function appendNoteExport(text: string, noteBlock: string): string {
 }
 
 /** Minimal RIS when Zotero translators are unavailable or fail. */
-export function fallbackItemsAsRis(items: Zotero.Item[]): string {
+export function fallbackItemsAsRis(
+  items: Zotero.Item[],
+  options?: CitationExportOptions,
+): string {
+  const ids = exportIdMap(options);
   const blocks: string[] = [];
   for (const item of items) {
     if (!item || item.deleted || item.isFeedItem) continue;
     if (item.isNote?.()) {
-      blocks.push(fallbackNoteAsRis(item));
+      blocks.push(fallbackNoteAsRis(item, options?.noteHtml));
       continue;
     }
     if (!(typeof item.isRegularItem === "function" && item.isRegularItem())) {
@@ -200,6 +254,13 @@ export function fallbackItemsAsRis(items: Zotero.Item[]): string {
     if (doi) lines.push(`DO  - ${doi}`);
     const url = field(item, "url");
     if (url) lines.push(`UR  - ${url}`);
+    const exportId = exportIdForItem(item, ids);
+    const extra = appendExportIdToExtra(field(item, "extra"), exportId);
+    if (extra) {
+      for (const line of extra.split(/\r?\n/)) {
+        if (line.trim()) lines.push(`N1  - ${line}`);
+      }
+    }
     lines.push("ER  - ");
     blocks.push(lines.join("\n"));
   }
@@ -207,13 +268,17 @@ export function fallbackItemsAsRis(items: Zotero.Item[]): string {
 }
 
 /** Minimal BibTeX when Zotero translators are unavailable or fail. */
-export function fallbackItemsAsBibTeX(items: Zotero.Item[]): string {
+export function fallbackItemsAsBibTeX(
+  items: Zotero.Item[],
+  options?: CitationExportOptions,
+): string {
+  const ids = exportIdMap(options);
   const blocks: string[] = [];
   let regularIndex = 0;
   for (const item of items) {
     if (!item || item.deleted || item.isFeedItem) continue;
     if (item.isNote?.()) {
-      blocks.push(fallbackNoteAsBibTeX(item));
+      blocks.push(fallbackNoteAsBibTeX(item, options?.noteHtml));
       continue;
     }
     if (!(typeof item.isRegularItem === "function" && item.isRegularItem())) {
@@ -245,12 +310,105 @@ export function fallbackItemsAsBibTeX(items: Zotero.Item[]): string {
     if (doi) fields.push(`  doi = {${escapeBibTeX(doi)}}`);
     const url = field(item, "url");
     if (url) fields.push(`  url = {${escapeBibTeX(url)}}`);
+    const exportId = exportIdForItem(item, ids);
+    const extra = appendExportIdToExtra(field(item, "extra"), exportId);
+    if (extra) {
+      fields.push(`  extra = {${escapeBibTeX(extra)}}`);
+    }
     blocks.push(
       `@${entryType}{${bibKey(item, regularIndex)},\n${fields.join(",\n")}\n}`,
     );
     regularIndex += 1;
   }
   return blocks.length ? `${blocks.join("\n\n")}\n` : "";
+}
+
+/**
+ * Inject export-local ids into translator RIS output by record order.
+ * Skips TY - NOTE records (syllabus note is appended separately).
+ */
+export function injectExportIdsIntoRis(
+  ris: string,
+  items: Zotero.Item[],
+  exportIdByItemKey?: Map<string, string> | Record<string, string>,
+): string {
+  const ids =
+    exportIdByItemKey instanceof Map
+      ? exportIdByItemKey
+      : new Map(Object.entries(exportIdByItemKey || {}));
+  if (!ids.size || !ris.trim()) {
+    return ris;
+  }
+  const regular = regularItemsOnly(items);
+  const records = ris
+    .replace(/\r\n/g, "\n")
+    .trim()
+    .split(/\n(?=TY {2}- )/);
+  let itemIdx = 0;
+  const out: string[] = [];
+  for (const record of records) {
+    const trimmed = record.trim();
+    if (!trimmed) continue;
+    let block = trimmed.replace(/\nER {2}- ?$/, "").trimEnd();
+    const isNote = /^TY {2}- NOTE\b/m.test(block);
+    if (!isNote && itemIdx < regular.length) {
+      const exportId = exportIdForItem(regular[itemIdx], ids);
+      itemIdx += 1;
+      if (
+        exportId &&
+        !block.includes(`${SYLLABUS_EXPORT_ID_KEY}:`)
+      ) {
+        block += `\nN1  - ${SYLLABUS_EXPORT_ID_KEY}: ${exportId}`;
+      }
+    }
+    out.push(`${block}\nER  - `);
+  }
+  return out.length ? `${out.join("\n")}\n` : ris;
+}
+
+/**
+ * Inject export-local ids into translator BibTeX by entry order among
+ * non-@misc{zoteroSyllabusNote} entries.
+ */
+export function injectExportIdsIntoBibTeX(
+  bib: string,
+  items: Zotero.Item[],
+  exportIdByItemKey?: Map<string, string> | Record<string, string>,
+): string {
+  const ids =
+    exportIdByItemKey instanceof Map
+      ? exportIdByItemKey
+      : new Map(Object.entries(exportIdByItemKey || {}));
+  if (!ids.size || !bib.trim()) {
+    return bib;
+  }
+  const regular = regularItemsOnly(items);
+  let itemIdx = 0;
+  return bib.replace(
+    /@(\w+)\s*\{([^\s,]+)\s*,([\s\S]*?)\n\}/g,
+    (full, type: string, key: string, body: string) => {
+      if (
+        String(type).toLowerCase() === "misc" &&
+        String(key) === "zoteroSyllabusNote"
+      ) {
+        return full;
+      }
+      if (itemIdx >= regular.length) {
+        return full;
+      }
+      const exportId = exportIdForItem(regular[itemIdx], ids);
+      itemIdx += 1;
+      if (!exportId || body.includes(SYLLABUS_EXPORT_ID_KEY)) {
+        return full;
+      }
+      const line = `  extra = {${SYLLABUS_EXPORT_ID_KEY}: ${exportId}}`;
+      const trimmedBody = body.trimEnd();
+      const nextBody = trimmedBody
+        ? `${trimmedBody},\n${line}`
+        : `\n${line}`;
+      return `@${type}{${key},${nextBody}\n}`;
+    },
+  );
 }
 
 async function resolveTranslator(
@@ -344,48 +502,72 @@ export async function exportItemsWithTranslator(
 async function exportWithSyllabusNote(
   items: Zotero.Item[],
   translatorID: string,
-  fallback: (items: Zotero.Item[]) => string,
-  noteAsFallback: (note: Zotero.Item) => string,
+  fallback: (
+    items: Zotero.Item[],
+    options?: CitationExportOptions,
+  ) => string,
+  noteAsFallback: (note: Zotero.Item, overrideHtml?: string) => string,
+  injectIds: (
+    text: string,
+    items: Zotero.Item[],
+    ids?: Map<string, string> | Record<string, string>,
+  ) => string,
+  options?: CitationExportOptions,
 ): Promise<string> {
   const notes = items.filter((item) => item?.isNote?.());
   const regular = regularItemsOnly(items);
+  const ids = exportIdMap(options);
   let text = "";
   try {
     if (regular.length) {
       text = await exportItemsWithTranslator(regular, translatorID);
+      if (text.trim() && ids.size) {
+        text = injectIds(text, regular, ids);
+      }
     }
     if (!text.trim()) {
-      text = fallback([...regular, ...notes]);
+      text = fallback([...regular, ...notes], options);
       return text;
     }
   } catch (err) {
     ztoolkit.log("Citation translator export failed; using fallback:", err);
-    return fallback([...regular, ...notes]);
+    return fallback([...regular, ...notes], options);
   }
   // Translators typically skip standalone notes — append explicitly.
   for (const note of notes) {
-    text = appendNoteExport(text, noteAsFallback(note));
+    text = appendNoteExport(
+      text,
+      noteAsFallback(note, options?.noteHtml),
+    );
   }
   return text.endsWith("\n") ? text : `${text}\n`;
 }
 
-export async function exportItemsAsRis(items: Zotero.Item[]): Promise<string> {
+export async function exportItemsAsRis(
+  items: Zotero.Item[],
+  options?: CitationExportOptions,
+): Promise<string> {
   return exportWithSyllabusNote(
     items,
     RIS_TRANSLATOR_ID,
     fallbackItemsAsRis,
     fallbackNoteAsRis,
+    injectExportIdsIntoRis,
+    options,
   );
 }
 
 export async function exportItemsAsBibTeX(
   items: Zotero.Item[],
+  options?: CitationExportOptions,
 ): Promise<string> {
   return exportWithSyllabusNote(
     items,
     BIBTEX_TRANSLATOR_ID,
     fallbackItemsAsBibTeX,
     fallbackNoteAsBibTeX,
+    injectExportIdsIntoBibTeX,
+    options,
   );
 }
 
