@@ -807,7 +807,11 @@ function libraryCollections(
       seen.add(parentID);
       depth += 1;
       try {
-        parentID = Zotero.Collections.get(parentID)?.parentID;
+        const parent = Zotero.Collections.get(parentID);
+        if (!parent) {
+          break;
+        }
+        parentID = parent.parentID;
       } catch {
         break;
       }

@@ -139,7 +139,7 @@ async function settleTourUi(ms = 500): Promise<void> {
 }
 
 function isUsableCollection(
-  collection: Zotero.Collection | null | undefined,
+  collection: Zotero.Collection | false | null | undefined,
 ): collection is Zotero.Collection {
   if (!collection) {
     return false;

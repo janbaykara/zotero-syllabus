@@ -342,8 +342,8 @@ export function collectionLibraryIsEditable(
 
 /** Items cannot be added to a collection in another library (Zotero FK). */
 export function itemBelongsInCollection(
-  item: Zotero.Item | null | undefined,
-  collection: Zotero.Collection | null | undefined,
+  item: Zotero.Item | false | null | undefined,
+  collection: Zotero.Collection | false | null | undefined,
 ): boolean {
   if (!item || !collection) {
     return false;

@@ -137,8 +137,9 @@ class ZoteroCache {
       const item = Zotero.Items.get(itemId);
       if (item) {
         this.itemCache.set(itemId, item);
+        return item;
       }
-      return item;
+      return undefined;
     } catch {
       return undefined;
     }
@@ -245,8 +246,9 @@ class ZoteroCache {
       const collection = Zotero.Collections.get(collectionId);
       if (collection) {
         this.setCollection(collection);
+        return collection;
       }
-      return collection;
+      return undefined;
     } catch {
       return undefined;
     }

@@ -210,7 +210,10 @@ function isReadingListCatalogItem(item: Zotero.Item): boolean {
 function itemAlreadyHasFile(item: Zotero.Item): boolean {
   for (const attId of item.getAttachments()) {
     const att = Zotero.Items.get(attId);
-    if (att?.isPDFAttachment?.() || att?.isEPUBAttachment?.()) {
+    if (!att) {
+      continue;
+    }
+    if (att.isPDFAttachment?.() || att.isEPUBAttachment?.()) {
       return true;
     }
   }
@@ -245,9 +248,12 @@ async function lookupQueuedAvailableFiles(): Promise<void> {
   pendingFileLookupIds.clear();
   const items = ids
     .map((id) => Zotero.Items.get(id))
-    .filter((item): item is Zotero.Item =>
-      Boolean(item?.isRegularItem?.() && !itemAlreadyHasFile(item)),
-    );
+    .filter((item): item is Zotero.Item => {
+      if (!item) {
+        return false;
+      }
+      return Boolean(item.isRegularItem?.() && !itemAlreadyHasFile(item));
+    });
   if (!items.length) {
     return;
   }

@@ -187,7 +187,7 @@ async function removePlaceholderUrlAttachments(
   const linked = Zotero.Attachments.LINK_MODE_LINKED_URL;
   for (const attId of item.getAttachments()) {
     const att = Zotero.Items.get(attId);
-    if (!att?.isAttachment()) {
+    if (!att || !att.isAttachment()) {
       continue;
     }
     const linkMode = att.attachmentLinkMode;
