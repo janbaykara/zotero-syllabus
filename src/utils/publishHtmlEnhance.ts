@@ -176,7 +176,9 @@ export async function replacePublishMetadataWithCitations(
     const doc = card.ownerDocument;
     if (!doc) continue;
 
-    let meta = card.querySelector(".syllabus-item-metadata") as HTMLElement | null;
+    let meta = card.querySelector(
+      ".syllabus-item-metadata",
+    ) as HTMLElement | null;
     if (!meta) {
       meta = doc.createElement("div");
       meta.className = "syllabus-item-metadata";

@@ -24,7 +24,8 @@ import { fileURLToPath } from "node:url";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const XPI_NAME = "zotero-syllabus.xpi";
 const PUBLISH_COMMIT_RE = /^chore\(publish\):\s*release\b/i;
-const SKIP_HIGHLIGHT_RE = /^(lint|chore(\(.*\))?|ci(\(.*\))?|build(\(.*\))?|style(\(.*\))?|test(\(.*\))?|docs(\(.*\))?)\b/i;
+const SKIP_HIGHLIGHT_RE =
+  /^(lint|chore(\(.*\))?|ci(\(.*\))?|build(\(.*\))?|style(\(.*\))?|test(\(.*\))?|docs(\(.*\))?)\b/i;
 
 function parseArgs(argv) {
   let tag = "";
@@ -82,10 +83,9 @@ function previousReleaseTag(tag, tags) {
 
 function listCommits(previousTag, tag) {
   const range = previousTag ? `${previousTag}..${tag}` : tag;
-  const raw = git(
-    ["log", range, "--pretty=format:%H\t%h\t%s", "--no-merges"],
-    { allowFail: true },
-  );
+  const raw = git(["log", range, "--pretty=format:%H\t%h\t%s", "--no-merges"], {
+    allowFail: true,
+  });
   if (!raw) return [];
   return raw
     .split("\n")
@@ -310,7 +310,8 @@ async function summarizeWithCursor(commits) {
 }
 
 async function buildHighlights(commits) {
-  if (commits.length === 0) return "_No code changes since the previous release._";
+  if (commits.length === 0)
+    return "_No code changes since the previous release._";
 
   const providers = [
     ["OpenAI", summarizeWithOpenAI],
@@ -347,7 +348,11 @@ function packageSection(tag, previousTag, currentSize, previousSize) {
     ? `**${formatBytes(currentSize)}**`
     : "_pending upload_";
   let deltaText = "";
-  if (Number.isFinite(currentSize) && Number.isFinite(previousSize) && previousTag) {
+  if (
+    Number.isFinite(currentSize) &&
+    Number.isFinite(previousSize) &&
+    previousTag
+  ) {
     const delta = formatDelta(currentSize, previousSize);
     deltaText = delta ? ` (${delta} vs ${previousTag})` : "";
   } else if (previousTag && !Number.isFinite(previousSize)) {
@@ -387,7 +392,9 @@ async function main() {
   const tag =
     tagArg ||
     process.env.RELEASE_TAG ||
-    (process.env.GITHUB_REF_TYPE === "tag" ? process.env.GITHUB_REF_NAME : "") ||
+    (process.env.GITHUB_REF_TYPE === "tag"
+      ? process.env.GITHUB_REF_NAME
+      : "") ||
     tags.at(-1);
   if (!tag) throw new Error("No release tag found (pass --tag vX.Y.Z)");
   if (!tags.includes(tag)) {

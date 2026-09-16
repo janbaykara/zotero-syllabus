@@ -1,7 +1,10 @@
 import { assert } from "chai";
 import { isPrintableItemHref } from "../src/utils/printSyllabus";
 import { runsFromNode } from "../src/utils/exportSyllabus";
-import { publishFileIconKind, publishHrefIconKind } from "../src/utils/zoteroAttachmentIcons";
+import {
+  publishFileIconKind,
+  publishHrefIconKind,
+} from "../src/utils/zoteroAttachmentIcons";
 import { remoteMatchesLocal } from "../src/utils/publishFileFingerprints";
 
 describe("publish link hrefs", function () {

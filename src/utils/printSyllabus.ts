@@ -875,7 +875,11 @@ function applyPublishLinkOverrides(
 }
 
 /** Turn reading titles into clickable links when the row has a printable URL. */
-function linkItemTitles(root: ParentNode): void {
+function linkItemTitles(
+  root: ParentNode,
+  options?: { withFileIcons?: boolean },
+): void {
+  const withFileIcons = options?.withFileIcons === true;
   const linkTitle = (host: Element, titleSelector: string): void => {
     const href = (host.getAttribute("data-print-url") || "").trim();
     if (!isPrintableItemHref(href)) {
@@ -896,35 +900,36 @@ function linkItemTitles(root: ParentNode): void {
     while (title.firstChild) {
       anchor.appendChild(title.firstChild);
     }
-
-    const iconKind = publishHrefIconKind(href);
-    if (iconKind) {
-      const iconLabel = getString(
-        iconKind === "pdf"
-          ? "attachment-pdf"
-          : iconKind === "epub"
-            ? "attachment-epub"
-            : "attachment-url",
-      );
-      anchor.setAttribute("title", iconLabel);
-      anchor.setAttribute("aria-label", `${text} — ${iconLabel}`);
-    }
-
     title.appendChild(anchor);
 
-    // File / link glyph sits on the title line (right), not inside the link text.
-    if (iconKind) {
-      const icon = doc.createElement("span");
-      icon.className = "syllabus-publish-file-icon";
-      icon.setAttribute("aria-hidden", "true");
-      icon.innerHTML = svgForPublishHrefKind(iconKind);
-      const titleLine = title.parentElement;
-      if (titleLine && titleLine !== host) {
-        titleLine.classList.add("syllabus-publish-title-line");
-        titleLine.appendChild(icon);
-      } else {
-        title.appendChild(icon);
-      }
+    // Hosted HTML only: PDF/EPUB/URL glyphs (SVG breaks some print HTML reparses).
+    if (!withFileIcons) {
+      return;
+    }
+    const iconKind = publishHrefIconKind(href);
+    if (!iconKind) {
+      return;
+    }
+    const iconLabel = getString(
+      iconKind === "pdf"
+        ? "attachment-pdf"
+        : iconKind === "epub"
+          ? "attachment-epub"
+          : "attachment-url",
+    );
+    anchor.setAttribute("title", iconLabel);
+    anchor.setAttribute("aria-label", `${text} — ${iconLabel}`);
+
+    const icon = doc.createElement("span");
+    icon.className = "syllabus-publish-file-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.innerHTML = svgForPublishHrefKind(iconKind);
+    const titleLine = title.parentElement;
+    if (titleLine && titleLine !== host) {
+      titleLine.classList.add("syllabus-publish-title-line");
+      titleLine.appendChild(icon);
+    } else {
+      title.appendChild(icon);
     }
   };
 
@@ -1226,7 +1231,11 @@ function applyInlinePrintStyles(
         display: "block",
         color: "#4b5563",
         "font-size":
-          density === "row" ? "12px" : density === "standard" ? "12.5px" : "13px",
+          density === "row"
+            ? "12px"
+            : density === "standard"
+              ? "12.5px"
+              : "13px",
         "line-height": "1.4",
         ...(density === "row" ? { "margin-top": "0" } : {}),
       });
@@ -1360,7 +1369,7 @@ function prepareSyllabusClone(
   expandCharacterSeparators(clone);
   putTitlesBeforeBadges(clone);
   applyPublishLinkOverrides(clone, options?.publishLinkByItemId);
-  linkItemTitles(clone);
+  linkItemTitles(clone, { withFileIcons: mode === "publish" });
   flattenPrintLayout(clone, mode);
   applyInlinePrintStyles(clone, resolved, mode);
   polishClassHeadings(clone);
@@ -1420,8 +1429,7 @@ export async function buildPrintableHtml({
     ? `<div class="syllabus-publish-downloads">${downloadLinks.join("")}</div>`
     : "";
 
-  const creditHtml =
-    layout === "publish" ? buildPublishCreditHtml() : "";
+  const creditHtml = layout === "publish" ? buildPublishCreditHtml() : "";
 
   const bodyClass = [
     "print",

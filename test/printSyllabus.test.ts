@@ -67,7 +67,8 @@ describe("serializeSyllabusForPrint", function () {
     assert.ok(linked!.classList.contains("syllabus-item-print-link"));
 
     const unlinked = out.querySelectorAll(".syllabus-item-card")[1];
-    assert.equal(unlinked.querySelector("a"), null);
+    assert.ok(unlinked);
+    assert.isNull(unlinked.querySelector("a"));
     assert.equal(
       unlinked.querySelector(".syllabus-item-title")?.textContent?.trim(),
       "No URL Paper",
