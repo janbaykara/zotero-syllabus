@@ -202,23 +202,27 @@ export function ReadingScheduleDayPage({
           </div>
         </div>
 
-        <div className="container-padded mt-6">
-          <DayNavHeader
-            dateKey={activeDateKey}
-            prevDateKey={prevDateKey}
-            nextDateKey={nextDateKey}
-            onPrev={() => prevDateKey && goToDate(prevDateKey)}
-            onNext={() => nextDateKey && goToDate(nextDateKey)}
-            density={density}
-          />
+        <div className="mt-6">
+          <div className="container-padded">
+            <DayNavHeader
+              dateKey={activeDateKey}
+              prevDateKey={prevDateKey}
+              nextDateKey={nextDateKey}
+              onPrev={() => prevDateKey && goToDate(prevDateKey)}
+              onNext={() => nextDateKey && goToDate(nextDateKey)}
+              density={density}
+            />
 
-          {classReadings.length === 0 ? (
-            <p className="text-secondary text-lg mt-8">
-              {activeDateKey
-                ? getString("schedule-day-empty")
-                : getString("schedule-window-empty")}
-            </p>
-          ) : (
+            {classReadings.length === 0 ? (
+              <p className="text-secondary text-lg mt-8">
+                {activeDateKey
+                  ? getString("schedule-day-empty")
+                  : getString("schedule-window-empty")}
+              </p>
+            ) : null}
+          </div>
+
+          {classReadings.length > 0 ? (
             <GalleryViewportProvider rootRef={pageRef}>
               <div className="space-y-8 mt-8">
                 {classReadings.map((classReading) => (
@@ -237,7 +241,7 @@ export function ReadingScheduleDayPage({
                 ))}
               </div>
             </GalleryViewportProvider>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

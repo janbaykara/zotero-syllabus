@@ -1,11 +1,21 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
-import { useCallback, useMemo } from "preact/hooks";
+import type { JSX } from "preact";
+import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
 import { openItemBestAttachment } from "../utils/items";
 import { openZoteroItemContextMenu } from "../utils/itemContextMenu";
 import type { ItemSyllabusAssignment } from "../utils/schemas";
-import type { GalleryLayout } from "./galleryLayout";
+import {
+  readingContentWidthClass,
+  readingItemsPackClass,
+  readingItemsPackMode,
+  readingTilesFitCount,
+  READING_TILE_GAP,
+  readingTileWidthCss,
+  type GalleryLayout,
+  type ReadingItemsPackMode,
+} from "./galleryLayout";
 import type { ItemDensity } from "./react-zotero-sync/itemDensity";
 import { GalleryTile } from "./GalleryPage";
 import { MagazineGrid, type MagazineTileClick } from "./MagazineTile";
@@ -57,6 +67,54 @@ export function readingContextLabel(opts: {
     );
   }
   return parts.join(" · ");
+}
+
+function useReadingItemsPack(
+  layout: GalleryLayout,
+  itemCount: number,
+): {
+  wrapRef: preact.RefObject<HTMLDivElement>;
+  pack: ReadingItemsPackMode;
+} {
+  const wrapRef = useRef<HTMLDivElement>(null!);
+  const [fitCount, setFitCount] = useState(4);
+
+  useEffect(() => {
+    if (layout === "card" || itemCount === 0) {
+      return;
+    }
+    const el = wrapRef.current;
+    if (!el) {
+      return;
+    }
+    const measure = () => {
+      const page = el.closest(".syllabus-page") as HTMLElement | null;
+      const width = page?.clientWidth || el.parentElement?.clientWidth || 0;
+      // rem size is effectively 16px in Zotero chrome; avoid fragile DOM null typing.
+      setFitCount(readingTilesFitCount(width, 16));
+    };
+    measure();
+    const win = el.ownerDocument.defaultView;
+    if (!win) {
+      return;
+    }
+    win.addEventListener("resize", measure);
+    let observer: ResizeObserver | null = null;
+    if (typeof win.ResizeObserver === "function") {
+      observer = new win.ResizeObserver(measure);
+      const page = el.closest(".syllabus-page");
+      observer.observe(page || el);
+    }
+    return () => {
+      win.removeEventListener("resize", measure);
+      observer?.disconnect();
+    };
+  }, [layout, itemCount]);
+
+  return {
+    wrapRef,
+    pack: readingItemsPackMode(itemCount, fitCount),
+  };
 }
 
 /**
@@ -124,32 +182,41 @@ export function ReadingItemsLayout({
     return map;
   }, [rows, readerMode, showPriority]);
 
+  const { wrapRef, pack } = useReadingItemsPack(layout, rows.length);
+  const packClass = readingItemsPackClass(pack);
+  const tileStyle = {
+    "--reading-tile-width": readingTileWidthCss(),
+    "--reading-tile-gap": READING_TILE_GAP,
+    "--reading-pack-count": rows.length,
+  } as JSX.CSSProperties;
+
   if (rows.length === 0) {
     return null;
   }
 
-  if (layout === "cover") {
-    return (
-      <div className={twMerge("syllabus-gallery-grid", className)}>
-        {rows.map((row) => (
-          <GalleryTile
-            key={row.key}
-            item={row.item}
-            selected={false}
-            chrome={chromeByItemId.get(row.item.id)}
-            onClick={handleClick}
-            onDoubleClick={handleDoubleClick}
-            onContextMenu={handleContextMenu}
-          />
-        ))}
-      </div>
-    );
-  }
-
-  if (layout === "magazine") {
-    return (
-      <div className={className}>
+  if (layout === "cover" || layout === "magazine") {
+    const grid =
+      layout === "cover" ? (
+        <div
+          className={twMerge("syllabus-gallery-grid", packClass, className)}
+          style={tileStyle}
+        >
+          {rows.map((row) => (
+            <GalleryTile
+              key={row.key}
+              item={row.item}
+              selected={false}
+              chrome={chromeByItemId.get(row.item.id)}
+              onClick={handleClick}
+              onDoubleClick={handleDoubleClick}
+              onContextMenu={handleContextMenu}
+            />
+          ))}
+        </div>
+      ) : (
         <MagazineGrid
+          className={twMerge(packClass, className)}
+          style={tileStyle}
           items={rows.map((row) => row.item)}
           keyPrefix={rows[0]?.key || "reading"}
           sortBy="auto"
@@ -160,6 +227,14 @@ export function ReadingItemsLayout({
           onDoubleClick={handleDoubleClick}
           onContextMenu={handleContextMenu}
         />
+      );
+
+    return (
+      <div
+        ref={wrapRef}
+        className={readingContentWidthClass(layout, pack)}
+      >
+        {grid}
       </div>
     );
   }

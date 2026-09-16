@@ -156,61 +156,71 @@ export function PinnedSection({
 
   return (
     <div
-      className={embedded ? undefined : "container-padded mt-6 mb-2"}
+      className={embedded ? undefined : "mt-6 mb-2"}
       data-tour={embedded ? "explorer-shelf-pinned" : "reading-schedule-pinned"}
     >
       {embedded ? null : (
-        <div className="text-3xl text-tertiary mb-4 flex items-center gap-2">
+        <div className="container-padded text-3xl text-tertiary mb-4 flex items-center gap-2">
           <Pin size={22} className="shrink-0" aria-hidden="true" />
           {getString("pinned-section-heading")}
         </div>
       )}
 
-      {layout !== "card" ? (
-        <ReadingItemsLayout
-          layout={layout}
-          density={density}
-          isLocked
-          template="strip"
-          showPriority={false}
-          rows={layoutRows}
-          onItemClick={(item, collectionId) => {
-            if (collectionId) {
-              selectItemInCollection(item, collectionId);
-              return;
-            }
-            try {
-              ztoolkit.getGlobal("ZoteroPane").selectItem(item.id);
-            } catch (error) {
-              ztoolkit.log("Error selecting pinned item:", error);
-            }
-          }}
-        />
-      ) : (
-        <div className="space-y-6">
-          {pinnedItems.map((item) => (
-            <PinnedItemRow
-              key={item.id}
-              item={item}
-              density={density}
-              showLibraryName={showLibraryName}
-              showUnpinCheckbox={showUnpinCheckboxes}
-              onChanged={onChanged}
-            />
-          ))}
+      <div
+        className={
+          embedded
+            ? undefined
+            : layout === "card"
+              ? "container-padded"
+              : "w-full min-w-0 max-w-full"
+        }
+      >
+        {layout !== "card" ? (
+          <ReadingItemsLayout
+            layout={layout}
+            density={density}
+            isLocked
+            template="strip"
+            showPriority={false}
+            rows={layoutRows}
+            onItemClick={(item, collectionId) => {
+              if (collectionId) {
+                selectItemInCollection(item, collectionId);
+                return;
+              }
+              try {
+                ztoolkit.getGlobal("ZoteroPane").selectItem(item.id);
+              } catch (error) {
+                ztoolkit.log("Error selecting pinned item:", error);
+              }
+            }}
+          />
+        ) : (
+          <div className="space-y-6">
+            {pinnedItems.map((item) => (
+              <PinnedItemRow
+                key={item.id}
+                item={item}
+                density={density}
+                showLibraryName={showLibraryName}
+                showUnpinCheckbox={showUnpinCheckboxes}
+                onChanged={onChanged}
+              />
+            ))}
 
-          {nextUp.map((reading) => (
-            <NextUpRow
-              key={`${reading.collection.id}-${reading.assignment.id}`}
-              reading={reading}
-              density={density}
-              showLibraryName={showLibraryName}
-              showUnpinCheckbox={showUnpinCheckboxes}
-              onChanged={onChanged}
-            />
-          ))}
-        </div>
-      )}
+            {nextUp.map((reading) => (
+              <NextUpRow
+                key={`${reading.collection.id}-${reading.assignment.id}`}
+                reading={reading}
+                density={density}
+                showLibraryName={showLibraryName}
+                showUnpinCheckbox={showUnpinCheckboxes}
+                onChanged={onChanged}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

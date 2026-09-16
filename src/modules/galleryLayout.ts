@@ -8,6 +8,93 @@ export const GALLERY_LAYOUT_MODES = ["card", "cover", "magazine"] as const;
 
 export type GalleryLayout = (typeof GALLERY_LAYOUT_MODES)[number];
 
+/**
+ * Matches `.container-padded` / `max-w-4xl`. Cover & Magazine tile width is
+ * sized so four tiles + gaps fill that column exactly.
+ */
+export const READING_NARROW_MAX = "56rem";
+export const READING_TILE_GAP = "1.25rem";
+/** Item counts at or below this stay on the narrow, left-aligned column. */
+export const READING_NARROW_MAX_ITEMS = 4;
+
+export type ReadingItemsPackMode = "narrow" | "centered" | "fill";
+
+/** Fixed tile width: (narrowMax − gaps between N tiles) / N, minus 1px for
+ *  subpixel rounding so auto-fill / fixed tracks don't wrap early. */
+export function readingTileWidthCss(): string {
+  const gaps = READING_NARROW_MAX_ITEMS - 1;
+  return `calc((${READING_NARROW_MAX} - ${gaps} * ${READING_TILE_GAP}) / ${READING_NARROW_MAX_ITEMS} - 1px)`;
+}
+
+/** How many fixed tiles fit in a full-pane row (padding deducted). */
+export function readingTilesFitCount(
+  containerWidthPx: number,
+  rootFontPx = 16,
+): number {
+  if (containerWidthPx <= 0) {
+    return READING_NARROW_MAX_ITEMS;
+  }
+  const gap = 1.25 * rootFontPx;
+  const gaps = READING_NARROW_MAX_ITEMS - 1;
+  // Match readingTileWidthCss(), including the 1px subpixel slack.
+  const tile =
+    ((56 - gaps * 1.25) / READING_NARROW_MAX_ITEMS) * rootFontPx - 1;
+  // Match container-padded-wide horizontal padding (px-6 / md:px-10).
+  const pad = (containerWidthPx >= 48 * rootFontPx ? 2.5 : 1.5) * 2 * rootFontPx;
+  const available = Math.max(0, containerWidthPx - pad);
+  return Math.max(1, Math.floor((available + gap) / (tile + gap)));
+}
+
+/**
+ * - ≤4: narrow column, left-aligned
+ * - more than 4 but ≤ what fits on screen: full width, centred
+ * - more than fit: full width, left-aligned wrapping
+ */
+export function readingItemsPackMode(
+  itemCount: number,
+  fitCount: number,
+): ReadingItemsPackMode {
+  if (itemCount <= 0) {
+    return "narrow";
+  }
+  if (itemCount <= READING_NARROW_MAX_ITEMS) {
+    return "narrow";
+  }
+  if (itemCount <= Math.max(fitCount, READING_NARROW_MAX_ITEMS)) {
+    return "centered";
+  }
+  return "fill";
+}
+
+export function readingContentWidthClass(
+  layout: GalleryLayout = "card",
+  pack: ReadingItemsPackMode | number = "narrow",
+): "container-padded" | "container-padded-wide" {
+  if (layout === "card") {
+    return "container-padded";
+  }
+  // Back-compat: callers that still pass an item count.
+  const mode: ReadingItemsPackMode =
+    typeof pack === "number"
+      ? pack <= READING_NARROW_MAX_ITEMS
+        ? "narrow"
+        : "centered"
+      : pack;
+  return mode === "narrow" ? "container-padded" : "container-padded-wide";
+}
+
+export function readingItemsPackClass(
+  mode: ReadingItemsPackMode,
+): string | undefined {
+  if (mode === "narrow") {
+    return "is-narrow";
+  }
+  if (mode === "centered") {
+    return "is-centered";
+  }
+  return "is-fill";
+}
+
 export type GalleryGlobalSetting<T> = {
   isCustom: boolean;
   saveGlobally: () => void;

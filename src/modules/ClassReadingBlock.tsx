@@ -24,6 +24,7 @@ import { classByNumber } from "../utils/schemas";
 import { getString, getUiDir } from "../utils/locale";
 import { ProseText } from "./ProseText";
 import type { GalleryLayout } from "./galleryLayout";
+import { readingContentWidthClass } from "./galleryLayout";
 import { ReadingItemsLayout, readingContextLabel } from "./readingItemsLayout";
 
 export type ClassReading = {
@@ -157,96 +158,105 @@ export function ClassReadingBlock({
   };
 
   return (
-    <div
-      className={twMerge(
-        "relative",
-        classStatus === "done" ? "opacity-40" : "",
-      )}
-    >
-      <div className="flex flex-col gap-2 mb-2">
-        <div>
-          <input
-            type="checkbox"
-            checked={classStatus === "done"}
-            onChange={handleClassStatusToggle}
-            className={twMerge(
-              "absolute right-full mr-1 w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden accent-accent-green!",
-              isZotero8OrLater() ? "md:mr-2!" : "mr-2!",
-            )}
-            title={
-              classStatus === "done"
-                ? getString("mark-not-done")
-                : getString("mark-done")
-            }
-            aria-label={
-              classStatus === "done"
-                ? getString("mark-not-done")
-                : getString("mark-done")
-            }
-          />
-          <div
-            className={twMerge(
-              "flex-1 syllabus-class-reading-heading",
-              showCollectionLink || compactHeading ? "text-xl" : "text-3xl",
-              classStatus === "done" ? "line-through" : "",
-              onCollectionClick
-                ? "hover:cursor-pointer hover:bg-quinary active:bg-quarternary rounded-md px-1 -mx-1 inline-block"
-                : "inline-block px-1 -mx-1",
-            )}
-            onClick={onCollectionClick}
-          >
-            {classReading.classTitle ? (
-              <>
-                <span className="font-semibold">{classReading.classTitle}</span>
-                <span className="text-secondary">, </span>
-              </>
-            ) : null}
-            <span className="text-secondary">
-              {classReading.classTitle ? singular : singularCapitalized}{" "}
-              {classReading.classNumber}
-            </span>
-            {showCollectionLink ? (
+    <div className={twMerge(classStatus === "done" ? "opacity-40" : "")}>
+      <div
+        className={twMerge(readingContentWidthClass("card"), "relative mb-2")}
+      >
+        <div className="flex flex-col gap-2">
+          <div>
+            <input
+              type="checkbox"
+              checked={classStatus === "done"}
+              onChange={handleClassStatusToggle}
+              className={twMerge(
+                "absolute right-full mr-1 w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden accent-accent-green!",
+                isZotero8OrLater() ? "md:mr-2!" : "mr-2!",
+              )}
+              title={
+                classStatus === "done"
+                  ? getString("mark-not-done")
+                  : getString("mark-done")
+              }
+              aria-label={
+                classStatus === "done"
+                  ? getString("mark-not-done")
+                  : getString("mark-done")
+              }
+            />
+            <div
+              className={twMerge(
+                "flex-1 syllabus-class-reading-heading",
+                showCollectionLink || compactHeading ? "text-xl" : "text-3xl",
+                classStatus === "done" ? "line-through" : "",
+                onCollectionClick
+                  ? "hover:cursor-pointer hover:bg-quinary active:bg-quarternary rounded-md px-1 -mx-1 inline-block"
+                  : "inline-block px-1 -mx-1",
+              )}
+              onClick={onCollectionClick}
+            >
+              {classReading.classTitle ? (
+                <>
+                  <span className="font-semibold">
+                    {classReading.classTitle}
+                  </span>
+                  <span className="text-secondary">, </span>
+                </>
+              ) : null}
               <span className="text-secondary">
-                {" "}
-                {classReadingSourceLabel(classReading, showLibraryName)}
+                {classReading.classTitle ? singular : singularCapitalized}{" "}
+                {classReading.classNumber}
               </span>
-            ) : null}
+              {showCollectionLink ? (
+                <span className="text-secondary">
+                  {" "}
+                  {classReadingSourceLabel(classReading, showLibraryName)}
+                </span>
+              ) : null}
+            </div>
           </div>
+          {classReading.classDescription && (
+            <div className="text-base mb-1">
+              <ProseText text={classReading.classDescription} />
+            </div>
+          )}
         </div>
-        {classReading.classDescription && (
-          <div className="text-base mb-1">
-            <ProseText text={classReading.classDescription} />
-          </div>
-        )}
       </div>
-      <ReadingItemsLayout
-        layout={layout}
-        density={density}
-        readerMode
-        isLocked
-        template="strip"
-        showPriority={false}
-        rows={classReading.items
-          .filter(({ assignment }) => !!assignment.id)
-          .map(({ item, assignment }) => ({
-            key: `${item.id}-assignment-${assignment.id}`,
-            item,
-            collectionId: classReading.collectionId,
-            assignment,
-            classNumber: classReading.classNumber,
-            slim:
-              density !== "expanded" ||
-              !assignment.priority ||
-              assignment.priority === "optional",
-            contextLabel: readingContextLabel({
+      <div
+        className={
+          layout === "card"
+            ? readingContentWidthClass("card")
+            : "w-full min-w-0 max-w-full"
+        }
+      >
+        <ReadingItemsLayout
+          layout={layout}
+          density={density}
+          readerMode
+          isLocked
+          template="strip"
+          showPriority={false}
+          rows={classReading.items
+            .filter(({ assignment }) => !!assignment.id)
+            .map(({ item, assignment }) => ({
+              key: `${item.id}-assignment-${assignment.id}`,
+              item,
               collectionId: classReading.collectionId,
+              assignment,
               classNumber: classReading.classNumber,
-              classTitle: classReading.classTitle,
-              collectionName: classReading.collectionName,
-            }),
-          }))}
-        onItemClick={onItemClick ? (item) => onItemClick(item) : undefined}
-      />
+              slim:
+                density !== "expanded" ||
+                !assignment.priority ||
+                assignment.priority === "optional",
+              contextLabel: readingContextLabel({
+                collectionId: classReading.collectionId,
+                classNumber: classReading.classNumber,
+                classTitle: classReading.classTitle,
+                collectionName: classReading.collectionName,
+              }),
+            }))}
+          onItemClick={onItemClick ? (item) => onItemClick(item) : undefined}
+        />
+      </div>
     </div>
   );
 }

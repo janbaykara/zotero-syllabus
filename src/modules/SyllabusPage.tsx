@@ -2439,85 +2439,93 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   </>
                 );
               })()}
+            </div>
 
-              {furtherReadingItems.length > 0 && (
+            {furtherReadingItems.length > 0 && (
+              <div
+                className="syllabus-class-group in-[.print]:scheme-light"
+                data-tour="syllabus-further-reading"
+              >
                 <div
-                  className="syllabus-class-group in-[.print]:scheme-light"
-                  data-tour="syllabus-further-reading"
+                  className={twMerge(
+                    "container-padded flex flex-row items-baseline gap-2 font-semibold",
+                    density !== "expanded"
+                      ? "text-xl mt-8 mb-2"
+                      : "text-2xl mt-12 mb-4",
+                  )}
                 >
-                  <div
-                    className={twMerge(
-                      "flex flex-row items-baseline gap-2 font-semibold",
-                      density !== "expanded"
-                        ? "text-xl mt-8 mb-2"
-                        : "text-2xl mt-12 mb-4",
-                    )}
-                  >
-                    {getString("further-reading-heading")}
-                    {!isLocked && (
-                      <div className="ml-auto shrink-0 inline-flex items-center gap-1.5 in-[.print]:hidden font-normal text-sm text-secondary">
-                        {furtherReadingHasManualOrder && (
-                          <button
-                            type="button"
-                            className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
-                            onClick={async () => {
+                  {getString("further-reading-heading")}
+                  {!isLocked && (
+                    <div className="ml-auto shrink-0 inline-flex items-center gap-1.5 in-[.print]:hidden font-normal text-sm text-secondary">
+                      {furtherReadingHasManualOrder && (
+                        <button
+                          type="button"
+                          className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
+                          onClick={async () => {
+                            await SyllabusManager.setFurtherReadingOrder(
+                              collectionId,
+                              [],
+                              "page",
+                            );
+                            setItemOrderVersion((v) => v + 1);
+                          }}
+                          title={getString("class-reset-sort")}
+                          aria-label={getString("class-reset-sort")}
+                        >
+                          <div className="text-lg text-center">⇅</div>
+                        </button>
+                      )}
+                      <label className="inline-flex items-center gap-1.5">
+                        <ArrowUpDown
+                          size={12}
+                          strokeWidth={2}
+                          aria-hidden="true"
+                        />
+                        <span>{getString("sort-label")}</span>
+                        <select
+                          value={furtherReadingSortBy}
+                          onChange={async (e) => {
+                            const next = e.currentTarget
+                              .value as FurtherReadingSortBy;
+                            if (furtherReadingHasManualOrder) {
                               await SyllabusManager.setFurtherReadingOrder(
                                 collectionId,
                                 [],
                                 "page",
                               );
                               setItemOrderVersion((v) => v + 1);
-                            }}
-                            title={getString("class-reset-sort")}
-                            aria-label={getString("class-reset-sort")}
-                          >
-                            <div className="text-lg text-center">⇅</div>
-                          </button>
-                        )}
-                        <label className="inline-flex items-center gap-1.5">
-                          <ArrowUpDown
-                            size={12}
-                            strokeWidth={2}
-                            aria-hidden="true"
-                          />
-                          <span>{getString("sort-label")}</span>
-                          <select
-                            value={furtherReadingSortBy}
-                            onChange={async (e) => {
-                              const next = e.currentTarget
-                                .value as FurtherReadingSortBy;
-                              if (furtherReadingHasManualOrder) {
-                                await SyllabusManager.setFurtherReadingOrder(
-                                  collectionId,
-                                  [],
-                                  "page",
-                                );
-                                setItemOrderVersion((v) => v + 1);
-                              }
-                              setFurtherReadingSortBy(next);
-                            }}
-                            aria-label={getString("further-reading-sort-aria")}
-                            className="text-sm text-primary bg-background border border-quinary rounded px-1.5 py-0.5 cursor-pointer"
-                          >
-                            <option value="title">
-                              {getString("sort-by-title")}
-                            </option>
-                            <option value="creator">
-                              {getString("sort-by-creator")}
-                            </option>
-                            <option value="date">
-                              {getString("sort-by-date")}
-                            </option>
-                          </select>
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                  {density === "expanded" && (
-                    <p className="text-secondary text-lg">
-                      {getString("further-reading-empty-desc")}
-                    </p>
+                            }
+                            setFurtherReadingSortBy(next);
+                          }}
+                          aria-label={getString("further-reading-sort-aria")}
+                          className="text-sm text-primary bg-background border border-quinary rounded px-1.5 py-0.5 cursor-pointer"
+                        >
+                          <option value="title">
+                            {getString("sort-by-title")}
+                          </option>
+                          <option value="creator">
+                            {getString("sort-by-creator")}
+                          </option>
+                          <option value="date">
+                            {getString("sort-by-date")}
+                          </option>
+                        </select>
+                      </label>
+                    </div>
                   )}
+                </div>
+                {density === "expanded" && (
+                  <p className="container-padded text-secondary text-lg">
+                    {getString("further-reading-empty-desc")}
+                  </p>
+                )}
+                <div
+                  className={
+                    isLocked && effectiveLayout !== "card"
+                      ? "w-full min-w-0 max-w-full"
+                      : "container-padded"
+                  }
+                >
                   <div
                     className={twMerge(
                       "syllabus-class-items box-border! rounded-lg",
@@ -2728,23 +2736,23 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                     )}
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {getPref("debugMode") && (
-                <div className="text-secondary text-sm">
-                  <h3>Debug info</h3>
-                  <pre>
-                    {JSON.stringify(
-                      {
-                        syllabusMetadata,
-                      },
-                      null,
-                      2,
-                    )}
-                  </pre>
-                </div>
-              )}
-            </div>
+            {getPref("debugMode") && (
+              <div className="container-padded text-secondary text-sm">
+                <h3>Debug info</h3>
+                <pre>
+                  {JSON.stringify(
+                    {
+                      syllabusMetadata,
+                    },
+                    null,
+                    2,
+                  )}
+                </pre>
+              </div>
+            )}
           </GalleryViewportProvider>
         </div>
       </div>

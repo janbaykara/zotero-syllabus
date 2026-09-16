@@ -654,6 +654,61 @@
   row-gap: 0;
   grid-auto-rows: auto auto;
   align-items: stretch;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Reading Cover/Magazine: fixed tile sized so 4 + gaps fit in max-w-4xl.
+   Narrow uses an explicit column count (not auto-fill) so 4 items never
+   wrap from subpixel rounding. */
+.syllabus-gallery-grid.is-narrow,
+.syllabus-magazine-grid.is-narrow {
+  grid-template-columns: repeat(
+    var(--reading-pack-count, 4),
+    minmax(var(--reading-tile-width, 13rem), var(--reading-tile-width, 13rem))
+  );
+  column-gap: var(--reading-tile-gap, 1.25rem);
+  justify-content: start;
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.syllabus-gallery-grid.is-fill,
+.syllabus-magazine-grid.is-fill {
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(var(--reading-tile-width, 13rem), var(--reading-tile-width, 13rem))
+  );
+  column-gap: var(--reading-tile-gap, 1.25rem);
+  justify-content: start;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.syllabus-gallery-grid.is-centered,
+.syllabus-magazine-grid.is-centered {
+  grid-template-columns: repeat(
+    var(--reading-pack-count, 4),
+    minmax(var(--reading-tile-width, 13rem), var(--reading-tile-width, 13rem))
+  );
+  column-gap: var(--reading-tile-gap, 1.25rem);
+  width: max-content;
+  max-width: 100%;
+  margin-inline: auto;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.syllabus-class-group,
+.syllabus-class-items {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .syllabus-gallery-tile {

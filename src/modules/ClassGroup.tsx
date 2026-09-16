@@ -536,7 +536,9 @@ export function ClassGroupComponent({
       )}
       <div
         className={twMerge(
-          "container-padded",
+          !isLocked || layout === "card"
+            ? "container-padded"
+            : "w-full min-w-0 max-w-full",
           density !== "expanded" ? "mt-0" : "mt-2",
         )}
       >

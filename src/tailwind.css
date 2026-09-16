@@ -110,6 +110,12 @@
   .container-padded {
     @apply px-6 md:px-10;
   }
+
+  /* Cover / Magazine item grids: full pane width, but never wider than the
+     scrollport (min-width:0 so auto-fill can wrap instead of overflowing). */
+  .container-padded-wide {
+    @apply w-full max-w-full min-w-0 mx-auto px-6 md:px-10 box-border;
+  }
 }
 
 @utility character-separator {

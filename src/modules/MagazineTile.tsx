@@ -331,6 +331,8 @@ export function MagazineGrid({
   onDoubleClick,
   onContextMenu,
   chromeByItemId,
+  className,
+  style,
 }: {
   items: Zotero.Item[];
   keyPrefix: string;
@@ -341,6 +343,8 @@ export function MagazineGrid({
   onDoubleClick: (item: Zotero.Item) => void;
   onContextMenu: MagazineTileClick;
   chromeByItemId?: ReadonlyMap<number, ReadingTileChrome> | null;
+  className?: string;
+  style?: JSX.CSSProperties;
 }) {
   const sorted = sortItems(uniqueItems(items), sortBy);
   const roles = assignMagazineRoles(
@@ -352,7 +356,11 @@ export function MagazineGrid({
     { template },
   );
   return (
-    <div className="syllabus-magazine-grid" data-magazine-template={template}>
+    <div
+      className={twMerge("syllabus-magazine-grid", className)}
+      style={style}
+      data-magazine-template={template}
+    >
       {sorted.map((item, index) => (
         <MagazineTile
           key={`${keyPrefix}-${item.id}`}

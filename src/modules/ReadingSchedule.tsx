@@ -223,50 +223,48 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
                       <WeekHeader weekStartDate={weekStartDate} />
                     </div>
 
-                    <div className="container-padded">
-                      <div className="space-y-12 my-6">
-                        {sortedDates.map((dateTimestamp) => {
-                          const classReadings = weekData.get(dateTimestamp)!;
+                    <div className="space-y-12 my-6">
+                      {sortedDates.map((dateTimestamp) => {
+                        const classReadings = weekData.get(dateTimestamp)!;
 
-                          return (
-                            <div key={dateTimestamp}>
-                              <div
-                                className={twMerge(
-                                  "mb-3 text-secondary text-2xl",
-                                )}
-                              >
-                                {formatReadingDate(
-                                  dateTimestamp,
-                                  !isThisMonth(parseReadingDate(dateTimestamp)),
-                                )}
-                              </div>
-
-                              <div className="space-y-8">
-                                {classReadings.map((classReading) => (
-                                  <ClassReadingBlock
-                                    key={`${classReading.collectionId}-${classReading.classNumber}`}
-                                    classReading={classReading}
-                                    density={density}
-                                    layout={layout}
-                                    showLibraryName={showLibrarySource}
-                                    onCollectionClick={() =>
-                                      handleCollectionClick(
-                                        classReading.collectionId,
-                                      )
-                                    }
-                                    onItemClick={(item) =>
-                                      handleItemClick(
-                                        item,
-                                        classReading.collectionId,
-                                      )
-                                    }
-                                  />
-                                ))}
-                              </div>
+                        return (
+                          <div key={dateTimestamp}>
+                            <div
+                              className={twMerge(
+                                "container-padded mb-3 text-secondary text-2xl",
+                              )}
+                            >
+                              {formatReadingDate(
+                                dateTimestamp,
+                                !isThisMonth(parseReadingDate(dateTimestamp)),
+                              )}
                             </div>
-                          );
-                        })}
-                      </div>
+
+                            <div className="space-y-8">
+                              {classReadings.map((classReading) => (
+                                <ClassReadingBlock
+                                  key={`${classReading.collectionId}-${classReading.classNumber}`}
+                                  classReading={classReading}
+                                  density={density}
+                                  layout={layout}
+                                  showLibraryName={showLibrarySource}
+                                  onCollectionClick={() =>
+                                    handleCollectionClick(
+                                      classReading.collectionId,
+                                    )
+                                  }
+                                  onItemClick={(item) =>
+                                    handleItemClick(
+                                      item,
+                                      classReading.collectionId,
+                                    )
+                                  }
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
