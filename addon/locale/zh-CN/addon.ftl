@@ -465,6 +465,14 @@ publish-status-copy = Copy link
 publish-status-open = Open link
 publish-status-dismiss = Dismiss
 publish-status-copied = Link copied
+publish-status-unpublish = Unpublish
+publish-status-unpublishing = Removing online copy…
+publish-status-heading-unpublishing = Unpublishing
+publish-status-unpublished = Syllabus unpublished
+dialog-publish-unpublish-title = Unpublish syllabus?
+publish-unpublish-confirm =
+    This permanently removes the online copy and attached files. Anyone with the link will see that the page is not found.
+progress-publish-unpublish-failed = Could not unpublish syllabus
 publish-html-download-ris = Download RIS
 publish-html-download-bib = Download BibTeX
 publish-html-published-at = published { $date } at { $time }

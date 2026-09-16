@@ -57,6 +57,7 @@ import {
   Copy,
   ExternalLink,
   LoaderCircle,
+  Trash2,
   Upload,
   X,
 } from "lucide-preact";
@@ -80,7 +81,10 @@ import {
   isPublishApiConfigured,
   signInWithZoteroForPublish,
 } from "../utils/publishAuth";
-import { publishSyllabusToCloud } from "../utils/publishSyllabus";
+import {
+  publishSyllabusToCloud,
+  unpublishSyllabusFromCloud,
+} from "../utils/publishSyllabus";
 import { confirmPrompt } from "../utils/window";
 import { copyStringToClipboard } from "../utils/clipboard";
 import {
@@ -389,6 +393,7 @@ type PublishUiStatus =
   | { kind: "idle" }
   | { kind: "auth" }
   | { kind: "preparing" }
+  | { kind: "unpublishing" }
   | { kind: "uploading"; current: number; total: number }
   | { kind: "done"; url: string }
   | { kind: "error"; message: string };
@@ -399,6 +404,7 @@ function PublishStatusBanner({
   onOpen,
   onCopy,
   onSync,
+  onUnpublish,
   onDismissStatus,
 }: {
   status: PublishUiStatus;
@@ -406,11 +412,13 @@ function PublishStatusBanner({
   onOpen: (url: string) => void;
   onCopy: (url: string) => void;
   onSync: () => void;
+  onUnpublish: () => void;
   onDismissStatus: () => void;
 }) {
   const busy =
     status.kind === "auth" ||
     status.kind === "preparing" ||
+    status.kind === "unpublishing" ||
     status.kind === "uploading";
   const showUrl =
     (status.kind === "done" && status.url) ||
@@ -422,15 +430,17 @@ function PublishStatusBanner({
       ? getString("publish-status-auth")
       : status.kind === "preparing"
         ? getString("publish-status-preparing")
-        : status.kind === "uploading"
-          ? getString("publish-status-uploading", {
-              args: { current: status.current, total: status.total },
-            })
-          : status.kind === "done"
-            ? getString("publish-status-done")
-            : status.kind === "error"
-              ? status.message
-              : null;
+        : status.kind === "unpublishing"
+          ? getString("publish-status-unpublishing")
+          : status.kind === "uploading"
+            ? getString("publish-status-uploading", {
+                args: { current: status.current, total: status.total },
+              })
+            : status.kind === "done"
+              ? getString("publish-status-done")
+              : status.kind === "error"
+                ? status.message
+                : null;
 
   if (!busy && !showUrl && status.kind !== "error") {
     return null;
@@ -447,6 +457,10 @@ function PublishStatusBanner({
   const isError = status.kind === "error";
   const actionHover = isError ? "hover:bg-red-100" : "hover:bg-purple-100";
   const actionColor = isError ? "text-red-900" : "text-purple-900";
+  const busyHeading =
+    status.kind === "unpublishing"
+      ? getString("publish-status-heading-unpublishing")
+      : getString("publish-status-heading-busy");
 
   return (
     <div
@@ -470,7 +484,7 @@ function PublishStatusBanner({
           ) : null}
           {statusText && (busy || isError || !url) ? (
             <span className="font-medium truncate min-w-0">
-              {busy ? getString("publish-status-heading-busy") : null}
+              {busy ? busyHeading : null}
               {busy && statusText ? " — " : null}
               {statusText}
             </span>
@@ -536,20 +550,36 @@ function PublishStatusBanner({
           )}
         </div>
         {canSync ? (
-          <button
-            type="button"
-            className={twMerge(
-              "inline-flex items-center gap-1.5 px-2 py-1 rounded border-none bg-transparent cursor-pointer font-medium shrink-0 ml-auto",
-              actionHover,
-              actionColor,
-            )}
-            title={getString("publish-status-sync")}
-            aria-label={getString("publish-status-sync")}
-            onClick={onSync}
-          >
-            <Upload size={16} aria-hidden="true" />
-            <span>{getString("publish-status-sync")}</span>
-          </button>
+          <div className="inline-flex items-center gap-1 shrink-0 ml-auto">
+            <button
+              type="button"
+              className={twMerge(
+                "inline-flex items-center gap-1.5 px-2 py-1 rounded border-none bg-transparent cursor-pointer font-medium",
+                actionHover,
+                actionColor,
+              )}
+              title={getString("publish-status-sync")}
+              aria-label={getString("publish-status-sync")}
+              onClick={onSync}
+            >
+              <Upload size={16} aria-hidden="true" />
+              <span>{getString("publish-status-sync")}</span>
+            </button>
+            <button
+              type="button"
+              className={twMerge(
+                "inline-flex items-center gap-1.5 px-2 py-1 rounded border-none bg-transparent cursor-pointer font-medium",
+                actionHover,
+                actionColor,
+              )}
+              title={getString("publish-status-unpublish")}
+              aria-label={getString("publish-status-unpublish")}
+              onClick={onUnpublish}
+            >
+              <Trash2 size={16} aria-hidden="true" />
+              <span>{getString("publish-status-unpublish")}</span>
+            </button>
+          </div>
         ) : null}
       </div>
     </div>
@@ -2415,6 +2445,79 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     }
   };
 
+  const handleUnpublish = async () => {
+    if (!isPublishApiConfigured()) {
+      const message = getString("progress-publish-unconfigured");
+      setPublishStatus({ kind: "error", message });
+      new ztoolkit.ProgressWindow(getString("app-name"), {
+        closeOnClick: true,
+        closeTime: 5000,
+      })
+        .createLine({
+          text: message,
+          type: "fail",
+        })
+        .show();
+      return;
+    }
+
+    const ok = confirmPrompt(
+      getString("dialog-publish-unpublish-title"),
+      getString("publish-unpublish-confirm"),
+    );
+    if (!ok) {
+      return;
+    }
+
+    if (!(await ensurePublishSignedIn())) {
+      return;
+    }
+
+    setPublishStatus({ kind: "unpublishing" });
+    const progress = new ztoolkit.ProgressWindow(getString("app-name"), {
+      closeOnClick: false,
+      closeTime: -1,
+    })
+      .createLine({
+        text: getString("publish-status-unpublishing"),
+        type: "default",
+      })
+      .show();
+
+    try {
+      await unpublishSyllabusFromCloud({ collectionId });
+      setPublishedUrl(null);
+      setPublishStatus({ kind: "idle" });
+      progress.close();
+      new ztoolkit.ProgressWindow(getString("app-name"), {
+        closeOnClick: true,
+        closeTime: 4000,
+      })
+        .createLine({
+          text: getString("publish-status-unpublished"),
+          type: "success",
+        })
+        .show();
+    } catch (err) {
+      ztoolkit.log("Error unpublishing syllabus:", err);
+      progress.close();
+      const message =
+        err instanceof Error && err.message === "publish_api_unconfigured"
+          ? getString("progress-publish-unconfigured")
+          : getString("progress-publish-unpublish-failed");
+      setPublishStatus({ kind: "error", message });
+      new ztoolkit.ProgressWindow(getString("app-name"), {
+        closeOnClick: true,
+        closeTime: 5000,
+      })
+        .createLine({
+          text: message,
+          type: "fail",
+        })
+        .show();
+    }
+  };
+
   const collection = useMemo(() => {
     return getCachedCollectionById(collectionId);
   }, [collectionId]);
@@ -2674,27 +2777,30 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                     readOnly={isLocked}
                   />
                 </div>
-                <PublishStatusBanner
-                  status={publishStatus}
-                  publishedUrl={publishedUrl}
-                  onOpen={(url) => Zotero.launchURL(url)}
-                  onCopy={(url) => {
-                    copyStringToClipboard(url);
-                    new ztoolkit.ProgressWindow(getString("app-name"), {
-                      closeOnClick: true,
-                      closeTime: 2000,
+              <PublishStatusBanner
+                status={publishStatus}
+                publishedUrl={publishedUrl}
+                onOpen={(url) => Zotero.launchURL(url)}
+                onCopy={(url) => {
+                  copyStringToClipboard(url);
+                  new ztoolkit.ProgressWindow(getString("app-name"), {
+                    closeOnClick: true,
+                    closeTime: 2000,
+                  })
+                    .createLine({
+                      text: getString("publish-status-copied"),
+                      type: "success",
                     })
-                      .createLine({
-                        text: getString("publish-status-copied"),
-                        type: "success",
-                      })
-                      .show();
-                  }}
-                  onSync={() => {
-                    void handlePublish({ skipConfirm: true });
-                  }}
-                  onDismissStatus={() => setPublishStatus({ kind: "idle" })}
-                />
+                    .show();
+                }}
+                onSync={() => {
+                  void handlePublish({ skipConfirm: true });
+                }}
+                onUnpublish={() => {
+                  void handleUnpublish();
+                }}
+                onDismissStatus={() => setPublishStatus({ kind: "idle" })}
+              />
               </div>
               <div className="syllabus-collection-description mt-4">
                 <TextInput

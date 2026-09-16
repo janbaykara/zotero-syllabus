@@ -204,11 +204,13 @@ https://<worker>/u/{zoteroUserId}/{libraryID}/{collectionKey}/
 
 Relative links resolve against that page URL. No paid domain is required (`*.workers.dev` is enough).
 
+**Unpublish.** The publish banner offers **Unpublish** next to Sync. After confirm (and OAuth if needed), the plugin calls `DELETE /v1/syllabus?libraryId=&collectionKey=`, which deletes every R2 object under that syllabus prefix and reconciles KV usage. The local `publishUrls` entry is cleared; subsequent public GETs return 404. Non-HTML attachments may remain cached at the edge for up to about five minutes (`Cache-Control: max-age=300`); `index.html` is already `no-cache`.
+
 **Quota.** R2 has no per-prefix caps. The Worker tracks `usage:{userId}` in KV, measures actual upload bytes, and rejects when projected usage exceeds `USER_QUOTA_BYTES` (default 200 MB). Set a Cloudflare **billing alert / spend limit** on the account as a backstop; that does not replace per-user quotas in the product.
 
 **Admin dashboard.** Optional secret-gated HTML at `GET /admin?key=<ADMIN_DASHBOARD_SECRET>` (Worker secret). Scans R2 for published syllabi and shows public URLs, per-syllabus storage size, and `files/` attachment counts. Unset or wrong key → 404. Does not include Cloudflare read throughput (use the Cloudflare dashboard).
 
-**UI entry.** Printer / save menu on [`SyllabusPage.tsx`](../src/modules/SyllabusPage.tsx): export formats plus **Publish online…**. Copyright confirm, then OAuth if needed, then upload. Prefs: `publishApiBaseUrl`, `publishJwt`, `publishUserId`, `publishJwtExpiresAt` (see [`addon/prefs.js`](../addon/prefs.js)).
+**UI entry.** Printer / save menu on [`SyllabusPage.tsx`](../src/modules/SyllabusPage.tsx): export formats plus **Publish online…**. Copyright confirm, then OAuth if needed, then upload. When a syllabus is already published, the status banner shows the public link plus **Sync changes** and **Unpublish**. Prefs: `publishApiBaseUrl`, `publishJwt`, `publishUserId`, `publishJwtExpiresAt`, `publishUrls` (see [`addon/prefs.js`](../addon/prefs.js)).
 
 ### First-time cloud setup
 

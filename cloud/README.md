@@ -92,8 +92,9 @@ Match the Worker origin exactly (no trailing slash).
 
 1. Syllabus view → printer menu → **Publish online…** → confirm → approve Zotero OAuth in the browser if prompted → wait for upload → public URL opens / is copied.
 2. Open the URL in a private window; click a title that had a PDF.
-3. Sign in as a second Zotero user (clear plugin publish JWT prefs or use another profile) and confirm you cannot overwrite the first user’s `/u/{otherId}/…` objects via the API.
-4. Fill the quota (or temporarily lower `USER_QUOTA_BYTES`) and confirm over-quota returns an error.
+3. On the publish banner, **Unpublish** → confirm → public URL returns 404 and the banner clears.
+4. Sign in as a second Zotero user (clear plugin publish JWT prefs or use another profile) and confirm you cannot overwrite the first user’s `/u/{otherId}/…` objects via the API.
+5. Fill the quota (or temporarily lower `USER_QUOTA_BYTES`) and confirm over-quota returns an error.
 
 ### 10. Ongoing ops
 
@@ -115,7 +116,7 @@ Match the Worker origin exactly (no trailing slash).
 | GET/HEAD | `/v1/objects`                               | Bearer JWT   | Single-object metadata                                                                                                                                                                     |
 | GET      | `/v1/syllabus/objects`                      | Bearer JWT   | Fast list of object sizes under a syllabus (for skip-unchanged)                                                                                                                            |
 | PUT      | `/v1/objects`                               | Bearer JWT   | Upload one object (`X-Object-Path`, optional `X-Object-Fingerprint`, library/collection headers). Allowed paths: `index.html`, `bibliography.ris`, `bibliography.bib`, `og-image.jpg`, `files/{key}.{ext}` |
-| DELETE   | `/v1/syllabus?libraryId=&collectionKey=`    | Bearer JWT   | Delete one published syllabus prefix                                                                                                                                                       |
+| DELETE   | `/v1/syllabus?libraryId=&collectionKey=`    | Bearer JWT   | Wipe one published syllabus (all R2 keys under the prefix); public URLs then 404. Plugin **Unpublish** calls this.                                                                         |
 | GET      | `/u/{userId}/{libraryId}/{collectionKey}/…` | —            | Public HTML / files                                                                                                                                                                        |
 | GET      | `/health`                                   | —            | Liveness                                                                                                                                                                                   |
 

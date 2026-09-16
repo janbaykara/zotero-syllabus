@@ -2,9 +2,11 @@ import { getCachedItem } from "./cache";
 import {
   listPublishObjects,
   putPublishObject,
+  deletePublishSyllabus,
   getPublishSession,
   getPublishApiBaseUrl,
 } from "./publishAuth";
+import { clearPublishedSyllabusUrl } from "./publishUrls";
 import {
   buildPrintableHtml,
   serializeSyllabusForPublish,
@@ -391,4 +393,29 @@ export async function publishSyllabusToCloud(opts: {
     throw new Error("publish_no_url");
   }
   return { publicUrl };
+}
+
+/** Wipe the published R2 prefix and clear the local public URL for this collection. */
+export async function unpublishSyllabusFromCloud(opts: {
+  collectionId: number;
+}): Promise<{ deleted: number }> {
+  const session = getPublishSession();
+  if (!session) {
+    throw new Error("publish_not_signed_in");
+  }
+
+  const collection = Zotero.Collections.get(opts.collectionId);
+  if (!collection) {
+    throw new Error("publish_collection_missing");
+  }
+  const libraryId = String(collection.libraryID);
+  const collectionKey = collection.key;
+
+  const result = await deletePublishSyllabus({
+    token: session.token,
+    libraryId,
+    collectionKey,
+  });
+  clearPublishedSyllabusUrl(opts.collectionId);
+  return { deleted: result.deleted };
 }
