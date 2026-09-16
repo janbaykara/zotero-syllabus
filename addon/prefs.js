@@ -21,3 +21,7 @@ pref("magazineTypeSize", "small");
 pref("generateReadingScheduleCollection", false);
 pref("readingScheduleCollectionKey", "");
 pref("customIcons", true);
+pref("publishApiBaseUrl", "https://read.zotero-syllabus.workers.dev");
+pref("publishJwt", "");
+pref("publishUserId", "");
+pref("publishJwtExpiresAt", 0);

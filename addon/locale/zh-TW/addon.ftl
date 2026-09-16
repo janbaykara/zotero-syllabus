@@ -187,6 +187,7 @@ page-save-pdf = PDF
 page-save-word = Word
 page-save-markdown = Markdown
 page-save-html = HTML
+page-publish = Publish online…
 placeholder-course-code = 課程代碼
 placeholder-institution = 院校
 placeholder-add-description = 新增描述…
@@ -436,6 +437,38 @@ progress-import-error-title = 匯入錯誤
 progress-import-bad-file = 請拖放 .syllabus 檔案
 progress-print-preparing = 正在準備教學大綱…
 progress-print-failed = 無法儲存教學大綱
+progress-publish-preparing = Preparing publish…
+progress-publish-uploading = Uploading { $current } of { $total }…
+progress-publish-done = Published — link copied
+progress-publish-failed = Could not publish the syllabus
+progress-publish-auth = Waiting for Zotero sign-in in your browser…
+progress-publish-auth-failed = Could not sign in for publish
+progress-publish-oauth-unconfigured = Publish OAuth is not set up on the server
+progress-publish-unconfigured = Publish hosting is not configured
+dialog-publish-confirm-title = Publish syllabus online?
+dialog-publish-confirm-text = This uploads the syllabus page and attached files to a public URL. Anyone with the link can open them. Only publish materials you have the right to share.
+dialog-publish-confirm-ok = Publish
+dialog-publish-confirm-cancel = Cancel
+dialog-publish-done-title = Syllabus published
+dialog-ok = OK
+dialog-publish-done-text =
+    Your syllabus is online at:
+    { $url }
+
+    The link is also shown at the top of the syllabus page and was copied to the clipboard.
+publish-status-heading-busy = Publishing
+publish-status-auth = Waiting for Zotero sign-in in your browser. Return here when the browser says you can close the window.
+publish-status-preparing = Preparing syllabus and files…
+publish-status-uploading = Uploading { $current } of { $total }…
+publish-status-done = Published
+publish-status-url-label = Public link:
+publish-status-sync = Sync changes
+publish-status-copy = Copy link
+publish-status-open = Open link
+publish-status-dismiss = Dismiss
+publish-status-copied = Link copied
+publish-html-download-ris = Download RIS
+publish-html-download-bib = Download BibTeX
 dialog-save-pdf = 儲存教學大綱 PDF
 file-filter-pdf = PDF
 dialog-save-word = 將教學大綱另存為 Word

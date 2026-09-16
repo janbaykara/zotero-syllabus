@@ -49,6 +49,11 @@ import {
   List,
   Pin,
   PinOff,
+  Copy,
+  ExternalLink,
+  LoaderCircle,
+  Upload,
+  X,
 } from "lucide-preact";
 import { TableOfContents } from "./TableOfContents";
 import {
@@ -65,6 +70,18 @@ import {
   saveSyllabusPdf,
   type SyllabusExportFormat,
 } from "../utils/exportSyllabus";
+import {
+  getPublishSession,
+  isPublishApiConfigured,
+  signInWithZoteroForPublish,
+} from "../utils/publishAuth";
+import { publishSyllabusToCloud } from "../utils/publishSyllabus";
+import { confirmPrompt } from "../utils/window";
+import { copyStringToClipboard } from "../utils/clipboard";
+import {
+  getPublishedSyllabusUrl,
+  setPublishedSyllabusUrl,
+} from "../utils/publishUrls";
 import { isEmptyClassGroup, useSyllabusClassGroups } from "./classGroups";
 import type { FurtherReadingEntry } from "./classGroups";
 import { ClassSubcollectionPage } from "./ClassReadingBlock";
@@ -362,14 +379,200 @@ const SAVE_FORMAT_OPTIONS: {
   { format: "html", labelKey: "page-save-html" },
 ];
 
+type PublishUiStatus =
+  | { kind: "idle" }
+  | { kind: "auth" }
+  | { kind: "preparing" }
+  | { kind: "uploading"; current: number; total: number }
+  | { kind: "done"; url: string }
+  | { kind: "error"; message: string };
+
+function PublishStatusBanner({
+  status,
+  publishedUrl,
+  onOpen,
+  onCopy,
+  onSync,
+  onDismissStatus,
+}: {
+  status: PublishUiStatus;
+  publishedUrl: string | null;
+  onOpen: (url: string) => void;
+  onCopy: (url: string) => void;
+  onSync: () => void;
+  onDismissStatus: () => void;
+}) {
+  const busy =
+    status.kind === "auth" ||
+    status.kind === "preparing" ||
+    status.kind === "uploading";
+  const showUrl =
+    (status.kind === "done" && status.url) ||
+    (status.kind === "idle" && publishedUrl) ||
+    (status.kind === "error" && publishedUrl);
+
+  const statusText =
+    status.kind === "auth"
+      ? getString("publish-status-auth")
+      : status.kind === "preparing"
+        ? getString("publish-status-preparing")
+        : status.kind === "uploading"
+          ? getString("publish-status-uploading", {
+              args: { current: status.current, total: status.total },
+            })
+          : status.kind === "done"
+            ? getString("publish-status-done")
+            : status.kind === "error"
+              ? status.message
+              : null;
+
+  if (!busy && !showUrl && status.kind !== "error") {
+    return null;
+  }
+
+  const url =
+    status.kind === "done"
+      ? status.url
+      : publishedUrl && (status.kind === "idle" || status.kind === "error")
+        ? publishedUrl
+        : null;
+
+  const canSync = Boolean(url) && !busy;
+  const isError = status.kind === "error";
+  const actionHover = isError ? "hover:bg-red-100" : "hover:bg-purple-100";
+  const actionColor = isError ? "text-red-900" : "text-purple-900";
+
+  return (
+    <div
+      className={twMerge(
+        "syllabus-publish-banner in-[.print]:hidden w-full rounded border px-3 py-2 text-base",
+        isError
+          ? "border-red-300 bg-red-50 text-red-900"
+          : "border-purple-300 bg-purple-50 text-purple-900",
+      )}
+      role="status"
+      aria-live="polite"
+    >
+      <div className="flex flex-row items-center gap-2 w-full min-w-0">
+        <div className="flex flex-row items-center gap-2 min-w-0 flex-1">
+          {busy ? (
+            <LoaderCircle
+              size={18}
+              className="animate-spin shrink-0"
+              aria-hidden="true"
+            />
+          ) : null}
+          {statusText && (busy || isError || !url) ? (
+            <span className="font-medium truncate min-w-0">
+              {busy ? getString("publish-status-heading-busy") : null}
+              {busy && statusText ? " — " : null}
+              {statusText}
+            </span>
+          ) : null}
+          {url ? (
+            <>
+              <span className="shrink-0 font-medium">
+                {getString("publish-status-url-label")}
+              </span>
+              <button
+                type="button"
+                className={twMerge(
+                  "min-w-0 flex-1 truncate text-left underline bg-transparent border-none p-0 cursor-pointer font-inherit",
+                  actionColor,
+                )}
+                onClick={() => onOpen(url)}
+                title={getString("publish-status-open")}
+              >
+                {url}
+              </button>
+              <button
+                type="button"
+                className={twMerge(
+                  "p-1.5 rounded border-none bg-transparent cursor-pointer shrink-0",
+                  actionHover,
+                  actionColor,
+                )}
+                title={getString("publish-status-copy")}
+                aria-label={getString("publish-status-copy")}
+                onClick={() => onCopy(url)}
+              >
+                <Copy size={18} />
+              </button>
+              <button
+                type="button"
+                className={twMerge(
+                  "p-1.5 rounded border-none bg-transparent cursor-pointer shrink-0",
+                  actionHover,
+                  actionColor,
+                )}
+                title={getString("publish-status-open")}
+                aria-label={getString("publish-status-open")}
+                onClick={() => onOpen(url)}
+              >
+                <ExternalLink size={18} />
+              </button>
+            </>
+          ) : null}
+          {(status.kind === "done" || isError) && (
+            <button
+              type="button"
+              className={twMerge(
+                "p-1.5 rounded border-none bg-transparent cursor-pointer shrink-0",
+                actionHover,
+                actionColor,
+              )}
+              title={getString("publish-status-dismiss")}
+              aria-label={getString("publish-status-dismiss")}
+              onClick={onDismissStatus}
+            >
+              <X size={18} />
+            </button>
+          )}
+        </div>
+        {canSync ? (
+          <button
+            type="button"
+            className={twMerge(
+              "inline-flex items-center gap-1.5 px-2 py-1 rounded border-none bg-transparent cursor-pointer font-medium shrink-0 ml-auto",
+              actionHover,
+              actionColor,
+            )}
+            title={getString("publish-status-sync")}
+            aria-label={getString("publish-status-sync")}
+            onClick={onSync}
+          >
+            <Upload size={16} aria-hidden="true" />
+            <span>{getString("publish-status-sync")}</span>
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+type SaveMenuAction =
+  | { kind: "export"; format: SyllabusExportFormat }
+  | { kind: "publish" };
+
 function SyllabusSaveFormatMenu({
   onSelect,
+  onPublish,
 }: {
   onSelect: (format: SyllabusExportFormat) => void;
+  onPublish: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const popoverStyle = useSaveFormatPopover(open, setOpen, rootRef);
+
+  const run = (action: SaveMenuAction) => {
+    setOpen(false);
+    if (action.kind === "export") {
+      onSelect(action.format);
+    } else {
+      onPublish();
+    }
+  };
 
   return (
     <div
@@ -403,15 +606,22 @@ function SyllabusSaveFormatMenu({
                   type="button"
                   role="menuitem"
                   className="syllabus-save-format-option"
-                  onClick={() => {
-                    setOpen(false);
-                    onSelect(format);
-                  }}
+                  onClick={() => run({ kind: "export", format })}
                 >
                   {getString(labelKey)}
                 </button>
               </li>
             ))}
+            <li>
+              <button
+                type="button"
+                role="menuitem"
+                className="syllabus-save-format-option"
+                onClick={() => run({ kind: "publish" })}
+              >
+                {getString("page-publish")}
+              </button>
+            </li>
           </ul>
         </div>
       ) : null}
@@ -2019,6 +2229,184 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     }
   };
 
+  const [publishStatus, setPublishStatus] = useState<PublishUiStatus>({
+    kind: "idle",
+  });
+  const [publishedUrl, setPublishedUrl] = useState<string | null>(() =>
+    getPublishedSyllabusUrl(collectionId),
+  );
+
+  useEffect(() => {
+    setPublishedUrl(getPublishedSyllabusUrl(collectionId));
+    setPublishStatus({ kind: "idle" });
+  }, [collectionId]);
+
+  const ensurePublishSignedIn = async (): Promise<boolean> => {
+    if (getPublishSession()) {
+      return true;
+    }
+    setPublishStatus({ kind: "auth" });
+    const progress = new ztoolkit.ProgressWindow(getString("app-name"), {
+      closeOnClick: false,
+      closeTime: -1,
+    })
+      .createLine({
+        text: getString("progress-publish-auth"),
+        type: "default",
+      })
+      .show();
+    try {
+      await signInWithZoteroForPublish();
+      progress.close();
+      return !!getPublishSession();
+    } catch (err) {
+      ztoolkit.log("Publish sign-in failed:", err);
+      progress.close();
+      const message =
+        err instanceof Error && err.message === "publish_oauth_not_configured"
+          ? getString("progress-publish-oauth-unconfigured")
+          : getString("progress-publish-auth-failed");
+      setPublishStatus({ kind: "error", message });
+      new ztoolkit.ProgressWindow(getString("app-name"), {
+        closeOnClick: true,
+        closeTime: 5000,
+      })
+        .createLine({
+          text: message,
+          type: "fail",
+        })
+        .show();
+      return false;
+    }
+  };
+
+  const handlePublish = async (options?: { skipConfirm?: boolean }) => {
+    if (!isPublishApiConfigured()) {
+      const message = getString("progress-publish-unconfigured");
+      setPublishStatus({ kind: "error", message });
+      new ztoolkit.ProgressWindow(getString("app-name"), {
+        closeOnClick: true,
+        closeTime: 5000,
+      })
+        .createLine({
+          text: message,
+          type: "fail",
+        })
+        .show();
+      return;
+    }
+
+    if (!options?.skipConfirm) {
+      const ok = confirmPrompt(
+        getString("dialog-publish-confirm-title"),
+        getString("dialog-publish-confirm-text"),
+      );
+      if (!ok) {
+        return;
+      }
+    }
+
+    if (!(await ensurePublishSignedIn())) {
+      return;
+    }
+
+    const syllabusPageElement = syllabusPageRef.current;
+    if (!syllabusPageElement) {
+      ztoolkit.log("Syllabus page element not found");
+      return;
+    }
+
+    setPublishStatus({ kind: "preparing" });
+    const progress = new ztoolkit.ProgressWindow(getString("app-name"), {
+      closeOnClick: false,
+      closeTime: -1,
+    })
+      .createLine({
+        text: getString("progress-publish-preparing"),
+        type: "default",
+      })
+      .show();
+
+    try {
+      const bibliographyHtmlPromise = (async () => {
+        const bibliography = await generateBibliographyForPrint(
+          items,
+          syllabusMetadata.cslStyle || null,
+        );
+        return bibliography
+          ? bibliographyToHtml(
+              bibliography.content,
+              density,
+              bibliography.isHtml,
+            )
+          : "";
+      })();
+      const { publicUrl } = await publishSyllabusToCloud({
+        collectionId,
+        items,
+        pageElement: syllabusPageElement,
+        density,
+        title: title || "Syllabus",
+        bibliographyHtml: "",
+        bibliographyHtmlPromise,
+        cslStyle: syllabusMetadata.cslStyle || null,
+        onProgress: (phase, current, total) => {
+          if (phase === "upload" && current != null && total != null) {
+            setPublishStatus({
+              kind: "uploading",
+              current,
+              total,
+            });
+            progress.changeLine({
+              text: getString("progress-publish-uploading", {
+                args: { current, total },
+              }),
+              type: "default",
+            });
+          } else {
+            setPublishStatus({ kind: "preparing" });
+            progress.changeLine({
+              text: getString("progress-publish-preparing"),
+              type: "default",
+            });
+          }
+        },
+      });
+      copyStringToClipboard(publicUrl);
+      setPublishedSyllabusUrl(collectionId, publicUrl);
+      setPublishedUrl(publicUrl);
+      setPublishStatus({ kind: "done", url: publicUrl });
+      progress.close();
+      new ztoolkit.ProgressWindow(getString("app-name"), {
+        closeOnClick: true,
+        closeTime: 4000,
+      })
+        .createLine({
+          text: getString("progress-publish-done"),
+          type: "success",
+        })
+        .show();
+      Zotero.launchURL(publicUrl);
+    } catch (err) {
+      ztoolkit.log("Error publishing syllabus:", err);
+      progress.close();
+      const message =
+        err instanceof Error && err.message === "publish_api_unconfigured"
+          ? getString("progress-publish-unconfigured")
+          : getString("progress-publish-failed");
+      setPublishStatus({ kind: "error", message });
+      new ztoolkit.ProgressWindow(getString("app-name"), {
+        closeOnClick: true,
+        closeTime: 5000,
+      })
+        .createLine({
+          text: message,
+          type: "fail",
+        })
+        .show();
+    }
+  };
+
   const collection = useMemo(() => {
     return getCachedCollectionById(collectionId);
   }, [collectionId]);
@@ -2187,7 +2575,10 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                       />
                     </div>
                   )}
-                  <SyllabusSaveFormatMenu onSelect={handleExportFormat} />
+                  <SyllabusSaveFormatMenu
+                    onSelect={handleExportFormat}
+                    onPublish={handlePublish}
+                  />
                   <div
                     className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
                     title={
@@ -2274,6 +2665,27 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   readOnly={isLocked}
                 />
               </div>
+              <PublishStatusBanner
+                status={publishStatus}
+                publishedUrl={publishedUrl}
+                onOpen={(url) => Zotero.launchURL(url)}
+                onCopy={(url) => {
+                  copyStringToClipboard(url);
+                  new ztoolkit.ProgressWindow(getString("app-name"), {
+                    closeOnClick: true,
+                    closeTime: 2000,
+                  })
+                    .createLine({
+                      text: getString("publish-status-copied"),
+                      type: "success",
+                    })
+                    .show();
+                }}
+                onSync={() => {
+                  void handlePublish({ skipConfirm: true });
+                }}
+                onDismissStatus={() => setPublishStatus({ kind: "idle" })}
+              />
               <div className="syllabus-collection-description">
                 <TextInput
                   elementType="textarea"
@@ -2300,7 +2712,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
             <div
               className={twMerge(
                 "syllabus-class-groups flex flex-col mb-12",
-                density !== "expanded" ? "gap-10 mt-4" : "gap-12 mt-6",
+                density !== "expanded" ? "gap-10 mt-10" : "gap-12 mt-12",
               )}
             >
               {isFiltered &&

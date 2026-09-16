@@ -74,7 +74,11 @@ export function runsFromNode(root: Node | null | undefined): ExportInline[] {
     if (tag === "a") {
       const href = (el.getAttribute("href") || "").trim();
       const text = normalizeWhitespace(el.textContent || "");
-      if (text && /^https?:\/\//i.test(href)) {
+      const isHttp = /^https?:\/\//i.test(href);
+      const isPublishFile = /^files\/[A-Za-z0-9._-]+\.[A-Za-z0-9]+$/.test(
+        href,
+      );
+      if (text && (isHttp || isPublishFile)) {
         runs.push({ type: "link", text, href });
         return;
       }
@@ -122,6 +126,31 @@ function pushBlock(blocks: ExportBlock[], block: ExportBlock): void {
   blocks.push(block);
 }
 
+/** Card / cover / magazine reading rows in printable syllabus HTML. */
+const READING_ITEM_SELECTOR =
+  ".syllabus-item-card, .syllabus-gallery-tile, .syllabus-magazine-tile";
+
+function titleRunsWithOptionalLink(
+  titleEl: Element | null,
+  fallbackTitle: string,
+  href: string,
+): ExportInline[] {
+  let runs = runsFromNode(titleEl);
+  if (!runs.length && fallbackTitle) {
+    runs = [{ type: "text", text: fallbackTitle }];
+  }
+  if (!runs.length) {
+    return [];
+  }
+  if (
+    /^https?:\/\//i.test(href) &&
+    !runs.some((run) => run.type === "link")
+  ) {
+    return [{ type: "link", text: runsText(runs), href }];
+  }
+  return runs;
+}
+
 function itemCardBlocks(card: Element): ExportBlock[] {
   const blocks: ExportBlock[] = [];
   const title = card.querySelector(".syllabus-item-title");
@@ -149,6 +178,94 @@ function itemCardBlocks(card: Element): ExportBlock[] {
   }
 
   return blocks;
+}
+
+function galleryTileBlocks(tile: Element): ExportBlock[] {
+  const blocks: ExportBlock[] = [];
+  const href = (tile.getAttribute("data-print-url") || "").trim();
+  const fallbackTitle = normalizeWhitespace(tile.getAttribute("title") || "");
+  const titleRuns = titleRunsWithOptionalLink(
+    tile.querySelector(".syllabus-gallery-title"),
+    fallbackTitle,
+    href,
+  );
+  if (titleRuns.length) {
+    pushBlock(blocks, { type: "listItem", runs: titleRuns });
+  }
+
+  const meta =
+    tile.querySelector(".syllabus-gallery-hostrow") ||
+    tile.querySelector(".syllabus-gallery-creator");
+  const metaRuns = runsFromNode(meta);
+  if (metaRuns.length) {
+    pushBlock(blocks, { type: "paragraph", runs: metaRuns });
+  }
+
+  const instruction = tile.querySelector(".syllabus-gallery-instruction");
+  const instructionRuns = runsFromNode(instruction);
+  if (instructionRuns.length) {
+    pushBlock(blocks, { type: "paragraph", runs: instructionRuns });
+  }
+
+  return blocks;
+}
+
+function magazineTileBlocks(tile: Element): ExportBlock[] {
+  const blocks: ExportBlock[] = [];
+  const href = (tile.getAttribute("data-print-url") || "").trim();
+  const fallbackTitle = normalizeWhitespace(tile.getAttribute("title") || "");
+  const titleRuns = titleRunsWithOptionalLink(
+    tile.querySelector(".syllabus-magazine-title"),
+    fallbackTitle,
+    href,
+  );
+  if (titleRuns.length) {
+    pushBlock(blocks, { type: "listItem", runs: titleRuns });
+  }
+
+  const metaParts = [
+    ...runsFromNode(tile.querySelector(".syllabus-magazine-kicker")),
+    ...runsFromNode(tile.querySelector(".syllabus-magazine-byline")),
+  ];
+  if (metaParts.length) {
+    const joined: ExportInline[] = [];
+    for (const part of metaParts) {
+      if (joined.length) {
+        joined.push({ type: "text", text: " · " });
+      }
+      joined.push(part);
+    }
+    pushBlock(blocks, { type: "paragraph", runs: joined });
+  }
+
+  const instruction = tile.querySelector(".syllabus-magazine-instruction");
+  const instructionRuns = runsFromNode(instruction);
+  if (instructionRuns.length) {
+    pushBlock(blocks, { type: "paragraph", runs: instructionRuns });
+  } else {
+    const abstract = tile.querySelector(
+      ".syllabus-magazine-abstract, .syllabus-magazine-meta",
+    );
+    const abstractRuns = runsFromNode(abstract);
+    if (abstractRuns.length) {
+      pushBlock(blocks, { type: "paragraph", runs: abstractRuns });
+    }
+  }
+
+  return blocks;
+}
+
+function readingItemBlocks(el: Element): ExportBlock[] {
+  if (el.classList.contains("syllabus-item-card")) {
+    return itemCardBlocks(el);
+  }
+  if (el.classList.contains("syllabus-gallery-tile")) {
+    return galleryTileBlocks(el);
+  }
+  if (el.classList.contains("syllabus-magazine-tile")) {
+    return magazineTileBlocks(el);
+  }
+  return [];
 }
 
 /**
@@ -182,12 +299,14 @@ export function blocksFromPrintableHtml(html: string): ExportBlock[] {
     pushBlock(blocks, { type: "paragraph", runs: descriptionRuns });
   }
 
-  // Course links: anchors that survive print outside item cards / bibliography.
+  // Course links: anchors that survive print outside readings / bibliography.
   page.querySelectorAll("a.underline, a[href]").forEach((anchor) => {
     if (
-      anchor.closest(".syllabus-item-card") ||
+      anchor.closest(READING_ITEM_SELECTOR) ||
       anchor.closest(".syllabus-print-bibliography") ||
-      anchor.closest(".syllabus-item-title")
+      anchor.closest(".syllabus-item-title") ||
+      anchor.closest(".syllabus-gallery-title") ||
+      anchor.closest(".syllabus-magazine-title")
     ) {
       return;
     }
@@ -213,8 +332,8 @@ export function blocksFromPrintableHtml(html: string): ExportBlock[] {
     if (headingRuns.length) {
       pushBlock(blocks, { type: "heading", level: 2, runs: headingRuns });
     }
-    group.querySelectorAll(".syllabus-item-card").forEach((card) => {
-      for (const block of itemCardBlocks(card)) {
+    group.querySelectorAll(READING_ITEM_SELECTOR).forEach((item) => {
+      for (const block of readingItemBlocks(item)) {
         pushBlock(blocks, block);
       }
     });
@@ -243,8 +362,8 @@ export function blocksFromPrintableHtml(html: string): ExportBlock[] {
         runs: [{ type: "text", text: getString("further-reading-heading") }],
       });
     }
-    further.querySelectorAll(".syllabus-item-card").forEach((card) => {
-      for (const block of itemCardBlocks(card)) {
+    further.querySelectorAll(READING_ITEM_SELECTOR).forEach((item) => {
+      for (const block of readingItemBlocks(item)) {
         pushBlock(blocks, block);
       }
     });

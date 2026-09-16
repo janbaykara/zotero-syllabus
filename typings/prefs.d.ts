@@ -30,6 +30,10 @@ declare namespace _ZoteroTypes {
       "generateReadingScheduleCollection": boolean;
       "readingScheduleCollectionKey": string;
       "customIcons": boolean;
+      "publishApiBaseUrl": string;
+      "publishJwt": string;
+      "publishUserId": string;
+      "publishJwtExpiresAt": number;
     };
   }
 }

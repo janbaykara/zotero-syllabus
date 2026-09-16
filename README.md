@@ -181,6 +181,7 @@ Example lists were last checked in August 2026 — institutions can unpublish th
 
 - **Assign an item multiple times** within a syllabus. Useful for breaking down larger readings into smaller chunks.
 - **Save as PDF, Word, Markdown, or HTML** — the printer icon opens a format menu, then asks where to save the syllabus (including a bibliography).
+- **Publish online** — from the same menu, publish a public URL (HTML + attachments) to Cloudflare-hosted storage. You are prompted to authorize with your Zotero account if needed. Anyone with the link can open the page and linked files; only publish materials you have the right to share. Requires the operator to deploy the Worker in [`cloud/`](cloud/) (see [`cloud/README.md`](cloud/README.md)). Per-user storage quotas apply; Zotero public groups still do not expose attachment files.
 - **Zotero Reading List compatibility**: if you have the [Zotero Reading List](https://github.com/Dominic-DallOsto/zotero-reading-list) plugin installed, reading status will be displayed in the syllabus view
 - **Customizable priorities** — Define your own priority levels with custom names and colors, or use the defaults (Essential, Recommended, Optional, Course Information).
 - **Customizable nomenclature** — Change the terminology used throughout (e.g., "week", "class", "session", "section") with automatic pluralization.

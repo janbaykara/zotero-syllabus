@@ -1,0 +1,16 @@
+{
+  "name": "zotero-syllabus-publish",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250906.0",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.34.0"
+  }
+}

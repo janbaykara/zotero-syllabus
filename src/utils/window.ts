@@ -3,6 +3,22 @@ export function getCurrentTab(win?: _ZoteroTypes.MainWindow) {
   return mainWindow.Zotero_Tabs.getState().find((tab) => tab.selected);
 }
 
+/** Blocking alert. No-ops in the test environment. */
+export function alertPrompt(title: string, text: string): void {
+  if ((__env__ as string) === "test") {
+    return;
+  }
+  const win = Zotero.getMainWindow();
+  if (!win) {
+    return;
+  }
+  try {
+    Services.prompt.alert(win, title, text);
+  } catch (error) {
+    ztoolkit.log("Error showing alert dialog:", error);
+  }
+}
+
 /** OK/Cancel prompt. Auto-accepts in the test environment. */
 export function confirmPrompt(title: string, text: string): boolean {
   if ((__env__ as string) === "test") {

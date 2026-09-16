@@ -50,6 +50,10 @@ export const PLUGIN_PREF_DEFAULTS: {
   generateReadingScheduleCollection: false,
   readingScheduleCollectionKey: "",
   customIcons: true,
+  publishApiBaseUrl: "https://read.zotero-syllabus.workers.dev",
+  publishJwt: "",
+  publishUserId: "",
+  publishJwtExpiresAt: 0,
 };
 
 const PREFS_PREFIX = config.prefsPrefix;

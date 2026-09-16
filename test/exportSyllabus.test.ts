@@ -83,6 +83,45 @@ describe("exportSyllabus blocks", function () {
     assert.include(md, "Smith, A. (2019). No URL Paper.");
   });
 
+  it("extracts cover-layout gallery tiles when item cards are absent", function () {
+    const html = `<!DOCTYPE html>
+<html><body class="print">
+  <div class="syllabus-page">
+    <div class="text-3xl">Cover Syllabus</div>
+    <div class="syllabus-class-group">
+      <div class="syllabus-class-heading">
+        <div class="syllabus-class-header">Class 1</div>
+        <div class="text-2xl">Intro</div>
+      </div>
+      <div class="syllabus-gallery-tile" data-print-url="https://example.edu/a" title="Cover Paper">
+        <div class="syllabus-gallery-meta">
+          <div class="syllabus-gallery-title">Cover Paper</div>
+          <div class="syllabus-gallery-creator">Ada</div>
+          <div class="syllabus-gallery-instruction">Skim chapter 1</div>
+        </div>
+      </div>
+      <div class="syllabus-magazine-tile" title="Magazine Essay">
+        <div class="syllabus-magazine-body">
+          <div class="syllabus-magazine-kicker">Nature</div>
+          <div class="syllabus-magazine-title">Magazine Essay</div>
+          <div class="syllabus-magazine-byline">Bea</div>
+          <div class="syllabus-magazine-instruction">Optional</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>`;
+    const md = blocksToMarkdown(blocksFromPrintableHtml(html));
+    assert.match(md, /^# Cover Syllabus/m);
+    assert.match(md, /^## Class 1 Intro/m);
+    assert.include(md, "- [Cover Paper](https://example.edu/a)");
+    assert.include(md, "Ada");
+    assert.include(md, "Skim chapter 1");
+    assert.include(md, "- Magazine Essay");
+    assert.include(md, "Nature · Bea");
+    assert.include(md, "Optional");
+  });
+
   it("maps blocks to DOCX paragraphs with a linked title", function () {
     const blocks = blocksFromPrintableHtml(FIXTURE_HTML);
     const paragraphs = blocksToDocxParagraphs(blocks);

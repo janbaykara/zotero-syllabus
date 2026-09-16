@@ -200,6 +200,11 @@ export const MagazineTile = memo(function MagazineTile({
     );
   }
 
+  const printUrl = (() => {
+    const raw = String(item.getField("url") || "").trim();
+    return /^https?:\/\//i.test(raw) ? raw : undefined;
+  })();
+
   return (
     <div
       ref={tileRef}
@@ -207,6 +212,7 @@ export const MagazineTile = memo(function MagazineTile({
       tabIndex={-1}
       data-item-id={item.id}
       data-role={role}
+      data-print-url={printUrl}
       className={twMerge(
         "syllabus-magazine-tile group min-w-0 cursor-pointer outline-none select-none relative",
         selected && "is-selected",

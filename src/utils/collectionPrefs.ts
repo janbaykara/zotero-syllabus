@@ -14,6 +14,7 @@ export const COLLECTION_ID_PREF_KEYS = [
   `${config.prefsPrefix}.gallerySort`,
   `${config.prefsPrefix}.galleryTypeSize`,
   `${config.prefsPrefix}.furtherReadingSort`,
+  `${config.prefsPrefix}.publishUrls`,
 ] as const;
 
 /**

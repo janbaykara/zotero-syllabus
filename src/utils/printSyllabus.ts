@@ -4,6 +4,10 @@ import {
   coerceItemDensity,
   type ItemDensity,
 } from "../modules/react-zotero-sync/itemDensity";
+import {
+  publishFileIconKind,
+  svgForPublishFileKind,
+} from "./zoteroAttachmentIcons";
 
 type PrintBrowsingContext = {
   print: (settings: unknown) => Promise<unknown>;
@@ -53,9 +57,9 @@ const PRINT_DOCUMENT_CSS = `
   }
   body {
     margin: 0;
-    padding: 0.25in 0;
+    padding: 0;
     color: #111;
-    background: #fff;
+    background: #fafafa;
     font-family: ${PRINT_FONT};
     font-size: 14px;
     line-height: 1.45;
@@ -66,6 +70,81 @@ const PRINT_DOCUMENT_CSS = `
   *::before, *::after {
     display: none !important;
     content: none !important;
+  }
+  /* Match SyllabusPage .container-padded: max-w-4xl (56rem) + horizontal pad */
+  .container,
+  .container-padded,
+  .syllabus-page {
+    max-width: 56rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .container-padded,
+  .syllabus-page {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+  .syllabus-page {
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+    background: #fff;
+    min-height: 100vh;
+  }
+  @media (min-width: 48rem) {
+    .container-padded,
+    .syllabus-page {
+      padding-left: 2.5rem;
+      padding-right: 2.5rem;
+    }
+    .syllabus-page {
+      padding-top: 2.5rem;
+      padding-bottom: 4rem;
+    }
+  }
+  .syllabus-publish-downloads {
+    position: absolute;
+    top: 2.5rem;
+    right: 2.5rem;
+    z-index: 2;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+  }
+  .syllabus-publish-download {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.7rem;
+    border: 1px solid #c4b5fd;
+    border-radius: 0.375rem;
+    background: #f5f3ff;
+    color: #5b21b6 !important;
+    text-decoration: none !important;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  .syllabus-publish-download:hover {
+    background: #ede9fe;
+  }
+  @media print {
+    .syllabus-publish-downloads {
+      display: none !important;
+    }
+  }
+  .syllabus-publish-file-icon {
+    display: inline-block;
+    vertical-align: -0.15em;
+    margin-inline-start: 0.35em;
+    line-height: 0;
+  }
+  .syllabus-publish-file-icon svg {
+    width: 16px;
+    height: 16px;
+    display: block;
   }
   .syllabus-page,
   .syllabus-class-groups,
@@ -80,8 +159,70 @@ const PRINT_DOCUMENT_CSS = `
     position: static !important;
     flex: none !important;
   }
+  /* Publish keeps density flex/grid inside cards */
+  body.publish-layout .syllabus-item-card {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+    flex: none !important;
+    position: static !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  body.publish-layout[data-item-density="row"] .syllabus-item-card {
+    display: block !important;
+  }
+  body.publish-layout .syllabus-item-card .contents {
+    display: contents !important;
+  }
+  body.publish-layout .syllabus-item-card .flex {
+    display: flex !important;
+    flex: initial !important;
+  }
+  body.publish-layout .syllabus-item-card .flex-row {
+    display: flex !important;
+    flex-direction: row !important;
+  }
+  body.publish-layout .syllabus-item-card .flex-col {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  body.publish-layout .syllabus-item-card .inline-flex {
+    display: inline-flex !important;
+  }
+  body.publish-layout .syllabus-item-thumbnail {
+    display: block !important;
+    flex-shrink: 0 !important;
+  }
+  body.publish-layout .syllabus-publish-item-type-icon {
+    display: block;
+    object-fit: contain;
+  }
+  body.publish-layout .syllabus-item-thumbnail-cover {
+    width: 6rem;
+    flex-shrink: 0;
+  }
+  body.publish-layout .syllabus-item-thumbnail-cover img {
+    max-width: 100%;
+    max-height: none !important;
+    height: auto;
+    display: block;
+  }
+  body.publish-layout .syllabus-publish-citation {
+    display: block;
+  }
   .syllabus-class-group + .syllabus-class-group {
     margin-top: 1.75rem;
+  }
+  /* Space after course description / links before the first class */
+  .syllabus-class-groups {
+    margin-top: 2.5rem;
+  }
+  body[data-item-density="row"] .syllabus-class-groups,
+  .density-row .syllabus-class-groups {
+    margin-top: 2rem;
   }
   body[data-item-density="standard"] .syllabus-class-group + .syllabus-class-group,
   .density-standard .syllabus-class-group + .syllabus-class-group {
@@ -162,6 +303,18 @@ const PRINT_DOCUMENT_CSS = `
     color: #111 !important;
     background: #fff !important;
     padding-top: 0.15in;
+    max-width: 56rem;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    padding-bottom: 2rem;
+  }
+  @media (min-width: 48rem) {
+    .syllabus-print-bibliography {
+      padding-left: 2.5rem;
+      padding-right: 2.5rem;
+    }
   }
   .syllabus-print-bibliography,
   .syllabus-print-bibliography * {
@@ -175,6 +328,21 @@ const PRINT_DOCUMENT_CSS = `
   @page { margin: 0.75in; }
   @media print {
     html, body { background: #fff; }
+    .syllabus-page {
+      max-width: none;
+      margin: 0;
+      padding: 0;
+      min-height: 0;
+    }
+    .container,
+    .container-padded,
+    .syllabus-print-bibliography {
+      max-width: none;
+      margin-left: 0;
+      margin-right: 0;
+      padding-left: 0;
+      padding-right: 0;
+    }
     * {
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
@@ -335,16 +503,31 @@ function expandCharacterSeparators(root: ParentNode): void {
   });
 }
 
-function flattenPrintLayout(root: ParentNode): void {
+function flattenPrintLayout(
+  root: ParentNode,
+  mode: "print" | "publish" = "print",
+): void {
   root.querySelectorAll("*").forEach((node) => {
     const el = node as Element;
     if (!el.classList) {
       return;
     }
+    const classes = [...el.classList];
+    const inItemCard = Boolean(
+      el.closest?.(
+        ".syllabus-item-card, .syllabus-gallery-tile, .syllabus-magazine-tile",
+      ),
+    );
+    if (mode === "publish" && inItemCard) {
+      if (classes.includes("sticky") || classes.includes("fixed")) {
+        setPrintStyle(el, { position: "static", top: "auto" });
+      }
+      setPrintStyle(el, { opacity: "1" });
+      return;
+    }
     if (isPrintOnly(el) || classListHas(el, "contents")) {
       setPrintStyle(el, { display: "block" });
     }
-    const classes = [...el.classList];
     if (
       classes.includes("flex") ||
       classes.includes("inline-flex") ||
@@ -431,31 +614,94 @@ function polishMasthead(root: ParentNode): void {
   });
 }
 
-/** Turn item titles into clickable links when the card has a web URL. */
+/** True for http(s) URLs or relative hosted files paths (publish). */
+export function isPrintableItemHref(href: string): boolean {
+  const value = href.trim();
+  if (!value) {
+    return false;
+  }
+  if (/^https?:\/\//i.test(value)) {
+    return true;
+  }
+  // Relative publish paths only (no scheme, no ..)
+  return /^files\/[A-Za-z0-9._-]+\.[A-Za-z0-9]+$/.test(value);
+}
+
+/**
+ * When publishing, override data-print-url with relative files/… paths
+ * for items that have an uploaded attachment.
+ */
+function applyPublishLinkOverrides(
+  root: ParentNode,
+  publishLinkByItemId?: Map<number, string>,
+): void {
+  if (!publishLinkByItemId?.size) {
+    return;
+  }
+  const hosts = root.querySelectorAll(
+    ".syllabus-item-card[data-item-id], .syllabus-gallery-tile[data-item-id], .syllabus-magazine-tile[data-item-id]",
+  );
+  hosts.forEach((host) => {
+    const id = Number.parseInt(host.getAttribute("data-item-id") || "", 10);
+    if (!Number.isFinite(id)) {
+      return;
+    }
+    const rel = publishLinkByItemId.get(id);
+    if (rel) {
+      host.setAttribute("data-print-url", rel);
+    }
+  });
+}
+
+/** Turn reading titles into clickable links when the row has a printable URL. */
 function linkItemTitles(root: ParentNode): void {
+  const linkTitle = (host: Element, titleSelector: string): void => {
+    const href = (host.getAttribute("data-print-url") || "").trim();
+    if (!isPrintableItemHref(href)) {
+      return;
+    }
+    const title = host.querySelector(titleSelector);
+    if (!title || title.querySelector("a")) {
+      return;
+    }
+    const text = (title.textContent || "").trim();
+    if (!text) {
+      return;
+    }
+    const doc = title.ownerDocument;
+    const anchor = doc.createElement("a");
+    anchor.setAttribute("href", href);
+    anchor.className = "syllabus-item-print-link";
+    while (title.firstChild) {
+      anchor.appendChild(title.firstChild);
+    }
+
+    const fileKind = publishFileIconKind(href);
+    if (fileKind) {
+      const fileLabel = getString(
+        fileKind === "pdf" ? "attachment-pdf" : "attachment-epub",
+      );
+      anchor.setAttribute("title", fileLabel);
+      anchor.setAttribute("aria-label", `${text} — ${fileLabel}`);
+      const icon = doc.createElement("span");
+      icon.className = "syllabus-publish-file-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.innerHTML = svgForPublishFileKind(fileKind);
+      anchor.appendChild(icon);
+    }
+
+    title.appendChild(anchor);
+  };
+
   root
     .querySelectorAll(".syllabus-item-card[data-print-url]")
-    .forEach((card) => {
-      const href = (card.getAttribute("data-print-url") || "").trim();
-      if (!/^https?:\/\//i.test(href)) {
-        return;
-      }
-      const title = card.querySelector(".syllabus-item-title");
-      if (!title || title.querySelector("a")) {
-        return;
-      }
-      const text = (title.textContent || "").trim();
-      if (!text) {
-        return;
-      }
-      const anchor = title.ownerDocument.createElement("a");
-      anchor.setAttribute("href", href);
-      anchor.className = "syllabus-item-print-link";
-      while (title.firstChild) {
-        anchor.appendChild(title.firstChild);
-      }
-      title.appendChild(anchor);
-    });
+    .forEach((card) => linkTitle(card, ".syllabus-item-title"));
+  root
+    .querySelectorAll(".syllabus-gallery-tile[data-print-url]")
+    .forEach((tile) => linkTitle(tile, ".syllabus-gallery-title"));
+  root
+    .querySelectorAll(".syllabus-magazine-tile[data-print-url]")
+    .forEach((tile) => linkTitle(tile, ".syllabus-magazine-title"));
 }
 
 function polishLinks(root: ParentNode): void {
@@ -471,12 +717,20 @@ function polishLinks(root: ParentNode): void {
       "word-break": "break-word",
     });
   });
+  // Keep file-type glyphs from picking up link underline/blue text.
+  root.querySelectorAll(".syllabus-publish-file-icon").forEach((el) => {
+    setPrintStyle(el, {
+      "text-decoration": "none",
+      color: "inherit",
+    });
+  });
 }
 
 /** Gecko print often ignores <style> here; inline styles do survive. */
 function applyInlinePrintStyles(
   root: ParentNode,
   density: ItemDensity = "expanded",
+  mode: "print" | "publish" = "print",
 ): void {
   root.querySelectorAll("*").forEach((el) => {
     const classes = el.classList ? [...el.classList] : [];
@@ -528,8 +782,16 @@ function applyInlinePrintStyles(
       });
     }
     if (classes.includes("syllabus-class-groups")) {
+      // Keep header / description / links from sitting on top of Class 1.
       setPrintStyle(el, {
-        "margin-top": density === "row" ? "4px" : "8px",
+        "margin-top":
+          mode === "publish"
+            ? density === "row"
+              ? "2rem"
+              : "2.75rem"
+            : density === "row"
+              ? "1.25rem"
+              : "1.75rem",
       });
     }
     if (classes.includes("syllabus-class-group")) {
@@ -544,7 +806,48 @@ function applyInlinePrintStyles(
       });
     }
     if (classes.includes("syllabus-item-card")) {
-      if (density === "row") {
+      if (mode === "publish") {
+        if (density === "row") {
+          setPrintStyle(el, {
+            display: "block",
+            background: "transparent",
+            padding: "2px 0",
+            "border-radius": "0",
+            margin: "0 0 2px",
+            "overflow-wrap": "anywhere",
+          });
+        } else if (density === "standard") {
+          setPrintStyle(el, {
+            display: "flex",
+            "flex-direction": "row",
+            "align-items": "center",
+            gap: "0.75rem",
+            background:
+              existingBg && existingBg !== "rgba(0, 0, 0, 0)"
+                ? existingBg
+                : "#f3f4f6",
+            padding: "6px 10px",
+            "border-radius": "6px",
+            margin: "0 0 4px",
+            "overflow-wrap": "anywhere",
+          });
+        } else {
+          setPrintStyle(el, {
+            display: "flex",
+            "flex-direction": "row",
+            "align-items": "flex-start",
+            gap: "1rem",
+            background:
+              existingBg && existingBg !== "rgba(0, 0, 0, 0)"
+                ? existingBg
+                : "#f3f4f6",
+            padding: "10px 14px",
+            "border-radius": "8px",
+            margin: "0 0 8px",
+            "overflow-wrap": "anywhere",
+          });
+        }
+      } else if (density === "row") {
         setPrintStyle(el, {
           display: "block",
           background: "transparent",
@@ -585,6 +888,30 @@ function applyInlinePrintStyles(
         });
       }
     }
+    if (classes.includes("syllabus-item-thumbnail") && mode === "publish") {
+      setPrintStyle(el, {
+        display: "block",
+        "flex-shrink": "0",
+      });
+    }
+    if (
+      classes.includes("syllabus-publish-item-type-icon") ||
+      (el.tagName === "IMG" &&
+        classListHas(el, "syllabus-publish-item-type-icon"))
+    ) {
+      setPrintStyle(el, {
+        display: "block",
+        width: density === "row" ? "16px" : "24px",
+        height: density === "row" ? "16px" : "24px",
+      });
+    }
+    if (classes.includes("syllabus-publish-citation")) {
+      setPrintStyle(el, {
+        color: "#4b5563",
+        "font-size": density === "standard" ? "12.5px" : "13px",
+        "line-height": "1.4",
+      });
+    }
     if (classes.includes("syllabus-item-title-row")) {
       setPrintStyle(el, {
         "font-size":
@@ -611,7 +938,7 @@ function applyInlinePrintStyles(
       classes.includes("syllabus-item-description") ||
       classes.includes("syllabus-item-reference")
     ) {
-      if (density === "row") {
+      if (density === "row" && mode === "print") {
         setPrintStyle(el, { display: "none" });
       } else {
         setPrintStyle(el, {
@@ -638,11 +965,57 @@ function resolvePrintDensity(
   return coerceItemDensity(fromAttr || "expanded");
 }
 
+export type SerializeSyllabusForPrintOptions = {
+  /** Parent item id → relative path (e.g. files/KEY.pdf) for cloud publish. */
+  publishLinkByItemId?: Map<number, string>;
+  /** Preserve app-like density layout (icons, flex) for hosted HTML. */
+  mode?: "print" | "publish";
+  /** CSL style URL for per-item citations in publish standard/expanded. */
+  cslStyle?: string | null;
+};
+
 /** Clone the live syllabus into print-safe HTML (no screen-only chrome). */
 export function serializeSyllabusForPrint(
   source: HTMLElement,
   density?: ItemDensity,
+  options?: SerializeSyllabusForPrintOptions,
 ): string {
+  const clone = prepareSyllabusClone(source, density, options);
+  return clone.innerHTML;
+}
+
+/**
+ * Publish HTML: keep density layout + icons, and (standard/expanded) show
+ * bibliographic citations instead of author/date metadata.
+ */
+export async function serializeSyllabusForPublish(
+  source: HTMLElement,
+  density?: ItemDensity,
+  options?: SerializeSyllabusForPrintOptions,
+): Promise<string> {
+  const resolved = resolvePrintDensity(source, density);
+  const clone = prepareSyllabusClone(source, density, {
+    ...options,
+    mode: "publish",
+  });
+  const { embedPublishCoverImages, embedPublishItemTypeIcons, replacePublishMetadataWithCitations } =
+    await import("./publishHtmlEnhance");
+  await embedPublishItemTypeIcons(clone, resolved);
+  await embedPublishCoverImages(clone);
+  await replacePublishMetadataWithCitations(
+    clone,
+    resolved,
+    options?.cslStyle,
+  );
+  return clone.innerHTML;
+}
+
+function prepareSyllabusClone(
+  source: HTMLElement,
+  density?: ItemDensity,
+  options?: SerializeSyllabusForPrintOptions,
+): HTMLElement {
+  const mode = options?.mode || "print";
   const resolved = resolvePrintDensity(source, density);
   const clone = source.cloneNode(true) as HTMLElement;
   clone.setAttribute("data-item-density", resolved);
@@ -651,17 +1024,24 @@ export function serializeSyllabusForPrint(
   clone
     .querySelectorAll("script, iframe, object, embed, button, svg")
     .forEach((el) => el.remove());
+  if (mode === "publish") {
+    // Keep item thumbnails/icons for the hosted page.
+    clone.querySelectorAll(".syllabus-item-thumbnail").forEach((el) => {
+      el.classList.remove("in-[.print]:hidden");
+    });
+  }
   removeScreenOnlyElements(clone);
   replaceFormControlsWithText(clone);
   expandCharacterSeparators(clone);
   putTitlesBeforeBadges(clone);
+  applyPublishLinkOverrides(clone, options?.publishLinkByItemId);
   linkItemTitles(clone);
-  flattenPrintLayout(clone);
-  applyInlinePrintStyles(clone, resolved);
+  flattenPrintLayout(clone, mode);
+  applyInlinePrintStyles(clone, resolved, mode);
   polishClassHeadings(clone);
   polishMasthead(clone);
   polishLinks(clone);
-  return clone.innerHTML;
+  return clone;
 }
 
 export async function buildPrintableHtml({
@@ -669,38 +1049,72 @@ export async function buildPrintableHtml({
   innerHTML,
   bibliographyHtml = "",
   density = "expanded",
+  citationDownloads,
+  layout = "print",
 }: {
   title: string;
   innerHTML: string;
   bibliographyHtml?: string;
   density?: ItemDensity;
+  citationDownloads?: {
+    risHref?: string;
+    bibHref?: string;
+    risLabel: string;
+    bibLabel: string;
+  };
+  layout?: "print" | "publish";
 }): Promise<string> {
   const resolved = coerceItemDensity(density);
   const safeTitle = escapeHtml(title || "Syllabus");
   const bodyStyle = [
     "margin:0",
-    "padding:4px 2px",
+    "padding:0",
     "color:#111",
-    "background:#fff",
+    "background:#fafafa",
     `font-family:${PRINT_FONT}`,
     "font-size:14px",
     "line-height:1.45",
   ].join(";");
 
+  const downloadLinks: string[] = [];
+  if (citationDownloads?.risHref) {
+    downloadLinks.push(
+      `<a class="syllabus-publish-download" href="${escapeHtml(citationDownloads.risHref)}" download="${escapeHtml(citationDownloads.risHref)}">${escapeHtml(citationDownloads.risLabel)}</a>`,
+    );
+  }
+  if (citationDownloads?.bibHref) {
+    downloadLinks.push(
+      `<a class="syllabus-publish-download" href="${escapeHtml(citationDownloads.bibHref)}" download="${escapeHtml(citationDownloads.bibHref)}">${escapeHtml(citationDownloads.bibLabel)}</a>`,
+    );
+  }
+  const downloadsHtml = downloadLinks.length
+    ? `<div class="syllabus-publish-downloads">${downloadLinks.join("")}</div>`
+    : "";
+
+  const bodyClass = [
+    "print",
+    `density-${resolved}`,
+    layout === "publish" ? "publish-layout" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return `<!DOCTYPE html>
 <html style="background:#fff;color-scheme:only light">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${safeTitle}</title>
   <style type="text/css">${PRINT_DOCUMENT_CSS}</style>
 </head>
-<body class="print density-${resolved}" data-item-density="${resolved}" style="${bodyStyle}">
-  <div class="syllabus-page" data-item-density="${resolved}">
+<body class="${bodyClass}" data-item-density="${resolved}" style="${bodyStyle}">
+  <div class="syllabus-page" data-item-density="${resolved}" style="position:relative;max-width:56rem;margin-left:auto;margin-right:auto;padding:2.5rem 2.5rem 4rem;background:#fff;min-height:100vh;box-sizing:border-box">
+    ${downloadsHtml}
     ${innerHTML}
   </div>
   ${
     bibliographyHtml
-      ? `<div class="syllabus-print-page-break" style="break-after:page;page-break-after:always;height:0"></div><div style="font-family:${PRINT_FONT};color:#111;padding-top:4px">${bibliographyHtml}</div>`
+      ? `<div class="syllabus-print-page-break" style="break-after:page;page-break-after:always;height:0"></div><div class="syllabus-print-bibliography" style="max-width:56rem;margin-left:auto;margin-right:auto;padding:0.15in 2.5rem 2rem;box-sizing:border-box;font-family:${PRINT_FONT};color:#111">${bibliographyHtml}</div>`
       : ""
   }
 </body>

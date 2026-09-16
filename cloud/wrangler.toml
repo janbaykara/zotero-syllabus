@@ -1,0 +1,28 @@
+name = "read"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+
+# Account workers.dev subdomain is zotero-syllabus →
+# public URL: https://read.zotero-syllabus.workers.dev
+#
+# Create these in the Cloudflare dashboard (or via wrangler), then fill in IDs:
+#   npx wrangler r2 bucket create zotero-syllabus
+#   npx wrangler kv namespace create SYLLABUS_USAGE
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "zotero-syllabus"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "2e2fabf0fe244c3080729ac6a3d9e1d5"
+
+[vars]
+PUBLIC_BASE_URL = "https://read.zotero-syllabus.workers.dev"
+USER_QUOTA_BYTES = "209715200"
+MAX_OBJECT_BYTES = "52428800"
+MAX_FILES_PER_PUBLISH = "200"
+
+# Secrets (set via wrangler, never commit):
+#   npx wrangler secret put JWT_SECRET
+#   npx wrangler secret put ZOTERO_OAUTH_CLIENT_KEY
+#   npx wrangler secret put ZOTERO_OAUTH_CLIENT_SECRET

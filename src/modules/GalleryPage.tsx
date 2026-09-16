@@ -1816,12 +1816,18 @@ export const GalleryTile = memo(function GalleryTile({
     chrome?.showPriority === false ? "" : chrome?.assignment?.priority || "";
   const done = chrome?.readerMode && chrome.assignment?.status === "done";
 
+  const printUrl = (() => {
+    const raw = String(item.getField("url") || "").trim();
+    return /^https?:\/\//i.test(raw) ? raw : undefined;
+  })();
+
   return (
     <div
       ref={tileRef}
       role={interactive ? "button" : undefined}
       tabIndex={interactive ? -1 : undefined}
       data-item-id={item.id}
+      data-print-url={printUrl}
       className={twMerge(
         "syllabus-gallery-tile group min-w-0 select-none relative",
         interactive && "cursor-pointer outline-none",
@@ -1863,7 +1869,7 @@ export const GalleryTile = memo(function GalleryTile({
               className="mt-0.5 in-[.print]:hidden"
             />
           ) : null}
-          <div className="text-sm font-medium text-primary leading-snug line-clamp-2 min-w-0">
+          <div className="syllabus-gallery-title text-sm font-medium text-primary leading-snug line-clamp-2 min-w-0">
             {title}
           </div>
         </div>
@@ -1883,7 +1889,7 @@ export const GalleryTile = memo(function GalleryTile({
             <span className="truncate">{hostname}</span>
           </div>
         ) : creator ? (
-          <div className="text-xs text-secondary truncate mt-0.5">
+          <div className="syllabus-gallery-creator text-xs text-secondary truncate mt-0.5">
             {creator}
           </div>
         ) : null}

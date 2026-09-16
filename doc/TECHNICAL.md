@@ -2,7 +2,7 @@
 
 This document is for people changing the plugin. End-user behaviour is in [README.md](../README.md).
 
-Contents: [collection note](#collection-note) · [item merges](#item-merges) · [preferences](#preferences) · [Extra absorb](#item-extra-legacy-absorb) · [class folders](#class-subcollections) · [practical rules](#practical-rules) · [localization](#localization) · [reading-list connectors](#reading-list-connectors) · [local development](#local-development) · [project structure](#project-structure) · [references](#references)
+Contents: [collection note](#collection-note) · [item merges](#item-merges) · [preferences](#preferences) · [Extra absorb](#item-extra-legacy-absorb) · [class folders](#class-subcollections) · [practical rules](#practical-rules) · [localization](#localization) · [reading-list connectors](#reading-list-connectors) · [cloud publish](#cloud-publish) · [local development](#local-development) · [project structure](#project-structure) · [references](#references)
 
 A **syllabus is one Zotero collection** that you have turned into a syllabus (or that had a legacy `collectionMetadata` preference). Items in that collection are the membership. Everything else — classes, assignments, course metadata — is stored in a **collection note** so it syncs with the library. Plugin **prefs** hold UI chrome only (and leftover legacy data). **Class subcollections** are a derived, one-way view of the note.
 
@@ -161,6 +161,74 @@ On startup (Zotero 8+), the plugin installs Connector translators from [`addon/c
 
 Gated by `FEATURE_FLAG.TALIS_METADATA` in [`src/modules/featureFlags.ts`](../src/modules/featureFlags.ts). End-user behaviour is in the [README import section](../README.md#import-a-reading-list).
 
+## Cloud publish
+
+Optional feature: from syllabus view, a user can **Publish online** a static HTML page plus attachment files to shared Cloudflare infrastructure. Recipients open a public URL without Zotero. This does **not** use Zotero group file sharing (public groups never expose attachments). Item `url` fields in the library are never rewritten.
+
+Operator setup detail (commands, secrets, smoke tests) lives in [`cloud/README.md`](../cloud/README.md). This section is the architecture overview and first-time checklist for maintainers.
+
+### How it works
+
+```
+  Zotero desktop plugin                Cloudflare
+  ┌─────────────────────┐              ┌──────────────────────────────────┐
+  │ Publish online…     │──start/poll──│ Worker (only R2 credentials)     │
+  │ (OAuth if needed)   │──PUT objects─│  · Zotero OAuth 1.0a (identity)  │
+  │ JWT in plugin prefs │              │  · JWT mint / verify             │
+  └─────────┬───────────┘              │  · Forced users/{id}/… prefixes  │
+            │ opens browser            │  · Quota via KV usage counters   │
+            ▼                          │  · Public GET /u/…               │
+     zotero.org OAuth ────────────────►│                                  │
+                                       │ Private R2 bucket                │
+                                       └──────────────────────────────────┘
+```
+
+**Trust boundary.** The plugin is untrusted (reverse-engineerable). It never holds R2 or Zotero OAuth client secrets. It holds only a short-ish-lived **JWT** (`sub` = Zotero `userID`) after OAuth. The Worker is the sole enforcer of identity, object keys, and storage quota. Assume attackers call the Worker API with curl.
+
+**Auth.** Choosing **Publish online…** confirms copyright, then if there is no stored JWT runs Zotero OAuth automatically: `POST /auth/zotero/start` → open `zotero.org/oauth/authorize` (with `identity=1`, so we get a userID without creating a long-lived Zotero library API key) → callback on the Worker → plugin polls `/auth/zotero/poll` for the JWT. There is no separate sign-in menu item. OAuth client key/secret exist only as Worker secrets.
+
+**Object layout** (deterministic; overwrite on republish; no syllabus database):
+
+```text
+users/{zoteroUserId}/syllabi/{libraryID}/{collectionKey}/index.html
+users/{zoteroUserId}/syllabi/{libraryID}/{collectionKey}/files/{attachmentKey}.{ext}
+```
+
+The Worker ignores any client-supplied owner and forces `users/{jwt.sub}/…`. Path traversal and keys outside that prefix are rejected.
+
+**Publish pipeline (plugin).** Build printable HTML from the live syllabus DOM ([`serializeSyllabusForPublish`](../src/utils/printSyllabus.ts) / [`buildPrintableHtml`](../src/utils/printSyllabus.ts)), pick best attachments (PDF → EPUB → other), rewrite title links to relative `files/…` paths when a file was uploaded (else keep existing `http(s)` item URLs), upload `bibliography.ris` / `bibliography.bib` plus files then `index.html` last via [`publishSyllabus.ts`](../src/utils/publishSyllabus.ts). Hosted HTML keeps the active density layout (row / standard / expanded) including item-type icons and covers; for **standard** and **expanded**, author/date metadata is replaced with a per-item bibliographic citation. Skip-unchanged uses one `GET /v1/syllabus/objects` list (size + `fingerprint` metadata) rather than per-file probes. Share URL:
+
+```text
+https://<worker>/u/{zoteroUserId}/{libraryID}/{collectionKey}/
+```
+
+Relative links resolve against that page URL. No paid domain is required (`*.workers.dev` is enough).
+
+**Quota.** R2 has no per-prefix caps. The Worker tracks `usage:{userId}` in KV, measures actual upload bytes, and rejects when projected usage exceeds `USER_QUOTA_BYTES` (default 200 MB). Set a Cloudflare **billing alert / spend limit** on the account as a backstop; that does not replace per-user quotas in the product.
+
+**UI entry.** Printer / save menu on [`SyllabusPage.tsx`](../src/modules/SyllabusPage.tsx): export formats plus **Publish online…**. Copyright confirm, then OAuth if needed, then upload. Prefs: `publishApiBaseUrl`, `publishJwt`, `publishUserId`, `publishJwtExpiresAt` (see [`addon/prefs.js`](../addon/prefs.js)).
+
+### First-time cloud setup
+
+Do this once before Publish works in a build you ship (or for local staging).
+
+1. **Cloudflare account** — Prefer a dedicated account. Enable Workers, R2, and Workers KV. Set a billing spending alert (and hard limit if available).
+2. **R2 bucket** — Create a **private** bucket (e.g. `zotero-syllabus-publish`). Do not enable public bucket access; the Worker serves reads.
+3. **KV namespace** — Create one for usage counters and OAuth state (e.g. `SYLLABUS_USAGE`). Put its id in [`cloud/wrangler.toml`](../cloud/wrangler.toml).
+4. **Deploy the Worker** from `cloud/`: `pnpm install`, set `PUBLIC_BASE_URL` / quota vars in `wrangler.toml`, then:
+   ```bash
+   npx wrangler secret put JWT_SECRET
+   npx wrangler secret put ZOTERO_OAUTH_CLIENT_KEY
+   npx wrangler secret put ZOTERO_OAUTH_CLIENT_SECRET
+   npx wrangler deploy
+   ```
+   Confirm `GET /health` returns `{"ok":true}`.
+5. **Zotero OAuth app** — Register at [zotero.org/oauth/apps](https://www.zotero.org/oauth/apps). Callback: `https://<your-worker>/auth/zotero/callback`. Client key/secret → Worker secrets only (never the XPI or git).
+6. **Point the plugin** — Set `extensions.zotero.syllabus.publishApiBaseUrl` (or the default in `addon/prefs.js`) to the Worker origin. Replace the shipped `…REPLACE.workers.dev` placeholder; until then the UI reports publish as unconfigured.
+7. **Smoke test** — Publish a small syllabus with one PDF (OAuth opens automatically if needed) → open `/u/…/` in a private window → confirm a second Zotero account cannot write under the first user’s prefix → confirm over-quota fails cleanly.
+
+Full command list and API table: [`cloud/README.md`](../cloud/README.md).
+
 ## Local development
 
 Requires Zotero 7+ (8–10 recommended), Node.js LTS, Git, and pnpm. Built on the [Zotero Plugin Template](https://github.com/windingwind/zotero-plugin-template).
@@ -193,12 +261,18 @@ src/
 │   ├── syllabusNote.ts          # Collection note: parse/save + in-memory cache
 │   ├── classSubcollections.ts   # One-way class folders
 │   ├── migratePrefsToNotes.ts   # Legacy collectionMetadata → notes
-│   ├── SyllabusPage.tsx         # Syllabus (and class-folder) view
+│   ├── SyllabusPage.tsx         # Syllabus (and class-folder) view; Publish menu
 │   └── ReadingSchedule.tsx
 └── utils/
     ├── schemas.ts               # CollectionSyllabusDocument and related types
-    ├── prefs.ts                 # UI / plugin prefs
+    ├── prefs.ts                 # UI / plugin prefs (incl. publish JWT)
+    ├── publishAuth.ts           # Zotero OAuth start/poll + Worker uploads
+    ├── publishSyllabus.ts       # Build static tree and publish
     └── cache.ts
+cloud/                           # Cloudflare Worker (R2 + KV + OAuth)
+├── README.md                    # Operator setup and API
+├── wrangler.toml
+└── src/
 ```
 
 ## References
@@ -211,5 +285,7 @@ src/
 - Zotero 10 plugin technical notes: https://www.zotero.org/support/dev/zotero_10_for_developers
 - https://www.zotero.org/support/kb/connector_zotero_unavailable
 - Translator code API: https://github.com/zotero/translators/blob/master/index.d.ts
+- Zotero Web API OAuth: https://www.zotero.org/support/dev/web_api/v3/oauth
+- Cloudflare Workers / R2 / KV: https://developers.cloudflare.com/workers/
 - Zotero server code: https://github.com/zotero/zotero/blob/47e6a0f7abaae0ad90c9f39c385fe24efd7071bf/chrome/content/zotero/xpcom/server/server_connector.js#L927
 - All Zotero icons: https://github.com/zotero/zotero/tree/b3ef63859d2dbeaf595f7482a4de3d586535c10e/chrome/skin/default/zotero/16/universal
