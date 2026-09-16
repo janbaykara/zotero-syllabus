@@ -39,6 +39,40 @@ describe("serializeSyllabusForPrint", function () {
     );
   });
 
+  it("preserves syllabus description newlines as prose paragraphs", function () {
+    const root = document.createElement("div");
+    const description = document.createElement("div");
+    description.className = "syllabus-collection-description";
+
+    const textarea = document.createElement("textarea");
+    textarea.className = "in-[.print]:hidden";
+    textarea.value = "First paragraph.\n\nSecond line soft-break\nstill second.";
+
+    const mirror = document.createElement("div");
+    mirror.className = "hidden in-[.print]:block";
+    mirror.innerHTML =
+      '<div class="syllabus-prose"><p>stale</p></div>';
+
+    description.append(textarea, mirror);
+    root.append(description);
+
+    const html = serializeSyllabusForPrint(root);
+    const out = document.createElement("div");
+    out.innerHTML = html;
+
+    const paragraphs = [
+      ...out.querySelectorAll(
+        ".syllabus-collection-description .syllabus-prose p",
+      ),
+    ];
+    assert.lengthOf(paragraphs, 2);
+    assert.equal(paragraphs[0].textContent, "First paragraph.");
+    assert.match(
+      paragraphs[1].innerHTML,
+      /^Second line soft-break<br\s*\/?>still second\.$/,
+    );
+  });
+
   it("wraps item titles in links when a web URL is present", function () {
     const root = document.createElement("div");
     root.innerHTML = `

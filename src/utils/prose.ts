@@ -37,6 +37,23 @@ export function proseToHtml(text: string | null | undefined): string {
     .join("");
 }
 
+/**
+ * Escape text and emit HTML matching {@link ProseText}: blank lines become
+ * paragraphs; single newlines become &lt;br&gt; soft breaks.
+ */
+export function proseToDisplayHtml(text: string | null | undefined): string {
+  const paragraphs = splitProse(text);
+  if (paragraphs.length === 0) {
+    return "";
+  }
+  return paragraphs
+    .map(
+      (lines) =>
+        `<p>${lines.map((line) => escapeHtml(line)).join("<br>")}</p>`,
+    )
+    .join("");
+}
+
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")

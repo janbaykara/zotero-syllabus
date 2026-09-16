@@ -18,14 +18,15 @@ export class PathError extends Error {
 }
 
 /** Relative object path inside a syllabus folder:
- * index.html, bibliography.ris / bibliography.bib, or files/{key}.{ext}
+ * index.html, bibliography.ris / bibliography.bib, og-image.jpg, or files/{key}.{ext}
  */
 export function assertRelPath(relPath: string): string {
   const p = relPath.replace(/^\/+/, "").trim();
   if (
     p === "index.html" ||
     p === "bibliography.ris" ||
-    p === "bibliography.bib"
+    p === "bibliography.bib" ||
+    p === "og-image.jpg"
   ) {
     return p;
   }

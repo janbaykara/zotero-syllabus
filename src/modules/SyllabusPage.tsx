@@ -42,6 +42,11 @@ import {
 } from "./furtherReadingSort";
 import {
   ArrowUpDown,
+  CodeXml,
+  FileText,
+  FileType,
+  Globe,
+  Hash,
   Printer,
   Settings,
   Lock,
@@ -372,11 +377,12 @@ const SAVE_FORMAT_OPTIONS: {
     | "page-save-word"
     | "page-save-markdown"
     | "page-save-html";
+  Icon: typeof FileText;
 }[] = [
-  { format: "pdf", labelKey: "page-save-pdf" },
-  { format: "docx", labelKey: "page-save-word" },
-  { format: "markdown", labelKey: "page-save-markdown" },
-  { format: "html", labelKey: "page-save-html" },
+  { format: "pdf", labelKey: "page-save-pdf", Icon: FileText },
+  { format: "docx", labelKey: "page-save-word", Icon: FileType },
+  { format: "markdown", labelKey: "page-save-markdown", Icon: Hash },
+  { format: "html", labelKey: "page-save-html", Icon: CodeXml },
 ];
 
 type PublishUiStatus =
@@ -600,7 +606,7 @@ function SyllabusSaveFormatMenu({
           style={popoverStyle}
         >
           <ul className="syllabus-explorer-configure-list">
-            {SAVE_FORMAT_OPTIONS.map(({ format, labelKey }) => (
+            {SAVE_FORMAT_OPTIONS.map(({ format, labelKey, Icon }) => (
               <li key={format}>
                 <button
                   type="button"
@@ -608,6 +614,7 @@ function SyllabusSaveFormatMenu({
                   className="syllabus-save-format-option"
                   onClick={() => run({ kind: "export", format })}
                 >
+                  <Icon size={16} strokeWidth={2} aria-hidden="true" />
                   {getString(labelKey)}
                 </button>
               </li>
@@ -619,6 +626,7 @@ function SyllabusSaveFormatMenu({
                 className="syllabus-save-format-option"
                 onClick={() => run({ kind: "publish" })}
               >
+                <Globe size={16} strokeWidth={2} aria-hidden="true" />
                 {getString("page-publish")}
               </button>
             </li>

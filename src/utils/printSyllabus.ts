@@ -11,6 +11,7 @@ import {
 } from "./zoteroAttachmentIcons";
 import { PUBLISH_COVER_CSS } from "./publishCoverStyles";
 import { PLUGIN_REPO_URL } from "../modules/syllabusNoteHtml";
+import { proseToDisplayHtml } from "./prose";
 
 const ZOTERO_HOME_URL = "https://www.zotero.org/";
 
@@ -179,12 +180,29 @@ const PRINT_DOCUMENT_CSS = `
     align-items: flex-start !important;
     gap: 0.75rem !important;
     flex: none !important;
-    position: static !important;
+    /* relative: stretched title link covers the whole card */
+    position: relative !important;
     height: auto !important;
     max-height: none !important;
     overflow: visible !important;
     width: 100% !important;
     box-sizing: border-box !important;
+  }
+  body.publish-layout .syllabus-publish-linked {
+    position: relative !important;
+    cursor: pointer;
+  }
+  /* Stretch the title <a> hit target over the card / gallery / magazine tile */
+  body.publish-layout .syllabus-item-print-link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+  /* Nested description/URL links stay above the stretch layer */
+  body.publish-layout .syllabus-publish-linked a:not(.syllabus-item-print-link) {
+    position: relative !important;
+    z-index: 2;
   }
   body.publish-layout[data-item-density="row"] .syllabus-item-card {
     display: block !important;
@@ -428,6 +446,16 @@ const PRINT_DOCUMENT_CSS = `
     margin-top: 0.25rem;
     font-size: 0.95rem;
   }
+  .syllabus-prose {
+    margin: 0;
+  }
+  .syllabus-prose p {
+    margin: 0 0 0.65em;
+    line-height: 1.45;
+  }
+  .syllabus-prose p:last-child {
+    margin-bottom: 0;
+  }
   body[data-item-density="row"] .syllabus-item-description,
   body[data-item-density="row"] .syllabus-item-reference,
   .density-row .syllabus-item-description,
@@ -583,6 +611,12 @@ function copyFormValues(source: HTMLElement, clone: HTMLElement): void {
   });
 }
 
+function setPrintOnlyProse(sibling: Element, text: string): void {
+  // Match TextInput's textarea print mirror: preserve paragraph / soft breaks
+  // instead of stuffing raw newlines into textContent (HTML collapses them).
+  sibling.innerHTML = `<div class="syllabus-prose">${proseToDisplayHtml(text)}</div>`;
+}
+
 function syncPrintOnlyTextFromInputs(root: ParentNode): void {
   [...root.querySelectorAll("input, textarea")].forEach((node) => {
     const el = asFormField(node);
@@ -595,7 +629,11 @@ function syncPrintOnlyTextFromInputs(root: ParentNode): void {
     // field and duplicates its value in the PDF.
     const sibling = asElement(el.nextElementSibling);
     if (sibling && isPrintOnly(sibling)) {
-      sibling.textContent = el.value;
+      if (el.tagName === "TEXTAREA") {
+        setPrintOnlyProse(sibling, el.value);
+      } else {
+        sibling.textContent = el.value;
+      }
     }
   });
 }
@@ -620,7 +658,12 @@ function replaceFormControlsWithText(root: ParentNode): void {
       return;
     }
     const div = el.ownerDocument.createElement("div");
-    div.textContent = text;
+    if (el.tagName === "TEXTAREA") {
+      div.className = "syllabus-prose";
+      div.innerHTML = proseToDisplayHtml(text);
+    } else {
+      div.textContent = text;
+    }
     el.replaceWith(div);
   });
 }
@@ -901,6 +944,10 @@ function linkItemTitles(
       anchor.appendChild(title.firstChild);
     }
     title.appendChild(anchor);
+    // Publish only: CSS stretches this link over the whole card.
+    if (withFileIcons) {
+      host.classList.add("syllabus-publish-linked");
+    }
 
     // Hosted HTML only: PDF/EPUB/URL glyphs (SVG breaks some print HTML reparses).
     if (!withFileIcons) {
@@ -1389,6 +1436,9 @@ export async function buildPrintableHtml({
   density = "expanded",
   citationDownloads,
   layout = "print",
+  description,
+  canonicalUrl,
+  ogImageUrl,
 }: {
   title: string;
   innerHTML: string;
@@ -1401,6 +1451,12 @@ export async function buildPrintableHtml({
     bibLabel: string;
   };
   layout?: "print" | "publish";
+  /** Share-card / SEO description (publish only). */
+  description?: string;
+  /** Absolute public syllabus URL (publish only). */
+  canonicalUrl?: string;
+  /** Absolute og-image.jpg URL when a collage was uploaded. */
+  ogImageUrl?: string;
 }): Promise<string> {
   const resolved = coerceItemDensity(density);
   const safeTitle = escapeHtml(title || "Syllabus");
@@ -1439,12 +1495,23 @@ export async function buildPrintableHtml({
     .filter(Boolean)
     .join(" ");
 
+  const shareMeta =
+    layout === "publish"
+      ? buildPublishShareMetaHtml({
+          title: title || "Syllabus",
+          description,
+          canonicalUrl,
+          ogImageUrl,
+        })
+      : "";
+
   return `<!DOCTYPE html>
 <html style="background:#fff;color-scheme:only light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${safeTitle}</title>
+  ${shareMeta}
   <style type="text/css">${PRINT_DOCUMENT_CSS}${layout === "publish" ? PUBLISH_COVER_CSS : ""}</style>
   ${
     layout === "publish"
@@ -1465,6 +1532,54 @@ export async function buildPrintableHtml({
   ${creditHtml}
 </body>
 </html>`;
+}
+
+function buildPublishShareMetaHtml(opts: {
+  title: string;
+  description?: string;
+  canonicalUrl?: string;
+  ogImageUrl?: string;
+}): string {
+  const lines: string[] = [];
+  const title = escapeHtml(opts.title);
+  const desc = (opts.description || "").trim();
+  const safeDesc = desc ? escapeHtml(desc) : "";
+  const url = (opts.canonicalUrl || "").trim();
+  const image = (opts.ogImageUrl || "").trim();
+
+  if (safeDesc) {
+    lines.push(`<meta name="description" content="${safeDesc}">`);
+  }
+  lines.push(`<meta property="og:title" content="${title}">`);
+  lines.push(`<meta property="og:type" content="website">`);
+  if (safeDesc) {
+    lines.push(`<meta property="og:description" content="${safeDesc}">`);
+  }
+  if (url) {
+    lines.push(
+      `<meta property="og:url" content="${escapeHtml(url)}">`,
+    );
+  }
+  if (image) {
+    lines.push(
+      `<meta property="og:image" content="${escapeHtml(image)}">`,
+    );
+    lines.push(`<meta property="og:image:width" content="1200">`);
+    lines.push(`<meta property="og:image:height" content="630">`);
+  }
+  lines.push(
+    `<meta name="twitter:card" content="${image ? "summary_large_image" : "summary"}">`,
+  );
+  lines.push(`<meta name="twitter:title" content="${title}">`);
+  if (safeDesc) {
+    lines.push(`<meta name="twitter:description" content="${safeDesc}">`);
+  }
+  if (image) {
+    lines.push(
+      `<meta name="twitter:image" content="${escapeHtml(image)}">`,
+    );
+  }
+  return lines.join("\n  ");
 }
 
 /** Small credit line for hosted HTML (product names stay untranslated). */

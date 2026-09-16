@@ -3,6 +3,7 @@ import {
   listPublishObjects,
   putPublishObject,
   getPublishSession,
+  getPublishApiBaseUrl,
 } from "./publishAuth";
 import {
   buildPrintableHtml,
@@ -20,6 +21,12 @@ import {
   PUBLISH_BIBLIOGRAPHY_RIS,
 } from "./exportCitations";
 import { getString } from "./locale";
+import {
+  PUBLISH_OG_IMAGE,
+  buildPublishOgImageJpeg,
+  bytesContentFingerprint,
+  extractPublishShareDescription,
+} from "./publishOgImage";
 
 export type PublishAttachmentPick = {
   itemId: number;
@@ -207,51 +214,51 @@ export async function publishSyllabusToCloud(opts: {
       cslStyle: opts.cslStyle,
     },
   );
+  const ogImagePromise = buildPublishOgImageJpeg(opts.pageElement).catch(
+    (err) => {
+      ztoolkit.log("OG image collage failed:", err);
+      return null;
+    },
+  );
   const bibliographyPromise =
     opts.bibliographyHtmlPromise ?? Promise.resolve(opts.bibliographyHtml);
 
-  const [[risText, bibText], innerHTML, listed, bibliographyHtml] =
+  const [[risText, bibText], innerHTML, listed, bibliographyHtml, ogImageBytes] =
     await Promise.all([
       citationsPromise,
       htmlPromise,
       remoteListPromise,
       bibliographyPromise,
+      ogImagePromise,
     ]);
   ztoolkit.log(
     `publish prepare finished in ${Date.now() - prepareStarted}ms ` +
       `(attachments=${picks.length}, ris=${risText.length}, bib=${bibText.length}, ` +
-      `remoteKeys=${listed ? Object.keys(listed.objects || {}).length : "n/a"})`,
+      `remoteKeys=${listed ? Object.keys(listed.objects || {}).length : "n/a"}, ` +
+      `ogImage=${ogImageBytes ? ogImageBytes.byteLength : 0})`,
   );
 
   const hasRis = Boolean(risText.trim());
   const hasBib = Boolean(bibText.trim());
-  const htmlContent = await buildPrintableHtml({
-    title: opts.title || "Syllabus",
-    innerHTML,
-    bibliographyHtml,
-    density: opts.density,
-    layout: "publish",
-    citationDownloads:
-      hasRis || hasBib
-        ? {
-            risHref: hasRis ? PUBLISH_BIBLIOGRAPHY_RIS : undefined,
-            bibHref: hasBib ? PUBLISH_BIBLIOGRAPHY_BIB : undefined,
-            risLabel: getString("publish-html-download-ris"),
-            bibLabel: getString("publish-html-download-bib"),
-          }
-        : undefined,
-  });
+  const description = extractPublishShareDescription(opts.pageElement);
 
-  let publicUrl = "";
+  let publicUrl =
+    listed?.publicUrl ||
+    `${getPublishApiBaseUrl()}/u/${session.userId}/${libraryId}/${collectionKey}/`;
+  if (!publicUrl.endsWith("/")) {
+    publicUrl = `${publicUrl}/`;
+  }
+
   const citationUploads = [
     ...(hasRis ? [{ relPath: PUBLISH_BIBLIOGRAPHY_RIS, text: risText }] : []),
     ...(hasBib ? [{ relPath: PUBLISH_BIBLIOGRAPHY_BIB, text: bibText }] : []),
   ];
-  const total = picks.length + citationUploads.length + 1;
+  const total =
+    picks.length + citationUploads.length + (ogImageBytes ? 1 : 0) + 1;
   let done = 0;
 
   const remoteObjects = listed?.objects || {};
-  publicUrl = listed?.publicUrl || publicUrl;
+  let ogImageReady = false;
 
   // Citation exports are small; skip when byte length matches remote.
   for (const citation of citationUploads) {
@@ -314,6 +321,60 @@ export async function publishSyllabusToCloud(opts: {
     publicUrl = result.publicUrl || publicUrl;
     done += 1;
   }
+
+  if (ogImageBytes && ogImageBytes.byteLength) {
+    opts.onProgress?.("upload", done + 1, total);
+    try {
+      const fingerprint = bytesContentFingerprint(ogImageBytes);
+      const remote = remoteObjects[PUBLISH_OG_IMAGE];
+      if (
+        remote &&
+        remoteMatchesLocal({
+          exists: true,
+          remoteSize: remote.size,
+          remoteFingerprint: remote.fingerprint,
+          localFingerprint: fingerprint,
+        })
+      ) {
+        ogImageReady = true;
+      } else {
+        const result = await putPublishObject({
+          token: session.token,
+          libraryId,
+          collectionKey,
+          relPath: PUBLISH_OG_IMAGE,
+          bytes: ogImageBytes,
+          fingerprint,
+        });
+        publicUrl = result.publicUrl || publicUrl;
+        ogImageReady = true;
+      }
+    } catch (err) {
+      // Worker may not allow og-image.jpg yet, or upload failed — still publish HTML.
+      ztoolkit.log("OG image upload failed (continuing without it):", err);
+    }
+    done += 1;
+  }
+
+  const htmlContent = await buildPrintableHtml({
+    title: opts.title || "Syllabus",
+    innerHTML,
+    bibliographyHtml,
+    density: opts.density,
+    layout: "publish",
+    description: description || undefined,
+    canonicalUrl: publicUrl,
+    ogImageUrl: ogImageReady ? `${publicUrl}${PUBLISH_OG_IMAGE}` : undefined,
+    citationDownloads:
+      hasRis || hasBib
+        ? {
+            risHref: hasRis ? PUBLISH_BIBLIOGRAPHY_RIS : undefined,
+            bibHref: hasBib ? PUBLISH_BIBLIOGRAPHY_BIB : undefined,
+            risLabel: getString("publish-html-download-ris"),
+            bibLabel: getString("publish-html-download-bib"),
+          }
+        : undefined,
+  });
 
   opts.onProgress?.("upload", done + 1, total);
   const htmlBytes = new TextEncoder().encode(htmlContent);
