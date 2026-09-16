@@ -22,7 +22,6 @@ jobs:
 
   release-notes:
     needs: create-release
-    continue-on-error: true
     uses: ./.github/workflows/release-notes.yml
     with:
       tag: ${{ github.ref_name }}

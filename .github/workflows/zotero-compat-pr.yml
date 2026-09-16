@@ -106,7 +106,6 @@ jobs:
 
   release-notes:
     needs: release
-    continue-on-error: true
     if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged && (contains(join(github.event.pull_request.labels.*.name, ','), 'zotero-compat') || contains(github.event.pull_request.body, 'zotero-compat'))
     uses: ./.github/workflows/release-notes.yml
     secrets: inherit
