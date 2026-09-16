@@ -42,7 +42,6 @@ import {
   openMyAnnotationsTab,
   openReadingScheduleTab,
   selectCollectionInLibrary,
-  selectItemInCollection,
   selectSavedSearchInLibrary,
 } from "./ClassReadingBlock";
 import { isOptionalFeatureEnabled } from "./optionalFeatures";
@@ -983,9 +982,13 @@ function ExplorerDeadlineShelf({
                   onCollectionClick={() =>
                     openCollectionSyllabusPage(classReading.collectionId)
                   }
-                  onItemClick={(item) =>
-                    selectItemInCollection(item, classReading.collectionId)
-                  }
+                  onItemClick={(item) => {
+                    try {
+                      ztoolkit.getGlobal("ZoteroPane").selectItem(item.id);
+                    } catch (error) {
+                      ztoolkit.log("Error selecting deadline item:", error);
+                    }
+                  }}
                 />
               </div>
             ))}

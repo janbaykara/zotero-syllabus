@@ -16,10 +16,7 @@ import {
   type NextUpReading,
 } from "./pinned";
 import { SyllabusItemCard } from "./SyllabusItemCard";
-import {
-  openCollectionSyllabusPage,
-  selectItemInCollection,
-} from "./ClassReadingBlock";
+import { openCollectionSyllabusPage } from "./ClassReadingBlock";
 import { SyllabusManager } from "./syllabus";
 import { ProseText } from "./ProseText";
 import { getItemCreatorLine, getItemTitle } from "../utils/items";
@@ -32,6 +29,14 @@ import {
   readingContextLabel,
   type ReadingLayoutRow,
 } from "./readingItemsLayout";
+
+function selectPinnedItem(item: Zotero.Item): void {
+  try {
+    ztoolkit.getGlobal("ZoteroPane").selectItem(item.id);
+  } catch (error) {
+    ztoolkit.log("Error selecting pinned item:", error);
+  }
+}
 
 export function usePinnedScheduleData(libraryID?: number) {
   const [pinnedItems, setPinnedItems] = useState<Zotero.Item[]>([]);
@@ -183,16 +188,8 @@ export function PinnedSection({
             template="strip"
             showPriority={false}
             rows={layoutRows}
-            onItemClick={(item, collectionId) => {
-              if (collectionId) {
-                selectItemInCollection(item, collectionId);
-                return;
-              }
-              try {
-                ztoolkit.getGlobal("ZoteroPane").selectItem(item.id);
-              } catch (error) {
-                ztoolkit.log("Error selecting pinned item:", error);
-              }
+            onItemClick={(item) => {
+              selectPinnedItem(item);
             }}
           />
         ) : (
@@ -303,7 +300,7 @@ function PinnedItemRow({
           readerMode={showUnpinCheckbox}
           onReaderCheck={showUnpinCheckbox ? handleReaderCheck : undefined}
           onClick={(clicked) => {
-            selectItemInCollection(clicked, collectionId);
+            selectPinnedItem(clicked);
           }}
         />
       ) : (
@@ -329,11 +326,7 @@ function PinnedItemRow({
               density === "row" ? "text-base" : "text-lg",
             )}
             onClick={() => {
-              try {
-                ztoolkit.getGlobal("ZoteroPane").selectItem(item.id);
-              } catch (error) {
-                ztoolkit.log("Error selecting pinned item:", error);
-              }
+              selectPinnedItem(item);
             }}
           >
             <div className="font-medium">
@@ -416,7 +409,7 @@ function NextUpRow({
         readerMode={showUnpinCheckbox}
         onReaderCheck={showUnpinCheckbox ? handleReaderCheck : undefined}
         onClick={(item) => {
-          selectItemInCollection(item, reading.collection.id);
+          selectPinnedItem(item);
         }}
       />
       {reading.classTitle ? (
