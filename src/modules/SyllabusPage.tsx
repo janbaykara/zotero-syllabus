@@ -2649,52 +2649,54 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           <div className="container-padded">
             <div
               className={twMerge(
-                "py-2 space-y-2",
+                "py-2",
                 density !== "expanded" ? "text-base" : "text-lg",
               )}
             >
-              <div className="syllabus-masthead-meta flex flex-0! flex-row gap-2 items-center">
-                <TextInput
-                  elementType="input"
-                  initialValue={syllabusMetadata.courseCode || ""}
-                  onSave={setCourseCode}
-                  className="w-[90px] overflow-hidden text-ellipsis whitespace-nowrap px-0! mx-0! text-primary cursor-pointer shrink-0! grow-0!"
-                  placeholder={getString("placeholder-course-code")}
-                  emptyBehavior="delete"
-                  readOnly={isLocked}
-                />
-                <TextInput
-                  elementType="input"
-                  initialValue={syllabusMetadata.institution || ""}
-                  onSave={setInstitution}
-                  className="px-0! mx-0! text-primary cursor-pointer grow shrink-0"
-                  placeholder={getString("placeholder-institution")}
-                  emptyBehavior="delete"
-                  readOnly={isLocked}
+              <div className="space-y-2">
+                <div className="syllabus-masthead-meta flex flex-0! flex-row gap-2 items-center">
+                  <TextInput
+                    elementType="input"
+                    initialValue={syllabusMetadata.courseCode || ""}
+                    onSave={setCourseCode}
+                    className="w-[90px] overflow-hidden text-ellipsis whitespace-nowrap px-0! mx-0! text-primary cursor-pointer shrink-0! grow-0!"
+                    placeholder={getString("placeholder-course-code")}
+                    emptyBehavior="delete"
+                    readOnly={isLocked}
+                  />
+                  <TextInput
+                    elementType="input"
+                    initialValue={syllabusMetadata.institution || ""}
+                    onSave={setInstitution}
+                    className="px-0! mx-0! text-primary cursor-pointer grow shrink-0"
+                    placeholder={getString("placeholder-institution")}
+                    emptyBehavior="delete"
+                    readOnly={isLocked}
+                  />
+                </div>
+                <PublishStatusBanner
+                  status={publishStatus}
+                  publishedUrl={publishedUrl}
+                  onOpen={(url) => Zotero.launchURL(url)}
+                  onCopy={(url) => {
+                    copyStringToClipboard(url);
+                    new ztoolkit.ProgressWindow(getString("app-name"), {
+                      closeOnClick: true,
+                      closeTime: 2000,
+                    })
+                      .createLine({
+                        text: getString("publish-status-copied"),
+                        type: "success",
+                      })
+                      .show();
+                  }}
+                  onSync={() => {
+                    void handlePublish({ skipConfirm: true });
+                  }}
+                  onDismissStatus={() => setPublishStatus({ kind: "idle" })}
                 />
               </div>
-              <PublishStatusBanner
-                status={publishStatus}
-                publishedUrl={publishedUrl}
-                onOpen={(url) => Zotero.launchURL(url)}
-                onCopy={(url) => {
-                  copyStringToClipboard(url);
-                  new ztoolkit.ProgressWindow(getString("app-name"), {
-                    closeOnClick: true,
-                    closeTime: 2000,
-                  })
-                    .createLine({
-                      text: getString("publish-status-copied"),
-                      type: "success",
-                    })
-                    .show();
-                }}
-                onSync={() => {
-                  void handlePublish({ skipConfirm: true });
-                }}
-                onDismissStatus={() => setPublishStatus({ kind: "idle" })}
-              />
-              <div className="syllabus-collection-description">
+              <div className="syllabus-collection-description mt-4">
                 <TextInput
                   elementType="textarea"
                   initialValue={syllabusMetadata.description || ""}

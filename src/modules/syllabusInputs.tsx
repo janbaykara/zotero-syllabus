@@ -137,6 +137,7 @@ export function TextInput({
   containerClassName?: string;
 } & JSX.HTMLAttributes<HTMLInputElement | HTMLTextAreaElement>) {
   const [value, setValue] = useState(initialValue);
+  const [editing, setEditing] = useState(false);
   const focusedRef = useRef(false);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const valueRef = useRef(value);
@@ -214,7 +215,24 @@ export function TextInput({
     if (el.ownerDocument.activeElement === el && start != null && end != null) {
       el.setSelectionRange(start, end);
     }
-  }, [value, fieldSizing, elementType]);
+  }, [value, fieldSizing, elementType, editing]);
+
+  useLayoutEffect(() => {
+    if (elementType !== "textarea" || !editing || readOnly) {
+      return;
+    }
+    const el = inputRef.current;
+    if (!el) {
+      return;
+    }
+    el.focus();
+    const len = el.value.length;
+    try {
+      el.setSelectionRange(len, len);
+    } catch {
+      // Some inputs reject setSelectionRange
+    }
+  }, [editing, elementType, readOnly]);
 
   // Hide the entire component when readOnly and no value
   if (readOnly && !value && !initialValue) {
@@ -222,101 +240,174 @@ export function TextInput({
   }
 
   const displayValue = value || initialValue || "";
+  const hasContent = Boolean(displayValue.trim());
+  const resolvedPlaceholder =
+    placeholder || getString("placeholder-add-description");
 
-  const el = (
-    <>
-      {h(elementType, {
-        ...elementProps,
-        ref: inputRef,
-        type: "text",
-        value,
-        readOnly,
-        disabled: readOnly,
-        onChange: readOnly
-          ? undefined
-          : (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-              setValue((e.target as HTMLInputElement).value),
-        onFocus: readOnly
-          ? undefined
-          : () => {
+  function beginEditing() {
+    if (readOnly) {
+      return;
+    }
+    setEditing(true);
+  }
+
+  function onRenderedClick(e: JSX.TargetedMouseEvent<HTMLDivElement>) {
+    const target = e.target as Element | null;
+    if (target?.closest?.("a")) {
+      return;
+    }
+    beginEditing();
+  }
+
+  // Single-line inputs keep always-editable behavior
+  if (elementType === "input") {
+    return (
+      <>
+        {h(elementType, {
+          ...elementProps,
+          ref: inputRef,
+          type: "text",
+          value,
+          readOnly,
+          disabled: readOnly,
+          onChange: readOnly
+            ? undefined
+            : (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+                setValue((e.target as HTMLInputElement).value),
+          onFocus: readOnly
+            ? undefined
+            : () => {
+                focusedRef.current = true;
+              },
+          onBlur: readOnly
+            ? undefined
+            : () => {
+                focusedRef.current = false;
+                save(value);
+              },
+          onKeyDown: readOnly
+            ? undefined
+            : (
+                e: JSX.TargetedKeyboardEvent<
+                  HTMLInputElement | HTMLTextAreaElement
+                >,
+              ) => {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  e.currentTarget.blur();
+                  save(value);
+                  return;
+                }
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.currentTarget.blur();
+                  save(value);
+                }
+              },
+          onSelect: readOnly
+            ? (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+                e.preventDefault();
+                e.currentTarget.setSelectionRange(0, 0);
+              }
+            : undefined,
+          onClick: readOnly
+            ? (
+                e: JSX.TargetedMouseEvent<
+                  HTMLInputElement | HTMLTextAreaElement
+                >,
+              ) => {
+                e.preventDefault();
+                e.currentTarget.blur();
+              }
+            : undefined,
+          placeholder: readOnly ? undefined : resolvedPlaceholder,
+          className: twMerge(
+            "bg-transparent border-none focus:outline-3 focus:outline-accent-blue focus:rounded-xs focus:outline-offset-2 field-sizing-content in-[.print]:hidden",
+            readOnly && "cursor-default select-none",
+            className,
+          ),
+          style: {
+            "--color-focus-border": "var(--color-accent-blue)",
+          },
+        })}
+        <div
+          className="hidden in-[.print]:block"
+          style={{ whiteSpace: "normal" }}
+        >
+          {displayValue}
+        </div>
+      </>
+    );
+  }
+
+  const showEditor = !readOnly && editing;
+  const showRendered = hasContent && (readOnly || !editing);
+  const showEmptyPrompt = !readOnly && !editing && !hasContent;
+
+  return (
+    <div className={twMerge("w-full", containerClassName)}>
+      {showEditor ? (
+        <>
+          <textarea
+            {...(elementProps as JSX.HTMLAttributes<HTMLTextAreaElement>)}
+            ref={inputRef as { current: HTMLTextAreaElement | null }}
+            value={value}
+            onChange={(e) => setValue((e.target as HTMLTextAreaElement).value)}
+            onFocus={() => {
               focusedRef.current = true;
-            },
-        onBlur: readOnly
-          ? undefined
-          : () => {
+            }}
+            onBlur={() => {
               focusedRef.current = false;
               save(value);
-            },
-        onKeyDown: readOnly
-          ? undefined
-          : (
-              e: JSX.TargetedKeyboardEvent<
-                HTMLInputElement | HTMLTextAreaElement
-              >,
-            ) => {
+              setEditing(false);
+            }}
+            onKeyDown={(e) => {
               if (e.key === "Escape") {
                 e.preventDefault();
                 e.currentTarget.blur();
                 save(value);
-                return;
               }
-              if (e.key === "Enter" && elementType !== "textarea") {
-                e.preventDefault();
-                e.currentTarget.blur();
-                save(value);
-              }
-            },
-        onSelect: readOnly
-          ? (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-              e.preventDefault();
-              e.currentTarget.setSelectionRange(0, 0);
-            }
-          : undefined,
-        onClick: readOnly
-          ? (
-              e: JSX.TargetedMouseEvent<HTMLInputElement | HTMLTextAreaElement>,
-            ) => {
-              e.preventDefault();
-              e.currentTarget.blur();
-            }
-          : undefined,
-        placeholder: readOnly ? undefined : placeholder || "Click to edit",
-        className: twMerge(
-          "bg-transparent border-none focus:outline-3 focus:outline-accent-blue focus:rounded-xs focus:outline-offset-2 field-sizing-content in-[.print]:hidden",
-          readOnly && "cursor-default select-none",
-          readOnly && elementType === "textarea" && "hidden",
-          className,
-        ),
-        style: {
-          "--color-focus-border": "var(--color-accent-blue)",
-        },
-      })}
-      {elementType === "textarea" && readOnly ? (
-        <div className="syllabus-prose">
-          <ProseText text={displayValue} />
-        </div>
-      ) : (
+            }}
+            placeholder={resolvedPlaceholder}
+            className={twMerge(
+              "bg-transparent border-none focus:outline-3 focus:outline-accent-blue focus:rounded-xs focus:outline-offset-2 field-sizing-content in-[.print]:hidden w-full",
+              className,
+            )}
+            style={{
+              "--color-focus-border": "var(--color-accent-blue)",
+            }}
+          />
+          <div className="hidden in-[.print]:block">
+            <ProseText text={displayValue} />
+          </div>
+        </>
+      ) : null}
+
+      {showRendered ? (
         <div
-          className="hidden in-[.print]:block"
-          style={{
-            whiteSpace: elementType === "textarea" ? undefined : "normal",
-          }}
-        >
-          {elementType === "textarea" ? (
-            <div className="syllabus-prose">
-              <ProseText text={displayValue} />
-            </div>
-          ) : (
-            displayValue
+          className={twMerge(
+            !readOnly && "cursor-text",
+            "focus-within:outline-3 focus-within:outline-accent-blue focus-within:rounded-xs focus-within:outline-offset-2",
+            className,
           )}
+        >
+          <ProseText text={displayValue} onClick={onRenderedClick} />
         </div>
-      )}
-    </>
+      ) : null}
+
+      {showEmptyPrompt ? (
+        <button
+          type="button"
+          className={twMerge(
+            "bg-transparent border-none p-0 m-0 text-left w-full cursor-text",
+            className,
+            "text-tertiary",
+          )}
+          onClick={beginEditing}
+        >
+          {resolvedPlaceholder}
+        </button>
+      ) : null}
+    </div>
   );
-
-  if (elementType === "input") {
-    return el;
-  }
-
-  return <div className={twMerge("w-full", containerClassName)}>{el}</div>;
 }

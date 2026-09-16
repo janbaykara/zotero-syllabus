@@ -541,6 +541,9 @@
   .cursor-pointer {
     cursor: pointer;
   }
+  .cursor-text {
+    cursor: text;
+  }
   .resize {
     resize: both;
   }
@@ -1103,6 +1106,9 @@
   .uppercase {
     text-transform: uppercase;
   }
+  .italic {
+    font-style: italic;
+  }
   .ordinal {
     --tw-ordinal: ordinal;
     font-variant-numeric: var(--tw-ordinal,) var(--tw-slashed-zero,) var(--tw-numeric-figure,) var(--tw-numeric-spacing,) var(--tw-numeric-fraction,);
@@ -1353,6 +1359,19 @@
   .not-in-\[\.print\]\:after\:bg-accent-blue\!:not(:where(:is(.print)) *)::after {
     content: var(--tw-content);
     background-color: var(--color-accent-blue) !important;
+  }
+  .focus-within\:rounded-xs:focus-within {
+    border-radius: var(--radius-xs);
+  }
+  .focus-within\:outline-3:focus-within {
+    outline-style: var(--tw-outline-style);
+    outline-width: 3px;
+  }
+  .focus-within\:outline-offset-2:focus-within {
+    outline-offset: 2px;
+  }
+  .focus-within\:outline-accent-blue:focus-within {
+    outline-color: var(--color-accent-blue);
   }
   @media (hover: hover) {
     .hover\:cursor-pointer:hover {

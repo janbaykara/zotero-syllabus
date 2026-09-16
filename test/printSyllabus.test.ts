@@ -46,12 +46,12 @@ describe("serializeSyllabusForPrint", function () {
 
     const textarea = document.createElement("textarea");
     textarea.className = "in-[.print]:hidden";
-    textarea.value = "First paragraph.\n\nSecond line soft-break\nstill second.";
+    textarea.value =
+      "First paragraph.\n\n**Bold** line soft-break\nstill second.";
 
     const mirror = document.createElement("div");
     mirror.className = "hidden in-[.print]:block";
-    mirror.innerHTML =
-      '<div class="syllabus-prose"><p>stale</p></div>';
+    mirror.innerHTML = '<div class="syllabus-prose"><p>stale</p></div>';
 
     description.append(textarea, mirror);
     root.append(description);
@@ -67,9 +67,10 @@ describe("serializeSyllabusForPrint", function () {
     ];
     assert.lengthOf(paragraphs, 2);
     assert.equal(paragraphs[0].textContent, "First paragraph.");
+    assert.include(paragraphs[1].innerHTML, "<strong>Bold</strong>");
     assert.match(
       paragraphs[1].innerHTML,
-      /^Second line soft-break<br\s*\/?>still second\.$/,
+      /line soft-break<br\s*\/?>\s*still second\./,
     );
   });
 

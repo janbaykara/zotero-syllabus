@@ -456,6 +456,42 @@ const PRINT_DOCUMENT_CSS = `
   .syllabus-prose p:last-child {
     margin-bottom: 0;
   }
+  .syllabus-prose ul,
+  .syllabus-prose ol {
+    margin: 0 0 0.65em;
+    padding-left: 1.35em;
+  }
+  .syllabus-prose ul:last-child,
+  .syllabus-prose ol:last-child {
+    margin-bottom: 0;
+  }
+  .syllabus-prose li {
+    margin: 0.15em 0;
+  }
+  .syllabus-prose li > p {
+    margin: 0;
+  }
+  .syllabus-prose blockquote {
+    margin: 0 0 0.65em;
+    padding-left: 0.85em;
+    border-left: 3px solid #d4d4d4;
+    color: #555;
+  }
+  .syllabus-prose blockquote:last-child {
+    margin-bottom: 0;
+  }
+  .syllabus-prose code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.92em;
+    padding: 0.1em 0.3em;
+    border-radius: 0.25em;
+    background: #f0f0f0;
+  }
+  .syllabus-prose a {
+    color: #2563eb;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
   body[data-item-density="row"] .syllabus-item-description,
   body[data-item-density="row"] .syllabus-item-reference,
   .density-row .syllabus-item-description,
@@ -612,8 +648,8 @@ function copyFormValues(source: HTMLElement, clone: HTMLElement): void {
 }
 
 function setPrintOnlyProse(sibling: Element, text: string): void {
-  // Match TextInput's textarea print mirror: preserve paragraph / soft breaks
-  // instead of stuffing raw newlines into textContent (HTML collapses them).
+  // Match TextInput's textarea print mirror: render Markdown instead of
+  // stuffing raw newlines into textContent (HTML collapses them).
   sibling.innerHTML = `<div class="syllabus-prose">${proseToDisplayHtml(text)}</div>`;
 }
 
