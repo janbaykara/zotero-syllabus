@@ -80,7 +80,8 @@ const PRINT_DOCUMENT_CSS = `
     display: none !important;
     content: none !important;
   }
-  /* Match SyllabusPage .container-padded: max-w-4xl (56rem) + horizontal pad */
+  /* Match SyllabusPage .container-padded: max-w-4xl (56rem) + horizontal pad.
+     Mobile uses tighter padding so covers + titles aren't squeezed. */
   .container,
   .container-padded,
   .syllabus-page {
@@ -90,12 +91,12 @@ const PRINT_DOCUMENT_CSS = `
   }
   .container-padded,
   .syllabus-page {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
   .syllabus-page {
-    padding-top: 2rem;
-    padding-bottom: 3rem;
+    padding-top: 1.25rem;
+    padding-bottom: 2.5rem;
     background: #fff;
     min-height: 100vh;
   }
@@ -110,31 +111,42 @@ const PRINT_DOCUMENT_CSS = `
       padding-bottom: 4rem;
     }
   }
+  /* In document flow above the title — not absolutely overlaid */
   .syllabus-publish-downloads {
-    position: absolute;
-    top: 2.5rem;
-    right: 2.5rem;
-    z-index: 2;
     display: flex;
     flex-direction: row;
-    justify-content: flex-end;
+    flex-wrap: wrap;
+    justify-content: flex-start;
     align-items: center;
-    gap: 0.5rem;
-    margin: 0;
+    gap: 0.4rem;
+    margin: 0 0 0.85rem;
+  }
+  @media (min-width: 48rem) {
+    .syllabus-publish-downloads {
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
   }
   .syllabus-publish-download {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    padding: 0.35rem 0.7rem;
+    padding: 0.35rem 0.65rem;
     border: 1px solid #c4b5fd;
     border-radius: 0.375rem;
     background: #f5f3ff;
     color: #5b21b6 !important;
     text-decoration: none !important;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     font-weight: 600;
     line-height: 1.2;
+  }
+  @media (min-width: 48rem) {
+    .syllabus-publish-download {
+      padding: 0.35rem 0.7rem;
+      font-size: 0.875rem;
+    }
   }
   .syllabus-publish-download:hover {
     background: #ede9fe;
@@ -178,7 +190,7 @@ const PRINT_DOCUMENT_CSS = `
     display: flex !important;
     flex-direction: row !important;
     align-items: flex-start !important;
-    gap: 0.75rem !important;
+    gap: 0.55rem !important;
     flex: none !important;
     /* relative: stretched title link covers the whole card */
     position: relative !important;
@@ -187,6 +199,11 @@ const PRINT_DOCUMENT_CSS = `
     overflow: visible !important;
     width: 100% !important;
     box-sizing: border-box !important;
+  }
+  @media (min-width: 48rem) {
+    body.publish-layout .syllabus-item-card {
+      gap: 0.75rem !important;
+    }
   }
   body.publish-layout .syllabus-publish-linked {
     position: relative !important;
@@ -295,9 +312,14 @@ const PRINT_DOCUMENT_CSS = `
     object-fit: contain;
   }
   body.publish-layout .syllabus-item-thumbnail-cover {
-    width: 6rem;
+    width: 4.5rem;
     flex-shrink: 0;
     align-self: flex-start;
+  }
+  @media (min-width: 48rem) {
+    body.publish-layout .syllabus-item-thumbnail-cover {
+      width: 6rem;
+    }
   }
   body.publish-layout .syllabus-item-thumbnail-cover img {
     max-width: none !important;
@@ -344,12 +366,17 @@ const PRINT_DOCUMENT_CSS = `
   body.publish-layout .syllabus-publish-credit {
     max-width: 56rem;
     margin: 0 auto;
-    padding: 1.25rem 2.5rem 2rem;
+    padding: 1rem 0.75rem 1.5rem;
     box-sizing: border-box;
     font-size: 11px;
     line-height: 1.45;
     color: #9ca3af;
     text-align: left;
+  }
+  @media (min-width: 48rem) {
+    body.publish-layout .syllabus-publish-credit {
+      padding: 1.25rem 2.5rem 2rem;
+    }
   }
   body.publish-layout .syllabus-publish-credit a {
     color: #6b7280;
@@ -412,11 +439,22 @@ const PRINT_DOCUMENT_CSS = `
     border-radius: 0.5rem;
     margin: 0.45rem 0;
   }
+  @media (max-width: 47.99rem) {
+    body.publish-layout .syllabus-item-card {
+      padding: 0.55rem 0.55rem;
+    }
+  }
   body[data-item-density="standard"] .syllabus-item-card,
   .density-standard .syllabus-item-card {
     padding: 0.4rem 0.65rem;
     margin: 0.25rem 0;
     border-radius: 0.35rem;
+  }
+  @media (max-width: 47.99rem) {
+    body.publish-layout[data-item-density="standard"] .syllabus-item-card,
+    body.publish-layout.density-standard .syllabus-item-card {
+      padding: 0.35rem 0.45rem;
+    }
   }
   body[data-item-density="row"] .syllabus-item-card,
   .density-row .syllabus-item-card {
@@ -513,8 +551,8 @@ const PRINT_DOCUMENT_CSS = `
     max-width: 56rem;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
     padding-bottom: 2rem;
   }
   @media (min-width: 48rem) {
@@ -1553,6 +1591,9 @@ export async function buildPrintableHtml({
         })
       : "";
 
+  const pagePad = layout === "publish" ? "" : "padding:2.5rem 2.5rem 4rem;";
+  const bibPad = layout === "publish" ? "" : "padding:0.15in 2.5rem 2rem;";
+
   return `<!DOCTYPE html>
 <html style="background:#fff;color-scheme:only light">
 <head>
@@ -1568,13 +1609,13 @@ export async function buildPrintableHtml({
   }
 </head>
 <body class="${bodyClass}" data-item-density="${resolved}" style="${bodyStyle}">
-  <div class="syllabus-page" data-item-density="${resolved}" style="position:relative;max-width:56rem;margin-left:auto;margin-right:auto;padding:2.5rem 2.5rem 4rem;background:#fff;min-height:100vh;box-sizing:border-box">
+  <div class="syllabus-page" data-item-density="${resolved}" style="max-width:56rem;margin-left:auto;margin-right:auto;${pagePad}background:#fff;min-height:100vh;box-sizing:border-box">
     ${downloadsHtml}
     ${innerHTML}
   </div>
   ${
     bibliographyHtml
-      ? `<div class="syllabus-print-page-break" style="break-after:page;page-break-after:always;height:0"></div><div class="syllabus-print-bibliography" style="max-width:56rem;margin-left:auto;margin-right:auto;padding:0.15in 2.5rem 2rem;box-sizing:border-box;font-family:${PRINT_FONT};color:#111">${bibliographyHtml}</div>`
+      ? `<div class="syllabus-print-page-break" style="break-after:page;page-break-after:always;height:0"></div><div class="syllabus-print-bibliography" style="max-width:56rem;margin-left:auto;margin-right:auto;${bibPad}box-sizing:border-box;font-family:${PRINT_FONT};color:#111">${bibliographyHtml}</div>`
       : ""
   }
   ${creditHtml}
