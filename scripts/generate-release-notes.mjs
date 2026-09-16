@@ -2,7 +2,8 @@
 /**
  * Build (and optionally publish) GitHub release notes for a tag:
  * - XPI attachment size and delta vs the previous release
- * - AI summary of key changes (OpenAI / Anthropic / Cursor, with commit fallback)
+ * - AI prose (1–3 sentences) on the most interesting end-user changes
+ *   (OpenAI / Anthropic / Cursor, with commit-subject fallback)
  * - Commit list since the previous release
  *
  * Usage:
@@ -169,18 +170,38 @@ function xpiSizeFromRelease(release) {
   return asset?.size;
 }
 
+function ensureSentence(text) {
+  const s = String(text || "").trim();
+  if (!s) return "";
+  return /[.!?]$/.test(s) ? s : `${s}.`;
+}
+
+function joinAsProse(items) {
+  const parts = items.map((s) => s.replace(/\.$/, "").trim()).filter(Boolean);
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return ensureSentence(parts[0]);
+  if (parts.length === 2) {
+    return ensureSentence(`${parts[0]}, and ${parts[1]}`);
+  }
+  return ensureSentence(
+    `${parts.slice(0, -1).join(", ")}, and ${parts.at(-1)}`,
+  );
+}
+
 function fallbackHighlights(commits) {
   const picks = commits
     .map((c) => c.subject)
     .filter((s) => !SKIP_HIGHLIGHT_RE.test(s))
-    .slice(0, 8);
-  if (picks.length === 0) {
-    return commits.slice(0, 5).map((c) => `- ${c.subject}`);
-  }
-  return picks.map((s) => `- ${s}`);
+    .slice(0, 3);
+  const subjects =
+    picks.length > 0
+      ? picks
+      : commits.slice(0, 3).map((c) => c.subject);
+  return joinAsProse(subjects);
 }
 
-function cleanAiBullets(text) {
+/** Normalize model output to 1–3 sentences of plain prose. */
+function cleanAiProse(text) {
   const lines = String(text || "")
     .replace(/\r\n/g, "\n")
     .split("\n")
@@ -188,14 +209,35 @@ function cleanAiBullets(text) {
     .filter(Boolean)
     .filter((line) => !/^#{1,6}\s/.test(line))
     .filter((line) => !/^(here('|’)s|summary|highlights)\b/i.test(line));
-  const bullets = lines
-    .map((line) => line.replace(/^[-*•]\s+/, "").replace(/^\d+\.\s+/, ""))
-    .map((line) => line.trim())
+  if (lines.length === 0) return "";
+
+  const bulletLines = lines.filter((line) =>
+    /^[-*•]\s+|^\d+\.\s+/.test(line),
+  );
+  if (
+    bulletLines.length > 0 &&
+    bulletLines.length >= Math.ceil(lines.length / 2)
+  ) {
+    const items = bulletLines
+      .map((line) => line.replace(/^[-*•]\s+/, "").replace(/^\d+\.\s+/, ""))
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .slice(0, 3);
+    return items.map(ensureSentence).join(" ");
+  }
+
+  const prose = lines.join(" ").replace(/\s+/g, " ").trim();
+  const sentences = prose.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [prose];
+  return sentences
+    .map((s) => s.trim())
     .filter(Boolean)
-    .slice(0, 8)
-    .map((line) => `- ${line}`);
-  return bullets.length ? bullets.join("\n") : "";
+    .slice(0, 3)
+    .map(ensureSentence)
+    .join(" ");
 }
+
+const AI_PROSE_SYSTEM =
+  "You write concise GitHub release notes for Zotero Syllabus, a Zotero plugin. Reply with 1–3 short sentences of plain prose for end users about the most interesting changes. Skip routine chores, CI, docs, and internal refactors. No bullets, preamble, commit hashes, or section headings.";
 
 async function summarizeWithOpenAI(commits) {
   const key = process.env.OPENAI_API_KEY;
@@ -213,12 +255,11 @@ async function summarizeWithOpenAI(commits) {
       messages: [
         {
           role: "system",
-          content:
-            "You write concise GitHub release notes for Zotero Syllabus, a Zotero plugin. Reply with 3–6 markdown bullets only. User-facing language. No preamble, no commit hashes, no section headings.",
+          content: AI_PROSE_SYSTEM,
         },
         {
           role: "user",
-          content: `Summarize the key changes in this release:\n\n${commits
+          content: `Write 1–3 sentences on the most interesting end-user changes in this release:\n\n${commits
             .map((c) => `- ${c.subject}`)
             .join("\n")}`,
         },
@@ -231,7 +272,7 @@ async function summarizeWithOpenAI(commits) {
       `OpenAI ${response.status}: ${data?.error?.message || "request failed"}`,
     );
   }
-  return cleanAiBullets(data?.choices?.[0]?.message?.content);
+  return cleanAiProse(data?.choices?.[0]?.message?.content);
 }
 
 async function summarizeWithAnthropic(commits) {
@@ -249,12 +290,11 @@ async function summarizeWithAnthropic(commits) {
       model,
       max_tokens: 400,
       temperature: 0.2,
-      system:
-        "You write concise GitHub release notes for Zotero Syllabus, a Zotero plugin. Reply with 3–6 markdown bullets only. User-facing language. No preamble, no commit hashes, no section headings.",
+      system: AI_PROSE_SYSTEM,
       messages: [
         {
           role: "user",
-          content: `Summarize the key changes in this release:\n\n${commits
+          content: `Write 1–3 sentences on the most interesting end-user changes in this release:\n\n${commits
             .map((c) => `- ${c.subject}`)
             .join("\n")}`,
         },
@@ -271,7 +311,7 @@ async function summarizeWithAnthropic(commits) {
     .filter((part) => part.type === "text")
     .map((part) => part.text)
     .join("\n");
-  return cleanAiBullets(text);
+  return cleanAiProse(text);
 }
 
 async function summarizeWithCursor(commits) {
@@ -290,9 +330,9 @@ async function summarizeWithCursor(commits) {
   const result = await Agent.prompt(
     [
       "Do not use tools, read files, or edit anything.",
-      "Reply with 3–6 markdown bullets only summarizing these commits for Zotero Syllabus end users.",
-      "No preamble, hashes, or headings.",
+      AI_PROSE_SYSTEM,
       "",
+      "Commits:",
       ...commits.map((c) => `- ${c.subject}`),
     ].join("\n"),
     {
@@ -306,7 +346,7 @@ async function summarizeWithCursor(commits) {
       `Cursor agent ${result.status}: ${result.error?.message || "no result"}`,
     );
   }
-  return cleanAiBullets(result.result);
+  return cleanAiProse(result.result);
 }
 
 async function buildHighlights(commits) {
@@ -330,7 +370,7 @@ async function buildHighlights(commits) {
     }
   }
   console.error("AI summary unavailable; using commit subjects");
-  return fallbackHighlights(commits).join("\n");
+  return fallbackHighlights(commits);
 }
 
 function commitListMarkdown(repo, commits) {

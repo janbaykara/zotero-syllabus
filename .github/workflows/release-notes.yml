@@ -1,4 +1,4 @@
-# Enrich a published GitHub release with package size, AI highlights, and commits.
+# Enrich a published GitHub release with package size, AI end-user prose, and commits.
 name: Release notes
 
 on:
@@ -45,7 +45,7 @@ jobs:
           fi
 
       # Optional AI: OPENAI_API_KEY / ANTHROPIC_API_KEY, else CURSOR_API_KEY via SDK.
-      # Without any of those, highlights fall back to filtered commit subjects.
+      # Without any of those, highlights fall back to a short prose join of commit subjects.
       - name: Install Cursor SDK for AI summary
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
