@@ -20,6 +20,8 @@ export default zotero({
           process: "readonly",
           fetch: "readonly",
           URL: "readonly",
+          setTimeout: "readonly",
+          clearTimeout: "readonly",
         },
       },
     },

@@ -108,9 +108,7 @@ export function fallbackItemsAsZoteroRdf(items: Zotero.Item[]): string {
     const about = `#item_${item.id || index}`;
     const bibType = bibTypeForItem(item);
     const zType = item.isNote?.() ? "note" : item.itemType || "document";
-    const parts: string[] = [
-      `<z:itemType>${escapeXml(zType)}</z:itemType>`,
-    ];
+    const parts: string[] = [`<z:itemType>${escapeXml(zType)}</z:itemType>`];
 
     if (item.isNote?.()) {
       const title = field(item, "title") || "Syllabus";
@@ -120,7 +118,10 @@ export function fallbackItemsAsZoteroRdf(items: Zotero.Item[]): string {
         parts.push(`<rdf:value>${escapeXml(body)}</rdf:value>`);
       }
       parts.push(tagsXml(item));
-    } else if (typeof item.isRegularItem === "function" && item.isRegularItem()) {
+    } else if (
+      typeof item.isRegularItem === "function" &&
+      item.isRegularItem()
+    ) {
       const title = field(item, "title");
       if (title) parts.push(`<dc:title>${escapeXml(title)}</dc:title>`);
       parts.push(creatorsXml(item));
@@ -138,9 +139,7 @@ export function fallbackItemsAsZoteroRdf(items: Zotero.Item[]): string {
       }
       const doi = field(item, "DOI");
       if (doi) {
-        parts.push(
-          `<dc:identifier>DOI ${escapeXml(doi)}</dc:identifier>`,
-        );
+        parts.push(`<dc:identifier>DOI ${escapeXml(doi)}</dc:identifier>`);
       }
       const url = field(item, "url");
       if (url) {
@@ -166,9 +165,7 @@ export function fallbackItemsAsZoteroRdf(items: Zotero.Item[]): string {
   return `<?xml version="1.0"?>\n<rdf:RDF ${ns}>\n${blocks.join("\n")}\n</rdf:RDF>\n`;
 }
 
-async function exportRdfWithTranslator(
-  items: Zotero.Item[],
-): Promise<string> {
+async function exportRdfWithTranslator(items: Zotero.Item[]): Promise<string> {
   return new Promise((resolve, reject) => {
     const translation = new Zotero.Translate.Export();
     translation.setItems(items);
@@ -214,9 +211,7 @@ async function exportRdfWithTranslator(
           reject(new Error("RDF export failed"));
           return;
         }
-        const rdfXml = String(
-          (translate as { string?: string }).string || "",
-        );
+        const rdfXml = String((translate as { string?: string }).string || "");
         if (!rdfXml) {
           reject(new Error("RDF export did not return a valid string"));
           return;

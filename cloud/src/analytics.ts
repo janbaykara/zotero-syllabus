@@ -128,7 +128,8 @@ async function runAnalyticsSql(
   env: Env,
   sql: string,
 ): Promise<
-  { ok: true; rows: Array<Record<string, unknown>> } | { ok: false; error: string }
+  | { ok: true; rows: Array<Record<string, unknown>> }
+  | { ok: false; error: string }
 > {
   const accountId = env.CF_ACCOUNT_ID?.trim();
   const token = env.CF_ANALYTICS_API_TOKEN?.trim();
@@ -293,7 +294,8 @@ FORMAT JSON
     const hits = asNumber(row.hits);
     if (event === EVENT_PAGE_VIEW) counts.pageViews += hits;
     else if (event === EVENT_FILE_DOWNLOAD) counts.fileDownloads += hits;
-    else if (event === EVENT_CITATION_DOWNLOAD) counts.citationDownloads += hits;
+    else if (event === EVENT_CITATION_DOWNLOAD)
+      counts.citationDownloads += hits;
   }
 
   return {

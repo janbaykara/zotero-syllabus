@@ -155,10 +155,7 @@ export function fallbackNoteAsBibTeX(note: Zotero.Item): string {
   return `@misc{zoteroSyllabusNote,\n${fields.join(",\n")}\n}`;
 }
 
-function appendNoteExport(
-  text: string,
-  noteBlock: string,
-): string {
+function appendNoteExport(text: string, noteBlock: string): string {
   const base = text.trimEnd();
   const note = noteBlock.trim();
   if (!note) return text;

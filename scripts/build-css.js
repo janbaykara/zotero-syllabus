@@ -111,7 +111,8 @@ export function watchPublishCoverStyles() {
   rebuild();
 }
 
-const invokedAsCli = process.argv[1] && process.argv[1].endsWith("build-css.js");
+const invokedAsCli =
+  process.argv[1] && process.argv[1].endsWith("build-css.js");
 
 if (invokedAsCli) {
   const watchOnly = process.argv.includes("--watch-publish-cover");

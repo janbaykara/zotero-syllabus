@@ -27,9 +27,7 @@ describe("prose markdown", function () {
   });
 
   it("renders lists and blockquotes", function () {
-    const html = proseToDisplayHtml(
-      "- one\n- two\n\n> quoted\n\n1. a\n2. b",
-    );
+    const html = proseToDisplayHtml("- one\n- two\n\n> quoted\n\n1. a\n2. b");
     assert.include(html, "<ul>");
     assert.include(html, "<ol>");
     assert.include(html, "<blockquote>");
@@ -38,7 +36,7 @@ describe("prose markdown", function () {
 
   it("escapes raw HTML and blocks javascript links", function () {
     const html = proseToDisplayHtml(
-      '<script>alert(1)</script> and [x](javascript:alert(1))',
+      "<script>alert(1)</script> and [x](javascript:alert(1))",
     );
     assert.notInclude(html, "<script>");
     assert.notInclude(html.toLowerCase(), "javascript:");

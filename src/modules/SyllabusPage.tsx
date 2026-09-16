@@ -2779,30 +2779,30 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                     readOnly={isLocked}
                   />
                 </div>
-              <PublishStatusBanner
-                status={publishStatus}
-                publishedUrl={publishedUrl}
-                onOpen={(url) => Zotero.launchURL(url)}
-                onCopy={(url) => {
-                  copyStringToClipboard(url);
-                  new ztoolkit.ProgressWindow(getString("app-name"), {
-                    closeOnClick: true,
-                    closeTime: 2000,
-                  })
-                    .createLine({
-                      text: getString("publish-status-copied"),
-                      type: "success",
+                <PublishStatusBanner
+                  status={publishStatus}
+                  publishedUrl={publishedUrl}
+                  onOpen={(url) => Zotero.launchURL(url)}
+                  onCopy={(url) => {
+                    copyStringToClipboard(url);
+                    new ztoolkit.ProgressWindow(getString("app-name"), {
+                      closeOnClick: true,
+                      closeTime: 2000,
                     })
-                    .show();
-                }}
-                onSync={() => {
-                  void handlePublish({ skipConfirm: true });
-                }}
-                onUnpublish={() => {
-                  void handleUnpublish();
-                }}
-                onDismissStatus={() => setPublishStatus({ kind: "idle" })}
-              />
+                      .createLine({
+                        text: getString("publish-status-copied"),
+                        type: "success",
+                      })
+                      .show();
+                  }}
+                  onSync={() => {
+                    void handlePublish({ skipConfirm: true });
+                  }}
+                  onUnpublish={() => {
+                    void handleUnpublish();
+                  }}
+                  onDismissStatus={() => setPublishStatus({ kind: "idle" })}
+                />
               </div>
               <div className="syllabus-collection-description mt-4">
                 <TextInput

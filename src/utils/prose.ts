@@ -60,6 +60,20 @@ function createMarkdown(breaks: boolean) {
   return md;
 }
 
+/** Drop markdown links with unsafe protocols; keep the visible label only. */
+function stripUnsafeMarkdownLinks(text: string): string {
+  return text.replace(
+    /\[([^\]]*)\]\(\s*([^)\s]+)(?:\s+"[^"]*")?\s*\)/g,
+    (full, label: string, url: string) => {
+      const trimmed = String(url || "").trim();
+      if (/^(https?:|mailto:|#)/i.test(trimmed)) {
+        return full;
+      }
+      return label;
+    },
+  );
+}
+
 const displayMarkdown = createMarkdown(true);
 
 /** Split on blank lines; within each paragraph, split on single newlines. */
@@ -85,7 +99,9 @@ export function splitProse(text: string | null | undefined): ProseParagraph[] {
  * Supports emphasis, strong, inline code, links, lists, and blockquotes.
  */
 export function proseToDisplayHtml(text: string | null | undefined): string {
-  const normalized = (text || "").replace(/\r\n/g, "\n").trim();
+  const normalized = stripUnsafeMarkdownLinks(
+    (text || "").replace(/\r\n/g, "\n").trim(),
+  );
   if (!normalized) {
     return "";
   }

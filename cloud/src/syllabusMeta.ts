@@ -22,9 +22,9 @@ export function sanitizeMetaField(
   maxChars = META_FIELD_MAX_CHARS,
 ): string {
   if (!raw) return "";
-  // Strip controls; keep printable Unicode (institution names, accents).
+  // Strip C0 controls + DEL; keep printable Unicode (institution names, accents).
   const cleaned = raw
-    .replace(/[\u0000-\u001F\u007F]/g, "")
+    .replace(/\p{Cc}/gu, "")
     .replace(/\s+/g, " ")
     .trim();
   if (!cleaned) return "";
@@ -33,9 +33,7 @@ export function sanitizeMetaField(
 }
 
 /** Decode a transport header (percent-encoded UTF-8) into a sanitized field. */
-export function decodeMetaHeader(
-  raw: string | null | undefined,
-): string {
+export function decodeMetaHeader(raw: string | null | undefined): string {
   if (!raw) return "";
   let decoded = raw;
   try {

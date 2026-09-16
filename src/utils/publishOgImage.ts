@@ -38,7 +38,9 @@ function srcLooksLoadable(src: string): boolean {
 }
 
 /** Prefer already-decoded cover <img> nodes from the live syllabus page. */
-export function collectPublishCoverImages(root: ParentNode): HTMLImageElement[] {
+export function collectPublishCoverImages(
+  root: ParentNode,
+): HTMLImageElement[] {
   const imgs = Array.from(
     root.querySelectorAll(
       ".syllabus-item-thumbnail-cover img, .syllabus-item-thumbnail img",
@@ -105,7 +107,10 @@ function loadImage(
   });
 }
 
-function winSetTimeout(fn: () => void, ms: number): ReturnType<typeof setTimeout> {
+function winSetTimeout(
+  fn: () => void,
+  ms: number,
+): ReturnType<typeof setTimeout> {
   return setTimeout(fn, ms);
 }
 

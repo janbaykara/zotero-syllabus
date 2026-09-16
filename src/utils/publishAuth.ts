@@ -378,7 +378,7 @@ export async function putPublishObject(opts: {
 /** Percent-encode for ASCII-safe HTTP headers (Worker decodes). */
 function encodeSyllabusMetaHeader(value: string | null | undefined): string {
   const cleaned = (value || "")
-    .replace(/[\u0000-\u001F\u007F]/g, "")
+    .replace(/\p{Cc}/gu, "")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 512);

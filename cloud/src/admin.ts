@@ -1,9 +1,5 @@
 import type { Env } from "./types";
-import {
-  queryViewStats,
-  syllabusStatsKey,
-  type ViewStats,
-} from "./analytics";
+import { queryViewStats, syllabusStatsKey, type ViewStats } from "./analytics";
 import { PathError, objectKey, userSyllabusPrefix } from "./paths";
 import { reconcileUsage } from "./quota";
 import { syllabusMetaFromCustomMetadata } from "./syllabusMeta";
@@ -339,9 +335,7 @@ ${trs}
       ? `<p class="muted">No published syllabi found.</p>`
       : sections.join("\n");
 
-  const viewsTotal = views.available
-    ? formatCount(views.pageViews30d)
-    : "—";
+  const viewsTotal = views.available ? formatCount(views.pageViews30d) : "—";
   const downloadsTotal = views.available
     ? formatCount(views.fileDownloads30d)
     : "—";
@@ -553,7 +547,10 @@ function adminJson(data: unknown, status = 200): Response {
 
 function requireAdminKey(request: Request, env: Env): boolean {
   const url = new URL(request.url);
-  return adminKeyMatches(url.searchParams.get("key"), env.ADMIN_DASHBOARD_SECRET);
+  return adminKeyMatches(
+    url.searchParams.get("key"),
+    env.ADMIN_DASHBOARD_SECRET,
+  );
 }
 
 export async function handleAdminDashboard(

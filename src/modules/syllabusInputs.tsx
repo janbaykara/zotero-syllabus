@@ -305,7 +305,9 @@ export function TextInput({
                 }
               },
           onSelect: readOnly
-            ? (e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+            ? (
+                e: JSX.TargetedEvent<HTMLInputElement | HTMLTextAreaElement>,
+              ) => {
                 e.preventDefault();
                 e.currentTarget.setSelectionRange(0, 0);
               }

@@ -42,7 +42,10 @@ describe("exportCitations syllabus note", function () {
     const ris = fallbackNoteAsRis(mockNote(noteHtml));
     assert.include(ris, "TY  - NOTE");
     assert.include(ris, "TI  - Syllabus");
-    assert.include(ris, 'N1  - <h1>Syllabus</h1><pre data-zotero-syllabus="1">{"version":2}</pre>');
+    assert.include(
+      ris,
+      'N1  - <h1>Syllabus</h1><pre data-zotero-syllabus="1">{"version":2}</pre>',
+    );
     assert.include(ris, "ER  - ");
   });
 
@@ -50,7 +53,10 @@ describe("exportCitations syllabus note", function () {
     const bib = fallbackNoteAsBibTeX(mockNote(noteHtml));
     assert.match(bib, /^@misc\{zoteroSyllabusNote,/);
     assert.include(bib, "title = {Syllabus}");
-    assert.include(bib, 'note = {<h1>Syllabus</h1><pre data-zotero-syllabus="1">{"version":2}</pre>}');
+    assert.include(
+      bib,
+      'note = {<h1>Syllabus</h1><pre data-zotero-syllabus="1">\\{"version":2\\}</pre>}',
+    );
   });
 
   it("fallback RIS/BibTeX include both regular items and the syllabus note", function () {

@@ -4,34 +4,80 @@
  */
 
 /* Utilities used by GalleryCover / PlaceholderFace (not in print base CSS) */
-body.publish-layout .syllabus-item-thumbnail-cover .relative { position: relative; }
-body.publish-layout .syllabus-item-thumbnail-cover .absolute { position: absolute; }
-body.publish-layout .syllabus-item-thumbnail-cover .inset-0 { inset: 0; }
-body.publish-layout .syllabus-item-thumbnail-cover .w-full { width: 100%; }
-body.publish-layout .syllabus-item-thumbnail-cover .h-full { height: 100%; }
-body.publish-layout .syllabus-item-thumbnail-cover .h-auto { height: auto; }
-body.publish-layout .syllabus-item-thumbnail-cover .min-w-0 { min-width: 0; }
-body.publish-layout .syllabus-item-thumbnail-cover .flex-1 { flex: 1 1 0%; }
-body.publish-layout .syllabus-item-thumbnail-cover .overflow-hidden { overflow: hidden; }
+body.publish-layout .syllabus-item-thumbnail-cover .relative {
+  position: relative;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .absolute {
+  position: absolute;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .inset-0 {
+  inset: 0;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .w-full {
+  width: 100%;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .h-full {
+  height: 100%;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .h-auto {
+  height: auto;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .min-w-0 {
+  min-width: 0;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .flex-1 {
+  flex: 1 1 0%;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .overflow-hidden {
+  overflow: hidden;
+}
 body.publish-layout .syllabus-item-thumbnail-cover .rounded-\[3px\],
-body.publish-layout .syllabus-item-thumbnail-cover [class*="rounded-[3px]"] { border-radius: 3px; }
-body.publish-layout .syllabus-item-thumbnail-cover .bg-quinary { background: #e8e8ea; }
-body.publish-layout .syllabus-item-thumbnail-cover .text-white { color: #fff !important; }
-body.publish-layout .syllabus-item-thumbnail-cover .text-white * { color: inherit !important; }
-body.publish-layout .syllabus-item-thumbnail-cover .font-semibold { font-weight: 600; }
-body.publish-layout .syllabus-item-thumbnail-cover .leading-snug { line-height: 1.375; }
+body.publish-layout .syllabus-item-thumbnail-cover [class*="rounded-[3px]"] {
+  border-radius: 3px;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .bg-quinary {
+  background: #e8e8ea;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .text-white {
+  color: #fff !important;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .text-white * {
+  color: inherit !important;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .font-semibold {
+  font-weight: 600;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .leading-snug {
+  line-height: 1.375;
+}
 body.publish-layout .syllabus-item-thumbnail-cover .drop-shadow-sm {
   filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.05));
 }
-body.publish-layout .syllabus-item-thumbnail-cover .opacity-85 { opacity: 0.85; }
-body.publish-layout .syllabus-item-thumbnail-cover .p-3 { padding: 0.75rem; }
-body.publish-layout .syllabus-item-thumbnail-cover .justify-between { justify-content: space-between; }
-body.publish-layout .syllabus-item-thumbnail-cover .object-cover { object-fit: cover; }
-body.publish-layout .syllabus-item-thumbnail-cover .object-contain { object-fit: contain; }
-body.publish-layout .syllabus-item-thumbnail-cover .bg-white { background: #fff; }
-body.publish-layout .syllabus-item-thumbnail-cover .block { display: block; }
+body.publish-layout .syllabus-item-thumbnail-cover .opacity-85 {
+  opacity: 0.85;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .p-3 {
+  padding: 0.75rem;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .justify-between {
+  justify-content: space-between;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .object-cover {
+  object-fit: cover;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .object-contain {
+  object-fit: contain;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .bg-white {
+  background: #fff;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .block {
+  display: block;
+}
 body.publish-layout .syllabus-item-thumbnail-cover .shadow-card {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.12),
+    0 1px 2px rgba(0, 0, 0, 0.08);
 }
 body.publish-layout .syllabus-item-thumbnail-cover .line-clamp-2,
 body.publish-layout .syllabus-item-thumbnail-cover .line-clamp-3,
@@ -40,15 +86,27 @@ body.publish-layout .syllabus-item-thumbnail-cover .line-clamp-4 {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-body.publish-layout .syllabus-item-thumbnail-cover .line-clamp-2 { -webkit-line-clamp: 2; }
-body.publish-layout .syllabus-item-thumbnail-cover .line-clamp-3 { -webkit-line-clamp: 3; }
-body.publish-layout .syllabus-item-thumbnail-cover .line-clamp-4 { -webkit-line-clamp: 4; }
+body.publish-layout .syllabus-item-thumbnail-cover .line-clamp-2 {
+  -webkit-line-clamp: 2;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .line-clamp-3 {
+  -webkit-line-clamp: 3;
+}
+body.publish-layout .syllabus-item-thumbnail-cover .line-clamp-4 {
+  -webkit-line-clamp: 4;
+}
 body.publish-layout .syllabus-item-thumbnail-cover .text-\[11px\],
-body.publish-layout .syllabus-item-thumbnail-cover [class*="text-[11px]"] { font-size: 11px; }
+body.publish-layout .syllabus-item-thumbnail-cover [class*="text-[11px]"] {
+  font-size: 11px;
+}
 body.publish-layout .syllabus-item-thumbnail-cover .text-\[12px\],
-body.publish-layout .syllabus-item-thumbnail-cover [class*="text-[12px]"] { font-size: 12px; }
+body.publish-layout .syllabus-item-thumbnail-cover [class*="text-[12px]"] {
+  font-size: 12px;
+}
 body.publish-layout .syllabus-item-thumbnail-cover .text-\[13px\],
-body.publish-layout .syllabus-item-thumbnail-cover [class*="text-[13px]"] { font-size: 13px; }
+body.publish-layout .syllabus-item-thumbnail-cover [class*="text-[13px]"] {
+  font-size: 13px;
+}
 
 /* Slot sizing inside expanded syllabus cards */
 body.publish-layout .syllabus-item-thumbnail-cover {
@@ -62,11 +120,15 @@ body.publish-layout .syllabus-item-thumbnail-cover .relative {
 }
 body.publish-layout .syllabus-item-thumbnail-cover .absolute,
 body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-journal,
-body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-placeholder-face,
+body.publish-layout
+  .syllabus-item-thumbnail-cover
+  .syllabus-gallery-placeholder-face,
 body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-book-spine,
 body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-page-fold,
 body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-play,
-body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-web-caption {
+body.publish-layout
+  .syllabus-item-thumbnail-cover
+  .syllabus-gallery-web-caption {
   position: absolute !important;
 }
 body.publish-layout .syllabus-item-thumbnail-cover .h-full {
@@ -75,12 +137,22 @@ body.publish-layout .syllabus-item-thumbnail-cover .h-full {
 body.publish-layout .syllabus-item-thumbnail-cover .overflow-hidden {
   overflow: hidden !important;
 }
-body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-cover-portrait,
-body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-cover-video,
+body.publish-layout
+  .syllabus-item-thumbnail-cover
+  .syllabus-gallery-cover-portrait,
+body.publish-layout
+  .syllabus-item-thumbnail-cover
+  .syllabus-gallery-cover-video,
 body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-cover-web,
-body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-cover-square,
-body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-cover-natural,
-body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-cover-with-binder {
+body.publish-layout
+  .syllabus-item-thumbnail-cover
+  .syllabus-gallery-cover-square,
+body.publish-layout
+  .syllabus-item-thumbnail-cover
+  .syllabus-gallery-cover-natural,
+body.publish-layout
+  .syllabus-item-thumbnail-cover
+  .syllabus-gallery-cover-with-binder {
   align-self: stretch;
   position: relative !important;
   height: auto !important;
@@ -143,10 +215,14 @@ body.publish-layout .syllabus-gallery-journal-mark {
   display: flex !important;
   color: #fff !important;
 }
-body.publish-layout .syllabus-gallery-journal.is-contemporary .syllabus-gallery-journal-edition {
+body.publish-layout
+  .syllabus-gallery-journal.is-contemporary
+  .syllabus-gallery-journal-edition {
   color: #5a5a5a !important;
 }
-body.publish-layout .syllabus-gallery-journal.is-contemporary .syllabus-gallery-journal-author {
+body.publish-layout
+  .syllabus-gallery-journal.is-contemporary
+  .syllabus-gallery-journal-author {
   color: #3a3a3a !important;
 }
 body.publish-layout .syllabus-gallery-journal-abstract {
@@ -169,7 +245,9 @@ body.publish-layout .syllabus-gallery-cover-with-binder {
   flex-direction: row !important;
   position: relative !important;
 }
-body.publish-layout .syllabus-gallery-cover-with-binder .syllabus-gallery-cover-face {
+body.publish-layout
+  .syllabus-gallery-cover-with-binder
+  .syllabus-gallery-cover-face {
   position: relative !important;
   overflow: hidden !important;
 }

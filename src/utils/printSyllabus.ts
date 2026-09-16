@@ -624,6 +624,10 @@ function asFormField(node: Node | Element | null): FormField | null {
   return el ? (el as FormField) : null;
 }
 
+function tagNameUpper(el: Element): string {
+  return el.tagName.toUpperCase();
+}
+
 function copyFormValues(source: HTMLElement, clone: HTMLElement): void {
   const srcEls = source.querySelectorAll("input, textarea, select");
   const dstEls = clone.querySelectorAll("input, textarea, select");
@@ -634,15 +638,15 @@ function copyFormValues(source: HTMLElement, clone: HTMLElement): void {
     const dst = dstEls[i];
     const from = asFormField(src);
     const to = asFormField(dst);
-    if (!from || !to || from.tagName !== to.tagName) {
+    if (!from || !to || tagNameUpper(from) !== tagNameUpper(to)) {
       return;
     }
     to.value = from.value;
     to.setAttribute("value", from.value);
-    if (from.tagName === "INPUT") {
+    if (tagNameUpper(from) === "INPUT") {
       to.checked = from.checked;
     }
-    if (from.tagName === "TEXTAREA") {
+    if (tagNameUpper(from) === "TEXTAREA") {
       to.textContent = from.value;
     }
   });
@@ -666,7 +670,7 @@ function syncPrintOnlyTextFromInputs(root: ParentNode): void {
     // field and duplicates its value in the PDF.
     const sibling = asElement(el.nextElementSibling);
     if (sibling && isPrintOnly(sibling)) {
-      if (el.tagName === "TEXTAREA") {
+      if (tagNameUpper(el) === "TEXTAREA") {
         setPrintOnlyProse(sibling, el.value);
       } else {
         sibling.textContent = el.value;
@@ -695,7 +699,7 @@ function replaceFormControlsWithText(root: ParentNode): void {
       return;
     }
     const div = el.ownerDocument.createElement("div");
-    if (el.tagName === "TEXTAREA") {
+    if (tagNameUpper(el) === "TEXTAREA") {
       div.className = "syllabus-prose";
       div.innerHTML = proseToDisplayHtml(text);
     } else {
@@ -896,7 +900,7 @@ function insertPublishTimestamp(root: ParentNode, when = new Date()): void {
  */
 function promoteSyllabusUrlLinks(root: ParentNode): void {
   root.querySelectorAll(".underline").forEach((el) => {
-    if (el.closest("a") || el.tagName === "A") {
+    if (el.closest("a") || tagNameUpper(el) === "A") {
       return;
     }
     const text = (el.textContent || "").trim();
@@ -1290,7 +1294,7 @@ function applyInlinePrintStyles(
     }
     if (
       classes.includes("syllabus-publish-item-type-icon") ||
-      (el.tagName === "IMG" &&
+      (el.tagName.toUpperCase() === "IMG" &&
         classListHas(el, "syllabus-publish-item-type-icon"))
     ) {
       setPrintStyle(el, {
@@ -1600,14 +1604,10 @@ function buildPublishShareMetaHtml(opts: {
     lines.push(`<meta property="og:description" content="${safeDesc}">`);
   }
   if (url) {
-    lines.push(
-      `<meta property="og:url" content="${escapeHtml(url)}">`,
-    );
+    lines.push(`<meta property="og:url" content="${escapeHtml(url)}">`);
   }
   if (image) {
-    lines.push(
-      `<meta property="og:image" content="${escapeHtml(image)}">`,
-    );
+    lines.push(`<meta property="og:image" content="${escapeHtml(image)}">`);
     lines.push(`<meta property="og:image:width" content="1200">`);
     lines.push(`<meta property="og:image:height" content="630">`);
   }
@@ -1619,9 +1619,7 @@ function buildPublishShareMetaHtml(opts: {
     lines.push(`<meta name="twitter:description" content="${safeDesc}">`);
   }
   if (image) {
-    lines.push(
-      `<meta name="twitter:image" content="${escapeHtml(image)}">`,
-    );
+    lines.push(`<meta name="twitter:image" content="${escapeHtml(image)}">`);
   }
   return lines.join("\n  ");
 }
