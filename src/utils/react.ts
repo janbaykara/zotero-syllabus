@@ -48,9 +48,11 @@ export function renderComponent(
     existing.treeKey != null &&
     existing.treeKey === treeKey;
 
-  // Only tear down when the logical view changes. Same-key re-renders update
-  // in place via Preact's render() — unmount-first caused SyllabusPage flashes.
-  if (existing && !sameTree && treeKey != null) {
+  // Same treeKey → update in place (avoids SyllabusPage flashes).
+  // Missing treeKey (TabManager / item pane) or a changed treeKey → remount.
+  // Without remounting, an emptied or replaced DOM leaves Preact desynced
+  // and the next render paints blank.
+  if (existing && !sameTree) {
     try {
       if (rootElement.isConnected || rootElement.parentNode) {
         existing.unmount();
@@ -58,9 +60,6 @@ export function renderComponent(
     } catch (e) {
       ztoolkit.log(`Error during unmount for root ${id}:`, e);
     }
-  } else if (existing && treeKey == null) {
-    // Legacy callers with no treeKey: preserve prior force-remount behaviour
-    // only when explicitly clearing; otherwise update in place.
   }
 
   // Render Preact component (updates existing tree when not unmounted)

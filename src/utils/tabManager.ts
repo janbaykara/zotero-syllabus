@@ -239,8 +239,8 @@ export class TabManager<TParams = any> {
 
     const rootElement = tabData.rootElement;
 
-    // Clear and render
-    rootElement.textContent = "";
+    // Do not clear textContent here — that desyncs Preact's VDOM from the DOM.
+    // renderComponent remounts when treeKey is omitted (legacy tab callers).
     const component = this.config.componentFactory(tabData.params);
     renderComponent(win, rootElement, component, `tab-${tabId}`);
 
