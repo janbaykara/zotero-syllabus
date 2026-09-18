@@ -78,6 +78,7 @@ export function readingContextLabel(opts: {
 function useReadingItemsPack(
   layout: GalleryLayout,
   itemCount: number,
+  enabled: boolean,
 ): {
   wrapRef: preact.RefObject<HTMLDivElement>;
   pack: ReadingItemsPackMode;
@@ -86,7 +87,7 @@ function useReadingItemsPack(
   const [fitCount, setFitCount] = useState(4);
 
   useEffect(() => {
-    if (layout === "card" || itemCount === 0) {
+    if (!enabled || layout === "card" || itemCount === 0) {
       return;
     }
     const el = wrapRef.current;
@@ -115,7 +116,7 @@ function useReadingItemsPack(
       win.removeEventListener("resize", measure);
       observer?.disconnect();
     };
-  }, [layout, itemCount]);
+  }, [enabled, layout, itemCount]);
 
   return {
     wrapRef,
@@ -134,6 +135,8 @@ export function ReadingItemsLayout({
   isLocked = true,
   template = "strip",
   showPriority = true,
+  /** Home shelves: horizontal scroll instead of wrapping pack grid. */
+  coverRail = false,
   className,
   onItemClick,
 }: {
@@ -145,6 +148,7 @@ export function ReadingItemsLayout({
   template?: MagazineSectionTemplate;
   /** Cover/magazine priority badge (off on Reading Schedule / Pinned). */
   showPriority?: boolean;
+  coverRail?: boolean;
   className?: string;
   onItemClick?: (item: Zotero.Item, collectionId: number) => void;
 }) {
@@ -188,7 +192,8 @@ export function ReadingItemsLayout({
     return map;
   }, [rows, readerMode, showPriority]);
 
-  const { wrapRef, pack } = useReadingItemsPack(layout, rows.length);
+  const usePack = layout !== "card" && !coverRail;
+  const { wrapRef, pack } = useReadingItemsPack(layout, rows.length, usePack);
   const packClass = readingItemsPackClass(pack);
   const tileStyle = {
     "--reading-tile-width": readingTileWidthCss(),
@@ -198,6 +203,24 @@ export function ReadingItemsLayout({
 
   if (rows.length === 0) {
     return null;
+  }
+
+  if (layout === "cover" && coverRail) {
+    return (
+      <div className={twMerge("syllabus-explorer-cover-rail", className)}>
+        {rows.map((row) => (
+          <GalleryTile
+            key={row.key}
+            item={row.item}
+            selected={false}
+            chrome={chromeByItemId.get(row.item.id)}
+            onClick={handleClick}
+            onDoubleClick={handleDoubleClick}
+            onContextMenu={handleContextMenu}
+          />
+        ))}
+      </div>
+    );
   }
 
   if (layout === "cover" || layout === "magazine") {

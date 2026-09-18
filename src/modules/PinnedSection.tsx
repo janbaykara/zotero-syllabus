@@ -187,6 +187,7 @@ export function PinnedSection({
             isLocked
             template="strip"
             showPriority={false}
+            coverRail={embedded && layout === "cover"}
             rows={layoutRows}
             onItemClick={(item) => {
               selectPinnedItem(item);

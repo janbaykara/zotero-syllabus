@@ -124,6 +124,8 @@ export function ClassReadingBlock({
   showCollectionLink = true,
   showLibraryName = false,
   compactHeading = false,
+  coverRail = false,
+  fullWidthItems = false,
   onCollectionClick,
   onItemClick,
 }: {
@@ -133,6 +135,10 @@ export function ClassReadingBlock({
   showCollectionLink?: boolean;
   showLibraryName?: boolean;
   compactHeading?: boolean;
+  /** Home shelf: scroll covers horizontally like other explorer rails. */
+  coverRail?: boolean;
+  /** Home shelf: cards span the shelf width like other explorer shelves. */
+  fullWidthItems?: boolean;
   onCollectionClick?: () => void;
   onItemClick?: (item: Zotero.Item) => void;
 }) {
@@ -229,7 +235,7 @@ export function ClassReadingBlock({
       </div>
       <div
         className={
-          layout === "card"
+          layout === "card" && !fullWidthItems
             ? readingContentWidthClass("card")
             : "w-full min-w-0 max-w-full"
         }
@@ -241,6 +247,7 @@ export function ClassReadingBlock({
           isLocked
           template="strip"
           showPriority={false}
+          coverRail={coverRail && layout === "cover"}
           rows={classReading.items
             .filter(({ assignment }) => !!assignment.id)
             .map(({ item, assignment }) => ({

@@ -43,13 +43,13 @@ import {
   openReadingScheduleTab,
   selectCollectionInLibrary,
   selectSavedSearchInLibrary,
+  type ClassReading,
 } from "./ClassReadingBlock";
 import { isOptionalFeatureEnabled } from "./optionalFeatures";
 import { ExplorerAnnotationShelf } from "./annotationTiles";
 import {
   buildClassReadings,
   filterSyllabiByLibrary,
-  groupUpcomingReadingsByCourse,
   pickUpcomingClassReadings,
 } from "./classReadings";
 import { useSyllabi } from "./react-zotero-sync/useSyllabi";
@@ -924,26 +924,28 @@ function ExplorerDeadlineDate({ isoDate }: { isoDate: string }) {
   const relative = formatRelativeReadingDate(isoDate);
   return (
     <div className="syllabus-explorer-deadline-date">
-      <span>{formatReadingDate(isoDate)}</span>
       {relative ? (
-        <span className="syllabus-explorer-deadline-date-relative">
+        <div className="text-3xl text-tertiary first-letter:capitalize">
           {relative}
-        </span>
+        </div>
       ) : null}
+      <div className="text-2xl text-secondary">
+        {formatReadingDate(isoDate)}
+      </div>
     </div>
   );
 }
 
 function ExplorerDeadlineShelf({
-  groups,
+  readings,
   density,
   layout,
 }: {
-  groups: ReturnType<typeof groupUpcomingReadingsByCourse>;
+  readings: ClassReading[];
   density: ItemDensity;
   layout: GalleryLayout;
 }) {
-  if (!groups.length) {
+  if (!readings.length) {
     return (
       <p className="text-secondary text-sm">
         {getString("explorer-shelf-empty")}
@@ -952,51 +954,32 @@ function ExplorerDeadlineShelf({
   }
   return (
     <div className="syllabus-explorer-deadlines">
-      {groups.map((group) => (
+      {readings.map((classReading) => (
         <div
-          key={group.collectionId}
-          className="syllabus-explorer-deadline-course"
+          key={`${classReading.collectionId}-${classReading.classNumber}-${classReading.readingDate || ""}`}
+          className="syllabus-explorer-deadline-session"
         >
-          <button
-            type="button"
-            className="syllabus-explorer-deadline-course-title"
-            onClick={() => openCollectionSyllabusPage(group.collectionId)}
-          >
-            <span
-              className="icon icon-css icon-collection syllabus-gallery-group-icon"
-              aria-hidden="true"
-            />
-            <span>{group.collectionName}</span>
-          </button>
-          <div className="syllabus-explorer-deadline-classes">
-            {group.classes.map((classReading) => (
-              <div
-                key={`${classReading.collectionId}-${classReading.classNumber}`}
-                className="syllabus-explorer-deadline-session"
-              >
-                {classReading.readingDate ? (
-                  <ExplorerDeadlineDate isoDate={classReading.readingDate} />
-                ) : null}
-                <ClassReadingBlock
-                  classReading={classReading}
-                  density={density}
-                  layout={layout}
-                  showCollectionLink={false}
-                  compactHeading
-                  onCollectionClick={() =>
-                    openCollectionSyllabusPage(classReading.collectionId)
-                  }
-                  onItemClick={(item) => {
-                    try {
-                      ztoolkit.getGlobal("ZoteroPane").selectItem(item.id);
-                    } catch (error) {
-                      ztoolkit.log("Error selecting deadline item:", error);
-                    }
-                  }}
-                />
-              </div>
-            ))}
-          </div>
+          {classReading.readingDate ? (
+            <ExplorerDeadlineDate isoDate={classReading.readingDate} />
+          ) : null}
+          <ClassReadingBlock
+            classReading={classReading}
+            density={density}
+            layout={layout}
+            showCollectionLink
+            coverRail={layout === "cover"}
+            fullWidthItems
+            onCollectionClick={() =>
+              openCollectionSyllabusPage(classReading.collectionId)
+            }
+            onItemClick={(item) => {
+              try {
+                ztoolkit.getGlobal("ZoteroPane").selectItem(item.id);
+              } catch (error) {
+                ztoolkit.log("Error selecting deadline item:", error);
+              }
+            }}
+          />
         </div>
       ))}
     </div>
@@ -1029,12 +1012,10 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
         .map((entry) => entry.collection.key),
     [collections],
   );
-  const upcomingDeadlineGroups = useMemo(
+  const upcomingDeadlines = useMemo(
     () =>
-      groupUpcomingReadingsByCourse(
-        pickUpcomingClassReadings(
-          buildClassReadings(filterSyllabiByLibrary(allSyllabi, libraryID)),
-        ),
+      pickUpcomingClassReadings(
+        buildClassReadings(filterSyllabiByLibrary(allSyllabi, libraryID)),
       ),
     [allSyllabi, libraryID],
   );
@@ -1142,7 +1123,7 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
       const items = itemsForShelf(shelf);
       const empty =
         shelf.type === "upcoming-deadlines"
-          ? upcomingDeadlineGroups.length === 0
+          ? upcomingDeadlines.length === 0
           : shelf.type === "pinned"
             ? !hasPinned
             : items.length === 0;
@@ -1152,7 +1133,7 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
       rows.push({ shelf, items });
     }
     return rows;
-  }, [hasPinned, itemsForShelf, upcomingDeadlineGroups.length, visibleShelves]);
+  }, [hasPinned, itemsForShelf, upcomingDeadlines.length, visibleShelves]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1529,7 +1510,7 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                   </div>
                   {shelf.type === "upcoming-deadlines" ? (
                     <ExplorerDeadlineShelf
-                      groups={upcomingDeadlineGroups}
+                      readings={upcomingDeadlines}
                       density={density}
                       layout={explorerShelfLayout(shelf)}
                     />
