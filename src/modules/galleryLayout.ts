@@ -43,7 +43,7 @@ export function readingTilesFitCount(
   // Match readingTileWidthCss() content box (56rem − 2×2.5rem pad).
   const contentMaxRem = 56 - 2 * READING_NARROW_PAD_X_REM;
   const tile =
-    ((contentMaxRem * rootFontPx - gaps * gap) / READING_NARROW_MAX_ITEMS) - 1;
+    (contentMaxRem * rootFontPx - gaps * gap) / READING_NARROW_MAX_ITEMS - 1;
   // Match container-padded-wide horizontal padding (px-6 / md:px-10).
   const pad =
     (containerWidthPx >= 48 * rootFontPx ? 2.5 : 1.5) * 2 * rootFontPx;
@@ -63,10 +63,7 @@ export function readingItemsPackMode(
   if (itemCount <= 0) {
     return "narrow";
   }
-  if (
-    itemCount <= READING_NARROW_MAX_ITEMS &&
-    itemCount <= fitCount
-  ) {
+  if (itemCount <= READING_NARROW_MAX_ITEMS && itemCount <= fitCount) {
     return "narrow";
   }
   if (itemCount <= fitCount) {
