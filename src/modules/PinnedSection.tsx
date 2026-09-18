@@ -310,7 +310,8 @@ function PinnedItemRow({
             <input
               type="checkbox"
               checked={false}
-              className="absolute right-full top-1/2 -translate-y-1/2 mr-1 w-4 h-4 cursor-pointer shrink-0"
+              className="absolute right-full mr-1 w-4 h-4 cursor-pointer shrink-0"
+              style={{ top: "0.35rem" }}
               title={getString("pinned-done-unpin-title")}
               aria-label={getString("pinned-done-unpin-title")}
               onClick={(e) => e.stopPropagation()}

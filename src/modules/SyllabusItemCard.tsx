@@ -589,9 +589,11 @@ export function SyllabusItemCard({
           checked={onReaderCheck ? false : assignmentStatus === "done"}
           onChange={handleAssignmentStatusToggle}
           className={twMerge(
-            "absolute right-full top-1/2 -translate-y-1/2 mr-1 w-4 h-4 cursor-pointer shrink-0 in-[.print]:hidden",
+            "absolute right-full mr-1 w-4 h-4 cursor-pointer shrink-0 in-[.print]:hidden",
             isZotero8OrLater() ? "md:mr-2!" : "mr-2!",
           )}
+          // Pin to the title/icon row — avoid top-1/2 which centers on tall cards.
+          style={{ top: "0.35rem" }}
           title={
             onReaderCheck
               ? getString("pinned-done-unpin-title")
@@ -629,7 +631,7 @@ export function SyllabusItemCard({
             density === "row"
               ? "size-4! min-w-4! max-w-4! h-[1.375rem]! max-h-[1.375rem]! flex items-center justify-center self-start"
               : density === "standard"
-                ? "size-6 self-center"
+                ? "size-6 self-start"
                 : twMerge(
                     "syllabus-item-thumbnail-cover self-start min-w-0",
                     slim ? "w-16" : "w-24",

@@ -517,7 +517,7 @@ export function ClassGroupComponent({
           <div className="container-padded">
             <div
               className={twMerge(
-                density !== "expanded" ? "text-base" : "text-lg pt-2",
+                density !== "expanded" ? "text-base mb-3" : "text-lg pt-2 mb-4",
               )}
             >
               <TextInput
@@ -539,15 +539,16 @@ export function ClassGroupComponent({
           !isLocked || layout === "card"
             ? "container-padded"
             : "w-full min-w-0 max-w-full",
-          density !== "expanded" ? "mt-0" : "mt-2",
         )}
       >
         <div
           className={twMerge(
             "syllabus-class-items box-border! rounded-lg",
+            // Horizontal-only negative margin so dropzone outline can bleed;
+            // keep real top margin as a breather after the class description.
             density !== "expanded"
-              ? "mt-1 space-y-2 p-1 -m-1"
-              : "mt-4 space-y-4 p-2 -m-2",
+              ? "space-y-2 px-1 pb-1 -mx-1"
+              : "mt-2 space-y-4 px-2 pb-2 -mx-2",
             "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:outline-accent-blue! data-[dropzone-active='true']:text-accent-blue! transition-all duration-200 outline-transparent outline-2! outline-dashed!",
             !isZotero8OrLater() && "compat-space-y",
           )}
