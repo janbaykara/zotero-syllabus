@@ -10,20 +10,24 @@ export type GalleryLayout = (typeof GALLERY_LAYOUT_MODES)[number];
 
 /**
  * Matches `.container-padded` / `max-w-4xl`. Cover & Magazine tile width is
- * sized so four tiles + gaps fill that column exactly.
+ * sized so four tiles + gaps fill that column's *content box* exactly.
+ * Padding is inside max-width (see `.container-padded`), so subtract it.
  */
 export const READING_NARROW_MAX = "56rem";
+/** Each side; matches `.container-padded` at ≥48rem. */
+export const READING_NARROW_PAD_X_REM = 2.5;
 export const READING_TILE_GAP = "1.25rem";
 /** Item counts at or below this stay on the narrow, left-aligned column. */
 export const READING_NARROW_MAX_ITEMS = 4;
 
 export type ReadingItemsPackMode = "narrow" | "centered" | "fill";
 
-/** Fixed tile width: (narrowMax − gaps between N tiles) / N, minus 1px for
+/** Fixed tile width: (contentMax − gaps between N tiles) / N, minus 1px for
  *  subpixel rounding so auto-fill / fixed tracks don't wrap early. */
 export function readingTileWidthCss(): string {
   const gaps = READING_NARROW_MAX_ITEMS - 1;
-  return `calc((${READING_NARROW_MAX} - ${gaps} * ${READING_TILE_GAP}) / ${READING_NARROW_MAX_ITEMS} - 1px)`;
+  const content = `calc(${READING_NARROW_MAX} - 2 * ${READING_NARROW_PAD_X_REM}rem)`;
+  return `calc((${content} - ${gaps} * ${READING_TILE_GAP}) / ${READING_NARROW_MAX_ITEMS} - 1px)`;
 }
 
 /** How many fixed tiles fit in a full-pane row (padding deducted). */
@@ -36,8 +40,10 @@ export function readingTilesFitCount(
   }
   const gap = 1.25 * rootFontPx;
   const gaps = READING_NARROW_MAX_ITEMS - 1;
-  // Match readingTileWidthCss(), including the 1px subpixel slack.
-  const tile = ((56 - gaps * 1.25) / READING_NARROW_MAX_ITEMS) * rootFontPx - 1;
+  // Match readingTileWidthCss() content box (56rem − 2×2.5rem pad).
+  const contentMaxRem = 56 - 2 * READING_NARROW_PAD_X_REM;
+  const tile =
+    ((contentMaxRem * rootFontPx - gaps * gap) / READING_NARROW_MAX_ITEMS) - 1;
   // Match container-padded-wide horizontal padding (px-6 / md:px-10).
   const pad =
     (containerWidthPx >= 48 * rootFontPx ? 2.5 : 1.5) * 2 * rootFontPx;
@@ -46,7 +52,7 @@ export function readingTilesFitCount(
 }
 
 /**
- * - ≤4: narrow column, left-aligned
+ * - ≤4 and they fit: narrow column, left-aligned
  * - more than 4 but ≤ what fits on screen: full width, centred
  * - more than fit: full width, left-aligned wrapping
  */
@@ -57,10 +63,13 @@ export function readingItemsPackMode(
   if (itemCount <= 0) {
     return "narrow";
   }
-  if (itemCount <= READING_NARROW_MAX_ITEMS) {
+  if (
+    itemCount <= READING_NARROW_MAX_ITEMS &&
+    itemCount <= fitCount
+  ) {
     return "narrow";
   }
-  if (itemCount <= Math.max(fitCount, READING_NARROW_MAX_ITEMS)) {
+  if (itemCount <= fitCount) {
     return "centered";
   }
   return "fill";

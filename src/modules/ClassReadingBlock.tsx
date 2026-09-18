@@ -161,9 +161,10 @@ export function ClassReadingBlock({
     <div className={twMerge(classStatus === "done" ? "opacity-40" : "")}>
       <div
         className={twMerge(
-          layout === "card"
-            ? readingContentWidthClass("card")
-            : "w-full min-w-0 max-w-full",
+          // Heading + description stay on the narrow padded column in every
+          // layout. Cover/Magazine used to be full-bleed, which stretched prose
+          // to the pane width and clipped the left checkbox under overflow-x-hidden.
+          readingContentWidthClass("card"),
           "relative mb-2",
         )}
       >

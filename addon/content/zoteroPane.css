@@ -511,6 +511,10 @@
 
 .syllabus-prose {
   margin: 0;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .syllabus-prose p {
@@ -664,7 +668,8 @@
   box-sizing: border-box;
 }
 
-/* Reading Cover/Magazine: fixed tile sized so 4 + gaps fit in max-w-4xl.
+/* Reading Cover/Magazine: fixed tile sized so 4 + gaps fit in the
+   container-padded *content* box (max-width minus inline padding).
    Narrow uses an explicit column count (not auto-fill) so 4 items never
    wrap from subpixel rounding. */
 .syllabus-gallery-grid.is-narrow,
