@@ -682,23 +682,26 @@ export function SyllabusItemCard({
         </div>
         {density === "row" ? (
           <div className="syllabus-item-text grow min-w-0 flex flex-col gap-0.5">
-            <div className="flex flex-row items-baseline gap-2 min-w-0">
-              <div
-                className={twMerge(
-                  "syllabus-item-title text-[14px] font-medium truncate min-w-0 leading-snug grow",
-                  readerMode && assignmentStatus === "done"
-                    ? "line-through"
-                    : "",
-                )}
-              >
-                {title}
-              </div>
-              {(author || year) && (
-                <div className="syllabus-item-metadata text-secondary text-[13px] shrink-0 text-right inline-flex flex-row gap-1.5 items-baseline justify-end character-separator [--character-separator:'·'] leading-snug whitespace-nowrap">
-                  {author && <span>{author}</span>}
-                  {year && <span>{year}</span>}
+            <div className="flex flex-row items-baseline gap-2 min-w-0 w-full">
+              <div className="flex flex-row items-baseline gap-2 min-w-0 grow overflow-hidden">
+                <div
+                  className={twMerge(
+                    "syllabus-item-title text-[14px] font-medium truncate min-w-0 grow leading-snug",
+                    (author || year) && "min-w-[40%]",
+                    readerMode && assignmentStatus === "done"
+                      ? "line-through"
+                      : "",
+                  )}
+                >
+                  {title}
                 </div>
-              )}
+                {(author || year) && (
+                  <div className="syllabus-item-metadata text-secondary text-[13px] min-w-0 max-w-[45%] truncate text-right inline-flex flex-row gap-1.5 items-baseline justify-end character-separator [--character-separator:'·'] leading-snug whitespace-nowrap">
+                    {author && <span className="truncate">{author}</span>}
+                    {year && <span className="shrink-0">{year}</span>}
+                  </div>
+                )}
+              </div>
               {!!priority && (
                 <PriorityIcon
                   id={priority}
