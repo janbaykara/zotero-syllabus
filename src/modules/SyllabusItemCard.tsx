@@ -694,7 +694,7 @@ export function SyllabusItemCard({
                 {title}
               </div>
               {(author || year) && (
-                <div className="syllabus-item-metadata text-secondary text-[13px] shrink-0 text-right flex flex-row gap-1.5 items-baseline justify-end character-separator [--character-separator:'·'] leading-snug whitespace-nowrap">
+                <div className="syllabus-item-metadata text-secondary text-[13px] shrink-0 text-right inline-flex flex-row gap-1.5 items-baseline justify-end character-separator [--character-separator:'·'] leading-snug whitespace-nowrap">
                   {author && <span>{author}</span>}
                   {year && <span>{year}</span>}
                 </div>
@@ -703,7 +703,7 @@ export function SyllabusItemCard({
                 <PriorityIcon
                   id={priority}
                   colors={!isIdentifierSelected}
-                  className="shrink-0 grow-0 text-[12px] leading-snug"
+                  className="shrink-0 text-[12px] leading-snug"
                   collectionId={collectionId}
                 />
               )}
@@ -1315,7 +1315,8 @@ function PriorityIcon({
   return (
     <span
       className={twMerge(
-        "uppercase font-semibold tracking-wide flex flex-row gap-1.5 items-baseline",
+        // inline-flex: Zotero's `.flex` sets `flex: 1 1 0%` (item grow), not display.
+        "uppercase font-semibold tracking-wide inline-flex flex-row gap-1.5 items-baseline",
         className,
       )}
     >
@@ -1345,7 +1346,7 @@ function ReadStatusIcon({ readStatusName }: { readStatusName: string }) {
   );
   if (!readStatus) return null;
   return (
-    <span className="uppercase font-semibold tracking-wide flex flex-row gap-2 items-baseline rounded-md px-1 py-0.25 in-[.print]:hidden">
+    <span className="uppercase font-semibold tracking-wide inline-flex flex-row gap-2 items-baseline rounded-md px-1 py-0.25 in-[.print]:hidden">
       <span className="w-3 h-3 rounded-full inline-block">
         {readStatus.icon}
       </span>

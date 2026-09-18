@@ -547,7 +547,7 @@ function PriorityEditor({
           <span className="text-sm text-secondary">
             {getString("settings-priority-preview")}
           </span>
-          <span className="uppercase font-semibold tracking-wide flex flex-row gap-1.5 items-baseline">
+          <span className="uppercase font-semibold tracking-wide inline-flex flex-row gap-1.5 items-baseline">
             <span
               className="w-3 h-3 rounded-full inline-block"
               style={{ backgroundColor: priority.color }}

@@ -103,7 +103,7 @@ export function ReadingPriorityBadge({
   return (
     <span
       className={twMerge(
-        "uppercase font-semibold tracking-wide flex flex-row gap-1.5 items-baseline text-[11px]",
+        "uppercase font-semibold tracking-wide inline-flex flex-row gap-1.5 items-baseline text-[11px]",
         className,
       )}
     >
