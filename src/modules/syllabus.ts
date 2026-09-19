@@ -2382,23 +2382,26 @@ export class SyllabusManager {
     const classNumber = resolveAssignmentClassNumber(assignment, collectionId);
     const hasClassNumber = classNumber !== undefined;
 
-    // Check for manual order if item and collectionId are provided
+    // Check for manual order if item and collectionId are provided.
+    // Unnumbered (no-class + priority) items use classNumber null.
     let manualOrderPosition: string | null = null;
     let hasManualOrder = false;
-    if (
-      item &&
-      collectionId !== undefined &&
-      hasClassNumber &&
-      classNumber !== undefined
-    ) {
-      const manualOrder = this.getClassItemOrder(collectionId, classNumber);
-      if (manualOrder.length > 0 && assignment.id) {
-        hasManualOrder = true;
-        const position = manualOrder.indexOf(assignment.id);
-        if (position !== -1) {
-          // Use position in manual order (padded to ensure proper sorting)
-          // Lower numbers come first, so we pad with zeros
-          manualOrderPosition = String(position).padStart(6, "0");
+    if (item && collectionId !== undefined && assignment.id) {
+      const orderClassNumber = hasClassNumber ? (classNumber ?? null) : null;
+      const appliesToUnnumbered = !hasClassNumber && hasPriority;
+      if (hasClassNumber || appliesToUnnumbered) {
+        const manualOrder = this.getClassItemOrder(
+          collectionId,
+          orderClassNumber,
+        );
+        if (manualOrder.length > 0) {
+          hasManualOrder = true;
+          const position = manualOrder.indexOf(assignment.id);
+          if (position !== -1) {
+            // Use position in manual order (padded to ensure proper sorting)
+            // Lower numbers come first, so we pad with zeros
+            manualOrderPosition = String(position).padStart(6, "0");
+          }
         }
       }
     }
@@ -2640,30 +2643,50 @@ export class SyllabusManager {
   }
 
   /**
-   * Get manual ordering of items for a specific class
-   * Returns array of itemIds in display order, or empty array if no manual order
+   * Get manual ordering of items for a specific class.
+   * Pass `null` for the unnumbered (Course Information) section.
+   * Returns assignment IDs in display order, or [] if no manual order.
    */
   static getClassItemOrder(
     collectionId: number | GetByLibraryAndKeyArgs,
     classNumber: number | null,
   ): string[] {
+    if (classNumber === null) {
+      return getCollectionDocument(collectionId).unnumberedOrder || [];
+    }
     const metadata = this.getSyllabusMetadata(collectionId);
     if (!metadata.classes) {
       return [];
     }
-    const classKey = classNumber === null ? "null" : String(classNumber);
-    return metadata.classes[classKey]?.itemOrder || [];
+    return metadata.classes[String(classNumber)]?.itemOrder || [];
   }
 
   /**
-   * Set manual ordering of items for a specific class
+   * Set manual ordering of items for a specific class.
+   * Pass `null` for the unnumbered (Course Information) section.
+   * Pass [] to clear and fall back to natural (priority/title) order.
    */
   static async setClassItemOrder(
     collectionId: number | GetByLibraryAndKeyArgs,
-    classNumber: number,
+    classNumber: number | null,
     itemIds: string[],
     source: "page" | "item-pane" = "page",
   ): Promise<void> {
+    if (classNumber === null) {
+      await mutateCollectionDocument(
+        collectionId,
+        (document) => ({
+          ...document,
+          unnumberedOrder: itemIds.length > 0 ? itemIds : undefined,
+        }),
+        { createNote: source === "page" ? "prompt" : "always" },
+      );
+      if (source !== "page") {
+        this.setupPage();
+      }
+      this.onClassListUpdate();
+      return;
+    }
     await this.setClassMetadata(
       collectionId,
       classNumber,

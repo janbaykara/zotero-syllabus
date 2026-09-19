@@ -316,6 +316,9 @@ export function SyllabusItemCard({
           "application/x-syllabus-source-further-reading",
           "1",
         );
+      } else {
+        // Unnumbered / Course Information section (priority, no class)
+        e.dataTransfer.setData("application/x-syllabus-source-unnumbered", "1");
       }
     }
     (e.currentTarget as HTMLElement).classList.add("syllabus-item-dragging");
@@ -555,9 +558,11 @@ export function SyllabusItemCard({
       data-item-id={item.id}
       data-syllabus-identifier={identifier}
       data-syllabus-class-number={
-        classNumber != null && classNumber !== undefined
-          ? String(classNumber)
-          : ""
+        isFurtherReading
+          ? "further-reading"
+          : classNumber != null && classNumber !== undefined
+            ? String(classNumber)
+            : "unnumbered"
       }
       data-print-url={
         /^https?:\/\//i.test(String(url).trim())

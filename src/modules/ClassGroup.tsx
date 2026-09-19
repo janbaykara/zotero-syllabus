@@ -55,7 +55,8 @@ export interface ClassGroupComponentProps {
   dropIndicator?: ItemDropIndicator | null;
   onDropIndicatorChange?: (indicator: ItemDropIndicator | null) => void;
   draggingIdentifiers?: Set<string>;
-  draggingSourceClass?: number | null;
+  /** Numbered class, `"unnumbered"` for Course Information, or null when not from a class group. */
+  draggingSourceClass?: number | "unnumbered" | null;
   density?: ItemDensity;
   readerMode?: boolean;
   isLocked?: boolean;
@@ -137,11 +138,10 @@ export function ClassGroupComponent({
     ? SyllabusManager.getClassStatus(collectionId, classNumber) === "done"
     : false;
 
-  // Check if there's a manual order for this class
+  // Check if there's a manual order for this class (including unnumbered)
   const hasManualOrder =
-    classNumber !== null &&
-    classNumber !== undefined &&
-    SyllabusManager.getClassItemOrder(collectionId, classNumber).length > 0;
+    SyllabusManager.getClassItemOrder(collectionId, classNumber ?? null)
+      .length > 0;
 
   const handleDeleteClass = async () => {
     if (classNumber == null) {
@@ -192,22 +192,20 @@ export function ClassGroupComponent({
   };
 
   const handleResetSortOrder = async () => {
-    if (classNumber !== null && classNumber !== undefined) {
-      try {
-        // Clear manual order by setting it to empty array
-        await SyllabusManager.setClassItemOrder(
-          collectionId,
-          classNumber,
-          [],
-          "page",
-        );
-        // Force immediate re-render
-        if (onResetSortOrder) {
-          onResetSortOrder();
-        }
-      } catch (err) {
-        ztoolkit.log("Error resetting sort order:", err);
+    try {
+      // Clear manual order by setting it to empty array
+      await SyllabusManager.setClassItemOrder(
+        collectionId,
+        classNumber ?? null,
+        [],
+        "page",
+      );
+      // Force immediate re-render
+      if (onResetSortOrder) {
+        onResetSortOrder();
       }
+    } catch (err) {
+      ztoolkit.log("Error resetting sort order:", err);
     }
   };
 
@@ -315,10 +313,11 @@ export function ClassGroupComponent({
     ) {
       return null;
     }
-    const sameClass =
-      draggingSourceClass !== null &&
-      draggingSourceClass !== undefined &&
-      draggingSourceClass === classNumberKey;
+    const dragSourceKey =
+      classNumber != null && classNumber !== undefined
+        ? classNumber
+        : "unnumbered";
+    const sameClass = draggingSourceClass === dragSourceKey;
     if (!sameClass || draggingIdentifiers.size !== 1) {
       return dropIndicator;
     }
@@ -355,7 +354,7 @@ export function ClassGroupComponent({
         readerMode && classIsDone ? "opacity-40" : "",
       )}
     >
-      {classNumber && (
+      {classNumber ? (
         <>
           <div
             className={twMerge(
@@ -533,7 +532,19 @@ export function ClassGroupComponent({
             </div>
           </div>
         </>
-      )}
+      ) : !isLocked && hasManualOrder ? (
+        <div className="container-padded flex flex-row justify-end in-[.print]:hidden">
+          <button
+            type="button"
+            className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
+            onClick={handleResetSortOrder}
+            title={getString("class-reset-sort")}
+            aria-label={getString("class-reset-sort")}
+          >
+            <div className="text-lg text-center">⇅</div>
+          </button>
+        </div>
+      ) : null}
       <div
         className={twMerge(
           !isLocked || layout === "card"

@@ -654,7 +654,20 @@ export function omitDocumentItemKeys(
   const orderHadMatch = document.furtherReadingOrder?.some((key) =>
     gone.has(key),
   );
-  if (!itemsHadMatch && !orderHadMatch) {
+  const removedAssignmentIds = new Set<string>();
+  if (itemsHadMatch) {
+    for (const key of gone) {
+      for (const assignment of document.items?.[key] || []) {
+        if (assignment.id) {
+          removedAssignmentIds.add(assignment.id);
+        }
+      }
+    }
+  }
+  const unnumberedHadMatch = document.unnumberedOrder?.some((id) =>
+    removedAssignmentIds.has(id),
+  );
+  if (!itemsHadMatch && !orderHadMatch && !unnumberedHadMatch) {
     return document;
   }
   const items: CollectionSyllabusDocument["items"] = {
@@ -672,12 +685,19 @@ export function omitDocumentItemKeys(
   const furtherReadingOrder = document.furtherReadingOrder?.filter(
     (key) => !gone.has(key),
   );
+  const unnumberedOrder = document.unnumberedOrder?.filter(
+    (id) => !removedAssignmentIds.has(id),
+  );
   const next: CollectionSyllabusDocument = {
     ...document,
     items,
     furtherReadingOrder:
       furtherReadingOrder && furtherReadingOrder.length > 0
         ? furtherReadingOrder
+        : undefined,
+    unnumberedOrder:
+      unnumberedOrder && unnumberedOrder.length > 0
+        ? unnumberedOrder
         : undefined,
   };
   return itemIndex ? { ...next, itemIndex } : next;
