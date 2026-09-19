@@ -342,12 +342,15 @@ export function ClassGroupComponent({
     return dropIndicator;
   })();
 
-  // Generate ID for TOC navigation
-  const tocId = classNumber ? `toc-class-${classNumber}` : null;
+  // Generate ID for TOC navigation / deep links from Home
+  const tocId =
+    classNumber != null
+      ? `toc-class-${classNumber}`
+      : "toc-class-unnumbered";
 
   return (
     <div
-      id={tocId || undefined}
+      id={tocId}
       data-tour="syllabus-class-group"
       className={twMerge(
         "syllabus-class-group in-[.print]:scheme-light",

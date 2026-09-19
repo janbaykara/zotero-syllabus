@@ -93,7 +93,13 @@ import {
 } from "../utils/publishUrls";
 import { isEmptyClassGroup, useSyllabusClassGroups } from "./classGroups";
 import type { FurtherReadingEntry } from "./classGroups";
-import { ClassSubcollectionPage } from "./ClassReadingBlock";
+import {
+  ClassSubcollectionPage,
+  peekPendingClassScroll,
+  subscribePendingClassScroll,
+  takePendingClassScroll,
+} from "./ClassReadingBlock";
+import { scrollElementBelowSticky } from "./galleryGroupNav";
 import { getClassSubcollectionContext } from "./syllabusNote";
 import { ReadingSchedule } from "./ReadingSchedule";
 import { ReadingScheduleDayPage } from "./ReadingScheduleDayPage";
@@ -1434,6 +1440,55 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       pending.showGroupHeader,
     );
   }, [selectedIdentifiers]);
+
+  // Deep link from Home Cover class headers (and similar).
+  const tryPendingClassScroll = useCallback(() => {
+    const elementId = peekPendingClassScroll(collectionId);
+    if (!elementId) {
+      return;
+    }
+    const container = syllabusPageRef.current;
+    if (!container) {
+      return;
+    }
+    const target = container.querySelector<HTMLElement>(
+      `#${CSS.escape(elementId)}`,
+    );
+    if (!target) {
+      return;
+    }
+    takePendingClassScroll(collectionId);
+    const sticky = container.querySelector<HTMLElement>(
+      "[syllabus-view-title-container]",
+    );
+    scrollElementBelowSticky(container, target, sticky, 16);
+  }, [collectionId]);
+
+  useEffect(() => {
+    return subscribePendingClassScroll(() => {
+      const win = Zotero.getMainWindow();
+      win.setTimeout(() => tryPendingClassScroll(), 0);
+    });
+  }, [tryPendingClassScroll]);
+
+  useEffect(() => {
+    tryPendingClassScroll();
+  }, [tryPendingClassScroll, visibleClassGroups, furtherReadingItems]);
+
+  // Drop a stale deep-link if the class section never mounts (empty/filtered).
+  useEffect(() => {
+    const elementId = peekPendingClassScroll(collectionId);
+    if (!elementId) {
+      return;
+    }
+    const win = Zotero.getMainWindow();
+    const timer = win.setTimeout(() => {
+      if (peekPendingClassScroll(collectionId) === elementId) {
+        takePendingClassScroll(collectionId);
+      }
+    }, 4000);
+    return () => win.clearTimeout(timer);
+  }, [collectionId, visibleClassGroups, furtherReadingItems]);
 
   const persistFurtherReadingOrder = useCallback(
     async (
@@ -3143,6 +3198,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
             {furtherReadingItems.length > 0 && (
               <div
+                id="toc-further-reading"
                 className="syllabus-class-group in-[.print]:scheme-light"
                 data-tour="syllabus-further-reading"
               >

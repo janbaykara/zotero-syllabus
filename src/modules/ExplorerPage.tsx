@@ -38,6 +38,7 @@ import { getString, getUiDir } from "../utils/locale";
 import { formatReadingDate, formatRelativeReadingDate } from "../utils/dates";
 import {
   ClassReadingBlock,
+  openCollectionSyllabusAtClass,
   openCollectionSyllabusPage,
   openMyAnnotationsTab,
   openReadingScheduleTab,
@@ -851,18 +852,28 @@ function ExplorerClassSegmentHeader({
   collectionId,
   classNumber,
   classMeta,
+  onOpen,
 }: {
   collectionId: number;
   classNumber: number | null;
   classMeta: SyllabusClassGroup["syllabusMetadata"];
+  onOpen: () => void;
 }) {
   if (classNumber == null) {
     return (
-      <header className="syllabus-explorer-class-segment-header">
+      <button
+        type="button"
+        className="syllabus-explorer-class-segment-header"
+        onClick={onOpen}
+      >
+        <div
+          className="syllabus-explorer-class-segment-kicker"
+          aria-hidden="true"
+        />
         <div className="syllabus-explorer-class-segment-title">
           {getString("gallery-unnumbered")}
         </div>
-      </header>
+      </button>
     );
   }
 
@@ -873,33 +884,34 @@ function ExplorerClassSegmentHeader({
   const readingDate = classMeta?.readingDate;
   const classIsDone =
     SyllabusManager.getClassStatus(collectionId, classNumber) === "done";
-  const showKicker = Boolean(title || classIsDone || readingDate);
 
   return (
-    <header className="syllabus-explorer-class-segment-header">
-      {showKicker ? (
-        <div className="syllabus-explorer-class-segment-kicker">
-          {title ? (
-            <span className="syllabus-explorer-class-segment-label">
-              {className}
-            </span>
-          ) : null}
-          {classIsDone ? (
-            <span className="syllabus-explorer-class-segment-done">
-              {getString("status-done")}
-            </span>
-          ) : null}
-          {readingDate ? (
-            <span className="syllabus-explorer-class-segment-date">
-              {formatReadingDate(readingDate)}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
+    <button
+      type="button"
+      className="syllabus-explorer-class-segment-header"
+      onClick={onOpen}
+    >
+      <div className="syllabus-explorer-class-segment-kicker">
+        {title ? (
+          <span className="syllabus-explorer-class-segment-label">
+            {className}
+          </span>
+        ) : null}
+        {classIsDone ? (
+          <span className="syllabus-explorer-class-segment-done">
+            {getString("status-done")}
+          </span>
+        ) : null}
+        {readingDate ? (
+          <span className="syllabus-explorer-class-segment-date">
+            {formatReadingDate(readingDate)}
+          </span>
+        ) : null}
+      </div>
       <div className="syllabus-explorer-class-segment-title">
         {title || className}
       </div>
-    </header>
+    </button>
   );
 }
 
@@ -988,16 +1000,32 @@ function ExplorerSyllabusCoverRail({
           data-explorer-class={segment.key}
         >
           {segment.key === "further-reading" ? (
-            <header className="syllabus-explorer-class-segment-header">
+            <button
+              type="button"
+              className="syllabus-explorer-class-segment-header"
+              onClick={() =>
+                openCollectionSyllabusAtClass(collectionId, "further-reading")
+              }
+            >
+              <div
+                className="syllabus-explorer-class-segment-kicker"
+                aria-hidden="true"
+              />
               <div className="syllabus-explorer-class-segment-title">
                 {getString("further-reading-heading")}
               </div>
-            </header>
+            </button>
           ) : (
             <ExplorerClassSegmentHeader
               collectionId={collectionId}
               classNumber={segment.classNumber}
               classMeta={segment.classMeta}
+              onOpen={() =>
+                openCollectionSyllabusAtClass(
+                  collectionId,
+                  segment.classNumber,
+                )
+              }
             />
           )}
           <div className="syllabus-explorer-class-segment-covers">

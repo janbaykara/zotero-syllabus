@@ -2143,23 +2143,26 @@
   scroll-snap-type: x mandatory;
 }
 
-/* Syllabus collection Cover shelves: class headers + covers in one horizontal rail. */
+/* Syllabus collection Cover shelves: class headers + covers in one horizontal rail.
+   Subgrid keeps kicker / title / covers on shared rows so titles and rules align. */
 .syllabus-explorer-class-cover-rail {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-end;
-  gap: 1.75rem;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  grid-template-rows: max-content max-content max-content;
+  column-gap: 1.75rem;
+  row-gap: 0.2rem;
+  align-items: start;
   overflow-x: auto;
   padding-bottom: 0.4rem;
   scroll-snap-type: x mandatory;
 }
 
 .syllabus-explorer-class-segment {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: 0.55rem;
-  flex: none;
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 3;
+  row-gap: inherit;
   min-width: 0;
   scroll-snap-align: start;
 }
@@ -2169,11 +2172,30 @@
 }
 
 .syllabus-explorer-class-segment-header {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  max-width: 22rem;
-  padding-inline-end: 0.35rem;
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 2;
+  row-gap: inherit;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0 0.15rem;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  border-radius: 0;
+}
+
+button.syllabus-explorer-class-segment-header:hover .syllabus-explorer-class-segment-title {
+  color: var(--accent-blue, #1a6fb5);
+}
+
+button.syllabus-explorer-class-segment-header:focus-visible {
+  outline: 2px solid var(--accent-blue, #1a6fb5);
+  outline-offset: 2px;
 }
 
 .syllabus-explorer-class-segment-kicker {
@@ -2181,6 +2203,65 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.35rem 0.65rem;
+  /* Fallback when subgrid is unavailable / kicker is empty. */
+  min-height: calc(11px * 1.2);
+}
+
+.syllabus-explorer-class-segment-kicker:empty::before {
+  content: "\00a0";
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  visibility: hidden;
+}
+
+.syllabus-explorer-class-segment-covers {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 148px;
+  grid-template-rows: max-content max-content;
+  justify-content: start;
+  align-items: end;
+  column-gap: 1.15rem;
+  /* Space between rule and covers (header padding already under the title). */
+  margin-top: 0.45rem;
+}
+
+@supports not (grid-template-rows: subgrid) {
+  .syllabus-explorer-class-cover-rail {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 1.75rem;
+  }
+
+  .syllabus-explorer-class-segment {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 0.65rem;
+    flex: none;
+    grid: none;
+  }
+
+  .syllabus-explorer-class-segment-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    grid: none;
+    padding-bottom: 0.55rem;
+    border-bottom: 1px solid var(--fill-quaternary, color-mix(in srgb, var(--fill-secondary, #8c8c8c) 35%, transparent));
+  }
+
+  .syllabus-explorer-class-segment-title {
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+
+  .syllabus-explorer-class-segment-covers {
+    margin-top: 0;
+  }
 }
 
 .syllabus-explorer-class-segment-label {
@@ -2200,6 +2281,7 @@
 }
 
 .syllabus-explorer-class-segment-date {
+  margin-inline-start: auto;
   font-size: 12px;
   font-weight: 500;
   color: var(--fill-secondary, #8c8c8c);
@@ -2215,16 +2297,8 @@
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-}
-
-.syllabus-explorer-class-segment-covers {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 148px;
-  grid-template-rows: max-content max-content;
-  justify-content: start;
-  align-items: end;
-  column-gap: 1.15rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--fill-quaternary, color-mix(in srgb, var(--fill-secondary, #8c8c8c) 35%, transparent));
 }
 
 .syllabus-explorer-cover-rail:has(.syllabus-explorer-annotation-tile) {

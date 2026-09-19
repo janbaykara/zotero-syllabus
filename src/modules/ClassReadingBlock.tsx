@@ -94,6 +94,71 @@ export function openCollectionSyllabusPage(collectionId: number): void {
   }
 }
 
+/** Element id for syllabus class / further-reading sections (TOC + deep links). */
+export function syllabusClassScrollId(
+  classNumber: number | null | "further-reading",
+): string {
+  if (classNumber === "further-reading") {
+    return "toc-further-reading";
+  }
+  if (classNumber == null) {
+    return "toc-class-unnumbered";
+  }
+  return `toc-class-${classNumber}`;
+}
+
+type PendingClassScroll = {
+  collectionId: number;
+  elementId: string;
+};
+
+let pendingClassScroll: PendingClassScroll | null = null;
+const pendingClassScrollListeners = new Set<() => void>();
+
+function notifyPendingClassScroll(): void {
+  for (const listener of pendingClassScrollListeners) {
+    listener();
+  }
+}
+
+/** Open a collection’s Syllabus view and scroll to a class section when ready. */
+export function openCollectionSyllabusAtClass(
+  collectionId: number,
+  classNumber: number | null | "further-reading",
+): void {
+  pendingClassScroll = {
+    collectionId,
+    elementId: syllabusClassScrollId(classNumber),
+  };
+  notifyPendingClassScroll();
+  openCollectionSyllabusPage(collectionId);
+}
+
+export function subscribePendingClassScroll(listener: () => void): () => void {
+  pendingClassScrollListeners.add(listener);
+  return () => {
+    pendingClassScrollListeners.delete(listener);
+  };
+}
+
+/** Peek without consuming — returns null if not for this collection. */
+export function peekPendingClassScroll(collectionId: number): string | null {
+  if (!pendingClassScroll || pendingClassScroll.collectionId !== collectionId) {
+    return null;
+  }
+  return pendingClassScroll.elementId;
+}
+
+/** Consume a pending class scroll for this collection, if any. */
+export function takePendingClassScroll(collectionId: number): string | null {
+  if (!pendingClassScroll || pendingClassScroll.collectionId !== collectionId) {
+    return null;
+  }
+  const elementId = pendingClassScroll.elementId;
+  pendingClassScroll = null;
+  return elementId;
+}
+
 export function selectItemInCollection(
   item: Zotero.Item,
   collectionId: number,
