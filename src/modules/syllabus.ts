@@ -19,6 +19,7 @@ import {
 } from "./explorerConfig";
 import {
   getSelectedCollection,
+  getSelectedLibraryID,
   itemBelongsInCollection,
   libraryIdForNewCollection,
 } from "../utils/zotero";
@@ -498,6 +499,22 @@ export class SyllabusManager {
         }
         this.removeReadingScheduleTabBarButton(win);
       }
+      if (!isOptionalFeatureEnabled("annotations")) {
+        try {
+          const tabs = win.Zotero_Tabs?._tabs || [];
+          for (const tab of [...tabs]) {
+            if (
+              typeof tab?.id === "string" &&
+              tab.id.startsWith("syllabus-my-annotations-tab-")
+            ) {
+              win.Zotero_Tabs.close(tab.id);
+            }
+          }
+        } catch {
+          // Tabs may not exist
+        }
+        this.removeMyAnnotationsTabBarButton(win);
+      }
     }
     const mode = this.getCollectionViewMode();
     const coerced = coerceEnabledViewMode(mode) as CollectionViewMode;
@@ -780,6 +797,7 @@ export class SyllabusManager {
         itemsViewIsFilteredForTreeViewID(currentViewKey);
 
       SyllabusManager.updateReadingScheduleTabBarButton();
+      SyllabusManager.updateMyAnnotationsTabBarButton();
 
       const collectionChanged = currentViewKey !== selectedViewKey;
       const tabChanged = newTabId !== currentTabId;
@@ -1039,6 +1057,93 @@ export class SyllabusManager {
     }
   }
 
+  static removeMyAnnotationsTabBarButton(win?: _ZoteroTypes.MainWindow): void {
+    win = win || Zotero.getMainWindow();
+    const doc = win?.document;
+    if (!doc) return;
+    for (const el of Array.from(
+      doc.querySelectorAll("#syllabus-my-annotations-tab-button"),
+    ) as Element[]) {
+      el.remove();
+    }
+  }
+
+  static setupMyAnnotationsTabBarButton(win?: _ZoteroTypes.MainWindow): void {
+    win = win || Zotero.getMainWindow();
+    const doc = win.document;
+    SyllabusManager.removeMyAnnotationsTabBarButton(win);
+    if (!isOptionalFeatureEnabled("annotations")) {
+      return;
+    }
+
+    const tabsToolbar = doc.getElementById("zotero-tabs-toolbar");
+    const tabsMenu = doc.getElementById("zotero-tb-tabs-menu");
+    const readingScheduleButton = doc.getElementById(
+      "syllabus-reading-schedule-tab-button",
+    );
+    if (!tabsToolbar) return;
+
+    const tooltip = getString("toolbar-my-annotations-open");
+    const button = ztoolkit.UI.createElement(doc, "toolbarbutton", {
+      id: "syllabus-my-annotations-tab-button",
+      classList: ["zotero-tb-button", "syllabus-tab-bar-button"],
+      attributes: {
+        crop: "none",
+        tooltiptext: tooltip,
+        image: "chrome://zotero/skin/16/universal/attachment-annotations.svg",
+      },
+      properties: {
+        label: getString("view-tab-my-annotations"),
+        tooltiptext: tooltip,
+      },
+      listeners: [
+        {
+          type: "command",
+          listener: () => {
+            SyllabusManager.openMyAnnotationsTabForCurrentLibrary();
+          },
+        },
+        {
+          type: "click",
+          listener: () => {
+            SyllabusManager.openMyAnnotationsTabForCurrentLibrary();
+          },
+        },
+      ],
+    });
+
+    if (
+      readingScheduleButton &&
+      readingScheduleButton.parentNode === tabsToolbar
+    ) {
+      tabsToolbar.insertBefore(button, readingScheduleButton);
+    } else if (tabsMenu && tabsMenu.parentNode === tabsToolbar) {
+      tabsToolbar.insertBefore(button, tabsMenu);
+    } else {
+      tabsToolbar.insertBefore(button, tabsToolbar.firstChild);
+    }
+    SyllabusManager.updateMyAnnotationsTabBarButton(win);
+  }
+
+  static updateMyAnnotationsTabBarButton(win?: _ZoteroTypes.MainWindow): void {
+    win = win || Zotero.getMainWindow();
+    const button = win?.document.getElementById(
+      "syllabus-my-annotations-tab-button",
+    );
+    if (!button) return;
+    let tabOpen = false;
+    try {
+      const libraryID =
+        getSelectedLibraryID() ?? Zotero.Libraries.userLibraryID;
+      tabOpen = !!win.Zotero_Tabs?._getTab(
+        `syllabus-my-annotations-tab-${libraryID}`,
+      )?.tab;
+    } catch {
+      // Keep false when the tab lookup fails.
+    }
+    button.setAttribute("data-tab-open", tabOpen ? "true" : "false");
+  }
+
   static setupReadingScheduleTabBarButton(win?: _ZoteroTypes.MainWindow): void {
     win = win || Zotero.getMainWindow();
     const doc = win.document;
@@ -1123,6 +1228,7 @@ export class SyllabusManager {
     const doc = w.document;
 
     SyllabusManager.setupReadingScheduleTabBarButton(w);
+    SyllabusManager.setupMyAnnotationsTabBarButton(w);
 
     // Find the items toolbar
     const itemsToolbar = doc.getElementById("zotero-items-toolbar");
@@ -1362,6 +1468,7 @@ export class SyllabusManager {
     const doc = w.document;
 
     SyllabusManager.updateReadingScheduleTabBarButton(w);
+    SyllabusManager.updateMyAnnotationsTabBarButton(w);
 
     const viewModeButtons = Array.from(
       doc.querySelectorAll(".syllabus-view-mode-button"),
@@ -3708,9 +3815,18 @@ export class SyllabusManager {
    * Open and render the My Annotations tab for a library
    */
   static openMyAnnotationsTab(libraryID: number) {
+    if (!isOptionalFeatureEnabled("annotations")) {
+      return;
+    }
     const win = Zotero.getMainWindow();
     this.myAnnotationsTab.open(win, { libraryID });
     this.syncMyAnnotationsTabIcon(win);
+    this.updateMyAnnotationsTabBarButton(win);
+  }
+
+  static openMyAnnotationsTabForCurrentLibrary() {
+    const libraryID = getSelectedLibraryID() ?? Zotero.Libraries.userLibraryID;
+    this.openMyAnnotationsTab(libraryID);
   }
 
   /**

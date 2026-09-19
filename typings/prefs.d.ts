@@ -17,6 +17,7 @@ declare namespace _ZoteroTypes {
       "enableGallery": boolean;
       "enableExplorer": boolean;
       "enableReadingSchedule": boolean;
+      "enableAnnotations": boolean;
       "optionalFeaturesPromptDone": boolean;
       "latestTourVersion": number;
       "latestGalleryTourVersion": number;
@@ -26,6 +27,7 @@ declare namespace _ZoteroTypes {
       "myAnnotationsLayout": string;
       "myAnnotationsSort": string;
       "myAnnotationsGroupBy": string;
+      "myAnnotationsOrder": string;
       "magazineTypeSize": string;
       "generateReadingScheduleCollection": boolean;
       "readingScheduleCollectionKey": string;

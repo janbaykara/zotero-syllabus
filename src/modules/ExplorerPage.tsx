@@ -1716,7 +1716,8 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                           }
                         />
                       </div>
-                    ) : shelf.type === "recent-annotations" ? (
+                    ) : shelf.type === "recent-annotations" &&
+                      isOptionalFeatureEnabled("annotations") ? (
                       <div className="inline-flex items-center gap-2 shrink-0">
                         <button
                           type="button"
@@ -1751,6 +1752,17 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                           }
                         />
                       </div>
+                    ) : shelf.type === "recent-annotations" ? (
+                      <ExplorerShelfSettingsMenu
+                        shelf={shelf}
+                        onChange={(next) =>
+                          setShelves(
+                            shelves.map((row) =>
+                              row.id === next.id ? next : row,
+                            ),
+                          )
+                        }
+                      />
                     ) : shelfShowsLayout(shelf) ? (
                       <ExplorerShelfSettingsMenu
                         shelf={shelf}

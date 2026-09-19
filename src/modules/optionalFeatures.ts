@@ -3,7 +3,7 @@ import { zoteroCache } from "../utils/cache";
 import { FEATURE_FLAG } from "./featureFlags";
 
 export type OptionalFeatureId =
-  "syllabus" | "gallery" | "explorer" | "readingSchedule";
+  "syllabus" | "gallery" | "explorer" | "readingSchedule" | "annotations";
 
 export type OptionalFeatureChoices = Record<OptionalFeatureId, boolean>;
 
@@ -13,11 +13,13 @@ const ENABLE_PREF: Record<
   | "enableGallery"
   | "enableExplorer"
   | "enableReadingSchedule"
+  | "enableAnnotations"
 > = {
   syllabus: "enableSyllabus",
   gallery: "enableGallery",
   explorer: "enableExplorer",
   readingSchedule: "enableReadingSchedule",
+  annotations: "enableAnnotations",
 };
 
 const ENABLE_PREF_KEYS = [
@@ -25,6 +27,7 @@ const ENABLE_PREF_KEYS = [
   "enableGallery",
   "enableExplorer",
   "enableReadingSchedule",
+  "enableAnnotations",
 ] as const;
 
 let chromeRefresh: (() => void) | null = null;
@@ -47,6 +50,7 @@ export function getOptionalFeatureChoices(): OptionalFeatureChoices {
     gallery: isOptionalFeatureEnabled("gallery"),
     explorer: isOptionalFeatureEnabled("explorer"),
     readingSchedule: isOptionalFeatureEnabled("readingSchedule"),
+    annotations: isOptionalFeatureEnabled("annotations"),
   };
 }
 
@@ -57,6 +61,7 @@ export function getDefaultOptionalFeatureChoices(): OptionalFeatureChoices {
     gallery: false,
     explorer: false,
     readingSchedule: false,
+    annotations: false,
   };
 }
 
@@ -96,6 +101,7 @@ export function migrateOptionalFeatures(): void {
     gallery: true,
     explorer: true,
     readingSchedule: true,
+    annotations: true,
   });
 }
 

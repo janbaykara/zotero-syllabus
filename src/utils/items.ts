@@ -382,3 +382,90 @@ export function openItemBestAttachment(item: Zotero.Item): void {
     Zotero.launchURL(url);
   }
 }
+
+/**
+ * Open the PDF/EPUB reader scrolled to a specific annotation
+ * (same path Zotero uses when double-clicking an annotation item).
+ */
+export async function openAnnotationInReader(
+  annotation: Zotero.Item,
+): Promise<void> {
+  try {
+    if (
+      typeof annotation.isAnnotation === "function" &&
+      !annotation.isAnnotation()
+    ) {
+      ztoolkit.log(
+        "openAnnotationInReader: item is not an annotation",
+        annotation.id,
+      );
+      return;
+    }
+  } catch (error) {
+    ztoolkit.log("openAnnotationInReader: isAnnotation check failed", error);
+    return;
+  }
+
+  const key = String(annotation.key || "").trim();
+  let attachmentID = Number(annotation.parentItemID || 0);
+  if (!attachmentID) {
+    try {
+      const parent = annotation.parentItem;
+      attachmentID = Number(parent?.id || 0);
+    } catch {
+      // Keep 0 when parent lookup fails.
+    }
+  }
+  if (!attachmentID || !key) {
+    ztoolkit.log("openAnnotationInReader: missing attachment or key", {
+      id: annotation.id,
+      attachmentID,
+      key,
+    });
+    return;
+  }
+
+  const location = { annotationID: key, annotationKey: key };
+  try {
+    const attachment = await Zotero.Items.getAsync(attachmentID);
+    if (!attachment) {
+      ztoolkit.log(
+        "openAnnotationInReader: attachment not found",
+        attachmentID,
+      );
+      return;
+    }
+    // Prefer FileHandlers (respects external PDF reader prefs) then Reader.
+    const opened = await Zotero.FileHandlers.open(attachment, { location });
+    if (opened) {
+      return;
+    }
+  } catch (error) {
+    ztoolkit.log("openAnnotationInReader: FileHandlers.open failed", error);
+  }
+
+  try {
+    await Zotero.Reader.open(attachmentID, location);
+  } catch (error) {
+    ztoolkit.log("openAnnotationInReader: Reader.open failed", error);
+  }
+}
+
+/** Resolve an annotation by id and open it in the reader. */
+export function openAnnotationIdInReader(annotationId: number): void {
+  void (async () => {
+    try {
+      const item = await Zotero.Items.getAsync(annotationId);
+      if (!item) {
+        ztoolkit.log(
+          "openAnnotationIdInReader: annotation not found",
+          annotationId,
+        );
+        return;
+      }
+      await openAnnotationInReader(item);
+    } catch (error) {
+      ztoolkit.log("openAnnotationIdInReader failed", error);
+    }
+  })();
+}

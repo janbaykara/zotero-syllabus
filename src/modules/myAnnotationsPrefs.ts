@@ -145,3 +145,49 @@ export function useMyAnnotationsGroupBy(
 
   return [resolved, setGroupBy];
 }
+
+export const MY_ANNOTATIONS_ORDERS = ["newestLast", "newestFirst"] as const;
+export type MyAnnotationsOrder = (typeof MY_ANNOTATIONS_ORDERS)[number];
+
+function coerceMyAnnotationsOrder(value: unknown): MyAnnotationsOrder {
+  if (value === "newestFirst") {
+    return "newestFirst";
+  }
+  return "newestLast";
+}
+
+export function getMyAnnotationsOrder(): MyAnnotationsOrder {
+  return coerceMyAnnotationsOrder(getPref("myAnnotationsOrder"));
+}
+
+export function setMyAnnotationsOrder(mode: MyAnnotationsOrder): void {
+  setPref("myAnnotationsOrder", mode);
+  zoteroCache.invalidatePref(getPrefKey("myAnnotationsOrder"));
+}
+
+export function useMyAnnotationsOrder(): [
+  MyAnnotationsOrder,
+  (mode: MyAnnotationsOrder) => void,
+] {
+  const [mode, setMode] = useState<MyAnnotationsOrder>(() =>
+    getMyAnnotationsOrder(),
+  );
+
+  useEffect(() => {
+    const refresh = () => setMode(getMyAnnotationsOrder());
+    refresh();
+    const observerID = Zotero.Prefs.registerObserver(
+      getPrefKey("myAnnotationsOrder"),
+      refresh,
+      true,
+    );
+    return () => Zotero.Prefs.unregisterObserver(observerID);
+  }, []);
+
+  const setOrder = useCallback((next: MyAnnotationsOrder) => {
+    setMode(next);
+    setMyAnnotationsOrder(next);
+  }, []);
+
+  return [mode, setOrder];
+}

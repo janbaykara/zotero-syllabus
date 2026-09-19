@@ -79,6 +79,9 @@ optional-features-explorer-desc =
 optional-features-reading-schedule-title = Reading Schedule
 optional-features-reading-schedule-desc =
     A calendar tab that gathers class due dates across your syllabi so you can see what’s next.
+optional-features-annotations-title = Annotation Feed
+optional-features-annotations-desc =
+    A timeline of your highlights and notes across sources — read them as one conversation.
 optional-features-enabled = On
 optional-features-disabled = Off
 optional-features-toggle = { $state ->
@@ -152,6 +155,7 @@ view-tab-explorer = Accueil
 view-tab-explorer-tooltip = Afficher comme accueil
 view-tab-reading-schedule = Planning des lectures
 view-tab-my-annotations = Mes annotations
+toolbar-my-annotations-open = Open Annotation Feed
 toolbar-reading-schedule-review = Consulter le Planning des lectures
 toolbar-reading-schedule-open = Ouvrir le Planning des lectures
 
@@ -568,7 +572,15 @@ explorer-recent-in-feed-desc = Derniers éléments de vos flux.
 explorer-recent-annotations = Annotations récentes
 explorer-recent-annotations-desc = Surlignages que vous avez faits récemment.
 my-annotations-empty = Aucune annotation récente
-my-annotations-desc = Annotations des documents que vous avez lus récemment.
+my-annotations-desc = Your highlights and notes across sources, in chronological order.
+my-annotations-order-newest-last = Newest last
+my-annotations-order-newest-last-title = Oldest at the top, newest at the bottom
+my-annotations-order-newest-first = Newest first
+my-annotations-order-newest-first-title = Newest at the top, oldest at the bottom
+my-annotations-load-previous = Load previous
+my-annotations-load-previous-loading = Loading…
+my-annotations-open-in-reader = Open in reader
+my-annotations-page = p. { $page }
 my-annotations-layout-vertical = Vertical
 my-annotations-layout-vertical-title = Couvertures empilées avec citations les unes sous les autres
 my-annotations-layout-grid = Grille

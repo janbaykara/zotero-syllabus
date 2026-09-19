@@ -46,7 +46,8 @@ type GuideImage =
   | "editing.png"
   | "reading.png"
   | "gallery.png"
-  | "home.png";
+  | "home.png"
+  | "home-annotations.png";
 
 function guideChromeUrl(filename: GuideImage): string {
   return `chrome://${config.addonRef}/content/images/guide/${filename}`;
@@ -542,6 +543,12 @@ function showcaseFeatures(): ShowcaseFeature[] {
       image: "reading.png",
     });
   }
+  features.push({
+    id: "annotations",
+    titleId: "optional-features-annotations-title",
+    descId: "optional-features-annotations-desc",
+    image: "home-annotations.png",
+  });
   return features;
 }
 

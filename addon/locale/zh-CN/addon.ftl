@@ -77,6 +77,9 @@ optional-features-explorer-desc =
 optional-features-reading-schedule-title = Reading Schedule
 optional-features-reading-schedule-desc =
     A calendar tab that gathers class due dates across your syllabi so you can see what’s next.
+optional-features-annotations-title = Annotation Feed
+optional-features-annotations-desc =
+    A timeline of your highlights and notes across sources — read them as one conversation.
 optional-features-enabled = On
 optional-features-disabled = Off
 optional-features-toggle = { $state ->
@@ -149,7 +152,8 @@ view-tab-gallery-tooltip = 以图库视图显示
 view-tab-explorer = 主页
 view-tab-explorer-tooltip = 以主页视图显示
 view-tab-reading-schedule = 阅读日程
-view-tab-my-annotations = 我的批注
+view-tab-my-annotations = 批注动态
+toolbar-my-annotations-open = Open Annotation Feed
 toolbar-reading-schedule-review = 查看阅读日程
 toolbar-reading-schedule-open = 打开阅读日程
 
@@ -562,7 +566,15 @@ explorer-recent-in-feed-desc = 订阅源中的最新条目。
 explorer-recent-annotations = 最近批注
 explorer-recent-annotations-desc = 最近做的高亮批注。
 my-annotations-empty = 暂无近期批注
-my-annotations-desc = 来自你最近阅读条目的批注。
+my-annotations-desc = Your highlights and notes across sources, in chronological order.
+my-annotations-order-newest-last = Newest last
+my-annotations-order-newest-last-title = Oldest at the top, newest at the bottom
+my-annotations-order-newest-first = Newest first
+my-annotations-order-newest-first-title = Newest at the top, oldest at the bottom
+my-annotations-load-previous = Load previous
+my-annotations-load-previous-loading = Loading…
+my-annotations-open-in-reader = Open in reader
+my-annotations-page = p. { $page }
 my-annotations-layout-vertical = 纵向
 my-annotations-layout-vertical-title = 封面与摘录纵向排列
 my-annotations-layout-grid = 网格

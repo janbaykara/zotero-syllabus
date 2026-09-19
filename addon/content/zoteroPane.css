@@ -1621,13 +1621,13 @@
   -moz-context-properties: fill, fill-opacity;
 }
 
-/* My Annotations: Zotero reader sidebar Annotations stack (attachment-annotations). */
+/* Annotation Feed: Zotero reader sidebar Annotations stack (attachment-annotations). */
 #tab-bar-container
   .tab[data-id^="syllabus-my-annotations-tab-"]
   .icon-item-type[data-item-type="attachment-annotations"] {
   background: url("chrome://zotero/skin/16/universal/attachment-annotations.svg")
     no-repeat center / contain !important;
-  fill: var(--fill-secondary);
+  fill: #7b4ddb;
   -moz-context-properties: fill, fill-opacity;
 }
 
@@ -1677,7 +1677,14 @@
   border: 0.5px solid var(--fill-secondary);
   margin-inline: 4px 2px;
   border-radius: 4px;
+}
+
+#zotero-tabs-toolbar > #syllabus-reading-schedule-tab-button {
   list-style-image: url("chrome://syllabus/content/icons/calendar.svg");
+}
+
+#zotero-tabs-toolbar > #syllabus-my-annotations-tab-button {
+  list-style-image: url("chrome://zotero/skin/16/universal/attachment-annotations.svg");
 }
 
 #zotero-tabs-toolbar > .syllabus-tab-bar-button .toolbarbutton-text {
@@ -1695,7 +1702,18 @@
   display: flex !important;
   fill: #7b4ddb;
   -moz-context-properties: fill, fill-opacity;
+}
+
+#zotero-tabs-toolbar
+  > #syllabus-reading-schedule-tab-button
+  .toolbarbutton-icon {
   list-style-image: url("chrome://syllabus/content/icons/calendar.svg");
+}
+
+#zotero-tabs-toolbar
+  > #syllabus-my-annotations-tab-button
+  .toolbarbutton-icon {
+  list-style-image: url("chrome://zotero/skin/16/universal/attachment-annotations.svg");
 }
 
 /* Icon-only while the Reading Schedule tab is open in the tab list. */
@@ -2462,10 +2480,204 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   box-sizing: border-box;
 }
 
+/* Match header + body to the same desktop inset as container-padded
+   (max-w-4xl + px-6 / md:px-10). Unlayered so sticky children can't lose
+   the constraint to @layer components. */
+.syllabus-my-annotations-order-toggle {
+  gap: 0.5rem;
+}
+
+.syllabus-my-annotations-inset {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--container-4xl, 56rem);
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+  min-width: 0;
+}
+
+@media (width >= 48rem) {
+  .syllabus-my-annotations-inset {
+    padding-inline: 2.5rem;
+  }
+}
+
 .syllabus-my-annotations-body {
   box-sizing: border-box;
-  max-width: 100%;
   min-width: 0;
+}
+
+.syllabus-my-annotations-stream {
+  --syllabus-magazine-serif:
+    "Newsreader", Georgia, "Palatino Linotype", Palatino, "Songti SC",
+    "Hiragino Mincho ProN", serif;
+}
+
+.syllabus-my-annotations-stream-entry {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 1.1rem;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding-block: 0.65rem;
+}
+
+.syllabus-my-annotations-stream-entry.is-selected
+  .syllabus-my-annotations-stream-avatar
+  .syllabus-gallery-tile {
+  outline: 2px solid var(--accent-blue, #1d4ed8);
+  outline-offset: 2px;
+}
+
+.syllabus-my-annotations-stream-avatar {
+  position: sticky;
+  /* Cleared by JS from the sticky page header height (+ gap). */
+  top: var(--syllabus-my-annotations-sticky-top, 8.5rem);
+  z-index: 1;
+  flex: 0 0 8rem;
+  width: 8rem;
+  max-width: 8rem;
+  min-width: 0;
+  align-self: flex-start;
+}
+
+.syllabus-my-annotations-stream-avatar .syllabus-gallery-tile {
+  width: 100%;
+  min-width: 0;
+}
+
+.syllabus-my-annotations-stream-avatar .syllabus-gallery-cover-portrait,
+.syllabus-my-annotations-stream-avatar .syllabus-gallery-cover-video,
+.syllabus-my-annotations-stream-avatar .syllabus-gallery-cover-web,
+.syllabus-my-annotations-stream-avatar .syllabus-gallery-cover-square,
+.syllabus-my-annotations-stream-avatar .syllabus-gallery-cover-natural,
+.syllabus-my-annotations-stream-avatar .syllabus-gallery-cover-with-binder {
+  width: 100%;
+}
+
+.syllabus-my-annotations-stream-avatar .syllabus-gallery-title {
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+
+.syllabus-my-annotations-stream-avatar .syllabus-gallery-creator,
+.syllabus-my-annotations-stream-avatar .syllabus-gallery-hostrow {
+  font-size: 0.7rem;
+}
+
+.syllabus-my-annotations-stream-avatar-empty {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--fill-secondary, #ccc) 35%, transparent);
+}
+
+.syllabus-my-annotations-stream-stack {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.syllabus-my-annotations-stream-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.35rem 0.45rem;
+  margin: -0.35rem -0.45rem;
+  border-radius: 0.35rem;
+  cursor: pointer;
+  outline: none;
+}
+
+.syllabus-my-annotations-stream-body:hover {
+  background: color-mix(in srgb, var(--fill-secondary, #888) 10%, transparent);
+}
+
+.syllabus-my-annotations-stream-body:focus-visible {
+  outline: 2px solid var(--accent-blue, #1d4ed8);
+  outline-offset: 1px;
+}
+
+.syllabus-my-annotations-stream-quote {
+  font-family: var(--syllabus-magazine-serif);
+  font-size: 1.2rem;
+  line-height: 1.55;
+  letter-spacing: 0.005em;
+}
+
+.syllabus-my-annotations-stream-quote .syllabus-magazine-highlight-mark {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.syllabus-my-annotations-stream-comment {
+  align-self: flex-end;
+  max-width: min(28rem, 92%);
+  box-sizing: border-box;
+  margin-block-start: 0.15rem;
+  padding: 0.55rem 0.8rem 0.6rem;
+  border-radius: 1rem 1rem 0.25rem 1rem;
+  background: color-mix(in srgb, var(--fill-primary, #111) 8%, transparent);
+  font-family: system-ui, sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--fill-primary, #111) 88%, transparent);
+  white-space: pre-wrap;
+  text-align: start;
+}
+
+.syllabus-my-annotations-stream-meta {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--fill-secondary, #888);
+}
+
+.syllabus-my-annotations-stream-location {
+  font-variant-numeric: tabular-nums;
+}
+
+.syllabus-my-annotations-stream-meta-sep {
+  opacity: 0.7;
+}
+
+.syllabus-my-annotations-stream-time {
+  font-size: inherit;
+  color: inherit;
+}
+
+.syllabus-my-annotations-load-previous-wrap {
+  display: flex;
+  justify-content: center;
+  padding-block: 0.25rem 0.5rem;
+}
+
+.syllabus-my-annotations-load-previous {
+  appearance: none;
+  border: 1px solid color-mix(in srgb, var(--fill-secondary, #888) 45%, transparent);
+  background: var(--material-background, transparent);
+  color: var(--fill-primary, inherit);
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.syllabus-my-annotations-load-previous:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.syllabus-my-annotations-load-previous:not(:disabled):hover {
+  background: color-mix(in srgb, var(--fill-secondary, #888) 12%, transparent);
 }
 
 .syllabus-my-annotations-body.is-grid-body {

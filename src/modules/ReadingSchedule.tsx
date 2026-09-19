@@ -53,7 +53,7 @@ function ReadingScheduleHeader({
   return (
     <div
       className={twMerge(
-        "sticky top-0 z-20 bg-background py-1",
+        "sticky top-0 z-20 w-full bg-background py-1",
         isZotero8OrLater() ? "pt-4 md:pt-8" : "pt-8",
       )}
     >
@@ -215,12 +215,13 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
                   <div key={weekStartKey} className="syllabus-class-group">
                     <div
                       className={twMerge(
-                        "container-padded",
-                        "text-3xl sticky top-12 z-10 py-2 bg-background text-tertiary",
-                        isZotero8OrLater() ? "md:top-16" : "top-12",
+                        "sticky z-10 w-full bg-background py-2",
+                        isZotero8OrLater() ? "top-12 md:top-16" : "top-12",
                       )}
                     >
-                      <WeekHeader weekStartDate={weekStartDate} />
+                      <div className="container-padded text-3xl text-tertiary">
+                        <WeekHeader weekStartDate={weekStartDate} />
+                      </div>
                     </div>
 
                     <div className="space-y-12 my-6">

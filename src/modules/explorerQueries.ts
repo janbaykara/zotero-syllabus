@@ -1,4 +1,10 @@
-import { useMemo } from "preact/hooks";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
 import { getCachedItem } from "../utils/cache";
 import { isSyllabusMemberItem } from "../utils/items";
@@ -24,6 +30,20 @@ export type ExplorerAnnotation = {
   text: string;
   color: string;
   dateModified: string;
+  parent: Zotero.Item | null;
+};
+
+/** Flat stream row for My Annotations timeline (quote + comment kept separate). */
+export type MyAnnotationStreamEntry = {
+  id: number;
+  quote: string;
+  comment: string;
+  color: string;
+  /** When the annotation was created. */
+  dateAdded: string;
+  dateModified: string;
+  /** Printed page label from the reader (may be empty for some EPUBs). */
+  pageLabel: string;
   parent: Zotero.Item | null;
 };
 
@@ -385,6 +405,139 @@ export async function searchRecentAnnotations(
       (a, b) => dateMs(b.dateModified) - dateMs(a.dateModified) || a.id - b.id,
     )
     .slice(0, limit);
+}
+
+export const MY_ANNOTATIONS_STREAM_PAGE_SIZE = 50;
+export const MY_ANNOTATIONS_STREAM_LOOKBACK_DAYS = 365;
+
+function annotationParentItem(item: Zotero.Item): Zotero.Item | null {
+  try {
+    const attachment = item.parentItem;
+    const work = attachment?.parentItem || attachment || null;
+    let parent = work && isSyllabusMemberItem(work) ? work : work || null;
+    if (parent && !parent.isRegularItem?.()) {
+      const grand = parent.parentItem;
+      parent = grand && isSyllabusMemberItem(grand) ? grand : parent;
+    }
+    return parent;
+  } catch {
+    return null;
+  }
+}
+
+/** Prefer reader page label; fall back to 1-based pageIndex from position JSON. */
+export function annotationLocationPageLabel(item: Zotero.Item): string {
+  try {
+    const label = String(item.annotationPageLabel || "").trim();
+    if (label) {
+      return label;
+    }
+  } catch {
+    // Fall through to position.
+  }
+  try {
+    const raw = String(item.annotationPosition || "").trim();
+    if (!raw) {
+      return "";
+    }
+    const parsed = JSON.parse(raw) as { pageIndex?: unknown };
+    if (typeof parsed.pageIndex === "number" && parsed.pageIndex >= 0) {
+      return String(parsed.pageIndex + 1);
+    }
+  } catch {
+    // Keep empty when position is unavailable or not a PDF rect position.
+  }
+  return "";
+}
+
+function mapAnnotationStreamEntry(
+  item: Zotero.Item,
+): MyAnnotationStreamEntry | null {
+  let quote = "";
+  let comment = "";
+  try {
+    quote = String(item.annotationText || "").trim();
+  } catch {
+    // Keep empty when annotation text is unavailable.
+  }
+  try {
+    comment = String(item.annotationComment || "").trim();
+  } catch {
+    // Keep empty when annotation comment is unavailable.
+  }
+  if (!quote && !comment) {
+    return null;
+  }
+  let color = DEFAULT_HIGHLIGHT_COLOR;
+  try {
+    color = normalizeHighlightColor(String(item.annotationColor || ""));
+  } catch {
+    // Keep the default color when annotation color is unavailable.
+  }
+  return {
+    id: item.id,
+    quote,
+    comment,
+    color,
+    dateAdded: String(item.dateAdded || item.dateModified || ""),
+    dateModified: String(item.dateModified || ""),
+    pageLabel: annotationLocationPageLabel(item),
+    parent: annotationParentItem(item),
+  };
+}
+
+function compareAnnotationNewestFirst(
+  a: { dateAdded: string; dateModified: string; id: number },
+  b: { dateAdded: string; dateModified: string; id: number },
+): number {
+  return (
+    dateMs(b.dateAdded) - dateMs(a.dateAdded) ||
+    dateMs(b.dateModified) - dateMs(a.dateModified) ||
+    a.id - b.id
+  );
+}
+
+/**
+ * Newest `limit` annotations in the lookback window (descending).
+ * Increase `limit` to "load previous" (older history from the live end).
+ */
+export async function searchMyAnnotationsStream(
+  libraryID: number,
+  options: { limit?: number } = {},
+): Promise<{ rows: MyAnnotationStreamEntry[]; hasMore: boolean }> {
+  const limit = Math.max(1, options.limit ?? MY_ANNOTATIONS_STREAM_PAGE_SIZE);
+  const ids = await searchItemIds(libraryID, [
+    ["itemType", "is", "annotation"],
+    [
+      "dateModified",
+      "isInTheLast",
+      `${MY_ANNOTATIONS_STREAM_LOOKBACK_DAYS} days`,
+    ],
+  ]);
+  const rows: MyAnnotationStreamEntry[] = [];
+  for (const id of ids) {
+    const item = resolveItem(id);
+    if (!item) {
+      continue;
+    }
+    try {
+      if (item.deleted) {
+        continue;
+      }
+    } catch {
+      continue;
+    }
+    const row = mapAnnotationStreamEntry(item);
+    if (row) {
+      rows.push(row);
+    }
+  }
+  rows.sort(compareAnnotationNewestFirst);
+  const hasMore = rows.length > limit;
+  return {
+    rows: rows.slice(0, limit),
+    hasMore,
+  };
 }
 
 export const MY_ANNOTATIONS_ITEM_LIMIT = 20;
@@ -825,4 +978,95 @@ export function useMyAnnotatedRecentlyRead(
   );
   useSyncExternalStore(store.subscribe, store.getSnapshot);
   return store.getData();
+}
+
+export type MyAnnotationsStreamState = {
+  rows: MyAnnotationStreamEntry[];
+  hasMore: boolean;
+  loading: boolean;
+  loadingMore: boolean;
+  loadPrevious: () => Promise<void>;
+};
+
+export function useMyAnnotationsStream(
+  libraryID: number,
+): MyAnnotationsStreamState {
+  const [rows, setRows] = useState<MyAnnotationStreamEntry[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadedLimitRef = useRef(MY_ANNOTATIONS_STREAM_PAGE_SIZE);
+  const loadTokenRef = useRef(0);
+
+  const reload = useCallback(
+    async (mode: "initial" | "refresh" | "more") => {
+      const token = ++loadTokenRef.current;
+      if (mode === "more") {
+        setLoadingMore(true);
+      } else if (mode === "initial") {
+        setLoading(true);
+      }
+      try {
+        const limit =
+          mode === "more"
+            ? loadedLimitRef.current + MY_ANNOTATIONS_STREAM_PAGE_SIZE
+            : Math.max(MY_ANNOTATIONS_STREAM_PAGE_SIZE, loadedLimitRef.current);
+        const next = await searchMyAnnotationsStream(libraryID, { limit });
+        if (token !== loadTokenRef.current) {
+          return;
+        }
+        loadedLimitRef.current = limit;
+        setRows(next.rows);
+        setHasMore(next.hasMore);
+      } finally {
+        if (token === loadTokenRef.current) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
+      }
+    },
+    [libraryID],
+  );
+
+  useEffect(() => {
+    loadedLimitRef.current = MY_ANNOTATIONS_STREAM_PAGE_SIZE;
+    void reload("initial");
+    let debounce: ReturnType<typeof setTimeout> | null = null;
+    const notifierID = Zotero.Notifier.registerObserver(
+      {
+        notify: () => {
+          if (debounce) {
+            clearTimeout(debounce);
+          }
+          debounce = setTimeout(() => {
+            debounce = null;
+            void reload("refresh");
+          }, 250);
+        },
+      },
+      ["item"],
+    );
+    return () => {
+      Zotero.Notifier.unregisterObserver(notifierID);
+      if (debounce) {
+        clearTimeout(debounce);
+      }
+      loadTokenRef.current += 1;
+    };
+  }, [libraryID, reload]);
+
+  const loadPrevious = useCallback(async () => {
+    if (!hasMore || loadingMore || loading) {
+      return;
+    }
+    await reload("more");
+  }, [hasMore, loadingMore, loading, reload]);
+
+  return {
+    rows,
+    hasMore,
+    loading,
+    loadingMore,
+    loadPrevious,
+  };
 }

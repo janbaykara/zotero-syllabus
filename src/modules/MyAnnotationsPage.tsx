@@ -2,509 +2,465 @@
 import { h, Fragment } from "preact";
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
-  useState,
 } from "preact/hooks";
 import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
-import {
-  ArrowDownAZ,
-  BookOpen,
-  Calendar,
-  CalendarPlus,
-  ChevronDown,
-  LayoutGrid,
-  LayoutList,
-  Shapes,
-  Tags,
-  User,
-} from "lucide-preact";
+import { ArrowDown, ArrowUp } from "lucide-preact";
 import { isZotero8OrLater } from "../utils/zotero";
-import { openItemBestAttachment, sortItems } from "../utils/items";
+import { openAnnotationIdInReader, openItemBestAttachment } from "../utils/items";
 import { getString, getUiDir } from "../utils/locale";
+import { formatRelativeTimestamp } from "../utils/dates";
 import { openZoteroItemContextMenu } from "../utils/itemContextMenu";
 import { renderComponent } from "../utils/react";
-import type { GalleryGroupBy } from "./galleryGroupBy";
-import type { GallerySortBy } from "./gallerySort";
 import {
-  useMyAnnotationsGroupBy,
-  useMyAnnotationsLayout,
-  useMyAnnotationsSortBy,
-  type MyAnnotationsLayout,
+  useMyAnnotationsOrder,
+  type MyAnnotationsOrder,
 } from "./myAnnotationsPrefs";
 import { GalleryViewportProvider } from "./galleryVisibility";
 import { useItemIdentifierSelection } from "./browsePage";
 import type { MagazineTileClick } from "./MagazineTile";
-import { ExplorerAnnotationTile } from "./annotationTiles";
+import { GalleryTile } from "./GalleryPage";
 import {
-  useMyAnnotatedRecentlyRead,
-  type ExplorerAnnotationGroup,
+  useMyAnnotationsStream,
+  type MyAnnotationStreamEntry,
 } from "./explorerQueries";
-import { useCollectionTagGroups } from "./tagGroups";
-import { useCollectionItemTypeGroups } from "./typeGroups";
-import { useCollectionCreatorGroups } from "./creatorGroups";
 
-type SegmentOption<T extends string> = {
-  mode: T;
-  label: string;
-  title: string;
-  Icon: typeof LayoutGrid;
+function dateMs(value: string | undefined): number {
+  const parsed = Date.parse(value || "");
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function sortStreamRows(
+  rows: MyAnnotationStreamEntry[],
+  order: MyAnnotationsOrder,
+): MyAnnotationStreamEntry[] {
+  const sorted = [...rows].sort(
+    (a, b) =>
+      dateMs(a.dateAdded) - dateMs(b.dateAdded) ||
+      dateMs(a.dateModified) - dateMs(b.dateModified) ||
+      a.id - b.id,
+  );
+  if (order === "newestFirst") {
+    sorted.reverse();
+  }
+  return sorted;
+}
+
+type StreamParentGroup = {
+  key: string;
+  parent: Zotero.Item | null;
+  entries: MyAnnotationStreamEntry[];
 };
 
-function layoutOptions(): SegmentOption<MyAnnotationsLayout>[] {
-  return [
-    {
-      mode: "vertical",
-      label: getString("my-annotations-layout-vertical"),
-      title: getString("my-annotations-layout-vertical-title"),
-      Icon: LayoutList,
-    },
-    {
-      mode: "grid",
-      label: getString("my-annotations-layout-grid"),
-      title: getString("my-annotations-layout-grid-title"),
-      Icon: LayoutGrid,
-    },
-  ];
-}
-
-function sortOptions(): SegmentOption<GallerySortBy>[] {
-  return [
-    {
-      mode: "lastRead",
-      label: getString("gallery-sort-last-read"),
-      title: getString("gallery-sort-last-read-title"),
-      Icon: BookOpen,
-    },
-    {
-      mode: "title",
-      label: getString("gallery-sort-az"),
-      title: getString("gallery-sort-az-title"),
-      Icon: ArrowDownAZ,
-    },
-    {
-      mode: "date",
-      label: getString("gallery-sort-date"),
-      title: getString("gallery-sort-date-title"),
-      Icon: Calendar,
-    },
-    {
-      mode: "dateAdded",
-      label: getString("gallery-sort-date-added"),
-      title: getString("gallery-sort-date-added-title"),
-      Icon: CalendarPlus,
-    },
-  ];
-}
-
-function groupByOptions(): SegmentOption<GalleryGroupBy>[] {
-  return [
-    {
-      mode: "none",
-      label: getString("gallery-group-none"),
-      title: getString("gallery-group-none-title"),
-      Icon: LayoutGrid,
-    },
-    {
-      mode: "type",
-      label: getString("gallery-group-type"),
-      title: getString("gallery-group-type-title"),
-      Icon: Shapes,
-    },
-    {
-      mode: "creator",
-      label: getString("gallery-group-creator"),
-      title: getString("gallery-group-creator-title"),
-      Icon: User,
-    },
-    {
-      mode: "tags",
-      label: getString("gallery-group-tags"),
-      title: getString("gallery-group-tags-title"),
-      Icon: Tags,
-    },
-  ];
-}
-
-function useConfigurePopover(
-  open: boolean,
-  setOpen: (open: boolean) => void,
-  rootRef: { current: HTMLDivElement | null },
-): JSX.CSSProperties {
-  const [popoverStyle, setPopoverStyle] = useState<JSX.CSSProperties>({});
-  const setOpenRef = useRef(setOpen);
-  setOpenRef.current = setOpen;
-
-  useLayoutEffect(() => {
-    if (!open) {
-      return;
+/** Collapse consecutive same-parent rows so one cover serves the run. */
+function groupAdjacentStreamEntries(
+  rows: MyAnnotationStreamEntry[],
+): StreamParentGroup[] {
+  const groups: StreamParentGroup[] = [];
+  for (const entry of rows) {
+    const parentId = entry.parent?.id ?? null;
+    const last = groups[groups.length - 1];
+    const lastId = last?.parent?.id ?? null;
+    if (last && parentId != null && parentId === lastId) {
+      last.entries.push(entry);
+      continue;
     }
-    const doc = rootRef.current?.ownerDocument || document;
-    const updatePosition = () => {
-      const el = rootRef.current;
-      if (!el) {
-        return;
-      }
-      const rect = el.getBoundingClientRect();
-      const view = doc.documentElement;
-      setPopoverStyle(
-        getUiDir() === "rtl"
-          ? { top: rect.bottom + 6, left: rect.left }
-          : { top: rect.bottom + 6, right: view.clientWidth - rect.right },
-      );
-    };
-    updatePosition();
-    const onPointerDown = (event: PointerEvent) => {
-      if (rootRef.current?.contains(event.target as Node)) {
-        return;
-      }
-      setOpenRef.current(false);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpenRef.current(false);
-      }
-    };
-    const win = doc.defaultView;
-    win?.addEventListener("resize", updatePosition);
-    doc.addEventListener("pointerdown", onPointerDown, true);
-    doc.addEventListener("keydown", onKeyDown);
-    return () => {
-      win?.removeEventListener("resize", updatePosition);
-      doc.removeEventListener("pointerdown", onPointerDown, true);
-      doc.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open, rootRef]);
-
-  return popoverStyle;
+    groups.push({
+      key:
+        parentId != null
+          ? `parent-${parentId}-${entry.id}`
+          : `orphan-${entry.id}`,
+      parent: entry.parent,
+      entries: [entry],
+    });
+  }
+  return groups;
 }
 
-function MyAnnotationsSettingsMenu({
-  layout,
-  onLayout,
-  sortBy,
-  onSortBy,
-  groupBy,
-  onGroupBy,
-}: {
-  layout: MyAnnotationsLayout;
-  onLayout: (mode: MyAnnotationsLayout) => void;
-  sortBy: GallerySortBy;
-  onSortBy: (mode: GallerySortBy) => void;
-  groupBy: GalleryGroupBy;
-  onGroupBy: (mode: GalleryGroupBy) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const popoverStyle = useConfigurePopover(open, setOpen, rootRef);
-  const titleId = "syllabus-my-annotations-settings";
-  const layouts = layoutOptions();
-  const sorts = sortOptions();
-  const groups = groupByOptions();
+function formatAnnotationPageLabel(page: string): string {
+  try {
+    const cite = (
+      Zotero as typeof Zotero & {
+        Cite?: { getLocatorString?: (locator: string) => string };
+      }
+    ).Cite;
+    const locator = cite?.getLocatorString?.("page");
+    if (locator) {
+      return `${locator} ${page}`;
+    }
+  } catch {
+    // Fall through to Fluent.
+  }
+  return getString("my-annotations-page", { args: { page } });
+}
 
+function AnnotationStreamBody({ entry }: { entry: MyAnnotationStreamEntry }) {
+  const stamp = formatRelativeTimestamp(entry.dateAdded || entry.dateModified);
+  const pageText = entry.pageLabel
+    ? formatAnnotationPageLabel(entry.pageLabel)
+    : "";
   return (
     <div
-      className="syllabus-explorer-configure syllabus-explorer-shelf-configure"
-      ref={rootRef}
+      className="syllabus-my-annotations-stream-body min-w-0"
+      data-annotation-id={entry.id}
+      role="button"
+      tabIndex={0}
+      title={getString("my-annotations-open-in-reader")}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openAnnotationIdInReader(entry.id);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          e.stopPropagation();
+          openAnnotationIdInReader(entry.id);
+        }
+      }}
     >
-      <button
-        type="button"
-        className="syllabus-explorer-customize"
-        aria-expanded={open}
-        aria-haspopup="dialog"
-        onClick={() => setOpen((value) => !value)}
-      >
-        <span>{getString("explorer-configure")}</span>
-        <ChevronDown size={12} strokeWidth={2} aria-hidden="true" />
-      </button>
-      {open ? (
-        <div
-          className="syllabus-explorer-configure-popover"
-          role="dialog"
-          aria-labelledby={titleId}
-          style={popoverStyle}
-        >
-          <div id={titleId} className="syllabus-explorer-configure-heading">
-            {getString("gallery-options-title")}
-          </div>
-          <div className="syllabus-explorer-shelf-setting">
-            <div className="syllabus-explorer-configure-heading">
-              {getString("gallery-menu-view")}
-            </div>
-            <div
-              role="radiogroup"
-              aria-label={getString("gallery-menu-view")}
-              className="syllabus-explorer-layout-toggle"
+      {entry.quote ? (
+        <div className="syllabus-my-annotations-stream-quote">
+          <mark
+            className="syllabus-magazine-highlight-mark"
+            style={{ "--highlight-color": entry.color } as JSX.CSSProperties}
+          >
+            {entry.quote}
+          </mark>
+        </div>
+      ) : null}
+      {pageText || stamp ? (
+        <div className="syllabus-my-annotations-stream-meta">
+          {pageText ? (
+            <span className="syllabus-my-annotations-stream-location">
+              {pageText}
+            </span>
+          ) : null}
+          {pageText && stamp ? (
+            <span className="syllabus-my-annotations-stream-meta-sep" aria-hidden="true">
+              ·
+            </span>
+          ) : null}
+          {stamp ? (
+            <time
+              className="syllabus-my-annotations-stream-time"
+              dateTime={stamp.iso}
+              title={stamp.absolute}
             >
-              {layouts.map(({ mode, label, title, Icon }) => {
-                const selected = layout === mode;
-                return (
-                  <button
-                    key={mode}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    title={title}
-                    className={twMerge(
-                      "syllabus-explorer-layout-btn",
-                      selected && "is-selected",
-                    )}
-                    onClick={() => onLayout(mode)}
-                  >
-                    <Icon size={12} strokeWidth={2} aria-hidden="true" />
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div className="syllabus-explorer-shelf-setting">
-            <div className="syllabus-explorer-configure-heading">
-              {getString("gallery-menu-sort")}
-            </div>
-            <div
-              role="radiogroup"
-              aria-label={getString("gallery-menu-sort")}
-              className="syllabus-explorer-layout-toggle"
-            >
-              {sorts.map(({ mode, label, title, Icon }) => {
-                const selected = sortBy === mode;
-                return (
-                  <button
-                    key={mode}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    title={title}
-                    className={twMerge(
-                      "syllabus-explorer-layout-btn",
-                      selected && "is-selected",
-                    )}
-                    onClick={() => onSortBy(mode)}
-                  >
-                    <Icon size={12} strokeWidth={2} aria-hidden="true" />
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div className="syllabus-explorer-shelf-setting">
-            <div className="syllabus-explorer-configure-heading">
-              {getString("gallery-menu-group")}
-            </div>
-            <div
-              role="radiogroup"
-              aria-label={getString("gallery-menu-group")}
-              className="syllabus-explorer-layout-toggle"
-            >
-              {groups.map(({ mode, label, title, Icon }) => {
-                const selected = groupBy === mode;
-                return (
-                  <button
-                    key={mode}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    title={title}
-                    className={twMerge(
-                      "syllabus-explorer-layout-btn",
-                      selected && "is-selected",
-                    )}
-                    onClick={() => onGroupBy(mode)}
-                  >
-                    <Icon size={12} strokeWidth={2} aria-hidden="true" />
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+              {stamp.relative}
+            </time>
+          ) : null}
+        </div>
+      ) : null}
+      {entry.comment ? (
+        <div className="syllabus-my-annotations-stream-comment">
+          {entry.comment}
         </div>
       ) : null}
     </div>
   );
 }
 
-function sortAnnotationGroups(
-  groups: ExplorerAnnotationGroup[],
-  sortBy: GallerySortBy,
-): ExplorerAnnotationGroup[] {
-  if (sortBy === "auto" || sortBy === "lastRead") {
-    return [...groups].sort(
-      (a, b) =>
-        (b.lastRead || 0) - (a.lastRead || 0) ||
-        (a.parent?.id || 0) - (b.parent?.id || 0),
-    );
-  }
-  const parents = groups
-    .map((group) => group.parent)
-    .filter((item): item is Zotero.Item => !!item);
-  const order = new Map(
-    sortItems(parents, sortBy).map((item, index) => [item.id, index]),
-  );
-  return [...groups].sort((a, b) => {
-    const aOrder = a.parent
-      ? (order.get(a.parent.id) ?? 0)
-      : Number.MAX_SAFE_INTEGER;
-    const bOrder = b.parent
-      ? (order.get(b.parent.id) ?? 0)
-      : Number.MAX_SAFE_INTEGER;
-    return aOrder - bOrder;
-  });
-}
-
-function AnnotationGroupsGrid({
-  groups,
-  arrangement,
-  selectedItemIds,
-  onClick,
-  onDoubleClick,
+function AnnotationStreamGroup({
+  group,
+  selected,
   onContextMenu,
 }: {
-  groups: ExplorerAnnotationGroup[];
-  arrangement: MyAnnotationsLayout;
-  selectedItemIds: number[] | null;
-  onClick: MagazineTileClick;
-  onDoubleClick: (item: Zotero.Item) => void;
+  group: StreamParentGroup;
+  selected: boolean;
   onContextMenu: MagazineTileClick;
 }) {
-  if (groups.length === 0) {
-    return (
-      <p className="text-secondary text-base">
-        {getString("my-annotations-empty")}
-      </p>
-    );
-  }
+  const parent = group.parent;
+  const openGroupInReader = useCallback(() => {
+    const first = group.entries[0];
+    if (first) {
+      openAnnotationIdInReader(first.id);
+      return;
+    }
+    if (parent) {
+      openItemBestAttachment(parent);
+    }
+  }, [group.entries, parent]);
+
+  return (
+    <article
+      className={twMerge(
+        "syllabus-my-annotations-stream-entry",
+        selected && "is-selected",
+      )}
+      data-parent-id={parent?.id ?? ""}
+      data-annotation-count={group.entries.length}
+    >
+      <div className="syllabus-my-annotations-stream-avatar">
+        {parent ? (
+          <GalleryTile
+            item={parent}
+            selected={selected}
+            interactive
+            onClick={(_item, e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              openGroupInReader();
+            }}
+            onDoubleClick={(_item) => {
+              openGroupInReader();
+            }}
+            onContextMenu={onContextMenu}
+          />
+        ) : (
+          <div className="syllabus-my-annotations-stream-avatar-empty" />
+        )}
+      </div>
+      <div className="syllabus-my-annotations-stream-stack min-w-0">
+        {group.entries.map((entry) => (
+          <AnnotationStreamBody key={entry.id} entry={entry} />
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function OrderToggle({
+  order,
+  onOrder,
+}: {
+  order: MyAnnotationsOrder;
+  onOrder: (mode: MyAnnotationsOrder) => void;
+}) {
+  const options: {
+    mode: MyAnnotationsOrder;
+    label: string;
+    title: string;
+    Icon: typeof ArrowDown;
+  }[] = [
+    {
+      mode: "newestLast",
+      label: getString("my-annotations-order-newest-last"),
+      title: getString("my-annotations-order-newest-last-title"),
+      Icon: ArrowDown,
+    },
+    {
+      mode: "newestFirst",
+      label: getString("my-annotations-order-newest-first"),
+      title: getString("my-annotations-order-newest-first-title"),
+      Icon: ArrowUp,
+    },
+  ];
   return (
     <div
-      className={
-        arrangement === "grid"
-          ? "syllabus-my-annotations-grid"
-          : "syllabus-my-annotations-vertical"
-      }
+      role="radiogroup"
+      aria-label={getString("view-tab-my-annotations")}
+      className="syllabus-explorer-layout-toggle syllabus-my-annotations-order-toggle"
     >
-      {groups.map((group) => (
-        <ExplorerAnnotationTile
-          key={
-            group.parent?.id ?? group.annotations.map((row) => row.id).join("-")
-          }
-          rows={group.annotations}
-          layout="cover"
-          size="large"
-          arrangement="stack"
-          selected={
-            !!group.parent &&
-            (selectedItemIds?.includes(group.parent.id) || false)
-          }
-          onClick={onClick}
-          onDoubleClick={onDoubleClick}
-          onContextMenu={onContextMenu}
-        />
-      ))}
+      {options.map(({ mode, label, title, Icon }) => {
+        const selected = order === mode;
+        return (
+          <button
+            key={mode}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            title={title}
+            className={twMerge(
+              "syllabus-explorer-layout-btn",
+              selected && "is-selected",
+            )}
+            onClick={() => onOrder(mode)}
+          >
+            <Icon size={12} strokeWidth={2} aria-hidden="true" />
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
+function LoadPreviousButton({
+  loading,
+  onClick,
+}: {
+  loading: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <div className="syllabus-my-annotations-load-previous-wrap">
+      <button
+        type="button"
+        className="syllabus-my-annotations-load-previous"
+        disabled={loading}
+        onClick={onClick}
+      >
+        {loading
+          ? getString("my-annotations-load-previous-loading")
+          : getString("my-annotations-load-previous")}
+      </button>
+    </div>
+  );
+}
+
+const NEAR_EDGE_PX = 80;
+
 export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
-  const groups = useMyAnnotatedRecentlyRead(libraryID);
-  const [layout, setLayout] = useMyAnnotationsLayout();
-  const [groupBy, setGroupBy] = useMyAnnotationsGroupBy({
-    classes: false,
-    subcollections: false,
-    magazine: false,
-  });
-  const [sortBy, setSortBy] = useMyAnnotationsSortBy();
-  const { selectedItemIds, handleIdentifierClick } =
-    useItemIdentifierSelection();
+  const { rows, hasMore, loading, loadingMore, loadPrevious } =
+    useMyAnnotationsStream(libraryID);
+  const [order, setOrder] = useMyAnnotationsOrder();
+  const { selectedItemIds } = useItemIdentifierSelection();
   const pageRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const pinnedToLiveRef = useRef(true);
+  const pendingScrollRef = useRef<
+    { kind: "live" } | { kind: "anchor"; height: number; top: number } | null
+  >({ kind: "live" });
+  const prevRowCountRef = useRef(0);
+  const skipNextPinTrackRef = useRef(false);
 
-  const syllabusItems = useMemo(
-    () =>
-      groups
-        .map((group) => group.parent)
-        .filter((item): item is Zotero.Item => !!item)
-        .map((zoteroItem) => ({ zoteroItem, assignments: [] as unknown[] })),
-    [groups],
+  const displayRows = useMemo(() => sortStreamRows(rows, order), [rows, order]);
+  const displayGroups = useMemo(
+    () => groupAdjacentStreamEntries(displayRows),
+    [displayRows],
   );
-  const { tagGroups, untaggedItems } = useCollectionTagGroups(syllabusItems);
-  const { typeGroups } = useCollectionItemTypeGroups(syllabusItems);
-  const { creatorGroups, uncreditedItems } =
-    useCollectionCreatorGroups(syllabusItems);
-
-  const groupsByParentId = useMemo(() => {
-    const map = new Map<number, ExplorerAnnotationGroup>();
-    for (const group of groups) {
-      if (group.parent) {
-        map.set(group.parent.id, group);
-      }
-    }
-    return map;
-  }, [groups]);
-
-  const sortedGroups = useMemo(
-    () => sortAnnotationGroups(groups, sortBy),
-    [groups, sortBy],
-  );
-
-  const selectItem = useCallback((item: Zotero.Item) => {
-    try {
-      ztoolkit.getGlobal("ZoteroPane").selectItem(item.id);
-    } catch (error) {
-      ztoolkit.log("Error selecting My Annotations item:", error);
-    }
-  }, []);
-
-  const handleClick = useCallback<MagazineTileClick>(
-    (item, e) => {
-      if (e.shiftKey) {
-        handleIdentifierClick(item, undefined, e);
-        return;
-      }
-      selectItem(item);
-    },
-    [handleIdentifierClick, selectItem],
-  );
-
-  const handleDoubleClick = useCallback((item: Zotero.Item) => {
-    openItemBestAttachment(item);
-  }, []);
 
   const handleContextMenu = useCallback<MagazineTileClick>((item, e) => {
     void openZoteroItemContextMenu(item, e);
   }, []);
 
-  const renderGroups = (itemList: Zotero.Item[]) => {
-    const mapped = itemList
-      .map((item) => groupsByParentId.get(item.id))
-      .filter((group): group is ExplorerAnnotationGroup => !!group);
-    return (
-      <AnnotationGroupsGrid
-        groups={sortAnnotationGroups(mapped, sortBy)}
-        arrangement={layout}
-        selectedItemIds={selectedItemIds}
-        onClick={handleClick}
-        onDoubleClick={handleDoubleClick}
-        onContextMenu={handleContextMenu}
+  const updatePinnedFromScroll = useCallback(() => {
+    if (skipNextPinTrackRef.current) {
+      return;
+    }
+    const el = pageRef.current;
+    if (!el) {
+      return;
+    }
+    if (order === "newestLast") {
+      const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+      pinnedToLiveRef.current = distance <= NEAR_EDGE_PX;
+    } else {
+      pinnedToLiveRef.current = el.scrollTop <= NEAR_EDGE_PX;
+    }
+  }, [order]);
+
+  useLayoutEffect(() => {
+    const page = pageRef.current;
+    const header = headerRef.current;
+    if (!page || !header) {
+      return;
+    }
+    const syncStickyTop = () => {
+      const gap = 12;
+      const top = Math.ceil(header.getBoundingClientRect().height + gap);
+      page.style.setProperty(
+        "--syllabus-my-annotations-sticky-top",
+        `${top}px`,
+      );
+    };
+    syncStickyTop();
+    const observer = new ResizeObserver(syncStickyTop);
+    observer.observe(header);
+    const win = page.ownerDocument.defaultView;
+    win?.addEventListener("resize", syncStickyTop);
+    return () => {
+      observer.disconnect();
+      win?.removeEventListener("resize", syncStickyTop);
+    };
+  }, []);
+
+  useEffect(() => {
+    const el = pageRef.current;
+    if (!el) {
+      return;
+    }
+    const onScroll = () => updatePinnedFromScroll();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [updatePinnedFromScroll]);
+
+  const handleOrderChange = useCallback(
+    (next: MyAnnotationsOrder) => {
+      setOrder(next);
+      pinnedToLiveRef.current = true;
+      pendingScrollRef.current = { kind: "live" };
+      skipNextPinTrackRef.current = true;
+    },
+    [setOrder],
+  );
+
+  const handleLoadPrevious = useCallback(async () => {
+    const el = pageRef.current;
+    if (el) {
+      pendingScrollRef.current = {
+        kind: "anchor",
+        height: el.scrollHeight,
+        top: el.scrollTop,
+      };
+      skipNextPinTrackRef.current = true;
+    }
+    await loadPrevious();
+  }, [loadPrevious]);
+
+  useLayoutEffect(() => {
+    const el = pageRef.current;
+    if (!el) {
+      return;
+    }
+    const pending = pendingScrollRef.current;
+    const grew = displayRows.length > prevRowCountRef.current;
+    prevRowCountRef.current = displayRows.length;
+
+    if (pending?.kind === "anchor") {
+      const delta = el.scrollHeight - pending.height;
+      el.scrollTop = pending.top + delta;
+      pendingScrollRef.current = null;
+      skipNextPinTrackRef.current = false;
+      updatePinnedFromScroll();
+      return;
+    }
+
+    const shouldStickLive =
+      pending?.kind === "live" ||
+      (pinnedToLiveRef.current && (grew || loading === false));
+
+    if (shouldStickLive) {
+      if (order === "newestLast") {
+        el.scrollTop = el.scrollHeight;
+      } else {
+        el.scrollTop = 0;
+      }
+      pendingScrollRef.current = null;
+      skipNextPinTrackRef.current = false;
+      pinnedToLiveRef.current = true;
+    }
+  }, [displayRows, order, loading, updatePinnedFromScroll]);
+
+  const loadPreviousControl =
+    hasMore && !loading ? (
+      <LoadPreviousButton
+        loading={loadingMore}
+        onClick={() => {
+          void handleLoadPrevious();
+        }}
       />
-    );
-  };
+    ) : null;
 
   return (
     <div
-      className="syllabus-page overflow-y-auto overflow-x-hidden h-full"
+      className="syllabus-page syllabus-my-annotations-page overflow-y-auto overflow-x-hidden h-full"
       dir={getUiDir()}
       ref={pageRef}
     >
       <div
+        ref={headerRef}
         className={twMerge(
           "sticky top-0 z-20 bg-background py-1",
           isZotero8OrLater() ? "pt-4 md:pt-8" : "pt-8",
         )}
       >
-        <div className="container-padded bg-background">
+        <div className="syllabus-my-annotations-inset bg-background">
           <div className="flex flex-row items-start gap-2 justify-between">
             <div className="min-w-0">
               <div className="font-semibold text-3xl">
@@ -514,111 +470,35 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
                 {getString("my-annotations-desc")}
               </p>
             </div>
-            <MyAnnotationsSettingsMenu
-              layout={layout}
-              onLayout={setLayout}
-              sortBy={sortBy}
-              onSortBy={setSortBy}
-              groupBy={groupBy}
-              onGroupBy={setGroupBy}
-            />
+            <OrderToggle order={order} onOrder={handleOrderChange} />
           </div>
         </div>
       </div>
       <GalleryViewportProvider rootRef={pageRef}>
-        <div
-          className={twMerge(
-            "syllabus-my-annotations-body pt-6 pb-10 flex flex-col gap-8 box-border min-w-0",
-            layout === "grid" ? "is-grid-body px-6 w-full" : "container-padded",
-          )}
-        >
-          {groupBy === "type" ? (
-            typeGroups.length === 0 ? (
-              <p className="text-secondary text-base">
-                {getString("my-annotations-empty")}
-              </p>
-            ) : (
-              typeGroups.map(({ itemType, label, items }) => (
-                <section
-                  key={itemType}
-                  className="syllabus-gallery-section"
-                  data-gallery-group={`type-${itemType}`}
-                >
-                  <h2 className="syllabus-gallery-section-title">{label}</h2>
-                  {renderGroups(items)}
-                </section>
-              ))
-            )
-          ) : groupBy === "creator" ? (
-            creatorGroups.length === 0 && uncreditedItems.length === 0 ? (
-              <p className="text-secondary text-base">
-                {getString("my-annotations-empty")}
-              </p>
-            ) : (
-              <>
-                {creatorGroups.map(({ key, label, items }) => (
-                  <section
-                    key={key}
-                    className="syllabus-gallery-section"
-                    data-gallery-group={`creator-${key}`}
-                  >
-                    <h2 className="syllabus-gallery-section-title">{label}</h2>
-                    {renderGroups(items)}
-                  </section>
-                ))}
-                {uncreditedItems.length > 0 ? (
-                  <section
-                    className="syllabus-gallery-section"
-                    data-gallery-group="uncredited"
-                  >
-                    <h2 className="syllabus-gallery-section-title">
-                      {getString("gallery-uncredited")}
-                    </h2>
-                    {renderGroups(uncreditedItems)}
-                  </section>
-                ) : null}
-              </>
-            )
-          ) : groupBy === "tags" ? (
-            tagGroups.length === 0 && untaggedItems.length === 0 ? (
-              <p className="text-secondary text-base">
-                {getString("my-annotations-empty")}
-              </p>
-            ) : (
-              <>
-                {tagGroups.map(({ tag, items }) => (
-                  <section
-                    key={tag}
-                    className="syllabus-gallery-section"
-                    data-gallery-group={`tag-${tag}`}
-                  >
-                    <h2 className="syllabus-gallery-section-title">{tag}</h2>
-                    {renderGroups(items)}
-                  </section>
-                ))}
-                {untaggedItems.length > 0 ? (
-                  <section
-                    className="syllabus-gallery-section"
-                    data-gallery-group="untagged"
-                  >
-                    <h2 className="syllabus-gallery-section-title">
-                      {getString("gallery-untagged")}
-                    </h2>
-                    {renderGroups(untaggedItems)}
-                  </section>
-                ) : null}
-              </>
-            )
+        <div className="syllabus-my-annotations-body syllabus-my-annotations-stream syllabus-my-annotations-inset pt-6 pb-10 flex flex-col gap-6 min-w-0">
+          {order === "newestLast" ? loadPreviousControl : null}
+          {loading && displayRows.length === 0 ? (
+            <p className="text-secondary text-base">
+              {getString("my-annotations-load-previous-loading")}
+            </p>
+          ) : displayRows.length === 0 ? (
+            <p className="text-secondary text-base">
+              {getString("my-annotations-empty")}
+            </p>
           ) : (
-            <AnnotationGroupsGrid
-              groups={sortedGroups}
-              arrangement={layout}
-              selectedItemIds={selectedItemIds}
-              onClick={handleClick}
-              onDoubleClick={handleDoubleClick}
-              onContextMenu={handleContextMenu}
-            />
+            displayGroups.map((group) => (
+              <AnnotationStreamGroup
+                key={group.key}
+                group={group}
+                selected={
+                  !!group.parent &&
+                  (selectedItemIds?.includes(group.parent.id) || false)
+                }
+                onContextMenu={handleContextMenu}
+              />
+            ))
           )}
+          {order === "newestFirst" ? loadPreviousControl : null}
         </div>
       </GalleryViewportProvider>
     </div>
