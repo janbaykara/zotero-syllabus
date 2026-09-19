@@ -179,11 +179,7 @@ function ClassSegmentHeader({
   );
 }
 
-function SegmentHeader({
-  segment,
-}: {
-  segment: ExplorerShelfSegment;
-}) {
+function SegmentHeader({ segment }: { segment: ExplorerShelfSegment }) {
   const title = (
     <div className="syllabus-explorer-class-segment-title">
       {segment.icon ? <GalleryGroupIcon spec={segment.icon} /> : null}
@@ -681,7 +677,9 @@ export function ExplorerCollectionShelfBody({
     return (
       <div
         className={twMerge(
-          layout === "magazine" && magazineTypeSize === "large" && "is-large-type",
+          layout === "magazine" &&
+            magazineTypeSize === "large" &&
+            "is-large-type",
         )}
       >
         <MagazineGrid

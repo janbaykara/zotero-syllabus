@@ -344,9 +344,7 @@ export function ClassGroupComponent({
 
   // Generate ID for TOC navigation / deep links from Home
   const tocId =
-    classNumber != null
-      ? `toc-class-${classNumber}`
-      : "toc-class-unnumbered";
+    classNumber != null ? `toc-class-${classNumber}` : "toc-class-unnumbered";
 
   return (
     <div

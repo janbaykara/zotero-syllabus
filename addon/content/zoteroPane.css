@@ -1710,9 +1710,7 @@
   list-style-image: url("chrome://syllabus/content/icons/calendar.svg");
 }
 
-#zotero-tabs-toolbar
-  > #syllabus-my-annotations-tab-button
-  .toolbarbutton-icon {
+#zotero-tabs-toolbar > #syllabus-my-annotations-tab-button .toolbarbutton-icon {
   list-style-image: url("chrome://zotero/skin/16/universal/attachment-annotations.svg");
 }
 
@@ -2214,7 +2212,8 @@ button.syllabus-explorer-class-segment-header {
   cursor: pointer;
 }
 
-button.syllabus-explorer-class-segment-header:hover .syllabus-explorer-class-segment-title {
+button.syllabus-explorer-class-segment-header:hover
+  .syllabus-explorer-class-segment-title {
   color: var(--accent-blue, #1a6fb5);
 }
 
@@ -2276,7 +2275,11 @@ button.syllabus-explorer-class-segment-header:focus-visible {
     gap: 0.2rem;
     grid: none;
     padding-bottom: 0.55rem;
-    border-bottom: 1px solid var(--fill-quaternary, color-mix(in srgb, var(--fill-secondary, #8c8c8c) 35%, transparent));
+    border-bottom: 1px solid
+      var(
+        --fill-quaternary,
+        color-mix(in srgb, var(--fill-secondary, #8c8c8c) 35%, transparent)
+      );
   }
 
   .syllabus-explorer-class-segment-title {
@@ -2324,7 +2327,11 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   align-items: center;
   gap: 0.4em;
   padding-bottom: 0.55rem;
-  border-bottom: 1px solid var(--fill-quaternary, color-mix(in srgb, var(--fill-secondary, #8c8c8c) 35%, transparent));
+  border-bottom: 1px solid
+    var(
+      --fill-quaternary,
+      color-mix(in srgb, var(--fill-secondary, #8c8c8c) 35%, transparent)
+    );
 }
 
 .syllabus-explorer-class-segment-title > span {
@@ -2662,7 +2669,8 @@ button.syllabus-explorer-class-segment-header:focus-visible {
 
 .syllabus-my-annotations-load-previous {
   appearance: none;
-  border: 1px solid color-mix(in srgb, var(--fill-secondary, #888) 45%, transparent);
+  border: 1px solid
+    color-mix(in srgb, var(--fill-secondary, #888) 45%, transparent);
   background: var(--material-background, transparent);
   color: var(--fill-primary, inherit);
   border-radius: 999px;

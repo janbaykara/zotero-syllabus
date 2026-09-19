@@ -11,7 +11,10 @@ import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
 import { ArrowDown, ArrowUp } from "lucide-preact";
 import { isZotero8OrLater } from "../utils/zotero";
-import { openAnnotationIdInReader, openItemBestAttachment } from "../utils/items";
+import {
+  openAnnotationIdInReader,
+  openItemBestAttachment,
+} from "../utils/items";
 import { getString, getUiDir } from "../utils/locale";
 import { formatRelativeTimestamp } from "../utils/dates";
 import { openZoteroItemContextMenu } from "../utils/itemContextMenu";
@@ -141,7 +144,10 @@ function AnnotationStreamBody({ entry }: { entry: MyAnnotationStreamEntry }) {
             </span>
           ) : null}
           {pageText && stamp ? (
-            <span className="syllabus-my-annotations-stream-meta-sep" aria-hidden="true">
+            <span
+              className="syllabus-my-annotations-stream-meta-sep"
+              aria-hidden="true"
+            >
               ·
             </span>
           ) : null}
