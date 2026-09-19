@@ -59,7 +59,7 @@ export class MenuManager extends ManagerTool {
           }
         }
         elementOption.styles!["list-style-image" as any] =
-          `url(${menuitemOption.icon})`;
+          `url("${menuitemOption.icon}")`;
       }
       if (menuitemOption.commandListener) {
         elementOption.listeners?.push({

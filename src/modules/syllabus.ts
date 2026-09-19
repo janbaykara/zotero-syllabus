@@ -2236,14 +2236,14 @@ export class SyllabusManager {
   static setupContextMenuAddCollectionShelf() {
     ztoolkit.Menu.unregister("syllabus-add-collection-shelf-menu");
 
+    // Same chrome://zotero pattern as pin — data/extension URLs don't show on Mac menuitems.
+    const homeIcon = "chrome://zotero/skin/16/universal/library.svg";
+
     ztoolkit.Menu.register("collection", {
       tag: "menuitem",
       id: "syllabus-add-collection-shelf-menu",
       label: getString("explorer-menu-add-to-home"),
-      // Data URI: extension chrome:// SVGs often fail as menuitem list-style-image.
-      icon: `data:image/svg+xml,${encodeURIComponent(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"><path fill="none" stroke="context-stroke" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>`,
-      )}`,
+      icon: homeIcon,
       isHidden: () => {
         if (!isOptionalFeatureEnabled("explorer")) {
           return true;
@@ -2268,6 +2268,14 @@ export class SyllabusManager {
               : "explorer-menu-add-to-home",
           ),
         );
+        try {
+          (elem as HTMLElement).style.setProperty(
+            "list-style-image",
+            `url("${homeIcon}")`,
+          );
+        } catch {
+          // Ignore if the host menuitem has no style object.
+        }
       },
       commandListener: () => {
         const collection = getSelectedCollection();
