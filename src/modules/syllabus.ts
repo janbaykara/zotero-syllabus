@@ -2376,7 +2376,7 @@ export class SyllabusManager {
           ),
         );
         try {
-          (elem as HTMLElement).style.setProperty(
+          (elem as unknown as HTMLElement).style.setProperty(
             "list-style-image",
             `url("${homeIcon}")`,
           );
