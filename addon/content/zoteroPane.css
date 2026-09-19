@@ -2143,6 +2143,90 @@
   scroll-snap-type: x mandatory;
 }
 
+/* Syllabus collection Cover shelves: class headers + covers in one horizontal rail. */
+.syllabus-explorer-class-cover-rail {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 1.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.4rem;
+  scroll-snap-type: x mandatory;
+}
+
+.syllabus-explorer-class-segment {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  flex: none;
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
+.syllabus-explorer-class-segment.is-done {
+  opacity: 0.45;
+}
+
+.syllabus-explorer-class-segment-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-width: 22rem;
+  padding-inline-end: 0.35rem;
+}
+
+.syllabus-explorer-class-segment-kicker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.65rem;
+}
+
+.syllabus-explorer-class-segment-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fill-secondary, #8c8c8c);
+}
+
+.syllabus-explorer-class-segment-done {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #7b4ddb;
+}
+
+.syllabus-explorer-class-segment-date {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fill-secondary, #8c8c8c);
+}
+
+.syllabus-explorer-class-segment-title {
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--fill-primary);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.syllabus-explorer-class-segment-covers {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 148px;
+  grid-template-rows: max-content max-content;
+  justify-content: start;
+  align-items: end;
+  column-gap: 1.15rem;
+}
+
 .syllabus-explorer-cover-rail:has(.syllabus-explorer-annotation-tile) {
   display: flex;
   align-items: flex-start;
@@ -2150,7 +2234,8 @@
   grid: none;
 }
 
-.syllabus-explorer-cover-rail .syllabus-gallery-tile {
+.syllabus-explorer-cover-rail .syllabus-gallery-tile,
+.syllabus-explorer-class-segment-covers .syllabus-gallery-tile {
   display: grid;
   grid-template-rows: subgrid;
   grid-row: span 2;
@@ -2171,11 +2256,18 @@
 .syllabus-explorer-cover-rail .syllabus-gallery-cover-web,
 .syllabus-explorer-cover-rail .syllabus-gallery-cover-square,
 .syllabus-explorer-cover-rail .syllabus-gallery-cover-natural,
-.syllabus-explorer-cover-rail .syllabus-gallery-cover-with-binder {
+.syllabus-explorer-cover-rail .syllabus-gallery-cover-with-binder,
+.syllabus-explorer-class-segment-covers .syllabus-gallery-cover-portrait,
+.syllabus-explorer-class-segment-covers .syllabus-gallery-cover-video,
+.syllabus-explorer-class-segment-covers .syllabus-gallery-cover-web,
+.syllabus-explorer-class-segment-covers .syllabus-gallery-cover-square,
+.syllabus-explorer-class-segment-covers .syllabus-gallery-cover-natural,
+.syllabus-explorer-class-segment-covers .syllabus-gallery-cover-with-binder {
   align-self: end;
 }
 
-.syllabus-explorer-cover-rail .syllabus-gallery-meta {
+.syllabus-explorer-cover-rail .syllabus-gallery-meta,
+.syllabus-explorer-class-segment-covers .syllabus-gallery-meta {
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
@@ -2183,16 +2275,19 @@
   overflow: hidden;
 }
 
-.syllabus-explorer-cover-rail .syllabus-gallery-meta > :first-child {
+.syllabus-explorer-cover-rail .syllabus-gallery-meta > :first-child,
+.syllabus-explorer-class-segment-covers .syllabus-gallery-meta > :first-child {
   min-height: calc(0.875rem * 1.375 * 2);
 }
 
-.syllabus-explorer-cover-rail .syllabus-gallery-hostrow {
+.syllabus-explorer-cover-rail .syllabus-gallery-hostrow,
+.syllabus-explorer-class-segment-covers .syllabus-gallery-hostrow {
   max-width: 100%;
   overflow: hidden;
 }
 
-.syllabus-explorer-cover-rail .syllabus-gallery-web-caption {
+.syllabus-explorer-cover-rail .syllabus-gallery-web-caption,
+.syllabus-explorer-class-segment-covers .syllabus-gallery-web-caption {
   display: none;
 }
 
@@ -2233,7 +2328,14 @@
     gap: 1.15rem;
   }
 
-  .syllabus-explorer-cover-rail .syllabus-gallery-tile {
+  .syllabus-explorer-class-segment-covers {
+    display: flex;
+    align-items: end;
+    gap: 1.15rem;
+  }
+
+  .syllabus-explorer-cover-rail .syllabus-gallery-tile,
+  .syllabus-explorer-class-segment-covers .syllabus-gallery-tile {
     display: flex;
     flex-direction: column;
     justify-content: flex-end;

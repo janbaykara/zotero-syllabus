@@ -12,6 +12,9 @@ import { setGalleryGroupBy } from "./galleryGroupBy";
 import {
   getLibraryViewMode,
   setLibraryViewMode,
+  toggleCollectionShelfOnHome,
+  isCollectionShelfOnHome,
+  getExplorerShelves,
   type LibraryViewMode,
 } from "./explorerConfig";
 import {
@@ -651,6 +654,7 @@ export class SyllabusManager {
     this.setupContextMenuSetStatus();
     this.setupContextMenuPinned();
     this.setupContextMenuGalleryNote();
+    this.setupContextMenuAddCollectionShelf();
   }
 
   static onNotify(
@@ -2225,6 +2229,52 @@ export class SyllabusManager {
         for (const item of selectedRegularItems()) {
           await deleteGalleryNote(item, collection.id);
         }
+      },
+    });
+  }
+
+  static setupContextMenuAddCollectionShelf() {
+    ztoolkit.Menu.unregister("syllabus-add-collection-shelf-menu");
+
+    ztoolkit.Menu.register("collection", {
+      tag: "menuitem",
+      id: "syllabus-add-collection-shelf-menu",
+      label: getString("explorer-menu-add-to-home"),
+      // Data URI: extension chrome:// SVGs often fail as menuitem list-style-image.
+      icon: `data:image/svg+xml,${encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"><path fill="none" stroke="context-stroke" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>`,
+      )}`,
+      isHidden: () => {
+        if (!isOptionalFeatureEnabled("explorer")) {
+          return true;
+        }
+        return !getSelectedCollection();
+      },
+      onShowing: (elem) => {
+        const collection = getSelectedCollection();
+        if (!collection) {
+          return;
+        }
+        const onHome = isCollectionShelfOnHome(
+          getExplorerShelves(),
+          collection.libraryID,
+          collection.key,
+        );
+        elem.setAttribute(
+          "label",
+          getString(
+            onHome
+              ? "explorer-menu-remove-from-home"
+              : "explorer-menu-add-to-home",
+          ),
+        );
+      },
+      commandListener: () => {
+        const collection = getSelectedCollection();
+        if (!collection) {
+          return;
+        }
+        toggleCollectionShelfOnHome(collection.libraryID, collection.key);
       },
     });
   }

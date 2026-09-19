@@ -52,7 +52,7 @@ import {
   filterSyllabiByLibrary,
   pickUpcomingClassReadings,
 } from "./classReadings";
-import { useSyllabi } from "./react-zotero-sync/useSyllabi";
+import { useSyllabi, type SyllabusData } from "./react-zotero-sync/useSyllabi";
 import { openZoteroItemContextMenu } from "../utils/itemContextMenu";
 import type { FluentMessageId } from "../../typings/i10n";
 import type { GalleryLayout } from "./galleryLayout";
@@ -63,6 +63,12 @@ import {
   useItemIdentifierSelection,
   densityLabel,
 } from "./browsePage";
+import {
+  buildSyllabusClassGroups,
+  type SyllabusClassGroup,
+} from "./classGroups";
+import { collectionHasSyllabusNote } from "./syllabusNote";
+import { SyllabusManager } from "./syllabus";
 import {
   ITEM_DENSITIES,
   useZoteroItemDensity,
@@ -828,6 +834,190 @@ function libraryCollections(
     });
 }
 
+function uniqueClassItems(group: SyllabusClassGroup): Zotero.Item[] {
+  const seen = new Set<number>();
+  const items: Zotero.Item[] = [];
+  for (const { item } of group.itemAssignments) {
+    if (seen.has(item.id)) {
+      continue;
+    }
+    seen.add(item.id);
+    items.push(item);
+  }
+  return items;
+}
+
+function ExplorerClassSegmentHeader({
+  collectionId,
+  classNumber,
+  classMeta,
+}: {
+  collectionId: number;
+  classNumber: number | null;
+  classMeta: SyllabusClassGroup["syllabusMetadata"];
+}) {
+  if (classNumber == null) {
+    return (
+      <header className="syllabus-explorer-class-segment-header">
+        <div className="syllabus-explorer-class-segment-title">
+          {getString("gallery-unnumbered")}
+        </div>
+      </header>
+    );
+  }
+
+  const { singularCapitalized } =
+    SyllabusManager.getNomenclatureFormatted(collectionId);
+  const className = `${singularCapitalized} ${classNumber}`;
+  const title = (classMeta?.title || "").trim();
+  const readingDate = classMeta?.readingDate;
+  const classIsDone =
+    SyllabusManager.getClassStatus(collectionId, classNumber) === "done";
+  const showKicker = Boolean(title || classIsDone || readingDate);
+
+  return (
+    <header className="syllabus-explorer-class-segment-header">
+      {showKicker ? (
+        <div className="syllabus-explorer-class-segment-kicker">
+          {title ? (
+            <span className="syllabus-explorer-class-segment-label">
+              {className}
+            </span>
+          ) : null}
+          {classIsDone ? (
+            <span className="syllabus-explorer-class-segment-done">
+              {getString("status-done")}
+            </span>
+          ) : null}
+          {readingDate ? (
+            <span className="syllabus-explorer-class-segment-date">
+              {formatReadingDate(readingDate)}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+      <div className="syllabus-explorer-class-segment-title">
+        {title || className}
+      </div>
+    </header>
+  );
+}
+
+/** Cover rail for syllabus collections: classes as horizontal segments. */
+function ExplorerSyllabusCoverRail({
+  collectionId,
+  syllabus,
+  keyPrefix,
+  selectedItemIds,
+  onClick,
+  onDoubleClick,
+  onContextMenu,
+}: {
+  collectionId: number;
+  syllabus: SyllabusData;
+  keyPrefix: string;
+  selectedItemIds: number[] | null;
+  onClick: MagazineTileClick;
+  onDoubleClick: (item: Zotero.Item) => void;
+  onContextMenu: MagazineTileClick;
+}) {
+  const { classGroups, furtherReadingItems } = useMemo(
+    () =>
+      buildSyllabusClassGroups(
+        collectionId,
+        syllabus.items,
+        syllabus.metadata,
+      ),
+    [collectionId, syllabus.items, syllabus.metadata],
+  );
+
+  const segments = useMemo(() => {
+    const rows: Array<{
+      key: string;
+      classNumber: number | null;
+      classMeta: SyllabusClassGroup["syllabusMetadata"];
+      items: Zotero.Item[];
+      done: boolean;
+    }> = [];
+    for (const group of classGroups) {
+      const items = uniqueClassItems(group);
+      if (items.length === 0) {
+        continue;
+      }
+      const done =
+        group.classNumber != null &&
+        SyllabusManager.getClassStatus(collectionId, group.classNumber) ===
+          "done";
+      rows.push({
+        key: String(group.classNumber ?? "unnumbered"),
+        classNumber: group.classNumber,
+        classMeta: group.syllabusMetadata,
+        items,
+        done,
+      });
+    }
+    if (furtherReadingItems.length > 0) {
+      rows.push({
+        key: "further-reading",
+        classNumber: null,
+        classMeta: undefined,
+        items: furtherReadingItems.map((entry) => entry.item),
+        done: false,
+      });
+    }
+    return rows;
+  }, [classGroups, collectionId, furtherReadingItems]);
+
+  if (segments.length === 0) {
+    return (
+      <p className="text-secondary text-base">
+        {getString("explorer-shelf-empty")}
+      </p>
+    );
+  }
+
+  return (
+    <div className="syllabus-explorer-class-cover-rail">
+      {segments.map((segment) => (
+        <section
+          key={`${keyPrefix}-${segment.key}`}
+          className={twMerge(
+            "syllabus-explorer-class-segment",
+            segment.done ? "is-done" : null,
+          )}
+          data-explorer-class={segment.key}
+        >
+          {segment.key === "further-reading" ? (
+            <header className="syllabus-explorer-class-segment-header">
+              <div className="syllabus-explorer-class-segment-title">
+                {getString("further-reading-heading")}
+              </div>
+            </header>
+          ) : (
+            <ExplorerClassSegmentHeader
+              collectionId={collectionId}
+              classNumber={segment.classNumber}
+              classMeta={segment.classMeta}
+            />
+          )}
+          <div className="syllabus-explorer-class-segment-covers">
+            {segment.items.map((item) => (
+              <GalleryTile
+                key={`${keyPrefix}-${segment.key}-${item.id}`}
+                item={item}
+                selected={selectedItemIds?.includes(item.id) || false}
+                onClick={onClick}
+                onDoubleClick={onDoubleClick}
+                onContextMenu={onContextMenu}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
 function ExplorerShelfBody({
   items,
   layout,
@@ -841,6 +1031,7 @@ function ExplorerShelfBody({
   onDoubleClick,
   onContextMenu,
   onIdentifierClick,
+  syllabus,
 }: {
   items: Zotero.Item[];
   layout: GalleryLayout;
@@ -858,7 +1049,29 @@ function ExplorerShelfBody({
     assignmentId: string | undefined,
     e?: JSX.TargetedMouseEvent<HTMLElement>,
   ) => void;
+  /** When set, Cover layout groups items by class along the rail. */
+  syllabus?: SyllabusData | null;
 }) {
+  if (items.length === 0 && !syllabus) {
+    return (
+      <p className="text-secondary text-base">
+        {getString("explorer-shelf-empty")}
+      </p>
+    );
+  }
+  if (layout === "cover" && syllabus) {
+    return (
+      <ExplorerSyllabusCoverRail
+        collectionId={collectionId}
+        syllabus={syllabus}
+        keyPrefix={keyPrefix}
+        selectedItemIds={selectedItemIds}
+        onClick={onClick}
+        onDoubleClick={onDoubleClick}
+        onContextMenu={onContextMenu}
+      />
+    );
+  }
   if (items.length === 0) {
     return (
       <p className="text-secondary text-base">
@@ -1542,6 +1755,15 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                       keyPrefix={shelf.id}
                       template={magazineTemplateForShelf(shelf.type, index)}
                       collectionId={collectionId}
+                      syllabus={
+                        shelf.type === "collection" &&
+                        collectionId &&
+                        collectionHasSyllabusNote(collectionId)
+                          ? allSyllabi.find(
+                              (entry) => entry.collection.id === collectionId,
+                            ) || null
+                          : null
+                      }
                       {...bodyProps}
                     />
                   )}

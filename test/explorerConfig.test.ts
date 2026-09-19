@@ -2,9 +2,11 @@ import { assert } from "chai";
 import {
   coerceExplorerShelves,
   defaultExplorerShelves,
+  isCollectionShelfOnHome,
   isExplorerShelfEnabled,
   layoutsForExplorerShelf,
   mergeExplorerCatalog,
+  withToggledCollectionShelf,
 } from "../src/modules/explorerConfig";
 
 describe("explorer shelves", function () {
@@ -289,5 +291,44 @@ describe("explorer shelves", function () {
       assert.equal(large.size, "large");
       assert.equal(large.limit, 20);
     }
+  });
+
+  it("toggles a collection onto and off Home", function () {
+    const base = defaultExplorerShelves();
+    const added = withToggledCollectionShelf(base, 1, "NESTED");
+    assert.isTrue(isCollectionShelfOnHome(added, 1, "NESTED"));
+    const shelf = added.find(
+      (row) => row.type === "collection" && row.collectionKey === "NESTED",
+    );
+    assert.ok(shelf);
+    assert.equal(shelf!.id, "catalog:collection:1:NESTED");
+    assert.equal(added.length, base.length + 1);
+
+    const removed = withToggledCollectionShelf(added, 1, "NESTED");
+    assert.isFalse(isCollectionShelfOnHome(removed, 1, "NESTED"));
+    assert.equal(removed.length, base.length);
+  });
+
+  it("re-enables a disabled collection shelf instead of duplicating it", function () {
+    const shelves = [
+      ...defaultExplorerShelves(),
+      {
+        id: "catalog:collection:1:ROOT",
+        type: "collection" as const,
+        layout: "magazine" as const,
+        libraryID: 1,
+        collectionKey: "ROOT",
+        enabled: false,
+      },
+    ];
+    assert.isFalse(isCollectionShelfOnHome(shelves, 1, "ROOT"));
+    const enabled = withToggledCollectionShelf(shelves, 1, "ROOT");
+    assert.isTrue(isCollectionShelfOnHome(enabled, 1, "ROOT"));
+    assert.equal(
+      enabled.filter(
+        (row) => row.type === "collection" && row.collectionKey === "ROOT",
+      ).length,
+      1,
+    );
   });
 });

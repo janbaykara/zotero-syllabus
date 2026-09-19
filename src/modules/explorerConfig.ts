@@ -471,6 +471,13 @@ export function createSavedSearchShelf(
   };
 }
 
+export function collectionShelfKey(
+  libraryID: number,
+  collectionKey: string,
+): string {
+  return `${libraryID}:${collectionKey}`;
+}
+
 export function savedSearchShelfKey(
   libraryID: number,
   searchKey: string,
@@ -480,6 +487,80 @@ export function savedSearchShelfKey(
 
 export function isExplorerShelfEnabled(shelf: ExplorerShelf): boolean {
   return shelf.enabled !== false;
+}
+
+function matchesCollectionShelf(
+  shelf: ExplorerShelf,
+  libraryID: number,
+  collectionKey: string,
+): boolean {
+  return (
+    shelf.type === "collection" &&
+    shelf.libraryID === libraryID &&
+    shelf.collectionKey === collectionKey
+  );
+}
+
+/** Whether the collection is currently shown as a Home shelf. */
+export function isCollectionShelfOnHome(
+  shelves: ExplorerShelf[],
+  libraryID: number,
+  collectionKey: string,
+): boolean {
+  const shelf = shelves.find((row) =>
+    matchesCollectionShelf(row, libraryID, collectionKey),
+  );
+  return !!shelf && isExplorerShelfEnabled(shelf);
+}
+
+/**
+ * Pure toggle: add/enable a collection shelf, or remove it when already on Home.
+ * Nested collections that are removed do not reappear in the configure catalog.
+ */
+export function withToggledCollectionShelf(
+  shelves: ExplorerShelf[],
+  libraryID: number,
+  collectionKey: string,
+): ExplorerShelf[] {
+  if (isCollectionShelfOnHome(shelves, libraryID, collectionKey)) {
+    return shelves.filter(
+      (row) => !matchesCollectionShelf(row, libraryID, collectionKey),
+    );
+  }
+
+  const existing = shelves.find((row) =>
+    matchesCollectionShelf(row, libraryID, collectionKey),
+  );
+  if (existing) {
+    return shelves.map((row) =>
+      matchesCollectionShelf(row, libraryID, collectionKey)
+        ? { ...row, enabled: true }
+        : row,
+    );
+  }
+
+  return [
+    ...shelves,
+    createCollectionShelf(
+      `catalog:collection:${collectionShelfKey(libraryID, collectionKey)}`,
+      libraryID,
+      collectionKey,
+    ),
+  ];
+}
+
+/** Toggle a collection as a Home shelf. Returns whether it is on Home afterward. */
+export function toggleCollectionShelfOnHome(
+  libraryID: number,
+  collectionKey: string,
+): boolean {
+  const next = withToggledCollectionShelf(
+    getExplorerShelves(),
+    libraryID,
+    collectionKey,
+  );
+  setExplorerShelves(next);
+  return isCollectionShelfOnHome(next, libraryID, collectionKey);
 }
 
 export function mergeExplorerCatalog(
