@@ -611,7 +611,9 @@
 .syllabus-gallery-section-title .syllabus-gallery-group-icon,
 .syllabus-gallery-section-title-muted .syllabus-gallery-group-icon,
 .syllabus-gallery-class-label .syllabus-gallery-group-icon,
-.syllabus-explorer-collection-link .syllabus-gallery-group-icon {
+.syllabus-explorer-collection-link .syllabus-gallery-group-icon,
+.syllabus-explorer-class-segment-title .syllabus-gallery-group-icon,
+.syllabus-explorer-shelf-group-title .syllabus-gallery-group-icon {
   fill: currentColor;
 }
 
@@ -629,7 +631,9 @@
 .syllabus-gallery-section-title-muted .icon-css.syllabus-gallery-group-icon,
 .syllabus-gallery-class-label .icon-css.syllabus-gallery-group-icon,
 .syllabus-explorer-collection-link .icon-css.syllabus-gallery-group-icon,
-.syllabus-explorer-configure-row .icon-css.syllabus-gallery-group-icon {
+.syllabus-explorer-configure-row .icon-css.syllabus-gallery-group-icon,
+.syllabus-explorer-class-segment-title .icon-css.syllabus-gallery-group-icon,
+.syllabus-explorer-shelf-group-title .icon-css.syllabus-gallery-group-icon {
   width: 1em;
   height: 1em;
   background-repeat: no-repeat;
@@ -2185,8 +2189,11 @@
   color: inherit;
   font: inherit;
   text-align: start;
-  cursor: pointer;
   border-radius: 0;
+}
+
+button.syllabus-explorer-class-segment-header {
+  cursor: pointer;
 }
 
 button.syllabus-explorer-class-segment-header:hover .syllabus-explorer-class-segment-title {
@@ -2294,11 +2301,24 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   letter-spacing: -0.01em;
   color: var(--fill-primary);
   overflow: hidden;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4em;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--fill-quaternary, color-mix(in srgb, var(--fill-secondary, #8c8c8c) 35%, transparent));
+}
+
+.syllabus-explorer-class-segment-title > span {
+  overflow: hidden;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-  padding-bottom: 0.55rem;
-  border-bottom: 1px solid var(--fill-quaternary, color-mix(in srgb, var(--fill-secondary, #8c8c8c) 35%, transparent));
+}
+
+.syllabus-explorer-class-segment-title .syllabus-gallery-group-icon,
+.syllabus-explorer-shelf-group-title .syllabus-gallery-group-icon {
+  flex: none;
 }
 
 .syllabus-explorer-cover-rail:has(.syllabus-explorer-annotation-tile) {

@@ -1,7 +1,10 @@
 import { assert } from "chai";
 import {
   coerceExplorerShelves,
+  createCollectionShelf,
   defaultExplorerShelves,
+  explorerShelfGroupBy,
+  explorerShelfSortBy,
   isCollectionShelfOnHome,
   isExplorerShelfEnabled,
   layoutsForExplorerShelf,
@@ -293,6 +296,78 @@ describe("explorer shelves", function () {
     }
   });
 
+  it("defaults new collection shelves to Cover / classes / auto", function () {
+    const shelf = createCollectionShelf("c1", 1, "ABC");
+    assert.equal(shelf.layout, "cover");
+    assert.equal(shelf.groupBy, "classes");
+    assert.equal(shelf.sortBy, "auto");
+    assert.equal(explorerShelfSortBy(shelf), "auto");
+    assert.equal(
+      explorerShelfGroupBy(shelf, { classes: true, magazine: false }),
+      "classes",
+    );
+    assert.equal(
+      explorerShelfGroupBy(shelf, { classes: false, magazine: false }),
+      "none",
+    );
+  });
+
+  it("coerces collection shelf groupBy and sortBy with Gallery gates", function () {
+    const shelves = coerceExplorerShelves([
+      {
+        id: "c",
+        type: "collection",
+        libraryID: 1,
+        collectionKey: "K",
+        layout: "cover",
+        groupBy: "auto",
+        sortBy: "title",
+      },
+      {
+        id: "c2",
+        type: "collection",
+        libraryID: 1,
+        collectionKey: "K2",
+        layout: "magazine",
+        groupBy: "auto",
+      },
+      {
+        id: "c3",
+        type: "collection",
+        libraryID: 1,
+        collectionKey: "K3",
+      },
+    ]);
+    const cover = shelves.find((s) => s.id === "c");
+    const mag = shelves.find((s) => s.id === "c2");
+    const legacy = shelves.find((s) => s.id === "c3");
+    assert.ok(cover && cover.type === "collection");
+    assert.ok(mag && mag.type === "collection");
+    assert.ok(legacy && legacy.type === "collection");
+    if (
+      cover?.type === "collection" &&
+      mag?.type === "collection" &&
+      legacy?.type === "collection"
+    ) {
+      assert.equal(cover.groupBy, "auto");
+      assert.equal(cover.sortBy, "title");
+      assert.equal(
+        explorerShelfGroupBy(cover, { classes: true, magazine: false }),
+        "none",
+      );
+      assert.equal(explorerShelfSortBy(cover), "title");
+      assert.equal(
+        explorerShelfGroupBy(mag, { classes: true, magazine: true }),
+        "auto",
+      );
+      assert.equal(explorerShelfSortBy(legacy), "auto");
+      assert.equal(
+        explorerShelfGroupBy(legacy, { classes: true, magazine: false }),
+        "classes",
+      );
+    }
+  });
+
   it("toggles a collection onto and off Home", function () {
     const base = defaultExplorerShelves();
     const added = withToggledCollectionShelf(base, 1, "NESTED");
@@ -302,6 +377,11 @@ describe("explorer shelves", function () {
     );
     assert.ok(shelf);
     assert.equal(shelf!.id, "catalog:collection:1:NESTED");
+    if (shelf!.type === "collection") {
+      assert.equal(shelf.layout, "cover");
+      assert.equal(shelf.groupBy, "classes");
+      assert.equal(shelf.sortBy, "auto");
+    }
     assert.equal(added.length, base.length + 1);
 
     const removed = withToggledCollectionShelf(added, 1, "NESTED");

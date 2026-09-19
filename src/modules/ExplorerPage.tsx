@@ -11,23 +11,34 @@ import {
 import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
 import {
+  ArrowDownAZ,
+  ALargeSmall,
   BookOpen,
   Calendar,
+  CalendarPlus,
+  CaseSensitive,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Folder,
+  GraduationCap,
   GripVertical,
   Headphones,
   Highlighter,
   Image,
+  LayoutGrid,
   LayoutList,
+  ListOrdered,
   Maximize2,
   Newspaper,
   Pin,
   Rows2,
   Rows3,
   Rss,
+  Shapes,
   Sparkles,
+  Tags,
+  User,
   Video,
 } from "lucide-preact";
 import { renderComponent } from "../utils/react";
@@ -35,10 +46,9 @@ import { isZotero8OrLater, libraryDisplayName } from "../utils/zotero";
 import { getCachedCollectionByKey } from "../utils/cache";
 import { isSyllabusMemberItem, openItemBestAttachment } from "../utils/items";
 import { getString, getUiDir } from "../utils/locale";
-import { formatReadingDate, formatRelativeReadingDate } from "../utils/dates";
+import { formatRelativeReadingDate, formatReadingDate } from "../utils/dates";
 import {
   ClassReadingBlock,
-  openCollectionSyllabusAtClass,
   openCollectionSyllabusPage,
   openMyAnnotationsTab,
   openReadingScheduleTab,
@@ -53,10 +63,13 @@ import {
   filterSyllabiByLibrary,
   pickUpcomingClassReadings,
 } from "./classReadings";
-import { useSyllabi, type SyllabusData } from "./react-zotero-sync/useSyllabi";
+import { useSyllabi } from "./react-zotero-sync/useSyllabi";
 import { openZoteroItemContextMenu } from "../utils/itemContextMenu";
 import type { FluentMessageId } from "../../typings/i10n";
 import type { GalleryLayout } from "./galleryLayout";
+import type { GalleryGroupBy } from "./galleryGroupBy";
+import type { GallerySortBy } from "./gallerySort";
+import type { MagazineTypeSize } from "./magazineTypeSize";
 import { GalleryTile } from "./GalleryPage";
 import { MagazineGrid, type MagazineTileClick } from "./MagazineTile";
 import {
@@ -64,12 +77,13 @@ import {
   useItemIdentifierSelection,
   densityLabel,
 } from "./browsePage";
-import {
-  buildSyllabusClassGroups,
-  type SyllabusClassGroup,
-} from "./classGroups";
 import { collectionHasSyllabusNote } from "./syllabusNote";
-import { SyllabusManager } from "./syllabus";
+import {
+  ExplorerCollectionShelfBody,
+  explorerCollectionGroupByModes,
+  explorerCollectionSortByModes,
+  explorerCollectionTypeSizeModes,
+} from "./ExplorerCollectionShelf";
 import {
   ITEM_DENSITIES,
   useZoteroItemDensity,
@@ -82,6 +96,10 @@ import {
   scrollElementBelowSticky,
 } from "./galleryGroupNav";
 import {
+  explorerShelfGroupBy,
+  explorerShelfMagazineTypeSize,
+  explorerShelfSortBy,
+  isExplorerCollectionShelf,
   isExplorerShelfEnabled,
   layoutsForExplorerShelf,
   mergeExplorerCatalog,
@@ -238,6 +256,81 @@ const LAYOUT_ICONS: Record<GalleryLayout, typeof Image> = {
   card: LayoutList,
   cover: Image,
   magazine: Newspaper,
+};
+
+const SORT_LABEL_IDS: Record<
+  Exclude<GallerySortBy, "lastRead">,
+  FluentMessageId
+> = {
+  auto: "gallery-sort-auto",
+  title: "gallery-sort-az",
+  date: "gallery-sort-date",
+  dateAdded: "gallery-sort-date-added",
+};
+
+const SORT_TITLE_IDS: Record<
+  Exclude<GallerySortBy, "lastRead">,
+  FluentMessageId
+> = {
+  auto: "gallery-sort-auto-title",
+  title: "gallery-sort-az-title",
+  date: "gallery-sort-date-title",
+  dateAdded: "gallery-sort-date-added-title",
+};
+
+const SORT_ICONS: Record<
+  Exclude<GallerySortBy, "lastRead">,
+  typeof ListOrdered
+> = {
+  auto: ListOrdered,
+  title: ArrowDownAZ,
+  date: Calendar,
+  dateAdded: CalendarPlus,
+};
+
+const GROUP_LABEL_IDS: Record<GalleryGroupBy, FluentMessageId> = {
+  none: "gallery-group-none",
+  auto: "gallery-group-auto",
+  type: "gallery-group-type",
+  creator: "gallery-group-creator",
+  tags: "gallery-group-tags",
+  subcollections: "gallery-group-subcollections",
+  classes: "gallery-group-classes",
+};
+
+const GROUP_TITLE_IDS: Record<GalleryGroupBy, FluentMessageId> = {
+  none: "gallery-group-none-title",
+  auto: "gallery-group-auto-title",
+  type: "gallery-group-type-title",
+  creator: "gallery-group-creator-title",
+  tags: "gallery-group-tags-title",
+  subcollections: "gallery-group-subcollections-title",
+  classes: "gallery-group-classes-title",
+};
+
+const GROUP_ICONS: Record<GalleryGroupBy, typeof LayoutGrid> = {
+  none: LayoutGrid,
+  auto: Sparkles,
+  type: Shapes,
+  creator: User,
+  tags: Tags,
+  subcollections: Folder,
+  classes: GraduationCap,
+};
+
+const TYPE_SIZE_LABEL_IDS: Record<MagazineTypeSize, FluentMessageId> = {
+  small: "gallery-type-small",
+  large: "gallery-type-large",
+};
+
+const TYPE_SIZE_TITLE_IDS: Record<MagazineTypeSize, FluentMessageId> = {
+  small: "gallery-type-small-title",
+  large: "gallery-type-large-title",
+};
+
+const TYPE_SIZE_ICONS: Record<MagazineTypeSize, typeof CaseSensitive> = {
+  small: CaseSensitive,
+  large: ALargeSmall,
 };
 
 const DENSITY_ICONS: Record<
@@ -541,6 +634,51 @@ function ExplorerShelfSettingsMenu({
   const showDensity =
     (shelf.type === "pinned" || shelf.type === "upcoming-deadlines") &&
     shelf.layout === "card";
+  const collection = collectionForShelf(shelf);
+  const isCollection = isExplorerCollectionShelf(shelf);
+  const isSyllabus =
+    isCollection && !!collection && collectionHasSyllabusNote(collection.id);
+  const collectionSortBy = isCollection ? explorerShelfSortBy(shelf) : "auto";
+  const collectionGroupBy = isCollection
+    ? explorerShelfGroupBy(shelf, {
+        classes: isSyllabus,
+        subcollections: true,
+        magazine: shelf.layout === "magazine",
+      })
+    : "none";
+  const collectionTypeSize = isCollection
+    ? explorerShelfMagazineTypeSize(shelf)
+    : "small";
+  const groupModes = isCollection
+    ? explorerCollectionGroupByModes(shelf.layout, isSyllabus)
+    : [];
+  const sortModes = explorerCollectionSortByModes();
+  const typeSizeModes = explorerCollectionTypeSizeModes();
+
+  const patchCollection = (
+    patch: Partial<{
+      layout: GalleryLayout;
+      groupBy: GalleryGroupBy;
+      sortBy: GallerySortBy;
+      magazineTypeSize: MagazineTypeSize;
+    }>,
+  ) => {
+    if (!isExplorerCollectionShelf(shelf)) {
+      return;
+    }
+    let next = { ...shelf, ...patch };
+    if (
+      patch.layout &&
+      patch.layout !== "magazine" &&
+      next.groupBy === "auto"
+    ) {
+      next = { ...next, groupBy: "none" };
+    }
+    if (patch.layout === "magazine" && next.groupBy === undefined) {
+      // keep resolved default
+    }
+    onChange(next);
+  };
 
   return (
     <div
@@ -568,6 +706,9 @@ function ExplorerShelfSettingsMenu({
             {getString("gallery-options-title")}
           </div>
           <div className="syllabus-explorer-shelf-setting">
+            <div className="syllabus-explorer-configure-heading">
+              {getString("gallery-menu-view")}
+            </div>
             <div
               role="radiogroup"
               aria-label={getString("gallery-menu-view")}
@@ -587,7 +728,11 @@ function ExplorerShelfSettingsMenu({
                       "syllabus-explorer-layout-btn",
                       selected && "is-selected",
                     )}
-                    onClick={() => onChange({ ...shelf, layout: mode })}
+                    onClick={() =>
+                      isCollection
+                        ? patchCollection({ layout: mode })
+                        : onChange({ ...shelf, layout: mode })
+                    }
                   >
                     <Icon size={12} strokeWidth={2} aria-hidden="true" />
                     {getString(LAYOUT_LABEL_IDS[mode])}
@@ -596,6 +741,110 @@ function ExplorerShelfSettingsMenu({
               })}
             </div>
           </div>
+          {isCollection ? (
+            <>
+              <div className="syllabus-explorer-shelf-setting">
+                <div className="syllabus-explorer-configure-heading">
+                  {getString("gallery-menu-sort")}
+                </div>
+                <div
+                  role="radiogroup"
+                  aria-label={getString("gallery-menu-sort")}
+                  className="syllabus-explorer-layout-toggle"
+                >
+                  {sortModes.map((mode) => {
+                    const Icon = SORT_ICONS[mode];
+                    const selected = collectionSortBy === mode;
+                    return (
+                      <button
+                        key={mode}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        title={getString(SORT_TITLE_IDS[mode])}
+                        className={twMerge(
+                          "syllabus-explorer-layout-btn",
+                          selected && "is-selected",
+                        )}
+                        onClick={() => patchCollection({ sortBy: mode })}
+                      >
+                        <Icon size={12} strokeWidth={2} aria-hidden="true" />
+                        {getString(SORT_LABEL_IDS[mode])}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="syllabus-explorer-shelf-setting">
+                <div className="syllabus-explorer-configure-heading">
+                  {getString("gallery-menu-group")}
+                </div>
+                <div
+                  role="radiogroup"
+                  aria-label={getString("gallery-menu-group")}
+                  className="syllabus-explorer-layout-toggle"
+                >
+                  {groupModes.map((mode) => {
+                    const Icon = GROUP_ICONS[mode];
+                    const selected = collectionGroupBy === mode;
+                    return (
+                      <button
+                        key={mode}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        title={getString(GROUP_TITLE_IDS[mode])}
+                        className={twMerge(
+                          "syllabus-explorer-layout-btn",
+                          selected && "is-selected",
+                        )}
+                        onClick={() => patchCollection({ groupBy: mode })}
+                      >
+                        <Icon size={12} strokeWidth={2} aria-hidden="true" />
+                        {getString(GROUP_LABEL_IDS[mode])}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {shelf.layout === "magazine" ? (
+                <div className="syllabus-explorer-shelf-setting">
+                  <div className="syllabus-explorer-configure-heading">
+                    {getString("gallery-menu-type-size")}
+                  </div>
+                  <div
+                    role="radiogroup"
+                    aria-label={getString("gallery-menu-type-size")}
+                    className="syllabus-explorer-layout-toggle"
+                  >
+                    {typeSizeModes.map((mode) => {
+                      const Icon = TYPE_SIZE_ICONS[mode];
+                      const selected = collectionTypeSize === mode;
+                      return (
+                        <button
+                          key={mode}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          title={getString(TYPE_SIZE_TITLE_IDS[mode])}
+                          className={twMerge(
+                            "syllabus-explorer-layout-btn",
+                            selected && "is-selected",
+                          )}
+                          onClick={() =>
+                            patchCollection({ magazineTypeSize: mode })
+                          }
+                        >
+                          <Icon size={12} strokeWidth={2} aria-hidden="true" />
+                          {getString(TYPE_SIZE_LABEL_IDS[mode])}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+            </>
+          ) : null}
           {showDensity ? (
             <div className="syllabus-explorer-shelf-setting">
               <div className="syllabus-explorer-configure-heading">
@@ -835,217 +1084,6 @@ function libraryCollections(
     });
 }
 
-function uniqueClassItems(group: SyllabusClassGroup): Zotero.Item[] {
-  const seen = new Set<number>();
-  const items: Zotero.Item[] = [];
-  for (const { item } of group.itemAssignments) {
-    if (seen.has(item.id)) {
-      continue;
-    }
-    seen.add(item.id);
-    items.push(item);
-  }
-  return items;
-}
-
-function ExplorerClassSegmentHeader({
-  collectionId,
-  classNumber,
-  classMeta,
-  onOpen,
-}: {
-  collectionId: number;
-  classNumber: number | null;
-  classMeta: SyllabusClassGroup["syllabusMetadata"];
-  onOpen: () => void;
-}) {
-  if (classNumber == null) {
-    return (
-      <button
-        type="button"
-        className="syllabus-explorer-class-segment-header"
-        onClick={onOpen}
-      >
-        <div
-          className="syllabus-explorer-class-segment-kicker"
-          aria-hidden="true"
-        />
-        <div className="syllabus-explorer-class-segment-title">
-          {getString("gallery-unnumbered")}
-        </div>
-      </button>
-    );
-  }
-
-  const { singularCapitalized } =
-    SyllabusManager.getNomenclatureFormatted(collectionId);
-  const className = `${singularCapitalized} ${classNumber}`;
-  const title = (classMeta?.title || "").trim();
-  const readingDate = classMeta?.readingDate;
-  const classIsDone =
-    SyllabusManager.getClassStatus(collectionId, classNumber) === "done";
-
-  return (
-    <button
-      type="button"
-      className="syllabus-explorer-class-segment-header"
-      onClick={onOpen}
-    >
-      <div className="syllabus-explorer-class-segment-kicker">
-        {title ? (
-          <span className="syllabus-explorer-class-segment-label">
-            {className}
-          </span>
-        ) : null}
-        {classIsDone ? (
-          <span className="syllabus-explorer-class-segment-done">
-            {getString("status-done")}
-          </span>
-        ) : null}
-        {readingDate ? (
-          <span className="syllabus-explorer-class-segment-date">
-            {formatReadingDate(readingDate)}
-          </span>
-        ) : null}
-      </div>
-      <div className="syllabus-explorer-class-segment-title">
-        {title || className}
-      </div>
-    </button>
-  );
-}
-
-/** Cover rail for syllabus collections: classes as horizontal segments. */
-function ExplorerSyllabusCoverRail({
-  collectionId,
-  syllabus,
-  keyPrefix,
-  selectedItemIds,
-  onClick,
-  onDoubleClick,
-  onContextMenu,
-}: {
-  collectionId: number;
-  syllabus: SyllabusData;
-  keyPrefix: string;
-  selectedItemIds: number[] | null;
-  onClick: MagazineTileClick;
-  onDoubleClick: (item: Zotero.Item) => void;
-  onContextMenu: MagazineTileClick;
-}) {
-  const { classGroups, furtherReadingItems } = useMemo(
-    () =>
-      buildSyllabusClassGroups(
-        collectionId,
-        syllabus.items,
-        syllabus.metadata,
-      ),
-    [collectionId, syllabus.items, syllabus.metadata],
-  );
-
-  const segments = useMemo(() => {
-    const rows: Array<{
-      key: string;
-      classNumber: number | null;
-      classMeta: SyllabusClassGroup["syllabusMetadata"];
-      items: Zotero.Item[];
-      done: boolean;
-    }> = [];
-    for (const group of classGroups) {
-      const items = uniqueClassItems(group);
-      if (items.length === 0) {
-        continue;
-      }
-      const done =
-        group.classNumber != null &&
-        SyllabusManager.getClassStatus(collectionId, group.classNumber) ===
-          "done";
-      rows.push({
-        key: String(group.classNumber ?? "unnumbered"),
-        classNumber: group.classNumber,
-        classMeta: group.syllabusMetadata,
-        items,
-        done,
-      });
-    }
-    if (furtherReadingItems.length > 0) {
-      rows.push({
-        key: "further-reading",
-        classNumber: null,
-        classMeta: undefined,
-        items: furtherReadingItems.map((entry) => entry.item),
-        done: false,
-      });
-    }
-    return rows;
-  }, [classGroups, collectionId, furtherReadingItems]);
-
-  if (segments.length === 0) {
-    return (
-      <p className="text-secondary text-base">
-        {getString("explorer-shelf-empty")}
-      </p>
-    );
-  }
-
-  return (
-    <div className="syllabus-explorer-class-cover-rail">
-      {segments.map((segment) => (
-        <section
-          key={`${keyPrefix}-${segment.key}`}
-          className={twMerge(
-            "syllabus-explorer-class-segment",
-            segment.done ? "is-done" : null,
-          )}
-          data-explorer-class={segment.key}
-        >
-          {segment.key === "further-reading" ? (
-            <button
-              type="button"
-              className="syllabus-explorer-class-segment-header"
-              onClick={() =>
-                openCollectionSyllabusAtClass(collectionId, "further-reading")
-              }
-            >
-              <div
-                className="syllabus-explorer-class-segment-kicker"
-                aria-hidden="true"
-              />
-              <div className="syllabus-explorer-class-segment-title">
-                {getString("further-reading-heading")}
-              </div>
-            </button>
-          ) : (
-            <ExplorerClassSegmentHeader
-              collectionId={collectionId}
-              classNumber={segment.classNumber}
-              classMeta={segment.classMeta}
-              onOpen={() =>
-                openCollectionSyllabusAtClass(
-                  collectionId,
-                  segment.classNumber,
-                )
-              }
-            />
-          )}
-          <div className="syllabus-explorer-class-segment-covers">
-            {segment.items.map((item) => (
-              <GalleryTile
-                key={`${keyPrefix}-${segment.key}-${item.id}`}
-                item={item}
-                selected={selectedItemIds?.includes(item.id) || false}
-                onClick={onClick}
-                onDoubleClick={onDoubleClick}
-                onContextMenu={onContextMenu}
-              />
-            ))}
-          </div>
-        </section>
-      ))}
-    </div>
-  );
-}
-
 function ExplorerShelfBody({
   items,
   layout,
@@ -1059,7 +1097,6 @@ function ExplorerShelfBody({
   onDoubleClick,
   onContextMenu,
   onIdentifierClick,
-  syllabus,
 }: {
   items: Zotero.Item[];
   layout: GalleryLayout;
@@ -1077,29 +1114,7 @@ function ExplorerShelfBody({
     assignmentId: string | undefined,
     e?: JSX.TargetedMouseEvent<HTMLElement>,
   ) => void;
-  /** When set, Cover layout groups items by class along the rail. */
-  syllabus?: SyllabusData | null;
 }) {
-  if (items.length === 0 && !syllabus) {
-    return (
-      <p className="text-secondary text-base">
-        {getString("explorer-shelf-empty")}
-      </p>
-    );
-  }
-  if (layout === "cover" && syllabus) {
-    return (
-      <ExplorerSyllabusCoverRail
-        collectionId={collectionId}
-        syllabus={syllabus}
-        keyPrefix={keyPrefix}
-        selectedItemIds={selectedItemIds}
-        onClick={onClick}
-        onDoubleClick={onDoubleClick}
-        onContextMenu={onContextMenu}
-      />
-    );
-  }
   if (items.length === 0) {
     return (
       <p className="text-secondary text-base">
@@ -1776,6 +1791,22 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                       onDoubleClick={handleDoubleClick}
                       onContextMenu={handleContextMenu}
                     />
+                  ) : isExplorerCollectionShelf(shelf) && collectionId ? (
+                    <ExplorerCollectionShelfBody
+                      shelf={shelf}
+                      collectionId={collectionId}
+                      syllabus={
+                        collectionHasSyllabusNote(collectionId)
+                          ? allSyllabi.find(
+                              (entry) => entry.collection.id === collectionId,
+                            ) || null
+                          : null
+                      }
+                      fallbackItems={items}
+                      keyPrefix={shelf.id}
+                      template={magazineTemplateForShelf(shelf.type, index)}
+                      {...bodyProps}
+                    />
                   ) : (
                     <ExplorerShelfBody
                       items={items}
@@ -1783,15 +1814,6 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                       keyPrefix={shelf.id}
                       template={magazineTemplateForShelf(shelf.type, index)}
                       collectionId={collectionId}
-                      syllabus={
-                        shelf.type === "collection" &&
-                        collectionId &&
-                        collectionHasSyllabusNote(collectionId)
-                          ? allSyllabi.find(
-                              (entry) => entry.collection.id === collectionId,
-                            ) || null
-                          : null
-                      }
                       {...bodyProps}
                     />
                   )}

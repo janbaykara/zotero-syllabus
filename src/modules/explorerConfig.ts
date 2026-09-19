@@ -7,6 +7,17 @@ import {
   coerceGalleryLayout,
   type GalleryLayout,
 } from "./galleryLayout";
+import {
+  coerceGalleryGroupBy,
+  resolveGalleryGroupBy,
+  type GalleryGroupBy,
+  type GalleryGroupByAllow,
+} from "./galleryGroupBy";
+import { coerceGallerySortBy, type GallerySortBy } from "./gallerySort";
+import {
+  coerceMagazineTypeSize,
+  type MagazineTypeSize,
+} from "./magazineTypeSize";
 
 export const EXPLORER_SHELF_TYPES = [
   "pinned",
@@ -66,6 +77,10 @@ export const EXPLORER_ANNOTATION_SIZES = ["small", "large"] as const;
 /** Shared shelf depth for recent annotations; size only controls quote abridgement. */
 export const EXPLORER_ANNOTATION_SHELF_LIMIT = 20;
 
+export const DEFAULT_COLLECTION_SHELF_GROUP_BY: GalleryGroupBy = "classes";
+export const DEFAULT_COLLECTION_SHELF_SORT_BY: GallerySortBy = "auto";
+export const DEFAULT_COLLECTION_SHELF_TYPE_SIZE: MagazineTypeSize = "small";
+
 function coerceAnnotationSize(value: unknown): ExplorerAnnotationSize {
   return value === "large" ? "large" : "small";
 }
@@ -74,6 +89,15 @@ type ExplorerShelfBase = {
   id: string;
   layout: GalleryLayout;
   enabled?: boolean;
+};
+
+export type ExplorerCollectionShelf = ExplorerShelfBase & {
+  type: "collection";
+  libraryID: number;
+  collectionKey: string;
+  groupBy?: GalleryGroupBy;
+  sortBy?: GallerySortBy;
+  magazineTypeSize?: MagazineTypeSize;
 };
 
 export type ExplorerShelf = ExplorerShelfBase &
@@ -90,11 +114,10 @@ export type ExplorerShelf = ExplorerShelfBase &
         limit: number;
         size: ExplorerAnnotationSize;
       }
-    | { type: "collection"; libraryID: number; collectionKey: string }
+    | ExplorerCollectionShelf
     | { type: "saved-search"; libraryID: number; searchKey: string }
   );
 
-const LayoutSchema = z.enum(GALLERY_LAYOUT_MODES);
 const LibraryViewModeSchema = z.enum(["collection", "explorer"]);
 const LibraryViewModesSchema = z.record(z.string(), z.unknown());
 
@@ -106,7 +129,9 @@ const ExplorerShelfSchema = z
     days: z.number().positive().optional(),
     limit: z.number().positive().optional(),
     size: z.enum(EXPLORER_ANNOTATION_SIZES).optional(),
-    groupBy: z.literal("auto").optional(),
+    groupBy: z.unknown().optional(),
+    sortBy: z.unknown().optional(),
+    magazineTypeSize: z.unknown().optional(),
     libraryID: z.number().int().positive().optional(),
     collectionKey: z.string().optional(),
     searchKey: z.string().optional(),
@@ -137,9 +162,10 @@ export function defaultLayoutForShelfType(
       return "card";
     case "upcoming-deadlines":
       return "cover";
+    case "collection":
+      return "cover";
     case "recently-added":
     case "recent-in-feed":
-    case "collection":
     case "saved-search":
       return "magazine";
     case "recent-annotations":
@@ -305,6 +331,17 @@ export function coerceExplorerShelf(value: unknown): ExplorerShelf | null {
         layout,
         libraryID: raw.libraryID,
         collectionKey: raw.collectionKey,
+        ...(raw.groupBy !== undefined
+          ? { groupBy: coerceGalleryGroupBy(raw.groupBy) }
+          : {}),
+        ...(raw.sortBy !== undefined
+          ? { sortBy: coerceGallerySortBy(raw.sortBy) }
+          : {}),
+        ...(raw.magazineTypeSize !== undefined
+          ? {
+              magazineTypeSize: coerceMagazineTypeSize(raw.magazineTypeSize),
+            }
+          : {}),
       };
       break;
     case "saved-search":
@@ -447,14 +484,71 @@ export function createCollectionShelf(
   id: string,
   libraryID: number,
   collectionKey: string,
-): ExplorerShelf {
+): ExplorerCollectionShelf {
   return {
     id,
     type: "collection",
-    layout: "magazine",
+    layout: "cover",
     libraryID,
     collectionKey,
+    groupBy: DEFAULT_COLLECTION_SHELF_GROUP_BY,
+    sortBy: DEFAULT_COLLECTION_SHELF_SORT_BY,
+    magazineTypeSize: DEFAULT_COLLECTION_SHELF_TYPE_SIZE,
   };
+}
+
+/** Resolved sort for a collection shelf (missing → auto). */
+export function explorerShelfSortBy(
+  shelf: ExplorerCollectionShelf | ExplorerShelf,
+): GallerySortBy {
+  if (shelf.type !== "collection") {
+    return DEFAULT_COLLECTION_SHELF_SORT_BY;
+  }
+  return shelf.sortBy != null
+    ? coerceGallerySortBy(shelf.sortBy)
+    : DEFAULT_COLLECTION_SHELF_SORT_BY;
+}
+
+/** Resolved magazine type size for a collection shelf. */
+export function explorerShelfMagazineTypeSize(
+  shelf: ExplorerCollectionShelf | ExplorerShelf,
+): MagazineTypeSize {
+  if (shelf.type !== "collection") {
+    return DEFAULT_COLLECTION_SHELF_TYPE_SIZE;
+  }
+  return shelf.magazineTypeSize != null
+    ? coerceMagazineTypeSize(shelf.magazineTypeSize)
+    : DEFAULT_COLLECTION_SHELF_TYPE_SIZE;
+}
+
+/**
+ * Resolved groupBy for a collection shelf.
+ * Missing groupBy defaults to classes (legacy Cover syllabus rails).
+ * Gates match Gallery (auto only for magazine; classes only with syllabus).
+ */
+export function explorerShelfGroupBy(
+  shelf: ExplorerCollectionShelf | ExplorerShelf,
+  allow: GalleryGroupByAllow,
+): GalleryGroupBy {
+  if (shelf.type !== "collection") {
+    return "none";
+  }
+  const layout = shelf.layout;
+  const raw =
+    shelf.groupBy != null
+      ? coerceGalleryGroupBy(shelf.groupBy)
+      : DEFAULT_COLLECTION_SHELF_GROUP_BY;
+  return resolveGalleryGroupBy(raw, {
+    classes: !!allow.classes,
+    subcollections: allow.subcollections !== false,
+    magazine: layout === "magazine",
+  });
+}
+
+export function isExplorerCollectionShelf(
+  shelf: ExplorerShelf,
+): shelf is ExplorerCollectionShelf {
+  return shelf.type === "collection";
 }
 
 export function createSavedSearchShelf(

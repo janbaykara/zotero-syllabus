@@ -1067,7 +1067,7 @@ function classNavLabel(
   return `${singularCapitalized} ${classNumber}`;
 }
 
-function GalleryGroupIcon({ spec }: { spec: GalleryGroupIconSpec }) {
+export function GalleryGroupIcon({ spec }: { spec: GalleryGroupIconSpec }) {
   if (spec.kind === "item-type") {
     return (
       <span
