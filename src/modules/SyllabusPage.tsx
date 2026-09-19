@@ -724,9 +724,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   const [draggingIdentifiers, setDraggingIdentifiers] = useState<Set<string>>(
     () => new Set(),
   );
-  const [draggingSourceClass, setDraggingSourceClass] = useState<number | null>(
-    null,
-  );
+  const [draggingSourceClass, setDraggingSourceClass] = useState<
+    number | "unnumbered" | null
+  >(null);
 
   const handleDropIndicatorChange = useCallback(
     (indicator: ItemDropIndicator | null) => {
@@ -1242,11 +1242,13 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         }
       }
       const classAttr = card.dataset.syllabusClassNumber;
-      setDraggingSourceClass(
-        classAttr !== undefined && classAttr !== ""
-          ? parseInt(classAttr, 10)
-          : null,
-      );
+      if (classAttr === "unnumbered") {
+        setDraggingSourceClass("unnumbered");
+      } else if (classAttr && /^\d+$/.test(classAttr)) {
+        setDraggingSourceClass(parseInt(classAttr, 10));
+      } else {
+        setDraggingSourceClass(null);
+      }
     };
 
     const handleGlobalDragEnd = () => {
@@ -1505,6 +1507,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     targetClassNumber: number | null,
     targetItemId?: number,
     insertBefore?: boolean,
+    zone?: "further-reading",
   ) => {
     if (isOsFileDrag(e.dataTransfer)) {
       e.preventDefault();
@@ -1532,18 +1535,48 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
     const targetClassNumberValue =
       targetClassNumber === null ? undefined : targetClassNumber;
+    const toUnnumbered =
+      targetClassNumber === null && zone !== "further-reading";
+    const toFurtherReading = zone === "further-reading";
 
     const fromFurtherReading =
       e.dataTransfer.getData(
         "application/x-syllabus-source-further-reading",
       ) === "1";
+    const fromUnnumbered =
+      e.dataTransfer.getData("application/x-syllabus-source-unnumbered") ===
+      "1";
+
+    const assignmentMatchesTargetClass = (
+      assignment: ItemSyllabusAssignment,
+      classNumber: number | null,
+    ) => {
+      const resolved =
+        SyllabusManager.getClassNumber(collectionId, assignment.classId) ??
+        assignment.classNumber;
+      if (classNumber === null) {
+        return resolved === undefined;
+      }
+      return resolved === classNumber;
+    };
+
+    const currentOrderForClass = (classNumber: number | null): string[] => {
+      let currentOrder = SyllabusManager.getClassItemOrder(
+        collectionId,
+        classNumber,
+      );
+      if (currentOrder.length === 0) {
+        const group = classGroups.find((g) => g.classNumber === classNumber);
+        currentOrder =
+          group?.itemAssignments
+            .map(({ assignment }) => assignment.id)
+            .filter((id): id is string => Boolean(id)) ?? [];
+      }
+      return currentOrder;
+    };
 
     // Reorder within Further reading (no assignment mutation)
-    if (
-      fromFurtherReading &&
-      targetClassNumber === null &&
-      targetItemId !== undefined
-    ) {
+    if (fromFurtherReading && toFurtherReading && targetItemId !== undefined) {
       const itemIds = itemIdStr
         .split(",")
         .map((id) => parseInt(id, 10))
@@ -1552,6 +1585,60 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         targetItemId,
         insertBefore,
       });
+      setItemOrderVersion((v) => v + 1);
+      return;
+    }
+
+    // Reorder within unnumbered / Course Information (assignment IDs)
+    if (fromUnnumbered && toUnnumbered && targetItemId !== undefined) {
+      const sourceAssignmentId = e.dataTransfer.getData(
+        "application/x-syllabus-assignment-id",
+      );
+      const multipleAssignmentIdsStr = e.dataTransfer.getData(
+        "application/x-syllabus-assignment-ids",
+      );
+      const draggedAssignmentIds = multipleAssignmentIdsStr
+        ? multipleAssignmentIdsStr.split(",").filter(Boolean)
+        : sourceAssignmentId
+          ? [sourceAssignmentId]
+          : [];
+      if (draggedAssignmentIds.length === 0) {
+        return;
+      }
+
+      const newOrder = currentOrderForClass(null).filter(
+        (id) => !draggedAssignmentIds.includes(id),
+      );
+
+      let targetAssignmentId: string | undefined;
+      const targetItem = syllabusItems.find(
+        (item) => item.zoteroItem.id === targetItemId,
+      );
+      if (targetItem) {
+        targetAssignmentId = targetItem.assignments.find((a) =>
+          assignmentMatchesTargetClass(a, null),
+        )?.id;
+      }
+
+      const targetIndex = targetAssignmentId
+        ? newOrder.findIndex((id) => id === targetAssignmentId)
+        : -1;
+      if (targetIndex !== -1) {
+        if (insertBefore) {
+          newOrder.splice(targetIndex, 0, ...draggedAssignmentIds);
+        } else {
+          newOrder.splice(targetIndex + 1, 0, ...draggedAssignmentIds);
+        }
+      } else {
+        newOrder.push(...draggedAssignmentIds);
+      }
+
+      await SyllabusManager.setClassItemOrder(
+        collectionId,
+        null,
+        newOrder,
+        "page",
+      );
       setItemOrderVersion((v) => v + 1);
       return;
     }
@@ -1773,11 +1860,46 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
         if (fromFurtherReading && targetClassNumberValue !== undefined) {
           await persistFurtherReadingOrder(itemIds, { removeOnly: true });
-        } else if (!fromFurtherReading && targetClassNumber === null) {
+        } else if (toFurtherReading) {
           await persistFurtherReadingOrder(itemIds, {
             targetItemId,
             insertBefore,
           });
+        } else if (toUnnumbered && processedAssignmentIds.length > 0) {
+          const allDraggedAssignmentIds = [
+            ...processedAssignmentIds,
+            ...newlyCreatedAssignmentIds,
+          ];
+          const newOrder = currentOrderForClass(null).filter(
+            (id) => !allDraggedAssignmentIds.includes(id),
+          );
+          let targetAssignmentId: string | undefined;
+          if (targetItemId !== undefined) {
+            const targetItem = syllabusItems.find(
+              (item) => item.zoteroItem.id === targetItemId,
+            );
+            targetAssignmentId = targetItem?.assignments.find((a) =>
+              assignmentMatchesTargetClass(a, null),
+            )?.id;
+          }
+          const targetIndex = targetAssignmentId
+            ? newOrder.findIndex((id) => id === targetAssignmentId)
+            : -1;
+          if (targetIndex !== -1) {
+            if (insertBefore) {
+              newOrder.splice(targetIndex, 0, ...allDraggedAssignmentIds);
+            } else {
+              newOrder.splice(targetIndex + 1, 0, ...allDraggedAssignmentIds);
+            }
+          } else {
+            newOrder.push(...allDraggedAssignmentIds);
+          }
+          await SyllabusManager.setClassItemOrder(
+            collectionId,
+            null,
+            newOrder,
+            "page",
+          );
         }
 
         setItemOrderVersion((v) => v + 1);
@@ -1994,15 +2116,16 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     }
 
     if (sourceAssignmentId) {
-      // Dragging from a class or "further reading" with an assignment: MOVE it
+      // Dragging from a class / unnumbered / further reading with an assignment: MOVE it
       // Update the assignment's classNumber using its ID
-      // If target is undefined (dropping to "further reading"), remove classNumber
+      // If target is undefined (dropping to further reading or unnumbered), remove classNumber
 
-      // If moving to a different class (or from class to further reading), update manual order
-      if (
+      const leavingNumberedClass =
         sourceClassNumber !== undefined &&
-        sourceClassNumber !== targetClassNumberValue
-      ) {
+        sourceClassNumber !== targetClassNumberValue;
+      const leavingUnnumbered = fromUnnumbered && !toUnnumbered;
+
+      if (leavingNumberedClass) {
         // Remove from source class order (if it exists)
         const sourceOrder = SyllabusManager.getClassItemOrder(
           collectionId,
@@ -2022,7 +2145,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           );
         }
 
-        // If moving to a class (not further reading), add to target class order
+        // If moving to a numbered class, add to target class order
         if (targetClassNumberValue !== undefined) {
           const targetOrder = SyllabusManager.getClassItemOrder(
             collectionId,
@@ -2032,7 +2155,6 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
             targetOrder.length > 0 &&
             !targetOrder.includes(sourceAssignmentId)
           ) {
-            // Add to end of manual order
             const updatedTargetOrder = [...targetOrder, sourceAssignmentId];
             await SyllabusManager.setClassItemOrder(
               collectionId,
@@ -2042,6 +2164,21 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
             );
           }
           setItemOrderVersion((v) => v + 1);
+        }
+      }
+
+      if (leavingUnnumbered) {
+        const sourceOrder = SyllabusManager.getClassItemOrder(
+          collectionId,
+          null,
+        );
+        if (sourceOrder.includes(sourceAssignmentId)) {
+          await SyllabusManager.setClassItemOrder(
+            collectionId,
+            null,
+            sourceOrder.filter((id) => id !== sourceAssignmentId),
+            "page",
+          );
         }
       }
 
@@ -2058,11 +2195,43 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           removeOnly: true,
         });
         setItemOrderVersion((v) => v + 1);
-      } else if (!fromFurtherReading && targetClassNumber === null) {
+      } else if (toFurtherReading) {
         await persistFurtherReadingOrder([draggedItem.id], {
           targetItemId,
           insertBefore,
         });
+        setItemOrderVersion((v) => v + 1);
+      } else if (toUnnumbered && !fromUnnumbered) {
+        const newOrder = currentOrderForClass(null).filter(
+          (id) => id !== sourceAssignmentId,
+        );
+        let targetAssignmentId: string | undefined;
+        if (targetItemId !== undefined) {
+          const targetItem = syllabusItems.find(
+            (item) => item.zoteroItem.id === targetItemId,
+          );
+          targetAssignmentId = targetItem?.assignments.find((a) =>
+            assignmentMatchesTargetClass(a, null),
+          )?.id;
+        }
+        const targetIndex = targetAssignmentId
+          ? newOrder.findIndex((id) => id === targetAssignmentId)
+          : -1;
+        if (targetIndex !== -1) {
+          if (insertBefore) {
+            newOrder.splice(targetIndex, 0, sourceAssignmentId);
+          } else {
+            newOrder.splice(targetIndex + 1, 0, sourceAssignmentId);
+          }
+        } else {
+          newOrder.push(sourceAssignmentId);
+        }
+        await SyllabusManager.setClassItemOrder(
+          collectionId,
+          null,
+          newOrder,
+          "page",
+        );
         setItemOrderVersion((v) => v + 1);
       }
     } else {
@@ -2128,7 +2297,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         }
 
         ztoolkit.log("Assignment created successfully");
-      } else {
+      } else if (toFurtherReading) {
         // Dropping to "further reading" with no assignment - reorder/append only
         await persistFurtherReadingOrder([draggedItem.id], {
           targetItemId,
@@ -3087,11 +3256,18 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                                   null,
                                   targetById.item.id,
                                   dropIndicator.edge === "before",
+                                  "further-reading",
                                 );
                                 return;
                               }
                             }
-                            void handleDrop(e, null);
+                            void handleDrop(
+                              e,
+                              null,
+                              undefined,
+                              undefined,
+                              "further-reading",
+                            );
                           }
                     }
                     onDragOver={
@@ -3209,7 +3385,13 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                             onDelete={handleDelete}
                             onDuplicate={handleDuplicate}
                             onDrop={(e, insertBefore) =>
-                              handleDrop(e, null, item.id, insertBefore)
+                              handleDrop(
+                                e,
+                                null,
+                                item.id,
+                                insertBefore,
+                                "further-reading",
+                              )
                             }
                             onDragOver={(e) => {
                               handleDragOver(e);

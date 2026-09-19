@@ -152,6 +152,31 @@ describe("syllabusNote remapping", function () {
       const document = sampleDocument();
       assert.strictEqual(omitDocumentItemKeys(document, ["nope"]), document);
     });
+
+    it("drops unnumberedOrder entries for removed assignment ids", function () {
+      const document = CollectionSyllabusDocumentSchema.parse({
+        version: 2,
+        items: {
+          goneKey: [
+            {
+              id: "course-1",
+              priority: "course-info",
+            },
+          ],
+          keepKey: [
+            {
+              id: "course-2",
+              priority: "course-info",
+            },
+          ],
+        },
+        unnumberedOrder: ["course-1", "course-2", "stale"],
+      });
+      const result = omitDocumentItemKeys(document, ["goneKey"]);
+      assert.deepEqual(result.unnumberedOrder, ["course-2", "stale"]);
+      assert.isUndefined(result.items.goneKey);
+      assert.equal(result.items.keepKey?.[0]?.id, "course-2");
+    });
   });
 
   describe("selectItemKeyRemapForDocument", function () {

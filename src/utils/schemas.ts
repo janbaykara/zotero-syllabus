@@ -454,6 +454,15 @@ const CollectionSyllabusDocumentV2Schema = SettingsSyllabusMetadataSchema.omit({
     .array(z.string())
     .optional()
     .transform((order) => (order && order.length > 0 ? order : undefined)),
+  /**
+   * Manual display order for unnumbered (no-class) assignments — typically
+   * Course Information and other priority'd items without a class number.
+   * Values are assignment IDs (same as class `itemOrder`).
+   */
+  unnumberedOrder: z
+    .array(z.string())
+    .optional()
+    .transform((order) => (order && order.length > 0 ? order : undefined)),
   items: z
     .record(z.string(), z.array(ItemSyllabusAssignmentEntity.latestSchema))
     .default(() => ({})),
