@@ -340,6 +340,12 @@ gallery-layout-card = Cartão
 gallery-layout-card-title = Cartões do programa
 gallery-layout-magazine = Revista
 gallery-layout-magazine-title = Layout de revista com tamanhos variados
+
+# Gallery notes (collection-scoped child notes)
+gallery-note-add = Add Gallery Note
+gallery-note-edit = Edit Gallery Note
+gallery-note-remove = Remove Gallery Note
+gallery-note-label = Gallery note
 magazine-shelf-watch = Assistir
 magazine-shelf-watch-title = Vídeos adicionados recentemente
 magazine-shelf-listen = Ouvir

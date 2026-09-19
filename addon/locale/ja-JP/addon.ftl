@@ -340,6 +340,12 @@ gallery-layout-card = カード
 gallery-layout-card-title = シラバスカード
 gallery-layout-magazine = マガジン
 gallery-layout-magazine-title = 大小混在のマガジンレイアウト
+
+# Gallery notes (collection-scoped child notes)
+gallery-note-add = Add Gallery Note
+gallery-note-edit = Edit Gallery Note
+gallery-note-remove = Remove Gallery Note
+gallery-note-label = Gallery note
 magazine-shelf-watch = 見る
 magazine-shelf-watch-title = 最近追加した動画
 magazine-shelf-listen = 聴く

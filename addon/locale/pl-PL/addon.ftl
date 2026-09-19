@@ -340,6 +340,12 @@ gallery-layout-card = Karta
 gallery-layout-card-title = Karty sylabusa
 gallery-layout-magazine = Magazyn
 gallery-layout-magazine-title = Układ magazynu o różnych rozmiarach
+
+# Gallery notes (collection-scoped child notes)
+gallery-note-add = Add Gallery Note
+gallery-note-edit = Edit Gallery Note
+gallery-note-remove = Remove Gallery Note
+gallery-note-label = Gallery note
 magazine-shelf-watch = Oglądaj
 magazine-shelf-watch-title = Ostatnio dodane filmy
 magazine-shelf-listen = Słuchaj

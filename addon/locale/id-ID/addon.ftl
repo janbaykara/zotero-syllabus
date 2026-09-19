@@ -340,6 +340,12 @@ gallery-layout-card = Kartu
 gallery-layout-card-title = Kartu silabus
 gallery-layout-magazine = Majalah
 gallery-layout-magazine-title = Tata letak majalah berbagai ukuran
+
+# Gallery notes (collection-scoped child notes)
+gallery-note-add = Add Gallery Note
+gallery-note-edit = Edit Gallery Note
+gallery-note-remove = Remove Gallery Note
+gallery-note-label = Gallery note
 magazine-shelf-watch = Tonton
 magazine-shelf-watch-title = Video yang baru ditambahkan
 magazine-shelf-listen = Dengar

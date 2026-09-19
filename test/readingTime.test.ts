@@ -44,10 +44,7 @@ describe("readingTime", function () {
       assert.isNull(getPageCount(mockItem("book", { numPages: "1" })));
       assert.isNull(getPageCount(mockItem("book", { pages: "1" })));
       assert.equal(getPageCount(mockItem("book", { numPages: "240" })), 240);
-      assert.equal(
-        getPageCount(mockItem("journalArticle", { pages: "1" })),
-        1,
-      );
+      assert.equal(getPageCount(mockItem("journalArticle", { pages: "1" })), 1);
     });
   });
 });

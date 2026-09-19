@@ -340,6 +340,12 @@ gallery-layout-card = Kart
 gallery-layout-card-title = İzlence kartları
 gallery-layout-magazine = Magazin
 gallery-layout-magazine-title = Karışık boyutlu magazin düzeni
+
+# Gallery notes (collection-scoped child notes)
+gallery-note-add = Add Gallery Note
+gallery-note-edit = Edit Gallery Note
+gallery-note-remove = Remove Gallery Note
+gallery-note-label = Gallery note
 magazine-shelf-watch = İzle
 magazine-shelf-watch-title = Son eklenen videolar
 magazine-shelf-listen = Dinle

@@ -340,6 +340,12 @@ gallery-layout-card = Kaart
 gallery-layout-card-title = Syllabuskaarten
 gallery-layout-magazine = Magazine
 gallery-layout-magazine-title = Magazinelay-out met verschillende groottes
+
+# Gallery notes (collection-scoped child notes)
+gallery-note-add = Add Gallery Note
+gallery-note-edit = Edit Gallery Note
+gallery-note-remove = Remove Gallery Note
+gallery-note-label = Gallery note
 magazine-shelf-watch = Kijken
 magazine-shelf-watch-title = Onlangs toegevoegde video’s
 magazine-shelf-listen = Luisteren

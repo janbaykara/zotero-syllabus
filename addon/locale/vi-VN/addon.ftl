@@ -340,6 +340,12 @@ gallery-layout-card = Thẻ bài
 gallery-layout-card-title = Thẻ đề cương
 gallery-layout-magazine = Tạp chí
 gallery-layout-magazine-title = Bố cục tạp chí nhiều kích thước
+
+# Gallery notes (collection-scoped child notes)
+gallery-note-add = Add Gallery Note
+gallery-note-edit = Edit Gallery Note
+gallery-note-remove = Remove Gallery Note
+gallery-note-label = Gallery note
 magazine-shelf-watch = Xem
 magazine-shelf-watch-title = Video mới thêm
 magazine-shelf-listen = Nghe

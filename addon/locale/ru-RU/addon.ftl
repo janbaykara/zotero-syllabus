@@ -340,6 +340,12 @@ gallery-layout-card = Карточка
 gallery-layout-card-title = Карточки силлабуса
 gallery-layout-magazine = Журнал
 gallery-layout-magazine-title = Журнальная вёрстка разных размеров
+
+# Gallery notes (collection-scoped child notes)
+gallery-note-add = Add Gallery Note
+gallery-note-edit = Edit Gallery Note
+gallery-note-remove = Remove Gallery Note
+gallery-note-label = Gallery note
 magazine-shelf-watch = Смотреть
 magazine-shelf-watch-title = Недавно добавленные видео
 magazine-shelf-listen = Слушать

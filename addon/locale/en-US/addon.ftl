@@ -338,6 +338,12 @@ gallery-layout-card = Card
 gallery-layout-card-title = Syllabus cards
 gallery-layout-magazine = Magazine
 gallery-layout-magazine-title = Mixed-size magazine layout
+
+# Gallery notes (collection-scoped child notes)
+gallery-note-add = Add Gallery Note
+gallery-note-edit = Edit Gallery Note
+gallery-note-remove = Remove Gallery Note
+gallery-note-label = Gallery note
 magazine-shelf-watch = Watch
 magazine-shelf-watch-title = Recently added videos
 magazine-shelf-listen = Listen

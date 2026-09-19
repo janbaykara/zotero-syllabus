@@ -340,6 +340,12 @@ gallery-layout-card = 卡片
 gallery-layout-card-title = 教學大綱卡片
 gallery-layout-magazine = 雜誌
 gallery-layout-magazine-title = 混合尺寸的雜誌版面
+
+# Gallery notes (collection-scoped child notes)
+gallery-note-add = Add Gallery Note
+gallery-note-edit = Edit Gallery Note
+gallery-note-remove = Remove Gallery Note
+gallery-note-label = Gallery note
 magazine-shelf-watch = 觀看
 magazine-shelf-watch-title = 最近新增的影片
 magazine-shelf-listen = 收聽

@@ -340,6 +340,12 @@ gallery-layout-card = 카드
 gallery-layout-card-title = 강의계획서 카드
 gallery-layout-magazine = 매거진
 gallery-layout-magazine-title = 다양한 크기의 매거진 레이아웃
+
+# Gallery notes (collection-scoped child notes)
+gallery-note-add = Add Gallery Note
+gallery-note-edit = Edit Gallery Note
+gallery-note-remove = Remove Gallery Note
+gallery-note-label = Gallery note
 magazine-shelf-watch = 보기
 magazine-shelf-watch-title = 최근 추가된 동영상
 magazine-shelf-listen = 듣기

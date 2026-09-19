@@ -36,6 +36,14 @@ import {
   readingChromeEqual,
   type ReadingTileChrome,
 } from "./readingAssignmentChrome";
+import { ProseText } from "./ProseText";
+import {
+  galleryNoteFingerprint,
+  openGalleryNoteByCollectionId,
+  readGalleryNoteText,
+  subscribeGalleryNoteChanges,
+} from "./galleryNote";
+import { useGalleryNoteText } from "./useGalleryNoteText";
 
 export type MagazineTileClick = (
   item: Zotero.Item,
@@ -61,6 +69,7 @@ export type MagazineTileProps = {
   onContextMenu: MagazineTileClick;
   /** Shelf tiles are height-capped; skip highlights there. */
   showHighlights?: boolean;
+  collectionId?: number;
   chrome?: ReadingTileChrome | null;
 };
 
@@ -72,8 +81,11 @@ export const MagazineTile = memo(function MagazineTile({
   onDoubleClick,
   onContextMenu,
   showHighlights = true,
+  collectionId: collectionIdProp,
   chrome,
 }: MagazineTileProps) {
+  const collectionId = collectionIdProp ?? chrome?.collectionId ?? 0;
+  const galleryNote = useGalleryNoteText(item, collectionId);
   const tileRef = useRef<HTMLDivElement>(null);
   const visible = useNearViewport(tileRef);
   const title = useMemo(
@@ -164,6 +176,14 @@ export const MagazineTile = memo(function MagazineTile({
   const priorityId =
     chrome?.showPriority === false ? "" : chrome?.assignment?.priority || "";
   const done = chrome?.readerMode && chrome.assignment?.status === "done";
+
+  const handleGalleryNoteClick = (e: JSX.TargetedMouseEvent<HTMLElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (collectionId) {
+      void openGalleryNoteByCollectionId(item, collectionId);
+    }
+  };
 
   let coverNode = null;
   if (useGalleryCover) {
@@ -260,12 +280,32 @@ export const MagazineTile = memo(function MagazineTile({
         {creator ? (
           <div className="syllabus-magazine-byline">{creator}</div>
         ) : null}
+        {galleryNote ? (
+          <div
+            className="syllabus-magazine-gallery-note"
+            role="button"
+            tabIndex={0}
+            title={getString("gallery-note-edit")}
+            aria-label={getString("gallery-note-label")}
+            onClick={handleGalleryNoteClick}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleGalleryNoteClick(
+                  e as unknown as JSX.TargetedMouseEvent<HTMLElement>,
+                );
+              }
+            }}
+          >
+            <ProseText text={galleryNote} />
+          </div>
+        ) : null}
         {instruction ? (
           <div className="syllabus-magazine-instruction">{instruction}</div>
         ) : null}
         {blurb ? (
           <div className="syllabus-magazine-abstract">{blurb}</div>
-        ) : !instruction && fallbackMeta ? (
+        ) : !instruction && !galleryNote && fallbackMeta ? (
           <div className="syllabus-magazine-meta">{fallbackMeta}</div>
         ) : null}
         {highlights.length > 0 ? (
@@ -303,6 +343,8 @@ function areMagazineTilePropsEqual(
   prev: MagazineTileProps,
   next: MagazineTileProps,
 ): boolean {
+  const prevCollectionId = prev.collectionId ?? prev.chrome?.collectionId ?? 0;
+  const nextCollectionId = next.collectionId ?? next.chrome?.collectionId ?? 0;
   return (
     prev.item.id === next.item.id &&
     prev.item.dateModified === next.item.dateModified &&
@@ -312,6 +354,9 @@ function areMagazineTilePropsEqual(
     prev.onDoubleClick === next.onDoubleClick &&
     prev.onContextMenu === next.onContextMenu &&
     prev.showHighlights === next.showHighlights &&
+    prevCollectionId === nextCollectionId &&
+    galleryNoteFingerprint(prev.item, prevCollectionId) ===
+      galleryNoteFingerprint(next.item, nextCollectionId) &&
     readingChromeEqual(prev.chrome, next.chrome)
   );
 }
@@ -332,6 +377,7 @@ export function MagazineGrid({
   keyPrefix,
   sortBy,
   template = "lead",
+  collectionId = 0,
   selectedItemIds,
   onClick,
   onDoubleClick,
@@ -344,6 +390,7 @@ export function MagazineGrid({
   keyPrefix: string;
   sortBy: ItemSortMode;
   template?: MagazineSectionTemplate;
+  collectionId?: number;
   selectedItemIds: number[] | null | undefined;
   onClick: MagazineTileClick;
   onDoubleClick: (item: Zotero.Item) => void;
@@ -352,13 +399,26 @@ export function MagazineGrid({
   className?: string;
   style?: JSX.CSSProperties;
 }) {
+  const [noteTick, setNoteTick] = useState(0);
+  useEffect(
+    () => subscribeGalleryNoteChanges(() => setNoteTick((n) => n + 1)),
+    [],
+  );
   const sorted = sortItems(uniqueItems(items), sortBy);
   const roles = assignMagazineRoles(
-    sorted.map((item) => ({
-      id: item.id,
-      itemType: item.itemType,
-      abstractLength: usableAbstractSnippet(item).length,
-    })),
+    sorted.map((item) => {
+      const chrome = chromeByItemId?.get(item.id);
+      const noteCollectionId = chrome?.collectionId ?? collectionId;
+      void noteTick;
+      const noteLen = noteCollectionId
+        ? readGalleryNoteText(item, noteCollectionId).length
+        : 0;
+      return {
+        id: item.id,
+        itemType: item.itemType,
+        abstractLength: Math.max(usableAbstractSnippet(item).length, noteLen),
+      };
+    }),
     { template },
   );
   return (
@@ -376,6 +436,7 @@ export function MagazineGrid({
           onClick={onClick}
           onDoubleClick={onDoubleClick}
           onContextMenu={onContextMenu}
+          collectionId={collectionId}
           chrome={chromeByItemId?.get(item.id)}
         />
       ))}

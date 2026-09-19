@@ -61,6 +61,11 @@ import {
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { ProseText } from "./ProseText";
+import {
+  openGalleryNoteByCollectionId,
+  galleryNoteFingerprint,
+} from "./galleryNote";
+import { useGalleryNoteText } from "./useGalleryNoteText";
 import { useZoteroItemDensity } from "./react-zotero-sync/itemDensity";
 import { SlimSyllabusItemCard, useItemIdentifierSelection } from "./browsePage";
 import { SyllabusItemCard } from "./SyllabusItemCard";
@@ -637,6 +642,7 @@ export function GalleryPage({
         <GalleryTile
           key={`${keyPrefix}-${item.id}`}
           item={item}
+          collectionId={collectionIdOrZero}
           selected={selectedItemIds?.includes(item.id) || false}
           onClick={handleClick}
           onDoubleClick={handleDoubleClick}
@@ -679,6 +685,7 @@ export function GalleryPage({
       keyPrefix={keyPrefix}
       sortBy={sortBy}
       template={template}
+      collectionId={collectionIdOrZero}
       selectedItemIds={selectedItemIds}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
@@ -1747,6 +1754,7 @@ function sortAssignmentRows(
 
 type GalleryTileProps = {
   item: Zotero.Item;
+  collectionId?: number;
   selected: boolean;
   interactive?: boolean;
   chrome?: ReadingTileChrome | null;
@@ -1760,6 +1768,7 @@ type GalleryTileProps = {
 
 export const GalleryTile = memo(function GalleryTile({
   item,
+  collectionId: collectionIdProp,
   selected,
   interactive = true,
   chrome,
@@ -1767,6 +1776,8 @@ export const GalleryTile = memo(function GalleryTile({
   onDoubleClick,
   onContextMenu,
 }: GalleryTileProps) {
+  const collectionId = collectionIdProp ?? chrome?.collectionId ?? 0;
+  const galleryNote = useGalleryNoteText(item, collectionId);
   const tileRef = useRef<HTMLDivElement>(null);
   const visible = useNearViewport(tileRef);
   const title = useMemo(
@@ -1821,6 +1832,122 @@ export const GalleryTile = memo(function GalleryTile({
     return /^https?:\/\//i.test(raw) ? raw : undefined;
   })();
 
+  const handleGalleryNoteClick = (e: JSX.TargetedMouseEvent<HTMLElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (collectionId) {
+      void openGalleryNoteByCollectionId(item, collectionId);
+    }
+  };
+
+  const meta = (
+    <div className="syllabus-gallery-meta min-w-0 px-0.5">
+      {chrome?.contextLabel ? (
+        <div className="text-xs text-secondary truncate mb-0.5">
+          {chrome.contextLabel}
+        </div>
+      ) : null}
+      {priorityId ? (
+        <div className="mb-0.5 min-w-0">
+          <ReadingPriorityBadge
+            collectionId={chrome?.collectionId ?? 0}
+            priorityId={priorityId}
+            className="min-w-0 truncate"
+          />
+        </div>
+      ) : null}
+      <div
+        className={twMerge(
+          "min-w-0",
+          chrome?.readerMode && "flex flex-row items-start gap-1.5",
+        )}
+      >
+        {chrome?.readerMode ? (
+          <ReadingDoneCheckbox
+            item={item}
+            collectionId={chrome.collectionId}
+            assignment={chrome.assignment}
+            onReaderCheck={chrome.onReaderCheck}
+            className="mt-0.5 in-[.print]:hidden"
+          />
+        ) : null}
+        <div className="syllabus-gallery-title text-sm font-medium text-primary leading-snug line-clamp-2 min-w-0">
+          {title}
+        </div>
+      </div>
+      {hostname ? (
+        <div className="syllabus-gallery-hostrow">
+          {faviconSrc ? (
+            <img
+              src={faviconSrc}
+              alt=""
+              className="syllabus-gallery-favicon"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+              }}
+            />
+          ) : null}
+          <span className="truncate">{hostname}</span>
+        </div>
+      ) : creator ? (
+        <div className="syllabus-gallery-creator text-xs text-secondary truncate mt-0.5">
+          {creator}
+        </div>
+      ) : null}
+      {instruction ? (
+        <div className="syllabus-gallery-instruction text-xs text-secondary mt-0.5 line-clamp-2 whitespace-pre-wrap">
+          {instruction}
+        </div>
+      ) : null}
+      {progress ? (
+        <div
+          className="syllabus-gallery-progress"
+          title={getString("gallery-page-of", {
+            args: { page: progress.page, total: progress.total },
+          })}
+        >
+          <div className="syllabus-gallery-progress-track">
+            <div
+              className="syllabus-gallery-progress-fill"
+              style={{ width: `${progress.percent}%` }}
+            />
+          </div>
+          <span className="syllabus-gallery-progress-pct">
+            {progress.percent}%
+          </span>
+        </div>
+      ) : null}
+      {readStatus ? (
+        <div className="text-[11px] text-secondary truncate mt-0.5 uppercase tracking-wide">
+          {readStatus.icon} {readStatus.name}
+        </div>
+      ) : null}
+    </div>
+  );
+
+  const notePane =
+    galleryNote && collectionId ? (
+      <div
+        className="syllabus-gallery-note"
+        role="button"
+        tabIndex={0}
+        title={getString("gallery-note-edit")}
+        aria-label={getString("gallery-note-label")}
+        onClick={handleGalleryNoteClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleGalleryNoteClick(
+              e as unknown as JSX.TargetedMouseEvent<HTMLElement>,
+            );
+          }
+        }}
+      >
+        <ProseText text={galleryNote} />
+      </div>
+    ) : null;
+
   return (
     <div
       ref={tileRef}
@@ -1832,96 +1959,27 @@ export const GalleryTile = memo(function GalleryTile({
         "syllabus-gallery-tile group min-w-0 select-none relative",
         interactive && "cursor-pointer outline-none",
         done && "opacity-40",
+        notePane && "has-gallery-note",
       )}
       title={title}
       onClick={interactive ? (e) => onClick(item, e) : undefined}
       onDblClick={interactive ? () => onDoubleClick(item) : undefined}
       onContextMenu={interactive ? (e) => onContextMenu(item, e) : undefined}
     >
-      <GalleryCover item={item} selected={selected} visible={visible} />
-      <div className="syllabus-gallery-meta min-w-0 px-0.5">
-        {chrome?.contextLabel ? (
-          <div className="text-xs text-secondary truncate mb-0.5">
-            {chrome.contextLabel}
+      {notePane ? (
+        <>
+          <div className="syllabus-gallery-tile-main">
+            <GalleryCover item={item} selected={selected} visible={visible} />
+            {meta}
           </div>
-        ) : null}
-        {priorityId ? (
-          <div className="mb-0.5 min-w-0">
-            <ReadingPriorityBadge
-              collectionId={chrome?.collectionId ?? 0}
-              priorityId={priorityId}
-              className="min-w-0 truncate"
-            />
-          </div>
-        ) : null}
-        <div
-          className={twMerge(
-            "min-w-0",
-            chrome?.readerMode && "flex flex-row items-start gap-1.5",
-          )}
-        >
-          {chrome?.readerMode ? (
-            <ReadingDoneCheckbox
-              item={item}
-              collectionId={chrome.collectionId}
-              assignment={chrome.assignment}
-              onReaderCheck={chrome.onReaderCheck}
-              className="mt-0.5 in-[.print]:hidden"
-            />
-          ) : null}
-          <div className="syllabus-gallery-title text-sm font-medium text-primary leading-snug line-clamp-2 min-w-0">
-            {title}
-          </div>
-        </div>
-        {hostname ? (
-          <div className="syllabus-gallery-hostrow">
-            {faviconSrc ? (
-              <img
-                src={faviconSrc}
-                alt=""
-                className="syllabus-gallery-favicon"
-                referrerPolicy="no-referrer"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = "none";
-                }}
-              />
-            ) : null}
-            <span className="truncate">{hostname}</span>
-          </div>
-        ) : creator ? (
-          <div className="syllabus-gallery-creator text-xs text-secondary truncate mt-0.5">
-            {creator}
-          </div>
-        ) : null}
-        {instruction ? (
-          <div className="syllabus-gallery-instruction text-xs text-secondary mt-0.5 line-clamp-2 whitespace-pre-wrap">
-            {instruction}
-          </div>
-        ) : null}
-        {progress ? (
-          <div
-            className="syllabus-gallery-progress"
-            title={getString("gallery-page-of", {
-              args: { page: progress.page, total: progress.total },
-            })}
-          >
-            <div className="syllabus-gallery-progress-track">
-              <div
-                className="syllabus-gallery-progress-fill"
-                style={{ width: `${progress.percent}%` }}
-              />
-            </div>
-            <span className="syllabus-gallery-progress-pct">
-              {progress.percent}%
-            </span>
-          </div>
-        ) : null}
-        {readStatus ? (
-          <div className="text-[11px] text-secondary truncate mt-0.5 uppercase tracking-wide">
-            {readStatus.icon} {readStatus.name}
-          </div>
-        ) : null}
-      </div>
+          {notePane}
+        </>
+      ) : (
+        <>
+          <GalleryCover item={item} selected={selected} visible={visible} />
+          {meta}
+        </>
+      )}
     </div>
   );
 }, areGalleryTilePropsEqual);
@@ -1930,11 +1988,16 @@ function areGalleryTilePropsEqual(
   prev: GalleryTileProps,
   next: GalleryTileProps,
 ): boolean {
+  const prevCollectionId = prev.collectionId ?? prev.chrome?.collectionId ?? 0;
+  const nextCollectionId = next.collectionId ?? next.chrome?.collectionId ?? 0;
   return (
     prev.item.id === next.item.id &&
     prev.item.dateModified === next.item.dateModified &&
     prev.selected === next.selected &&
     prev.interactive === next.interactive &&
+    prevCollectionId === nextCollectionId &&
+    galleryNoteFingerprint(prev.item, prevCollectionId) ===
+      galleryNoteFingerprint(next.item, nextCollectionId) &&
     readingChromeEqual(prev.chrome, next.chrome) &&
     prev.onClick === next.onClick &&
     prev.onDoubleClick === next.onDoubleClick &&

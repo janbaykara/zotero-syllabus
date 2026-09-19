@@ -47,6 +47,13 @@ import {
   notifyPinnedChanges,
 } from "./pinned";
 import {
+  deleteGalleryNote,
+  findGalleryNoteForCollection,
+  initializeGalleryNotes,
+  openGalleryNote,
+  shutdownGalleryNotes,
+} from "./galleryNote";
+import {
   coerceEnabledViewMode,
   isOptionalFeatureEnabled,
   migrateOptionalFeatures,
@@ -429,6 +436,7 @@ export class SyllabusManager {
   static onStartup(rootURI: string) {
     ztoolkit.log("SyllabusManager.onStartup");
     initializeSyllabusNotes();
+    initializeGalleryNotes();
     // Chrome refresh when the selected collection's syllabus note is removed.
     registerSyllabusNoteDetachedHandler((collectionRef) => {
       // Defer past the item save/notifier stack.
@@ -642,6 +650,7 @@ export class SyllabusManager {
     this.setupContextMenuSetClassNumber();
     this.setupContextMenuSetStatus();
     this.setupContextMenuPinned();
+    this.setupContextMenuGalleryNote();
   }
 
   static onNotify(
@@ -722,6 +731,7 @@ export class SyllabusManager {
     }
     unpatchManagedCollectionTreePrototype();
     shutdownSyllabusNotes();
+    shutdownGalleryNotes();
   }
 
   static registerNotifier() {
@@ -2133,6 +2143,88 @@ export class SyllabusManager {
           );
         }
         enqueuePinnedReadingScheduleSync();
+      },
+    });
+  }
+
+  static setupContextMenuGalleryNote() {
+    ztoolkit.Menu.unregister("syllabus-gallery-note-edit-menu");
+    ztoolkit.Menu.unregister("syllabus-gallery-note-remove-menu");
+
+    const selectedRegularItems = (): Zotero.Item[] => {
+      try {
+        const items = ztoolkit.getGlobal("ZoteroPane").getSelectedItems() || [];
+        return items.filter((item) => {
+          try {
+            return item.isRegularItem();
+          } catch {
+            return false;
+          }
+        });
+      } catch {
+        return [];
+      }
+    };
+
+    ztoolkit.Menu.register("item", {
+      tag: "menuitem",
+      id: "syllabus-gallery-note-edit-menu",
+      label: getString("gallery-note-edit"),
+      icon: "chrome://zotero/skin/16/universal/note.svg",
+      isHidden: () => {
+        const collection = getSelectedCollection();
+        return !collection || selectedRegularItems().length === 0;
+      },
+      onShowing: (elem) => {
+        const collection = getSelectedCollection();
+        const items = selectedRegularItems();
+        if (!collection || items.length === 0) {
+          return;
+        }
+        const allHave = items.every(
+          (item) => findGalleryNoteForCollection(item, collection.id) != null,
+        );
+        elem.setAttribute(
+          "label",
+          allHave
+            ? getString("gallery-note-edit")
+            : getString("gallery-note-add"),
+        );
+      },
+      commandListener: async () => {
+        const collection = getSelectedCollection();
+        if (!collection) {
+          return;
+        }
+        const items = selectedRegularItems();
+        for (const item of items) {
+          await openGalleryNote(item, collection);
+        }
+      },
+    });
+
+    ztoolkit.Menu.register("item", {
+      tag: "menuitem",
+      id: "syllabus-gallery-note-remove-menu",
+      label: getString("gallery-note-remove"),
+      icon: "chrome://zotero/skin/16/universal/trash.svg",
+      isHidden: () => {
+        const collection = getSelectedCollection();
+        if (!collection) {
+          return true;
+        }
+        return !selectedRegularItems().some(
+          (item) => findGalleryNoteForCollection(item, collection.id) != null,
+        );
+      },
+      commandListener: async () => {
+        const collection = getSelectedCollection();
+        if (!collection) {
+          return;
+        }
+        for (const item of selectedRegularItems()) {
+          await deleteGalleryNote(item, collection.id);
+        }
       },
     });
   }

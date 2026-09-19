@@ -340,6 +340,12 @@ gallery-layout-card = بطاقة
 gallery-layout-card-title = بطاقات المنهاج
 gallery-layout-magazine = مجلة
 gallery-layout-magazine-title = تخطيط مجلة بأحجام متنوعة
+
+# Gallery notes (collection-scoped child notes)
+gallery-note-add = Add Gallery Note
+gallery-note-edit = Edit Gallery Note
+gallery-note-remove = Remove Gallery Note
+gallery-note-label = Gallery note
 magazine-shelf-watch = مشاهدة
 magazine-shelf-watch-title = فيديوهات أُضيفت مؤخرًا
 magazine-shelf-listen = استماع

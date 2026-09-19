@@ -123,6 +123,10 @@ The Reading Schedule UI has a **Pinned** section above the calendar. The library
 
 Pin state is tags only (not syllabus JSON). See [`src/modules/pinned.ts`](../src/modules/pinned.ts). Syllabus pages expose pin/unpin next to Print / Lock / Settings.
 
+## Gallery notes
+
+Collection-scoped notes on regular items for Gallery / card views. Each note is a **child note** tagged `zotero-syllabus-gallery:{collectionKey}` (collection **key**, not numeric id). Edited via Zotero’s built-in note editor (`ZoteroPane.selectItem`). Shown in Row/card like a reading instruction, beside Cover tiles (span 2), and above Magazine blurbs (and boosts magazine role size from note length). See [`src/modules/galleryNote.ts`](../src/modules/galleryNote.ts).
+
 ## Practical rules
 
 - Do not persist hydrated `classNumber` on assignments; identity is `classId`.
@@ -147,7 +151,7 @@ That works in Preact TSX (render, `title`, `placeholder`, `aria-label`) and in p
 
 Prefs XHTML uses `data-l10n-id` against `preferences.ftl`. Keep `{ $vars }` and Fluent attributes (`.label`) unchanged when translating.
 
-Do **not** localize stored library identifiers: syllabus note title `Syllabus`, managed collection `Reading Schedule`, managed child folder `Pinned`, playground `Syllabus Tour`, tags `zotero-syllabus` / `pinned` / `zotero-syllabus-pinned-intention`, or the “Plugin data (do not edit)” note heading. Display chrome for those concepts still goes through Fluent. The product name **Zotero Syllabus** is not translated.
+Do **not** localize stored library identifiers: syllabus note title `Syllabus`, managed collection `Reading Schedule`, managed child folder `Pinned`, playground `Syllabus Tour`, tags `zotero-syllabus` / `pinned` / `zotero-syllabus-pinned-intention` / `zotero-syllabus-gallery:{collectionKey}`, or the “Plugin data (do not edit)” note heading. Display chrome for those concepts still goes through Fluent. The product name **Zotero Syllabus** is not translated.
 
 ## Reading-list connectors
 

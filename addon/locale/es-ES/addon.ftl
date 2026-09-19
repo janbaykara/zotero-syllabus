@@ -340,6 +340,12 @@ gallery-layout-card = Tarjeta
 gallery-layout-card-title = Tarjetas del programa
 gallery-layout-magazine = Revista
 gallery-layout-magazine-title = Diseño de revista de tamaños mixtos
+
+# Gallery notes (collection-scoped child notes)
+gallery-note-add = Add Gallery Note
+gallery-note-edit = Edit Gallery Note
+gallery-note-remove = Remove Gallery Note
+gallery-note-label = Gallery note
 magazine-shelf-watch = Ver
 magazine-shelf-watch-title = Vídeos añadidos recientemente
 magazine-shelf-listen = Escuchar

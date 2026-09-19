@@ -21,6 +21,8 @@ import { GalleryCover } from "./GalleryCover";
 import { getString } from "../utils/locale";
 import { isOsFileDrag } from "../utils/nativeFileDrop";
 import type { ItemDensity } from "./react-zotero-sync/itemDensity";
+import { openGalleryNoteByCollectionId } from "./galleryNote";
+import { useGalleryNoteText } from "./useGalleryNoteText";
 
 export function SyllabusItemCard({
   className,
@@ -121,6 +123,15 @@ export function SyllabusItemCard({
   // const is
 
   const classInstruction = assignment?.classInstruction || "";
+  const galleryNote = useGalleryNoteText(item, collectionId);
+  const handleGalleryNoteClick = useCallback(
+    (e: JSX.TargetedMouseEvent<HTMLElement>) => {
+      e.stopPropagation();
+      e.preventDefault();
+      void openGalleryNoteByCollectionId(item, collectionId);
+    },
+    [item, collectionId],
+  );
   const title = getItemTitle(item) || getString("untitled");
   const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(item.itemType);
   const author = getItemCreatorLine(item);
@@ -852,6 +863,26 @@ export function SyllabusItemCard({
                 </div>
               )}
             </div>
+            {galleryNote ? (
+              <div
+                className="syllabus-item-description text-secondary text-[12px] leading-snug cursor-pointer"
+                role="button"
+                tabIndex={0}
+                title={getString("gallery-note-edit")}
+                aria-label={getString("gallery-note-label")}
+                onClick={handleGalleryNoteClick}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleGalleryNoteClick(
+                      e as unknown as JSX.TargetedMouseEvent<HTMLElement>,
+                    );
+                  }
+                }}
+              >
+                <ProseText text={galleryNote} />
+              </div>
+            ) : null}
             {classInstruction && (
               <div className="syllabus-item-description text-secondary text-[12px] leading-snug">
                 <ProseText text={classInstruction} />
@@ -906,6 +937,26 @@ export function SyllabusItemCard({
                     )}
                   </span>
                 </div>
+                {galleryNote ? (
+                  <div
+                    className="syllabus-item-description cursor-pointer"
+                    role="button"
+                    tabIndex={0}
+                    title={getString("gallery-note-edit")}
+                    aria-label={getString("gallery-note-label")}
+                    onClick={handleGalleryNoteClick}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleGalleryNoteClick(
+                          e as unknown as JSX.TargetedMouseEvent<HTMLElement>,
+                        );
+                      }
+                    }}
+                  >
+                    <ProseText text={galleryNote} />
+                  </div>
+                ) : null}
                 {classInstruction && (
                   <div className="syllabus-item-description">
                     <ProseText text={classInstruction} />
@@ -958,6 +1009,26 @@ export function SyllabusItemCard({
                     {bibliographicReference}
                   </div>
                 )}
+                {galleryNote ? (
+                  <div
+                    className="syllabus-item-description cursor-pointer"
+                    role="button"
+                    tabIndex={0}
+                    title={getString("gallery-note-edit")}
+                    aria-label={getString("gallery-note-label")}
+                    onClick={handleGalleryNoteClick}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleGalleryNoteClick(
+                          e as unknown as JSX.TargetedMouseEvent<HTMLElement>,
+                        );
+                      }
+                    }}
+                  >
+                    <ProseText text={galleryNote} />
+                  </div>
+                ) : null}
                 {classInstruction && (
                   <div className="syllabus-item-description">
                     <ProseText text={classInstruction} />

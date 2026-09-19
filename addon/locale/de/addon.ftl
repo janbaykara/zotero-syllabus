@@ -340,6 +340,12 @@ gallery-layout-card = Karte
 gallery-layout-card-title = Lehrplan-Karten
 gallery-layout-magazine = Magazin
 gallery-layout-magazine-title = Gemischtes Magazin-Layout
+
+# Gallery notes (collection-scoped child notes)
+gallery-note-add = Add Gallery Note
+gallery-note-edit = Edit Gallery Note
+gallery-note-remove = Remove Gallery Note
+gallery-note-label = Gallery note
 magazine-shelf-watch = Ansehen
 magazine-shelf-watch-title = Zuletzt hinzugefügte Videos
 magazine-shelf-listen = Anhören
