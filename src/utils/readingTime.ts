@@ -84,11 +84,25 @@ export function getPageCount(item: Zotero.Item): number | null {
   if (numPages) {
     const pages = parseInt(String(numPages), 10);
     if (!isNaN(pages) && pages > 0) {
-      return pages;
+      return ignoreBogusBookPageCount(item, pages);
     }
   }
 
-  return pageCountFromPagesField(getItemField(item, "pages"));
+  return ignoreBogusBookPageCount(
+    item,
+    pageCountFromPagesField(getItemField(item, "pages")),
+  );
+}
+
+/** Books almost never have 1 page; treat that as bad metadata. */
+function ignoreBogusBookPageCount(
+  item: Zotero.Item,
+  pages: number | null,
+): number | null {
+  if (pages === 1 && item.itemType === "book") {
+    return null;
+  }
+  return pages;
 }
 
 /** "12-24", "iv, 1–200", or a single number. Prefers the last numeric range. */
