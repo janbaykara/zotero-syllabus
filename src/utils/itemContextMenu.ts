@@ -4,7 +4,10 @@ type ItemContextMenuPane = {
   getSelectedItems?: (
     asIDs?: boolean,
   ) => Zotero.Item[] | number[] | false | null;
-  selectItem?: (id: number) => Promise<unknown> | unknown;
+  selectItem?: (
+    id: number,
+    options?: { noTabSwitch?: boolean },
+  ) => Promise<unknown> | unknown;
   onItemsContextMenuOpen?: (
     event: Event,
     x?: number,
@@ -149,7 +152,8 @@ export async function openZoteroItemContextMenu(
       !selectedIds.includes(item.id) &&
       typeof pane.selectItem === "function"
     ) {
-      await pane.selectItem(item.id);
+      // Stay on Reading Schedule / other custom tabs while the menu opens.
+      await pane.selectItem(item.id, { noTabSwitch: true });
     }
     const { x, y } = itemContextMenuScreenPoint(event, fallbackElement);
     await pane.onItemsContextMenuOpen(event, x, y);

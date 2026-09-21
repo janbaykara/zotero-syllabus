@@ -2,6 +2,8 @@
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
 @source "./**/*.{ts,tsx,js,jsx}";
+/* Giant CSS string — scanning it for utilities causes needless rebuilds. */
+@source not "./utils/publishCoverStyles.generated.ts";
 
 @theme {
   /**

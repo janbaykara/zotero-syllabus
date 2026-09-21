@@ -7,7 +7,6 @@ import { SyllabusManager } from "./syllabus";
 import {
   ClassReadingBlock,
   selectCollectionInLibrary,
-  selectItemInCollection,
 } from "./ClassReadingBlock";
 import {
   useZoteroItemDensity,
@@ -16,6 +15,7 @@ import {
 import { useSyllabi } from "./react-zotero-sync/useSyllabi";
 import { formatReadingDate, toLocalDateKey } from "../utils/dates";
 import { isZotero8OrLater } from "../utils/zotero";
+import { openItemBestAttachment } from "../utils/items";
 import {
   getReadingScheduleCollectionContext,
   listReadingScheduleDateFolders,
@@ -234,9 +234,7 @@ export function ReadingScheduleDayPage({
                     onCollectionClick={() =>
                       selectCollectionInLibrary(classReading.collectionId)
                     }
-                    onItemClick={(item) =>
-                      selectItemInCollection(item, classReading.collectionId)
-                    }
+                    onItemClick={(item) => openItemBestAttachment(item)}
                   />
                 ))}
               </div>

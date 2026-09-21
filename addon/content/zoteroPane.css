@@ -888,6 +888,41 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Pinned syllabus cover: class-aware item progress on a light schedule page. */
+.syllabus-pinned-collection-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
+}
+
+.syllabus-pinned-collection-progress-track {
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(
+    in srgb,
+    var(--fill-secondary, #8c8c8c) 22%,
+    transparent
+  );
+  overflow: hidden;
+}
+
+.syllabus-pinned-collection-progress-fill {
+  height: 4px;
+  border-radius: 999px;
+  background: #7b4ddb;
+}
+
+.syllabus-pinned-collection-progress-pct {
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--fill-secondary, #8c8c8c);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Newsreader (Google Fonts) — Production Type, SIL OFL 1.1. Self-hosted
    so magazine view works offline and does not call fonts.googleapis.com. */
 @font-face {
@@ -2195,6 +2230,200 @@
   overflow-x: auto;
   padding-bottom: 0.4rem;
   scroll-snap-type: x mandatory;
+}
+
+/* Pinned syllabus in Cover mode: overlapping unread covers + class heading. */
+.syllabus-pinned-collection-covers {
+  align-items: start;
+}
+
+.syllabus-pinned-collection-cover {
+  width: var(--reading-tile-width, 13rem);
+  max-width: 100%;
+  scroll-snap-align: start;
+}
+
+.syllabus-explorer-cover-rail .syllabus-pinned-collection-cover {
+  grid-row: span 2;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  width: 148px;
+  max-width: 148px;
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
+.syllabus-explorer-cover-rail .syllabus-pinned-collection-stack {
+  align-self: stretch;
+}
+
+.syllabus-pinned-collection-stack {
+  --stack-fan: 0.5rem;
+  /* Extra inset so a slightly wider hover fan doesn’t clip. */
+  --stack-pad: calc(var(--stack-fan) + 0.28rem);
+  position: relative;
+  width: 100%;
+  /* Room for tops tipping up / sideways when pivoting from the ground. */
+  padding-block-start: calc(var(--stack-pad) + 0.15rem);
+  padding-inline: var(--stack-pad);
+}
+
+.syllabus-pinned-collection-stack[data-count="1"] {
+  padding-block-start: 0;
+  padding-inline: 0;
+}
+
+.syllabus-pinned-collection-stack-layer {
+  position: absolute;
+  inset-inline-start: var(--stack-pad);
+  inset-block-end: 0;
+  width: calc(100% - 2 * var(--stack-pad));
+  transform-origin: bottom center;
+  transform: none;
+  filter: brightness(calc(1 - var(--stack-index, 0) * 0.05));
+  pointer-events: none;
+  transition: transform 0.22s ease;
+}
+
+/* Front upright on the ground; behind cards spill left / right from that baseline. */
+.syllabus-pinned-collection-stack-layer[data-stack-index="0"] {
+  transform: none;
+}
+
+.syllabus-pinned-collection-stack-layer[data-stack-index="1"] {
+  transform: translateX(-0.5rem) rotate(-2deg);
+}
+
+.syllabus-pinned-collection-stack-layer[data-stack-index="2"] {
+  transform: translateX(0.5rem) rotate(2deg);
+}
+
+/* Front card stays in flow for height; fan transform still applies. */
+.syllabus-pinned-collection-stack-layer:first-child {
+  position: relative;
+  inset-inline-start: auto;
+  inset-block-end: auto;
+  width: calc(100% - 2 * var(--stack-pad));
+  margin-inline-start: var(--stack-pad);
+  filter: none;
+  pointer-events: auto;
+}
+
+.syllabus-pinned-collection-stack[data-count="1"]
+  .syllabus-pinned-collection-stack-layer:first-child {
+  width: 100%;
+  margin-inline-start: 0;
+  transform: none;
+}
+
+/* Subtle hover fan + cover shadow lift (same values as gallery item hover). */
+.syllabus-pinned-collection-cover:hover
+  .syllabus-pinned-collection-stack:not([data-count="1"])
+  .syllabus-pinned-collection-stack-layer[data-stack-index="1"],
+.syllabus-pinned-collection-cover:has(
+    .syllabus-pinned-collection-cover-hit:focus-visible
+  )
+  .syllabus-pinned-collection-stack:not([data-count="1"])
+  .syllabus-pinned-collection-stack-layer[data-stack-index="1"] {
+  transform: translateX(-0.72rem) rotate(-3.25deg);
+}
+
+.syllabus-pinned-collection-cover:hover
+  .syllabus-pinned-collection-stack:not([data-count="1"])
+  .syllabus-pinned-collection-stack-layer[data-stack-index="2"],
+.syllabus-pinned-collection-cover:has(
+    .syllabus-pinned-collection-cover-hit:focus-visible
+  )
+  .syllabus-pinned-collection-stack:not([data-count="1"])
+  .syllabus-pinned-collection-stack-layer[data-stack-index="2"] {
+  transform: translateX(0.72rem) rotate(3.25deg);
+}
+
+.syllabus-pinned-collection-cover:hover
+  .syllabus-pinned-collection-stack-layer
+  .syllabus-gallery-cover-portrait,
+.syllabus-pinned-collection-cover:hover
+  .syllabus-pinned-collection-stack-layer
+  .syllabus-gallery-cover-video,
+.syllabus-pinned-collection-cover:hover
+  .syllabus-pinned-collection-stack-layer
+  .syllabus-gallery-cover-web,
+.syllabus-pinned-collection-cover:hover
+  .syllabus-pinned-collection-stack-layer
+  .syllabus-gallery-cover-square,
+.syllabus-pinned-collection-cover:hover
+  .syllabus-pinned-collection-stack-layer
+  .syllabus-gallery-cover-natural,
+.syllabus-pinned-collection-cover:has(
+    .syllabus-pinned-collection-cover-hit:focus-visible
+  )
+  .syllabus-pinned-collection-stack-layer
+  .syllabus-gallery-cover-portrait,
+.syllabus-pinned-collection-cover:has(
+    .syllabus-pinned-collection-cover-hit:focus-visible
+  )
+  .syllabus-pinned-collection-stack-layer
+  .syllabus-gallery-cover-video,
+.syllabus-pinned-collection-cover:has(
+    .syllabus-pinned-collection-cover-hit:focus-visible
+  )
+  .syllabus-pinned-collection-stack-layer
+  .syllabus-gallery-cover-web,
+.syllabus-pinned-collection-cover:has(
+    .syllabus-pinned-collection-cover-hit:focus-visible
+  )
+  .syllabus-pinned-collection-stack-layer
+  .syllabus-gallery-cover-square,
+.syllabus-pinned-collection-cover:has(
+    .syllabus-pinned-collection-cover-hit:focus-visible
+  )
+  .syllabus-pinned-collection-stack-layer
+  .syllabus-gallery-cover-natural {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.14),
+    0 6px 16px rgba(0, 0, 0, 0.18);
+}
+
+.syllabus-pinned-collection-cover:hover
+  .syllabus-pinned-collection-stack-layer
+  .syllabus-gallery-cover-with-binder,
+.syllabus-pinned-collection-cover:has(
+    .syllabus-pinned-collection-cover-hit:focus-visible
+  )
+  .syllabus-pinned-collection-stack-layer
+  .syllabus-gallery-cover-with-binder {
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.14))
+    drop-shadow(0 6px 16px rgba(0, 0, 0, 0.18));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .syllabus-pinned-collection-stack-layer {
+    transition: none;
+  }
+}
+
+.syllabus-explorer-cover-rail .syllabus-pinned-collection-stack-layer,
+.syllabus-explorer-cover-rail
+  .syllabus-pinned-collection-stack-layer
+  .syllabus-gallery-cover-portrait,
+.syllabus-explorer-cover-rail
+  .syllabus-pinned-collection-stack-layer
+  .syllabus-gallery-cover-video,
+.syllabus-explorer-cover-rail
+  .syllabus-pinned-collection-stack-layer
+  .syllabus-gallery-cover-web,
+.syllabus-explorer-cover-rail
+  .syllabus-pinned-collection-stack-layer
+  .syllabus-gallery-cover-square,
+.syllabus-explorer-cover-rail
+  .syllabus-pinned-collection-stack-layer
+  .syllabus-gallery-cover-natural,
+.syllabus-explorer-cover-rail
+  .syllabus-pinned-collection-stack-layer
+  .syllabus-gallery-cover-with-binder {
+  width: 100%;
 }
 
 /* Syllabus collection Cover shelves: class headers + covers in one horizontal rail.

@@ -52,13 +52,25 @@ export const INTENTION_NOTE_TAG = "zotero-syllabus-pinned-intention";
 /** Stored Reading Schedule child folder name. Do not localize. */
 export const PINNED_FOLDER_NAME = "Pinned";
 
+/** Item counts for a pinned syllabus: done classes count all their items. */
+export type SyllabusItemProgress = {
+  done: number;
+  total: number;
+  percent: number;
+};
+
 export type NextUpReading = {
   collection: Zotero.Collection;
   libraryID: number;
   classNumber: number;
   classTitle: string;
+  /** First incomplete assignment (deep-link / flash target). */
   item: Zotero.Item;
   assignment: ItemSyllabusAssignment;
+  /** Up to 3 unread items in syllabus order for the cover stack. */
+  unreadItems: Zotero.Item[];
+  /** Class-aware item progress for the cover progress bar. */
+  progress: SyllabusItemProgress;
 };
 
 function resolveItem(id: number): Zotero.Item | null {
@@ -497,7 +509,57 @@ function sortAssignmentsForClass(
 }
 
 /**
+ * Syllabus progress in item currency, driven by class completion:
+ * items in a done class count as done even when unread.
+ * Missing/deleted items are skipped so the bar matches what the UI shows.
+ */
+export function getSyllabusItemProgress(
+  collection: Zotero.Collection,
+  document?: CollectionSyllabusDocument,
+): SyllabusItemProgress {
+  const doc = document || getCollectionDocument(collection);
+  const classIds = orderedClassIds(doc);
+  const doneClassNumbers = new Set<number>();
+  for (let index = 0; index < classIds.length; index++) {
+    const classId = classIds[index];
+    if (doc.classes?.[classId]?.status === "done") {
+      doneClassNumbers.add(index + 1);
+    }
+  }
+
+  let done = 0;
+  let total = 0;
+  const libraryID = collection.libraryID;
+  for (const [itemKey, assignments] of Object.entries(doc.items || {})) {
+    if (!resolveLibraryItem(libraryID, itemKey)) {
+      continue;
+    }
+    for (const assignment of assignments || []) {
+      const classNumber = assignmentClassNumber(
+        assignment,
+        doc.classes,
+        doc.classOrder,
+      );
+      if (classNumber == null) {
+        continue;
+      }
+      total += 1;
+      if (doneClassNumbers.has(classNumber) || assignment.status === "done") {
+        done += 1;
+      }
+    }
+  }
+
+  const percent =
+    total <= 0
+      ? 0
+      : Math.min(100, Math.max(0, Math.round((done / total) * 100)));
+  return { done, total, percent };
+}
+
+/**
  * First incomplete class assignment in syllabus order, or null if caught up.
+ * Also gathers up to 3 unread items (from that class onward) for the cover stack.
  */
 export function getNextUpAssignment(
   collection: Zotero.Collection,
@@ -507,10 +569,16 @@ export function getNextUpAssignment(
   const classIds = orderedClassIds(doc);
   const libraryID = collection.libraryID;
 
+  let next: NextUpReading | null = null;
+  const unreadItems: Zotero.Item[] = [];
+
   for (let index = 0; index < classIds.length; index++) {
     const classId = classIds[index];
     const classNumber = index + 1;
     const classMeta = doc.classes?.[classId];
+    if (classMeta?.status === "done") {
+      continue;
+    }
     const entries: Array<{
       item: Zotero.Item;
       assignment: ItemSyllabusAssignment;
@@ -542,20 +610,34 @@ export function getNextUpAssignment(
       classMeta?.itemOrder,
       doc.priorities,
     );
-    const first = sorted[0];
-    if (first) {
-      return {
-        collection,
-        libraryID,
-        classNumber,
-        classTitle: classMeta?.title || "",
-        item: first.item,
-        assignment: first.assignment,
-      };
+    for (const entry of sorted) {
+      if (!next) {
+        next = {
+          collection,
+          libraryID,
+          classNumber,
+          classTitle: classMeta?.title || "",
+          item: entry.item,
+          assignment: entry.assignment,
+          unreadItems: [],
+          progress: { done: 0, total: 0, percent: 0 },
+        };
+      }
+      if (unreadItems.length < 3) {
+        unreadItems.push(entry.item);
+      }
+    }
+    if (next && unreadItems.length >= 3) {
+      break;
     }
   }
 
-  return null;
+  if (!next) {
+    return null;
+  }
+  next.unreadItems = unreadItems;
+  next.progress = getSyllabusItemProgress(collection, doc);
+  return next;
 }
 
 function resolveLibraryItem(

@@ -298,6 +298,7 @@ export type FluentMessageId =
   | 'pinned-menu-unpin-syllabus'
   | 'pinned-next-up-from'
   | 'pinned-section-heading'
+  | 'pinned-syllabus-progress'
   | 'pinned-unpin-cancel'
   | 'pinned-unpin-delete'
   | 'pinned-unpin-item'

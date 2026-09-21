@@ -126,7 +126,7 @@ export const GalleryCover = memo(function GalleryCover({
         showBinder
           ? "syllabus-gallery-cover-with-binder"
           : twMerge(
-              "overflow-hidden rounded-[3px] bg-quinary shadow-card transition-shadow group-hover:shadow-card-hover",
+              "rounded-[3px] bg-quinary transition-shadow",
               coverShapeClass,
               isJournalLike &&
                 cover.kind === "image" &&
@@ -147,14 +147,14 @@ export const GalleryCover = memo(function GalleryCover({
         className={twMerge(
           showBinder
             ? twMerge(
-                "syllabus-gallery-cover-face relative min-w-0 flex-1 overflow-hidden rounded-[3px] bg-quinary shadow-card transition-shadow group-hover:shadow-card-hover",
+                "syllabus-gallery-cover-face relative min-w-0 flex-1 overflow-hidden rounded-[3px] bg-quinary transition-shadow",
                 coverShapeClass,
                 isJournalLike &&
                   cover.kind === "image" &&
                   "syllabus-gallery-journal-sheet",
               )
             : twMerge(
-                "relative w-full",
+                "relative w-full overflow-hidden rounded-[inherit]",
                 useNaturalAspect ? "h-auto" : "h-full",
               ),
         )}

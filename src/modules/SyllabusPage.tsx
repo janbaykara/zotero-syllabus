@@ -1443,24 +1443,46 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
   // Deep link from Home Cover class headers (and similar).
   const tryPendingClassScroll = useCallback(() => {
-    const elementId = peekPendingClassScroll(collectionId);
-    if (!elementId) {
+    const pending = peekPendingClassScroll(collectionId);
+    if (!pending) {
       return;
     }
     const container = syllabusPageRef.current;
     if (!container) {
       return;
     }
+    const sticky = container.querySelector<HTMLElement>(
+      "[syllabus-view-title-container]",
+    );
+    const itemId = pending.itemId;
+    const itemCard =
+      itemId != null
+        ? container.querySelector<HTMLElement>(`[data-item-id="${itemId}"]`)
+        : null;
+    if (itemCard && itemId != null) {
+      takePendingClassScroll(collectionId);
+      try {
+        ztoolkit.getGlobal("ZoteroPane").selectItem(itemId);
+      } catch (error) {
+        ztoolkit.log("Error selecting deep-linked syllabus item:", error);
+      }
+      scrollElementBelowSticky(container, itemCard, sticky, 16);
+      return;
+    }
     const target = container.querySelector<HTMLElement>(
-      `#${CSS.escape(elementId)}`,
+      `#${CSS.escape(pending.elementId)}`,
     );
     if (!target) {
       return;
     }
     takePendingClassScroll(collectionId);
-    const sticky = container.querySelector<HTMLElement>(
-      "[syllabus-view-title-container]",
-    );
+    if (itemId != null) {
+      try {
+        ztoolkit.getGlobal("ZoteroPane").selectItem(itemId);
+      } catch (error) {
+        ztoolkit.log("Error selecting deep-linked syllabus item:", error);
+      }
+    }
     scrollElementBelowSticky(container, target, sticky, 16);
   }, [collectionId]);
 
@@ -1477,13 +1499,15 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
   // Drop a stale deep-link if the class section never mounts (empty/filtered).
   useEffect(() => {
-    const elementId = peekPendingClassScroll(collectionId);
-    if (!elementId) {
+    const pending = peekPendingClassScroll(collectionId);
+    if (!pending) {
       return;
     }
+    const elementId = pending.elementId;
     const win = Zotero.getMainWindow();
     const timer = win.setTimeout(() => {
-      if (peekPendingClassScroll(collectionId) === elementId) {
+      const still = peekPendingClassScroll(collectionId);
+      if (still && still.elementId === elementId) {
         takePendingClassScroll(collectionId);
       }
     }, 4000);

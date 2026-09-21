@@ -2,7 +2,7 @@ import { execSync } from "child_process";
 import { createHash } from "crypto";
 import { readFileSync, writeFileSync, watch } from "fs";
 import { fileURLToPath } from "url";
-import { dirname, join } from "path";
+import { dirname, basename, join } from "path";
 import postcss from "postcss";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -62,8 +62,20 @@ export async function generatePublishCoverStyles() {
 export const PUBLISH_COVER_CSS = ${JSON.stringify(combined)};
 `;
 
+  // Skip identical writes — otherwise mtime churn restarts Tailwind +
+  // zotero-plugin serve in a loop (fs.watch on galleryCover also fires when
+  // sibling addon/content/tailwind.css is rewritten).
+  try {
+    if (readFileSync(publishCoverOut, "utf8") === ts) {
+      return false;
+    }
+  } catch {
+    /* missing output is fine */
+  }
+
   writeFileSync(publishCoverOut, ts, "utf8");
   console.log(`✓ Generated publish cover CSS: ${publishCoverOut}`);
+  return true;
 }
 
 function buildTailwind() {
@@ -96,16 +108,43 @@ function buildTailwind() {
 export function watchPublishCoverStyles() {
   const targets = [galleryCoverFile, publishShimFile];
   let timer = null;
+  let lastSourceHash = "";
+  const sourceHash = () => {
+    const hash = createHash("sha256");
+    for (const target of targets) {
+      hash.update(readFileSync(target));
+      hash.update("\0");
+    }
+    return hash.digest("hex");
+  };
   const rebuild = () => {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
+      try {
+        const nextHash = sourceHash();
+        if (nextHash === lastSourceHash) {
+          return;
+        }
+        lastSourceHash = nextHash;
+      } catch (err) {
+        console.error("Error reading publish cover sources:", err);
+        return;
+      }
       generatePublishCoverStyles().catch((err) => {
         console.error("Error generating publish cover CSS:", err);
       });
-    }, 100);
+    }, 150);
   };
   for (const target of targets) {
-    watch(target, rebuild);
+    // Watch the parent dir and filter by basename — file watches on macOS
+    // often fire when siblings (e.g. tailwind.css) change in the same folder.
+    watch(dirname(target), { persistent: true }, (_event, filename) => {
+      // On macOS filename can be null; hash check below filters no-ops.
+      if (filename && filename !== basename(target)) {
+        return;
+      }
+      rebuild();
+    });
   }
   console.log("✓ Watching galleryCover.css + publishCoverShim.css");
   rebuild();

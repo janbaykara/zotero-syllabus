@@ -108,9 +108,11 @@ export function syllabusClassScrollId(
   return `toc-class-${classNumber}`;
 }
 
-type PendingClassScroll = {
+export type PendingClassScroll = {
   collectionId: number;
   elementId: string;
+  /** When set, syllabus page selects/scrolls this item so it flashes in view. */
+  itemId?: number;
 };
 
 let pendingClassScroll: PendingClassScroll | null = null;
@@ -122,14 +124,19 @@ function notifyPendingClassScroll(): void {
   }
 }
 
-/** Open a collection’s Syllabus view and scroll to a class section when ready. */
+/**
+ * Open a collection’s Syllabus view and scroll to a class section when ready.
+ * Pass `itemId` to select that item (blue outline) and prefer scrolling to its card.
+ */
 export function openCollectionSyllabusAtClass(
   collectionId: number,
   classNumber: number | null | "further-reading",
+  itemId?: number,
 ): void {
   pendingClassScroll = {
     collectionId,
     elementId: syllabusClassScrollId(classNumber),
+    itemId: itemId && itemId > 0 ? itemId : undefined,
   };
   notifyPendingClassScroll();
   openCollectionSyllabusPage(collectionId);
@@ -143,21 +150,25 @@ export function subscribePendingClassScroll(listener: () => void): () => void {
 }
 
 /** Peek without consuming — returns null if not for this collection. */
-export function peekPendingClassScroll(collectionId: number): string | null {
+export function peekPendingClassScroll(
+  collectionId: number,
+): PendingClassScroll | null {
   if (!pendingClassScroll || pendingClassScroll.collectionId !== collectionId) {
     return null;
   }
-  return pendingClassScroll.elementId;
+  return pendingClassScroll;
 }
 
 /** Consume a pending class scroll for this collection, if any. */
-export function takePendingClassScroll(collectionId: number): string | null {
+export function takePendingClassScroll(
+  collectionId: number,
+): PendingClassScroll | null {
   if (!pendingClassScroll || pendingClassScroll.collectionId !== collectionId) {
     return null;
   }
-  const elementId = pendingClassScroll.elementId;
+  const pending = pendingClassScroll;
   pendingClassScroll = null;
-  return elementId;
+  return pending;
 }
 
 export function selectItemInCollection(

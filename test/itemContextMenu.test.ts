@@ -31,6 +31,7 @@ function mouseEvent(
 function fakePane(options: {
   selected?: number[];
   selectCalls?: number[];
+  selectOptions?: Array<{ noTabSwitch?: boolean } | undefined>;
   openCalls?: Array<{ x?: number; y?: number }>;
 }): ItemContextMenuPaneLike {
   let selected = options.selected ?? [];
@@ -39,8 +40,9 @@ function fakePane(options: {
       assert.isTrue(asIDs);
       return selected;
     },
-    selectItem: async (id: number) => {
+    selectItem: async (id: number, selectOptions?) => {
       options.selectCalls?.push(id);
+      options.selectOptions?.push(selectOptions);
       selected = [id];
       return true;
     },
@@ -140,16 +142,18 @@ describe("itemContextMenu", function () {
 
     it("selects an unselected item then opens the native menu", async function () {
       const selectCalls: number[] = [];
+      const selectOptions: Array<{ noTabSwitch?: boolean } | undefined> = [];
       const openCalls: Array<{ x?: number; y?: number }> = [];
       const event = mouseEvent(80, 90);
       await openZoteroItemContextMenu(
         fakeItem(42),
         event,
         null,
-        fakePane({ selected: [7], selectCalls, openCalls }),
+        fakePane({ selected: [7], selectCalls, selectOptions, openCalls }),
       );
       assert.isTrue(event.defaultPrevented);
       assert.deepEqual(selectCalls, [42]);
+      assert.deepEqual(selectOptions, [{ noTabSwitch: true }]);
       assert.deepEqual(openCalls, [{ x: 80, y: 90 }]);
     });
 

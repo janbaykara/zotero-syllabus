@@ -1,6 +1,7 @@
 import { assert } from "chai";
 import {
   getNextUpAssignment,
+  getSyllabusItemProgress,
   isPinnedItem,
   noteHtmlToPlainText,
   PINNED_TAG,
@@ -107,6 +108,11 @@ describe("pinned", function () {
       assert.equal(next!.item.id, second.id);
       assert.equal(next!.classNumber, 2);
       assert.equal(next!.assignment.id, "a2");
+      assert.deepEqual(
+        next!.unreadItems.map((item) => item.id),
+        [second.id],
+      );
+      assert.deepEqual(next!.progress, { done: 1, total: 2, percent: 50 });
     } finally {
       try {
         await collection.eraseTx({ deleteItems: false });
@@ -114,5 +120,78 @@ describe("pinned", function () {
         /* ignore */
       }
     }
+  });
+
+  it("counts all items in done classes toward progress", async function () {
+    const live: Zotero.Item[] = [];
+    for (const title of ["A", "B", "C", "D"]) {
+      const item = new Zotero.Item("book");
+      item.libraryID = Zotero.Libraries.userLibraryID;
+      item.setField("title", title);
+      await item.saveTx();
+      live.push(item);
+      items.push(item);
+    }
+    const [a, b, c, d] = live;
+
+    const document = CollectionSyllabusDocumentSchema.parse({
+      version: 2,
+      classes: {
+        "class-a": { number: 1, title: "Week 1", status: "done" },
+        "class-b": { number: 2, title: "Week 2" },
+      },
+      classOrder: ["class-a", "class-b"],
+      items: {
+        [a.key]: [
+          {
+            id: "a1",
+            classId: "class-a",
+            status: null,
+            priority: "essential",
+          },
+        ],
+        [b.key]: [
+          {
+            id: "a2",
+            classId: "class-a",
+            status: null,
+            priority: "essential",
+          },
+        ],
+        [c.key]: [
+          {
+            id: "b1",
+            classId: "class-b",
+            status: "done",
+            priority: "essential",
+          },
+        ],
+        [d.key]: [
+          {
+            id: "b2",
+            classId: "class-b",
+            status: null,
+            priority: "essential",
+          },
+        ],
+        // Deleted / missing keys must not inflate the denominator.
+        ZZDELETED: [
+          {
+            id: "gone",
+            classId: "class-b",
+            status: null,
+            priority: "essential",
+          },
+        ],
+      },
+    });
+    const collection = {
+      libraryID: Zotero.Libraries.userLibraryID,
+    } as Zotero.Collection;
+    assert.deepEqual(getSyllabusItemProgress(collection, document), {
+      done: 3,
+      total: 4,
+      percent: 75,
+    });
   });
 });

@@ -432,6 +432,7 @@ pinned-done-unpin-title = Unpin this item?
 pinned-done-unpin-message = Remove this item from Pinned?
 pinned-done-unpin-syllabus-title = Unpin this syllabus?
 pinned-done-unpin-syllabus-message = Remove this syllabus from Pinned?
+pinned-syllabus-progress = { $done } of { $total }
 
 # Columns
 column-reading-instructions = Okuma yönergeleri

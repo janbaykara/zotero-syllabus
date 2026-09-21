@@ -5,7 +5,6 @@ import { twMerge } from "tailwind-merge";
 import {
   ClassReadingBlock,
   selectCollectionInLibrary,
-  selectItemInCollection,
 } from "./ClassReadingBlock";
 import {
   collectClassReadingsByWeek,
@@ -32,6 +31,7 @@ import {
 } from "../utils/dates";
 import { hasMultipleNonFeedLibraries, isZotero8OrLater } from "../utils/zotero";
 import { getString, getUiDir } from "../utils/locale";
+import { openItemBestAttachment } from "../utils/items";
 import { PinnedSection, usePinnedScheduleData } from "./PinnedSection";
 import { SyllabusViewMenu } from "./SyllabusViewMenu";
 import { useGalleryLayout } from "./galleryLayout";
@@ -94,8 +94,8 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
     selectCollectionInLibrary(collectionId);
   };
 
-  const handleItemClick = (item: Zotero.Item, collectionId: number) => {
-    selectItemInCollection(item, collectionId);
+  const handleItemClick = (item: Zotero.Item) => {
+    openItemBestAttachment(item);
   };
 
   const showLibrarySource =
@@ -338,12 +338,7 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
                                         classReading.collectionId,
                                       )
                                     }
-                                    onItemClick={(item) =>
-                                      handleItemClick(
-                                        item,
-                                        classReading.collectionId,
-                                      )
-                                    }
+                                    onItemClick={handleItemClick}
                                   />
                                 ))}
                               </div>
