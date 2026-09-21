@@ -26,7 +26,7 @@ page-lock = Lock syllabus
 - **Prefs XHTML:** `data-l10n-id` + `preferences.ftl`.
 - **Variables:** `{ $name }` in FTL, never concatenate sentences in code.
 - **Call `getString` at render/use time**, not at module load (`initLocale` has not run yet).
-- **Do not translate stored identifiers:** note title `"Syllabus"`, collection `"Reading Schedule"`, child folder `"Pinned"`, playground `"Syllabus Tour"`, plugin JSON heading, tags `zotero-syllabus` / `pinned` / `zotero-syllabus-pinned-intention` / `zotero-syllabus-gallery:{collectionKey}`. Display labels for those concepts still go through Fluent.
+- **Do not translate stored identifiers:** note title `"Syllabus"`, collection `"Reading Schedule"`, child folder `"Pinned"`, playground `"Syllabus Tour"`, plugin JSON heading, tags `zotero-syllabus` / `pinned` / `zotero-syllabus-pinned-intention` / `zotero-syllabus-pinned-collection` / `zotero-syllabus-gallery:{collectionKey}`. Display labels for those concepts still go through Fluent.
 - **Product name** `Zotero Syllabus` stays untranslated.
 - Locale folders match Zotero: `de` not `de-DE`; `ar` not `ar-SA`; `pt-BR`, `es-ES`, `fr-FR`, …
 - Details: `doc/TECHNICAL.md` (Localization) and `AGENTS.md`.

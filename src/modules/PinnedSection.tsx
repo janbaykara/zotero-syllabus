@@ -29,7 +29,7 @@ import {
   openItemBestAttachment,
 } from "../utils/items";
 import { getCachedItem } from "../utils/cache";
-import { libraryDisplayName } from "../utils/zotero";
+import { libraryDisplayName, selectZoteroCollection } from "../utils/zotero";
 import { getString } from "../utils/locale";
 import { TabManager } from "../utils/tabManager";
 import type { ItemDensity } from "./react-zotero-sync/itemDensity";
@@ -119,12 +119,27 @@ async function showPinnedItemInLibraryTable(item: Zotero.Item): Promise<void> {
   }
 }
 
-function openNextUpInSyllabus(reading: NextUpReading): void {
-  openCollectionSyllabusAtClass(
-    reading.collection.id,
-    reading.classNumber,
-    reading.item.id,
-  );
+function openPinnedCollection(reading: NextUpReading): void {
+  if (reading.isSyllabus) {
+    if (reading.classNumber != null && reading.item) {
+      openCollectionSyllabusAtClass(
+        reading.collection.id,
+        reading.classNumber,
+        reading.item.id,
+      );
+      return;
+    }
+    openCollectionSyllabusPage(reading.collection.id);
+    return;
+  }
+  try {
+    if (!selectZoteroCollection(reading.collection.id)) {
+      return;
+    }
+    TabManager.selectLibraryTab();
+  } catch (error) {
+    ztoolkit.log("Error opening pinned collection:", error);
+  }
 }
 
 export function usePinnedScheduleData(libraryID?: number) {
@@ -229,12 +244,15 @@ export function PinnedSection({
     }
     const rows = [...pinnedLayoutRows];
     for (const reading of nextUp) {
+      if (!reading.isSyllabus || !reading.item || !reading.assignment) {
+        continue;
+      }
       rows.push({
         key: `pinned-next-${reading.collection.id}-${reading.assignment.id}`,
         item: reading.item,
         collectionId: reading.collection.id,
         assignment: reading.assignment,
-        classNumber: reading.classNumber,
+        classNumber: reading.classNumber ?? undefined,
         slim: true,
         contextLabel: readingContextLabel({
           collectionId: reading.collection.id,
@@ -377,11 +395,11 @@ export function PinnedSection({
             onItemClick={(item, collectionId) => {
               const reading = nextUp.find(
                 (entry) =>
-                  entry.item.id === item.id &&
+                  entry.item?.id === item.id &&
                   entry.collection.id === collectionId,
               );
               if (reading) {
-                openNextUpInSyllabus(reading);
+                openPinnedCollection(reading);
                 return;
               }
               activatePinnedItem(item, embedded);
@@ -404,7 +422,11 @@ export function PinnedSection({
 
             {nextUp.map((reading) => (
               <NextUpRow
-                key={`${reading.collection.id}-${reading.assignment.id}`}
+                key={
+                  reading.assignment
+                    ? `${reading.collection.id}-${reading.assignment.id}`
+                    : `pinned-collection-${reading.collection.id}`
+                }
                 reading={reading}
                 density={density}
                 showLibraryName={showLibraryName}
@@ -432,25 +454,36 @@ function NextUpCoverStack({
   const stackItems =
     reading.unreadItems.length > 0
       ? reading.unreadItems.slice(0, 3)
-      : [reading.item];
+      : reading.item
+        ? [reading.item]
+        : [];
 
   const handleUnpin = async () => {
     await setPinnedSyllabus(reading.collection, false);
     onChanged();
   };
 
-  const classNumberLabel = getString("menu-class-label", {
-    args: {
-      nomenclature: singularCapitalized,
-      number: reading.classNumber,
-    },
-  });
+  const classNumberLabel =
+    reading.isSyllabus && reading.classNumber != null
+      ? getString("menu-class-label", {
+          args: {
+            nomenclature: singularCapitalized,
+            number: reading.classNumber,
+          },
+        })
+      : "";
   const classTitle = reading.classTitle.trim();
-  const className = classTitle
-    ? `${classTitle} · ${classNumberLabel}`
-    : classNumberLabel;
+  const className = classNumberLabel
+    ? classTitle
+      ? `${classNumberLabel}: ${classTitle}`
+      : classNumberLabel
+    : "";
 
-  const open = () => openNextUpInSyllabus(reading);
+  const open = () => openPinnedCollection(reading);
+  const showProgress =
+    reading.isSyllabus &&
+    reading.progress != null &&
+    reading.progress.total > 0;
 
   return (
     <div
@@ -466,25 +499,32 @@ function NextUpCoverStack({
       >
         <div
           className="syllabus-pinned-collection-stack"
-          data-count={stackItems.length}
+          data-count={Math.max(stackItems.length, 1)}
         >
-          {stackItems.map((item, index) => (
+          {stackItems.length > 0 ? (
+            stackItems.map((item, index) => (
+              <div
+                key={item.id}
+                className="syllabus-pinned-collection-stack-layer"
+                data-stack-index={index}
+                style={{
+                  zIndex: stackItems.length - index,
+                  ["--stack-index" as string]: String(index),
+                }}
+              >
+                <GalleryCover item={item} selected={false} visible />
+              </div>
+            ))
+          ) : (
             <div
-              key={item.id}
-              className="syllabus-pinned-collection-stack-layer"
-              data-stack-index={index}
-              style={{
-                zIndex: stackItems.length - index,
-                ["--stack-index" as string]: String(index),
-              }}
-            >
-              <GalleryCover item={item} selected={false} visible />
-            </div>
-          ))}
+              className="syllabus-pinned-collection-stack-layer syllabus-pinned-collection-stack-empty"
+              data-stack-index={0}
+            />
+          )}
         </div>
       </button>
-      <div className="syllabus-gallery-meta syllabus-class-reading-heading min-w-0 px-0.5">
-        <div className="flex items-center gap-0.5 min-w-0">
+      <div className="syllabus-gallery-meta min-w-0 px-0.5">
+        <div className="flex flex-row items-start gap-0.5 min-w-0">
           <div
             role="button"
             tabIndex={0}
@@ -497,7 +537,11 @@ function NextUpCoverStack({
               }
             }}
           >
-            <GalleryGroupIcon spec={{ kind: "collection" }} />
+            <GalleryGroupIcon
+              spec={{
+                kind: reading.isSyllabus ? "syllabus" : "collection",
+              }}
+            />
             <span className="truncate">{reading.collection.name}</span>
           </div>
           <button
@@ -513,21 +557,23 @@ function NextUpCoverStack({
             <PinOff size={16} />
           </button>
         </div>
-        <div
-          role="button"
-          tabIndex={0}
-          className="syllabus-gallery-creator syllabus-pinned-collection-class text-xs text-secondary truncate mt-0.5 cursor-pointer"
-          onClick={open}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              open();
-            }
-          }}
-        >
-          {className}
-        </div>
-        {reading.progress.total > 0 ? (
+        {className ? (
+          <div
+            role="button"
+            tabIndex={0}
+            className="syllabus-gallery-creator syllabus-pinned-collection-class text-xs text-secondary truncate mt-0.5 cursor-pointer"
+            onClick={open}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                open();
+              }
+            }}
+          >
+            {className}
+          </div>
+        ) : null}
+        {showProgress && reading.progress ? (
           <button
             type="button"
             className="syllabus-pinned-collection-progress border-0 bg-transparent p-0 cursor-pointer text-left w-full min-w-0"
@@ -718,17 +764,22 @@ function NextUpRow({
     }
   };
 
+  const open = () => openPinnedCollection(reading);
+  const headerLabel = reading.isSyllabus
+    ? getString("pinned-next-up-from", {
+        args: { name: reading.collection.name },
+      })
+    : reading.collection.name;
+
   return (
     <div className="relative">
       <div className="flex flex-row items-start gap-2 justify-between mb-1">
         <button
           type="button"
           className="text-secondary text-sm text-left border-0 bg-transparent cursor-pointer p-0 hover:text-primary"
-          onClick={() => openCollectionSyllabusPage(reading.collection.id)}
+          onClick={open}
         >
-          {getString("pinned-next-up-from", {
-            args: { name: reading.collection.name },
-          })}
+          {headerLabel}
           {showLibraryName ? (
             <span className="text-tertiary">
               {" "}
@@ -746,24 +797,43 @@ function NextUpRow({
           <PinOff size={16} />
         </button>
       </div>
-      <SyllabusItemCard
-        item={reading.item}
-        collectionId={reading.collection.id}
-        classNumber={reading.classNumber}
-        assignment={reading.assignment}
-        density={density}
-        slim
-        hideHoverActions
-        readerMode={showUnpinCheckbox}
-        onReaderCheck={showUnpinCheckbox ? handleReaderCheck : undefined}
-        onClick={() => {
-          openNextUpInSyllabus(reading);
-        }}
-        onContextMenu={(_clicked, e) => {
-          void openZoteroCollectionContextMenu(reading.collection, e);
-        }}
-      />
-      {reading.classTitle ? (
+      {reading.isSyllabus && reading.item && reading.assignment ? (
+        <SyllabusItemCard
+          item={reading.item}
+          collectionId={reading.collection.id}
+          classNumber={reading.classNumber ?? undefined}
+          assignment={reading.assignment}
+          density={density}
+          slim
+          hideHoverActions
+          readerMode={showUnpinCheckbox}
+          onReaderCheck={showUnpinCheckbox ? handleReaderCheck : undefined}
+          onClick={() => {
+            openPinnedCollection(reading);
+          }}
+          onContextMenu={(_clicked, e) => {
+            void openZoteroCollectionContextMenu(reading.collection, e);
+          }}
+        />
+      ) : reading.item ? (
+        <SyllabusItemCard
+          item={reading.item}
+          collectionId={reading.collection.id}
+          assignment={{ id: `pinned-collection-${reading.collection.id}` }}
+          density={density}
+          slim
+          hideHoverActions
+          readerMode={showUnpinCheckbox}
+          onReaderCheck={showUnpinCheckbox ? handleReaderCheck : undefined}
+          onClick={() => {
+            openPinnedCollection(reading);
+          }}
+          onContextMenu={(_clicked, e) => {
+            void openZoteroCollectionContextMenu(reading.collection, e);
+          }}
+        />
+      ) : null}
+      {reading.isSyllabus && reading.classTitle ? (
         <div className="text-tertiary text-sm mt-1">
           {
             SyllabusManager.getNomenclatureFormatted(reading.collection.id)

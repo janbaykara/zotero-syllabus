@@ -815,7 +815,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       setIsPinned(next);
       enqueuePinnedReadingScheduleSync();
     } else if (next) {
-      ztoolkit.log("Could not pin syllabus: no Syllabus note on collection");
+      ztoolkit.log("Could not pin collection");
     }
   };
 

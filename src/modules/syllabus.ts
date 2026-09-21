@@ -2259,21 +2259,10 @@ export class SyllabusManager {
           return;
         }
         const pinned = isPinnedSyllabus(collection);
-        if (pinned) {
-          await setPinnedSyllabus(collection, false);
-          enqueuePinnedReadingScheduleSync();
-          return;
-        }
-        // Pinning requires a Syllabus note — prompt to create one if needed.
-        const enabled = await ensureSyllabusNoteForUser(collection);
-        if (!enabled) {
-          return;
-        }
-        const ok = await setPinnedSyllabus(collection, true);
+        const ok = await setPinnedSyllabus(collection, !pinned);
         if (!ok) {
-          ztoolkit.log(
-            "Could not pin syllabus: no Syllabus note on collection",
-          );
+          ztoolkit.log("Could not update pinned collection");
+          return;
         }
         enqueuePinnedReadingScheduleSync();
       },

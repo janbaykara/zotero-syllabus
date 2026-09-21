@@ -617,7 +617,24 @@
   fill: currentColor;
 }
 
+/* Keep the branded purple on syllabus collection icons in group chrome. */
+.syllabus-gallery-group-pill .icon-css.icon-syllabus-collection,
+.syllabus-gallery-section-title .icon-css.icon-syllabus-collection,
+.syllabus-gallery-section-title-muted .icon-css.icon-syllabus-collection,
+.syllabus-gallery-class-label .icon-css.icon-syllabus-collection,
+.syllabus-explorer-collection-link .icon-css.icon-syllabus-collection,
+.syllabus-explorer-class-segment-title .icon-css.icon-syllabus-collection,
+.syllabus-explorer-shelf-group-title .icon-css.icon-syllabus-collection,
+.syllabus-pinned-collection-course .icon-css.icon-syllabus-collection {
+  fill: #7b4ddb;
+}
+
 .syllabus-gallery-group-pill[aria-current="true"] .icon-css {
+  fill: #fff;
+}
+
+.syllabus-gallery-group-pill[aria-current="true"]
+  .icon-css.icon-syllabus-collection {
   fill: #fff;
 }
 
@@ -2286,9 +2303,8 @@
   height: auto;
 }
 
-/* Shared stack caption on Home rail + Reading Schedule grid — same classes as
-   Cover GalleryTile meta. Unlayered type so Zotero `button` / UA rules cannot
-   override course/class sizing. */
+/* Shared stack caption on Home rail + Reading Schedule grid — same rhythm as
+   Cover GalleryTile meta (padding-top 0.5rem, creator mt-0.5). */
 .syllabus-pinned-collection-cover > .syllabus-gallery-meta {
   align-self: start;
   min-width: 0;
@@ -2301,6 +2317,18 @@
   line-height: var(--text-sm--line-height, 1.25rem) !important;
   font-weight: var(--font-weight-medium, 500) !important;
   color: var(--fill-primary, inherit);
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+  max-height: none;
+}
+
+.syllabus-pinned-collection-cover
+  .syllabus-pinned-collection-course
+  .syllabus-gallery-group-icon {
+  width: 0.9em;
+  height: 0.9em;
+  flex: none;
 }
 
 .syllabus-pinned-collection-cover .syllabus-pinned-collection-class {
@@ -2308,6 +2336,21 @@
   line-height: var(--text-xs--line-height, 1rem) !important;
   font-weight: var(--font-weight-normal, 400) !important;
   color: var(--fill-secondary, inherit);
+  margin-top: 0.125rem; /* match Tailwind mt-0.5 on item creators */
+  margin-bottom: 0;
+  margin-inline: 0;
+  padding: 0;
+  min-height: 0;
+  max-height: none;
+}
+
+/* Don't reserve a 2-line title block for single-line course names — that
+   pushed Class away from the course title vs item title→author. */
+.syllabus-explorer-cover-rail
+  .syllabus-pinned-collection-cover
+  > .syllabus-gallery-meta
+  > :first-child {
+  min-height: 0;
 }
 
 .syllabus-pinned-collection-cover
@@ -2319,6 +2362,10 @@
 .syllabus-pinned-collection-unpin {
   margin: 0;
   max-height: none;
+  /* Keep hover target without stretching the title row past item titles. */
+  padding-block: 0 !important;
+  padding-inline: 0.25rem !important;
+  line-height: 0;
 }
 
 /* Home cover rail: participate in the same 2-row subgrid as GalleryTile so
@@ -2393,6 +2440,13 @@
   margin-inline-start: 0;
   filter: none;
   pointer-events: auto;
+}
+
+.syllabus-pinned-collection-stack-empty {
+  aspect-ratio: 2 / 3;
+  width: 100%;
+  border-radius: 0.25rem;
+  background: var(--fill-quinary, rgba(0, 0, 0, 0.06));
 }
 
 .syllabus-pinned-collection-stack[data-count="1"]

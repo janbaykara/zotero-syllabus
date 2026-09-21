@@ -1,3 +1,5 @@
+import { collectionHasSyllabusNote } from "./syllabusNote";
+
 export type GalleryGroupIconSpec =
   | { kind: "item-type"; itemType: string }
   | { kind: "creator" }
@@ -5,6 +7,7 @@ export type GalleryGroupIconSpec =
   | { kind: "tag" }
   | { kind: "untagged" }
   | { kind: "collection" }
+  | { kind: "syllabus" }
   | { kind: "collection-root" }
   | { kind: "class" }
   | { kind: "further-reading" };
@@ -26,6 +29,15 @@ type SubcollectionNavNode = {
   itemIds: number[];
   children: SubcollectionNavNode[];
 };
+
+/** Folder vs purple syllabus icon for a collection group heading / nav pill. */
+export function collectionGroupIconSpec(
+  collectionId: number,
+): Extract<GalleryGroupIconSpec, { kind: "collection" | "syllabus" }> {
+  return collectionHasSyllabusNote(collectionId)
+    ? { kind: "syllabus" }
+    : { kind: "collection" };
+}
 
 function subtreeHasContent(node: SubcollectionNavNode): boolean {
   if (node.itemIds.length > 0) {
@@ -52,7 +64,7 @@ export function flattenSubcollectionNavGroups(
       groups.push({
         id: `col-${current.collectionId}`,
         label: current.name,
-        icon: { kind: "collection" },
+        icon: collectionGroupIconSpec(current.collectionId),
       });
     }
     for (const child of current.children) {

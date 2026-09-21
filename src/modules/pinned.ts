@@ -1,7 +1,8 @@
 /**
- * Pinned items (tag on regular items) and pinned syllabi (tag on the
- * standalone Syllabus note). Optional intention child notes for items.
- * Next-up = first incomplete assignment in class order.
+ * Pinned items (tag on regular items) and pinned collections (tag on the
+ * Syllabus note, or a marker note for non-syllabus collections). Optional
+ * intention child notes for items. Next-up = first incomplete assignment
+ * in class order (syllabi only).
  */
 
 import {
@@ -19,6 +20,7 @@ import {
 } from "../utils/items";
 import { confirmExPrompt, confirmPrompt } from "../utils/window";
 import {
+  collectionHasSyllabusNote,
   getCollectionDocument,
   getSyllabusNoteId,
   SYLLABUS_NOTE_TAG,
@@ -43,11 +45,17 @@ export function notifyPinnedChanges(): void {
   }
 }
 
-/** Stored tag on pinned items and pinned Syllabus notes. Do not localize. */
+/** Stored tag on pinned items and pinned Syllabus / collection notes. Do not localize. */
 export const PINNED_TAG = "pinned";
 
 /** Stored tag on optional intention child notes. Do not localize. */
 export const INTENTION_NOTE_TAG = "zotero-syllabus-pinned-intention";
+
+/**
+ * Marker note tag for pinning a collection that has no Syllabus note.
+ * Do not localize.
+ */
+export const PINNED_COLLECTION_TAG = "zotero-syllabus-pinned-collection";
 
 /** Stored Reading Schedule child folder name. Do not localize. */
 export const PINNED_FOLDER_NAME = "Pinned";
@@ -62,15 +70,17 @@ export type SyllabusItemProgress = {
 export type NextUpReading = {
   collection: Zotero.Collection;
   libraryID: number;
-  classNumber: number;
+  /** True when the collection has a Syllabus note (progress + class next-up). */
+  isSyllabus: boolean;
+  classNumber: number | null;
   classTitle: string;
-  /** First incomplete assignment (deep-link / flash target). */
-  item: Zotero.Item;
-  assignment: ItemSyllabusAssignment;
-  /** Up to 3 unread items in syllabus order for the cover stack. */
+  /** First incomplete assignment / first collection item (deep-link target). */
+  item: Zotero.Item | null;
+  assignment: ItemSyllabusAssignment | null;
+  /** Up to 3 items for the cover stack (unread assignments or collection items). */
   unreadItems: Zotero.Item[];
-  /** Class-aware item progress for the cover progress bar. */
-  progress: SyllabusItemProgress;
+  /** Class-aware progress; null for non-syllabus collections. */
+  progress: SyllabusItemProgress | null;
 };
 
 function resolveItem(id: number): Zotero.Item | null {
@@ -107,9 +117,28 @@ export function isPinnedSyllabusNote(item: Zotero.Item): boolean {
   return hasTagSafe(item, SYLLABUS_NOTE_TAG) && hasTagSafe(item, PINNED_TAG);
 }
 
+/** Marker note used to pin a collection that is not a syllabus. */
+export function isPinnedCollectionMarkerNote(item: Zotero.Item): boolean {
+  try {
+    if (!item.isNote() || !item.isTopLevelItem() || item.deleted) {
+      return false;
+    }
+  } catch {
+    return false;
+  }
+  return (
+    hasTagSafe(item, PINNED_COLLECTION_TAG) &&
+    hasTagSafe(item, PINNED_TAG) &&
+    !hasTagSafe(item, SYLLABUS_NOTE_TAG)
+  );
+}
+
 export function isPinnedSyllabus(collection: Zotero.Collection): boolean {
   const note = findSyllabusNoteForCollection(collection);
-  return note != null && hasTagSafe(note, PINNED_TAG);
+  if (note != null && hasTagSafe(note, PINNED_TAG)) {
+    return true;
+  }
+  return findPinnedCollectionMarker(collection) != null;
 }
 
 function findSyllabusNoteForCollection(
@@ -131,6 +160,82 @@ function findSyllabusNoteForCollection(
     return null;
   }
   return note;
+}
+
+function findPinnedCollectionMarker(
+  collection: Zotero.Collection,
+): Zotero.Item | null {
+  try {
+    const children = collection.getChildItems(false, false) || [];
+    for (const child of children) {
+      if (isPinnedCollectionMarkerNote(child)) {
+        return child;
+      }
+    }
+  } catch (error) {
+    ztoolkit.log("Error finding pinned collection marker:", error);
+  }
+  return null;
+}
+
+async function erasePinnedCollectionMarker(
+  collection: Zotero.Collection,
+): Promise<void> {
+  const marker = findPinnedCollectionMarker(collection);
+  if (!marker) {
+    return;
+  }
+  try {
+    await marker.eraseTx();
+  } catch (error) {
+    ztoolkit.log("Error erasing pinned collection marker:", error);
+  }
+}
+
+async function ensurePinnedCollectionMarker(
+  collection: Zotero.Collection,
+): Promise<Zotero.Item | null> {
+  const existing = findPinnedCollectionMarker(collection);
+  if (existing) {
+    if (!hasTagSafe(existing, PINNED_TAG)) {
+      existing.addTag(PINNED_TAG);
+      await existing.saveTx({ skipSelect: true });
+    }
+    return existing;
+  }
+  try {
+    const note = new Zotero.Item("note");
+    note.libraryID = collection.libraryID;
+    // Zotero 8: save before setNote / addToCollection / addTag.
+    await note.saveTx({ skipSelect: true });
+    try {
+      note.setNote("");
+    } catch {
+      // Ignore empty note failures.
+    }
+    try {
+      note.addToCollection(collection.id);
+    } catch (error) {
+      ztoolkit.log(
+        "addToCollection failed for pin marker, trying collection.addItem:",
+        error,
+      );
+      if (note.id) {
+        try {
+          await collection.addItem(note.id);
+        } catch (error2) {
+          ztoolkit.log("collection.addItem failed for pin marker:", error2);
+        }
+      }
+    }
+    note.addTag(PINNED_COLLECTION_TAG);
+    note.addTag(PINNED_TAG);
+    await note.saveTx({ skipSelect: true });
+    return note;
+  } catch (error) {
+    ztoolkit.log("Error creating pinned collection marker:", error);
+    return null;
+  }
 }
 
 async function searchTaggedItemIds(
@@ -201,7 +306,10 @@ export async function listPinnedSyllabi(
     const itemIds = await searchTaggedItemIds(id, PINNED_TAG);
     for (const itemId of itemIds) {
       const note = resolveItem(itemId);
-      if (!note || !isPinnedSyllabusNote(note)) {
+      if (
+        !note ||
+        (!isPinnedSyllabusNote(note) && !isPinnedCollectionMarkerNote(note))
+      ) {
         continue;
       }
       for (const collectionId of note.getCollections()) {
@@ -251,24 +359,41 @@ export async function setPinnedItem(
   notifyPinnedChanges();
 }
 
+/**
+ * Pin or unpin a collection. Syllabi store the pin on the Syllabus note;
+ * other collections use a lightweight marker note (no syllabus is created).
+ */
 export async function setPinnedSyllabus(
   collection: Zotero.Collection,
   pinned: boolean,
 ): Promise<boolean> {
   const note = findSyllabusNoteForCollection(collection);
-  if (!note) {
-    return false;
-  }
-  const currently = hasTagSafe(note, PINNED_TAG);
-  if (pinned === currently) {
+  if (note) {
+    await erasePinnedCollectionMarker(collection);
+    const currently = hasTagSafe(note, PINNED_TAG);
+    if (pinned === currently) {
+      return true;
+    }
+    if (pinned) {
+      note.addTag(PINNED_TAG);
+    } else {
+      note.removeTag(PINNED_TAG);
+    }
+    await note.saveTx({ skipSelect: true });
+    notifyPinnedChanges();
     return true;
   }
+
   if (pinned) {
-    note.addTag(PINNED_TAG);
-  } else {
-    note.removeTag(PINNED_TAG);
+    const marker = await ensurePinnedCollectionMarker(collection);
+    if (!marker) {
+      return false;
+    }
+    notifyPinnedChanges();
+    return true;
   }
-  await note.saveTx({ skipSelect: true });
+
+  await erasePinnedCollectionMarker(collection);
   notifyPinnedChanges();
   return true;
 }
@@ -615,12 +740,13 @@ export function getNextUpAssignment(
         next = {
           collection,
           libraryID,
+          isSyllabus: true,
           classNumber,
           classTitle: classMeta?.title || "",
           item: entry.item,
           assignment: entry.assignment,
           unreadItems: [],
-          progress: { done: 0, total: 0, percent: 0 },
+          progress: null,
         };
       }
       if (unreadItems.length < 3) {
@@ -638,6 +764,39 @@ export function getNextUpAssignment(
   next.unreadItems = unreadItems;
   next.progress = getSyllabusItemProgress(collection, doc);
   return next;
+}
+
+/** Cover-stack reading for a pinned non-syllabus collection. */
+export function getPinnedCollectionReading(
+  collection: Zotero.Collection,
+): NextUpReading {
+  const unreadItems = collectionRegularItems(collection).slice(0, 3);
+  return {
+    collection,
+    libraryID: collection.libraryID,
+    isSyllabus: false,
+    classNumber: null,
+    classTitle: "",
+    item: unreadItems[0] ?? null,
+    assignment: null,
+    unreadItems,
+    progress: null,
+  };
+}
+
+function collectionRegularItems(collection: Zotero.Collection): Zotero.Item[] {
+  try {
+    const children = collection.getChildItems(false, false) || [];
+    return children.filter((item) => {
+      try {
+        return item.isRegularItem() && !item.deleted;
+      } catch {
+        return false;
+      }
+    });
+  } catch {
+    return [];
+  }
 }
 
 function resolveLibraryItem(
@@ -672,13 +831,17 @@ function resolveLibraryItem(
 export async function listNextUpReadings(
   libraryID?: number,
 ): Promise<NextUpReading[]> {
-  const syllabi = await listPinnedSyllabi(libraryID);
+  const collections = await listPinnedSyllabi(libraryID);
   const readings: NextUpReading[] = [];
-  for (const collection of syllabi) {
-    const next = getNextUpAssignment(collection);
-    if (next) {
-      readings.push(next);
+  for (const collection of collections) {
+    if (collectionHasSyllabusNote(collection)) {
+      const next = getNextUpAssignment(collection);
+      if (next) {
+        readings.push(next);
+      }
+      continue;
     }
+    readings.push(getPinnedCollectionReading(collection));
   }
   return readings;
 }

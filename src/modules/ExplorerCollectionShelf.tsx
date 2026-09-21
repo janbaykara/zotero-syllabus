@@ -27,6 +27,7 @@ import { SyllabusManager } from "./syllabus";
 import { collectionHasSyllabusNote } from "./syllabusNote";
 import { GalleryTile, GalleryGroupIcon } from "./GalleryPage";
 import type { GalleryGroupIconSpec } from "./galleryGroupNav";
+import { collectionGroupIconSpec } from "./galleryGroupNav";
 import { MagazineGrid, type MagazineTileClick } from "./MagazineTile";
 import { SlimSyllabusItemCard } from "./browsePage";
 import type { GalleryLayout } from "./galleryLayout";
@@ -429,7 +430,7 @@ function buildSubcollectionSegments(
     segments.push({
       key: `col-${child.collectionId}`,
       title: child.name,
-      icon: { kind: "collection" },
+      icon: collectionGroupIconSpec(child.collectionId),
       items,
       onOpen: () => onOpenCollection(child.collectionId),
     });

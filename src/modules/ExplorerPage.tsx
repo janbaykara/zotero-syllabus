@@ -204,9 +204,14 @@ function CatalogRowIcon({
   size?: number;
 }) {
   if (shelf.type === "collection") {
+    const collection = collectionForShelf(shelf);
+    const iconKind =
+      collection && collectionHasSyllabusNote(collection.id)
+        ? "icon-syllabus-collection"
+        : "icon-collection";
     return (
       <span
-        className="icon icon-css icon-collection syllabus-gallery-group-icon"
+        className={`icon icon-css ${iconKind} syllabus-gallery-group-icon`}
         aria-hidden="true"
       />
     );
@@ -1693,7 +1698,11 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                             onClick={openCollection}
                           >
                             <span
-                              className="icon icon-css icon-collection syllabus-gallery-group-icon"
+                              className={`icon icon-css ${
+                                collectionHasSyllabusNote(collectionId)
+                                  ? "icon-syllabus-collection"
+                                  : "icon-collection"
+                              } syllabus-gallery-group-icon`}
                               aria-hidden="true"
                             />
                             <span>{heading}</span>

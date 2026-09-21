@@ -75,6 +75,7 @@ import { useGalleryGroupBy, type GalleryGroupBy } from "./galleryGroupBy";
 import {
   findActiveGalleryGroupId,
   flattenSubcollectionNavGroups,
+  collectionGroupIconSpec,
   scrollChildIntoNearestHorizontal,
   scrollElementBelowSticky,
   type GalleryGroupIconSpec,
@@ -1083,6 +1084,14 @@ export function GalleryGroupIcon({ spec }: { spec: GalleryGroupIconSpec }) {
       />
     );
   }
+  if (spec.kind === "syllabus" || spec.kind === "class") {
+    return (
+      <span
+        className="icon icon-css icon-syllabus-collection syllabus-gallery-group-icon"
+        aria-hidden="true"
+      />
+    );
+  }
   const Icon =
     spec.kind === "creator"
       ? User
@@ -1094,9 +1103,7 @@ export function GalleryGroupIcon({ spec }: { spec: GalleryGroupIconSpec }) {
             ? Tag
             : spec.kind === "collection-root"
               ? FolderOpen
-              : spec.kind === "class"
-                ? GraduationCap
-                : BookOpen;
+              : BookOpen;
   return (
     <Icon
       className="syllabus-gallery-group-icon"
@@ -1182,7 +1189,7 @@ function GallerySubcollectionSection({
       data-gallery-group={isRoot ? undefined : `col-${node.collectionId}`}
     >
       {!isRoot && (
-        <GalleryGroupHeading icon={{ kind: "collection" }}>
+        <GalleryGroupHeading icon={collectionGroupIconSpec(node.collectionId)}>
           {node.name}
         </GalleryGroupHeading>
       )}
@@ -1858,7 +1865,9 @@ export const GalleryTile = memo(function GalleryTile({
         className={twMerge(
           "min-w-0",
           chrome?.onUnpin && "flex flex-row items-start gap-0.5",
-          !chrome?.onUnpin && chrome?.readerMode && "flex flex-row items-start gap-1.5",
+          !chrome?.onUnpin &&
+            chrome?.readerMode &&
+            "flex flex-row items-start gap-1.5",
         )}
       >
         {chrome?.onUnpin ? (

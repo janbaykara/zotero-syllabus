@@ -1,11 +1,16 @@
 import { assert } from "chai";
 import {
   getNextUpAssignment,
+  getPinnedCollectionReading,
   getSyllabusItemProgress,
+  isPinnedCollectionMarkerNote,
   isPinnedItem,
+  isPinnedSyllabus,
   noteHtmlToPlainText,
+  PINNED_COLLECTION_TAG,
   PINNED_TAG,
   setPinnedItem,
+  setPinnedSyllabus,
 } from "../src/modules/pinned";
 import { PINNED_FOLDER_NAME } from "../src/modules/readingScheduleCollection";
 import { CollectionSyllabusDocumentSchema } from "../src/utils/schemas";
@@ -105,9 +110,10 @@ describe("pinned", function () {
 
       const next = getNextUpAssignment(collection, document);
       assert.isNotNull(next);
-      assert.equal(next!.item.id, second.id);
+      assert.isTrue(next!.isSyllabus);
+      assert.equal(next!.item!.id, second.id);
       assert.equal(next!.classNumber, 2);
-      assert.equal(next!.assignment.id, "a2");
+      assert.equal(next!.assignment!.id, "a2");
       assert.deepEqual(
         next!.unreadItems.map((item) => item.id),
         [second.id],
@@ -193,5 +199,42 @@ describe("pinned", function () {
       total: 4,
       percent: 75,
     });
+  });
+
+  it("pins a non-syllabus collection via a marker note", async function () {
+    const collection = new Zotero.Collection();
+    collection.libraryID = Zotero.Libraries.userLibraryID;
+    collection.name = "Pinned plain collection";
+    await collection.saveTx();
+
+    try {
+      assert.isFalse(isPinnedSyllabus(collection));
+      const ok = await setPinnedSyllabus(collection, true);
+      assert.isTrue(ok);
+      assert.isTrue(isPinnedSyllabus(collection));
+
+      const children = collection.getChildItems(false, false) || [];
+      const marker = children.find((item) =>
+        isPinnedCollectionMarkerNote(item),
+      );
+      assert.isOk(marker);
+      assert.isTrue(marker!.hasTag(PINNED_COLLECTION_TAG));
+      assert.isTrue(marker!.hasTag(PINNED_TAG));
+      items.push(marker!);
+
+      const reading = getPinnedCollectionReading(collection);
+      assert.isFalse(reading.isSyllabus);
+      assert.isNull(reading.progress);
+      assert.isNull(reading.classNumber);
+
+      await setPinnedSyllabus(collection, false);
+      assert.isFalse(isPinnedSyllabus(collection));
+    } finally {
+      try {
+        await collection.eraseTx({ deleteItems: true });
+      } catch {
+        /* ignore */
+      }
+    }
   });
 });
