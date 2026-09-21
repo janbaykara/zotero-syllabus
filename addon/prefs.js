@@ -9,6 +9,8 @@ pref("enableGallery", false);
 pref("enableExplorer", false);
 pref("enableReadingSchedule", false);
 pref("enableAnnotations", false);
+pref("myAnnotationsCopyBlockquote", false);
+pref("myAnnotationsCopyCiteKey", false);
 pref("optionalFeaturesPromptDone", false);
 pref("latestTourVersion", 0);
 pref("latestGalleryTourVersion", 0);

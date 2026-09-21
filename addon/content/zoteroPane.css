@@ -2487,31 +2487,21 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   box-sizing: border-box;
 }
 
-/* Match header + body to the same desktop inset as container-padded
-   (max-w-4xl + px-6 / md:px-10). Unlayered so sticky children can't lose
-   the constraint to @layer components. */
-.syllabus-my-annotations-order-toggle {
-  gap: 0.5rem;
-}
-
-.syllabus-my-annotations-inset {
-  box-sizing: border-box;
-  width: 100%;
+/* Unlayered inset matching Reading Schedule container-padded, so header and
+   stream share one width even if @layer utilities lose the cascade. */
+.syllabus-my-annotations-page .container-padded {
   max-width: var(--container-4xl, 56rem);
   margin-inline: auto;
   padding-inline: 1.5rem;
+  width: auto;
+  box-sizing: content-box;
   min-width: 0;
 }
 
 @media (width >= 48rem) {
-  .syllabus-my-annotations-inset {
+  .syllabus-my-annotations-page .container-padded {
     padding-inline: 2.5rem;
   }
-}
-
-.syllabus-my-annotations-body {
-  box-sizing: border-box;
-  min-width: 0;
 }
 
 .syllabus-my-annotations-stream {
@@ -2589,25 +2579,140 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   gap: 1.15rem;
 }
 
+.syllabus-my-annotations-stream-copy-all-wrap {
+  display: flex;
+  justify-content: flex-end;
+  margin-block-start: 0.35rem;
+}
+
+.syllabus-my-annotations-stream-copy-all {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: none;
+  background: transparent;
+  color: var(--fill-secondary, #888);
+  padding: 0.2rem 0.35rem;
+  border-radius: 0.3rem;
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    color 0.12s ease,
+    background 0.12s ease;
+}
+
+.syllabus-my-annotations-stream-entry:hover
+  .syllabus-my-annotations-stream-copy-all,
+.syllabus-my-annotations-stream-entry:focus-within
+  .syllabus-my-annotations-stream-copy-all,
+.syllabus-my-annotations-stream-copy-all:focus-visible,
+.syllabus-my-annotations-stream-copy-all.is-copied {
+  opacity: 1;
+}
+
+.syllabus-my-annotations-stream-copy-all:hover {
+  color: var(--fill-primary, inherit);
+  background: color-mix(in srgb, var(--fill-secondary, #888) 12%, transparent);
+}
+
+.syllabus-my-annotations-stream-copy-all.is-copied {
+  color: var(--accent-green, #15803d);
+  background: color-mix(in srgb, var(--accent-green, #15803d) 12%, transparent);
+}
+
+.syllabus-my-annotations-stream-copy-all:focus-visible {
+  outline: 2px solid var(--accent-blue, #1d4ed8);
+  outline-offset: 1px;
+}
+
+.syllabus-my-annotations-stream-body-wrap {
+  min-width: 0;
+  padding: 0.35rem 0.45rem;
+  margin: -0.35rem -0.45rem;
+  border-radius: 0.35rem;
+}
+
+.syllabus-my-annotations-stream-body-wrap:hover {
+  background: color-mix(in srgb, var(--fill-secondary, #888) 10%, transparent);
+}
+
 .syllabus-my-annotations-stream-body {
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
-  padding: 0.35rem 0.45rem;
-  margin: -0.35rem -0.45rem;
-  border-radius: 0.35rem;
+  outline: none;
+}
+
+.syllabus-my-annotations-stream-quote,
+.syllabus-my-annotations-stream-comment {
   cursor: pointer;
   outline: none;
 }
 
-.syllabus-my-annotations-stream-body:hover {
-  background: color-mix(in srgb, var(--fill-secondary, #888) 10%, transparent);
-}
-
-.syllabus-my-annotations-stream-body:focus-visible {
+.syllabus-my-annotations-stream-quote:focus-visible,
+.syllabus-my-annotations-stream-comment:focus-visible {
   outline: 2px solid var(--accent-blue, #1d4ed8);
   outline-offset: 1px;
+  border-radius: 0.25rem;
+}
+
+.syllabus-my-annotations-stream-copy {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: none;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-size: inherit;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.syllabus-my-annotations-stream-meta-sep.syllabus-my-annotations-stream-copy-sep {
+  opacity: 0;
+}
+
+.syllabus-my-annotations-stream-body-wrap:hover
+  .syllabus-my-annotations-stream-copy,
+.syllabus-my-annotations-stream-body-wrap:focus-within
+  .syllabus-my-annotations-stream-copy,
+.syllabus-my-annotations-stream-copy:focus-visible,
+.syllabus-my-annotations-stream-copy.is-copied {
+  opacity: 1;
+}
+
+.syllabus-my-annotations-stream-body-wrap:hover
+  .syllabus-my-annotations-stream-meta-sep.syllabus-my-annotations-stream-copy-sep,
+.syllabus-my-annotations-stream-body-wrap:focus-within
+  .syllabus-my-annotations-stream-meta-sep.syllabus-my-annotations-stream-copy-sep,
+.syllabus-my-annotations-stream-body-wrap:has(
+    .syllabus-my-annotations-stream-copy.is-copied
+  )
+  .syllabus-my-annotations-stream-meta-sep.syllabus-my-annotations-stream-copy-sep {
+  opacity: 0.7;
+}
+
+.syllabus-my-annotations-stream-copy:hover {
+  color: var(--fill-primary, inherit);
+}
+
+.syllabus-my-annotations-stream-copy.is-copied {
+  color: var(--accent-green, #15803d);
+}
+
+.syllabus-my-annotations-stream-copy:focus-visible {
+  outline: 2px solid var(--accent-blue, #1d4ed8);
+  outline-offset: 1px;
+  border-radius: 0.2rem;
 }
 
 .syllabus-my-annotations-stream-quote {
@@ -2642,7 +2747,7 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: 0.35rem;
   font-size: 0.78rem;
   color: var(--fill-secondary, #888);

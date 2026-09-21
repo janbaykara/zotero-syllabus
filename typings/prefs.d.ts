@@ -18,6 +18,8 @@ declare namespace _ZoteroTypes {
       "enableExplorer": boolean;
       "enableReadingSchedule": boolean;
       "enableAnnotations": boolean;
+      "myAnnotationsCopyBlockquote": boolean;
+      "myAnnotationsCopyCiteKey": boolean;
       "optionalFeaturesPromptDone": boolean;
       "latestTourVersion": number;
       "latestGalleryTourVersion": number;

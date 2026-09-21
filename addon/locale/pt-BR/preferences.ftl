@@ -36,6 +36,13 @@ pref-enable-reading-schedule-desc = Open a calendar tab that gathers class due d
 pref-enable-annotations =
     .label = Annotation Feed tab
 pref-enable-annotations-desc = Open a timeline of your annotation highlights and notes across sources.
+pref-my-annotations-copy-blockquote =
+    .label = Prefix copied annotations with Markdown blockquotes (>)
+pref-my-annotations-copy-blockquote-desc = When copying from Annotation Feed, wrap each annotation as a Markdown blockquote.
+pref-my-annotations-copy-cite-key =
+    .label = Append Pandoc cite keys ({"[@…]"}) when copying
+pref-my-annotations-copy-cite-key-desc = Add {"[@citationKey]"} after each copied annotation (from Better BibTeX or the item Citation Key field).
+
 pref-show-bibliography =
     .label = Mostrar bibliografia
 pref-show-bibliography-desc = Include a bibliography section at the bottom of the Syllabus view.

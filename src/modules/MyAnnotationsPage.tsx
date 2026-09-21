@@ -6,23 +6,28 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
 } from "preact/hooks";
 import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
-import { ArrowDown, ArrowUp } from "lucide-preact";
+import { Check, Copy } from "lucide-preact";
 import { isZotero8OrLater } from "../utils/zotero";
 import {
   openAnnotationIdInReader,
   openItemBestAttachment,
 } from "../utils/items";
+import { copyStringToClipboard } from "../utils/clipboard";
+import { getItemCitationKey } from "../utils/citeKey";
 import { getString, getUiDir } from "../utils/locale";
 import { formatRelativeTimestamp } from "../utils/dates";
 import { openZoteroItemContextMenu } from "../utils/itemContextMenu";
 import { renderComponent } from "../utils/react";
+import { getPref } from "../utils/prefs";
 import {
   useMyAnnotationsOrder,
   type MyAnnotationsOrder,
 } from "./myAnnotationsPrefs";
+import { MyAnnotationsMenu } from "./MyAnnotationsMenu";
 import { GalleryViewportProvider } from "./galleryVisibility";
 import { useItemIdentifierSelection } from "./browsePage";
 import type { MagazineTileClick } from "./MagazineTile";
@@ -31,6 +36,73 @@ import {
   useMyAnnotationsStream,
   type MyAnnotationStreamEntry,
 } from "./explorerQueries";
+
+/** Prefix each line for a Markdown blockquote (blank lines become `>`). */
+function toMarkdownBlockquote(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => (line.length ? `> ${line}` : ">"))
+    .join("\n");
+}
+
+/** Plain text for clipboard: quote and/or comment, optional blockquote + cite key. */
+function formatAnnotationCopyText(entry: MyAnnotationStreamEntry): string {
+  const blockquote = getPref("myAnnotationsCopyBlockquote");
+  const parts: string[] = [];
+  if (entry.quote) {
+    parts.push(blockquote ? toMarkdownBlockquote(entry.quote) : entry.quote);
+  }
+  if (entry.comment) {
+    parts.push(entry.comment);
+  }
+  let text = parts.join("\n\n");
+  if (!text) {
+    return "";
+  }
+  if (getPref("myAnnotationsCopyCiteKey")) {
+    const citeKey = getItemCitationKey(entry.parent);
+    if (citeKey) {
+      text = `${text} [@${citeKey}]`;
+    }
+  }
+  return text;
+}
+
+function formatGroupCopyText(entries: MyAnnotationStreamEntry[]): string {
+  return entries
+    .map((entry) => formatAnnotationCopyText(entry))
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+const COPY_FLASH_MS = 900;
+
+/** Brief “Copied” flash after a successful clipboard write. */
+function useCopyFlash() {
+  const [flashed, setFlashed] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current != null) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
+
+  const flash = useCallback(() => {
+    setFlashed(true);
+    if (timerRef.current != null) {
+      clearTimeout(timerRef.current);
+    }
+    timerRef.current = setTimeout(() => {
+      setFlashed(false);
+      timerRef.current = null;
+    }, COPY_FLASH_MS);
+  }, []);
+
+  return [flashed, flash] as const;
+}
 
 function dateMs(value: string | undefined): number {
   const parsed = Date.parse(value || "");
@@ -106,67 +178,128 @@ function AnnotationStreamBody({ entry }: { entry: MyAnnotationStreamEntry }) {
   const pageText = entry.pageLabel
     ? formatAnnotationPageLabel(entry.pageLabel)
     : "";
+  const copyText = formatAnnotationCopyText(entry);
+  const [copied, flashCopied] = useCopyFlash();
+  const openInReader = () => {
+    openAnnotationIdInReader(entry.id);
+  };
+  const onOpenKeyDown = (e: JSX.TargetedKeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      e.stopPropagation();
+      openInReader();
+    }
+  };
+  const showMeta = !!(pageText || stamp || copyText);
+  const copyLabel = copied
+    ? getString("my-annotations-copied")
+    : getString("my-annotations-copy");
+
   return (
     <div
-      className="syllabus-my-annotations-stream-body min-w-0"
+      className="syllabus-my-annotations-stream-body-wrap min-w-0"
       data-annotation-id={entry.id}
-      role="button"
-      tabIndex={0}
-      title={getString("my-annotations-open-in-reader")}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        openAnnotationIdInReader(entry.id);
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          e.stopPropagation();
-          openAnnotationIdInReader(entry.id);
-        }
-      }}
     >
-      {entry.quote ? (
-        <div className="syllabus-my-annotations-stream-quote">
-          <mark
-            className="syllabus-magazine-highlight-mark"
-            style={{ "--highlight-color": entry.color } as JSX.CSSProperties}
+      <div className="syllabus-my-annotations-stream-body min-w-0">
+        {entry.quote ? (
+          <div
+            className="syllabus-my-annotations-stream-quote"
+            role="button"
+            tabIndex={0}
+            title={getString("my-annotations-open-in-reader")}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              openInReader();
+            }}
+            onKeyDown={onOpenKeyDown}
           >
-            {entry.quote}
-          </mark>
-        </div>
-      ) : null}
-      {pageText || stamp ? (
-        <div className="syllabus-my-annotations-stream-meta">
-          {pageText ? (
-            <span className="syllabus-my-annotations-stream-location">
-              {pageText}
-            </span>
-          ) : null}
-          {pageText && stamp ? (
-            <span
-              className="syllabus-my-annotations-stream-meta-sep"
-              aria-hidden="true"
+            <mark
+              className="syllabus-magazine-highlight-mark"
+              style={{ "--highlight-color": entry.color } as JSX.CSSProperties}
             >
-              ·
-            </span>
-          ) : null}
-          {stamp ? (
-            <time
-              className="syllabus-my-annotations-stream-time"
-              dateTime={stamp.iso}
-              title={stamp.absolute}
-            >
-              {stamp.relative}
-            </time>
-          ) : null}
-        </div>
-      ) : null}
-      {entry.comment ? (
-        <div className="syllabus-my-annotations-stream-comment">
-          {entry.comment}
-        </div>
-      ) : null}
+              {entry.quote}
+            </mark>
+          </div>
+        ) : null}
+        {showMeta ? (
+          <div className="syllabus-my-annotations-stream-meta">
+            {pageText ? (
+              <span className="syllabus-my-annotations-stream-location">
+                {pageText}
+              </span>
+            ) : null}
+            {pageText && stamp ? (
+              <span
+                className="syllabus-my-annotations-stream-meta-sep"
+                aria-hidden="true"
+              >
+                ·
+              </span>
+            ) : null}
+            {stamp ? (
+              <time
+                className="syllabus-my-annotations-stream-time"
+                dateTime={stamp.iso}
+                title={stamp.absolute}
+              >
+                {stamp.relative}
+              </time>
+            ) : null}
+            {copyText ? (
+              <>
+                {pageText || stamp ? (
+                  <span
+                    className="syllabus-my-annotations-stream-meta-sep syllabus-my-annotations-stream-copy-sep"
+                    aria-hidden="true"
+                  >
+                    ·
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  className={twMerge(
+                    "syllabus-my-annotations-stream-copy",
+                    copied && "is-copied",
+                  )}
+                  title={copyLabel}
+                  aria-label={copyLabel}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (copyStringToClipboard(copyText)) {
+                      flashCopied();
+                    }
+                  }}
+                >
+                  {copied ? (
+                    <Check size={11} strokeWidth={2.5} aria-hidden="true" />
+                  ) : (
+                    <Copy size={11} strokeWidth={2} aria-hidden="true" />
+                  )}
+                  {copyLabel}
+                </button>
+              </>
+            ) : null}
+          </div>
+        ) : null}
+        {entry.comment ? (
+          <div
+            className="syllabus-my-annotations-stream-comment"
+            role="button"
+            tabIndex={0}
+            title={getString("my-annotations-open-in-reader")}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              openInReader();
+            }}
+            onKeyDown={onOpenKeyDown}
+          >
+            {entry.comment}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -191,6 +324,13 @@ function AnnotationStreamGroup({
       openItemBestAttachment(parent);
     }
   }, [group.entries, parent]);
+
+  const groupCopyText = formatGroupCopyText(group.entries);
+  const showCopyAll = !!groupCopyText;
+  const [copiedAll, flashCopiedAll] = useCopyFlash();
+  const copyAllLabel = copiedAll
+    ? getString("my-annotations-copied")
+    : getString("my-annotations-copy-all");
 
   return (
     <article
@@ -220,6 +360,33 @@ function AnnotationStreamGroup({
         ) : (
           <div className="syllabus-my-annotations-stream-avatar-empty" />
         )}
+        {showCopyAll ? (
+          <div className="syllabus-my-annotations-stream-copy-all-wrap">
+            <button
+              type="button"
+              className={twMerge(
+                "syllabus-my-annotations-stream-copy-all",
+                copiedAll && "is-copied",
+              )}
+              title={copyAllLabel}
+              aria-label={copyAllLabel}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (copyStringToClipboard(groupCopyText)) {
+                  flashCopiedAll();
+                }
+              }}
+            >
+              {copiedAll ? (
+                <Check size={12} strokeWidth={2.5} aria-hidden="true" />
+              ) : (
+                <Copy size={12} strokeWidth={2} aria-hidden="true" />
+              )}
+              {copyAllLabel}
+            </button>
+          </div>
+        ) : null}
       </div>
       <div className="syllabus-my-annotations-stream-stack min-w-0">
         {group.entries.map((entry) => (
@@ -227,62 +394,6 @@ function AnnotationStreamGroup({
         ))}
       </div>
     </article>
-  );
-}
-
-function OrderToggle({
-  order,
-  onOrder,
-}: {
-  order: MyAnnotationsOrder;
-  onOrder: (mode: MyAnnotationsOrder) => void;
-}) {
-  const options: {
-    mode: MyAnnotationsOrder;
-    label: string;
-    title: string;
-    Icon: typeof ArrowDown;
-  }[] = [
-    {
-      mode: "newestLast",
-      label: getString("my-annotations-order-newest-last"),
-      title: getString("my-annotations-order-newest-last-title"),
-      Icon: ArrowDown,
-    },
-    {
-      mode: "newestFirst",
-      label: getString("my-annotations-order-newest-first"),
-      title: getString("my-annotations-order-newest-first-title"),
-      Icon: ArrowUp,
-    },
-  ];
-  return (
-    <div
-      role="radiogroup"
-      aria-label={getString("view-tab-my-annotations")}
-      className="syllabus-explorer-layout-toggle syllabus-my-annotations-order-toggle"
-    >
-      {options.map(({ mode, label, title, Icon }) => {
-        const selected = order === mode;
-        return (
-          <button
-            key={mode}
-            type="button"
-            role="radio"
-            aria-checked={selected}
-            title={title}
-            className={twMerge(
-              "syllabus-explorer-layout-btn",
-              selected && "is-selected",
-            )}
-            onClick={() => onOrder(mode)}
-          >
-            <Icon size={12} strokeWidth={2} aria-hidden="true" />
-            {label}
-          </button>
-        );
-      })}
-    </div>
   );
 }
 
@@ -455,19 +566,19 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
 
   return (
     <div
-      className="syllabus-page syllabus-my-annotations-page overflow-y-auto overflow-x-hidden h-full"
+      className="syllabus-page syllabus-my-annotations-page overflow-y-auto overflow-x-hidden h-full bg-background"
       dir={getUiDir()}
       ref={pageRef}
     >
       <div
         ref={headerRef}
         className={twMerge(
-          "sticky top-0 z-20 bg-background py-1",
+          "sticky top-0 z-20 w-full bg-background py-1",
           isZotero8OrLater() ? "pt-4 md:pt-8" : "pt-8",
         )}
       >
-        <div className="syllabus-my-annotations-inset bg-background">
-          <div className="flex flex-row items-start gap-2 justify-between">
+        <div className="container-padded bg-background">
+          <div className="flex flex-row items-center gap-2 justify-between">
             <div className="min-w-0">
               <div className="font-semibold text-3xl">
                 {getString("view-tab-my-annotations")}
@@ -476,12 +587,14 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
                 {getString("my-annotations-desc")}
               </p>
             </div>
-            <OrderToggle order={order} onOrder={handleOrderChange} />
+            <div className="inline-flex items-center gap-2.5 shrink grow-0">
+              <MyAnnotationsMenu order={order} onOrder={handleOrderChange} />
+            </div>
           </div>
         </div>
       </div>
       <GalleryViewportProvider rootRef={pageRef}>
-        <div className="syllabus-my-annotations-body syllabus-my-annotations-stream syllabus-my-annotations-inset pt-6 pb-10 flex flex-col gap-6 min-w-0">
+        <div className="syllabus-my-annotations-body syllabus-my-annotations-stream container-padded pt-6 pb-10 flex flex-col gap-6 min-w-0">
           {order === "newestLast" ? loadPreviousControl : null}
           {loading && displayRows.length === 0 ? (
             <p className="text-secondary text-base">

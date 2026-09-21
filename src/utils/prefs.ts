@@ -39,6 +39,8 @@ export const PLUGIN_PREF_DEFAULTS: {
   enableExplorer: false,
   enableReadingSchedule: false,
   enableAnnotations: false,
+  myAnnotationsCopyBlockquote: false,
+  myAnnotationsCopyCiteKey: false,
   optionalFeaturesPromptDone: false,
   latestTourVersion: 0,
   latestGalleryTourVersion: 0,
