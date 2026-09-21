@@ -18,6 +18,14 @@ type CollectionContextMenuPane = {
 /** Test seam: pass a stub pane instead of the live ZoteroPane. */
 export type CollectionContextMenuPaneLike = CollectionContextMenuPane;
 
+function logContextMenuError(message: string, error: unknown): void {
+  try {
+    ztoolkit.log(message, error);
+  } catch {
+    // Tests (and early boot) may not have ztoolkit.
+  }
+}
+
 function getCollectionContextMenuPane(): CollectionContextMenuPane | undefined {
   try {
     return ztoolkit.getGlobal("ZoteroPane") as
@@ -39,7 +47,7 @@ async function selectCollectionForContextMenu(
     await pane.collectionsView.selectByID(treeViewID);
     return true;
   } catch (error) {
-    ztoolkit.log("Error selecting collection for context menu:", error);
+    logContextMenuError("Error selecting collection for context menu:", error);
     return false;
   }
 }
@@ -87,6 +95,6 @@ export async function openZoteroCollectionContextMenu(
     const { x, y } = itemContextMenuScreenPoint(event, fallbackElement);
     await pane.onCollectionsContextMenuOpen(event, x, y);
   } catch (err) {
-    ztoolkit.log("Error opening collection context menu:", err);
+    logContextMenuError("Error opening collection context menu:", err);
   }
 }
