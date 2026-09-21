@@ -374,7 +374,7 @@ export function openItemBestAttachment(item: Zotero.Item): void {
   });
   if (viewableAttachment) {
     const pane = ztoolkit.getGlobal("ZoteroPane");
-    void pane.viewPDF(viewableAttachment, { page: 1 } as any);
+    void pane.viewPDF(viewableAttachment);
     return;
   }
   const url = item.getField("url");

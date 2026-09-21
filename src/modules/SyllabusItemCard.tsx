@@ -419,7 +419,7 @@ export function SyllabusItemCard({
     // If there's an attachment, go to it
     if (viewableAttachment) {
       const pane = ztoolkit.getGlobal("ZoteroPane");
-      pane.viewPDF(viewableAttachment, { page: 1 } as any);
+      pane.viewPDF(viewableAttachment);
     } else if (url) {
       Zotero.launchURL(url);
     }
@@ -433,7 +433,7 @@ export function SyllabusItemCard({
 
     try {
       const pane = ztoolkit.getGlobal("ZoteroPane");
-      await pane.viewPDF(viewableAttachment.item.id, { page: 1 } as any);
+      await pane.viewPDF(viewableAttachment.item.id);
     } catch {
       try {
         const file = viewableAttachment.item.getFilePath();
