@@ -321,10 +321,7 @@ export function ClassReadingBlock({
               collectionId: classReading.collectionId,
               assignment,
               classNumber: classReading.classNumber,
-              slim:
-                density !== "expanded" ||
-                !assignment.priority ||
-                assignment.priority === "optional",
+              slim: true,
               contextLabel: readingContextLabel({
                 collectionId: classReading.collectionId,
                 classNumber: classReading.classNumber,

@@ -277,7 +277,6 @@ export function ReadingItemsLayout({
         if (!row.assignment?.id) {
           return null;
         }
-        const priority = row.assignment.priority || "";
         return (
           <SyllabusItemCard
             key={row.key}
@@ -285,10 +284,7 @@ export function ReadingItemsLayout({
             collectionId={row.collectionId}
             classNumber={row.classNumber ?? undefined}
             assignment={row.assignment}
-            slim={
-              row.slim ??
-              (density !== "expanded" || !priority || priority === "optional")
-            }
+            slim={row.slim ?? true}
             density={density}
             readerMode={readerMode || Boolean(row.onReaderCheck)}
             onReaderCheck={row.onReaderCheck}

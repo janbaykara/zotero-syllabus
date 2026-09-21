@@ -59,8 +59,13 @@ function ReadingScheduleHeader({
     >
       <div className="container-padded bg-background">
         <div className="flex flex-row items-center gap-2 justify-between">
-          <div className={twMerge("font-semibold text-3xl")}>
-            {getString("view-tab-reading-schedule")}
+          <div className="min-w-0">
+            <div className="font-semibold text-3xl">
+              {getString("view-tab-reading-schedule")}
+            </div>
+            <p className="text-secondary text-base mt-1">
+              {getString("reading-schedule-desc")}
+            </p>
           </div>
           <div className="inline-flex items-center gap-2.5 shrink grow-0">
             <SyllabusViewMenu

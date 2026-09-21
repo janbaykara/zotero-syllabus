@@ -639,7 +639,6 @@ export function ClassGroupComponent({
               }
 
               // Use assignment priority directly
-              const priority = assignment.priority || "";
               // Generate unique key using assignment ID - REQUIRED
               const uniqueKey = `${item.id}-assignment-${assignment.id}`;
 
@@ -650,11 +649,7 @@ export function ClassGroupComponent({
                   collectionId={collectionId}
                   classNumber={classNumber ?? undefined}
                   assignment={assignment}
-                  slim={
-                    density !== "expanded" ||
-                    !priority ||
-                    priority === "optional"
-                  }
+                  slim={true}
                   density={density}
                   readerMode={readerMode}
                   isLocked={isLocked}

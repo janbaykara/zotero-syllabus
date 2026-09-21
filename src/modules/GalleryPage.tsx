@@ -740,7 +740,6 @@ export function GalleryPage({
           if (!assignment.id) {
             return null;
           }
-          const priority = assignment.priority || "";
           return (
             <SyllabusItemCard
               key={`${keyPrefix}-${item.id}-${assignment.id}`}
@@ -748,9 +747,7 @@ export function GalleryPage({
               collectionId={collectionIdOrZero}
               classNumber={classNumber ?? undefined}
               assignment={assignment}
-              slim={
-                density !== "expanded" || !priority || priority === "optional"
-              }
+              slim={true}
               density={density}
               readerMode={false}
               isLocked={true}
