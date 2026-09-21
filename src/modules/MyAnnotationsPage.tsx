@@ -48,19 +48,20 @@ function toMarkdownBlockquote(text: string): string {
 /** Plain text for clipboard: quote and/or comment, optional blockquote + cite key. */
 function formatAnnotationCopyText(entry: MyAnnotationStreamEntry): string {
   const blockquote = getPref("myAnnotationsCopyBlockquote");
+  const citeKey = getPref("myAnnotationsCopyCiteKey");
   const parts: string[] = [];
   if (entry.quote) {
-    parts.push(blockquote ? toMarkdownBlockquote(entry.quote) : entry.quote);
-  }
-  if (entry.comment) {
-    let comment = entry.comment;
-    if (getPref("myAnnotationsCopyCiteKey")) {
+    let quote = entry.quote;
+    if (citeKey) {
       const citeKey = getItemCitationKey(entry.parent);
       if (citeKey) {
-        comment = `${comment} [@${citeKey}]`;
+        quote = `${quote} [@${citeKey}]`;
       }
     }
-    parts.push(comment);
+    parts.push(blockquote ? toMarkdownBlockquote(quote) : quote);
+  }
+  if (entry.comment) {
+    parts.push(entry.comment);
   }
   const text = parts.join("\n\n");
   if (!text) {
