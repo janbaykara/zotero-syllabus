@@ -56,14 +56,14 @@ function formatAnnotationCopyText(entry: MyAnnotationStreamEntry): string {
     parts.push(entry.comment);
   }
   let text = parts.join("\n\n");
-  if (!text) {
-    return "";
-  }
   if (getPref("myAnnotationsCopyCiteKey")) {
     const citeKey = getItemCitationKey(entry.parent);
     if (citeKey) {
       text = `${text} [@${citeKey}]`;
     }
+  }
+  if (!text) {
+    return "";
   }
   return text;
 }

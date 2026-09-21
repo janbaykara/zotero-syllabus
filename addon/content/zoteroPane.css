@@ -722,6 +722,40 @@
   max-width: 100%;
 }
 
+/* Reading Schedule: stacked sticky bands under the page header.
+   Offsets are measured in ReadingSchedule via --syllabus-schedule-sticky-*. */
+.syllabus-schedule-sticky-week,
+.syllabus-schedule-sticky-date,
+.syllabus-schedule-sticky-class {
+  position: sticky;
+  z-index: 10;
+  width: 100%;
+  box-sizing: border-box;
+  /* Opaque chrome so scrolling content cannot show between stacked bands. */
+  background-color: var(--color-background, var(--material-background, #fff));
+  /* Seal 1px seams from subpixel rounding between stacked stickies. */
+  box-shadow: 0 1px 0 var(--color-background, var(--material-background, #fff));
+}
+
+.syllabus-schedule-sticky-week {
+  /* Fallback ≈ title + subtitle header; JS/inline style overrides when measured. */
+  top: var(--syllabus-schedule-sticky-top, 6.75rem);
+  z-index: 12;
+  padding-block: 0.25rem 0.35rem;
+}
+
+.syllabus-schedule-sticky-date {
+  top: var(--syllabus-schedule-sticky-date, 9.25rem);
+  z-index: 11;
+  padding-block: 0.2rem 0.35rem;
+}
+
+.syllabus-schedule-sticky-class {
+  top: var(--syllabus-schedule-sticky-class, 11.5rem);
+  z-index: 10;
+  padding-block: 0.2rem 0.4rem;
+}
+
 .syllabus-gallery-tile {
   display: grid;
   grid-template-rows: subgrid;

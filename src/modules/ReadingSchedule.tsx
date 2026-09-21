@@ -1,6 +1,11 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
-import { useMemo, useRef } from "preact/hooks";
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 import { twMerge } from "tailwind-merge";
 import {
   ClassReadingBlock,
@@ -34,8 +39,13 @@ import { hasMultipleNonFeedLibraries, isZotero8OrLater } from "../utils/zotero";
 import { getString, getUiDir } from "../utils/locale";
 import { PinnedSection, usePinnedScheduleData } from "./PinnedSection";
 import { SyllabusViewMenu } from "./SyllabusViewMenu";
-import { useGalleryLayout, type GalleryLayout } from "./galleryLayout";
+import { useGalleryLayout } from "./galleryLayout";
 import { GalleryViewportProvider } from "./galleryVisibility";
+import {
+  ScheduleStickyTopsContext,
+  useScheduleStickyTop,
+  type ScheduleStickyTops,
+} from "./scheduleSticky";
 
 setDefaultOptions({
   weekStartsOn: 1,
@@ -43,44 +53,11 @@ setDefaultOptions({
 
 const READING_SCHEDULE_LAYOUT_KEY = "reading-schedule";
 
-function ReadingScheduleHeader({
-  layout,
-  onLayoutChange,
-}: {
-  layout: GalleryLayout;
-  onLayoutChange: (layout: GalleryLayout) => void;
-}) {
-  return (
-    <div
-      className={twMerge(
-        "sticky top-0 z-20 w-full bg-background py-1",
-        isZotero8OrLater() ? "pt-4 md:pt-8" : "pt-8",
-      )}
-    >
-      <div className="container-padded bg-background">
-        <div className="flex flex-row items-center gap-2 justify-between">
-          <div className="min-w-0">
-            <div className="font-semibold text-3xl">
-              {getString("view-tab-reading-schedule")}
-            </div>
-            <p className="text-secondary text-base mt-1">
-              {getString("reading-schedule-desc")}
-            </p>
-          </div>
-          <div className="inline-flex items-center gap-2.5 shrink grow-0">
-            <SyllabusViewMenu
-              showLayout
-              layout={layout}
-              onLayoutChange={onLayoutChange}
-              showCheckboxes={false}
-              showScheduleCollection
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+/** Fallbacks if sticky bands aren't in the DOM yet. */
+const SCHEDULE_WEEK_BAND_PX = 40;
+const SCHEDULE_DATE_BAND_PX = 36;
+/** Clearance under the measured page header (same as Annotation Feed). */
+const SCHEDULE_HEADER_GAP_PX = 12;
 
 export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
   const [density] = useZoteroItemDensity();
@@ -89,6 +66,12 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
     "card",
   );
   const pageRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [stickyTops, setStickyTops] = useState<ScheduleStickyTops>({
+    week: 0,
+    date: 0,
+    class: 0,
+  });
 
   const allSyllabi = useSyllabi();
   const syllabi = useMemo(
@@ -129,6 +112,110 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
         ...nextUp.map((reading) => reading.libraryID),
       ]).size > 1);
 
+  const scheduleHeader = (
+    <div
+      ref={headerRef}
+      className={twMerge(
+        "sticky top-0 z-20 w-full bg-background py-1",
+        isZotero8OrLater() ? "pt-4 md:pt-8" : "pt-8",
+      )}
+    >
+      <div className="container-padded bg-background">
+        <div className="flex flex-row items-center gap-2 justify-between">
+          <div className="min-w-0">
+            <div className="font-semibold text-3xl">
+              {getString("view-tab-reading-schedule")}
+            </div>
+            <p className="text-secondary text-base mt-1">
+              {getString("reading-schedule-desc")}
+            </p>
+          </div>
+          <div className="inline-flex items-center gap-2.5 shrink grow-0">
+            <SyllabusViewMenu
+              showLayout
+              layout={layout}
+              onLayoutChange={setLayout}
+              showCheckboxes={false}
+              showScheduleCollection
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  useLayoutEffect(() => {
+    const page = pageRef.current;
+    const header = headerRef.current;
+    if (!page || !header) {
+      return;
+    }
+    const observedBands = new WeakSet<Element>();
+    const syncStickyTop = () => {
+      const primary = Math.ceil(
+        header.getBoundingClientRect().height + SCHEDULE_HEADER_GAP_PX,
+      );
+      const weekEl = page.querySelector(
+        ".syllabus-schedule-sticky-week",
+      ) as HTMLElement | null;
+      const dateEl = page.querySelector(
+        ".syllabus-schedule-sticky-date",
+      ) as HTMLElement | null;
+      for (const el of [weekEl, dateEl]) {
+        if (el && !observedBands.has(el)) {
+          observedBands.add(el);
+          observer.observe(el);
+        }
+      }
+      const weekH = Math.ceil(
+        weekEl?.getBoundingClientRect().height || SCHEDULE_WEEK_BAND_PX,
+      );
+      const dateH = Math.ceil(
+        dateEl?.getBoundingClientRect().height || SCHEDULE_DATE_BAND_PX,
+      );
+      const next: ScheduleStickyTops = {
+        week: primary,
+        date: primary + weekH,
+        class: primary + weekH + dateH,
+      };
+      page.style.setProperty(
+        "--syllabus-schedule-sticky-top",
+        `${next.week}px`,
+      );
+      page.style.setProperty(
+        "--syllabus-schedule-sticky-date",
+        `${next.date}px`,
+      );
+      page.style.setProperty(
+        "--syllabus-schedule-sticky-class",
+        `${next.class}px`,
+      );
+      setStickyTops((prev) =>
+        prev.week === next.week &&
+        prev.date === next.date &&
+        prev.class === next.class
+          ? prev
+          : next,
+      );
+    };
+    const observer = new ResizeObserver(syncStickyTop);
+    observer.observe(header);
+    syncStickyTop();
+    const win = page.ownerDocument.defaultView;
+    win?.addEventListener("resize", syncStickyTop);
+    const raf = win?.requestAnimationFrame(() => {
+      syncStickyTop();
+      win.requestAnimationFrame(syncStickyTop);
+    });
+    return () => {
+      observer.disconnect();
+      win?.removeEventListener("resize", syncStickyTop);
+      if (raf != null) {
+        win?.cancelAnimationFrame(raf);
+      }
+    };
+  }, [hasPinned, sortedWeeks.length]);
+
   if (sortedWeeks.length === 0 && !hasPinned) {
     return (
       <div
@@ -139,7 +226,7 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
         data-item-density={density}
         dir={getUiDir()}
       >
-        <ReadingScheduleHeader layout={layout} onLayoutChange={setLayout} />
+        {scheduleHeader}
         <div className="container-padded py-12">
           <div className="text-center text-secondary">
             <div
@@ -191,98 +278,123 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
       dir={getUiDir()}
     >
       <div className="pb-12">
-        <ReadingScheduleHeader layout={layout} onLayoutChange={setLayout} />
+        {scheduleHeader}
 
-        <GalleryViewportProvider rootRef={pageRef}>
-          <PinnedSection
-            density={density}
-            layout={layout}
-            showLibraryName={showLibrarySource}
-            pinnedItems={pinnedItems}
-            nextUp={nextUp}
-            onChanged={reload}
-            showUnpinCheckboxes
-          />
+        <ScheduleStickyTopsContext.Provider value={stickyTops}>
+          <GalleryViewportProvider rootRef={pageRef}>
+            <PinnedSection
+              density={density}
+              layout={layout}
+              showLibraryName={showLibrarySource}
+              pinnedItems={pinnedItems}
+              nextUp={nextUp}
+              onChanged={reload}
+              showUnpinCheckboxes
+            />
 
-          {sortedWeeks.length > 0 ? (
-            <div className={twMerge("flex flex-col gap-8 mt-8")}>
-              {sortedWeeks.map((weekStartKey) => {
-                const weekData = readingsByWeek.get(weekStartKey)!;
-                const sortedDates = Array.from(weekData.keys()).sort(
-                  (a, b) =>
-                    parseReadingDate(a).getTime() -
-                    parseReadingDate(b).getTime(),
-                );
+            {sortedWeeks.length > 0 ? (
+              <div className={twMerge("flex flex-col gap-8 mt-8")}>
+                {sortedWeeks.map((weekStartKey) => {
+                  const weekData = readingsByWeek.get(weekStartKey)!;
+                  const sortedDates = Array.from(weekData.keys()).sort(
+                    (a, b) =>
+                      parseReadingDate(a).getTime() -
+                      parseReadingDate(b).getTime(),
+                  );
 
-                const weekStartDate = parseReadingDate(weekStartKey);
+                  const weekStartDate = parseReadingDate(weekStartKey);
 
-                return (
-                  <div key={weekStartKey} className="syllabus-class-group">
-                    <div
-                      className={twMerge(
-                        "sticky z-10 w-full bg-background py-2",
-                        isZotero8OrLater() ? "top-12 md:top-16" : "top-12",
-                      )}
-                    >
-                      <div className="container-padded text-3xl text-tertiary">
-                        <WeekHeader weekStartDate={weekStartDate} />
+                  return (
+                    <div key={weekStartKey} className="syllabus-class-group">
+                      <StickyWeekBand>
+                        <div className="container-padded text-3xl text-tertiary">
+                          <WeekHeader weekStartDate={weekStartDate} />
+                        </div>
+                      </StickyWeekBand>
+
+                      <div className="space-y-12 my-6">
+                        {sortedDates.map((dateTimestamp) => {
+                          const classReadings = weekData.get(dateTimestamp)!;
+
+                          return (
+                            <div key={dateTimestamp}>
+                              <StickyDateBand>
+                                <div className="container-padded text-secondary text-2xl">
+                                  {formatReadingDate(
+                                    dateTimestamp,
+                                    !isThisMonth(
+                                      parseReadingDate(dateTimestamp),
+                                    ),
+                                  )}
+                                </div>
+                              </StickyDateBand>
+
+                              <div className="space-y-8 mt-3">
+                                {classReadings.map((classReading) => (
+                                  <ClassReadingBlock
+                                    key={`${classReading.collectionId}-${classReading.classNumber}`}
+                                    classReading={classReading}
+                                    density={density}
+                                    layout={layout}
+                                    showLibraryName={showLibrarySource}
+                                    stickyHeading
+                                    onCollectionClick={() =>
+                                      handleCollectionClick(
+                                        classReading.collectionId,
+                                      )
+                                    }
+                                    onItemClick={(item) =>
+                                      handleItemClick(
+                                        item,
+                                        classReading.collectionId,
+                                      )
+                                    }
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-
-                    <div className="space-y-12 my-6">
-                      {sortedDates.map((dateTimestamp) => {
-                        const classReadings = weekData.get(dateTimestamp)!;
-
-                        return (
-                          <div key={dateTimestamp}>
-                            <div
-                              className={twMerge(
-                                "container-padded mb-3 text-secondary text-2xl",
-                              )}
-                            >
-                              {formatReadingDate(
-                                dateTimestamp,
-                                !isThisMonth(parseReadingDate(dateTimestamp)),
-                              )}
-                            </div>
-
-                            <div className="space-y-8">
-                              {classReadings.map((classReading) => (
-                                <ClassReadingBlock
-                                  key={`${classReading.collectionId}-${classReading.classNumber}`}
-                                  classReading={classReading}
-                                  density={density}
-                                  layout={layout}
-                                  showLibraryName={showLibrarySource}
-                                  onCollectionClick={() =>
-                                    handleCollectionClick(
-                                      classReading.collectionId,
-                                    )
-                                  }
-                                  onItemClick={(item) =>
-                                    handleItemClick(
-                                      item,
-                                      classReading.collectionId,
-                                    )
-                                  }
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="container-padded text-secondary text-lg mt-4">
-              {getString("schedule-empty-desc")}
-            </p>
-          )}
-        </GalleryViewportProvider>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="container-padded text-secondary text-lg mt-4">
+                {getString("schedule-empty-desc")}
+              </p>
+            )}
+          </GalleryViewportProvider>
+        </ScheduleStickyTopsContext.Provider>
       </div>
+    </div>
+  );
+}
+
+function StickyWeekBand({
+  children,
+  className,
+}: {
+  children: preact.ComponentChildren;
+  className?: string;
+}) {
+  const top = useScheduleStickyTop("week");
+  return (
+    <div
+      className={twMerge("syllabus-schedule-sticky-week", className)}
+      style={top}
+    >
+      {children}
+    </div>
+  );
+}
+
+function StickyDateBand({ children }: { children: preact.ComponentChildren }) {
+  const top = useScheduleStickyTop("date");
+  return (
+    <div className="syllabus-schedule-sticky-date" style={top}>
+      {children}
     </div>
   );
 }

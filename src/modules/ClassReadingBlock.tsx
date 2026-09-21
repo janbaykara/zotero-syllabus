@@ -26,6 +26,7 @@ import { ProseText } from "./ProseText";
 import type { GalleryLayout } from "./galleryLayout";
 import { readingContentWidthClass } from "./galleryLayout";
 import { ReadingItemsLayout, readingContextLabel } from "./readingItemsLayout";
+import { useScheduleStickyTop } from "./scheduleSticky";
 
 export type ClassReading = {
   collectionId: number;
@@ -191,6 +192,7 @@ export function ClassReadingBlock({
   compactHeading = false,
   coverRail = false,
   fullWidthItems = false,
+  stickyHeading = false,
   onCollectionClick,
   onItemClick,
 }: {
@@ -204,9 +206,12 @@ export function ClassReadingBlock({
   coverRail?: boolean;
   /** Home shelf: cards span the shelf width like other explorer shelves. */
   fullWidthItems?: boolean;
+  /** Stick the class title under Reading Schedule week/date headers. */
+  stickyHeading?: boolean;
   onCollectionClick?: () => void;
   onItemClick?: (item: Zotero.Item) => void;
 }) {
+  const stickyTop = useScheduleStickyTop("class");
   const { singularCapitalized, singular } =
     SyllabusManager.getNomenclatureFormatted(classReading.collectionId);
   const classStatus = SyllabusManager.getClassStatus(
@@ -232,72 +237,82 @@ export function ClassReadingBlock({
     <div className={twMerge(classStatus === "done" ? "opacity-40" : "")}>
       <div
         className={twMerge(
-          // Heading + description stay on the narrow padded column in every
-          // layout. Cover/Magazine used to be full-bleed, which stretched prose
-          // to the pane width and clipped the left checkbox under overflow-x-hidden.
-          readingContentWidthClass("card"),
-          "relative mb-2",
+          stickyHeading
+            ? "syllabus-schedule-sticky-class"
+            : twMerge(readingContentWidthClass("card"), "relative mb-2"),
         )}
+        style={stickyHeading ? stickyTop : undefined}
       >
-        <div className="flex flex-col gap-2">
-          <div>
-            <input
-              type="checkbox"
-              checked={classStatus === "done"}
-              onChange={handleClassStatusToggle}
-              className={twMerge(
-                "absolute right-full mr-1 w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden accent-accent-green!",
-                isZotero8OrLater() ? "md:mr-2!" : "mr-2!",
-              )}
-              title={
-                classStatus === "done"
-                  ? getString("mark-not-done")
-                  : getString("mark-done")
-              }
-              aria-label={
-                classStatus === "done"
-                  ? getString("mark-not-done")
-                  : getString("mark-done")
-              }
-            />
-            <div
-              className={twMerge(
-                "flex-1 syllabus-class-reading-heading",
-                showCollectionLink || compactHeading ? "text-xl" : "text-3xl",
-                classStatus === "done" ? "line-through" : "",
-                onCollectionClick
-                  ? "hover:cursor-pointer hover:bg-quinary active:bg-quarternary rounded-md px-1 -mx-1 inline-block"
-                  : "inline-block px-1 -mx-1",
-              )}
-              onClick={onCollectionClick}
-            >
-              {classReading.classTitle ? (
-                <>
-                  <span className="font-semibold">
-                    {classReading.classTitle}
-                  </span>
-                  <span className="text-secondary">, </span>
-                </>
-              ) : null}
-              <span className="text-secondary">
-                {classReading.classTitle ? singular : singularCapitalized}{" "}
-                {classReading.classNumber}
-              </span>
-              {showCollectionLink ? (
-                <span className="text-secondary">
-                  {" "}
-                  {classReadingSourceLabel(classReading, showLibraryName)}
-                </span>
-              ) : null}
-            </div>
-          </div>
-          {classReading.classDescription && (
-            <div className="text-base mb-1">
-              <ProseText text={classReading.classDescription} />
-            </div>
+        <div
+          className={twMerge(
+            // Heading stays on the narrow padded column in every layout.
+            // Cover/Magazine used to be full-bleed, which stretched prose to
+            // the pane width and clipped the left checkbox under overflow-x-hidden.
+            stickyHeading
+              ? twMerge(readingContentWidthClass("card"), "relative")
+              : undefined,
           )}
+        >
+          <input
+            type="checkbox"
+            checked={classStatus === "done"}
+            onChange={handleClassStatusToggle}
+            className={twMerge(
+              "absolute right-full mr-1 w-4 h-4 cursor-pointer shrink-0 self-center in-[.print]:hidden accent-accent-green!",
+              isZotero8OrLater() ? "md:mr-2!" : "mr-2!",
+            )}
+            title={
+              classStatus === "done"
+                ? getString("mark-not-done")
+                : getString("mark-done")
+            }
+            aria-label={
+              classStatus === "done"
+                ? getString("mark-not-done")
+                : getString("mark-done")
+            }
+          />
+          <div
+            className={twMerge(
+              "flex-1 syllabus-class-reading-heading",
+              showCollectionLink || compactHeading ? "text-xl" : "text-3xl",
+              classStatus === "done" ? "line-through" : "",
+              onCollectionClick
+                ? "hover:cursor-pointer hover:bg-quinary active:bg-quarternary rounded-md px-1 -mx-1 inline-block"
+                : "inline-block px-1 -mx-1",
+            )}
+            onClick={onCollectionClick}
+          >
+            {classReading.classTitle ? (
+              <>
+                <span className="font-semibold">{classReading.classTitle}</span>
+                <span className="text-secondary">, </span>
+              </>
+            ) : null}
+            <span className="text-secondary">
+              {classReading.classTitle ? singular : singularCapitalized}{" "}
+              {classReading.classNumber}
+            </span>
+            {showCollectionLink ? (
+              <span className="text-secondary">
+                {" "}
+                {classReadingSourceLabel(classReading, showLibraryName)}
+              </span>
+            ) : null}
+          </div>
         </div>
       </div>
+      {classReading.classDescription ? (
+        <div
+          className={twMerge(
+            readingContentWidthClass("card"),
+            "text-base mb-2",
+            stickyHeading ? "mt-1" : undefined,
+          )}
+        >
+          <ProseText text={classReading.classDescription} />
+        </div>
+      ) : null}
       <div
         className={
           layout === "card" && !fullWidthItems

@@ -29,6 +29,7 @@ import {
   readingContextLabel,
   type ReadingLayoutRow,
 } from "./readingItemsLayout";
+import { useScheduleStickyTop } from "./scheduleSticky";
 
 function selectPinnedItem(item: Zotero.Item): void {
   try {
@@ -165,10 +166,7 @@ export function PinnedSection({
       data-tour={embedded ? "explorer-shelf-pinned" : "reading-schedule-pinned"}
     >
       {embedded ? null : (
-        <div className="container-padded text-3xl text-tertiary mb-4 flex items-center gap-2">
-          <Pin size={22} className="shrink-0" aria-hidden="true" />
-          {getString("pinned-section-heading")}
-        </div>
+        <PinnedStickyHeading />
       )}
 
       <div
@@ -424,6 +422,21 @@ function NextUpRow({
           {reading.classTitle ? `: ${reading.classTitle}` : ""}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function PinnedStickyHeading() {
+  const top = useScheduleStickyTop("week");
+  return (
+    <div
+      className="syllabus-schedule-sticky-week mb-4"
+      style={top}
+    >
+      <div className="container-padded text-3xl text-tertiary flex items-center gap-2">
+        <Pin size={22} className="shrink-0" aria-hidden="true" />
+        {getString("pinned-section-heading")}
+      </div>
     </div>
   );
 }
