@@ -34,6 +34,7 @@ import {
   Tags,
   User,
   UserX,
+  PinOff,
 } from "lucide-preact";
 import { renderComponent } from "../utils/react";
 import { isZotero8OrLater } from "../utils/zotero";
@@ -1856,21 +1857,45 @@ export const GalleryTile = memo(function GalleryTile({
       <div
         className={twMerge(
           "min-w-0",
-          chrome?.readerMode && "flex flex-row items-start gap-1.5",
+          chrome?.onUnpin && "flex flex-row items-start gap-0.5",
+          !chrome?.onUnpin && chrome?.readerMode && "flex flex-row items-start gap-1.5",
         )}
       >
-        {chrome?.readerMode ? (
-          <ReadingDoneCheckbox
-            item={item}
-            collectionId={chrome.collectionId}
-            assignment={chrome.assignment}
-            onReaderCheck={chrome.onReaderCheck}
-            className="mt-0.5 in-[.print]:hidden"
-          />
-        ) : null}
-        <div className="syllabus-gallery-title text-sm font-medium text-primary leading-snug line-clamp-2 min-w-0">
-          {title}
-        </div>
+        {chrome?.onUnpin ? (
+          <>
+            <div className="syllabus-gallery-title text-sm font-medium text-primary leading-snug line-clamp-2 min-w-0 flex-1">
+              {title}
+            </div>
+            <button
+              type="button"
+              className="syllabus-pinned-collection-unpin shrink-0 text-secondary hover:text-primary hover:bg-quinary rounded p-1 cursor-pointer border-0 bg-transparent opacity-0 group-hover:opacity-100 focus-visible:opacity-100 in-[.print]:hidden"
+              title={getString("pinned-unpin-item")}
+              aria-label={getString("pinned-unpin-item")}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                void chrome.onUnpin?.();
+              }}
+            >
+              <PinOff size={16} />
+            </button>
+          </>
+        ) : (
+          <>
+            {chrome?.readerMode ? (
+              <ReadingDoneCheckbox
+                item={item}
+                collectionId={chrome.collectionId}
+                assignment={chrome.assignment}
+                onReaderCheck={chrome.onReaderCheck}
+                className="mt-0.5 in-[.print]:hidden"
+              />
+            ) : null}
+            <div className="syllabus-gallery-title text-sm font-medium text-primary leading-snug line-clamp-2 min-w-0">
+              {title}
+            </div>
+          </>
+        )}
       </div>
       {hostname ? (
         <div className="syllabus-gallery-hostrow">

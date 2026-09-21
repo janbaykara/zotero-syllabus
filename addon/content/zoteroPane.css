@@ -815,6 +815,13 @@
     grid-row: auto;
   }
 
+  .syllabus-gallery-grid .syllabus-pinned-collection-cover {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    grid-row: auto;
+  }
+
   .syllabus-gallery-tile.has-gallery-note {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -2232,27 +2239,107 @@
   scroll-snap-type: x mandatory;
 }
 
-/* Pinned syllabus in Cover mode: overlapping unread covers + class heading. */
-.syllabus-pinned-collection-covers {
-  align-items: start;
+/* Stack fans paint past the 148px column. Pad the scrollport so they aren’t
+   clipped, and cancel with negative margin so covers + captions stay flush
+   with the shelf header (fan may reach the content/window edge). */
+.syllabus-explorer-cover-rail:has(.syllabus-pinned-collection-cover) {
+  /* Hover fan + rotated AABB; keep ≥ fan overhang past the front cover. */
+  --pinned-stack-rail-pad: 1.5rem;
+  padding-inline: var(--pinned-stack-rail-pad);
+  margin-inline: calc(var(--pinned-stack-rail-pad) * -1);
+  scroll-padding-inline: var(--pinned-stack-rail-pad);
+}
+
+/* Pinned syllabus in Cover mode: same 2-row subgrid as GalleryTile so covers
+   share a baseline and captions (title / class / progress) line up across
+   stacks with different cover heights. Each stack spans both tracks so wrapped
+   rows don’t land in the prior row’s caption track. */
+.syllabus-gallery-grid .syllabus-pinned-collection-cover {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 2;
+  min-width: 0;
+  margin-bottom: 1.75rem;
+  /* contain:layout breaks subgrid (covers no longer share a baseline). */
+  contain: style;
+  align-content: end;
+}
+
+.syllabus-gallery-grid .syllabus-pinned-collection-cover-hit {
+  align-self: end;
+  min-width: 0;
 }
 
 .syllabus-pinned-collection-cover {
+  --stack-fan: 0.5rem;
+  /* Room for hover fan AABB past the front cover. */
+  --stack-pad: calc(var(--stack-fan) + 0.28rem);
   width: var(--reading-tile-width, 13rem);
   max-width: 100%;
   scroll-snap-align: start;
 }
 
+/* Zotero platform CSS sets `button { max-height: 25px }` — that collapses the
+   stack hit target and, in the Home cover rail subgrid, the whole shelf. */
+.syllabus-pinned-collection-cover-hit {
+  max-height: none;
+  height: auto;
+}
+
+/* Shared stack caption on Home rail + Reading Schedule grid — same classes as
+   Cover GalleryTile meta. Unlayered type so Zotero `button` / UA rules cannot
+   override course/class sizing. */
+.syllabus-pinned-collection-cover > .syllabus-gallery-meta {
+  align-self: start;
+  min-width: 0;
+  margin-top: 0;
+  padding-top: 0.5rem;
+}
+
+.syllabus-pinned-collection-cover .syllabus-pinned-collection-course {
+  font-size: var(--text-sm) !important;
+  line-height: var(--text-sm--line-height, 1.25rem) !important;
+  font-weight: var(--font-weight-medium, 500) !important;
+  color: var(--fill-primary, inherit);
+}
+
+.syllabus-pinned-collection-cover .syllabus-pinned-collection-class {
+  font-size: var(--text-xs) !important;
+  line-height: var(--text-xs--line-height, 1rem) !important;
+  font-weight: var(--font-weight-normal, 400) !important;
+  color: var(--fill-secondary, inherit);
+}
+
+.syllabus-pinned-collection-cover
+  > .syllabus-gallery-meta
+  button.syllabus-pinned-collection-progress {
+  margin: 0;
+}
+
+.syllabus-pinned-collection-unpin {
+  margin: 0;
+  max-height: none;
+}
+
+/* Home cover rail: participate in the same 2-row subgrid as GalleryTile so
+   mixed pins+stacks size the rail to full cover + heading height (flex span-2
+   was collapsing / clipping under overflow-x). */
 .syllabus-explorer-cover-rail .syllabus-pinned-collection-cover {
+  display: grid;
+  grid-template-rows: subgrid;
   grid-row: span 2;
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
+  align-content: end;
   width: 148px;
   max-width: 148px;
   min-width: 0;
+  overflow: visible;
   scroll-snap-align: start;
+}
+
+.syllabus-explorer-cover-rail .syllabus-pinned-collection-cover-hit {
+  align-self: end;
+  min-width: 0;
 }
 
 .syllabus-explorer-cover-rail .syllabus-pinned-collection-stack {
@@ -2260,26 +2347,23 @@
 }
 
 .syllabus-pinned-collection-stack {
-  --stack-fan: 0.5rem;
-  /* Extra inset so a slightly wider hover fan doesn’t clip. */
-  --stack-pad: calc(var(--stack-fan) + 0.28rem);
   position: relative;
   width: 100%;
-  /* Room for tops tipping up / sideways when pivoting from the ground. */
+  /* Room for tops tipping up when pivoting from the ground. Sideways fan
+     bleeds past the column into the cover-rail pad (not inset here). */
   padding-block-start: calc(var(--stack-pad) + 0.15rem);
-  padding-inline: var(--stack-pad);
+  box-sizing: border-box;
 }
 
 .syllabus-pinned-collection-stack[data-count="1"] {
   padding-block-start: 0;
-  padding-inline: 0;
 }
 
 .syllabus-pinned-collection-stack-layer {
   position: absolute;
-  inset-inline-start: var(--stack-pad);
+  inset-inline-start: 0;
   inset-block-end: 0;
-  width: calc(100% - 2 * var(--stack-pad));
+  width: 100%;
   transform-origin: bottom center;
   transform: none;
   filter: brightness(calc(1 - var(--stack-index, 0) * 0.05));
@@ -2305,8 +2389,8 @@
   position: relative;
   inset-inline-start: auto;
   inset-block-end: auto;
-  width: calc(100% - 2 * var(--stack-pad));
-  margin-inline-start: var(--stack-pad);
+  width: 100%;
+  margin-inline-start: 0;
   filter: none;
   pointer-events: auto;
 }
@@ -2427,12 +2511,13 @@
 }
 
 /* Syllabus collection Cover shelves: class headers + covers in one horizontal rail.
-   Subgrid keeps kicker / title / covers on shared rows so titles and rules align. */
+   Four shared rows (kicker / title / cover / meta) via nested subgrid so captions
+   line up across class segments even when cover heights differ between groups. */
 .syllabus-explorer-class-cover-rail {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: max-content;
-  grid-template-rows: max-content max-content max-content;
+  grid-template-rows: max-content max-content max-content max-content;
   column-gap: 1.75rem;
   row-gap: 0.2rem;
   align-items: start;
@@ -2444,7 +2529,7 @@
 .syllabus-explorer-class-segment {
   display: grid;
   grid-template-rows: subgrid;
-  grid-row: span 3;
+  grid-row: span 4;
   row-gap: inherit;
   min-width: 0;
   scroll-snap-align: start;
@@ -2507,12 +2592,12 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 148px;
-  grid-template-rows: max-content max-content;
+  grid-template-rows: subgrid;
+  grid-row: span 2;
   justify-content: start;
   align-items: end;
   column-gap: 1.15rem;
-  /* Space between rule and covers (header padding already under the title). */
-  margin-top: 0.45rem;
+  row-gap: inherit;
 }
 
 @supports not (grid-template-rows: subgrid) {
@@ -2589,7 +2674,9 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   flex-direction: row;
   align-items: center;
   gap: 0.4em;
-  padding-bottom: 0.55rem;
+  /* Padding under the rule doubles as the gap before covers (covers is
+     subgridded — no margin-top there, or shared cover/meta tracks break). */
+  padding-bottom: 1rem;
   border-bottom: 1px solid
     var(
       --fill-quaternary,
@@ -2717,7 +2804,8 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   }
 
   .syllabus-explorer-cover-rail .syllabus-gallery-tile,
-  .syllabus-explorer-class-segment-covers .syllabus-gallery-tile {
+  .syllabus-explorer-class-segment-covers .syllabus-gallery-tile,
+  .syllabus-explorer-cover-rail .syllabus-pinned-collection-cover {
     display: flex;
     flex-direction: column;
     justify-content: flex-end;

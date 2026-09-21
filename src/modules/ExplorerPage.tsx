@@ -49,6 +49,7 @@ import { getString, getUiDir } from "../utils/locale";
 import { formatRelativeReadingDate, formatReadingDate } from "../utils/dates";
 import {
   ClassReadingBlock,
+  openCollectionSyllabusAtClass,
   openCollectionSyllabusPage,
   openMyAnnotationsTab,
   openReadingScheduleTab,
@@ -78,11 +79,14 @@ import {
   densityLabel,
 } from "./browsePage";
 import { collectionHasSyllabusNote } from "./syllabusNote";
+import { SyllabusManager } from "./syllabus";
 import {
   ExplorerCollectionShelfBody,
+  ExplorerSegmentedCoverRail,
   explorerCollectionGroupByModes,
   explorerCollectionSortByModes,
   explorerCollectionTypeSizeModes,
+  type ExplorerShelfSegment,
 } from "./ExplorerCollectionShelf";
 import {
   ITEM_DENSITIES,
@@ -1192,14 +1196,71 @@ function ExplorerDeadlineDate({ isoDate }: { isoDate: string }) {
   );
 }
 
+function upcomingDeadlineSegmentKey(classReading: ClassReading): string {
+  return `${classReading.collectionId}-${classReading.classNumber}-${classReading.readingDate || ""}`;
+}
+
+/** Cover mode: one horizontal segment per class / deadline (Collection shelf pattern). */
+function buildUpcomingDeadlineCoverSegments(
+  readings: ClassReading[],
+): ExplorerShelfSegment[] {
+  const segments: ExplorerShelfSegment[] = [];
+  for (const classReading of readings) {
+    const items = classReading.items
+      .filter(({ assignment }) => !!assignment.id)
+      .map(({ item }) => item);
+    if (!items.length) {
+      continue;
+    }
+    const { singularCapitalized } = SyllabusManager.getNomenclatureFormatted(
+      classReading.collectionId,
+    );
+    const className = `${singularCapitalized} ${classReading.classNumber}`;
+    const title = (classReading.classTitle || "").trim();
+    const done =
+      SyllabusManager.getClassStatus(
+        classReading.collectionId,
+        classReading.classNumber,
+      ) === "done";
+    segments.push({
+      key: upcomingDeadlineSegmentKey(classReading),
+      // Prefer class title; fall back to "Class N". Collection stays in the kicker
+      // so multi-course shelves stay identifiable (unlike single-collection rails).
+      title: title || className,
+      label: classReading.collectionName,
+      date: classReading.readingDate
+        ? formatRelativeReadingDate(classReading.readingDate) ||
+          formatReadingDate(classReading.readingDate)
+        : undefined,
+      done,
+      icon: { kind: "class" },
+      items,
+      onOpen: () =>
+        openCollectionSyllabusAtClass(
+          classReading.collectionId,
+          classReading.classNumber,
+        ),
+    });
+  }
+  return segments;
+}
+
 function ExplorerDeadlineShelf({
   readings,
   density,
   layout,
+  selectedItemIds = null,
+  onClick,
+  onDoubleClick,
+  onContextMenu,
 }: {
   readings: ClassReading[];
   density: ItemDensity;
   layout: GalleryLayout;
+  selectedItemIds?: number[] | null;
+  onClick: MagazineTileClick;
+  onDoubleClick: (item: Zotero.Item) => void;
+  onContextMenu: MagazineTileClick;
 }) {
   if (!readings.length) {
     return (
@@ -1208,11 +1269,26 @@ function ExplorerDeadlineShelf({
       </p>
     );
   }
+
+  if (layout === "cover") {
+    const segments = buildUpcomingDeadlineCoverSegments(readings);
+    return (
+      <ExplorerSegmentedCoverRail
+        segments={segments}
+        keyPrefix="upcoming-deadlines"
+        selectedItemIds={selectedItemIds}
+        onClick={onClick}
+        onDoubleClick={onDoubleClick}
+        onContextMenu={onContextMenu}
+      />
+    );
+  }
+
   return (
     <div className="syllabus-explorer-deadlines">
       {readings.map((classReading) => (
         <div
-          key={`${classReading.collectionId}-${classReading.classNumber}-${classReading.readingDate || ""}`}
+          key={upcomingDeadlineSegmentKey(classReading)}
           className="syllabus-explorer-deadline-session"
         >
           {classReading.readingDate ? (
@@ -1223,7 +1299,6 @@ function ExplorerDeadlineShelf({
             density={density}
             layout={layout}
             showCollectionLink
-            coverRail={layout === "cover"}
             fullWidthItems
             onCollectionClick={() =>
               openCollectionSyllabusPage(classReading.collectionId)
@@ -1781,6 +1856,10 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                       readings={upcomingDeadlines}
                       density={density}
                       layout={explorerShelfLayout(shelf)}
+                      selectedItemIds={selectedItemIds}
+                      onClick={handleClick}
+                      onDoubleClick={handleDoubleClick}
+                      onContextMenu={handleContextMenu}
                     />
                   ) : shelf.type === "pinned" ? (
                     <PinnedSection

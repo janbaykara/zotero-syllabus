@@ -35,16 +35,18 @@ import { TabManager } from "../utils/tabManager";
 import type { ItemDensity } from "./react-zotero-sync/itemDensity";
 import type { GalleryLayout } from "./galleryLayout";
 import {
-  READING_TILE_GAP,
-  readingContentWidthClass,
-  readingTileWidthCss,
-} from "./galleryLayout";
-import {
   ReadingItemsLayout,
   readingContextLabel,
+  useReadingItemsPack,
   type ReadingLayoutRow,
 } from "./readingItemsLayout";
-import { GalleryTile } from "./GalleryPage";
+import {
+  READING_TILE_GAP,
+  readingContentWidthClass,
+  readingItemsPackClass,
+  readingTileWidthCss,
+} from "./galleryLayout";
+import { GalleryTile, GalleryGroupIcon } from "./GalleryPage";
 import { GalleryCover } from "./GalleryCover";
 import { openZoteroItemContextMenu } from "../utils/itemContextMenu";
 import { openZoteroCollectionContextMenu } from "../utils/collectionContextMenu";
@@ -58,6 +60,18 @@ function itemHasViewableAttachment(item: Zotero.Item): boolean {
   });
 }
 
+/** Select the item so the item pane / sidebar updates (stay on current view). */
+function selectPinnedItem(item: Zotero.Item): void {
+  try {
+    const pane = ztoolkit.getGlobal("ZoteroPane");
+    if (!item.deleted && pane && typeof pane.selectItem === "function") {
+      void pane.selectItem(item.id, { noTabSwitch: true });
+    }
+  } catch (error) {
+    ztoolkit.log("Error selecting pinned item:", error);
+  }
+}
+
 /** Open Reader when possible; otherwise select the item in My Library Table. */
 function openPinnedItem(item: Zotero.Item): void {
   if (itemHasViewableAttachment(item)) {
@@ -65,6 +79,15 @@ function openPinnedItem(item: Zotero.Item): void {
     return;
   }
   void showPinnedItemInLibraryTable(item);
+}
+
+/** Home shelf: click → sidebar; double-click → reader. */
+function activatePinnedItem(item: Zotero.Item, embedded: boolean): void {
+  if (embedded) {
+    selectPinnedItem(item);
+    return;
+  }
+  openPinnedItem(item);
 }
 
 /**
@@ -232,6 +255,13 @@ export function PinnedSection({
     return rows;
   }, [coverMode, pinnedLayoutRows, nextUp, showUnpinCheckboxes, onChanged]);
 
+  const coverTileCount = pinnedItems.length + nextUp.length;
+  const { wrapRef: coverPackRef, pack: coverPack } = useReadingItemsPack(
+    "cover",
+    coverTileCount,
+    coverMode && !embedded && coverTileCount > 0,
+  );
+
   if (pinnedItems.length === 0 && nextUp.length === 0) {
     return null;
   }
@@ -250,9 +280,11 @@ export function PinnedSection({
             item={item}
             selected={false}
             onClick={(clicked) => {
-              openPinnedItem(clicked);
+              activatePinnedItem(clicked, true);
             }}
-            onDoubleClick={openPinnedItem}
+            onDoubleClick={(clicked) => {
+              openItemBestAttachment(clicked);
+            }}
             onContextMenu={(clicked, e) => {
               void openZoteroItemContextMenu(clicked, e);
             }}
@@ -263,53 +295,63 @@ export function PinnedSection({
             key={`pinned-next-${reading.collection.id}`}
             reading={reading}
             onChanged={onChanged}
-            compact
           />
         ))}
       </div>
     ) : coverMode ? (
-      <div className="space-y-6">
-        {pinnedLayoutRows.length > 0 ? (
-          <ReadingItemsLayout
-            layout="cover"
-            density={density}
-            isLocked
-            template="strip"
-            showPriority={false}
-            rows={pinnedLayoutRows}
-            onItemClick={(item) => {
-              openPinnedItem(item);
-            }}
-          />
-        ) : null}
-        {nextUp.length > 0 ? (
-          <div className={readingContentWidthClass("cover", "narrow")}>
-            <div
-              className="syllabus-gallery-grid is-narrow syllabus-pinned-collection-covers"
-              style={
-                {
-                  ...tileStyle,
-                  "--reading-pack-count": Math.min(nextUp.length, 4),
-                } as JSX.CSSProperties
-              }
-            >
-              {nextUp.map((reading) => (
-                <NextUpCoverStack
-                  key={`pinned-next-${reading.collection.id}`}
-                  reading={reading}
-                  onChanged={onChanged}
-                />
-              ))}
-            </div>
-          </div>
-        ) : null}
+      <div
+        ref={coverPackRef}
+        className={readingContentWidthClass("cover", coverPack)}
+      >
+        <div
+          className={twMerge(
+            "syllabus-gallery-grid syllabus-pinned-collection-covers",
+            readingItemsPackClass(coverPack),
+          )}
+          style={
+            {
+              ...tileStyle,
+              "--reading-pack-count": coverTileCount,
+            } as JSX.CSSProperties
+          }
+        >
+          {pinnedLayoutRows.map((row) => (
+            <GalleryTile
+              key={row.key}
+              item={row.item}
+              selected={false}
+              chrome={{
+                collectionId: row.collectionId,
+                assignment: row.assignment,
+                showPriority: false,
+                onUnpin: row.onReaderCheck,
+              }}
+              onClick={(clicked) => {
+                openPinnedItem(clicked);
+              }}
+              onDoubleClick={(clicked) => {
+                openItemBestAttachment(clicked);
+              }}
+              onContextMenu={(clicked, e) => {
+                void openZoteroItemContextMenu(clicked, e);
+              }}
+            />
+          ))}
+          {nextUp.map((reading) => (
+            <NextUpCoverStack
+              key={`pinned-next-${reading.collection.id}`}
+              reading={reading}
+              onChanged={onChanged}
+            />
+          ))}
+        </div>
       </div>
     ) : null;
 
   return (
     <div
       className={embedded ? undefined : "mt-6 mb-10"}
-      data-tour={embedded ? "explorer-shelf-pinned" : "reading-schedule-pinned"}
+      data-fix={embedded ? "explorer-shelf-pinned" : "reading-schedule-pinned"}
     >
       {embedded ? null : <PinnedStickyHeading />}
 
@@ -342,7 +384,7 @@ export function PinnedSection({
                 openNextUpInSyllabus(reading);
                 return;
               }
-              openPinnedItem(item);
+              activatePinnedItem(item, embedded);
             }}
           />
         ) : null}
@@ -356,6 +398,7 @@ export function PinnedSection({
                 showLibraryName={showLibraryName}
                 showUnpinCheckbox={showUnpinCheckboxes}
                 onChanged={onChanged}
+                selectOnClick={embedded}
               />
             ))}
 
@@ -379,12 +422,9 @@ export function PinnedSection({
 function NextUpCoverStack({
   reading,
   onChanged,
-  compact = false,
 }: {
   reading: NextUpReading;
   onChanged: () => void;
-  /** Explorer cover rail: slightly tighter heading. */
-  compact?: boolean;
 }) {
   const { singularCapitalized } = SyllabusManager.getNomenclatureFormatted(
     reading.collection.id,
@@ -399,14 +439,16 @@ function NextUpCoverStack({
     onChanged();
   };
 
-  const className = reading.classTitle
-    ? reading.classTitle
-    : getString("menu-class-label", {
-        args: {
-          nomenclature: singularCapitalized,
-          number: reading.classNumber,
-        },
-      });
+  const classNumberLabel = getString("menu-class-label", {
+    args: {
+      nomenclature: singularCapitalized,
+      number: reading.classNumber,
+    },
+  });
+  const classTitle = reading.classTitle.trim();
+  const className = classTitle
+    ? `${classTitle} · ${classNumberLabel}`
+    : classNumberLabel;
 
   const open = () => openNextUpInSyllabus(reading);
 
@@ -441,20 +483,23 @@ function NextUpCoverStack({
           ))}
         </div>
       </button>
-      <div
-        className={twMerge(
-          "syllabus-class-reading-heading mt-2 min-w-0 flex flex-col gap-0.5",
-          compact ? "text-sm leading-snug" : "text-base leading-snug",
-        )}
-      >
+      <div className="syllabus-gallery-meta syllabus-class-reading-heading min-w-0 px-0.5">
         <div className="flex items-center gap-0.5 min-w-0">
-          <button
-            type="button"
-            className="font-semibold min-w-0 flex-1 truncate border-0 bg-transparent p-0 cursor-pointer text-left text-inherit"
+          <div
+            role="button"
+            tabIndex={0}
+            className="syllabus-gallery-title syllabus-pinned-collection-course text-sm font-medium text-primary leading-snug flex items-center gap-1 min-w-0 flex-1 cursor-pointer"
             onClick={open}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                open();
+              }
+            }}
           >
-            {reading.collection.name}
-          </button>
+            <GalleryGroupIcon spec={{ kind: "collection" }} />
+            <span className="truncate">{reading.collection.name}</span>
+          </div>
           <button
             type="button"
             className="syllabus-pinned-collection-unpin shrink-0 text-secondary hover:text-primary hover:bg-quinary rounded p-1 cursor-pointer border-0 bg-transparent opacity-0 group-hover/pinned-collection:opacity-100 focus-visible:opacity-100"
@@ -468,13 +513,20 @@ function NextUpCoverStack({
             <PinOff size={16} />
           </button>
         </div>
-        <button
-          type="button"
-          className="text-secondary min-w-0 truncate border-0 bg-transparent p-0 cursor-pointer text-left text-inherit"
+        <div
+          role="button"
+          tabIndex={0}
+          className="syllabus-gallery-creator syllabus-pinned-collection-class text-xs text-secondary truncate mt-0.5 cursor-pointer"
           onClick={open}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              open();
+            }
+          }}
         >
           {className}
-        </button>
+        </div>
         {reading.progress.total > 0 ? (
           <button
             type="button"
@@ -509,12 +561,15 @@ function PinnedItemRow({
   showLibraryName,
   showUnpinCheckbox,
   onChanged,
+  selectOnClick = false,
 }: {
   item: Zotero.Item;
   density: ItemDensity;
   showLibraryName: boolean;
   showUnpinCheckbox: boolean;
   onChanged: () => void;
+  /** Home shelf: click selects for the item pane; double-click opens reader. */
+  selectOnClick?: boolean;
 }) {
   const intention = readIntentionText(item);
   const collectionIds = item.getCollections();
@@ -532,6 +587,10 @@ function PinnedItemRow({
     if (ok) {
       onChanged();
     }
+  };
+
+  const handleClick = (clicked: Zotero.Item) => {
+    activatePinnedItem(clicked, selectOnClick);
   };
 
   return (
@@ -580,8 +639,9 @@ function PinnedItemRow({
           hideHoverActions
           readerMode={showUnpinCheckbox}
           onReaderCheck={showUnpinCheckbox ? handleReaderCheck : undefined}
-          onClick={(clicked) => {
-            openPinnedItem(clicked);
+          onClick={handleClick}
+          onContextMenu={(clicked, e) => {
+            void openZoteroItemContextMenu(clicked, e);
           }}
         />
       ) : (
@@ -608,7 +668,13 @@ function PinnedItemRow({
               density === "row" ? "text-base" : "text-lg",
             )}
             onClick={() => {
-              openPinnedItem(item);
+              handleClick(item);
+            }}
+            onDblClick={() => {
+              openItemBestAttachment(item);
+            }}
+            onContextMenu={(e) => {
+              void openZoteroItemContextMenu(item, e);
             }}
           >
             <div className="font-medium">
@@ -692,6 +758,9 @@ function NextUpRow({
         onReaderCheck={showUnpinCheckbox ? handleReaderCheck : undefined}
         onClick={() => {
           openNextUpInSyllabus(reading);
+        }}
+        onContextMenu={(_clicked, e) => {
+          void openZoteroCollectionContextMenu(reading.collection, e);
         }}
       />
       {reading.classTitle ? (

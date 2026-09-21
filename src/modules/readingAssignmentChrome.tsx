@@ -12,6 +12,8 @@ export type ReadingTileChrome = {
   readerMode?: boolean;
   /** When set, checkbox runs this instead of toggling assignment done status. */
   onReaderCheck?: () => void | Promise<void>;
+  /** Hover unpin control (Pinned Cover tiles); replaces the checkbox when set. */
+  onUnpin?: () => void | Promise<void>;
   /** Class / syllabus name shown above the title in cover & magazine. */
   contextLabel?: string;
   /** When false, hide priority badge (e.g. Reading Schedule / Pinned). */
@@ -135,6 +137,7 @@ export function readingChromeEqual(
     a.collectionId === b.collectionId &&
     a.readerMode === b.readerMode &&
     a.onReaderCheck === b.onReaderCheck &&
+    a.onUnpin === b.onUnpin &&
     a.contextLabel === b.contextLabel &&
     a.showPriority === b.showPriority &&
     a.assignment?.id === b.assignment?.id &&

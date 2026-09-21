@@ -2225,7 +2225,19 @@ export class SyllabusManager {
       icon: pinIcon,
       isHidden: () => {
         const collection = getSelectedCollection();
-        return !collection || !collectionHasSyllabusNote(collection);
+        if (!collection) {
+          return true;
+        }
+        // Managed folders and class subcollections are not pin targets —
+        // pin the syllabus root (or turn a plain collection into one).
+        if (
+          isManagedReadingScheduleCollection(collection.id) ||
+          isAutoManagedCollection(collection.id) ||
+          getClassSubcollectionContext(collection)
+        ) {
+          return true;
+        }
+        return false;
       },
       onShowing: (elem) => {
         const collection = getSelectedCollection();
@@ -2247,8 +2259,18 @@ export class SyllabusManager {
           return;
         }
         const pinned = isPinnedSyllabus(collection);
-        const ok = await setPinnedSyllabus(collection, !pinned);
-        if (!ok && !pinned) {
+        if (pinned) {
+          await setPinnedSyllabus(collection, false);
+          enqueuePinnedReadingScheduleSync();
+          return;
+        }
+        // Pinning requires a Syllabus note — prompt to create one if needed.
+        const enabled = await ensureSyllabusNoteForUser(collection);
+        if (!enabled) {
+          return;
+        }
+        const ok = await setPinnedSyllabus(collection, true);
+        if (!ok) {
           ztoolkit.log(
             "Could not pin syllabus: no Syllabus note on collection",
           );

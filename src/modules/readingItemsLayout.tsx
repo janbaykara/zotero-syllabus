@@ -75,7 +75,7 @@ export function readingContextLabel(opts: {
   return parts.join(" · ");
 }
 
-function useReadingItemsPack(
+export function useReadingItemsPack(
   layout: GalleryLayout,
   itemCount: number,
   enabled: boolean,
