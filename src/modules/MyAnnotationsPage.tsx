@@ -53,16 +53,16 @@ function formatAnnotationCopyText(entry: MyAnnotationStreamEntry): string {
     parts.push(blockquote ? toMarkdownBlockquote(entry.quote) : entry.quote);
   }
   if (entry.comment) {
-    const comment = entry.comment
+    let comment = entry.comment;
     if (getPref("myAnnotationsCopyCiteKey")) {
       const citeKey = getItemCitationKey(entry.parent);
       if (citeKey) {
         comment = `${comment} [@${citeKey}]`;
       }
     }
-    parts.push(entry.comment);
+    parts.push(comment);
   }
-  let text = parts.join("\n\n");
+  const text = parts.join("\n\n");
   if (!text) {
     return "";
   }

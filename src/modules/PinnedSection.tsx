@@ -165,9 +165,7 @@ export function PinnedSection({
       className={embedded ? undefined : "mt-6 mb-2"}
       data-tour={embedded ? "explorer-shelf-pinned" : "reading-schedule-pinned"}
     >
-      {embedded ? null : (
-        <PinnedStickyHeading />
-      )}
+      {embedded ? null : <PinnedStickyHeading />}
 
       <div
         className={
@@ -429,10 +427,7 @@ function NextUpRow({
 function PinnedStickyHeading() {
   const top = useScheduleStickyTop("week");
   return (
-    <div
-      className="syllabus-schedule-sticky-week mb-4"
-      style={top}
-    >
+    <div className="syllabus-schedule-sticky-week mb-4" style={top}>
       <div className="container-padded text-3xl text-tertiary flex items-center gap-2">
         <Pin size={22} className="shrink-0" aria-hidden="true" />
         {getString("pinned-section-heading")}

@@ -9,8 +9,7 @@ import type { MyAnnotationsOrder } from "./myAnnotationsPrefs";
 const ORDER_OPTIONS: {
   mode: MyAnnotationsOrder;
   labelKey:
-    | "my-annotations-order-newest-last"
-    | "my-annotations-order-newest-first";
+    "my-annotations-order-newest-last" | "my-annotations-order-newest-first";
   titleKey:
     | "my-annotations-order-newest-last-title"
     | "my-annotations-order-newest-first-title";
