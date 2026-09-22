@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
-import { useEffect, useMemo, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { getString } from "../utils/locale";
 import { sortItems } from "../utils/items";
 import {
@@ -44,6 +44,17 @@ async function partitionByAnnotations(
   return { withAnnotations, withoutAnnotations };
 }
 
+function uniqueItems(items: Zotero.Item[]): Zotero.Item[] {
+  const seen = new Set<number>();
+  return items.filter((item) => {
+    if (seen.has(item.id)) {
+      return false;
+    }
+    seen.add(item.id);
+    return true;
+  });
+}
+
 export function GalleryAnnotationsSection({
   items,
   keyPrefix,
@@ -63,16 +74,27 @@ export function GalleryAnnotationsSection({
   onDoubleClick: (item: Zotero.Item) => void;
   onContextMenu: MagazineTileClick;
 }) {
-  const sorted = useMemo(
-    () => sortItems(uniqueItems(items), sortBy),
+  /** Stable across selection re-renders that only change the items array identity. */
+  const sortedIdsKey = useMemo(
+    () =>
+      sortItems(uniqueItems(items), sortBy)
+        .map((item) => item.id)
+        .join(","),
     [items, sortBy],
   );
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const sortByRef = useRef(sortBy);
+  sortByRef.current = sortBy;
+
   const [partition, setPartition] = useState<AnnotationPartition | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    setPartition(null);
-    const itemsToLoad = sorted;
+    const itemsToLoad = sortItems(
+      uniqueItems(itemsRef.current),
+      sortByRef.current,
+    );
     void partitionByAnnotations(itemsToLoad).then((next) => {
       if (!cancelled) {
         setPartition(next);
@@ -81,7 +103,7 @@ export function GalleryAnnotationsSection({
     return () => {
       cancelled = true;
     };
-  }, [sorted]);
+  }, [sortedIdsKey]);
 
   if (!partition) {
     return null;
@@ -138,15 +160,4 @@ export function GalleryAnnotationsSection({
       ) : null}
     </div>
   );
-}
-
-function uniqueItems(items: Zotero.Item[]): Zotero.Item[] {
-  const seen = new Set<number>();
-  return items.filter((item) => {
-    if (seen.has(item.id)) {
-      return false;
-    }
-    seen.add(item.id);
-    return true;
-  });
 }
