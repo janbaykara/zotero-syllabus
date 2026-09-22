@@ -29,7 +29,7 @@ export const PLUGIN_PREF_DEFAULTS: {
   [K in keyof PluginPrefsMap]: PluginPrefsMap[K];
 } = {
   showBibliography: false,
-  defaultItemDensity: "standard",
+  defaultItemDensity: "expanded",
   readerMode: false,
   shouldColourSyllabusRows: false,
   debugMode: false,

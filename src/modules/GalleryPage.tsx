@@ -27,8 +27,11 @@ import {
   LayoutGrid,
   LayoutList,
   ListOrdered,
+  Maximize2,
   MoreHorizontal,
   Newspaper,
+  Rows2,
+  Rows3,
   Shapes,
   Sparkles,
   Tag,
@@ -54,7 +57,7 @@ import {
   isWebGalleryItem,
 } from "../utils/itemCover";
 import { GalleryCover } from "./GalleryCover";
-import { GalleryAnnotationsRow } from "./GalleryAnnotationsRow";
+import { GalleryAnnotationsSection } from "./GalleryAnnotationsRow";
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
 import { useZoteroItemsViewRegularItemIds } from "./react-zotero-sync/itemsViewItems";
 import {
@@ -69,7 +72,12 @@ import {
   galleryNoteFingerprint,
 } from "./galleryNote";
 import { useGalleryNoteText } from "./useGalleryNoteText";
-import { useZoteroItemDensity } from "./react-zotero-sync/itemDensity";
+import {
+  ITEM_DENSITIES,
+  useZoteroItemDensity,
+  type ItemDensity,
+} from "./react-zotero-sync/itemDensity";
+import { densityLabel } from "./browsePage";
 import { SlimSyllabusItemCard, useItemIdentifierSelection } from "./browsePage";
 import { SyllabusItemCard } from "./SyllabusItemCard";
 import { useSyllabusClassGroups } from "./classGroups";
@@ -659,19 +667,16 @@ export function GalleryPage({
   );
 
   const renderAnnotations = (items: Zotero.Item[], keyPrefix: string) => (
-    <div className="syllabus-gallery-annotations-list syllabus-my-annotations-stream">
-      {sortItems(uniqueItems(items), sortBy).map((item) => (
-        <GalleryAnnotationsRow
-          key={`${keyPrefix}-${item.id}`}
-          item={item}
-          collectionId={collectionIdOrZero}
-          selected={selectedItemIds?.includes(item.id) || false}
-          onClick={handleClick}
-          onDoubleClick={handleDoubleClick}
-          onContextMenu={handleContextMenu}
-        />
-      ))}
-    </div>
+    <GalleryAnnotationsSection
+      items={items}
+      keyPrefix={keyPrefix}
+      sortBy={sortBy}
+      collectionId={collectionIdOrZero}
+      selectedItemIds={selectedItemIds}
+      onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
+      onContextMenu={handleContextMenu}
+    />
   );
 
   const renderCards = (items: Zotero.Item[], keyPrefix: string) => (
@@ -1449,6 +1454,21 @@ function galleryLayoutOptions(): GallerySegmentOption<GalleryLayout>[] {
   ];
 }
 
+function galleryDensityOptions(): GallerySegmentOption<ItemDensity>[] {
+  return ITEM_DENSITIES.map((mode) => ({
+    mode,
+    label: densityLabel(mode),
+    title: getString(
+      mode === "row"
+        ? "page-density-row"
+        : mode === "standard"
+          ? "page-density-standard"
+          : "page-density-expanded",
+    ),
+    Icon: mode === "row" ? Rows3 : mode === "standard" ? Rows2 : Maximize2,
+  }));
+}
+
 function magazineTypeSizeOptions(): GallerySegmentOption<MagazineTypeSize>[] {
   return [
     {
@@ -1581,6 +1601,8 @@ function GalleryPageHeader({
   const sortOptions = gallerySortOptions();
   const quoteOrderOptions = galleryQuoteOrderOptions();
   const [quoteOrder, setQuoteOrder] = useAnnotationsQuoteOrder();
+  const densityOptions = galleryDensityOptions();
+  const [density, setDensity] = useZoteroItemDensity();
   const allGroupBy = galleryGroupByOptions();
   const groupByOptions = allGroupBy.filter((option) => {
     if (option.mode === "auto" && layout !== "magazine") {
@@ -1673,6 +1695,15 @@ function GalleryPageHeader({
                   tourPrefix="gallery-group"
                   globalSetting={groupByGlobal}
                 />
+                {layout === "card" ? (
+                  <GallerySegmentedControl
+                    label={getString("settings-density")}
+                    ariaLabel={getString("settings-density")}
+                    value={density}
+                    onChange={setDensity}
+                    options={densityOptions}
+                  />
+                ) : null}
                 {layout === "magazine" ? (
                   <GallerySegmentedControl
                     label={getString("gallery-menu-type-size")}

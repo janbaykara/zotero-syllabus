@@ -1,5 +1,5 @@
 pref("showBibliography", false);
-pref("defaultItemDensity", "standard");
+pref("defaultItemDensity", "expanded");
 pref("readerMode", false);
 pref("shouldColourSyllabusRows", false);
 pref("debugMode", false);
