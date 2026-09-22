@@ -855,7 +855,7 @@
 .syllabus-gallery-tile.has-gallery-note {
   grid-column: span 2;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  column-gap: 0.85rem;
+  column-gap: 0.55rem;
 }
 
 .syllabus-gallery-tile.has-gallery-note .syllabus-gallery-tile-main {
@@ -869,10 +869,13 @@
 
 .syllabus-gallery-note {
   grid-column: 2;
-  grid-row: span 2;
+  /* Cover track only — sit against the bottom of the cover, not the meta. */
+  grid-row: 1;
   min-width: 0;
-  align-self: stretch;
-  padding: 0.35rem 0.15rem 0.5rem;
+  max-height: 100%;
+  align-self: end;
+  margin-left: 0;
+  padding: 0.15rem 0.15rem 0;
   font-size: 0.8rem;
   line-height: 1.45;
   color: var(--fill-secondary, inherit);
@@ -910,19 +913,34 @@
   .syllabus-gallery-tile.has-gallery-note {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: auto;
-    align-items: stretch;
+    grid-template-rows: auto auto;
+    align-items: start;
   }
 
+  /* Flatten so cover + note can share the first row. */
   .syllabus-gallery-tile.has-gallery-note .syllabus-gallery-tile-main {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    grid-row: auto;
+    display: contents;
+  }
+
+  .syllabus-gallery-tile.has-gallery-note > .syllabus-gallery-cover-portrait,
+  .syllabus-gallery-tile.has-gallery-note > .syllabus-gallery-cover-video,
+  .syllabus-gallery-tile.has-gallery-note > .syllabus-gallery-cover-web,
+  .syllabus-gallery-tile.has-gallery-note > .syllabus-gallery-cover-square,
+  .syllabus-gallery-tile.has-gallery-note > .syllabus-gallery-cover-natural,
+  .syllabus-gallery-tile.has-gallery-note > .syllabus-gallery-cover-with-binder {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .syllabus-gallery-tile.has-gallery-note > .syllabus-gallery-meta {
+    grid-column: 1;
+    grid-row: 2;
   }
 
   .syllabus-gallery-note {
-    grid-row: auto;
+    grid-column: 2;
+    grid-row: 1;
+    align-self: end;
   }
 }
 
@@ -3018,6 +3036,42 @@ button.syllabus-explorer-class-segment-header:focus-visible {
 .syllabus-my-annotations-stream-avatar .syllabus-gallery-tile {
   width: 100%;
   min-width: 0;
+}
+
+/* Annotations occupy the column to the right — stack the gallery note under
+   cover + metadata instead of opening a second tile column. */
+.syllabus-my-annotations-stream-avatar .syllabus-gallery-tile.has-gallery-note {
+  display: flex;
+  flex-direction: column;
+  grid-column: auto;
+  grid-row: auto;
+  grid-template-columns: none;
+  grid-template-rows: none;
+  align-content: start;
+  column-gap: 0;
+}
+
+.syllabus-my-annotations-stream-avatar
+  .syllabus-gallery-tile.has-gallery-note
+  .syllabus-gallery-tile-main {
+  display: flex;
+  flex-direction: column;
+  grid-column: auto;
+  grid-row: auto;
+  grid-template-rows: none;
+  align-content: start;
+}
+
+.syllabus-my-annotations-stream-avatar .syllabus-gallery-note {
+  grid-column: auto;
+  grid-row: auto;
+  align-self: stretch;
+  margin-left: 0;
+  padding: 0.4rem 0.05rem 0.15rem;
+}
+
+.syllabus-my-annotations-stream-avatar .syllabus-gallery-note .syllabus-prose {
+  -webkit-line-clamp: 8;
 }
 
 .syllabus-my-annotations-stream-avatar .syllabus-gallery-cover-portrait,
