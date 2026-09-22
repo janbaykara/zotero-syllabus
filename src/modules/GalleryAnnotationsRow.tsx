@@ -15,6 +15,7 @@ import {
 import type { GallerySortBy } from "./gallerySort";
 import { GalleryTile } from "./GalleryPage";
 import type { MagazineTileClick } from "./MagazineTile";
+import type { ReadingTileChrome } from "./readingAssignmentChrome";
 
 type AnnotationPartition = {
   withAnnotations: Array<{
@@ -124,6 +125,8 @@ export function GalleryAnnotationsSection({
   collectionId,
   selectedItemIds,
   showItemsWithoutAnnotations = true,
+  showGalleryNote = false,
+  chromeByItemId,
   onClick,
   onDoubleClick,
   onContextMenu,
@@ -134,6 +137,8 @@ export function GalleryAnnotationsSection({
   collectionId: number;
   selectedItemIds: number[] | null;
   showItemsWithoutAnnotations?: boolean;
+  showGalleryNote?: boolean;
+  chromeByItemId?: ReadonlyMap<number, ReadingTileChrome> | null;
   onClick: MagazineTileClick;
   onDoubleClick: (item: Zotero.Item) => void;
   onContextMenu: MagazineTileClick;
@@ -231,6 +236,8 @@ export function GalleryAnnotationsSection({
                 group={group}
                 selected={selectedItemIds?.includes(item.id) || false}
                 collectionId={collectionId}
+                showGalleryNote={showGalleryNote}
+                chrome={chromeByItemId?.get(item.id)}
                 onClick={onClick}
                 onDoubleClick={onDoubleClick}
                 onContextMenu={onContextMenu}
@@ -253,7 +260,9 @@ export function GalleryAnnotationsSection({
                 key={`${keyPrefix}-empty-${item.id}`}
                 item={item}
                 collectionId={collectionId}
+                showGalleryNote={showGalleryNote}
                 selected={selectedItemIds?.includes(item.id) || false}
+                chrome={chromeByItemId?.get(item.id)}
                 onClick={onClick}
                 onDoubleClick={onDoubleClick}
                 onContextMenu={onContextMenu}

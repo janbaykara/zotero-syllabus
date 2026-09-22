@@ -25,7 +25,7 @@ import { getString, getUiDir } from "../utils/locale";
 import { ProseText } from "./ProseText";
 import type { GalleryLayout } from "./galleryLayout";
 import { readingContentWidthClass } from "./galleryLayout";
-import { ReadingItemsLayout, readingContextLabel } from "./readingItemsLayout";
+import { ReadingItemsLayout } from "./readingItemsLayout";
 import { useScheduleStickyTop } from "./scheduleSticky";
 
 export type ClassReading = {
@@ -204,6 +204,7 @@ export function ClassReadingBlock({
   coverRail = false,
   fullWidthItems = false,
   stickyHeading = false,
+  showPriority,
   onCollectionClick,
   onItemClick,
 }: {
@@ -219,10 +220,16 @@ export function ClassReadingBlock({
   fullWidthItems?: boolean;
   /** Stick the class title under Reading Schedule week/date headers. */
   stickyHeading?: boolean;
+  /**
+   * Cover/magazine priority badge. Defaults on for Cover (schedule page),
+   * off for Card/Magazine where class context already frames the list.
+   */
+  showPriority?: boolean;
   onCollectionClick?: () => void;
   onItemClick?: (item: Zotero.Item) => void;
 }) {
   const stickyTop = useScheduleStickyTop("class");
+  const showPriorityBadge = showPriority ?? layout === "cover";
   const { singularCapitalized, singular } =
     SyllabusManager.getNomenclatureFormatted(classReading.collectionId);
   const classStatus = SyllabusManager.getClassStatus(
@@ -337,7 +344,7 @@ export function ClassReadingBlock({
           readerMode
           isLocked
           template="strip"
-          showPriority={false}
+          showPriority={showPriorityBadge}
           coverRail={coverRail && layout === "cover"}
           rows={classReading.items
             .filter(({ assignment }) => !!assignment.id)
@@ -348,12 +355,6 @@ export function ClassReadingBlock({
               assignment,
               classNumber: classReading.classNumber,
               slim: true,
-              contextLabel: readingContextLabel({
-                collectionId: classReading.collectionId,
-                classNumber: classReading.classNumber,
-                classTitle: classReading.classTitle,
-                collectionName: classReading.collectionName,
-              }),
             }))}
           onItemClick={onItemClick ? (item) => onItemClick(item) : undefined}
         />

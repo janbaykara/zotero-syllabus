@@ -1,16 +1,23 @@
 import { assert } from "chai";
+import { config } from "../package.json";
+import { zoteroCache } from "../src/utils/cache";
 import {
   coerceExplorerShelves,
   createCollectionShelf,
   defaultExplorerShelves,
   explorerShelfGroupBy,
   explorerShelfSortBy,
+  getExplorerShelves,
   isCollectionShelfOnHome,
   isExplorerShelfEnabled,
   layoutsForExplorerShelf,
   mergeExplorerCatalog,
   withToggledCollectionShelf,
 } from "../src/modules/explorerConfig";
+
+const SHELVES_PREF = `${config.prefsPrefix}.explorerShelves`;
+const COLLECTION_COVER_MIGRATION_PREF = `${config.prefsPrefix}.explorerCollectionCoverDefault`;
+const DEADLINES_COVER_MIGRATION_PREF = `${config.prefsPrefix}.explorerDeadlinesCoverDefault`;
 
 describe("explorer shelves", function () {
   it("puts pinned and upcoming deadlines first on the default homepage", function () {
@@ -207,22 +214,19 @@ describe("explorer shelves", function () {
     );
   });
 
-  it("keeps watch and listen shelves on cover layout", function () {
+  it("keeps watch, listen, and pinned shelves on cover layout", function () {
     const shelves = coerceExplorerShelves([
       { id: "wn", type: "watch-now", layout: "magazine" },
       { id: "ln", type: "listen-now", layout: "card" },
+      { id: "pin", type: "pinned", layout: "magazine" },
     ]);
     assert.deepEqual(
       shelves.map((shelf) => shelf.layout),
-      ["cover", "cover"],
+      ["cover", "cover", "cover"],
     );
     assert.deepEqual(layoutsForExplorerShelf("watch-now"), ["cover"]);
     assert.deepEqual(layoutsForExplorerShelf("listen-now"), ["cover"]);
-    assert.deepEqual(layoutsForExplorerShelf("pinned"), [
-      "card",
-      "cover",
-      "magazine",
-    ]);
+    assert.deepEqual(layoutsForExplorerShelf("pinned"), ["cover"]);
     assert.deepEqual(layoutsForExplorerShelf("upcoming-deadlines"), [
       "card",
       "cover",
@@ -402,5 +406,127 @@ describe("explorer shelves", function () {
       ).length,
       1,
     );
+  });
+
+  it("migrates stored Magazine collection shelves to Cover once", function () {
+    const previousShelves = Zotero.Prefs.get(SHELVES_PREF, true);
+    const previousCollectionFlag = Zotero.Prefs.get(
+      COLLECTION_COVER_MIGRATION_PREF,
+      true,
+    );
+    const previousDeadlinesFlag = Zotero.Prefs.get(
+      DEADLINES_COVER_MIGRATION_PREF,
+      true,
+    );
+    try {
+      try {
+        Zotero.Prefs.clear(COLLECTION_COVER_MIGRATION_PREF, true);
+      } catch {
+        /* already clear */
+      }
+      try {
+        Zotero.Prefs.clear(DEADLINES_COVER_MIGRATION_PREF, true);
+      } catch {
+        /* already clear */
+      }
+      zoteroCache.invalidatePref(COLLECTION_COVER_MIGRATION_PREF);
+      zoteroCache.invalidatePref(DEADLINES_COVER_MIGRATION_PREF);
+
+      Zotero.Prefs.set(
+        SHELVES_PREF,
+        JSON.stringify([
+          {
+            id: "catalog:collection:1:OLD",
+            type: "collection",
+            layout: "magazine",
+            libraryID: 1,
+            collectionKey: "OLD",
+            enabled: false,
+          },
+          {
+            id: "catalog:collection:1:KEEP",
+            type: "collection",
+            layout: "card",
+            libraryID: 1,
+            collectionKey: "KEEP",
+          },
+        ]),
+        true,
+      );
+      zoteroCache.invalidatePref(SHELVES_PREF);
+
+      const shelves = getExplorerShelves();
+      const oldShelf = shelves.find(
+        (row) => row.type === "collection" && row.collectionKey === "OLD",
+      );
+      const keepShelf = shelves.find(
+        (row) => row.type === "collection" && row.collectionKey === "KEEP",
+      );
+      assert.equal(oldShelf?.layout, "cover");
+      assert.equal(keepShelf?.layout, "card");
+      assert.isTrue(!!Zotero.Prefs.get(COLLECTION_COVER_MIGRATION_PREF, true));
+
+      // Second load must not rewrite intentional Magazine after the bump.
+      Zotero.Prefs.set(
+        SHELVES_PREF,
+        JSON.stringify([
+          {
+            id: "catalog:collection:1:CHOSEN",
+            type: "collection",
+            layout: "magazine",
+            libraryID: 1,
+            collectionKey: "CHOSEN",
+          },
+        ]),
+        true,
+      );
+      zoteroCache.invalidatePref(SHELVES_PREF);
+      const after = getExplorerShelves();
+      assert.equal(
+        after.find(
+          (row) => row.type === "collection" && row.collectionKey === "CHOSEN",
+        )?.layout,
+        "magazine",
+      );
+    } finally {
+      if (previousShelves === undefined) {
+        try {
+          Zotero.Prefs.clear(SHELVES_PREF, true);
+        } catch {
+          /* already clear */
+        }
+      } else {
+        Zotero.Prefs.set(SHELVES_PREF, previousShelves as string, true);
+      }
+      if (previousCollectionFlag === undefined) {
+        try {
+          Zotero.Prefs.clear(COLLECTION_COVER_MIGRATION_PREF, true);
+        } catch {
+          /* already clear */
+        }
+      } else {
+        Zotero.Prefs.set(
+          COLLECTION_COVER_MIGRATION_PREF,
+          previousCollectionFlag as boolean,
+          true,
+        );
+      }
+      if (previousDeadlinesFlag === undefined) {
+        try {
+          Zotero.Prefs.clear(DEADLINES_COVER_MIGRATION_PREF, true);
+        } catch {
+          /* already clear */
+        }
+      } else {
+        Zotero.Prefs.set(
+          DEADLINES_COVER_MIGRATION_PREF,
+          previousDeadlinesFlag as boolean,
+          true,
+        );
+      }
+      zoteroCache.invalidatePref(SHELVES_PREF);
+      zoteroCache.invalidatePref(COLLECTION_COVER_MIGRATION_PREF);
+      zoteroCache.invalidatePref(DEADLINES_COVER_MIGRATION_PREF);
+    }
   });
 });

@@ -5,7 +5,8 @@ import {
   SyllabusManager,
   classByNumber,
 } from "./syllabus";
-import { sortItemsByTitle } from "../utils/items";
+import { sortItems, sortItemsByTitle } from "../utils/items";
+import type { GallerySortBy } from "./gallerySort";
 
 export type SyllabusClassGroup = {
   classNumber: number | null;
@@ -21,6 +22,30 @@ export type FurtherReadingEntry = {
   item: Zotero.Item;
   assignment?: ItemSyllabusAssignment;
 };
+
+export type ClassAssignmentRow = {
+  item: Zotero.Item;
+  assignment: ItemSyllabusAssignment;
+};
+
+/** Keep syllabus order for `auto`; otherwise sort by item fields. */
+export function sortClassAssignmentRows(
+  rows: ClassAssignmentRow[],
+  sortBy: GallerySortBy,
+): ClassAssignmentRow[] {
+  if (sortBy === "auto") {
+    return rows;
+  }
+  const order = new Map(
+    sortItems(
+      rows.map((row) => row.item),
+      sortBy,
+    ).map((item, index) => [item.id, index]),
+  );
+  return [...rows].sort(
+    (a, b) => (order.get(a.item.id) ?? 0) - (order.get(b.item.id) ?? 0),
+  );
+}
 
 /** No class, priority, or instruction — may still carry reading `status`. */
 export function isClasslessAssignment(

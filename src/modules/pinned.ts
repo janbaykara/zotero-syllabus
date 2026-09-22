@@ -5,13 +5,20 @@
  * in class order (syllabi only).
  */
 
+import * as z from "zod";
+import { config } from "../../package.json";
 import {
   assignmentClassNumber,
   orderedClassIds,
   type CollectionSyllabusDocument,
   type ItemSyllabusAssignment,
 } from "../utils/schemas";
-import { getCachedCollectionById, getCachedItem } from "../utils/cache";
+import {
+  getCachedCollectionById,
+  getCachedItem,
+  getCachedPref,
+  zoteroCache,
+} from "../utils/cache";
 import { compareLocale, getString } from "../utils/locale";
 import {
   getItemTitle,
@@ -27,6 +34,118 @@ import {
 } from "./syllabusNote";
 
 const pinnedListeners = new Set<() => void>();
+
+/** Pref: libraryID → ordered shelf entry keys (`i:<itemKey>` / `c:<collectionKey>`). */
+const PinnedShelfOrderSchema = z.record(z.string(), z.array(z.string()));
+
+function pinnedShelfOrderPrefKey() {
+  return `${config.prefsPrefix}.pinnedShelfOrder`;
+}
+
+export type PinnedShelfEntryKind = "item" | "collection";
+
+export function pinnedShelfEntryKey(
+  kind: PinnedShelfEntryKind,
+  key: string,
+): string {
+  return `${kind === "item" ? "i" : "c"}:${key}`;
+}
+
+export function getPinnedShelfOrder(libraryID: number): string[] {
+  const map =
+    getCachedPref(pinnedShelfOrderPrefKey(), PinnedShelfOrderSchema) || {};
+  const raw = map[String(libraryID)];
+  return Array.isArray(raw)
+    ? raw.filter((entry) => typeof entry === "string")
+    : [];
+}
+
+export function setPinnedShelfOrder(libraryID: number, order: string[]): void {
+  const key = pinnedShelfOrderPrefKey();
+  const map = getCachedPref(key, PinnedShelfOrderSchema) || {};
+  map[String(libraryID)] = order;
+  Zotero.Prefs.set(key, JSON.stringify(map), true);
+  zoteroCache.invalidatePref(key);
+}
+
+/** Stable reorder: known keys first (saved order), then remaining in input order. */
+export function applyPinnedShelfOrder<T>(
+  entries: T[],
+  getKey: (entry: T) => string,
+  order: string[],
+): T[] {
+  if (order.length === 0 || entries.length <= 1) {
+    return entries;
+  }
+  const byKey = new Map<string, T>();
+  for (const entry of entries) {
+    byKey.set(getKey(entry), entry);
+  }
+  const used = new Set<string>();
+  const next: T[] = [];
+  for (const key of order) {
+    const entry = byKey.get(key);
+    if (!entry || used.has(key)) {
+      continue;
+    }
+    next.push(entry);
+    used.add(key);
+  }
+  for (const entry of entries) {
+    const key = getKey(entry);
+    if (used.has(key)) {
+      continue;
+    }
+    next.push(entry);
+  }
+  return next;
+}
+
+/** Move `from` → `to` (to is index in the list before removal; same as explorer catalog). */
+export function movePinnedShelfEntry<T>(
+  entries: T[],
+  from: number,
+  to: number,
+): T[] {
+  if (from === to || from < 0 || to < 0 || to > entries.length) {
+    return entries;
+  }
+  const next = [...entries];
+  const [row] = next.splice(from, 1);
+  next.splice(to > from ? to - 1 : to, 0, row);
+  return next;
+}
+
+/**
+ * Library used for pinned shelf order prefs. The Reading Schedule tab passes
+ * no libraryID (all libraries); if every pin shares one library, use that so
+ * reorder still works.
+ */
+export function resolvePinnedOrderLibraryID(
+  libraryID: number | undefined,
+  items: Array<{ libraryID: number }>,
+  collections: Array<{ libraryID: number }>,
+): number | undefined {
+  if (libraryID != null) {
+    return libraryID;
+  }
+  let found: number | undefined;
+  for (const entry of items) {
+    if (found == null) {
+      found = entry.libraryID;
+    } else if (found !== entry.libraryID) {
+      return undefined;
+    }
+  }
+  for (const entry of collections) {
+    if (found == null) {
+      found = entry.libraryID;
+    } else if (found !== entry.libraryID) {
+      return undefined;
+    }
+  }
+  return found;
+}
 
 export function subscribePinnedChanges(listener: () => void): () => void {
   pinnedListeners.add(listener);

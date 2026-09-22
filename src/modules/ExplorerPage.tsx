@@ -646,8 +646,7 @@ function ExplorerShelfSettingsMenu({
   const titleId = `syllabus-explorer-shelf-settings-${shelf.id}`;
   const [density, setDensity] = useZoteroItemDensity();
   const showDensity =
-    (shelf.type === "pinned" || shelf.type === "upcoming-deadlines") &&
-    shelf.layout === "card";
+    shelf.type === "upcoming-deadlines" && shelf.layout === "card";
   const collection = collectionForShelf(shelf);
   const isCollection = isExplorerCollectionShelf(shelf);
   const isSyllabus =
@@ -1166,9 +1165,10 @@ function buildUpcomingDeadlineCoverSegments(
 ): ExplorerShelfSegment[] {
   const segments: ExplorerShelfSegment[] = [];
   for (const classReading of readings) {
-    const items = classReading.items
-      .filter(({ assignment }) => !!assignment.id)
-      .map(({ item }) => item);
+    const itemAssignments = classReading.items.filter(
+      ({ assignment }) => !!assignment.id,
+    );
+    const items = itemAssignments.map(({ item }) => item);
     if (!items.length) {
       continue;
     }
@@ -1195,6 +1195,9 @@ function buildUpcomingDeadlineCoverSegments(
       done,
       icon: { kind: "class" },
       items,
+      itemAssignments,
+      collectionId: classReading.collectionId,
+      classNumber: classReading.classNumber,
       onOpen: () =>
         openCollectionSyllabusAtClass(
           classReading.collectionId,
@@ -1260,6 +1263,7 @@ function ExplorerDeadlineShelf({
             layout={layout}
             showCollectionLink
             fullWidthItems
+            showPriority
             onCollectionClick={() =>
               openCollectionSyllabusPage(classReading.collectionId)
             }
@@ -1810,6 +1814,7 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                       pinnedItems={pinnedItems}
                       nextUp={nextUp}
                       onChanged={reloadPinned}
+                      libraryID={libraryID}
                       embedded
                     />
                   ) : shelf.type === "recent-annotations" ? (

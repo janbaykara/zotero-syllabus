@@ -1,14 +1,18 @@
 import { assert } from "chai";
 import {
+  applyPinnedShelfOrder,
   getNextUpAssignment,
   getPinnedCollectionReading,
   getSyllabusItemProgress,
   isPinnedCollectionMarkerNote,
   isPinnedItem,
   isPinnedSyllabus,
+  movePinnedShelfEntry,
   noteHtmlToPlainText,
   PINNED_COLLECTION_TAG,
   PINNED_TAG,
+  pinnedShelfEntryKey,
+  resolvePinnedOrderLibraryID,
   setPinnedItem,
   setPinnedSyllabus,
 } from "../src/modules/pinned";
@@ -36,6 +40,51 @@ describe("pinned", function () {
   it("uses a stable untranslated folder name", function () {
     assert.equal(PINNED_FOLDER_NAME, "Pinned");
     assert.isNull(dateKeyFromFolderName(PINNED_FOLDER_NAME));
+  });
+
+  it("orders pinned shelf entries by saved keys then remainder", function () {
+    const entries = [
+      { key: pinnedShelfEntryKey("item", "a"), label: "A" },
+      { key: pinnedShelfEntryKey("collection", "b"), label: "B" },
+      { key: pinnedShelfEntryKey("item", "c"), label: "C" },
+    ];
+    const ordered = applyPinnedShelfOrder(entries, (entry) => entry.key, [
+      pinnedShelfEntryKey("item", "c"),
+      pinnedShelfEntryKey("collection", "b"),
+    ]);
+    assert.deepEqual(
+      ordered.map((entry) => entry.label),
+      ["C", "B", "A"],
+    );
+  });
+
+  it("moves a pinned shelf entry like the explorer catalog", function () {
+    const entries = ["a", "b", "c"];
+    assert.deepEqual(movePinnedShelfEntry(entries, 0, 2), ["b", "a", "c"]);
+    assert.deepEqual(movePinnedShelfEntry(entries, 2, 0), ["c", "a", "b"]);
+    assert.deepEqual(movePinnedShelfEntry(entries, 1, 1), entries);
+  });
+
+  it("resolves order library when the schedule tab omits libraryID", function () {
+    assert.equal(
+      resolvePinnedOrderLibraryID(
+        undefined,
+        [{ libraryID: 1 }, { libraryID: 1 }],
+        [{ libraryID: 1 }],
+      ),
+      1,
+    );
+    assert.isUndefined(
+      resolvePinnedOrderLibraryID(
+        undefined,
+        [{ libraryID: 1 }],
+        [{ libraryID: 2 }],
+      ),
+    );
+    assert.equal(
+      resolvePinnedOrderLibraryID(3, [{ libraryID: 1 }], [{ libraryID: 2 }]),
+      3,
+    );
   });
 
   it("strips note HTML for intention display", function () {

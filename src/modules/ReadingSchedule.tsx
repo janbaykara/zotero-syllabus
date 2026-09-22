@@ -284,6 +284,7 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
               pinnedItems={pinnedItems}
               nextUp={nextUp}
               onChanged={reload}
+              libraryID={libraryID}
               showUnpinCheckboxes
             />
 

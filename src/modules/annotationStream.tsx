@@ -3,6 +3,7 @@ import { h, Fragment } from "preact";
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -25,6 +26,7 @@ import { formatRelativeTimestamp } from "../utils/dates";
 import { getPref } from "../utils/prefs";
 import { GalleryTile } from "./GalleryPage";
 import type { MagazineTileClick } from "./MagazineTile";
+import type { ReadingTileChrome } from "./readingAssignmentChrome";
 import type { MyAnnotationStreamEntry } from "./explorerQueries";
 import { sortAnnotationsByQuoteOrder } from "./explorerQueries";
 import {
@@ -286,11 +288,66 @@ export function AnnotationStreamBody({
   );
 }
 
+/**
+ * Firefox (Zotero) does not grow a `flex-direction: column; flex-wrap: wrap`
+ * container to fit wrapped columns, so overflowing quotes paint over the next
+ * shelf entry. Measure the real right edge of children and set an explicit width.
+ */
+function useExplorerRailStackWidth(
+  stackRef: { current: HTMLDivElement | null },
+  layoutKey: string,
+): void {
+  useLayoutEffect(() => {
+    const stack = stackRef.current;
+    if (!stack?.closest(".syllabus-explorer-annotation-stream-rail")) {
+      return;
+    }
+
+    const syncWidth = () => {
+      const stackLeft = stack.getBoundingClientRect().left;
+      let maxRight = 0;
+      for (const child of Array.from(stack.children)) {
+        maxRight = Math.max(
+          maxRight,
+          (child as HTMLElement).getBoundingClientRect().right - stackLeft,
+        );
+      }
+      const next = Math.ceil(maxRight);
+      const prev = stack.style.width ? Number.parseFloat(stack.style.width) : 0;
+      if (next > 0 && Math.abs(next - prev) > 1) {
+        stack.style.width = `${next}px`;
+      } else if (next <= 0 && stack.style.width) {
+        stack.style.width = "";
+      }
+    };
+
+    syncWidth();
+
+    const win = stack.ownerDocument.defaultView;
+    if (!win || typeof win.ResizeObserver !== "function") {
+      return () => {
+        stack.style.width = "";
+      };
+    }
+
+    const ro = new win.ResizeObserver(syncWidth);
+    for (const child of Array.from(stack.children)) {
+      ro.observe(child);
+    }
+    return () => {
+      ro.disconnect();
+      stack.style.width = "";
+    };
+  }, [stackRef, layoutKey]);
+}
+
 export function AnnotationStreamGroup({
   group,
   selected,
   collectionId,
+  chrome,
   emptyLabel,
+  showGalleryNote = false,
   onClick,
   onDoubleClick,
   onContextMenu,
@@ -298,8 +355,10 @@ export function AnnotationStreamGroup({
   group: AnnotationStreamParentGroup;
   selected: boolean;
   collectionId?: number;
+  chrome?: ReadingTileChrome | null;
   /** Shown in the quote stack when the group has no entries. */
   emptyLabel?: string;
+  showGalleryNote?: boolean;
   onClick: MagazineTileClick;
   onDoubleClick: (item: Zotero.Item) => void;
   onContextMenu: MagazineTileClick;
@@ -310,6 +369,18 @@ export function AnnotationStreamGroup({
     () => sortAnnotationsByQuoteOrder(group.entries, quoteOrder),
     [group.entries, quoteOrder],
   );
+  const stackRef = useRef<HTMLDivElement>(null);
+  const stackLayoutKey = useMemo(
+    () =>
+      entries
+        .map(
+          (entry) =>
+            `${entry.id}:${entry.quote?.length ?? 0}:${entry.comment?.length ?? 0}`,
+        )
+        .join(","),
+    [entries],
+  );
+  useExplorerRailStackWidth(stackRef, stackLayoutKey);
   const groupCopyText = formatGroupCopyText(entries);
   const showCopyAll = !!groupCopyText;
   const [copiedAll, flashCopiedAll] = useCopyFlash();
@@ -332,8 +403,10 @@ export function AnnotationStreamGroup({
           <GalleryTile
             item={parent}
             collectionId={collectionId}
+            showGalleryNote={showGalleryNote}
             selected={selected}
             interactive
+            chrome={chrome}
             onClick={onClick}
             onDoubleClick={onDoubleClick}
             onContextMenu={onContextMenu}
@@ -369,7 +442,10 @@ export function AnnotationStreamGroup({
           </div>
         ) : null}
       </div>
-      <div className="syllabus-my-annotations-stream-stack min-w-0">
+      <div
+        ref={stackRef}
+        className="syllabus-my-annotations-stream-stack min-w-0"
+      >
         {entries.length === 0 && emptyLabel ? (
           <p className="syllabus-gallery-annotations-empty text-secondary">
             {emptyLabel}

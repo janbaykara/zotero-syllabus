@@ -36,6 +36,7 @@ export function SyllabusItemCard({
   isLocked = false,
   hideHoverActions = false,
   isFurtherReading = false,
+  showGalleryNote = false,
   onDrop,
   onDragOver,
   dropEdge = null,
@@ -71,6 +72,8 @@ export function SyllabusItemCard({
   onReaderCheck?: () => void | Promise<void>;
   /** True when rendered in the Further reading section (for drag reorder). */
   isFurtherReading?: boolean;
+  /** Only Gallery Page should pass true; all other surfaces default off. */
+  showGalleryNote?: boolean;
   onDrop?: (
     e: JSX.TargetedDragEvent<HTMLElement>,
     insertBefore: boolean,
@@ -123,7 +126,10 @@ export function SyllabusItemCard({
   // const is
 
   const classInstruction = assignment?.classInstruction || "";
-  const galleryNote = useGalleryNoteText(item, collectionId);
+  const galleryNote = useGalleryNoteText(
+    item,
+    showGalleryNote ? collectionId : 0,
+  );
   const handleGalleryNoteClick = useCallback(
     (e: JSX.TargetedMouseEvent<HTMLElement>) => {
       e.stopPropagation();

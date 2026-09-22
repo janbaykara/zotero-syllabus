@@ -16,7 +16,7 @@ export type ReadingTileChrome = {
   onUnpin?: () => void | Promise<void>;
   /** Class / syllabus name shown above the title in cover & magazine. */
   contextLabel?: string;
-  /** When false, hide priority badge (e.g. Reading Schedule / Pinned). */
+  /** When false, hide priority badge (e.g. Pinned). */
   showPriority?: boolean;
 };
 
@@ -125,6 +125,24 @@ export function ReadingPriorityBadge({
       </span>
     </span>
   );
+}
+
+/** One chrome entry per item id (later rows overwrite earlier). */
+export function chromeByItemIdFromAssignments(
+  collectionId: number,
+  rows: Array<{ item: Zotero.Item; assignment?: ItemSyllabusAssignment }>,
+  options?: Pick<ReadingTileChrome, "showPriority" | "readerMode">,
+): Map<number, ReadingTileChrome> {
+  const map = new Map<number, ReadingTileChrome>();
+  for (const { item, assignment } of rows) {
+    map.set(item.id, {
+      collectionId,
+      assignment,
+      showPriority: options?.showPriority,
+      readerMode: options?.readerMode,
+    });
+  }
+  return map;
 }
 
 export function readingChromeEqual(

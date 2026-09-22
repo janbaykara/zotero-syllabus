@@ -1,4 +1,5 @@
 const SKIP_TARGET_SELECTOR = "input, textarea, iframe";
+const ITEM_MENU_ID = "zotero-itemmenu";
 
 type ItemContextMenuPane = {
   getSelectedItems?: (
@@ -8,6 +9,15 @@ type ItemContextMenuPane = {
     id: number,
     options?: { noTabSwitch?: boolean },
   ) => Promise<unknown> | unknown;
+  selectItems?: (
+    ids: number[],
+    options?: { noTabSwitch?: boolean },
+  ) => Promise<unknown> | unknown;
+  itemsView?: {
+    selection?: {
+      clearSelection?: () => void;
+    };
+  } | null;
   onItemsContextMenuOpen?: (
     event: Event,
     x?: number,
@@ -21,6 +31,10 @@ export type ItemContextMenuPaneLike = ItemContextMenuPane;
 export type ItemContextMenuPoint = {
   x: number;
   y: number;
+};
+
+type ItemMenuElement = Element & {
+  state?: string;
 };
 
 /** True for Shift+F10 / the ContextMenu key, matching Zotero’s item tree. */
@@ -120,10 +134,83 @@ function getItemContextMenuPane(): ItemContextMenuPane | undefined {
   }
 }
 
+function isItemMenuOpen(menu: ItemMenuElement | null | undefined): boolean {
+  const state = menu?.state;
+  return state === "open" || state === "showing" || state === "hiding";
+}
+
+async function restoreItemSelection(
+  pane: ItemContextMenuPane,
+  previousIds: number[],
+): Promise<void> {
+  try {
+    if (previousIds.length === 0) {
+      pane.itemsView?.selection?.clearSelection?.();
+      return;
+    }
+    if (typeof pane.selectItems === "function") {
+      await pane.selectItems(previousIds, { noTabSwitch: true });
+      return;
+    }
+    if (previousIds.length === 1 && typeof pane.selectItem === "function") {
+      await pane.selectItem(previousIds[0], { noTabSwitch: true });
+    }
+  } catch (err) {
+    try {
+      ztoolkit.log("Error restoring selection after item context menu:", err);
+    } catch {
+      // Tests (and early boot) may not have ztoolkit.
+    }
+  }
+}
+
 /**
- * Open Zotero’s native `#zotero-itemmenu` for `item`, matching table-list
- * right-click: select the item if it is not already in the selection, then
- * build and show the menu.
+ * Restore the prior library selection once `#zotero-itemmenu` closes so a
+ * right-click does not leave the clicked item selected (left-click selects).
+ * Resolves after restore. When the menu is open, waits for `popuphidden` first.
+ */
+async function restoreSelectionAfterItemMenu(
+  pane: ItemContextMenuPane,
+  previousIds: number[],
+): Promise<void> {
+  try {
+    const win = Zotero.getMainWindow();
+    const menu = win?.document?.getElementById(
+      ITEM_MENU_ID,
+    ) as ItemMenuElement | null;
+
+    // After onItemsContextMenuOpen, the popup is already open (or it failed).
+    // Wait for close so menu commands still see the temporary selection.
+    if (
+      menu &&
+      typeof menu.addEventListener === "function" &&
+      isItemMenuOpen(menu)
+    ) {
+      await new Promise<void>((resolve) => {
+        menu.addEventListener("popuphidden", () => resolve(), { once: true });
+      });
+    }
+  } catch {
+    // Fall through to restore even if the menu lookup fails.
+  }
+  await restoreItemSelection(pane, previousIds);
+}
+
+function itemMenuIsOpen(): boolean {
+  try {
+    const menu = Zotero.getMainWindow()?.document?.getElementById(
+      ITEM_MENU_ID,
+    ) as ItemMenuElement | null;
+    return isItemMenuOpen(menu);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Open Zotero’s native `#zotero-itemmenu` for `item`. Temporarily selects the
+ * item when needed so the menu targets it, then restores the prior library
+ * selection when the menu closes — left-click (not right-click) selects.
  */
 export async function openZoteroItemContextMenu(
   item: Zotero.Item,
@@ -148,15 +235,21 @@ export async function openZoteroItemContextMenu(
       return;
     }
     const selectedIds = selectedItemIds(pane);
-    if (
-      !selectedIds.includes(item.id) &&
-      typeof pane.selectItem === "function"
-    ) {
+    const restoreIds = selectedIds.includes(item.id) ? null : selectedIds;
+    if (restoreIds && typeof pane.selectItem === "function") {
       // Stay on Reading Schedule / other custom tabs while the menu opens.
       await pane.selectItem(item.id, { noTabSwitch: true });
     }
     const { x, y } = itemContextMenuScreenPoint(event, fallbackElement);
     await pane.onItemsContextMenuOpen(event, x, y);
+    if (restoreIds) {
+      const restorePromise = restoreSelectionAfterItemMenu(pane, restoreIds);
+      // Callers fire-and-forget; don't block on popuphidden (that hangs until
+      // the user dismisses the menu). Await only when restoring immediately.
+      if (!itemMenuIsOpen()) {
+        await restorePromise;
+      }
+    }
   } catch (err) {
     ztoolkit.log("Error opening item context menu:", err);
   }

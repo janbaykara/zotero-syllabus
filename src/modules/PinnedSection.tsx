@@ -1,7 +1,13 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
 import type { JSX } from "preact";
-import { useCallback, useEffect, useMemo, useState } from "preact/hooks";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 import { twMerge } from "tailwind-merge";
 import { BookOpen, Pin, PinOff } from "lucide-preact";
 import {
@@ -14,6 +20,12 @@ import {
   confirmUnpinPinnedItem,
   confirmUnpinPinnedSyllabus,
   unpinItemWithNotePrompt,
+  applyPinnedShelfOrder,
+  getPinnedShelfOrder,
+  movePinnedShelfEntry,
+  pinnedShelfEntryKey,
+  resolvePinnedOrderLibraryID,
+  setPinnedShelfOrder,
   type NextUpReading,
 } from "./pinned";
 import { SyllabusItemCard } from "./SyllabusItemCard";
@@ -153,8 +165,28 @@ export function usePinnedScheduleData(libraryID?: number) {
         listPinnedItems(libraryID),
         listNextUpReadings(libraryID),
       ]);
-      setPinnedItems(items);
-      setNextUp(readings);
+      const orderLibraryID = resolvePinnedOrderLibraryID(
+        libraryID,
+        items,
+        readings,
+      );
+      const order =
+        orderLibraryID != null ? getPinnedShelfOrder(orderLibraryID) : [];
+      setPinnedItems(
+        applyPinnedShelfOrder(
+          items,
+          (item) => pinnedShelfEntryKey("item", item.key),
+          order,
+        ),
+      );
+      setNextUp(
+        applyPinnedShelfOrder(
+          readings,
+          (reading) =>
+            pinnedShelfEntryKey("collection", reading.collection.key),
+          order,
+        ),
+      );
     })();
   }, [libraryID]);
 
@@ -195,6 +227,7 @@ export function PinnedSection({
   onChanged,
   embedded = false,
   showUnpinCheckboxes = false,
+  libraryID,
 }: {
   density: ItemDensity;
   layout?: GalleryLayout;
@@ -206,9 +239,71 @@ export function PinnedSection({
   embedded?: boolean;
   /** Reading Schedule: checkboxes that confirm and unpin. */
   showUnpinCheckboxes?: boolean;
+  /** Library for persisted shelf order (Home / Reading Schedule). */
+  libraryID?: number;
 }) {
   /** Cover mode renders pinned collections as stacks — omit them from item tiles. */
   const coverMode = layout === "cover";
+
+  const orderLibraryID = useMemo(
+    () => resolvePinnedOrderLibraryID(libraryID, pinnedItems, nextUp),
+    [libraryID, pinnedItems, nextUp],
+  );
+
+  /** Instant UI order; avoids a full pinned-item search reload on every drop. */
+  const [orderOverride, setOrderOverride] = useState<string[] | null>(null);
+  const membershipKey = useMemo(
+    () =>
+      [
+        ...pinnedItems.map((item) => pinnedShelfEntryKey("item", item.key)),
+        ...nextUp.map((reading) =>
+          pinnedShelfEntryKey("collection", reading.collection.key),
+        ),
+      ]
+        .sort()
+        .join("|"),
+    [pinnedItems, nextUp],
+  );
+
+  useEffect(() => {
+    setOrderOverride(null);
+  }, [membershipKey]);
+
+  type CoverEntry =
+    | { kind: "item"; key: string; item: Zotero.Item }
+    | { kind: "collection"; key: string; reading: NextUpReading };
+
+  const coverEntries = useMemo((): CoverEntry[] => {
+    const entries: CoverEntry[] = [
+      ...pinnedItems.map((item) => ({
+        kind: "item" as const,
+        key: pinnedShelfEntryKey("item", item.key),
+        item,
+      })),
+      ...nextUp.map((reading) => ({
+        kind: "collection" as const,
+        key: pinnedShelfEntryKey("collection", reading.collection.key),
+        reading,
+      })),
+    ];
+    const order =
+      orderOverride ??
+      (orderLibraryID != null ? getPinnedShelfOrder(orderLibraryID) : []);
+    if (order.length === 0) {
+      return entries;
+    }
+    return applyPinnedShelfOrder(entries, (entry) => entry.key, order);
+  }, [pinnedItems, nextUp, orderLibraryID, orderOverride]);
+
+  const commitShelfOrder = useCallback(
+    (keys: string[]) => {
+      setOrderOverride(keys);
+      if (orderLibraryID != null) {
+        setPinnedShelfOrder(orderLibraryID, keys);
+      }
+    },
+    [orderLibraryID],
+  );
 
   const pinnedLayoutRows = useMemo((): ReadingLayoutRow[] => {
     const rows: ReadingLayoutRow[] = [];
@@ -273,7 +368,7 @@ export function PinnedSection({
     return rows;
   }, [coverMode, pinnedLayoutRows, nextUp, showUnpinCheckboxes, onChanged]);
 
-  const coverTileCount = pinnedItems.length + nextUp.length;
+  const coverTileCount = coverEntries.length;
   const { wrapRef: coverPackRef, pack: coverPack } = useReadingItemsPack(
     "cover",
     coverTileCount,
@@ -289,39 +384,45 @@ export function PinnedSection({
     "--reading-tile-gap": READING_TILE_GAP,
   } as JSX.CSSProperties;
 
-  const coverBody =
-    coverMode && embedded ? (
-      <div className="syllabus-explorer-cover-rail">
-        {pinnedItems.map((item) => (
-          <GalleryTile
-            key={`pinned-item-${item.id}`}
-            item={item}
-            selected={false}
-            onClick={(clicked) => {
-              activatePinnedItem(clicked, true);
-            }}
-            onDoubleClick={(clicked) => {
-              openItemBestAttachment(clicked);
-            }}
-            onContextMenu={(clicked, e) => {
-              void openZoteroItemContextMenu(clicked, e);
-            }}
-          />
-        ))}
-        {nextUp.map((reading) => (
-          <NextUpCoverStack
-            key={`pinned-next-${reading.collection.id}`}
-            reading={reading}
-            onChanged={onChanged}
-          />
-        ))}
-      </div>
-    ) : coverMode ? (
+  const coverBody = coverMode ? (
+    embedded ? (
+      <PinnedOrderedList
+        entries={coverEntries}
+        canReorder={orderLibraryID != null}
+        onReorder={commitShelfOrder}
+        axis="x"
+        className="syllabus-explorer-cover-rail"
+        tileClassName="syllabus-pinned-shelf-tile"
+        renderEntry={(entry) =>
+          entry.kind === "item" ? (
+            <GalleryTile
+              item={entry.item}
+              selected={false}
+              onClick={(clicked) => {
+                activatePinnedItem(clicked, true);
+              }}
+              onDoubleClick={(clicked) => {
+                openItemBestAttachment(clicked);
+              }}
+              onContextMenu={(clicked, e) => {
+                void openZoteroItemContextMenu(clicked, e);
+              }}
+            />
+          ) : (
+            <NextUpCoverStack reading={entry.reading} onChanged={onChanged} />
+          )
+        }
+      />
+    ) : (
       <div
         ref={coverPackRef}
         className={readingContentWidthClass("cover", coverPack)}
       >
-        <div
+        <PinnedOrderedList
+          entries={coverEntries}
+          canReorder={orderLibraryID != null}
+          onReorder={commitShelfOrder}
+          axis="x"
           className={twMerge(
             "syllabus-gallery-grid syllabus-pinned-collection-covers",
             readingItemsPackClass(coverPack),
@@ -332,44 +433,84 @@ export function PinnedSection({
               "--reading-pack-count": coverTileCount,
             } as JSX.CSSProperties
           }
-        >
-          {pinnedLayoutRows.map((row) => (
-            <GalleryTile
-              key={row.key}
-              item={row.item}
-              selected={false}
-              chrome={{
-                collectionId: row.collectionId,
-                assignment: row.assignment,
-                showPriority: false,
-                onUnpin: row.onReaderCheck,
-              }}
-              onClick={(clicked) => {
-                openPinnedItem(clicked);
-              }}
-              onDoubleClick={(clicked) => {
-                openItemBestAttachment(clicked);
-              }}
-              onContextMenu={(clicked, e) => {
-                void openZoteroItemContextMenu(clicked, e);
-              }}
+          tileClassName="syllabus-pinned-shelf-tile"
+          renderEntry={(entry) =>
+            entry.kind === "item" ? (
+              <GalleryTile
+                item={entry.item}
+                selected={false}
+                chrome={{
+                  collectionId: entry.item.getCollections()[0] ?? 0,
+                  assignment: {
+                    id: `pinned-${entry.item.id}`,
+                    classInstruction:
+                      readIntentionText(entry.item) || undefined,
+                  },
+                  showPriority: false,
+                  onUnpin: showUnpinCheckboxes
+                    ? async () => {
+                        const ok = await confirmUnpinPinnedItem(entry.item);
+                        if (ok) {
+                          onChanged();
+                        }
+                      }
+                    : undefined,
+                }}
+                onClick={(clicked) => {
+                  openPinnedItem(clicked);
+                }}
+                onDoubleClick={(clicked) => {
+                  openItemBestAttachment(clicked);
+                }}
+                onContextMenu={(clicked, e) => {
+                  void openZoteroItemContextMenu(clicked, e);
+                }}
+              />
+            ) : (
+              <NextUpCoverStack reading={entry.reading} onChanged={onChanged} />
+            )
+          }
+        />
+      </div>
+    )
+  ) : null;
+
+  const cardBody =
+    !coverMode && layout === "card" ? (
+      <PinnedOrderedList
+        entries={coverEntries}
+        canReorder={orderLibraryID != null}
+        onReorder={commitShelfOrder}
+        axis="y"
+        className="space-y-6"
+        tileClassName="syllabus-pinned-shelf-card"
+        renderEntry={(entry) =>
+          entry.kind === "item" ? (
+            <PinnedItemRow
+              item={entry.item}
+              density={density}
+              showLibraryName={showLibraryName}
+              showUnpinCheckbox={showUnpinCheckboxes}
+              onChanged={onChanged}
+              selectOnClick={embedded}
             />
-          ))}
-          {nextUp.map((reading) => (
-            <NextUpCoverStack
-              key={`pinned-next-${reading.collection.id}`}
-              reading={reading}
+          ) : (
+            <NextUpRow
+              reading={entry.reading}
+              density={density}
+              showLibraryName={showLibraryName}
+              showUnpinCheckbox={showUnpinCheckboxes}
               onChanged={onChanged}
             />
-          ))}
-        </div>
-      </div>
+          )
+        }
+      />
     ) : null;
 
   return (
     <div
       className={embedded ? undefined : "mt-6 mb-10"}
-      data-fix={embedded ? "explorer-shelf-pinned" : "reading-schedule-pinned"}
+      data-tour={embedded ? "explorer-shelf-pinned" : "reading-schedule-pinned"}
     >
       {embedded ? null : <PinnedStickyHeading />}
 
@@ -406,37 +547,183 @@ export function PinnedSection({
             }}
           />
         ) : null}
-        {!coverMode && layout === "card" ? (
-          <div className="space-y-6">
-            {pinnedItems.map((item) => (
-              <PinnedItemRow
-                key={item.id}
-                item={item}
-                density={density}
-                showLibraryName={showLibraryName}
-                showUnpinCheckbox={showUnpinCheckboxes}
-                onChanged={onChanged}
-                selectOnClick={embedded}
-              />
-            ))}
-
-            {nextUp.map((reading) => (
-              <NextUpRow
-                key={
-                  reading.assignment
-                    ? `${reading.collection.id}-${reading.assignment.id}`
-                    : `pinned-collection-${reading.collection.id}`
-                }
-                reading={reading}
-                density={density}
-                showLibraryName={showLibraryName}
-                showUnpinCheckbox={showUnpinCheckboxes}
-                onChanged={onChanged}
-              />
-            ))}
-          </div>
-        ) : null}
+        {cardBody}
       </div>
+    </div>
+  );
+}
+
+const PINNED_SHELF_DRAG_MIME = "application/x-syllabus-pinned-shelf";
+
+type PinnedCoverEntry =
+  | { kind: "item"; key: string; item: Zotero.Item }
+  | { kind: "collection"; key: string; reading: NextUpReading };
+
+function PinnedOrderedList({
+  entries,
+  canReorder,
+  onReorder,
+  axis,
+  className,
+  style,
+  tileClassName,
+  renderEntry,
+}: {
+  entries: PinnedCoverEntry[];
+  canReorder: boolean;
+  onReorder: (keys: string[]) => void;
+  axis: "x" | "y";
+  className?: string;
+  style?: JSX.CSSProperties;
+  tileClassName: string;
+  renderEntry: (entry: PinnedCoverEntry) => JSX.Element;
+}) {
+  const [draggingKey, setDraggingKey] = useState<string | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
+  const draggingKeyRef = useRef<string | null>(null);
+  const dropIndexRef = useRef<number | null>(null);
+  const suppressClickRef = useRef(false);
+
+  const finishDrag = useCallback(() => {
+    draggingKeyRef.current = null;
+    dropIndexRef.current = null;
+    setDraggingKey(null);
+    setDropIndex(null);
+  }, []);
+
+  const dropIndexForTile = (
+    index: number,
+    clientX: number,
+    clientY: number,
+    tile: HTMLElement,
+  ) => {
+    const rect = tile.getBoundingClientRect();
+    const after =
+      axis === "x"
+        ? clientX > rect.left + rect.width / 2
+        : clientY > rect.top + rect.height / 2;
+    return after ? index + 1 : index;
+  };
+
+  const updateDropIndex = (
+    index: number,
+    clientX: number,
+    clientY: number,
+    tile: HTMLElement,
+  ) => {
+    const next = dropIndexForTile(index, clientX, clientY, tile);
+    dropIndexRef.current = next;
+    setDropIndex((current) => (current === next ? current : next));
+  };
+
+  const commitReorder = (fromKey: string, toIndex: number) => {
+    if (!canReorder) {
+      return;
+    }
+    const from = entries.findIndex((entry) => entry.key === fromKey);
+    if (from < 0) {
+      return;
+    }
+    const next = movePinnedShelfEntry(entries, from, toIndex);
+    const keys = next.map((entry) => entry.key);
+    if (keys.join("\0") === entries.map((entry) => entry.key).join("\0")) {
+      return;
+    }
+    onReorder(keys);
+  };
+
+  const allowReorder = canReorder && entries.length > 1;
+
+  return (
+    <div
+      className={className}
+      style={style}
+      onDragOver={(event) => {
+        if (!draggingKeyRef.current || !event.dataTransfer) {
+          return;
+        }
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+      }}
+    >
+      {entries.map((entry, index) => (
+        <div
+          key={entry.key}
+          className={twMerge(
+            tileClassName,
+            draggingKey === entry.key && "is-dragging",
+            dropIndex === index && "is-drop-before",
+            dropIndex === entries.length &&
+              index === entries.length - 1 &&
+              "is-drop-after",
+          )}
+          draggable={allowReorder}
+          title={
+            allowReorder ? getString("explorer-configure-reorder") : undefined
+          }
+          onDragStart={(event) => {
+            if (!allowReorder || !event.dataTransfer) {
+              return;
+            }
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData(PINNED_SHELF_DRAG_MIME, entry.key);
+            event.dataTransfer.setData("text/plain", entry.key);
+            draggingKeyRef.current = entry.key;
+            dropIndexRef.current = index;
+            setDraggingKey(entry.key);
+            setDropIndex(index);
+            suppressClickRef.current = false;
+          }}
+          onDragEnd={() => {
+            finishDrag();
+          }}
+          onDragOver={(event) => {
+            if (!draggingKeyRef.current) {
+              return;
+            }
+            event.preventDefault();
+            if (event.dataTransfer) {
+              event.dataTransfer.dropEffect = "move";
+            }
+            updateDropIndex(
+              index,
+              event.clientX,
+              event.clientY,
+              event.currentTarget as HTMLElement,
+            );
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const fromKey =
+              event.dataTransfer?.getData(PINNED_SHELF_DRAG_MIME) ||
+              event.dataTransfer?.getData("text/plain") ||
+              draggingKeyRef.current;
+            // Prefer live geometry on the drop target — React state can lag.
+            const to = dropIndexForTile(
+              index,
+              event.clientX,
+              event.clientY,
+              event.currentTarget as HTMLElement,
+            );
+            if (fromKey) {
+              suppressClickRef.current = true;
+              commitReorder(fromKey, to);
+            }
+            finishDrag();
+          }}
+          onClickCapture={(event) => {
+            if (!suppressClickRef.current) {
+              return;
+            }
+            event.preventDefault();
+            event.stopPropagation();
+            suppressClickRef.current = false;
+          }}
+        >
+          {renderEntry(entry)}
+        </div>
+      ))}
     </div>
   );
 }
@@ -492,10 +779,17 @@ function NextUpCoverStack({
         void openZoteroCollectionContextMenu(reading.collection, e);
       }}
     >
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         className="syllabus-pinned-collection-cover-hit border-0 bg-transparent p-0 cursor-pointer text-left w-full min-w-0"
         onClick={open}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            open();
+          }
+        }}
       >
         <div
           className="syllabus-pinned-collection-stack"
@@ -522,7 +816,7 @@ function NextUpCoverStack({
             />
           )}
         </div>
-      </button>
+      </div>
       <div className="syllabus-gallery-meta min-w-0 px-0.5">
         <div className="flex flex-row items-start gap-0.5 min-w-0">
           <div
@@ -574,8 +868,9 @@ function NextUpCoverStack({
           </div>
         ) : null}
         {showProgress && reading.progress ? (
-          <button
-            type="button"
+          <div
+            role="button"
+            tabIndex={0}
             className="syllabus-pinned-collection-progress border-0 bg-transparent p-0 cursor-pointer text-left w-full min-w-0"
             title={getString("pinned-syllabus-progress", {
               args: {
@@ -584,6 +879,12 @@ function NextUpCoverStack({
               },
             })}
             onClick={open}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                open();
+              }
+            }}
           >
             <div className="syllabus-pinned-collection-progress-track">
               <div
@@ -594,7 +895,7 @@ function NextUpCoverStack({
             <span className="syllabus-pinned-collection-progress-pct">
               {reading.progress.percent}%
             </span>
-          </button>
+          </div>
         ) : null}
       </div>
     </div>
@@ -682,6 +983,7 @@ function PinnedItemRow({
           }}
           density={density}
           slim
+          isLocked
           hideHoverActions
           readerMode={showUnpinCheckbox}
           onReaderCheck={showUnpinCheckbox ? handleReaderCheck : undefined}
@@ -805,6 +1107,7 @@ function NextUpRow({
           assignment={reading.assignment}
           density={density}
           slim
+          isLocked
           hideHoverActions
           readerMode={showUnpinCheckbox}
           onReaderCheck={showUnpinCheckbox ? handleReaderCheck : undefined}
@@ -822,6 +1125,7 @@ function NextUpRow({
           assignment={{ id: `pinned-collection-${reading.collection.id}` }}
           density={density}
           slim
+          isLocked
           hideHoverActions
           readerMode={showUnpinCheckbox}
           onReaderCheck={showUnpinCheckbox ? handleReaderCheck : undefined}

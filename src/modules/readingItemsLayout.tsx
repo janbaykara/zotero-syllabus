@@ -146,7 +146,7 @@ export function ReadingItemsLayout({
   readerMode?: boolean;
   isLocked?: boolean;
   template?: MagazineSectionTemplate;
-  /** Cover/magazine priority badge (off on Reading Schedule / Pinned). */
+  /** Cover/magazine priority badge (off on Pinned; Reading Schedule Cover shows it). */
   showPriority?: boolean;
   coverRail?: boolean;
   className?: string;

@@ -83,7 +83,7 @@ import {
 import { densityLabel } from "./browsePage";
 import { SlimSyllabusItemCard, useItemIdentifierSelection } from "./browsePage";
 import { SyllabusItemCard } from "./SyllabusItemCard";
-import { useSyllabusClassGroups } from "./classGroups";
+import { sortClassAssignmentRows, useSyllabusClassGroups } from "./classGroups";
 import { useGalleryGroupBy, type GalleryGroupBy } from "./galleryGroupBy";
 import {
   findActiveGalleryGroupId,
@@ -159,6 +159,7 @@ import {
 import {
   ReadingDoneCheckbox,
   ReadingPriorityBadge,
+  chromeByItemIdFromAssignments,
   readingChromeEqual,
   type ReadingTileChrome,
 } from "./readingAssignmentChrome";
@@ -794,6 +795,7 @@ export function GalleryPage({
           key={`${keyPrefix}-${item.id}`}
           item={item}
           collectionId={collectionIdOrZero}
+          showGalleryNote={true}
           selected={selectedItemIds?.includes(item.id) || false}
           onClick={handleClick}
           onDoubleClick={handleDoubleClick}
@@ -803,7 +805,11 @@ export function GalleryPage({
     </div>
   );
 
-  const renderAnnotations = (items: Zotero.Item[], keyPrefix: string) => (
+  const renderAnnotations = (
+    items: Zotero.Item[],
+    keyPrefix: string,
+    chromeByItemId?: ReadonlyMap<number, ReadingTileChrome> | null,
+  ) => (
     <GalleryAnnotationsSection
       items={items}
       keyPrefix={keyPrefix}
@@ -811,6 +817,8 @@ export function GalleryPage({
       collectionId={collectionIdOrZero}
       selectedItemIds={selectedItemIds}
       showItemsWithoutAnnotations={showItemsWithoutAnnotations}
+      showGalleryNote={true}
+      chromeByItemId={chromeByItemId}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
@@ -831,6 +839,7 @@ export function GalleryPage({
           collectionId={collectionIdOrZero}
           keyPrefix={keyPrefix}
           density={density}
+          showGalleryNote={true}
           selectedIdentifiers={selectedIdentifiers}
           selectedItemIds={selectedItemIds}
           onIdentifierClick={handleIdentifierClick}
@@ -851,6 +860,7 @@ export function GalleryPage({
       sortBy={sortBy}
       template={template}
       collectionId={collectionIdOrZero}
+      showGalleryNote={true}
       selectedItemIds={selectedItemIds}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
@@ -884,25 +894,56 @@ export function GalleryPage({
     if (rows.length === 0) {
       return null;
     }
+    const chromeByItemId = chromeByItemIdFromAssignments(
+      collectionIdOrZero,
+      rows,
+    );
     if (layout === "magazine") {
-      return renderMagazine(
-        rows.map(({ item }) => item),
-        keyPrefix,
+      return (
+        <MagazineGrid
+          items={rows.map(({ item }) => item)}
+          keyPrefix={keyPrefix}
+          sortBy={sortBy}
+          template={magazineSectionTemplate(magazineSectionIndex++)}
+          collectionId={collectionIdOrZero}
+          showGalleryNote={true}
+          selectedItemIds={selectedItemIds}
+          onClick={handleClick}
+          onDoubleClick={handleDoubleClick}
+          onContextMenu={handleContextMenu}
+          chromeByItemId={chromeByItemId}
+        />
       );
     }
     if (layout === "annotations") {
       return renderAnnotations(
         rows.map(({ item }) => item),
         keyPrefix,
+        chromeByItemId,
       );
     }
     if (layout !== "card") {
-      return renderCovers(
-        rows.map(({ item }) => item),
-        keyPrefix,
+      return (
+        <div className="syllabus-gallery-grid">
+          {sortItems(uniqueItems(rows.map(({ item }) => item)), sortBy).map(
+            (item) => (
+              <GalleryTile
+                key={`${keyPrefix}-${item.id}`}
+                item={item}
+                collectionId={collectionIdOrZero}
+                showGalleryNote={true}
+                selected={selectedItemIds?.includes(item.id) || false}
+                chrome={chromeByItemId.get(item.id)}
+                onClick={handleClick}
+                onDoubleClick={handleDoubleClick}
+                onContextMenu={handleContextMenu}
+              />
+            ),
+          )}
+        </div>
       );
     }
-    const sorted = sortAssignmentRows(rows, sortBy);
+    const sorted = sortClassAssignmentRows(rows, sortBy);
     return (
       <div
         className={twMerge(
@@ -925,6 +966,7 @@ export function GalleryPage({
               density={density}
               readerMode={false}
               isLocked={true}
+              showGalleryNote={true}
               selectedIdentifiers={selectedIdentifiers}
               onIdentifierClick={handleIdentifierClick}
               onContextMenu={handleContextMenu}
@@ -2006,27 +2048,11 @@ function uniqueItems(items: Zotero.Item[]): Zotero.Item[] {
   });
 }
 
-function sortAssignmentRows(
-  rows: Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }>,
-  sortBy: GallerySortBy,
-) {
-  if (sortBy === "auto") {
-    return rows;
-  }
-  const order = new Map(
-    sortItems(
-      rows.map((row) => row.item),
-      sortBy,
-    ).map((item, index) => [item.id, index]),
-  );
-  return [...rows].sort(
-    (a, b) => (order.get(a.item.id) ?? 0) - (order.get(b.item.id) ?? 0),
-  );
-}
-
 type GalleryTileProps = {
   item: Zotero.Item;
   collectionId?: number;
+  /** Only Gallery Page should pass true; all other surfaces default off. */
+  showGalleryNote?: boolean;
   selected: boolean;
   interactive?: boolean;
   chrome?: ReadingTileChrome | null;
@@ -2041,6 +2067,7 @@ type GalleryTileProps = {
 export const GalleryTile = memo(function GalleryTile({
   item,
   collectionId: collectionIdProp,
+  showGalleryNote = false,
   selected,
   interactive = true,
   chrome,
@@ -2049,7 +2076,10 @@ export const GalleryTile = memo(function GalleryTile({
   onContextMenu,
 }: GalleryTileProps) {
   const collectionId = collectionIdProp ?? chrome?.collectionId ?? 0;
-  const galleryNote = useGalleryNoteText(item, collectionId);
+  const galleryNote = useGalleryNoteText(
+    item,
+    showGalleryNote ? collectionId : 0,
+  );
   const tileRef = useRef<HTMLDivElement>(null);
   const visible = useNearViewport(tileRef);
   const title = useMemo(
@@ -2113,14 +2143,14 @@ export const GalleryTile = memo(function GalleryTile({
   };
 
   const meta = (
-    <div className="syllabus-gallery-meta min-w-0 px-0.5">
+    <div className="syllabus-gallery-meta min-w-0 px-0.5 flex flex-col gap-0.5">
       {chrome?.contextLabel ? (
-        <div className="text-xs text-secondary truncate mb-0.5">
+        <div className="text-xs text-secondary truncate">
           {chrome.contextLabel}
         </div>
       ) : null}
       {priorityId ? (
-        <div className="mb-0.5 min-w-0">
+        <div className="min-w-0">
           <ReadingPriorityBadge
             collectionId={chrome?.collectionId ?? 0}
             priorityId={priorityId}
@@ -2189,12 +2219,12 @@ export const GalleryTile = memo(function GalleryTile({
           <span className="truncate">{hostname}</span>
         </div>
       ) : creator ? (
-        <div className="syllabus-gallery-creator text-xs text-secondary truncate mt-0.5">
+        <div className="syllabus-gallery-creator text-xs text-secondary truncate">
           {creator}
         </div>
       ) : null}
       {instruction ? (
-        <div className="syllabus-gallery-instruction text-xs text-secondary mt-0.5 line-clamp-2 whitespace-pre-wrap">
+        <div className="syllabus-gallery-instruction text-xs text-secondary line-clamp-2 whitespace-pre-wrap">
           {instruction}
         </div>
       ) : null}
@@ -2217,7 +2247,7 @@ export const GalleryTile = memo(function GalleryTile({
         </div>
       ) : null}
       {readStatus ? (
-        <div className="text-[11px] text-secondary truncate mt-0.5 uppercase tracking-wide">
+        <div className="text-[11px] text-secondary truncate uppercase tracking-wide">
           {readStatus.icon} {readStatus.name}
         </div>
       ) : null}
@@ -2293,9 +2323,11 @@ function areGalleryTilePropsEqual(
     prev.item.dateModified === next.item.dateModified &&
     prev.selected === next.selected &&
     prev.interactive === next.interactive &&
+    !!prev.showGalleryNote === !!next.showGalleryNote &&
     prevCollectionId === nextCollectionId &&
-    galleryNoteFingerprint(prev.item, prevCollectionId) ===
-      galleryNoteFingerprint(next.item, nextCollectionId) &&
+    (!prev.showGalleryNote ||
+      galleryNoteFingerprint(prev.item, prevCollectionId) ===
+        galleryNoteFingerprint(next.item, nextCollectionId)) &&
     readingChromeEqual(prev.chrome, next.chrome) &&
     prev.onClick === next.onClick &&
     prev.onDoubleClick === next.onDoubleClick &&

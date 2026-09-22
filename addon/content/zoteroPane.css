@@ -824,13 +824,136 @@
     var(--syllabus-annotations-cover-cols),
     minmax(0, var(--syllabus-annotations-cover-width))
   );
+  /* One row per tile — do not use the Cover gallery’s 2-row subgrid here
+     (priority / title / author spacing goes wrong once chrome is present). */
+  grid-auto-rows: auto;
   column-gap: var(--syllabus-annotations-cover-gap);
   justify-content: start;
   width: 100%;
+  align-items: start;
+}
+
+.syllabus-gallery-annotations-empty-section .syllabus-gallery-tile {
+  display: flex;
+  flex-direction: column;
+  grid-row: auto;
+  grid-column: auto;
+  grid-template-rows: none;
+  align-content: start;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+  max-width: var(--syllabus-annotations-cover-width);
+  margin-bottom: 0;
+}
+
+.syllabus-gallery-annotations-empty-section .syllabus-gallery-tile-main {
+  display: flex;
+  flex-direction: column;
+  grid-row: auto;
+  grid-column: auto;
+  grid-template-rows: none;
+  align-content: start;
+}
+
+.syllabus-gallery-annotations-empty-section .syllabus-gallery-meta {
+  align-self: stretch;
+}
+
+/*
+ * Do not let Gallery Notes span a second parent-grid column here: with
+ * cols-cap=1 that creates an implicit auto track and the cover blows up.
+ * Match the annotation feed avatar — note stacks under cover + metadata.
+ */
+.syllabus-gallery-annotations-empty-section
+  .syllabus-gallery-tile.has-gallery-note {
+  display: flex;
+  flex-direction: column;
+  grid-column: auto;
+  grid-row: auto;
+  grid-template-columns: none;
+  grid-template-rows: none;
+  align-content: start;
+  column-gap: 0;
+}
+
+.syllabus-gallery-annotations-empty-section
+  .syllabus-gallery-tile.has-gallery-note
+  .syllabus-gallery-tile-main {
+  display: flex;
+  flex-direction: column;
+  grid-column: auto;
+  grid-row: auto;
+  grid-template-rows: none;
+  align-content: start;
+}
+
+.syllabus-gallery-annotations-empty-section
+  .syllabus-gallery-tile.has-gallery-note
+  .syllabus-gallery-note {
+  grid-column: auto;
+  grid-row: auto;
+  align-self: stretch;
+  margin-left: 0;
+  padding: 0.4rem 0.05rem 0.15rem;
+}
+
+.syllabus-gallery-annotations-empty-section
+  .syllabus-gallery-tile.has-gallery-note
+  .syllabus-gallery-note
+  .syllabus-prose {
+  -webkit-line-clamp: 8;
+}
+
+@supports not (grid-template-rows: subgrid) {
+  .syllabus-gallery-annotations-empty-section
+    .syllabus-gallery-tile.has-gallery-note {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .syllabus-gallery-annotations-empty-section
+    .syllabus-gallery-tile.has-gallery-note
+    .syllabus-gallery-tile-main {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .syllabus-gallery-annotations-empty-section
+    .syllabus-gallery-tile.has-gallery-note
+    > .syllabus-gallery-cover-portrait,
+  .syllabus-gallery-annotations-empty-section
+    .syllabus-gallery-tile.has-gallery-note
+    > .syllabus-gallery-cover-video,
+  .syllabus-gallery-annotations-empty-section
+    .syllabus-gallery-tile.has-gallery-note
+    > .syllabus-gallery-cover-web,
+  .syllabus-gallery-annotations-empty-section
+    .syllabus-gallery-tile.has-gallery-note
+    > .syllabus-gallery-cover-square,
+  .syllabus-gallery-annotations-empty-section
+    .syllabus-gallery-tile.has-gallery-note
+    > .syllabus-gallery-cover-natural,
+  .syllabus-gallery-annotations-empty-section
+    .syllabus-gallery-tile.has-gallery-note
+    > .syllabus-gallery-cover-with-binder,
+  .syllabus-gallery-annotations-empty-section
+    .syllabus-gallery-tile.has-gallery-note
+    > .syllabus-gallery-meta,
+  .syllabus-gallery-annotations-empty-section
+    .syllabus-gallery-tile.has-gallery-note
+    > .syllabus-gallery-note {
+    grid-column: auto;
+    grid-row: auto;
+  }
 }
 
 /* Explorer recent-annotations: same stream groups, horizontal rail.
-   Cover is fixed; each annotation is its own column ~2.66× cover width. */
+   Cover is fixed; quote columns are ~2.66× cover width. Short quotes
+   stack top-to-bottom within the clamp-height band before wrapping to
+   the next column (flex column-wrap needs a definite height).
+   Firefox won't grow the wrap container's width — AnnotationStreamGroup
+   measures children and sets an explicit width so the next cover clears. */
 .syllabus-explorer-annotation-stream-rail {
   display: flex;
   flex-direction: row;
@@ -853,6 +976,11 @@
   );
   --syllabus-explorer-annotation-col-width: calc(
     2.66 * var(--syllabus-annotations-cover-width)
+  );
+  /* One fully line-clamped quote + meta + body padding — tall enough
+     for a long annotation alone, short enough that two brief ones pack. */
+  --syllabus-explorer-annotation-stack-height: calc(
+    1.2rem * 1.55 * 8 + 0.45rem + 1.35rem + 0.7rem
   );
   --syllabus-explorer-entry-gap: 1.1rem;
   --syllabus-explorer-annotation-gap: 0.65rem;
@@ -878,12 +1006,15 @@
 .syllabus-explorer-annotation-stream-rail
   .syllabus-my-annotations-stream-stack {
   flex: 0 0 auto;
-  width: auto;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: stretch;
+  height: var(--syllabus-explorer-annotation-stack-height);
+  width: max-content;
   max-width: none;
   min-width: 0;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  align-items: flex-start;
   gap: var(--syllabus-explorer-annotation-gap);
   overflow: visible;
   padding-block: 0.05rem 0.2rem;
@@ -891,7 +1022,7 @@
 
 .syllabus-explorer-annotation-stream-rail
   .syllabus-my-annotations-stream-body-wrap {
-  flex: 0 0 var(--syllabus-explorer-annotation-col-width);
+  flex: 0 0 auto;
   width: var(--syllabus-explorer-annotation-col-width);
   max-width: var(--syllabus-explorer-annotation-col-width);
   scroll-snap-align: start;
@@ -1061,6 +1192,13 @@
     grid-row: auto;
   }
 
+  .syllabus-gallery-grid .syllabus-pinned-shelf-tile {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    grid-row: auto;
+  }
+
   .syllabus-gallery-tile.has-gallery-note {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -1125,6 +1263,11 @@
   align-items: center;
   gap: 0.4rem;
   margin-top: 0.35rem;
+}
+
+/* GalleryTile meta uses flex gap — don't double-space under the byline. */
+.syllabus-gallery-meta.flex .syllabus-gallery-progress {
+  margin-top: 0;
 }
 
 .syllabus-gallery-progress-track {
@@ -2494,6 +2637,106 @@
   scroll-snap-type: x mandatory;
 }
 
+.syllabus-pinned-shelf-tile {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 2;
+  position: relative;
+  box-sizing: border-box;
+  width: 148px;
+  max-width: 148px;
+  min-width: 0;
+  scroll-snap-align: start;
+  cursor: grab;
+}
+
+.syllabus-explorer-cover-rail
+  .syllabus-pinned-shelf-tile
+  > .syllabus-gallery-tile,
+.syllabus-explorer-cover-rail
+  .syllabus-pinned-shelf-tile
+  > .syllabus-pinned-collection-cover {
+  width: 100%;
+  max-width: none;
+}
+
+.syllabus-pinned-shelf-tile.is-dragging {
+  opacity: 0.45;
+  cursor: grabbing;
+}
+
+.syllabus-pinned-shelf-tile.is-drop-before::before,
+.syllabus-pinned-shelf-tile.is-drop-after::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  pointer-events: none;
+  background: var(--accent-blue, #2255e0);
+  border-radius: 2px;
+}
+
+.syllabus-pinned-shelf-tile.is-drop-before::before {
+  left: -0.55rem;
+}
+
+.syllabus-pinned-shelf-tile.is-drop-after::after {
+  right: -0.55rem;
+}
+
+/* Reading Schedule Cover grid: same wrapper as the Home rail. */
+.syllabus-gallery-grid .syllabus-pinned-shelf-tile {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 2;
+  width: auto;
+  max-width: none;
+  min-width: 0;
+  scroll-snap-align: unset;
+}
+
+.syllabus-gallery-grid .syllabus-pinned-shelf-tile > .syllabus-gallery-tile,
+.syllabus-gallery-grid
+  .syllabus-pinned-shelf-tile
+  > .syllabus-pinned-collection-cover {
+  width: 100%;
+  max-width: none;
+}
+
+/* Reading Schedule Card list: vertical drop lines between rows. */
+.syllabus-pinned-shelf-card {
+  position: relative;
+  cursor: grab;
+}
+
+.syllabus-pinned-shelf-card.is-dragging {
+  opacity: 0.45;
+  cursor: grabbing;
+}
+
+.syllabus-pinned-shelf-card.is-drop-before::before,
+.syllabus-pinned-shelf-card.is-drop-after::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  left: 0.25rem;
+  right: 0.25rem;
+  height: 3px;
+  pointer-events: none;
+  background: var(--accent-blue, #2255e0);
+  border-radius: 2px;
+}
+
+.syllabus-pinned-shelf-card.is-drop-before::before {
+  top: -0.75rem;
+}
+
+.syllabus-pinned-shelf-card.is-drop-after::after {
+  bottom: -0.75rem;
+}
+
 /* Stack fans paint past the 148px column. Pad the scrollport so they aren’t
    clipped, and cancel with negative margin so covers + captions stay flush
    with the shelf header (fan may reach the content/window edge). */
@@ -2580,15 +2823,6 @@
   padding: 0;
   min-height: 0;
   max-height: none;
-}
-
-/* Don't reserve a 2-line title block for single-line course names — that
-   pushed Class away from the course title vs item title→author. */
-.syllabus-explorer-cover-rail
-  .syllabus-pinned-collection-cover
-  > .syllabus-gallery-meta
-  > :first-child {
-  min-height: 0;
 }
 
 .syllabus-pinned-collection-cover
@@ -3036,11 +3270,6 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   overflow: hidden;
 }
 
-.syllabus-explorer-cover-rail .syllabus-gallery-meta > :first-child,
-.syllabus-explorer-class-segment-covers .syllabus-gallery-meta > :first-child {
-  min-height: calc(0.875rem * 1.375 * 2);
-}
-
 .syllabus-explorer-cover-rail .syllabus-gallery-hostrow,
 .syllabus-explorer-class-segment-covers .syllabus-gallery-hostrow {
   max-width: 100%;
@@ -3097,7 +3326,8 @@ button.syllabus-explorer-class-segment-header:focus-visible {
 
   .syllabus-explorer-cover-rail .syllabus-gallery-tile,
   .syllabus-explorer-class-segment-covers .syllabus-gallery-tile,
-  .syllabus-explorer-cover-rail .syllabus-pinned-collection-cover {
+  .syllabus-explorer-cover-rail .syllabus-pinned-collection-cover,
+  .syllabus-explorer-cover-rail .syllabus-pinned-shelf-tile {
     display: flex;
     flex-direction: column;
     justify-content: flex-end;

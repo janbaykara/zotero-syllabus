@@ -31,7 +31,9 @@ function mouseEvent(
 function fakePane(options: {
   selected?: number[];
   selectCalls?: number[];
+  selectItemsCalls?: number[][];
   selectOptions?: Array<{ noTabSwitch?: boolean } | undefined>;
+  clearCalls?: number[];
   openCalls?: Array<{ x?: number; y?: number }>;
 }): ItemContextMenuPaneLike {
   let selected = options.selected ?? [];
@@ -45,6 +47,20 @@ function fakePane(options: {
       options.selectOptions?.push(selectOptions);
       selected = [id];
       return true;
+    },
+    selectItems: async (ids: number[], selectOptions?) => {
+      options.selectItemsCalls?.push([...ids]);
+      options.selectOptions?.push(selectOptions);
+      selected = [...ids];
+      return true;
+    },
+    itemsView: {
+      selection: {
+        clearSelection: () => {
+          options.clearCalls?.push(1);
+          selected = [];
+        },
+      },
     },
     onItemsContextMenuOpen: async (_event, x, y) => {
       options.openCalls?.push({ x, y });
@@ -140,8 +156,9 @@ describe("itemContextMenu", function () {
       assert.deepEqual(openCalls, []);
     });
 
-    it("selects an unselected item then opens the native menu", async function () {
+    it("temporarily selects an unselected item, opens the menu, then restores", async function () {
       const selectCalls: number[] = [];
+      const selectItemsCalls: number[][] = [];
       const selectOptions: Array<{ noTabSwitch?: boolean } | undefined> = [];
       const openCalls: Array<{ x?: number; y?: number }> = [];
       const event = mouseEvent(80, 90);
@@ -149,24 +166,56 @@ describe("itemContextMenu", function () {
         fakeItem(42),
         event,
         null,
-        fakePane({ selected: [7], selectCalls, selectOptions, openCalls }),
+        fakePane({
+          selected: [7],
+          selectCalls,
+          selectItemsCalls,
+          selectOptions,
+          openCalls,
+        }),
       );
       assert.isTrue(event.defaultPrevented);
       assert.deepEqual(selectCalls, [42]);
-      assert.deepEqual(selectOptions, [{ noTabSwitch: true }]);
+      assert.deepEqual(selectItemsCalls, [[7]]);
+      assert.deepEqual(selectOptions, [
+        { noTabSwitch: true },
+        { noTabSwitch: true },
+      ]);
       assert.deepEqual(openCalls, [{ x: 80, y: 90 }]);
+    });
+
+    it("clears selection after the menu when nothing was selected", async function () {
+      const selectCalls: number[] = [];
+      const clearCalls: number[] = [];
+      const openCalls: Array<{ x?: number; y?: number }> = [];
+      await openZoteroItemContextMenu(
+        fakeItem(42),
+        mouseEvent(1, 2),
+        null,
+        fakePane({ selected: [], selectCalls, clearCalls, openCalls }),
+      );
+      assert.deepEqual(selectCalls, [42]);
+      assert.deepEqual(clearCalls, [1]);
+      assert.deepEqual(openCalls, [{ x: 1, y: 2 }]);
     });
 
     it("keeps a multi-selection when the clicked item is already selected", async function () {
       const selectCalls: number[] = [];
+      const selectItemsCalls: number[][] = [];
       const openCalls: Array<{ x?: number; y?: number }> = [];
       await openZoteroItemContextMenu(
         fakeItem(42),
         mouseEvent(11, 22),
         null,
-        fakePane({ selected: [42, 99], selectCalls, openCalls }),
+        fakePane({
+          selected: [42, 99],
+          selectCalls,
+          selectItemsCalls,
+          openCalls,
+        }),
       );
       assert.deepEqual(selectCalls, []);
+      assert.deepEqual(selectItemsCalls, []);
       assert.deepEqual(openCalls, [{ x: 11, y: 22 }]);
     });
   });

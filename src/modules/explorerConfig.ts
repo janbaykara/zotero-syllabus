@@ -140,6 +140,11 @@ function deadlinesLayoutMigrationKey() {
   return `${config.prefsPrefix}.explorerDeadlinesCoverDefault`;
 }
 
+/** One-time bump: collection shelves were catalogued as Magazine; default is now Cover. */
+function collectionLayoutMigrationKey() {
+  return `${config.prefsPrefix}.explorerCollectionCoverDefault`;
+}
+
 function libraryViewPrefKey() {
   return `${config.prefsPrefix}.libraryViewModes`;
 }
@@ -149,7 +154,7 @@ export function defaultLayoutForShelfType(
 ): GalleryLayout {
   switch (type) {
     case "pinned":
-      return "card";
+      return "cover";
     case "upcoming-deadlines":
       return "cover";
     case "collection":
@@ -174,12 +179,12 @@ export function layoutsForExplorerShelf(
   type: ExplorerShelfType,
 ): readonly GalleryLayout[] {
   switch (type) {
+    case "pinned":
     case "watch-now":
     case "listen-now":
       return ["cover"];
     case "recent-annotations":
       return ["card"];
-    case "pinned":
     case "upcoming-deadlines":
       return EXPLORER_SHELF_LAYOUTS;
     default:
@@ -200,7 +205,7 @@ function resolveShelfLayout(
 
 export function defaultExplorerShelves(): ExplorerShelf[] {
   return [
-    { id: "pinned", type: "pinned", layout: "card" },
+    { id: "pinned", type: "pinned", layout: "cover" },
     { id: "upcoming-deadlines", type: "upcoming-deadlines", layout: "cover" },
     { id: "watch-now", type: "watch-now", layout: "cover" },
     { id: "listen-now", type: "listen-now", layout: "cover" },
@@ -419,7 +424,9 @@ export function getExplorerShelves(): ExplorerShelf[] {
   const raw = getCachedPref(shelvesPrefKey(), ExplorerShelvesSchema);
   const shelves =
     raw == null ? defaultExplorerShelves() : coerceExplorerShelves(raw);
-  return migrateUpcomingDeadlinesCoverDefault(shelves);
+  return migrateCollectionCoverDefault(
+    migrateUpcomingDeadlinesCoverDefault(shelves),
+  );
 }
 
 /**
@@ -440,6 +447,41 @@ function migrateUpcomingDeadlinesCoverDefault(
 
   const next = shelves.map((shelf) =>
     shelf.type === "upcoming-deadlines" && shelf.layout === "card"
+      ? { ...shelf, layout: "cover" as const }
+      : shelf,
+  );
+  const changed = next.some(
+    (shelf, index) => shelf.layout !== shelves[index]?.layout,
+  );
+  if (changed) {
+    setExplorerShelves(next);
+  }
+  try {
+    Zotero.Prefs.set(key, true, true);
+  } catch {
+    return changed ? next : shelves;
+  }
+  return changed ? next : shelves;
+}
+
+/**
+ * Collection shelves used to be catalogued with Magazine as the default.
+ * Remap that shipped default to Cover once; after that, Magazine is a real choice.
+ */
+function migrateCollectionCoverDefault(
+  shelves: ExplorerShelf[],
+): ExplorerShelf[] {
+  const key = collectionLayoutMigrationKey();
+  try {
+    if (Zotero.Prefs.get(key, true)) {
+      return shelves;
+    }
+  } catch {
+    return shelves;
+  }
+
+  const next = shelves.map((shelf) =>
+    shelf.type === "collection" && shelf.layout === "magazine"
       ? { ...shelf, layout: "cover" as const }
       : shelf,
   );

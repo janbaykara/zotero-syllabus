@@ -188,6 +188,7 @@ export function SlimSyllabusItemCard({
   selectedItemIds,
   onIdentifierClick,
   onContextMenu,
+  showGalleryNote = false,
 }: {
   item: Zotero.Item;
   collectionId: number;
@@ -204,6 +205,7 @@ export function SlimSyllabusItemCard({
     item: Zotero.Item,
     e: JSX.TargetedMouseEvent<HTMLElement>,
   ) => void;
+  showGalleryNote?: boolean;
 }) {
   return (
     <SyllabusItemCard
@@ -215,6 +217,7 @@ export function SlimSyllabusItemCard({
       density={density}
       readerMode={false}
       isLocked={true}
+      showGalleryNote={showGalleryNote}
       selectedIdentifiers={selectedIdentifiers}
       onIdentifierClick={onIdentifierClick}
       onContextMenu={onContextMenu}

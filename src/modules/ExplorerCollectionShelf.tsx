@@ -12,6 +12,8 @@ import {
 } from "./ClassReadingBlock";
 import {
   buildSyllabusClassGroups,
+  sortClassAssignmentRows,
+  type ClassAssignmentRow,
   type SyllabusClassGroup,
 } from "./classGroups";
 import { useCollectionCreatorGroups } from "./creatorGroups";
@@ -30,6 +32,11 @@ import type { GalleryGroupIconSpec } from "./galleryGroupNav";
 import { collectionGroupIconSpec } from "./galleryGroupNav";
 import { MagazineGrid, type MagazineTileClick } from "./MagazineTile";
 import { SlimSyllabusItemCard } from "./browsePage";
+import { SyllabusItemCard } from "./SyllabusItemCard";
+import {
+  chromeByItemIdFromAssignments,
+  type ReadingTileChrome,
+} from "./readingAssignmentChrome";
 import type { GalleryLayout } from "./galleryLayout";
 import type { GalleryGroupBy } from "./galleryGroupBy";
 import type { GallerySortBy } from "./gallerySort";
@@ -52,6 +59,11 @@ export type ExplorerShelfSegment = {
   done?: boolean;
   icon?: GalleryGroupIconSpec;
   items: Zotero.Item[];
+  /** Class grouping: assignment rows so priority chrome / cards can show. */
+  itemAssignments?: ClassAssignmentRow[];
+  classNumber?: number | null;
+  /** When segments span collections (e.g. upcoming deadlines). */
+  collectionId?: number;
   onOpen?: () => void;
 };
 
@@ -66,10 +78,10 @@ function uniqueItems(items: Zotero.Item[]): Zotero.Item[] {
   });
 }
 
-function uniqueClassItems(group: SyllabusClassGroup): Zotero.Item[] {
+function uniqueClassItems(rows: ClassAssignmentRow[]): Zotero.Item[] {
   const seen = new Set<number>();
   const items: Zotero.Item[] = [];
-  for (const { item } of group.itemAssignments) {
+  for (const { item } of rows) {
     if (seen.has(item.id)) {
       continue;
     }
@@ -230,6 +242,7 @@ function SegmentHeader({ segment }: { segment: ExplorerShelfSegment }) {
 export function ExplorerSegmentedCoverRail({
   segments,
   keyPrefix,
+  collectionId = 0,
   selectedItemIds,
   onClick,
   onDoubleClick,
@@ -238,6 +251,7 @@ export function ExplorerSegmentedCoverRail({
 }: {
   segments: ExplorerShelfSegment[];
   keyPrefix: string;
+  collectionId?: number;
   selectedItemIds: number[] | null;
   onClick: MagazineTileClick;
   onDoubleClick: (item: Zotero.Item) => void;
@@ -265,6 +279,13 @@ export function ExplorerSegmentedCoverRail({
     <div className="syllabus-explorer-class-cover-rail">
       {segments.map((segment) => {
         const classHeader = classHeaders?.[segment.key];
+        const segmentCollectionId = segment.collectionId ?? collectionId;
+        const chromeByItemId = segment.itemAssignments
+          ? chromeByItemIdFromAssignments(
+              segmentCollectionId,
+              segment.itemAssignments,
+            )
+          : undefined;
         return (
           <section
             key={`${keyPrefix}-${segment.key}`}
@@ -284,7 +305,9 @@ export function ExplorerSegmentedCoverRail({
                 <GalleryTile
                   key={`${keyPrefix}-${segment.key}-${item.id}`}
                   item={item}
+                  collectionId={segmentCollectionId}
                   selected={selectedItemIds?.includes(item.id) || false}
+                  chrome={chromeByItemId?.get(item.id)}
                   onClick={onClick}
                   onDoubleClick={onDoubleClick}
                   onContextMenu={onContextMenu}
@@ -357,7 +380,11 @@ function buildClassSegments(
   > = {};
 
   for (const group of classGroups) {
-    const items = sortSegmentItems(uniqueClassItems(group), sortBy);
+    const itemAssignments = sortClassAssignmentRows(
+      group.itemAssignments,
+      sortBy,
+    );
+    const items = uniqueClassItems(itemAssignments);
     if (items.length === 0) {
       continue;
     }
@@ -370,6 +397,8 @@ function buildClassSegments(
       key,
       title: "",
       items,
+      itemAssignments,
+      classNumber: group.classNumber,
       done,
       onOpen: () =>
         openCollectionSyllabusAtClass(collectionId, group.classNumber),
@@ -596,11 +625,53 @@ export function ExplorerCollectionShelfBody({
     collectionId,
   ]);
 
-  const renderSegmentBody = (items: Zotero.Item[], segmentKey: string) => {
+  const renderSegmentBody = (segment: ExplorerShelfSegment) => {
+    const { items, key: segmentKey, itemAssignments, classNumber } = segment;
+    const chromeByItemId: ReadonlyMap<number, ReadingTileChrome> | undefined =
+      itemAssignments
+        ? chromeByItemIdFromAssignments(collectionId, itemAssignments)
+        : undefined;
+
     if (layout === "cover") {
       return null;
     }
     if (layout === "card") {
+      if (itemAssignments) {
+        return (
+          <div
+            className={twMerge(
+              "syllabus-gallery-cards flex flex-col",
+              density !== "expanded" ? "gap-2" : "gap-4",
+            )}
+          >
+            {itemAssignments.map(({ item, assignment }) => {
+              if (!assignment.id) {
+                return null;
+              }
+              return (
+                <SyllabusItemCard
+                  key={`${keyPrefix}-${segmentKey}-${item.id}-${assignment.id}`}
+                  item={item}
+                  collectionId={collectionId}
+                  classNumber={classNumber ?? undefined}
+                  assignment={assignment}
+                  slim={true}
+                  density={density}
+                  readerMode={false}
+                  isLocked={true}
+                  selectedIdentifiers={selectedIdentifiers}
+                  onIdentifierClick={onIdentifierClick}
+                  onContextMenu={onContextMenu}
+                  isZoteroSelected={selectedItemIds?.includes(item.id) || false}
+                  isIdentifierSelected={selectedIdentifiers.has(
+                    `assignment:${assignment.id}`,
+                  )}
+                />
+              );
+            })}
+          </div>
+        );
+      }
       return (
         <div
           className={twMerge(
@@ -630,10 +701,12 @@ export function ExplorerCollectionShelfBody({
         keyPrefix={`${keyPrefix}-${segmentKey}`}
         sortBy={sortBy}
         template={template}
+        collectionId={collectionId}
         selectedItemIds={selectedItemIds}
         onClick={onClick}
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
+        chromeByItemId={chromeByItemId}
       />
     );
   };
@@ -655,6 +728,7 @@ export function ExplorerCollectionShelfBody({
       <ExplorerSegmentedCoverRail
         segments={segments}
         keyPrefix={keyPrefix}
+        collectionId={collectionId}
         selectedItemIds={selectedItemIds}
         onClick={onClick}
         onDoubleClick={onDoubleClick}
@@ -673,7 +747,7 @@ export function ExplorerCollectionShelfBody({
       );
     }
     if (layout === "card") {
-      return renderSegmentBody(flatItems, "all");
+      return renderSegmentBody({ key: "all", title: "", items: flatItems });
     }
     return (
       <div
@@ -688,6 +762,7 @@ export function ExplorerCollectionShelfBody({
           keyPrefix={keyPrefix}
           sortBy={sortBy}
           template={template}
+          collectionId={collectionId}
           selectedItemIds={selectedItemIds}
           onClick={onClick}
           onDoubleClick={onDoubleClick}
@@ -741,7 +816,7 @@ export function ExplorerCollectionShelfBody({
               {icon ? <GalleryGroupIcon spec={icon} /> : null}
               <span>{heading}</span>
             </h3>
-            {renderSegmentBody(segment.items, segment.key)}
+            {renderSegmentBody(segment)}
           </section>
         );
       })}
