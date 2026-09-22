@@ -58,7 +58,10 @@ import {
   type ClassReading,
 } from "./ClassReadingBlock";
 import { isOptionalFeatureEnabled } from "./optionalFeatures";
-import { ExplorerAnnotationShelf } from "./annotationTiles";
+import {
+  ExplorerAnnotationShelf,
+  groupAdjacentStreamEntries,
+} from "./annotationStream";
 import {
   buildClassReadings,
   filterSyllabiByLibrary,
@@ -116,7 +119,6 @@ import {
   EXPLORER_ARTICLE_DESK_LIMIT,
   EXPLORER_MEDIA_LIMIT,
   EXPLORER_RECENTLY_ADDED_LIMIT,
-  groupAdjacentAnnotations,
   pickNewestItems,
   pickRecentItemsByDate,
   useExplorerQueryData,
@@ -253,17 +255,20 @@ const LAYOUT_LABEL_IDS: Record<GalleryLayout, FluentMessageId> = {
   cover: "gallery-layout-cover",
   magazine: "gallery-layout-magazine",
   card: "gallery-layout-card",
+  annotations: "gallery-layout-annotations",
 };
 
 const LAYOUT_TITLE_IDS: Record<GalleryLayout, FluentMessageId> = {
   cover: "gallery-layout-cover-title",
   magazine: "gallery-layout-magazine-title",
   card: "gallery-layout-card-title",
+  annotations: "gallery-layout-annotations-title",
 };
 
 const LAYOUT_ICONS: Record<GalleryLayout, typeof Image> = {
   card: LayoutList,
   cover: Image,
+  annotations: Highlighter,
   magazine: Newspaper,
 };
 
@@ -1418,7 +1423,7 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
             EXPLORER_MEDIA_LIMIT,
           );
         case "recent-annotations":
-          return groupAdjacentAnnotations(
+          return groupAdjacentStreamEntries(
             data.annotations.slice(0, shelf.limit),
           )
             .map((group) => group.parent)
@@ -1884,8 +1889,6 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                     shelf.layout !== "magazine" ? (
                     <ExplorerAnnotationShelf
                       annotations={data.annotations.slice(0, shelf.limit)}
-                      layout={shelf.layout === "card" ? "card" : "cover"}
-                      size={shelf.size}
                       selectedItemIds={selectedItemIds}
                       onClick={handleClick}
                       onDoubleClick={handleDoubleClick}

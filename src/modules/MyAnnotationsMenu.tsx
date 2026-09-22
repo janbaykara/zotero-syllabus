@@ -1,15 +1,26 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { ArrowDown, ArrowUp, MoreHorizontal } from "lucide-preact";
+import {
+  ArrowDown,
+  ArrowUp,
+  CalendarPlus,
+  ListOrdered,
+  MoreHorizontal,
+} from "lucide-preact";
 import { getString } from "../utils/locale";
 import { useBooleanPref } from "./react-zotero-sync/booleanPref";
-import type { MyAnnotationsOrder } from "./myAnnotationsPrefs";
+import type { AnnotationsQuoteOrder } from "./explorerQueries";
+import {
+  useAnnotationsQuoteOrder,
+  type MyAnnotationsOrder,
+} from "./myAnnotationsPrefs";
 
 const ORDER_OPTIONS: {
   mode: MyAnnotationsOrder;
   labelKey:
-    "my-annotations-order-newest-last" | "my-annotations-order-newest-first";
+    | "my-annotations-order-newest-last"
+    | "my-annotations-order-newest-first";
   titleKey:
     | "my-annotations-order-newest-last-title"
     | "my-annotations-order-newest-first-title";
@@ -29,7 +40,31 @@ const ORDER_OPTIONS: {
   },
 ];
 
-/** ⋯ menu: chronological order + Annotation Feed copy preferences. */
+const QUOTE_ORDER_OPTIONS: {
+  mode: AnnotationsQuoteOrder;
+  labelKey:
+    | "annotations-quote-order-location"
+    | "annotations-quote-order-date-added";
+  titleKey:
+    | "annotations-quote-order-location-title"
+    | "annotations-quote-order-date-added-title";
+  Icon: typeof ListOrdered;
+}[] = [
+  {
+    mode: "location",
+    labelKey: "annotations-quote-order-location",
+    titleKey: "annotations-quote-order-location-title",
+    Icon: ListOrdered,
+  },
+  {
+    mode: "dateAdded",
+    labelKey: "annotations-quote-order-date-added",
+    titleKey: "annotations-quote-order-date-added-title",
+    Icon: CalendarPlus,
+  },
+];
+
+/** ⋯ menu: chronological order + quote order + Annotation Feed copy preferences. */
 export function MyAnnotationsMenu({
   order,
   onOrder,
@@ -39,6 +74,7 @@ export function MyAnnotationsMenu({
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const [quoteOrder, setQuoteOrder] = useAnnotationsQuoteOrder();
   const [blockquote, setBlockquote] = useBooleanPref(
     "myAnnotationsCopyBlockquote",
   );
@@ -118,6 +154,35 @@ export function MyAnnotationsMenu({
                     {getString(labelKey)}
                   </button>
                 ))}
+              </div>
+            </div>
+            <div className="syllabus-gallery-toolbar-cluster">
+              <div className="syllabus-gallery-toolbar-heading">
+                <span className="syllabus-gallery-groupby-label">
+                  {getString("annotations-quote-order-menu")}
+                </span>
+              </div>
+              <div
+                role="radiogroup"
+                aria-label={getString("annotations-quote-order-menu")}
+                className="syllabus-gallery-groupby"
+              >
+                {QUOTE_ORDER_OPTIONS.map(
+                  ({ mode, labelKey, titleKey, Icon }) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      role="radio"
+                      aria-checked={quoteOrder === mode}
+                      title={getString(titleKey)}
+                      className="syllabus-gallery-groupby-btn"
+                      onClick={() => setQuoteOrder(mode)}
+                    >
+                      <Icon size={12} strokeWidth={2} aria-hidden="true" />
+                      {getString(labelKey)}
+                    </button>
+                  ),
+                )}
               </div>
             </div>
             <div className="syllabus-gallery-toolbar-cluster">

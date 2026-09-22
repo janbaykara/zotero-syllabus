@@ -105,7 +105,9 @@ function appendChoiceButtons(
         ? "gallery-layout-cover"
         : mode === "magazine"
           ? "gallery-layout-magazine"
-          : "gallery-layout-card",
+          : mode === "annotations"
+            ? "gallery-layout-annotations"
+            : "gallery-layout-card",
     );
     button.style.cssText =
       "appearance: auto; font: inherit; padding: 6px 12px; min-width: 12em; cursor: pointer;";

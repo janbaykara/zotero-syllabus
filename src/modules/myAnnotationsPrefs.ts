@@ -8,6 +8,10 @@ import {
 import { coerceGallerySortBy, type GallerySortBy } from "./gallerySort";
 import { getPref, getPrefKey, setPref } from "../utils/prefs";
 import { zoteroCache } from "../utils/cache";
+import {
+  coerceAnnotationsQuoteOrder,
+  type AnnotationsQuoteOrder,
+} from "./explorerQueries";
 
 export const MY_ANNOTATIONS_LAYOUTS = ["vertical", "grid"] as const;
 export type MyAnnotationsLayout = (typeof MY_ANNOTATIONS_LAYOUTS)[number];
@@ -187,6 +191,42 @@ export function useMyAnnotationsOrder(): [
   const setOrder = useCallback((next: MyAnnotationsOrder) => {
     setMode(next);
     setMyAnnotationsOrder(next);
+  }, []);
+
+  return [mode, setOrder];
+}
+
+export function getAnnotationsQuoteOrder(): AnnotationsQuoteOrder {
+  return coerceAnnotationsQuoteOrder(getPref("annotationsQuoteOrder"));
+}
+
+export function setAnnotationsQuoteOrder(mode: AnnotationsQuoteOrder): void {
+  setPref("annotationsQuoteOrder", mode);
+  zoteroCache.invalidatePref(getPrefKey("annotationsQuoteOrder"));
+}
+
+export function useAnnotationsQuoteOrder(): [
+  AnnotationsQuoteOrder,
+  (mode: AnnotationsQuoteOrder) => void,
+] {
+  const [mode, setMode] = useState<AnnotationsQuoteOrder>(() =>
+    getAnnotationsQuoteOrder(),
+  );
+
+  useEffect(() => {
+    const refresh = () => setMode(getAnnotationsQuoteOrder());
+    refresh();
+    const observerID = Zotero.Prefs.registerObserver(
+      getPrefKey("annotationsQuoteOrder"),
+      refresh,
+      true,
+    );
+    return () => Zotero.Prefs.unregisterObserver(observerID);
+  }, []);
+
+  const setOrder = useCallback((next: AnnotationsQuoteOrder) => {
+    setMode(next);
+    setAnnotationsQuoteOrder(next);
   }, []);
 
   return [mode, setOrder];

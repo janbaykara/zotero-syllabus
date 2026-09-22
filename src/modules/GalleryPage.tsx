@@ -22,6 +22,7 @@ import {
   FolderOpen,
   Globe,
   GraduationCap,
+  Highlighter,
   Image,
   LayoutGrid,
   LayoutList,
@@ -53,6 +54,7 @@ import {
   isWebGalleryItem,
 } from "../utils/itemCover";
 import { GalleryCover } from "./GalleryCover";
+import { GalleryAnnotationsRow } from "./GalleryAnnotationsRow";
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
 import { useZoteroItemsViewRegularItemIds } from "./react-zotero-sync/itemsViewItems";
 import {
@@ -98,6 +100,8 @@ import {
   type GalleryLayout,
 } from "./galleryLayout";
 import { useMagazineTypeSize, type MagazineTypeSize } from "./magazineTypeSize";
+import { useAnnotationsQuoteOrder } from "./myAnnotationsPrefs";
+import type { AnnotationsQuoteOrder } from "./explorerQueries";
 import {
   GALLERY_TOUR_EVENT_CLOSE_SETTINGS,
   GALLERY_TOUR_EVENT_OPEN_SETTINGS,
@@ -654,6 +658,22 @@ export function GalleryPage({
     </div>
   );
 
+  const renderAnnotations = (items: Zotero.Item[], keyPrefix: string) => (
+    <div className="syllabus-gallery-annotations-list syllabus-my-annotations-stream">
+      {sortItems(uniqueItems(items), sortBy).map((item) => (
+        <GalleryAnnotationsRow
+          key={`${keyPrefix}-${item.id}`}
+          item={item}
+          collectionId={collectionIdOrZero}
+          selected={selectedItemIds?.includes(item.id) || false}
+          onClick={handleClick}
+          onDoubleClick={handleDoubleClick}
+          onContextMenu={handleContextMenu}
+        />
+      ))}
+    </div>
+  );
+
   const renderCards = (items: Zotero.Item[], keyPrefix: string) => (
     <div
       className={twMerge(
@@ -707,6 +727,9 @@ export function GalleryPage({
         magazineSectionTemplate(magazineSectionIndex++),
       );
     }
+    if (layout === "annotations") {
+      return renderAnnotations(items, keyPrefix);
+    }
     return renderCovers(items, keyPrefix);
   };
 
@@ -720,6 +743,12 @@ export function GalleryPage({
     }
     if (layout === "magazine") {
       return renderMagazine(
+        rows.map(({ item }) => item),
+        keyPrefix,
+      );
+    }
+    if (layout === "annotations") {
+      return renderAnnotations(
         rows.map(({ item }) => item),
         keyPrefix,
       );
@@ -777,6 +806,7 @@ export function GalleryPage({
         layout === "magazine" &&
           magazineTypeSize === "large" &&
           "is-large-type",
+        layout === "annotations" && "syllabus-gallery-annotations-page",
         density !== "expanded" && `density-${density}`,
         fileDrop.isDraggingFile && "file-drag-over",
       )}
@@ -796,7 +826,11 @@ export function GalleryPage({
             isZotero8OrLater() ? "md:pt-8 pt-6" : "pt-8",
           )}
         >
-          <div className="px-6">
+          <div
+            className={
+              layout === "annotations" ? "container-padded" : "px-6"
+            }
+          >
             <GalleryPageHeader
               title={title || getString("untitled")}
               groupBy={groupBy}
@@ -821,7 +855,12 @@ export function GalleryPage({
           </div>
         </div>
         <GalleryViewportProvider rootRef={pageRef}>
-          <div className="px-6 pt-4">
+          <div
+            className={twMerge(
+              "pt-4",
+              layout === "annotations" ? "container-padded" : "px-6",
+            )}
+          >
             {layout === "magazine" &&
             groupBy !== "none" &&
             groupBy !== "auto" ? (
@@ -1317,6 +1356,23 @@ function gallerySortOptions(): GallerySegmentOption<GallerySortBy>[] {
   ];
 }
 
+function galleryQuoteOrderOptions(): GallerySegmentOption<AnnotationsQuoteOrder>[] {
+  return [
+    {
+      mode: "location",
+      label: getString("annotations-quote-order-location"),
+      title: getString("annotations-quote-order-location-title"),
+      Icon: ListOrdered,
+    },
+    {
+      mode: "dateAdded",
+      label: getString("annotations-quote-order-date-added"),
+      title: getString("annotations-quote-order-date-added-title"),
+      Icon: CalendarPlus,
+    },
+  ];
+}
+
 function galleryGroupByOptions(): GallerySegmentOption<GalleryGroupBy>[] {
   return [
     {
@@ -1377,6 +1433,12 @@ function galleryLayoutOptions(): GallerySegmentOption<GalleryLayout>[] {
       label: getString("gallery-layout-cover"),
       title: getString("gallery-layout-cover-title"),
       Icon: Image,
+    },
+    {
+      mode: "annotations",
+      label: getString("gallery-layout-annotations"),
+      title: getString("gallery-layout-annotations-title"),
+      Icon: Highlighter,
     },
     {
       mode: "magazine",
@@ -1517,6 +1579,8 @@ function GalleryPageHeader({
 
   const layoutOptions = galleryLayoutOptions();
   const sortOptions = gallerySortOptions();
+  const quoteOrderOptions = galleryQuoteOrderOptions();
+  const [quoteOrder, setQuoteOrder] = useAnnotationsQuoteOrder();
   const allGroupBy = galleryGroupByOptions();
   const groupByOptions = allGroupBy.filter((option) => {
     if (option.mode === "auto" && layout !== "magazine") {
@@ -1617,6 +1681,15 @@ function GalleryPageHeader({
                     onChange={onMagazineTypeSize}
                     options={magazineTypeSizeOptions()}
                     globalSetting={magazineTypeSizeGlobal}
+                  />
+                ) : null}
+                {layout === "annotations" ? (
+                  <GallerySegmentedControl
+                    label={getString("annotations-quote-order-menu")}
+                    ariaLabel={getString("annotations-quote-order-menu")}
+                    value={quoteOrder}
+                    onChange={setQuoteOrder}
+                    options={quoteOrderOptions}
                   />
                 ) : null}
               </div>

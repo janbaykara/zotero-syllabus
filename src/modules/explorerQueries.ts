@@ -44,8 +44,71 @@ export type MyAnnotationStreamEntry = {
   dateModified: string;
   /** Printed page label from the reader (may be empty for some EPUBs). */
   pageLabel: string;
+  /**
+   * Zotero reader document order (`annotationSortIndex`), e.g. `00008|000412|00574`.
+   * Empty when the reader did not store one.
+   */
+  sortIndex: string;
   parent: Zotero.Item | null;
 };
+
+export const ANNOTATIONS_QUOTE_ORDERS = ["location", "dateAdded"] as const;
+export type AnnotationsQuoteOrder = (typeof ANNOTATIONS_QUOTE_ORDERS)[number];
+
+export function coerceAnnotationsQuoteOrder(
+  value: unknown,
+): AnnotationsQuoteOrder {
+  return value === "dateAdded" ? "dateAdded" : "location";
+}
+
+function pageLabelSortKey(pageLabel: string): number {
+  const match = String(pageLabel || "").match(/-?\d+(?:\.\d+)?/);
+  if (!match) {
+    return Number.POSITIVE_INFINITY;
+  }
+  const n = Number(match[0]);
+  return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
+}
+
+/** Sort quotes within one parent: document location or date added (oldest first). */
+export function compareAnnotationsQuoteOrder(
+  a: MyAnnotationStreamEntry,
+  b: MyAnnotationStreamEntry,
+  order: AnnotationsQuoteOrder,
+): number {
+  if (order === "location") {
+    const sa = a.sortIndex || "";
+    const sb = b.sortIndex || "";
+    if (sa && sb && sa !== sb) {
+      return sa < sb ? -1 : 1;
+    }
+    if (sa && !sb) {
+      return -1;
+    }
+    if (!sa && sb) {
+      return 1;
+    }
+    const page =
+      pageLabelSortKey(a.pageLabel) - pageLabelSortKey(b.pageLabel);
+    if (page) {
+      return page;
+    }
+  }
+  return (
+    dateMs(a.dateAdded) - dateMs(b.dateAdded) ||
+    dateMs(a.dateModified) - dateMs(b.dateModified) ||
+    a.id - b.id
+  );
+}
+
+export function sortAnnotationsByQuoteOrder(
+  entries: MyAnnotationStreamEntry[],
+  order: AnnotationsQuoteOrder,
+): MyAnnotationStreamEntry[] {
+  return [...entries].sort((a, b) =>
+    compareAnnotationsQuoteOrder(a, b, order),
+  );
+}
 
 export type ExplorerAnnotationGroup = {
   parent: Zotero.Item | null;
@@ -357,54 +420,30 @@ export async function searchRecentFeedItems(
 export async function searchRecentAnnotations(
   libraryID: number,
   limit: number,
-): Promise<ExplorerAnnotation[]> {
+): Promise<MyAnnotationStreamEntry[]> {
   const ids = await searchItemIds(libraryID, [
     ["itemType", "is", "annotation"],
     ["dateModified", "isInTheLast", "90 days"],
   ]);
-  const rows: ExplorerAnnotation[] = [];
+  const rows: MyAnnotationStreamEntry[] = [];
   for (const id of ids) {
     const item = resolveItem(id);
     if (!item) {
       continue;
     }
-    let text = "";
     try {
-      text = String(item.annotationText || item.annotationComment || "").trim();
-    } catch {
-      // Keep empty when annotation text is unavailable.
-    }
-    let color = DEFAULT_HIGHLIGHT_COLOR;
-    try {
-      color = normalizeHighlightColor(String(item.annotationColor || ""));
-    } catch {
-      // Keep the default color when annotation color is unavailable.
-    }
-    let parent: Zotero.Item | null = null;
-    try {
-      const attachment = item.parentItem;
-      const work = attachment?.parentItem || attachment || null;
-      parent = work && isSyllabusMemberItem(work) ? work : work || null;
-      if (parent && !parent.isRegularItem?.()) {
-        const grand = parent.parentItem;
-        parent = grand && isSyllabusMemberItem(grand) ? grand : parent;
+      if (item.deleted) {
+        continue;
       }
     } catch {
-      // Keep null when parent lookup fails.
+      continue;
     }
-    rows.push({
-      id: item.id,
-      text,
-      color,
-      dateModified: String(item.dateModified || ""),
-      parent,
-    });
+    const row = mapAnnotationStreamEntry(item);
+    if (row) {
+      rows.push(row);
+    }
   }
-  return rows
-    .sort(
-      (a, b) => dateMs(b.dateModified) - dateMs(a.dateModified) || a.id - b.id,
-    )
-    .slice(0, limit);
+  return rows.sort(compareAnnotationNewestFirst).slice(0, limit);
 }
 
 export const MY_ANNOTATIONS_STREAM_PAGE_SIZE = 50;
@@ -482,6 +521,13 @@ function mapAnnotationStreamEntry(
     dateAdded: String(item.dateAdded || item.dateModified || ""),
     dateModified: String(item.dateModified || ""),
     pageLabel: annotationLocationPageLabel(item),
+    sortIndex: (() => {
+      try {
+        return String(item.annotationSortIndex || "").trim();
+      } catch {
+        return "";
+      }
+    })(),
     parent: annotationParentItem(item),
   };
 }
@@ -551,9 +597,24 @@ async function loadChildItems(item: Zotero.Item): Promise<void> {
   }
 }
 
-async function annotationsForParent(
+/** All annotations under a parent item's file attachments (newest first). */
+export async function annotationsForParent(
   parent: Zotero.Item,
 ): Promise<ExplorerAnnotation[]> {
+  const stream = await annotationsStreamForParent(parent);
+  return stream.map((row) => ({
+    id: row.id,
+    text: row.quote || row.comment,
+    color: row.color,
+    dateModified: row.dateModified,
+    parent: row.parent,
+  }));
+}
+
+/** Stream rows (quote/comment/page) for all annotations under a parent. */
+export async function annotationsStreamForParent(
+  parent: Zotero.Item,
+): Promise<MyAnnotationStreamEntry[]> {
   await loadChildItems(parent);
   let attachmentIds: number[];
   try {
@@ -561,7 +622,7 @@ async function annotationsForParent(
   } catch {
     return [];
   }
-  const rows: ExplorerAnnotation[] = [];
+  const rows: MyAnnotationStreamEntry[] = [];
   for (const attId of attachmentIds) {
     const att = resolveItem(attId);
     if (!att) {
@@ -589,30 +650,16 @@ async function annotationsForParent(
       } catch {
         continue;
       }
-      let text = "";
-      try {
-        text = String(ann.annotationText || ann.annotationComment || "").trim();
-      } catch {
-        // Keep empty when annotation text is unavailable.
+      const row = mapAnnotationStreamEntry(ann);
+      if (!row) {
+        continue;
       }
-      let color = DEFAULT_HIGHLIGHT_COLOR;
-      try {
-        color = normalizeHighlightColor(String(ann.annotationColor || ""));
-      } catch {
-        // Keep the default color when annotation color is unavailable.
-      }
-      rows.push({
-        id: ann.id,
-        text,
-        color,
-        dateModified: String(ann.dateModified || ""),
-        parent,
-      });
+      // Attachments' getAnnotations() rows may not resolve parent via parentItem
+      // the same way library annotation search does — pin the known parent.
+      rows.push({ ...row, parent });
     }
   }
-  return rows.sort(
-    (a, b) => dateMs(b.dateModified) - dateMs(a.dateModified) || a.id - b.id,
-  );
+  return rows.sort(compareAnnotationNewestFirst);
 }
 
 function maxLastReadForParent(parent: Zotero.Item): number {
@@ -701,7 +748,7 @@ export type ExplorerQuerySnapshot = {
   recentItems: Zotero.Item[];
   recentlyRead: Zotero.Item[];
   feedItems: Zotero.Item[];
-  annotations: ExplorerAnnotation[];
+  annotations: MyAnnotationStreamEntry[];
   savedSearchItems: Record<string, Zotero.Item[]>;
 };
 

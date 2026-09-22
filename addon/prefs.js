@@ -21,6 +21,7 @@ pref("myAnnotationsLayout", "grid");
 pref("myAnnotationsSort", "lastRead");
 pref("myAnnotationsGroupBy", "none");
 pref("myAnnotationsOrder", "newestLast");
+pref("annotationsQuoteOrder", "location");
 pref("magazineTypeSize", "small");
 pref("generateReadingScheduleCollection", false);
 pref("readingScheduleCollectionKey", "");

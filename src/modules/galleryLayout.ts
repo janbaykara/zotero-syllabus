@@ -4,7 +4,12 @@ import { config } from "../../package.json";
 import { getCachedPref, zoteroCache } from "../utils/cache";
 import { getPref, getPrefKey, setPref } from "../utils/prefs";
 
-export const GALLERY_LAYOUT_MODES = ["card", "cover", "magazine"] as const;
+export const GALLERY_LAYOUT_MODES = [
+  "card",
+  "cover",
+  "annotations",
+  "magazine",
+] as const;
 
 export type GalleryLayout = (typeof GALLERY_LAYOUT_MODES)[number];
 

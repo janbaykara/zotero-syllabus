@@ -175,6 +175,11 @@ export function defaultLayoutForShelfType(
   }
 }
 
+/** Gallery-only layouts that do not apply to Explorer shelves. */
+const EXPLORER_SHELF_LAYOUTS = GALLERY_LAYOUT_MODES.filter(
+  (mode) => mode !== "annotations",
+);
+
 export function layoutsForExplorerShelf(
   type: ExplorerShelfType,
 ): readonly GalleryLayout[] {
@@ -184,9 +189,9 @@ export function layoutsForExplorerShelf(
       return ["cover"];
     case "pinned":
     case "upcoming-deadlines":
-      return GALLERY_LAYOUT_MODES;
+      return EXPLORER_SHELF_LAYOUTS;
     default:
-      return GALLERY_LAYOUT_MODES;
+      return EXPLORER_SHELF_LAYOUTS;
   }
 }
 

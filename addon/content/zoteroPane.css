@@ -582,7 +582,9 @@
 .syllabus-gallery-class-header + .syllabus-gallery-grid,
 .syllabus-gallery-class-description + .syllabus-gallery-grid,
 .syllabus-gallery-class-header + .syllabus-gallery-cards,
-.syllabus-gallery-class-description + .syllabus-gallery-cards {
+.syllabus-gallery-class-description + .syllabus-gallery-cards,
+.syllabus-gallery-class-header + .syllabus-gallery-annotations-list,
+.syllabus-gallery-class-description + .syllabus-gallery-annotations-list {
   margin-top: 20px;
 }
 
@@ -685,6 +687,71 @@
   max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
+}
+
+/* Gallery Annotations: vertical list reusing Annotation Feed stream rows. */
+.syllabus-gallery-annotations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.syllabus-gallery-annotations-row {
+  width: 100%;
+  min-width: 0;
+}
+
+.syllabus-gallery-annotations-empty {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.syllabus-gallery-annotations-section {
+  gap: 3.5rem;
+}
+
+.syllabus-gallery-annotations-empty-heading {
+  margin: 0 0 1.1rem;
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--fill-secondary, inherit);
+}
+
+/* Explorer recent-annotations: same stream groups, horizontal rail. */
+.syllabus-explorer-annotation-stream-rail {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 1.6rem;
+  overflow-x: auto;
+  overflow-y: visible;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding-block: 0.15rem 0.35rem;
+  scroll-snap-type: x proximity;
+}
+
+.syllabus-explorer-annotation-stream-rail .syllabus-my-annotations-stream-entry {
+  flex: 0 0 min(26rem, 85%);
+  width: min(26rem, 85%);
+  max-width: 100%;
+  scroll-snap-align: start;
+  padding-block: 0.25rem;
+  box-sizing: border-box;
+}
+
+.syllabus-explorer-annotation-stream-rail
+  .syllabus-my-annotations-stream-avatar {
+  position: static;
+  top: auto;
 }
 
 /* Reading Cover/Magazine: fixed tile sized so 4 + gaps fit in the
@@ -2894,7 +2961,8 @@ button.syllabus-explorer-class-segment-header:focus-visible {
 
 /* Unlayered inset matching Reading Schedule container-padded, so header and
    stream share one width even if @layer utilities lose the cascade. */
-.syllabus-my-annotations-page .container-padded {
+.syllabus-my-annotations-page .container-padded,
+.syllabus-gallery-annotations-page .container-padded {
   max-width: var(--container-4xl, 56rem);
   margin-inline: auto;
   padding-inline: 1.5rem;
@@ -2904,7 +2972,8 @@ button.syllabus-explorer-class-segment-header:focus-visible {
 }
 
 @media (width >= 48rem) {
-  .syllabus-my-annotations-page .container-padded {
+  .syllabus-my-annotations-page .container-padded,
+  .syllabus-gallery-annotations-page .container-padded {
     padding-inline: 2.5rem;
   }
 }

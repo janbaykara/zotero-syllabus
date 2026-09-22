@@ -221,6 +221,10 @@
               data-l10n-id="pref-gallery-layout-magazine"
             />
             <menuitem value="card" data-l10n-id="pref-gallery-layout-card" />
+            <menuitem
+              value="annotations"
+              data-l10n-id="pref-gallery-layout-annotations"
+            />
           </menupopup>
         </menulist>
       </html:div>
@@ -325,6 +329,34 @@
       <html:p
         class="syllabus-pref-desc"
         data-l10n-id="pref-my-annotations-copy-cite-key-desc"
+      ></html:p>
+    </html:div>
+    <html:div class="syllabus-pref-row">
+      <html:div class="syllabus-pref-row-main">
+        <label
+          control="zotero-prefpane-__addonRef__-annotationsQuoteOrder"
+          data-l10n-id="pref-annotations-quote-order"
+        />
+        <menulist
+          id="zotero-prefpane-__addonRef__-annotationsQuoteOrder"
+          native="true"
+          preference="annotationsQuoteOrder"
+        >
+          <menupopup>
+            <menuitem
+              value="location"
+              data-l10n-id="pref-annotations-quote-order-location"
+            />
+            <menuitem
+              value="dateAdded"
+              data-l10n-id="pref-annotations-quote-order-date-added"
+            />
+          </menupopup>
+        </menulist>
+      </html:div>
+      <html:p
+        class="syllabus-pref-desc"
+        data-l10n-id="pref-annotations-quote-order-desc"
       ></html:p>
     </html:div>
   </html:section>

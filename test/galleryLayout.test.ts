@@ -69,13 +69,17 @@ describe("gallery defaults", function () {
     }
   });
 
-  it("orders layouts card → cover → magazine", function () {
-    assert.deepEqual([...GALLERY_LAYOUT_MODES], ["card", "cover", "magazine"]);
+  it("orders layouts card → cover → annotations → magazine", function () {
+    assert.deepEqual(
+      [...GALLERY_LAYOUT_MODES],
+      ["card", "cover", "annotations", "magazine"],
+    );
   });
 
   it("coerces unknown layouts to cover", function () {
     assert.equal(coerceGalleryLayout("magazine"), "magazine");
     assert.equal(coerceGalleryLayout("card"), "card");
+    assert.equal(coerceGalleryLayout("annotations"), "annotations");
     assert.equal(coerceGalleryLayout("nope"), "cover");
   });
 

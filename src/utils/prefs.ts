@@ -51,6 +51,7 @@ export const PLUGIN_PREF_DEFAULTS: {
   myAnnotationsSort: "lastRead",
   myAnnotationsGroupBy: "none",
   myAnnotationsOrder: "newestLast",
+  annotationsQuoteOrder: "location",
   magazineTypeSize: "small",
   generateReadingScheduleCollection: false,
   readingScheduleCollectionKey: "",
