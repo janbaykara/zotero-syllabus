@@ -57,7 +57,10 @@ import {
   isWebGalleryItem,
 } from "../utils/itemCover";
 import { GalleryCover } from "./GalleryCover";
-import { GalleryAnnotationsSection, useItemIdsWithAnnotations } from "./GalleryAnnotationsRow";
+import {
+  GalleryAnnotationsSection,
+  useItemIdsWithAnnotations,
+} from "./GalleryAnnotationsRow";
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
 import { useZoteroItemsViewRegularItemIds } from "./react-zotero-sync/itemsViewItems";
 import {
@@ -1879,9 +1882,7 @@ function GalleryPageHeader({
                           onShowItemsWithoutAnnotations(e.currentTarget.checked)
                         }
                       />
-                      <span>
-                        {getString("gallery-annotations-show-empty")}
-                      </span>
+                      <span>{getString("gallery-annotations-show-empty")}</span>
                     </label>
                   </>
                 ) : null}

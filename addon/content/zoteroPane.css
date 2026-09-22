@@ -760,8 +760,7 @@
     var(--syllabus-annotations-cover-min),
     calc(
       (
-          100cqw -
-            (var(--syllabus-annotations-cover-cols) - 1) *
+          100cqw - (var(--syllabus-annotations-cover-cols) - 1) *
             var(--syllabus-annotations-cover-gap)
         ) /
         var(--syllabus-annotations-cover-cols) - 1px

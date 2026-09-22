@@ -174,7 +174,10 @@ export function GalleryAnnotationsSection({
       .catch((err) => {
         ztoolkit.log("GalleryAnnotationsSection partition failed", err);
         if (!cancelled) {
-          setPartition({ withAnnotations: [], withoutAnnotations: itemsToLoad });
+          setPartition({
+            withAnnotations: [],
+            withoutAnnotations: itemsToLoad,
+          });
         }
       });
     return () => {
