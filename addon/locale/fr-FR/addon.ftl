@@ -269,6 +269,7 @@ item-pane-select-collection = Sélectionnez une collection pour voir les attribu
 
 # Settings
 settings-title = Paramètres du syllabus
+settings-window-title = Paramètres de { $name }
 settings-view = View
 settings-view-desc = Density and checkboxes for this syllabus.
 settings-density = Density
@@ -281,10 +282,10 @@ settings-singular = Forme au singulier
 settings-nomenclature-placeholder = p. ex. semaine, cours, séance, section
 settings-plural-label = Forme au pluriel :
 settings-subcollections = Sous-collections de séance
-settings-subcollections-desc = Désactivé par défaut. Une fois activé, chaque séance avec des lectures assignées obtient un dossier sous cette collection. Les séances sans assignations n’ont pas de dossier ; ces dossiers sont supprimés. Les dossiers sont créés, renommés et supprimés pour correspondre au syllabus — y compris les collections enfants existantes, qui peuvent être supprimées. Désactiver laisse les dossiers en place.
+settings-subcollections-desc = Une fois activé, chaque séance avec des lectures assignées obtient un dossier sous cette collection.
 settings-subcollections-checkbox = Créer des sous-collections ?
 settings-bib-style = Style bibliographique
-settings-bib-style-desc = Choisissez un style CSL (Citation Style Language) pour les références bibliographiques. S’il n’est pas défini, le style par défaut de l’utilisateur sera utilisé.
+settings-bib-style-desc = Choisissez un style CSL (Citation Style Language) pour les références bibliographiques.
 settings-citation-style = Style de citation
 settings-user-default = Défaut utilisateur
 settings-user-default-named = Défaut utilisateur : { $name }

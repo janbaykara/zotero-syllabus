@@ -269,6 +269,7 @@ item-pane-select-collection = Seleccione una colección para ver las asignacione
 
 # Settings
 settings-title = Ajustes del programa
+settings-window-title = Ajustes de { $name }
 settings-view = View
 settings-view-desc = Density and checkboxes for this syllabus.
 settings-density = Density
@@ -281,10 +282,10 @@ settings-singular = Forma singular
 settings-nomenclature-placeholder = p. ej., semana, clase, sesión, sección
 settings-plural-label = Forma plural:
 settings-subcollections = Subcolecciones de clase
-settings-subcollections-desc = Desactivado de forma predeterminada. Al activarlo, cada clase con lecturas asignadas obtiene una carpeta bajo esta colección. Las clases sin asignaciones no tienen carpeta, y esas carpetas se eliminan. Las carpetas se crean, se renombran y se eliminan para coincidir con el programa, incluidas las colecciones hijas existentes, que pueden borrarse. Desactivar deja las carpetas en su sitio.
+settings-subcollections-desc = Al activarlo, cada clase con lecturas asignadas obtiene una carpeta bajo esta colección.
 settings-subcollections-checkbox = ¿Crear subcolecciones?
 settings-bib-style = Estilo de bibliografía
-settings-bib-style-desc = Elija un estilo CSL (Citation Style Language) para las referencias bibliográficas. Si no se define, se usará el estilo predeterminado del usuario.
+settings-bib-style-desc = Elija un estilo CSL (Citation Style Language) para las referencias bibliográficas.
 settings-citation-style = Estilo de cita
 settings-user-default = Predeterminado del usuario
 settings-user-default-named = Predeterminado del usuario: { $name }

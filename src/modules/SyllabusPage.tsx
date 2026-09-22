@@ -35,7 +35,10 @@ import { useZoteroReaderMode } from "./react-zotero-sync/readerMode";
 import { isZotero8OrLater } from "../utils/zotero";
 import { getItemTitle, sortItems } from "../utils/items";
 import slugify from "slugify";
-import { SettingsPage } from "./SettingsPage";
+import {
+  openSyllabusSettingsDialog,
+  closeSyllabusSettingsDialog,
+} from "./openSyllabusSettingsDialog";
 import {
   useFurtherReadingSortBy,
   type FurtherReadingSortBy,
@@ -785,9 +788,6 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   );
   const effectiveLayout = isLocked ? browseLayout : "card";
 
-  // Settings view state
-  const [showSettings, setShowSettings] = useState(false);
-
   const [isPinned, setIsPinned] = useState(() => {
     const collection = getCachedCollectionById(collectionId);
     return collection ? isPinnedSyllabus(collection) : false;
@@ -819,20 +819,21 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     }
   };
 
+  // Settings popout (DialogHelper window)
   useEffect(() => {
     const win = Zotero.getMainWindow();
     if (!win) {
       return;
     }
-    const openSettings = () => setShowSettings(true);
-    const closeSettings = () => setShowSettings(false);
+    const openSettings = () => openSyllabusSettingsDialog(collectionId);
+    const closeSettings = () => closeSyllabusSettingsDialog();
     win.addEventListener(TOUR_EVENT_OPEN_SETTINGS, openSettings);
     win.addEventListener(TOUR_EVENT_CLOSE_SETTINGS, closeSettings);
     return () => {
       win.removeEventListener(TOUR_EVENT_OPEN_SETTINGS, openSettings);
       win.removeEventListener(TOUR_EVENT_CLOSE_SETTINGS, closeSettings);
     };
-  }, []);
+  }, [collectionId]);
 
   // Table of Contents state
   const [showTOC, setShowTOC] = useState(false);
@@ -1412,17 +1413,13 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   }, []);
 
   useEffect(() => {
-    if (showSettings) {
-      return;
-    }
-
     const win = Zotero.getMainWindow();
     const doc = win?.document ?? document;
     doc.addEventListener("keydown", handleSyllabusKeyDown, true);
     return () => {
       doc.removeEventListener("keydown", handleSyllabusKeyDown, true);
     };
-  }, [handleSyllabusKeyDown, showSettings]);
+  }, [handleSyllabusKeyDown]);
 
   useLayoutEffect(() => {
     const pending = pendingNavScrollRef.current;
@@ -2828,16 +2825,6 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     }
   };
 
-  // If settings view is active, show settings page
-  if (showSettings) {
-    return (
-      <SettingsPage
-        collectionId={collectionId}
-        onBack={() => setShowSettings(false)}
-      />
-    );
-  }
-
   return (
     <>
       <div
@@ -2923,20 +2910,18 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                     layout={browseLayout}
                     onLayoutChange={setBrowseLayout}
                   />
-                  {!isLocked && (
-                    <div
-                      className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
-                      title={getString("page-edit-settings")}
-                      aria-label={getString("page-edit-settings")}
-                      data-tour="syllabus-settings-button"
-                      onClick={() => setShowSettings(true)}
-                    >
-                      <Settings
-                        size={20}
-                        className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-                      />
-                    </div>
-                  )}
+                  <div
+                    className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
+                    title={getString("page-edit-settings")}
+                    aria-label={getString("page-edit-settings")}
+                    data-tour="syllabus-settings-button"
+                    onClick={() => openSyllabusSettingsDialog(collectionId)}
+                  >
+                    <Settings
+                      size={20}
+                      className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
+                    />
+                  </div>
                   <SyllabusSaveFormatMenu
                     onSelect={handleExportFormat}
                     onPublish={handlePublish}

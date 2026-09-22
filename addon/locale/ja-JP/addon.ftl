@@ -269,6 +269,7 @@ item-pane-select-collection = コレクションを選択してシラバスの�
 
 # Settings
 settings-title = シラバス設定
+settings-window-title = { $name } の設定
 settings-view = View
 settings-view-desc = Density and checkboxes for this syllabus.
 settings-density = Density
@@ -281,10 +282,10 @@ settings-singular = 単数形
 settings-nomenclature-placeholder = 例：週、授業、回、セクション
 settings-plural-label = 複数形：
 settings-subcollections = 授業のサブコレクション
-settings-subcollections-desc = 既定ではオフです。オンにすると、課題がある各授業がこのコレクション配下にフォルダを持ちます。課題のない授業にはフォルダは作られず、そうしたフォルダは削除されます。フォルダはシラバスに合わせて作成・改名・削除されます。既存の子コレクションも削除されることがあります。オフにしてもフォルダは残ります。
+settings-subcollections-desc = オンにすると、課題がある各授業がこのコレクション配下にフォルダを持ちます。
 settings-subcollections-checkbox = サブコレクションを作成しますか？
 settings-bib-style = 参考文献スタイル
-settings-bib-style-desc = 書誌参照に使う CSL（Citation Style Language）スタイルを選びます。未設定の場合はユーザー既定のスタイルが使われます。
+settings-bib-style-desc = 書誌参照に使う CSL（Citation Style Language）スタイルを選びます。
 settings-citation-style = 引用スタイル
 settings-user-default = ユーザー既定
 settings-user-default-named = ユーザー既定：{ $name }

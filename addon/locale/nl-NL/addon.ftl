@@ -269,6 +269,7 @@ item-pane-select-collection = Selecteer een collectie om syllabustoewijzingen te
 
 # Settings
 settings-title = Syllabusinstellingen
+settings-window-title = Instellingen voor { $name }
 settings-view = View
 settings-view-desc = Density and checkboxes for this syllabus.
 settings-density = Density
@@ -281,10 +282,10 @@ settings-singular = Enkelvoud
 settings-nomenclature-placeholder = bijv. week, college, bijeenkomst, onderdeel
 settings-plural-label = Meervoud:
 settings-subcollections = Subcollecties per bijeenkomst
-settings-subcollections-desc = Standaard uit. Als dit aanstaat, krijgt elke bijeenkomst met toegewezen lectuur een map onder deze collectie. Bijeenkomsten zonder toewijzingen krijgen geen map; die mappen worden verwijderd. Mappen worden aangemaakt, hernoemd en verwijderd zodat ze bij de syllabus passen — inclusief bestaande kindcollecties, die kunnen worden verwijderd. Uitschakelen laat mappen staan.
+settings-subcollections-desc = Als dit aanstaat, krijgt elke bijeenkomst met toegewezen lectuur een map onder deze collectie.
 settings-subcollections-checkbox = Subcollecties aanmaken?
 settings-bib-style = Bibliografiestijl
-settings-bib-style-desc = Kies een CSL-stijl (Citation Style Language) voor bibliografische verwijzingen. Als er geen is ingesteld, wordt de standaardstijl van de gebruiker gebruikt.
+settings-bib-style-desc = Kies een CSL-stijl (Citation Style Language) voor bibliografische verwijzingen.
 settings-citation-style = Citatestijl
 settings-user-default = Gebruikersstandaard
 settings-user-default-named = Gebruikersstandaard: { $name }

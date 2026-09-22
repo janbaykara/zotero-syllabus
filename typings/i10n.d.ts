@@ -515,6 +515,7 @@ export type FluentMessageId =
   | 'settings-user-default-named'
   | 'settings-view'
   | 'settings-view-desc'
+  | 'settings-window-title'
   | 'sort-by-creator'
   | 'sort-by-date'
   | 'sort-by-title'

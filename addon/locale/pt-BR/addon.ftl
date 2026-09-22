@@ -269,6 +269,7 @@ item-pane-select-collection = Selecione uma coleção para ver as tarefas do pro
 
 # Settings
 settings-title = Configurações do programa
+settings-window-title = Configurações de { $name }
 settings-view = View
 settings-view-desc = Density and checkboxes for this syllabus.
 settings-density = Density
@@ -281,10 +282,10 @@ settings-singular = Forma singular
 settings-nomenclature-placeholder = ex.: semana, aula, sessão, unidade
 settings-plural-label = Forma plural:
 settings-subcollections = Subcoleções de aula
-settings-subcollections-desc = Desativado por padrão. Quando ativado, cada aula com leituras atribuídas ganha uma pasta nesta coleção. Aulas sem atribuições não recebem pasta, e essas pastas são removidas. Pastas são criadas, renomeadas e removidas para corresponder ao programa — inclusive coleções filhas existentes, que podem ser excluídas. Desativar deixa as pastas no lugar.
+settings-subcollections-desc = Quando ativado, cada aula com leituras atribuídas ganha uma pasta nesta coleção.
 settings-subcollections-checkbox = Criar subcoleções?
 settings-bib-style = Estilo de bibliografia
-settings-bib-style-desc = Escolha um estilo CSL (Citation Style Language) para as referências bibliográficas. Se não for definido, será usado o estilo padrão do usuário.
+settings-bib-style-desc = Escolha um estilo CSL (Citation Style Language) para as referências bibliográficas.
 settings-citation-style = Estilo de citação
 settings-user-default = Padrão do usuário
 settings-user-default-named = Padrão do usuário: { $name }

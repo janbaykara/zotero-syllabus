@@ -269,6 +269,7 @@ item-pane-select-collection = Выберите коллекцию, чтобы у
 
 # Settings
 settings-title = Параметры силлабуса
+settings-window-title = Настройки: { $name }
 settings-view = View
 settings-view-desc = Density and checkboxes for this syllabus.
 settings-density = Density
@@ -281,10 +282,10 @@ settings-singular = Форма единственного числа
 settings-nomenclature-placeholder = напр., неделя, занятие, сессия, раздел
 settings-plural-label = Форма множественного числа:
 settings-subcollections = Подколлекции занятий
-settings-subcollections-desc = По умолчанию выключено. При включении каждое занятие с назначенными текстами получает папку в этой коллекции. Занятия без назначений не получают папку; такие папки удаляются. Папки создаются, переименовываются и удаляются в соответствии с силлабусом — в том числе существующие дочерние коллекции, которые могут быть удалены. Отключение оставляет папки на месте.
+settings-subcollections-desc = При включении каждое занятие с назначенными текстами получает папку в этой коллекции.
 settings-subcollections-checkbox = Создавать подколлекции?
 settings-bib-style = Стиль библиографии
-settings-bib-style-desc = Выберите стиль CSL (Citation Style Language) для библиографических ссылок. Если не задан, будет использован стиль пользователя по умолчанию.
+settings-bib-style-desc = Выберите стиль CSL (Citation Style Language) для библиографических ссылок.
 settings-citation-style = Стиль цитирования
 settings-user-default = По умолчанию пользователя
 settings-user-default-named = По умолчанию пользователя: { $name }

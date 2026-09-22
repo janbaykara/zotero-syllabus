@@ -269,6 +269,7 @@ item-pane-select-collection = Selecione uma coleção para ver os trabalhos do p
 
 # Settings
 settings-title = Definições do programa de curso
+settings-window-title = Definições de { $name }
 settings-view = View
 settings-view-desc = Density and checkboxes for this syllabus.
 settings-density = Density
@@ -281,10 +282,10 @@ settings-singular = Forma singular
 settings-nomenclature-placeholder = p. ex., semana, aula, sessão, secção
 settings-plural-label = Forma plural:
 settings-subcollections = Subcoleções de aulas
-settings-subcollections-desc = Desativado por omissão. Quando ativado, cada aula com leituras atribuídas recebe uma pasta nesta coleção. As aulas sem atribuições não recebem pasta, e essas pastas são removidas. As pastas são criadas, renomeadas e removidas de acordo com o programa — incluindo coleções descendentes existentes, que podem ser eliminadas. Desativar deixa as pastas no sítio.
+settings-subcollections-desc = Quando ativado, cada aula com leituras atribuídas recebe uma pasta nesta coleção.
 settings-subcollections-checkbox = Criar subcoleções?
 settings-bib-style = Estilo bibliográfico
-settings-bib-style-desc = Escolha um estilo CSL (Citation Style Language) para as referências bibliográficas. Se não for definido, será usado o estilo predefinido do utilizador.
+settings-bib-style-desc = Escolha um estilo CSL (Citation Style Language) para as referências bibliográficas.
 settings-citation-style = Estilo de citação
 settings-user-default = Predefinição do utilizador
 settings-user-default-named = Predefinição do utilizador: { $name }

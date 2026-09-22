@@ -269,6 +269,7 @@ item-pane-select-collection = 컬렉션을 선택하여 강의계획서 과제 �
 
 # Settings
 settings-title = 강의계획서 설정
+settings-window-title = { $name } 설정
 settings-view = View
 settings-view-desc = Density and checkboxes for this syllabus.
 settings-density = Density
@@ -281,10 +282,10 @@ settings-singular = 단수형
 settings-nomenclature-placeholder = 예: 주, 수업, 회차, 섹션
 settings-plural-label = 복수형:
 settings-subcollections = 수업 하위 컬렉션
-settings-subcollections-desc = 기본적으로 꺼져 있습니다. 켜면 과제가 있는 각 수업이 이 컬렉션 아래 폴더를 갖습니다. 과제가 없는 수업에는 폴더가 없으며 그런 폴더는 삭제됩니다. 폴더는 강의계획서에 맞게 만들고, 이름을 바꾸고, 삭제합니다. 기존 하위 컬렉션도 삭제될 수 있습니다. 끄면 폴더는 그대로 둡니다.
+settings-subcollections-desc = 켜면 과제가 있는 각 수업이 이 컬렉션 아래 폴더를 갖습니다.
 settings-subcollections-checkbox = 하위 컬렉션을 만들까요?
 settings-bib-style = 참고문헌 스타일
-settings-bib-style-desc = 서지 참조에 사용할 CSL(Citation Style Language) 스타일을 선택하세요. 설정하지 않으면 사용자 기본 스타일이 사용됩니다.
+settings-bib-style-desc = 서지 참조에 사용할 CSL(Citation Style Language) 스타일을 선택하세요.
 settings-citation-style = 인용 스타일
 settings-user-default = 사용자 기본값
 settings-user-default-named = 사용자 기본값: { $name }

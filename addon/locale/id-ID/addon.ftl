@@ -269,6 +269,7 @@ item-pane-select-collection = Pilih koleksi untuk melihat tugas silabus
 
 # Settings
 settings-title = Pengaturan silabus
+settings-window-title = Pengaturan untuk { $name }
 settings-view = View
 settings-view-desc = Density and checkboxes for this syllabus.
 settings-density = Density
@@ -281,10 +282,10 @@ settings-singular = Bentuk tunggal
 settings-nomenclature-placeholder = mis., minggu, kelas, sesi, bagian
 settings-plural-label = Bentuk jamak:
 settings-subcollections = Subkoleksi kelas
-settings-subcollections-desc = Nonaktif secara bawaan. Jika diaktifkan, setiap kelas dengan bacaan tertugas mendapat folder di bawah koleksi ini. Kelas tanpa penugasan tidak mendapat folder, dan folder itu dihapus. Folder dibuat, diganti namanya, dan dihapus agar sesuai dengan silabus — termasuk koleksi turunan yang sudah ada, yang dapat dihapus. Menonaktifkan opsi ini membiarkan folder di tempatnya.
+settings-subcollections-desc = Jika diaktifkan, setiap kelas dengan bacaan tertugas mendapat folder di bawah koleksi ini.
 settings-subcollections-checkbox = Buat subkoleksi?
 settings-bib-style = Gaya bibliografi
-settings-bib-style-desc = Pilih gaya CSL (Citation Style Language) untuk rujukan bibliografi. Jika tidak diatur, gaya bawaan pengguna akan digunakan.
+settings-bib-style-desc = Pilih gaya CSL (Citation Style Language) untuk rujukan bibliografi.
 settings-citation-style = Gaya sitasi
 settings-user-default = Bawaan pengguna
 settings-user-default-named = Bawaan pengguna: { $name }

@@ -38,7 +38,8 @@ import { openDeletePriorityDialog } from "./openDeletePriorityDialog";
 
 interface SettingsPageProps {
   collectionId: number;
-  onBack: () => void;
+  /** `window` = popout DialogHelper chrome (no Zotero tab-bar padding). */
+  presentation?: "page" | "window";
 }
 
 async function importSyllabusMetadataFromFile(
@@ -120,7 +121,10 @@ function SettingsSection({
   );
 }
 
-export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
+export function SettingsPage({
+  collectionId,
+  presentation = "page",
+}: SettingsPageProps) {
   const [
     metadata,
     _setDescription,
@@ -297,10 +301,25 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
   );
   const currentStyle = metadata.cslStyle || null;
 
+  const defaultStyleLabel = defaultStyleName
+    ? getString("settings-user-default-named", {
+        args: { name: defaultStyleName },
+      })
+    : getString("settings-user-default");
+
+  const currentStyleLabel = useMemo(() => {
+    if (!currentStyle) return defaultStyleLabel;
+    return (
+      availableStyles.find((s) => s.url === currentStyle)?.name || currentStyle
+    );
+  }, [availableStyles, currentStyle, defaultStyleLabel]);
+
+  const [stylePickerOpen, setStylePickerOpen] = useState(false);
+
   const handleCslStyleChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const value = e.currentTarget.value;
+    (value: string) => {
       setCslStyle(value === "" ? null : value);
+      setStylePickerOpen(false);
     },
     [setCslStyle],
   );
@@ -354,23 +373,16 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
         <div
           className={twMerge(
             "sticky top-0 z-10 bg-background-sidepane py-1",
-            isZotero8OrLater() ? "md:pt-8" : "pt-8",
+            presentation === "window"
+              ? "pt-4"
+              : isZotero8OrLater()
+                ? "md:pt-8"
+                : "pt-8",
           )}
         >
           <div className="container-padded bg-background-sidepane">
-            <div className="flex flex-row items-center gap-4 justify-between">
-              <div className="flex-1 text-3xl font-semibold">
-                {getString("settings-title")}
-              </div>
-              <div className="inline-flex items-center gap-2 shrink grow-0">
-                <button
-                  onClick={onBack}
-                  title={getString("settings-back")}
-                  aria-label={getString("settings-back")}
-                >
-                  ← {getString("nav-back")}
-                </button>
-              </div>
+            <div className="flex-1 text-3xl font-semibold">
+              {getString("settings-title")}
             </div>
           </div>
         </div>
@@ -428,24 +440,69 @@ export function SettingsPage({ collectionId, onBack }: SettingsPageProps) {
               <label className="text-sm font-medium text-secondary">
                 {getString("settings-citation-style")}
               </label>
-              <select
-                value={currentStyle || ""}
-                onChange={handleCslStyleChange}
-                className="px-3 py-2 border border-quinary rounded-md bg-background text-primary focus:outline-3 focus:outline-accent-blue focus:outline-offset-2"
-              >
-                <option value="">
-                  {defaultStyleName
-                    ? getString("settings-user-default-named", {
-                        args: { name: defaultStyleName },
-                      })
-                    : getString("settings-user-default")}
-                </option>
-                {availableStyles.map((style) => (
-                  <option key={style.url} value={style.url}>
-                    {style.name}
-                  </option>
-                ))}
-              </select>
+              {/* Native <select> does not open in DialogHelper windows
+                  (body overflow:hidden). Use an in-flow picker instead. */}
+              <div className="relative">
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between gap-2 px-3 py-2 border border-quinary rounded-md bg-background text-primary text-left cursor-pointer focus:outline-3 focus:outline-accent-blue focus:outline-offset-2"
+                  aria-haspopup="listbox"
+                  aria-expanded={stylePickerOpen}
+                  aria-label={getString("settings-citation-style")}
+                  onClick={() => setStylePickerOpen((open) => !open)}
+                >
+                  <span className="min-w-0 truncate">{currentStyleLabel}</span>
+                  <span className="text-tertiary shrink-0" aria-hidden="true">
+                    ▾
+                  </span>
+                </button>
+                {stylePickerOpen ? (
+                  <div
+                    role="listbox"
+                    aria-label={getString("settings-citation-style")}
+                    className="mt-1 max-h-64 overflow-y-auto rounded-md border border-quinary bg-background"
+                  >
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={!currentStyle}
+                      onClick={() => handleCslStyleChange("")}
+                      className={twMerge(
+                        "flex w-full items-center px-3 py-2 text-left text-sm border-0 cursor-pointer",
+                        !currentStyle
+                          ? "bg-accent-blue10 text-primary"
+                          : "bg-transparent text-primary hover:bg-quinary/40",
+                      )}
+                    >
+                      <span className="min-w-0 flex-1 truncate">
+                        {defaultStyleLabel}
+                      </span>
+                    </button>
+                    {availableStyles.map((style) => {
+                      const selected = style.url === currentStyle;
+                      return (
+                        <button
+                          key={style.url}
+                          type="button"
+                          role="option"
+                          aria-selected={selected}
+                          onClick={() => handleCslStyleChange(style.url)}
+                          className={twMerge(
+                            "flex w-full items-center px-3 py-2 text-left text-sm border-0 cursor-pointer",
+                            selected
+                              ? "bg-accent-blue10 text-primary"
+                              : "bg-transparent text-primary hover:bg-quinary/40",
+                          )}
+                        >
+                          <span className="min-w-0 flex-1 truncate">
+                            {style.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
             </div>
           </SettingsSection>
 

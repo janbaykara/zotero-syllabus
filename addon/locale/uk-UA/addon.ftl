@@ -269,6 +269,7 @@ item-pane-select-collection = Виберіть колекцію, щоб пере
 
 # Settings
 settings-title = Параметри силабуса
+settings-window-title = Налаштування: { $name }
 settings-view = View
 settings-view-desc = Density and checkboxes for this syllabus.
 settings-density = Density
@@ -281,10 +282,10 @@ settings-singular = Форма однини
 settings-nomenclature-placeholder = напр., тиждень, заняття, сесія, розділ
 settings-plural-label = Форма множини:
 settings-subcollections = Підколекції занять
-settings-subcollections-desc = Типово вимкнено. Якщо увімкнено, кожне заняття з призначеними текстами отримує теку в цій колекції. Заняття без призначень не отримують теку; такі теки вилучаються. Теки створюються, перейменовуються й вилучаються відповідно до силабуса — зокрема наявні дочірні колекції, які можуть бути вилучені. Вимкнення залишає теки на місці.
+settings-subcollections-desc = Якщо увімкнено, кожне заняття з призначеними текстами отримує теку в цій колекції.
 settings-subcollections-checkbox = Створювати підколекції?
 settings-bib-style = Стиль бібліографії
-settings-bib-style-desc = Виберіть стиль CSL (Citation Style Language) для бібліографічних посилань. Якщо не задано, буде використано типовий стиль користувача.
+settings-bib-style-desc = Виберіть стиль CSL (Citation Style Language) для бібліографічних посилань.
 settings-citation-style = Стиль цитування
 settings-user-default = Типово для користувача
 settings-user-default-named = Типово для користувача: { $name }

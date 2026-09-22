@@ -267,6 +267,7 @@ item-pane-select-collection = Select a collection to view syllabus assignments
 
 # Settings
 settings-title = Syllabus Settings
+settings-window-title = Settings for { $name }
 settings-view = View
 settings-view-desc = Density and checkboxes for this syllabus.
 settings-density = Density
@@ -279,10 +280,10 @@ settings-singular = Singular form
 settings-nomenclature-placeholder = e.g., week, class, session, section
 settings-plural-label = Plural form:
 settings-subcollections = Class subcollections
-settings-subcollections-desc = Off by default. When enabled, each class with assigned readings gets a folder under this collection. Classes with no assignments do not get a folder, and those folders are removed. Folders are created, renamed, and removed to match the syllabus — including existing child collections, which can be deleted. Turning this off leaves folders in place.
+settings-subcollections-desc = When enabled, each class with assigned readings gets a folder under this collection.
 settings-subcollections-checkbox = Create subcollections?
 settings-bib-style = Bibliography Style
-settings-bib-style-desc = Choose a CSL (Citation Style Language) style for bibliographic references. If not set, the user default style will be used.
+settings-bib-style-desc = Choose a CSL (Citation Style Language) style for bibliographic references.
 settings-citation-style = Citation Style
 settings-user-default = User default
 settings-user-default-named = User default: { $name }

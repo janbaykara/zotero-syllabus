@@ -269,6 +269,7 @@ item-pane-select-collection = حدد مجموعة لعرض تكليفات الم
 
 # Settings
 settings-title = إعدادات المنهاج
+settings-window-title = إعدادات { $name }
 settings-view = View
 settings-view-desc = Density and checkboxes for this syllabus.
 settings-density = Density
@@ -281,10 +282,10 @@ settings-singular = صيغة المفرد
 settings-nomenclature-placeholder = مثل: أسبوع، محاضرة، جلسة، قسم
 settings-plural-label = صيغة الجمع:
 settings-subcollections = المجموعات الفرعية للمحاضرات
-settings-subcollections-desc = معطّل افتراضيًا. عند التمكين، تحصل كل محاضرة فيها قراءات معيّنة على مجلد ضمن هذه المجموعة. المحاضرات بلا تعيينات لا تحصل على مجلد، وتُزال تلك المجلدات. تُنشأ المجلدات ويُعاد تسميتها وتُحذف لتطابق المنهاج — بما في ذلك المجموعات الفرعية القائمة التي قد تُحذف. إلغاء التفعيل يترك المجلدات في مكانها.
+settings-subcollections-desc = عند التمكين، تحصل كل محاضرة فيها قراءات معيّنة على مجلد ضمن هذه المجموعة.
 settings-subcollections-checkbox = إنشاء مجموعات فرعية؟
 settings-bib-style = أسلوب قائمة المراجع
-settings-bib-style-desc = اختر أسلوب CSL (Citation Style Language) للمراجع الببليوغرافية. إن لم يُحدد، يُستخدم الأسلوب الافتراضي للمستخدم.
+settings-bib-style-desc = اختر أسلوب CSL (Citation Style Language) للمراجع الببليوغرافية.
 settings-citation-style = أسلوب الاستشهاد
 settings-user-default = افتراضي المستخدم
 settings-user-default-named = افتراضي المستخدم: { $name }

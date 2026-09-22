@@ -269,6 +269,7 @@ item-pane-select-collection = Wählen Sie eine Sammlung, um Lehrplan-Aufgaben an
 
 # Settings
 settings-title = Lehrplaneinstellungen
+settings-window-title = Einstellungen für { $name }
 settings-view = View
 settings-view-desc = Dichte und Kontrollkästchen für diesen Lehrplan.
 settings-density = Density
@@ -281,10 +282,10 @@ settings-singular = Einzahl
 settings-nomenclature-placeholder = z. B. Woche, Klasse, Sitzung, Abschnitt
 settings-plural-label = Mehrzahl:
 settings-subcollections = Untersammlungen für Sitzungen
-settings-subcollections-desc = Standardmäßig aus. Wenn aktiviert, erhält jede Sitzung mit zugewiesenen Texten einen Ordner unter dieser Sammlung. Sitzungen ohne Zuweisungen erhalten keinen Ordner; solche Ordner werden entfernt. Ordner werden angelegt, umbenannt und entfernt, damit sie zum Lehrplan passen — einschließlich vorhandener Untersammlungen, die gelöscht werden können. Das Deaktivieren lässt Ordner bestehen.
+settings-subcollections-desc = Wenn aktiviert, erhält jede Sitzung mit zugewiesenen Texten einen Ordner unter dieser Sammlung.
 settings-subcollections-checkbox = Untersammlungen anlegen?
 settings-bib-style = Bibliografiestil
-settings-bib-style-desc = Wählen Sie einen CSL-Stil (Citation Style Language) für bibliografische Nachweise. Ist keiner gesetzt, wird der Standardstil des Nutzers verwendet.
+settings-bib-style-desc = Wählen Sie einen CSL-Stil (Citation Style Language) für bibliografische Nachweise.
 settings-citation-style = Zitierstil
 settings-user-default = Nutzerstandard
 settings-user-default-named = Nutzerstandard: { $name }

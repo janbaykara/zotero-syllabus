@@ -267,6 +267,7 @@ item-pane-select-collection = 选择一个分类以查看教学大纲作业
 
 # Settings
 settings-title = 教学大纲设置
+settings-window-title = { $name } 的设置
 settings-view = View
 settings-view-desc = Density and checkboxes for this syllabus.
 settings-density = Density
@@ -279,10 +280,10 @@ settings-singular = 单数形式
 settings-nomenclature-placeholder = 例如：周、课堂、单元、节
 settings-plural-label = 复数形式：
 settings-subcollections = 课堂子分类
-settings-subcollections-desc = 默认关闭。启用后，每个有指定阅读的课堂会在此分类下拥有一个文件夹。没有指定阅读的课堂不会获得文件夹，这些文件夹会被删除。文件夹会按教学大纲创建、重命名和删除——包括已有子分类，它们也可能被删除。关闭此选项后文件夹会保留。
+settings-subcollections-desc = 启用后，每个有指定阅读的课堂会在此分类下拥有一个文件夹。
 settings-subcollections-checkbox = 创建子分类？
 settings-bib-style = 参考文献样式
-settings-bib-style-desc = 为文献引用选择 CSL（Citation Style Language）样式。未设置时将使用用户默认样式。
+settings-bib-style-desc = 为文献引用选择 CSL（Citation Style Language）样式。
 settings-citation-style = 引用样式
 settings-user-default = 用户默认
 settings-user-default-named = 用户默认：{ $name }

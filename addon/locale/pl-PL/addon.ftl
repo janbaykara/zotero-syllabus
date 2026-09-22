@@ -269,6 +269,7 @@ item-pane-select-collection = Wybierz kolekcję, aby zobaczyć zadania sylabusa
 
 # Settings
 settings-title = Ustawienia sylabusa
+settings-window-title = Ustawienia: { $name }
 settings-view = View
 settings-view-desc = Density and checkboxes for this syllabus.
 settings-density = Density
@@ -281,10 +282,10 @@ settings-singular = Forma liczby pojedynczej
 settings-nomenclature-placeholder = np. tydzień, zajęcia, sesja, sekcja
 settings-plural-label = Forma liczby mnogiej:
 settings-subcollections = Podkolekcje zajęć
-settings-subcollections-desc = Domyślnie wyłączone. Po włączeniu zajęcia z przypisanymi lekturami otrzymują folder w tej kolekcji. Zajęcia bez przypisań nie otrzymują folderu; takie foldery są usuwane. Foldery są tworzone, przemianowywane i usuwane zgodnie z sylabusem — w tym istniejące kolekcje podrzędne, które mogą zostać usunięte. Wyłączenie tej opcji pozostawia foldery na miejscu.
+settings-subcollections-desc = Po włączeniu zajęcia z przypisanymi lekturami otrzymują folder w tej kolekcji.
 settings-subcollections-checkbox = Tworzyć podkolekcje?
 settings-bib-style = Styl bibliografii
-settings-bib-style-desc = Wybierz styl CSL (Citation Style Language) dla odwołań bibliograficznych. Jeśli nie ustawiono, użyty zostanie styl domyślny użytkownika.
+settings-bib-style-desc = Wybierz styl CSL (Citation Style Language) dla odwołań bibliograficznych.
 settings-citation-style = Styl cytowania
 settings-user-default = Domyślny użytkownika
 settings-user-default-named = Domyślny użytkownika: { $name }

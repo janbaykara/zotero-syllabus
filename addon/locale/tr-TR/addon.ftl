@@ -269,6 +269,7 @@ item-pane-select-collection = İzlence ödevlerini görmek için bir koleksiyon 
 
 # Settings
 settings-title = İzlence Ayarları
+settings-window-title = { $name } ayarları
 settings-view = View
 settings-view-desc = Density and checkboxes for this syllabus.
 settings-density = Density
@@ -281,10 +282,10 @@ settings-singular = Tekil biçim
 settings-nomenclature-placeholder = örn. hafta, ders, oturum, bölüm
 settings-plural-label = Çoğul biçim:
 settings-subcollections = Ders alt koleksiyonları
-settings-subcollections-desc = Varsayılan olarak kapalıdır. Etkinleştirildiğinde atanmış okuması olan her ders bu koleksiyon altında bir klasör alır. Ataması olmayan dersler klasör almaz; bu klasörler kaldırılır. Klasörler izlenceyle eşleşecek biçimde oluşturulur, yeniden adlandırılır ve kaldırılır — silinebilecek mevcut alt koleksiyonlar dahil. Kapatmak klasörleri yerinde bırakır.
+settings-subcollections-desc = Etkinleştirildiğinde atanmış okuması olan her ders bu koleksiyon altında bir klasör alır.
 settings-subcollections-checkbox = Alt koleksiyonlar oluşturulsun mu?
 settings-bib-style = Kaynakça stili
-settings-bib-style-desc = Kaynakça göndermeleri için bir CSL (Citation Style Language) stili seçin. Ayarlanmazsa kullanıcının varsayılan stili kullanılır.
+settings-bib-style-desc = Kaynakça göndermeleri için bir CSL (Citation Style Language) stili seçin.
 settings-citation-style = Atıf stili
 settings-user-default = Kullanıcı varsayılanı
 settings-user-default-named = Kullanıcı varsayılanı: { $name }

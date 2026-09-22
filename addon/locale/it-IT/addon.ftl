@@ -269,6 +269,7 @@ item-pane-select-collection = Seleziona una raccolta per vedere le assegnazioni 
 
 # Settings
 settings-title = Impostazioni del programma
+settings-window-title = Impostazioni per { $name }
 settings-view = View
 settings-view-desc = Density and checkboxes for this syllabus.
 settings-density = Density
@@ -281,10 +282,10 @@ settings-singular = Forma singolare
 settings-nomenclature-placeholder = es. settimana, lezione, sessione, sezione
 settings-plural-label = Forma plurale:
 settings-subcollections = Sottoraccolte delle lezioni
-settings-subcollections-desc = Disattivato per impostazione predefinita. Se attivato, ogni lezione con letture assegnate ottiene una cartella sotto questa raccolta. Le lezioni senza assegnazioni non hanno una cartella; quelle cartelle vengono rimosse. Le cartelle vengono create, rinominate e rimosse per corrispondere al programma — comprese le raccolte figlie esistenti, che possono essere eliminate. Disattivare lascia le cartelle al loro posto.
+settings-subcollections-desc = Se attivato, ogni lezione con letture assegnate ottiene una cartella sotto questa raccolta.
 settings-subcollections-checkbox = Creare sottoraccolte?
 settings-bib-style = Stile bibliografico
-settings-bib-style-desc = Scegli uno stile CSL (Citation Style Language) per i riferimenti bibliografici. Se non è impostato, verrà usato lo stile predefinito dell’utente.
+settings-bib-style-desc = Scegli uno stile CSL (Citation Style Language) per i riferimenti bibliografici.
 settings-citation-style = Stile di citazione
 settings-user-default = Predefinito utente
 settings-user-default-named = Predefinito utente: { $name }

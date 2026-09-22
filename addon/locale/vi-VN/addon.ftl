@@ -269,6 +269,7 @@ item-pane-select-collection = Chọn một bộ sưu tập để xem bài tập 
 
 # Settings
 settings-title = Cài đặt đề cương
+settings-window-title = Cài đặt cho { $name }
 settings-view = View
 settings-view-desc = Density and checkboxes for this syllabus.
 settings-density = Density
@@ -281,10 +282,10 @@ settings-singular = Dạng số ít
 settings-nomenclature-placeholder = vd. tuần, buổi học, phiên, phần
 settings-plural-label = Dạng số nhiều:
 settings-subcollections = Bộ sưu tập con buổi học
-settings-subcollections-desc = Tắt theo mặc định. Khi bật, mỗi buổi học có bài đọc được gán có một thư mục trong bộ sưu tập này. Buổi không có bài gán không có thư mục; những thư mục đó bị gỡ. Thư mục được tạo, đổi tên và gỡ để khớp đề cương — kể cả bộ sưu tập con sẵn có, có thể bị xóa. Tắt sẽ giữ nguyên thư mục.
+settings-subcollections-desc = Khi bật, mỗi buổi học có bài đọc được gán có một thư mục trong bộ sưu tập này.
 settings-subcollections-checkbox = Tạo bộ sưu tập con?
 settings-bib-style = Phong cách thư mục
-settings-bib-style-desc = Chọn phong cách CSL (Citation Style Language) cho tài liệu tham khảo. Nếu không đặt, sẽ dùng phong cách mặc định của người dùng.
+settings-bib-style-desc = Chọn phong cách CSL (Citation Style Language) cho tài liệu tham khảo.
 settings-citation-style = Phong cách trích dẫn
 settings-user-default = Mặc định người dùng
 settings-user-default-named = Mặc định người dùng: { $name }

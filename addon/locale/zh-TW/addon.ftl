@@ -269,6 +269,7 @@ item-pane-select-collection = 選取一個分類以檢視教學大綱作業
 
 # Settings
 settings-title = 教學大綱設定
+settings-window-title = { $name } 的設定
 settings-view = View
 settings-view-desc = Density and checkboxes for this syllabus.
 settings-density = Density
@@ -281,10 +282,10 @@ settings-singular = 單數形式
 settings-nomenclature-placeholder = 例如：週、課堂、單元、節
 settings-plural-label = 複數形式：
 settings-subcollections = 課堂子分類
-settings-subcollections-desc = 預設關閉。啟用後，每個有指定閱讀的課堂會在此分類下擁有一個資料夾。沒有指定閱讀的課堂不會獲得資料夾，這些資料夾會被刪除。資料夾會依教學大綱建立、重新命名和刪除——包括既有子分類，它們也可能被刪除。關閉此選項後資料夾會保留。
+settings-subcollections-desc = 啟用後，每個有指定閱讀的課堂會在此分類下擁有一個資料夾。
 settings-subcollections-checkbox = 建立子分類？
 settings-bib-style = 參考文獻樣式
-settings-bib-style-desc = 為文獻引用選擇 CSL（Citation Style Language）樣式。未設定時將使用使用者預設樣式。
+settings-bib-style-desc = 為文獻引用選擇 CSL（Citation Style Language）樣式。
 settings-citation-style = 引用樣式
 settings-user-default = 使用者預設
 settings-user-default-named = 使用者預設：{ $name }
