@@ -70,20 +70,12 @@ export type ExplorerShelfType = (typeof EXPLORER_SHELF_TYPES)[number];
 
 export type LibraryViewMode = "collection" | "explorer";
 
-export type ExplorerAnnotationSize = "small" | "large";
-
-export const EXPLORER_ANNOTATION_SIZES = ["small", "large"] as const;
-
-/** Shared shelf depth for recent annotations; size only controls quote abridgement. */
+/** Shared shelf depth for recent annotations. */
 export const EXPLORER_ANNOTATION_SHELF_LIMIT = 20;
 
 export const DEFAULT_COLLECTION_SHELF_GROUP_BY: GalleryGroupBy = "classes";
 export const DEFAULT_COLLECTION_SHELF_SORT_BY: GallerySortBy = "auto";
 export const DEFAULT_COLLECTION_SHELF_TYPE_SIZE: MagazineTypeSize = "small";
-
-function coerceAnnotationSize(value: unknown): ExplorerAnnotationSize {
-  return value === "large" ? "large" : "small";
-}
 
 type ExplorerShelfBase = {
   id: string;
@@ -112,7 +104,6 @@ export type ExplorerShelf = ExplorerShelfBase &
     | {
         type: "recent-annotations";
         limit: number;
-        size: ExplorerAnnotationSize;
       }
     | ExplorerCollectionShelf
     | { type: "saved-search"; libraryID: number; searchKey: string }
@@ -128,7 +119,6 @@ const ExplorerShelfSchema = z
     layout: z.unknown().optional(),
     days: z.number().positive().optional(),
     limit: z.number().positive().optional(),
-    size: z.enum(EXPLORER_ANNOTATION_SIZES).optional(),
     groupBy: z.unknown().optional(),
     sortBy: z.unknown().optional(),
     magazineTypeSize: z.unknown().optional(),
@@ -187,6 +177,8 @@ export function layoutsForExplorerShelf(
     case "watch-now":
     case "listen-now":
       return ["cover"];
+    case "recent-annotations":
+      return ["card"];
     case "pinned":
     case "upcoming-deadlines":
       return EXPLORER_SHELF_LAYOUTS;
@@ -315,13 +307,10 @@ export function coerceExplorerShelf(value: unknown): ExplorerShelf | null {
       };
       break;
     case "recent-annotations": {
-      const size = coerceAnnotationSize(raw.size);
       shelf = {
         id,
         type: "recent-annotations",
         layout,
-        size,
-        // Size only controls quote abridgement; shelf depth is shared.
         limit: EXPLORER_ANNOTATION_SHELF_LIMIT,
       };
       break;

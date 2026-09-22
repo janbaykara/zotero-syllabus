@@ -879,64 +879,14 @@ function ExplorerShelfSettingsMenu({
                       role="radio"
                       aria-checked={selected}
                       title={getString(DENSITY_TITLE_IDS[mode])}
+                      onClick={() => setDensity(mode)}
                       className={twMerge(
                         "syllabus-explorer-layout-btn",
                         selected && "is-selected",
                       )}
-                      onClick={() => setDensity(mode)}
                     >
                       <Icon size={12} strokeWidth={2} aria-hidden="true" />
                       {densityLabel(mode)}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
-          {shelf.type === "recent-annotations" ? (
-            <div className="syllabus-explorer-shelf-setting">
-              <div className="syllabus-explorer-configure-heading">
-                {getString("explorer-annotations-size")}
-              </div>
-              <div
-                role="radiogroup"
-                aria-label={getString("explorer-annotations-size")}
-                className="syllabus-explorer-layout-toggle"
-              >
-                {(
-                  [
-                    {
-                      mode: "small" as const,
-                      label: getString("gallery-type-small"),
-                      title: getString("explorer-annotations-size-small-title"),
-                    },
-                    {
-                      mode: "large" as const,
-                      label: getString("gallery-type-large"),
-                      title: getString("explorer-annotations-size-large-title"),
-                    },
-                  ] as const
-                ).map(({ mode, label, title }) => {
-                  const selected = shelf.size === mode;
-                  return (
-                    <button
-                      key={mode}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      title={title}
-                      className={twMerge(
-                        "syllabus-explorer-layout-btn",
-                        selected && "is-selected",
-                      )}
-                      onClick={() =>
-                        onChange({
-                          ...shelf,
-                          size: mode,
-                        })
-                      }
-                    >
-                      {label}
                     </button>
                   );
                 })}
@@ -1807,51 +1757,28 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                       </div>
                     ) : shelf.type === "recent-annotations" &&
                       isOptionalFeatureEnabled("annotations") ? (
-                      <div className="inline-flex items-center gap-2 shrink-0">
-                        <button
-                          type="button"
-                          className="syllabus-explorer-customize syllabus-explorer-shelf-goto"
-                          onClick={() => openMyAnnotationsTab(libraryID)}
-                        >
-                          <span>
-                            {getString("explorer-go-to-my-annotations")}
-                          </span>
-                          {getUiDir() === "rtl" ? (
-                            <ChevronLeft
-                              size={12}
-                              strokeWidth={2}
-                              aria-hidden="true"
-                            />
-                          ) : (
-                            <ChevronRight
-                              size={12}
-                              strokeWidth={2}
-                              aria-hidden="true"
-                            />
-                          )}
-                        </button>
-                        <ExplorerShelfSettingsMenu
-                          shelf={shelf}
-                          onChange={(next) =>
-                            setShelves(
-                              shelves.map((row) =>
-                                row.id === next.id ? next : row,
-                              ),
-                            )
-                          }
-                        />
-                      </div>
-                    ) : shelf.type === "recent-annotations" ? (
-                      <ExplorerShelfSettingsMenu
-                        shelf={shelf}
-                        onChange={(next) =>
-                          setShelves(
-                            shelves.map((row) =>
-                              row.id === next.id ? next : row,
-                            ),
-                          )
-                        }
-                      />
+                      <button
+                        type="button"
+                        className="syllabus-explorer-customize syllabus-explorer-shelf-goto"
+                        onClick={() => openMyAnnotationsTab(libraryID)}
+                      >
+                        <span>
+                          {getString("explorer-go-to-my-annotations")}
+                        </span>
+                        {getUiDir() === "rtl" ? (
+                          <ChevronLeft
+                            size={12}
+                            strokeWidth={2}
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <ChevronRight
+                            size={12}
+                            strokeWidth={2}
+                            aria-hidden="true"
+                          />
+                        )}
+                      </button>
                     ) : shelfShowsLayout(shelf) ? (
                       <ExplorerShelfSettingsMenu
                         shelf={shelf}
@@ -1885,8 +1812,7 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                       onChanged={reloadPinned}
                       embedded
                     />
-                  ) : shelf.type === "recent-annotations" &&
-                    shelf.layout !== "magazine" ? (
+                  ) : shelf.type === "recent-annotations" ? (
                     <ExplorerAnnotationShelf
                       annotations={data.annotations.slice(0, shelf.limit)}
                       selectedItemIds={selectedItemIds}

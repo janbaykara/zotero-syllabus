@@ -277,23 +277,15 @@ describe("explorer shelves", function () {
     );
   });
 
-  it("defaults recent-annotations size to small without changing shelf depth", function () {
-    const small = coerceExplorerShelves([
-      { id: "ann", type: "recent-annotations" },
+  it("keeps a fixed depth for recent-annotations shelves", function () {
+    const shelf = coerceExplorerShelves([
+      { id: "ann", type: "recent-annotations", size: "large", limit: 5 },
     ])[0];
-    assert.equal(small.type, "recent-annotations");
-    if (small.type === "recent-annotations") {
-      assert.equal(small.size, "small");
-      assert.equal(small.limit, 20);
+    assert.equal(shelf.type, "recent-annotations");
+    if (shelf.type === "recent-annotations") {
+      assert.equal(shelf.limit, 20);
     }
-    const large = coerceExplorerShelves([
-      { id: "ann", type: "recent-annotations", size: "large" },
-    ])[0];
-    assert.equal(large.type, "recent-annotations");
-    if (large.type === "recent-annotations") {
-      assert.equal(large.size, "large");
-      assert.equal(large.limit, 20);
-    }
+    assert.deepEqual(layoutsForExplorerShelf("recent-annotations"), ["card"]);
   });
 
   it("defaults new collection shelves to Cover / classes / auto", function () {
