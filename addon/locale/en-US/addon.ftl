@@ -287,7 +287,22 @@ settings-citation-style = Citation Style
 settings-user-default = User default
 settings-user-default-named = User default: { $name }
 settings-priorities = Priorities
-settings-priorities-desc = Customize priority names, colors, and sort order.
+settings-priorities-desc = Customize priority names, colors, and sort order for this syllabus.
+settings-priorities-global-title = Global priority defaults
+settings-priorities-global-desc = New syllabi copy these priorities. Existing syllabi keep their own lists.
+settings-priorities-global-link = Edit global defaults…
+settings-priorities-global-done = Done
+settings-priorities-global-reset = Reset global defaults
+settings-priorities-set-global = Use as global defaults
+settings-priorities-set-global-confirm-title = Use as global defaults?
+settings-priorities-set-global-confirm-message =
+    This will replace your global priority defaults with this syllabus’s priorities. New syllabi will copy these names, colors, and order. Existing syllabi are not changed.
+settings-priorities-set-global-done = Saved as global defaults for new syllabi
+settings-priorities-reset-global = Reset to global defaults
+settings-priorities-reset-global-confirm-title = Reset to global defaults?
+settings-priorities-reset-global-confirm-message =
+    This will replace this syllabus’s priorities with your global defaults. Readings that use priorities not in the global list will need to be moved or cleared.
+settings-priorities-reset-global-done = Reset priorities to global defaults
 settings-add-priority = Add new priority
 settings-add-priority-button = Add Priority
 settings-new-priority-name = New Priority
@@ -296,6 +311,16 @@ settings-priority-move-down = Move down
 settings-priority-color = Priority color
 settings-priority-name-placeholder = Priority name
 settings-priority-delete = Delete priority
+settings-priority-delete-title = Delete priority?
+settings-priority-delete-message =
+    { $count ->
+        [one] { $count } reading uses “{ $name }”. Choose what to do with it before deleting this priority.
+       *[other] { $count } readings use “{ $name }”. Choose what to do with them before deleting this priority.
+    }
+settings-priority-delete-migrate-label = Move readings to
+settings-priority-delete-migrate = Move and delete
+settings-priority-delete-clear = Clear priority
+settings-priority-delete-cancel = Cancel
 settings-priority-name-label = Name
 settings-priority-preview = Preview:
 priority-default-course-info = Course Information

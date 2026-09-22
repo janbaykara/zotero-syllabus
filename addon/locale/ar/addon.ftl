@@ -289,7 +289,22 @@ settings-citation-style = أسلوب الاستشهاد
 settings-user-default = افتراضي المستخدم
 settings-user-default-named = افتراضي المستخدم: { $name }
 settings-priorities = الأولويات
-settings-priorities-desc = خصّص أسماء الأولويات وألوانها وترتيب فرزها.
+settings-priorities-desc = خصص أسماء الأولويات وألوانها وترتيبها لهذا المقرر.
+settings-priorities-global-title = أولويات افتراضية عامة
+settings-priorities-global-desc = المقررات الجديدة تنسخ هذه الأولويات. الحالية تحتفظ بقوائمها.
+settings-priorities-global-link = تعديل الإعدادات العامة…
+settings-priorities-global-done = تم
+settings-priorities-global-reset = إعادة التعيين إلى الإعدادات المدمجة
+settings-priorities-set-global = استخدام كإعدادات عامة
+settings-priorities-set-global-confirm-title = استخدام كإعدادات عامة؟
+settings-priorities-set-global-confirm-message =
+    سيستبدل ذلك أولوياتك الافتراضية العامة بأولويات هذا المقرر. ستنسخ المقررات الجديدة هذه الأسماء والألوان والترتيب. المقررات الحالية لا تتغير.
+settings-priorities-set-global-done = حُفظت كإعدادات عامة للمقررات الجديدة
+settings-priorities-reset-global = إعادة التعيين إلى الإعدادات العامة
+settings-priorities-reset-global-confirm-title = إعادة التعيين إلى الإعدادات العامة؟
+settings-priorities-reset-global-confirm-message =
+    سيستبدل هذا أولويات هذا المقرر بإعداداتك العامة. القراءات التي تستخدم أولويات غير موجودة في القائمة العامة ستحتاج إلى النقل أو المسح.
+settings-priorities-reset-global-done = أُعيدت الأولويات إلى الإعدادات العامة
 settings-add-priority = إضافة أولوية جديدة
 settings-add-priority-button = إضافة أولوية
 settings-new-priority-name = أولوية جديدة
@@ -298,6 +313,16 @@ settings-priority-move-down = نقل إلى الأسفل
 settings-priority-color = لون الأولوية
 settings-priority-name-placeholder = اسم الأولوية
 settings-priority-delete = حذف الأولوية
+settings-priority-delete-title = حذف الأولوية؟
+settings-priority-delete-message =
+    { $count ->
+        [one] قراءة واحدة تستخدم «{ $name }». اختر ما تفعله بها قبل حذف هذه الأولوية.
+       *[other] { $count } قراءات تستخدم «{ $name }». اختر ما تفعله بها قبل حذف هذه الأولوية.
+    }
+settings-priority-delete-migrate-label = نقل القراءات إلى
+settings-priority-delete-migrate = نقل وحذف
+settings-priority-delete-clear = مسح الأولوية
+settings-priority-delete-cancel = إلغاء
 settings-priority-name-label = الاسم
 settings-priority-preview = معاينة:
 priority-default-course-info = معلومات المقرر

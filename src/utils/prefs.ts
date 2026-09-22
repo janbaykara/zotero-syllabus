@@ -60,6 +60,7 @@ export const PLUGIN_PREF_DEFAULTS: {
   publishJwt: "",
   publishUserId: "",
   publishJwtExpiresAt: 0,
+  defaultPriorities: "",
 };
 
 const PREFS_PREFIX = config.prefsPrefix;

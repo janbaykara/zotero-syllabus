@@ -8,6 +8,10 @@ import { uuidv7 } from "uuidv7";
 import { getString } from "../utils/locale";
 import { confirmPrompt } from "../utils/window";
 import {
+  getGlobalDefaultPriorities,
+  clonePriorities,
+} from "./defaultPriorities";
+import {
   CollectionSyllabusDocumentSchema,
   COLLECTION_SYLLABUS_DOCUMENT_VERSION,
   SettingsSyllabusMetadataSchema,
@@ -20,6 +24,7 @@ import {
   getClassNumberById,
   type CollectionSyllabusDocument,
   type ItemSyllabusAssignment,
+  type Priority,
   type SettingsCollectionDictionaryData,
   type SettingsSyllabusMetadata,
 } from "../utils/schemas";
@@ -1926,6 +1931,117 @@ export function getCollectionDocument(
   return loadDocumentForCollection(collection).document;
 }
 
+/** How many assignments currently use this priority id. */
+export function countAssignmentsWithPriority(
+  document: CollectionSyllabusDocument,
+  priorityId: string,
+): number {
+  let count = 0;
+  for (const assignments of Object.values(document.items || {})) {
+    for (const assignment of assignments || []) {
+      if (assignment.priority === priorityId) {
+        count += 1;
+      }
+    }
+  }
+  return count;
+}
+
+/**
+ * Remove a priority from the list and remaps assignments that used it.
+ * Pass `remapToPriorityId: null` to clear those assignments' priority.
+ */
+export async function deletePriorityAndRemapAssignments(
+  collectionId: CollectionIdentifier | Zotero.Collection,
+  priorityId: string,
+  remapToPriorityId: string | null,
+): Promise<CollectionSyllabusDocument> {
+  return mutateCollectionDocument(
+    collectionId,
+    (document) => {
+      const priorities = (document.priorities || [])
+        .filter((p) => p.id !== priorityId)
+        .map((p, index) => ({ ...p, order: index + 1 }));
+
+      const items: CollectionSyllabusDocument["items"] = {};
+      for (const [itemKey, assignments] of Object.entries(
+        document.items || {},
+      )) {
+        items[itemKey] = (assignments || []).map((assignment) => {
+          if (assignment.priority !== priorityId) {
+            return assignment;
+          }
+          return {
+            ...assignment,
+            priority: remapToPriorityId ?? undefined,
+          };
+        });
+      }
+
+      return {
+        ...document,
+        priorities,
+        items,
+      };
+    },
+    { createNote: "prompt" },
+  );
+}
+
+/**
+ * Replace the priorities list and remap assignments whose priority id is no
+ * longer present. `remaps` maps removed id → new id (or null to clear).
+ * Any removed id missing from `remaps` is cleared.
+ */
+export function applyPriorityListReplacement(
+  document: CollectionSyllabusDocument,
+  nextPriorities: Priority[],
+  remaps: ReadonlyMap<string, string | null> = new Map(),
+): CollectionSyllabusDocument {
+  const priorities = nextPriorities.map((p, index) => ({
+    ...p,
+    order: index + 1,
+  }));
+  const nextIds = new Set(priorities.map((p) => p.id));
+
+  const items: CollectionSyllabusDocument["items"] = {};
+  for (const [itemKey, assignments] of Object.entries(document.items || {})) {
+    items[itemKey] = (assignments || []).map((assignment) => {
+      const current = assignment.priority;
+      if (!current || nextIds.has(current)) {
+        return assignment;
+      }
+      const target = remaps.has(current) ? remaps.get(current) : null;
+      return {
+        ...assignment,
+        priority: target ?? undefined,
+      };
+    });
+  }
+
+  return {
+    ...document,
+    priorities,
+    items,
+  };
+}
+
+/**
+ * Replace this syllabus's priorities and remap orphaned assignments in one write.
+ */
+export async function replacePrioritiesAndRemapAssignments(
+  collectionId: CollectionIdentifier | Zotero.Collection,
+  nextPriorities: Priority[],
+  remaps: ReadonlyMap<string, string | null> = new Map(),
+): Promise<CollectionSyllabusDocument> {
+  return mutateCollectionDocument(
+    collectionId,
+    (document) =>
+      applyPriorityListReplacement(document, nextPriorities, remaps),
+    { createNote: "prompt" },
+  );
+}
+
 export function getCollectionDocumentSnapshot(
   collectionId: CollectionIdentifier | Zotero.Collection,
 ): string {
@@ -2403,8 +2519,23 @@ export async function mutateCollectionDocument(
         nextResult.success ? nextResult.data : mutated,
         current,
       );
-      if (created && next.createSubcollections === undefined) {
-        next = { ...next, createSubcollections: false };
+      if (created) {
+        // Materialise global priority defaults into brand-new syllabi so each
+        // note gets its own copy. Skip when the mutator already set priorities
+        // (e.g. import), so we don't clobber an incoming list.
+        const mutatorSetPriorities =
+          JSON.stringify(mutated.priorities ?? null) !==
+          JSON.stringify(current.priorities ?? null);
+        next = {
+          ...next,
+          priorities: mutatorSetPriorities
+            ? next.priorities
+            : clonePriorities(getGlobalDefaultPriorities()),
+          createSubcollections:
+            next.createSubcollections === undefined
+              ? false
+              : next.createSubcollections,
+        };
       }
       setCacheEntry(ref, note.id || null, note.version || 0, next);
       try {

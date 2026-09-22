@@ -289,7 +289,22 @@ settings-citation-style = 引用樣式
 settings-user-default = 使用者預設
 settings-user-default-named = 使用者預設：{ $name }
 settings-priorities = 優先順序
-settings-priorities-desc = 自訂優先順序名稱、顏色和排序。
+settings-priorities-desc = 自訂本教學大綱的優先順序名稱、顏色與排序。
+settings-priorities-global-title = 全域預設優先順序
+settings-priorities-global-desc = 新建教學大綱會複製這些優先順序。既有大綱保留各自清單。
+settings-priorities-global-link = 編輯全域預設…
+settings-priorities-global-done = 完成
+settings-priorities-global-reset = 重設為內建預設
+settings-priorities-set-global = 設為全域預設
+settings-priorities-set-global-confirm-title = 設為全域預設？
+settings-priorities-set-global-confirm-message =
+    這將以本教學大綱的優先順序取代你的全域預設優先順序。新建教學大綱會複製這些名稱、顏色與順序。既有大綱不會改變。
+settings-priorities-set-global-done = 已儲存為新建教學大綱的全域預設
+settings-priorities-reset-global = 重設為全域預設
+settings-priorities-reset-global-confirm-title = 重設為全域預設？
+settings-priorities-reset-global-confirm-message =
+    這會以全域預設優先順序取代此教學大綱的優先順序。使用不在全域清單中之優先順序的閱讀需要移動或清除。
+settings-priorities-reset-global-done = 已將優先順序重設為全域預設
 settings-add-priority = 新增優先順序
 settings-add-priority-button = 新增優先順序
 settings-new-priority-name = 新優先順序
@@ -298,6 +313,16 @@ settings-priority-move-down = 下移
 settings-priority-color = 優先順序顏色
 settings-priority-name-placeholder = 優先順序名稱
 settings-priority-delete = 刪除優先順序
+settings-priority-delete-title = 刪除優先順序？
+settings-priority-delete-message =
+    { $count ->
+        [one] 有 { $count } 篇閱讀使用「{ $name }」。刪除此優先順序前請選擇如何處理。
+       *[other] 有 { $count } 篇閱讀使用「{ $name }」。刪除此優先順序前請選擇如何處理。
+    }
+settings-priority-delete-migrate-label = 將閱讀移至
+settings-priority-delete-migrate = 移動並刪除
+settings-priority-delete-clear = 清除優先順序
+settings-priority-delete-cancel = 取消
 settings-priority-name-label = 名稱
 settings-priority-preview = 預覽：
 priority-default-course-info = 課程資訊

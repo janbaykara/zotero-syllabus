@@ -85,6 +85,25 @@ function bindPrefEvents() {
     REDDIT_URL,
   );
 
+  const globalPrioritiesButton = doc.getElementById(
+    `${config.addonRef}-pref-global-priorities`,
+  );
+  if (
+    globalPrioritiesButton &&
+    !(globalPrioritiesButton as HTMLElement).dataset.syllabusBound
+  ) {
+    (globalPrioritiesButton as HTMLElement).dataset.syllabusBound = "1";
+    globalPrioritiesButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      void import("./openGlobalPrioritiesDialog").then(
+        ({ openGlobalPrioritiesDialog }) => {
+          openGlobalPrioritiesDialog();
+        },
+      );
+    });
+  }
+
   const resetButton = doc.getElementById(`${config.addonRef}-pref-reset`);
   if (resetButton && !(resetButton as HTMLElement).dataset.syllabusBound) {
     (resetButton as HTMLElement).dataset.syllabusBound = "1";

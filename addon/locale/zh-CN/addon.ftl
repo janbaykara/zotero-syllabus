@@ -287,7 +287,22 @@ settings-citation-style = 引用样式
 settings-user-default = 用户默认
 settings-user-default-named = 用户默认：{ $name }
 settings-priorities = 优先级
-settings-priorities-desc = 自定义优先级名称、颜色和排序。
+settings-priorities-desc = 自定义本教学大纲的优先级名称、颜色和排序。
+settings-priorities-global-title = 全局默认优先级
+settings-priorities-global-desc = 新建教学大纲会复制这些优先级。已有大纲保留各自列表。
+settings-priorities-global-link = 编辑全局默认…
+settings-priorities-global-done = 完成
+settings-priorities-global-reset = 重置为内置默认
+settings-priorities-set-global = 设为全局默认
+settings-priorities-set-global-confirm-title = 设为全局默认？
+settings-priorities-set-global-confirm-message =
+    这将用本教学大纲的优先级替换你的全局默认优先级。新建教学大纲会复制这些名称、颜色和顺序。已有大纲不会改变。
+settings-priorities-set-global-done = 已保存为新建教学大纲的全局默认
+settings-priorities-reset-global = 重置为全局默认
+settings-priorities-reset-global-confirm-title = 重置为全局默认？
+settings-priorities-reset-global-confirm-message =
+    这将用全局默认优先级替换本教学大纲的优先级。使用不在全局列表中的优先级的阅读需要移动或清除。
+settings-priorities-reset-global-done = 已将优先级重置为全局默认
 settings-add-priority = 添加新优先级
 settings-add-priority-button = 添加优先级
 settings-new-priority-name = 新优先级
@@ -296,6 +311,16 @@ settings-priority-move-down = 下移
 settings-priority-color = 优先级颜色
 settings-priority-name-placeholder = 优先级名称
 settings-priority-delete = 删除优先级
+settings-priority-delete-title = 删除优先级？
+settings-priority-delete-message =
+    { $count ->
+        [one] 有 { $count } 篇阅读使用“{ $name }”。删除此优先级前请选择如何处理。
+       *[other] 有 { $count } 篇阅读使用“{ $name }”。删除此优先级前请选择如何处理。
+    }
+settings-priority-delete-migrate-label = 将阅读移至
+settings-priority-delete-migrate = 移动并删除
+settings-priority-delete-clear = 清除优先级
+settings-priority-delete-cancel = 取消
 settings-priority-name-label = 名称
 settings-priority-preview = 预览：
 priority-default-course-info = 课程信息

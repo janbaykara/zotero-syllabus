@@ -289,7 +289,22 @@ settings-citation-style = Gaya sitasi
 settings-user-default = Bawaan pengguna
 settings-user-default-named = Bawaan pengguna: { $name }
 settings-priorities = Prioritas
-settings-priorities-desc = Sesuaikan nama, warna, dan urutan prioritas.
+settings-priorities-desc = Sesuaikan nama, warna, dan urutan prioritas untuk silabus ini.
+settings-priorities-global-title = Prioritas bawaan global
+settings-priorities-global-desc = Silabus baru menyalin prioritas ini. Yang sudah ada mempertahankan daftarnya sendiri.
+settings-priorities-global-link = Edit bawaan global…
+settings-priorities-global-done = Selesai
+settings-priorities-global-reset = Reset ke bawaan default
+settings-priorities-set-global = Gunakan sebagai bawaan global
+settings-priorities-set-global-confirm-title = Gunakan sebagai bawaan global?
+settings-priorities-set-global-confirm-message =
+    Ini akan mengganti prioritas bawaan global Anda dengan prioritas silabus ini. Silabus baru akan menyalin nama, warna, dan urutan ini. Silabus yang sudah ada tidak berubah.
+settings-priorities-set-global-done = Disimpan sebagai bawaan global untuk silabus baru
+settings-priorities-reset-global = Reset ke bawaan global
+settings-priorities-reset-global-confirm-title = Reset ke bawaan global?
+settings-priorities-reset-global-confirm-message =
+    Ini akan mengganti prioritas silabus ini dengan bawaan global Anda. Bacaan yang memakai prioritas di luar daftar global perlu dipindahkan atau dibersihkan.
+settings-priorities-reset-global-done = Prioritas di-reset ke bawaan global
 settings-add-priority = Tambah prioritas baru
 settings-add-priority-button = Tambah prioritas
 settings-new-priority-name = Prioritas baru
@@ -298,6 +313,16 @@ settings-priority-move-down = Pindah ke bawah
 settings-priority-color = Warna prioritas
 settings-priority-name-placeholder = Nama prioritas
 settings-priority-delete = Hapus prioritas
+settings-priority-delete-title = Hapus prioritas?
+settings-priority-delete-message =
+    { $count ->
+        [one] { $count } bacaan menggunakan “{ $name }”. Pilih apa yang akan dilakukan sebelum menghapus prioritas ini.
+       *[other] { $count } bacaan menggunakan “{ $name }”. Pilih apa yang akan dilakukan sebelum menghapus prioritas ini.
+    }
+settings-priority-delete-migrate-label = Pindahkan bacaan ke
+settings-priority-delete-migrate = Pindahkan dan hapus
+settings-priority-delete-clear = Hapus prioritas
+settings-priority-delete-cancel = Batal
 settings-priority-name-label = Nama
 settings-priority-preview = Pratinjau:
 priority-default-course-info = Informasi mata kuliah

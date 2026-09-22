@@ -4,7 +4,6 @@ import slugify from "slugify";
  */
 
 import { getLocaleID, getString, compareLocale } from "../utils/locale";
-import type { FluentMessageId } from "../../typings/i10n";
 import { renderSyllabusPage } from "./SyllabusPage";
 import { renderGalleryPage } from "./GalleryPage";
 import { renderExplorerPage } from "./ExplorerPage";
@@ -65,6 +64,7 @@ import {
   registerOptionalFeaturesPrefObserver,
   unregisterOptionalFeaturesPrefObserver,
 } from "./optionalFeatures";
+import { getGlobalDefaultPriorities } from "./defaultPriorities";
 import {
   ItemSyllabusDataEntity,
   ItemSyllabusAssignmentEntity,
@@ -112,6 +112,9 @@ import {
   ensureSyllabusNoteForUser,
   whenSyllabusNotesReady,
   registerSyllabusNoteDetachedHandler,
+  countAssignmentsWithPriority,
+  deletePriorityAndRemapAssignments,
+  replacePrioritiesAndRemapAssignments,
   SYLLABUS_NOTE_TAG,
 } from "./syllabusNote";
 import { getItemTitle, readItemNote } from "../utils/items";
@@ -3177,6 +3180,51 @@ export class SyllabusManager {
   }
 
   /**
+   * Delete a priority and remapping assignments that used it.
+   * `remapToPriorityId` null clears those assignments' priority.
+   */
+  static async deletePriorityAndRemap(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    priorityId: string,
+    remapToPriorityId: string | null,
+  ): Promise<void> {
+    await deletePriorityAndRemapAssignments(
+      collectionId,
+      priorityId,
+      remapToPriorityId,
+    );
+  }
+
+  /**
+   * Replace priorities and remap assignments whose ids are no longer present.
+   * `remaps` maps removed id → new id (or null to clear).
+   */
+  static async replacePrioritiesAndRemap(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    nextPriorities: Priority[],
+    remaps: ReadonlyMap<string, string | null> = new Map(),
+  ): Promise<void> {
+    await replacePrioritiesAndRemapAssignments(
+      collectionId,
+      nextPriorities,
+      remaps,
+    );
+  }
+
+  /**
+   * Count assignments using a priority id in this collection's note.
+   */
+  static countAssignmentsWithPriority(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    priorityId: string,
+  ): number {
+    return countAssignmentsWithPriority(
+      getCollectionDocument(collectionId),
+      priorityId,
+    );
+  }
+
+  /**
    * Get locked state for a collection
    */
   static getLocked(collectionId: number | GetByLibraryAndKeyArgs): boolean {
@@ -3650,19 +3698,10 @@ export class SyllabusManager {
   }
 
   /**
-   * Get default priorities (used when no custom priorities are set)
+   * Get default priorities (global pref, or built-in locale-aware defaults).
    */
   static getDefaultPriorities(): Priority[] {
-    const names: Record<string, FluentMessageId> = {
-      "course-info": "priority-default-course-info",
-      essential: "priority-default-essential",
-      recommended: "priority-default-recommended",
-      optional: "priority-default-optional",
-    };
-    return DEFAULT_PRIORITIES.map((p) => ({
-      ...p,
-      name: names[p.id] ? getString(names[p.id]) : p.name,
-    }));
+    return getGlobalDefaultPriorities();
   }
 
   /**

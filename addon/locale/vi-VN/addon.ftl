@@ -289,7 +289,22 @@ settings-citation-style = Phong cách trích dẫn
 settings-user-default = Mặc định người dùng
 settings-user-default-named = Mặc định người dùng: { $name }
 settings-priorities = Mức ưu tiên
-settings-priorities-desc = Tùy chỉnh tên, màu và thứ tự mức ưu tiên.
+settings-priorities-desc = Tùy chỉnh tên, màu và thứ tự ưu tiên cho đề cương này.
+settings-priorities-global-title = Ưu tiên mặc định toàn cục
+settings-priorities-global-desc = Đề cương mới sẽ sao chép các ưu tiên này. Đề cương hiện có giữ danh sách riêng.
+settings-priorities-global-link = Chỉnh mặc định toàn cục…
+settings-priorities-global-done = Xong
+settings-priorities-global-reset = Đặt lại về mặc định tích hợp
+settings-priorities-set-global = Dùng làm mặc định toàn cục
+settings-priorities-set-global-confirm-title = Dùng làm mặc định toàn cục?
+settings-priorities-set-global-confirm-message =
+    Thao tác này sẽ thay mặc định ưu tiên toàn cục bằng ưu tiên của đề cương này. Đề cương mới sẽ sao chép tên, màu và thứ tự này. Đề cương hiện có không đổi.
+settings-priorities-set-global-done = Đã lưu làm mặc định toàn cục cho đề cương mới
+settings-priorities-reset-global = Đặt lại về mặc định toàn cục
+settings-priorities-reset-global-confirm-title = Đặt lại về mặc định toàn cục?
+settings-priorities-reset-global-confirm-message =
+    Thao tác này sẽ thay mức ưu tiên của đề cương này bằng mặc định toàn cục. Các bài đọc dùng mức ưu tiên không có trong danh sách toàn cục sẽ cần được chuyển hoặc xóa.
+settings-priorities-reset-global-done = Đã đặt lại mức ưu tiên về mặc định toàn cục
 settings-add-priority = Thêm mức ưu tiên mới
 settings-add-priority-button = Thêm mức ưu tiên
 settings-new-priority-name = Mức ưu tiên mới
@@ -298,6 +313,16 @@ settings-priority-move-down = Chuyển xuống
 settings-priority-color = Màu mức ưu tiên
 settings-priority-name-placeholder = Tên mức ưu tiên
 settings-priority-delete = Xóa mức ưu tiên
+settings-priority-delete-title = Xóa mức ưu tiên?
+settings-priority-delete-message =
+    { $count ->
+        [one] { $count } bài đọc dùng “{ $name }”. Chọn cách xử lý trước khi xóa mức ưu tiên này.
+       *[other] { $count } bài đọc dùng “{ $name }”. Chọn cách xử lý trước khi xóa mức ưu tiên này.
+    }
+settings-priority-delete-migrate-label = Chuyển bài đọc sang
+settings-priority-delete-migrate = Chuyển và xóa
+settings-priority-delete-clear = Xóa mức ưu tiên
+settings-priority-delete-cancel = Hủy
 settings-priority-name-label = Tên
 settings-priority-preview = Xem trước:
 priority-default-course-info = Thông tin học phần

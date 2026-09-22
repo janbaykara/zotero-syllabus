@@ -289,7 +289,22 @@ settings-citation-style = Estilo de cita
 settings-user-default = Predeterminado del usuario
 settings-user-default-named = Predeterminado del usuario: { $name }
 settings-priorities = Prioridades
-settings-priorities-desc = Personalice nombres, colores y orden de las prioridades.
+settings-priorities-desc = Personaliza nombres, colores y orden de prioridades de este programa.
+settings-priorities-global-title = Prioridades predeterminadas globales
+settings-priorities-global-desc = Los programas nuevos copian estas prioridades. Los existentes mantienen las suyas.
+settings-priorities-global-link = Editar valores globales…
+settings-priorities-global-done = Listo
+settings-priorities-global-reset = Restablecer valores integrados
+settings-priorities-set-global = Usar como valores globales
+settings-priorities-set-global-confirm-title = ¿Usar como valores globales?
+settings-priorities-set-global-confirm-message =
+    Esto reemplazará tus prioridades predeterminadas globales por las de este programa. Los programas nuevos copiarán estos nombres, colores y orden. Los existentes no cambian.
+settings-priorities-set-global-done = Guardado como valores globales para programas nuevos
+settings-priorities-reset-global = Restablecer valores globales
+settings-priorities-reset-global-confirm-title = ¿Restablecer valores globales?
+settings-priorities-reset-global-confirm-message =
+    Esto reemplazará las prioridades de este programa con tus valores globales. Las lecturas que usen prioridades que no estén en la lista global deberán moverse o quitarse.
+settings-priorities-reset-global-done = Prioridades restablecidas a los valores globales
 settings-add-priority = Añadir una prioridad nueva
 settings-add-priority-button = Añadir prioridad
 settings-new-priority-name = Prioridad nueva
@@ -298,6 +313,16 @@ settings-priority-move-down = Bajar
 settings-priority-color = Color de la prioridad
 settings-priority-name-placeholder = Nombre de la prioridad
 settings-priority-delete = Eliminar prioridad
+settings-priority-delete-title = ¿Eliminar prioridad?
+settings-priority-delete-message =
+    { $count ->
+        [one] { $count } lectura usa “{ $name }”. Elige qué hacer con ella antes de eliminar esta prioridad.
+       *[other] { $count } lecturas usan “{ $name }”. Elige qué hacer con ellas antes de eliminar esta prioridad.
+    }
+settings-priority-delete-migrate-label = Mover lecturas a
+settings-priority-delete-migrate = Mover y eliminar
+settings-priority-delete-clear = Quitar prioridad
+settings-priority-delete-cancel = Cancelar
 settings-priority-name-label = Nombre
 settings-priority-preview = Vista previa:
 priority-default-course-info = Información del curso

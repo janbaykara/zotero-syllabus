@@ -289,7 +289,22 @@ settings-citation-style = Zitierstil
 settings-user-default = Nutzerstandard
 settings-user-default-named = Nutzerstandard: { $name }
 settings-priorities = Prioritäten
-settings-priorities-desc = Prioritätsnamen, -farben und Sortierung anpassen.
+settings-priorities-desc = Prioritätsnamen, Farben und Reihenfolge für diesen Syllabus anpassen.
+settings-priorities-global-title = Globale Prioritäts-Standards
+settings-priorities-global-desc = Neue Syllabi kopieren diese Prioritäten. Bestehende behalten ihre eigenen Listen.
+settings-priorities-global-link = Globale Standards bearbeiten…
+settings-priorities-global-done = Fertig
+settings-priorities-global-reset = Auf integrierte Standards zurücksetzen
+settings-priorities-set-global = Als globale Standards verwenden
+settings-priorities-set-global-confirm-title = Als globale Standards verwenden?
+settings-priorities-set-global-confirm-message =
+    Damit werden Ihre globalen Prioritäts-Standards durch die Prioritäten dieses Syllabus ersetzt. Neue Syllabi kopieren diese Namen, Farben und Reihenfolge. Bestehende Syllabi ändern sich nicht.
+settings-priorities-set-global-done = Als globale Standards für neue Syllabi gespeichert
+settings-priorities-reset-global = Auf globale Standards zurücksetzen
+settings-priorities-reset-global-confirm-title = Auf globale Standards zurücksetzen?
+settings-priorities-reset-global-confirm-message =
+    Dadurch werden die Prioritäten dieses Syllabus durch Ihre globalen Standards ersetzt. Lesungen mit Prioritäten, die nicht in der globalen Liste vorkommen, müssen verschoben oder entfernt werden.
+settings-priorities-reset-global-done = Prioritäten auf globale Standards zurückgesetzt
 settings-add-priority = Neue Priorität hinzufügen
 settings-add-priority-button = Priorität hinzufügen
 settings-new-priority-name = Neue Priorität
@@ -298,6 +313,16 @@ settings-priority-move-down = Nach unten
 settings-priority-color = Prioritätsfarbe
 settings-priority-name-placeholder = Prioritätsname
 settings-priority-delete = Priorität löschen
+settings-priority-delete-title = Priorität löschen?
+settings-priority-delete-message =
+    { $count ->
+        [one] { $count } Lesung verwendet „{ $name }“. Legen Sie fest, was damit geschehen soll, bevor Sie diese Priorität löschen.
+       *[other] { $count } Lesungen verwenden „{ $name }“. Legen Sie fest, was damit geschehen soll, bevor Sie diese Priorität löschen.
+    }
+settings-priority-delete-migrate-label = Lesungen verschieben nach
+settings-priority-delete-migrate = Verschieben und löschen
+settings-priority-delete-clear = Priorität entfernen
+settings-priority-delete-cancel = Abbrechen
 settings-priority-name-label = Name
 settings-priority-preview = Vorschau:
 priority-default-course-info = Kursinformationen

@@ -289,7 +289,22 @@ settings-citation-style = Atıf stili
 settings-user-default = Kullanıcı varsayılanı
 settings-user-default-named = Kullanıcı varsayılanı: { $name }
 settings-priorities = Öncelikler
-settings-priorities-desc = Öncelik adlarını, renklerini ve sıralamasını özelleştirin.
+settings-priorities-desc = Bu müfredat için öncelik adlarını, renklerini ve sırasını özelleştirin.
+settings-priorities-global-title = Genel öncelik varsayılanları
+settings-priorities-global-desc = Yeni müfredatlar bu öncelikleri kopyalar. Mevcutlar kendi listelerini korur.
+settings-priorities-global-link = Genel varsayılanları düzenle…
+settings-priorities-global-done = Bitti
+settings-priorities-global-reset = Yerleşik varsayılanlara sıfırla
+settings-priorities-set-global = Genel varsayılan olarak kullan
+settings-priorities-set-global-confirm-title = Genel varsayılan olarak kullanılsın mı?
+settings-priorities-set-global-confirm-message =
+    Bu, genel öncelik varsayılanlarınızı bu müfredatın öncelikleriyle değiştirir. Yeni müfredatlar bu adları, renkleri ve sırayı kopyalar. Mevcut müfredatlar değişmez.
+settings-priorities-set-global-done = Yeni müfredatlar için genel varsayılan olarak kaydedildi
+settings-priorities-reset-global = Genel varsayılanlara sıfırla
+settings-priorities-reset-global-confirm-title = Genel varsayılanlara sıfırlansın mı?
+settings-priorities-reset-global-confirm-message =
+    Bu, bu müfredatın önceliklerini genel varsayılanlarınızla değiştirir. Genel listede olmayan öncelikleri kullanan okumaların taşınması veya temizlenmesi gerekir.
+settings-priorities-reset-global-done = Öncelikler genel varsayılanlara sıfırlandı
 settings-add-priority = Yeni öncelik ekle
 settings-add-priority-button = Öncelik ekle
 settings-new-priority-name = Yeni öncelik
@@ -298,6 +313,16 @@ settings-priority-move-down = Aşağı taşı
 settings-priority-color = Öncelik rengi
 settings-priority-name-placeholder = Öncelik adı
 settings-priority-delete = Önceliği sil
+settings-priority-delete-title = Öncelik silinsin mi?
+settings-priority-delete-message =
+    { $count ->
+        [one] { $count } okuma “{ $name }” kullanıyor. Bu önceliği silmeden önce ne yapılacağını seçin.
+       *[other] { $count } okuma “{ $name }” kullanıyor. Bu önceliği silmeden önce ne yapılacağını seçin.
+    }
+settings-priority-delete-migrate-label = Okumaları şuraya taşı
+settings-priority-delete-migrate = Taşı ve sil
+settings-priority-delete-clear = Önceliği temizle
+settings-priority-delete-cancel = İptal
 settings-priority-name-label = Ad
 settings-priority-preview = Önizleme:
 priority-default-course-info = Ders bilgisi

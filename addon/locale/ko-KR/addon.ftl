@@ -289,7 +289,22 @@ settings-citation-style = 인용 스타일
 settings-user-default = 사용자 기본값
 settings-user-default-named = 사용자 기본값: { $name }
 settings-priorities = 우선순위
-settings-priorities-desc = 우선순위 이름, 색, 정렬 순서를 사용자 지정합니다.
+settings-priorities-desc = 이 강의계획서의 우선순위 이름, 색상, 순서를 사용자 지정합니다.
+settings-priorities-global-title = 전역 기본 우선순위
+settings-priorities-global-desc = 새 강의계획서는 이 우선순위를 복사합니다. 기존 항목은 자체 목록을 유지합니다.
+settings-priorities-global-link = 전역 기본값 편집…
+settings-priorities-global-done = 완료
+settings-priorities-global-reset = 기본 제공 값으로 재설정
+settings-priorities-set-global = 전역 기본값으로 사용
+settings-priorities-set-global-confirm-title = 전역 기본값으로 사용할까요?
+settings-priorities-set-global-confirm-message =
+    전역 기본 우선순위가 이 강의계획서의 우선순위로 바뀝니다. 새 강의계획서는 이 이름, 색상, 순서를 복사합니다. 기존 강의계획서는 변경되지 않습니다.
+settings-priorities-set-global-done = 새 강의계획서용 전역 기본값으로 저장됨
+settings-priorities-reset-global = 전역 기본값으로 재설정
+settings-priorities-reset-global-confirm-title = 전역 기본값으로 재설정할까요?
+settings-priorities-reset-global-confirm-message =
+    이 강의계획서의 우선순위를 전역 기본값으로 바꿉니다. 전역 목록에 없는 우선순위를 쓰는 읽기는 이동하거나 지워야 합니다.
+settings-priorities-reset-global-done = 우선순위를 전역 기본값으로 재설정함
 settings-add-priority = 새 우선순위 추가
 settings-add-priority-button = 우선순위 추가
 settings-new-priority-name = 새 우선순위
@@ -298,6 +313,16 @@ settings-priority-move-down = 아래로
 settings-priority-color = 우선순위 색
 settings-priority-name-placeholder = 우선순위 이름
 settings-priority-delete = 우선순위 삭제
+settings-priority-delete-title = 우선순위를 삭제할까요?
+settings-priority-delete-message =
+    { $count ->
+        [one] 읽기 { $count }개가 “{ $name }”을(를) 사용합니다. 이 우선순위를 삭제하기 전에 처리할 방법을 선택하세요.
+       *[other] 읽기 { $count }개가 “{ $name }”을(를) 사용합니다. 이 우선순위를 삭제하기 전에 처리할 방법을 선택하세요.
+    }
+settings-priority-delete-migrate-label = 읽기 이동 위치
+settings-priority-delete-migrate = 이동 후 삭제
+settings-priority-delete-clear = 우선순위 지우기
+settings-priority-delete-cancel = 취소
 settings-priority-name-label = 이름
 settings-priority-preview = 미리 보기:
 priority-default-course-info = 강의 정보

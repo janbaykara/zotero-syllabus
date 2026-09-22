@@ -289,7 +289,22 @@ settings-citation-style = Style de citation
 settings-user-default = Défaut utilisateur
 settings-user-default-named = Défaut utilisateur : { $name }
 settings-priorities = Priorités
-settings-priorities-desc = Personnalisez les noms, couleurs et l’ordre des priorités.
+settings-priorities-desc = Personnalisez les noms, couleurs et l’ordre des priorités de ce syllabus.
+settings-priorities-global-title = Priorités par défaut globales
+settings-priorities-global-desc = Les nouveaux syllabus copient ces priorités. Les existants gardent leurs propres listes.
+settings-priorities-global-link = Modifier les valeurs globales…
+settings-priorities-global-done = Terminé
+settings-priorities-global-reset = Réinitialiser aux valeurs intégrées
+settings-priorities-set-global = Utiliser comme valeurs globales
+settings-priorities-set-global-confirm-title = Utiliser comme valeurs globales ?
+settings-priorities-set-global-confirm-message =
+    Cela remplacera vos priorités par défaut globales par celles de ce syllabus. Les nouveaux syllabus copieront ces noms, couleurs et ordre. Les syllabus existants ne changent pas.
+settings-priorities-set-global-done = Enregistré comme valeurs globales pour les nouveaux syllabus
+settings-priorities-reset-global = Réinitialiser aux valeurs globales
+settings-priorities-reset-global-confirm-title = Réinitialiser aux valeurs globales ?
+settings-priorities-reset-global-confirm-message =
+    Cela remplacera les priorités de ce syllabus par vos valeurs globales. Les lectures utilisant des priorités absentes de la liste globale devront être déplacées ou effacées.
+settings-priorities-reset-global-done = Priorités réinitialisées aux valeurs globales
 settings-add-priority = Ajouter une nouvelle priorité
 settings-add-priority-button = Ajouter une priorité
 settings-new-priority-name = Nouvelle priorité
@@ -298,6 +313,16 @@ settings-priority-move-down = Descendre
 settings-priority-color = Couleur de la priorité
 settings-priority-name-placeholder = Nom de la priorité
 settings-priority-delete = Supprimer la priorité
+settings-priority-delete-title = Supprimer la priorité ?
+settings-priority-delete-message =
+    { $count ->
+        [one] { $count } lecture utilise « { $name } ». Choisissez quoi en faire avant de supprimer cette priorité.
+       *[other] { $count } lectures utilisent « { $name } ». Choisissez quoi en faire avant de supprimer cette priorité.
+    }
+settings-priority-delete-migrate-label = Déplacer les lectures vers
+settings-priority-delete-migrate = Déplacer et supprimer
+settings-priority-delete-clear = Effacer la priorité
+settings-priority-delete-cancel = Annuler
 settings-priority-name-label = Nom
 settings-priority-preview = Aperçu :
 priority-default-course-info = Informations du cours

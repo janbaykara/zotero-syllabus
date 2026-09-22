@@ -289,7 +289,22 @@ settings-citation-style = Estilo de citação
 settings-user-default = Predefinição do utilizador
 settings-user-default-named = Predefinição do utilizador: { $name }
 settings-priorities = Prioridades
-settings-priorities-desc = Personalize os nomes, as cores e a ordem das prioridades.
+settings-priorities-desc = Personalize nomes, cores e ordem das prioridades neste programa.
+settings-priorities-global-title = Prioridades predefinidas globais
+settings-priorities-global-desc = Novos programas copiam estas prioridades. Os existentes mantêm as próprias listas.
+settings-priorities-global-link = Editar predefinições globais…
+settings-priorities-global-done = Concluído
+settings-priorities-global-reset = Repor predefinições integradas
+settings-priorities-set-global = Usar como predefinições globais
+settings-priorities-set-global-confirm-title = Usar como predefinições globais?
+settings-priorities-set-global-confirm-message =
+    Isto substituirá as suas prioridades predefinidas globais pelas prioridades deste programa. Novos programas copiarão estes nomes, cores e ordem. Os programas existentes não mudam.
+settings-priorities-set-global-done = Guardado como predefinições globais para novos programas
+settings-priorities-reset-global = Repor predefinições globais
+settings-priorities-reset-global-confirm-title = Repor predefinições globais?
+settings-priorities-reset-global-confirm-message =
+    Isto substituirá as prioridades deste programa pelas suas predefinições globais. Leituras que usam prioridades fora da lista global terão de ser movidas ou limpas.
+settings-priorities-reset-global-done = Prioridades repostas para as predefinições globais
 settings-add-priority = Adicionar nova prioridade
 settings-add-priority-button = Adicionar prioridade
 settings-new-priority-name = Nova prioridade
@@ -298,6 +313,16 @@ settings-priority-move-down = Mover para baixo
 settings-priority-color = Cor da prioridade
 settings-priority-name-placeholder = Nome da prioridade
 settings-priority-delete = Eliminar prioridade
+settings-priority-delete-title = Eliminar prioridade?
+settings-priority-delete-message =
+    { $count ->
+        [one] { $count } leitura usa “{ $name }”. Escolha o que fazer com ela antes de eliminar esta prioridade.
+       *[other] { $count } leituras usam “{ $name }”. Escolha o que fazer com elas antes de eliminar esta prioridade.
+    }
+settings-priority-delete-migrate-label = Mover leituras para
+settings-priority-delete-migrate = Mover e eliminar
+settings-priority-delete-clear = Limpar prioridade
+settings-priority-delete-cancel = Cancelar
 settings-priority-name-label = Nome
 settings-priority-preview = Pré-visualização:
 priority-default-course-info = Informação da unidade curricular

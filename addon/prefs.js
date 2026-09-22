@@ -30,3 +30,4 @@ pref("publishApiBaseUrl", "https://read.zotero-syllabus.workers.dev");
 pref("publishJwt", "");
 pref("publishUserId", "");
 pref("publishJwtExpiresAt", 0);
+pref("defaultPriorities", "");

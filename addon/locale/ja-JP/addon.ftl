@@ -289,7 +289,22 @@ settings-citation-style = 引用スタイル
 settings-user-default = ユーザー既定
 settings-user-default-named = ユーザー既定：{ $name }
 settings-priorities = 優先度
-settings-priorities-desc = 優先度の名前、色、並べ替え順をカスタマイズします。
+settings-priorities-desc = このシラバスの優先度の名前・色・並び順をカスタマイズします。
+settings-priorities-global-title = グローバル優先度の既定値
+settings-priorities-global-desc = 新しいシラバスはこれらの優先度をコピーします。既存のものは各自のリストを保ちます。
+settings-priorities-global-link = グローバル既定値を編集…
+settings-priorities-global-done = 完了
+settings-priorities-global-reset = 組み込みの既定値に戻す
+settings-priorities-set-global = グローバル既定値として使う
+settings-priorities-set-global-confirm-title = グローバル既定値として使いますか？
+settings-priorities-set-global-confirm-message =
+    グローバル優先度の既定値がこのシラバスの優先度に置き換わります。新しいシラバスはこれらの名前・色・並び順をコピーします。既存のシラバスは変わりません。
+settings-priorities-set-global-done = 新しいシラバス用のグローバル既定値として保存しました
+settings-priorities-reset-global = グローバル既定値に戻す
+settings-priorities-reset-global-confirm-title = グローバル既定値に戻しますか？
+settings-priorities-reset-global-confirm-message =
+    このシラバスの優先度をグローバル既定値に置き換えます。グローバル一覧にない優先度を使っている読書は移動またはクリアが必要です。
+settings-priorities-reset-global-done = 優先度をグローバル既定値に戻しました
 settings-add-priority = 新しい優先度を追加
 settings-add-priority-button = 優先度を追加
 settings-new-priority-name = 新しい優先度
@@ -298,6 +313,16 @@ settings-priority-move-down = 下へ
 settings-priority-color = 優先度の色
 settings-priority-name-placeholder = 優先度の名前
 settings-priority-delete = 優先度を削除
+settings-priority-delete-title = 優先度を削除しますか？
+settings-priority-delete-message =
+    { $count ->
+        [one] { $count } 件の読書が「{ $name }」を使用しています。この優先度を削除する前に処理を選んでください。
+       *[other] { $count } 件の読書が「{ $name }」を使用しています。この優先度を削除する前に処理を選んでください。
+    }
+settings-priority-delete-migrate-label = 読書の移動先
+settings-priority-delete-migrate = 移動して削除
+settings-priority-delete-clear = 優先度をクリア
+settings-priority-delete-cancel = キャンセル
 settings-priority-name-label = 名前
 settings-priority-preview = プレビュー：
 priority-default-course-info = 授業情報

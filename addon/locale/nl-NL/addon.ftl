@@ -289,7 +289,22 @@ settings-citation-style = Citatestijl
 settings-user-default = Gebruikersstandaard
 settings-user-default-named = Gebruikersstandaard: { $name }
 settings-priorities = Prioriteiten
-settings-priorities-desc = Pas prioriteitsnamen, -kleuren en sorteervolgorde aan.
+settings-priorities-desc = Pas prioriteitsnamen, kleuren en volgorde voor dit syllabus aan.
+settings-priorities-global-title = Globale standaardprioriteiten
+settings-priorities-global-desc = Nieuwe syllabi kopiëren deze prioriteiten. Bestaande behouden hun eigen lijsten.
+settings-priorities-global-link = Globale standaarden bewerken…
+settings-priorities-global-done = Klaar
+settings-priorities-global-reset = Herstellen naar ingebouwde standaarden
+settings-priorities-set-global = Gebruik als globale standaarden
+settings-priorities-set-global-confirm-title = Gebruiken als globale standaarden?
+settings-priorities-set-global-confirm-message =
+    Dit vervangt je globale standaardprioriteiten door de prioriteiten van dit syllabus. Nieuwe syllabi kopiëren deze namen, kleuren en volgorde. Bestaande syllabi veranderen niet.
+settings-priorities-set-global-done = Opgeslagen als globale standaarden voor nieuwe syllabi
+settings-priorities-reset-global = Herstellen naar globale standaarden
+settings-priorities-reset-global-confirm-title = Herstellen naar globale standaarden?
+settings-priorities-reset-global-confirm-message =
+    Dit vervangt de prioriteiten van dit syllabus door je globale standaarden. Lezingen met prioriteiten die niet in de globale lijst staan, moeten worden verplaatst of gewist.
+settings-priorities-reset-global-done = Prioriteiten hersteld naar globale standaarden
 settings-add-priority = Nieuwe prioriteit toevoegen
 settings-add-priority-button = Prioriteit toevoegen
 settings-new-priority-name = Nieuwe prioriteit
@@ -298,6 +313,16 @@ settings-priority-move-down = Omlaag
 settings-priority-color = Prioriteitskleur
 settings-priority-name-placeholder = Prioriteitsnaam
 settings-priority-delete = Prioriteit verwijderen
+settings-priority-delete-title = Prioriteit verwijderen?
+settings-priority-delete-message =
+    { $count ->
+        [one] { $count } lezing gebruikt “{ $name }”. Kies wat je ermee wilt doen voordat je deze prioriteit verwijdert.
+       *[other] { $count } lezingen gebruiken “{ $name }”. Kies wat je ermee wilt doen voordat je deze prioriteit verwijdert.
+    }
+settings-priority-delete-migrate-label = Lezingen verplaatsen naar
+settings-priority-delete-migrate = Verplaatsen en verwijderen
+settings-priority-delete-clear = Prioriteit wissen
+settings-priority-delete-cancel = Annuleren
 settings-priority-name-label = Naam
 settings-priority-preview = Voorbeeld:
 priority-default-course-info = Cursusinformatie

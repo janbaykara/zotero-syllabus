@@ -289,7 +289,22 @@ settings-citation-style = Стиль цитирования
 settings-user-default = По умолчанию пользователя
 settings-user-default-named = По умолчанию пользователя: { $name }
 settings-priorities = Приоритеты
-settings-priorities-desc = Настройте названия приоритетов, цвета и порядок сортировки.
+settings-priorities-desc = Настройте названия, цвета и порядок приоритетов для этой программы.
+settings-priorities-global-title = Глобальные приоритеты по умолчанию
+settings-priorities-global-desc = Новые программы копируют эти приоритеты. Существующие сохраняют свои списки.
+settings-priorities-global-link = Изменить глобальные настройки…
+settings-priorities-global-done = Готово
+settings-priorities-global-reset = Сбросить к встроенным значениям
+settings-priorities-set-global = Сделать глобальными по умолчанию
+settings-priorities-set-global-confirm-title = Сделать глобальными по умолчанию?
+settings-priorities-set-global-confirm-message =
+    Это заменит ваши глобальные приоритеты по умолчанию приоритетами этой программы. Новые программы скопируют эти названия, цвета и порядок. Существующие не изменятся.
+settings-priorities-set-global-done = Сохранено как глобальные настройки для новых программ
+settings-priorities-reset-global = Сбросить к глобальным
+settings-priorities-reset-global-confirm-title = Сбросить к глобальным?
+settings-priorities-reset-global-confirm-message =
+    Это заменит приоритеты этой программы вашими глобальными настройками. Чтения с приоритетами вне глобального списка нужно будет переместить или очистить.
+settings-priorities-reset-global-done = Приоритеты сброшены к глобальным настройкам
 settings-add-priority = Добавить новый приоритет
 settings-add-priority-button = Добавить приоритет
 settings-new-priority-name = Новый приоритет
@@ -298,6 +313,16 @@ settings-priority-move-down = Переместить вниз
 settings-priority-color = Цвет приоритета
 settings-priority-name-placeholder = Название приоритета
 settings-priority-delete = Удалить приоритет
+settings-priority-delete-title = Удалить приоритет?
+settings-priority-delete-message =
+    { $count ->
+        [one] { $count } чтение использует «{ $name }». Выберите, что сделать с ним, прежде чем удалить этот приоритет.
+       *[other] { $count } чтений используют «{ $name }». Выберите, что сделать с ними, прежде чем удалить этот приоритет.
+    }
+settings-priority-delete-migrate-label = Переместить чтения в
+settings-priority-delete-migrate = Переместить и удалить
+settings-priority-delete-clear = Сбросить приоритет
+settings-priority-delete-cancel = Отмена
 settings-priority-name-label = Название
 settings-priority-preview = Предпросмотр:
 priority-default-course-info = Сведения о курсе

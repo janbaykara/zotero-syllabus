@@ -289,7 +289,22 @@ settings-citation-style = Styl cytowania
 settings-user-default = Domyślny użytkownika
 settings-user-default-named = Domyślny użytkownika: { $name }
 settings-priorities = Priorytety
-settings-priorities-desc = Dostosuj nazwy priorytetów, kolory i kolejność sortowania.
+settings-priorities-desc = Dostosuj nazwy, kolory i kolejność priorytetów tego sylabusu.
+settings-priorities-global-title = Globalne domyślne priorytety
+settings-priorities-global-desc = Nowe sylabusy kopiują te priorytety. Istniejące zachowują własne listy.
+settings-priorities-global-link = Edytuj ustawienia globalne…
+settings-priorities-global-done = Gotowe
+settings-priorities-global-reset = Przywróć wbudowane domyślne
+settings-priorities-set-global = Użyj jako ustawienia globalne
+settings-priorities-set-global-confirm-title = Użyć jako ustawienia globalne?
+settings-priorities-set-global-confirm-message =
+    To zastąpi Twoje globalne domyślne priorytety priorytetami tego sylabusu. Nowe sylabusy skopiują te nazwy, kolory i kolejność. Istniejące się nie zmienią.
+settings-priorities-set-global-done = Zapisano jako ustawienia globalne dla nowych sylabusów
+settings-priorities-reset-global = Przywróć ustawienia globalne
+settings-priorities-reset-global-confirm-title = Przywrócić ustawienia globalne?
+settings-priorities-reset-global-confirm-message =
+    To zastąpi priorytety tego sylabusu Twoimi ustawieniami globalnymi. Lektury używające priorytetów spoza listy globalnej będzie trzeba przenieść lub wyczyścić.
+settings-priorities-reset-global-done = Przywrócono priorytety do ustawień globalnych
 settings-add-priority = Dodaj nowy priorytet
 settings-add-priority-button = Dodaj priorytet
 settings-new-priority-name = Nowy priorytet
@@ -298,6 +313,16 @@ settings-priority-move-down = Przenieś w dół
 settings-priority-color = Kolor priorytetu
 settings-priority-name-placeholder = Nazwa priorytetu
 settings-priority-delete = Usuń priorytet
+settings-priority-delete-title = Usunąć priorytet?
+settings-priority-delete-message =
+    { $count ->
+        [one] { $count } lektura używa „{ $name }”. Wybierz, co z nią zrobić przed usunięciem tego priorytetu.
+       *[other] { $count } lektury używają „{ $name }”. Wybierz, co z nimi zrobić przed usunięciem tego priorytetu.
+    }
+settings-priority-delete-migrate-label = Przenieś lektury do
+settings-priority-delete-migrate = Przenieś i usuń
+settings-priority-delete-clear = Wyczyść priorytet
+settings-priority-delete-cancel = Anuluj
 settings-priority-name-label = Nazwa
 settings-priority-preview = Podgląd:
 priority-default-course-info = Informacje o przedmiocie

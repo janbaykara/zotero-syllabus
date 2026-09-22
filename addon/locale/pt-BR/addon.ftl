@@ -289,7 +289,22 @@ settings-citation-style = Estilo de citação
 settings-user-default = Padrão do usuário
 settings-user-default-named = Padrão do usuário: { $name }
 settings-priorities = Prioridades
-settings-priorities-desc = Personalize nomes, cores e ordem das prioridades.
+settings-priorities-desc = Personalize nomes, cores e ordem das prioridades neste programa.
+settings-priorities-global-title = Prioridades padrão globais
+settings-priorities-global-desc = Novos programas copiam estas prioridades. Os existentes mantêm as próprias listas.
+settings-priorities-global-link = Editar padrões globais…
+settings-priorities-global-done = Concluído
+settings-priorities-global-reset = Redefinir para padrões integrados
+settings-priorities-set-global = Usar como padrões globais
+settings-priorities-set-global-confirm-title = Usar como padrões globais?
+settings-priorities-set-global-confirm-message =
+    Isso substituirá suas prioridades padrão globais pelas prioridades deste programa. Novos programas copiarão estes nomes, cores e ordem. Programas existentes não mudam.
+settings-priorities-set-global-done = Salvo como padrões globais para novos programas
+settings-priorities-reset-global = Redefinir para padrões globais
+settings-priorities-reset-global-confirm-title = Redefinir para padrões globais?
+settings-priorities-reset-global-confirm-message =
+    Isso substituirá as prioridades deste programa pelos seus padrões globais. Leituras que usam prioridades fora da lista global precisarão ser movidas ou limpas.
+settings-priorities-reset-global-done = Prioridades redefinidas para os padrões globais
 settings-add-priority = Adicionar nova prioridade
 settings-add-priority-button = Adicionar prioridade
 settings-new-priority-name = Nova prioridade
@@ -298,6 +313,16 @@ settings-priority-move-down = Mover para baixo
 settings-priority-color = Cor da prioridade
 settings-priority-name-placeholder = Nome da prioridade
 settings-priority-delete = Excluir prioridade
+settings-priority-delete-title = Excluir prioridade?
+settings-priority-delete-message =
+    { $count ->
+        [one] { $count } leitura usa “{ $name }”. Escolha o que fazer com ela antes de excluir esta prioridade.
+       *[other] { $count } leituras usam “{ $name }”. Escolha o que fazer com elas antes de excluir esta prioridade.
+    }
+settings-priority-delete-migrate-label = Mover leituras para
+settings-priority-delete-migrate = Mover e excluir
+settings-priority-delete-clear = Limpar prioridade
+settings-priority-delete-cancel = Cancelar
 settings-priority-name-label = Nome
 settings-priority-preview = Prévia:
 priority-default-course-info = Informações da disciplina
