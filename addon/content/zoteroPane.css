@@ -348,6 +348,24 @@
   color: var(--fill-secondary, #8c8c8c);
 }
 
+.syllabus-gallery-toolbar-checkbox {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--fill-primary, inherit);
+  cursor: pointer;
+}
+
+.syllabus-gallery-toolbar-checkbox input {
+  margin: 0.15rem 0 0;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
 .syllabus-gallery-save-global {
   appearance: none;
   display: inline-flex;
@@ -711,16 +729,105 @@
   line-height: 1.4;
 }
 
+/*
+ * Gallery Annotations view — cover sizing premises:
+ * 1. Feed covers and No Annotations grid share one cover width (must match).
+ * 2. --cols = min(pane fit, item count): enough tiles expand to fill the row;
+ *    a single tile does not become a full-width banner.
+ * 3. Cover width = (pane − gaps) / cols, clamped to min/max.
+ * 4. Grid tracks are capped at that width (not unbounded 1fr), so the max
+ *    actually holds when cols is 1.
+ * 5. Container queries size against the pane, not the Zotero window.
+ */
 .syllabus-gallery-annotations-section {
+  container-type: inline-size;
+  container-name: gallery-annotations;
   gap: 3.5rem;
+  --syllabus-annotations-cover-gap: 1.25rem;
+  --syllabus-annotations-cover-min: 140px;
+  /* Soft cap: leave most of the row for quotes in the feed. */
+  --syllabus-annotations-cover-max: 11rem;
+}
+
+/* cqw must be resolved on descendants (a container cannot query itself). */
+.syllabus-gallery-annotations-section > * {
+  --syllabus-annotations-cover-cols-fit: 1;
+  --syllabus-annotations-cover-cols: min(
+    var(--syllabus-annotations-cover-cols-fit),
+    var(--syllabus-annotations-cover-cols-cap, 99)
+  );
+  --syllabus-annotations-cover-width: clamp(
+    var(--syllabus-annotations-cover-min),
+    calc(
+      (
+          100cqw -
+            (var(--syllabus-annotations-cover-cols) - 1) *
+            var(--syllabus-annotations-cover-gap)
+        ) /
+        var(--syllabus-annotations-cover-cols) - 1px
+    ),
+    var(--syllabus-annotations-cover-max)
+  );
+}
+
+/* Breakpoints ≈ n * min + (n − 1) * gap (140px + 1.25rem gaps). */
+@container gallery-annotations (min-width: 18.75rem) {
+  .syllabus-gallery-annotations-section > * {
+    --syllabus-annotations-cover-cols-fit: 2;
+  }
+}
+
+@container gallery-annotations (min-width: 28.75rem) {
+  .syllabus-gallery-annotations-section > * {
+    --syllabus-annotations-cover-cols-fit: 3;
+  }
+}
+
+@container gallery-annotations (min-width: 38.75rem) {
+  .syllabus-gallery-annotations-section > * {
+    --syllabus-annotations-cover-cols-fit: 4;
+  }
+}
+
+@container gallery-annotations (min-width: 48.75rem) {
+  .syllabus-gallery-annotations-section > * {
+    --syllabus-annotations-cover-cols-fit: 5;
+  }
+}
+
+@container gallery-annotations (min-width: 58.75rem) {
+  .syllabus-gallery-annotations-section > * {
+    --syllabus-annotations-cover-cols-fit: 6;
+  }
+}
+
+@container gallery-annotations (min-width: 68.75rem) {
+  .syllabus-gallery-annotations-section > * {
+    --syllabus-annotations-cover-cols-fit: 7;
+  }
 }
 
 .syllabus-gallery-annotations-empty-heading {
   margin: 0 0 1.1rem;
-  font-size: 1.35rem;
-  font-weight: 600;
+  font-size: 1.1rem;
+  font-weight: 500;
   line-height: 1.35;
   color: var(--fill-secondary, inherit);
+}
+
+/*
+ * Tracks sized to --cover-width (shared with feed). Using max-width on the
+ * track — not naked 1fr — so cols=1 stays at --cover-max instead of
+ * stretching full-pane.
+ */
+.syllabus-gallery-annotations-empty-section .syllabus-gallery-grid {
+  grid-template-columns: repeat(
+    var(--syllabus-annotations-cover-cols),
+    minmax(0, var(--syllabus-annotations-cover-width))
+  );
+  column-gap: var(--syllabus-annotations-cover-gap);
+  justify-content: start;
+  width: 100%;
 }
 
 /* Explorer recent-annotations: same stream groups, horizontal rail. */
@@ -737,6 +844,15 @@
   box-sizing: border-box;
   padding-block: 0.15rem 0.35rem;
   scroll-snap-type: x proximity;
+  --syllabus-annotations-cover-gap: 1.25rem;
+  --syllabus-annotations-cover-min: 140px;
+  --syllabus-annotations-cover-max: 11rem;
+  /* Entry is the containing block for avatar % width. */
+  --syllabus-annotations-cover-width: clamp(
+    var(--syllabus-annotations-cover-min),
+    calc((100% - 4 * var(--syllabus-annotations-cover-gap)) / 5 - 1px),
+    var(--syllabus-annotations-cover-max)
+  );
 }
 
 .syllabus-explorer-annotation-stream-rail
@@ -927,7 +1043,8 @@
   .syllabus-gallery-tile.has-gallery-note > .syllabus-gallery-cover-web,
   .syllabus-gallery-tile.has-gallery-note > .syllabus-gallery-cover-square,
   .syllabus-gallery-tile.has-gallery-note > .syllabus-gallery-cover-natural,
-  .syllabus-gallery-tile.has-gallery-note > .syllabus-gallery-cover-with-binder {
+  .syllabus-gallery-tile.has-gallery-note
+    > .syllabus-gallery-cover-with-binder {
     grid-column: 1;
     grid-row: 1;
   }
@@ -3003,6 +3120,66 @@ button.syllabus-explorer-class-segment-header:focus-visible {
     "Hiragino Mincho ProN", serif;
 }
 
+/* Standalone Annotations Feed: same cover tokens / column steps as Gallery. */
+.syllabus-my-annotations-page .syllabus-my-annotations-stream {
+  container-type: inline-size;
+  container-name: my-annotations;
+  --syllabus-annotations-cover-gap: 1.25rem;
+  --syllabus-annotations-cover-min: 140px;
+  --syllabus-annotations-cover-max: 11rem;
+}
+
+.syllabus-my-annotations-page .syllabus-my-annotations-stream > * {
+  --syllabus-annotations-cover-cols: 1;
+  --syllabus-annotations-cover-width: clamp(
+    var(--syllabus-annotations-cover-min),
+    calc(
+      (
+          100cqw - (var(--syllabus-annotations-cover-cols) - 1) *
+            var(--syllabus-annotations-cover-gap)
+        ) /
+        var(--syllabus-annotations-cover-cols) - 1px
+    ),
+    var(--syllabus-annotations-cover-max)
+  );
+}
+
+@container my-annotations (min-width: 18.75rem) {
+  .syllabus-my-annotations-page .syllabus-my-annotations-stream > * {
+    --syllabus-annotations-cover-cols: 2;
+  }
+}
+
+@container my-annotations (min-width: 28.75rem) {
+  .syllabus-my-annotations-page .syllabus-my-annotations-stream > * {
+    --syllabus-annotations-cover-cols: 3;
+  }
+}
+
+@container my-annotations (min-width: 38.75rem) {
+  .syllabus-my-annotations-page .syllabus-my-annotations-stream > * {
+    --syllabus-annotations-cover-cols: 4;
+  }
+}
+
+@container my-annotations (min-width: 48.75rem) {
+  .syllabus-my-annotations-page .syllabus-my-annotations-stream > * {
+    --syllabus-annotations-cover-cols: 5;
+  }
+}
+
+@container my-annotations (min-width: 58.75rem) {
+  .syllabus-my-annotations-page .syllabus-my-annotations-stream > * {
+    --syllabus-annotations-cover-cols: 6;
+  }
+}
+
+@container my-annotations (min-width: 68.75rem) {
+  .syllabus-my-annotations-page .syllabus-my-annotations-stream > * {
+    --syllabus-annotations-cover-cols: 7;
+  }
+}
+
 .syllabus-my-annotations-stream-entry {
   display: flex;
   flex-direction: row;
@@ -3026,10 +3203,11 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   /* Cleared by JS from the sticky page header height (+ gap). */
   top: var(--syllabus-my-annotations-sticky-top, 8.5rem);
   z-index: 1;
-  flex: 0 0 8rem;
-  width: 8rem;
-  max-width: 8rem;
-  min-width: 0;
+  /* Same fixed width as No Annotations grid tracks. */
+  flex: 0 0 var(--syllabus-annotations-cover-width);
+  width: var(--syllabus-annotations-cover-width);
+  max-width: var(--syllabus-annotations-cover-width);
+  min-width: var(--syllabus-annotations-cover-min, 140px);
   align-self: flex-start;
 }
 
@@ -3084,13 +3262,13 @@ button.syllabus-explorer-class-segment-header:focus-visible {
 }
 
 .syllabus-my-annotations-stream-avatar .syllabus-gallery-title {
-  font-size: 0.8rem;
-  line-height: 1.3;
+  font-size: 0.875rem;
+  line-height: 1.35;
 }
 
 .syllabus-my-annotations-stream-avatar .syllabus-gallery-creator,
 .syllabus-my-annotations-stream-avatar .syllabus-gallery-hostrow {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
 }
 
 .syllabus-my-annotations-stream-avatar-empty {

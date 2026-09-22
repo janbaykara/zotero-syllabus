@@ -113,6 +113,7 @@ export type FluentMessageId =
   | 'further-reading-sort-aria'
   | 'gallery-annotations-empty'
   | 'gallery-annotations-none-heading'
+  | 'gallery-annotations-show-empty'
   | 'gallery-empty'
   | 'gallery-empty-filtered'
   | 'gallery-empty-subcollections'

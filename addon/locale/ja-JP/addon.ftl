@@ -372,7 +372,8 @@ gallery-layout-card-title = シラバスカード
 gallery-layout-annotations = 注釈
 gallery-layout-annotations-title = すべての注釈付きカバー
 gallery-annotations-empty = 注釈はありません
-gallery-annotations-none-heading = 注釈のないアイテム
+gallery-annotations-none-heading = 注釈なし
+gallery-annotations-show-empty = 注釈のないアイテムを表示
 gallery-layout-magazine = マガジン
 gallery-layout-magazine-title = 大小混在のマガジンレイアウト
 

@@ -372,7 +372,8 @@ gallery-layout-card-title = Lehrplan-Karten
 gallery-layout-annotations = Annotationen
 gallery-layout-annotations-title = Cover mit allen Annotationen
 gallery-annotations-empty = Keine Annotationen
-gallery-annotations-none-heading = Einträge ohne Annotationen
+gallery-annotations-none-heading = Keine Annotationen
+gallery-annotations-show-empty = Einträge ohne Annotationen anzeigen
 gallery-layout-magazine = Magazin
 gallery-layout-magazine-title = Gemischtes Magazin-Layout
 

@@ -372,7 +372,8 @@ gallery-layout-card-title = Tarjetas del programa
 gallery-layout-annotations = Anotaciones
 gallery-layout-annotations-title = Portadas con todas las anotaciones
 gallery-annotations-empty = Sin anotaciones
-gallery-annotations-none-heading = Elementos sin anotaciones
+gallery-annotations-none-heading = Sin anotaciones
+gallery-annotations-show-empty = Mostrar elementos sin anotaciones
 gallery-layout-magazine = Revista
 gallery-layout-magazine-title = Diseño de revista de tamaños mixtos
 

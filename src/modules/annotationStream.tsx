@@ -14,6 +14,10 @@ import {
   openAnnotationIdInReader,
   openItemBestAttachment,
 } from "../utils/items";
+import {
+  annotationCommentToDisplayHtml,
+  annotationCommentToPlainText,
+} from "../utils/annotationComment";
 import { copyStringToClipboard } from "../utils/clipboard";
 import { getItemCitationKey } from "../utils/citeKey";
 import { getString } from "../utils/locale";
@@ -54,7 +58,7 @@ export function formatAnnotationCopyText(
     parts.push(blockquote ? toMarkdownBlockquote(quote) : quote);
   }
   if (entry.comment) {
-    parts.push(entry.comment);
+    parts.push(annotationCommentToPlainText(entry.comment));
   }
   return parts.join("\n\n");
 }
@@ -271,9 +275,11 @@ export function AnnotationStreamBody({
               openInReader();
             }}
             onKeyDown={onOpenKeyDown}
-          >
-            {entry.comment}
-          </div>
+            // Zotero comments are plain text + a few inline HTML tags.
+            dangerouslySetInnerHTML={{
+              __html: annotationCommentToDisplayHtml(entry.comment),
+            }}
+          />
         ) : null}
       </div>
     </div>

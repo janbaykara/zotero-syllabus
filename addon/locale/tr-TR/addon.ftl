@@ -372,7 +372,8 @@ gallery-layout-card-title = İzlence kartları
 gallery-layout-annotations = Notlar
 gallery-layout-annotations-title = Tüm notlarla kapaklar
 gallery-annotations-empty = Not yok
-gallery-annotations-none-heading = Notu olmayan öğeler
+gallery-annotations-none-heading = Not yok
+gallery-annotations-show-empty = Notu olmayan öğeleri göster
 gallery-layout-magazine = Magazin
 gallery-layout-magazine-title = Karışık boyutlu magazin düzeni
 

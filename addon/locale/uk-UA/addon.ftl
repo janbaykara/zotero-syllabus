@@ -372,7 +372,8 @@ gallery-layout-card-title = Картки силабуса
 gallery-layout-annotations = Анотації
 gallery-layout-annotations-title = Обкладинки з усіма анотаціями
 gallery-annotations-empty = Немає анотацій
-gallery-annotations-none-heading = Елементи без анотацій
+gallery-annotations-none-heading = Немає анотацій
+gallery-annotations-show-empty = Показувати елементи без анотацій
 gallery-layout-magazine = Журнал
 gallery-layout-magazine-title = Журнальне компонування різних розмірів
 

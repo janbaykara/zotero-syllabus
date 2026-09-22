@@ -372,7 +372,8 @@ gallery-layout-card-title = بطاقات المنهاج
 gallery-layout-annotations = التعليقات
 gallery-layout-annotations-title = أغلفة مع كل التعليقات
 gallery-annotations-empty = لا توجد تعليقات
-gallery-annotations-none-heading = عناصر بلا تعليقات
+gallery-annotations-none-heading = لا تعليقات
+gallery-annotations-show-empty = إظهار العناصر بلا تعليقات
 gallery-layout-magazine = مجلة
 gallery-layout-magazine-title = تخطيط مجلة بأحجام متنوعة
 

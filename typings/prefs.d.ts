@@ -31,6 +31,7 @@ declare namespace _ZoteroTypes {
       "myAnnotationsGroupBy": string;
       "myAnnotationsOrder": string;
       "annotationsQuoteOrder": string;
+      "galleryShowItemsWithoutAnnotations": boolean;
       "magazineTypeSize": string;
       "generateReadingScheduleCollection": boolean;
       "readingScheduleCollectionKey": string;

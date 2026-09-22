@@ -372,7 +372,8 @@ gallery-layout-card-title = Karty sylabusa
 gallery-layout-annotations = Adnotacje
 gallery-layout-annotations-title = Okładki ze wszystkimi adnotacjami
 gallery-annotations-empty = Brak adnotacji
-gallery-annotations-none-heading = Elementy bez adnotacji
+gallery-annotations-none-heading = Brak adnotacji
+gallery-annotations-show-empty = Pokaż elementy bez adnotacji
 gallery-layout-magazine = Magazyn
 gallery-layout-magazine-title = Układ magazynu o różnych rozmiarach
 

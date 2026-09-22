@@ -372,7 +372,8 @@ gallery-layout-card-title = Kartu silabus
 gallery-layout-annotations = Anotasi
 gallery-layout-annotations-title = Sampul dengan semua anotasi
 gallery-annotations-empty = Tidak ada anotasi
-gallery-annotations-none-heading = Item tanpa anotasi
+gallery-annotations-none-heading = Tidak ada anotasi
+gallery-annotations-show-empty = Tampilkan item tanpa anotasi
 gallery-layout-magazine = Majalah
 gallery-layout-magazine-title = Tata letak majalah berbagai ukuran
 

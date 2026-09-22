@@ -1,5 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
+import type { JSX } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { getString } from "../utils/locale";
 import { sortItems } from "../utils/items";
@@ -55,12 +56,74 @@ function uniqueItems(items: Zotero.Item[]): Zotero.Item[] {
   });
 }
 
+/** Item ids that currently have at least one annotation in the stream. */
+export async function collectItemIdsWithAnnotations(
+  items: Zotero.Item[],
+): Promise<Set<number>> {
+  const unique = uniqueItems(items);
+  const flags = await Promise.all(
+    unique.map(async (item) => {
+      const entries = await annotationsStreamForParent(item);
+      return entries.length > 0 ? item.id : null;
+    }),
+  );
+  return new Set(flags.filter((id): id is number => id != null));
+}
+
+/**
+ * When `enabled`, resolves to the set of item ids that have annotations
+ * (`null` while loading). When disabled, returns `null` (no filtering).
+ */
+export function useItemIdsWithAnnotations(
+  items: Zotero.Item[],
+  enabled: boolean,
+): Set<number> | null {
+  const idsKey = useMemo(
+    () =>
+      uniqueItems(items)
+        .map((item) => item.id)
+        .sort((a, b) => a - b)
+        .join(","),
+    [items],
+  );
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const [annotatedIds, setAnnotatedIds] = useState<Set<number> | null>(null);
+
+  useEffect(() => {
+    if (!enabled) {
+      setAnnotatedIds(null);
+      return;
+    }
+    let cancelled = false;
+    setAnnotatedIds(null);
+    void collectItemIdsWithAnnotations(itemsRef.current)
+      .then((next) => {
+        if (!cancelled) {
+          setAnnotatedIds(next);
+        }
+      })
+      .catch((err) => {
+        ztoolkit.log("useItemIdsWithAnnotations failed", err);
+        if (!cancelled) {
+          setAnnotatedIds(new Set());
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, idsKey]);
+
+  return enabled ? annotatedIds : null;
+}
+
 export function GalleryAnnotationsSection({
   items,
   keyPrefix,
   sortBy,
   collectionId,
   selectedItemIds,
+  showItemsWithoutAnnotations = true,
   onClick,
   onDoubleClick,
   onContextMenu,
@@ -70,17 +133,23 @@ export function GalleryAnnotationsSection({
   sortBy: GallerySortBy;
   collectionId: number;
   selectedItemIds: number[] | null;
+  showItemsWithoutAnnotations?: boolean;
   onClick: MagazineTileClick;
   onDoubleClick: (item: Zotero.Item) => void;
   onContextMenu: MagazineTileClick;
 }) {
-  /** Stable across selection re-renders that only change the items array identity. */
-  const sortedIdsKey = useMemo(
+  /**
+   * Stable across parent re-renders: do not bake sort order into the key —
+   * `sortItems(..., "auto")` preserves caller order, which can churn and
+   * cancel the partition effect forever (blank annotations gallery).
+   */
+  const itemsKey = useMemo(
     () =>
-      sortItems(uniqueItems(items), sortBy)
+      uniqueItems(items)
         .map((item) => item.id)
+        .sort((a, b) => a - b)
         .join(","),
-    [items, sortBy],
+    [items],
   );
   const itemsRef = useRef(items);
   itemsRef.current = items;
@@ -91,31 +160,63 @@ export function GalleryAnnotationsSection({
 
   useEffect(() => {
     let cancelled = false;
+    setPartition(null);
     const itemsToLoad = sortItems(
       uniqueItems(itemsRef.current),
       sortByRef.current,
     );
-    void partitionByAnnotations(itemsToLoad).then((next) => {
-      if (!cancelled) {
-        setPartition(next);
-      }
-    });
+    void partitionByAnnotations(itemsToLoad)
+      .then((next) => {
+        if (!cancelled) {
+          setPartition(next);
+        }
+      })
+      .catch((err) => {
+        ztoolkit.log("GalleryAnnotationsSection partition failed", err);
+        if (!cancelled) {
+          setPartition({ withAnnotations: [], withoutAnnotations: itemsToLoad });
+        }
+      });
     return () => {
       cancelled = true;
     };
-  }, [sortedIdsKey]);
+  }, [itemsKey, sortBy]);
 
   if (!partition) {
     return null;
   }
 
   const { withAnnotations, withoutAnnotations } = partition;
+  const emptyItems = showItemsWithoutAnnotations ? withoutAnnotations : [];
+  const sortedWith = withAnnotations;
+  const sortedEmpty = sortItems(emptyItems, sortBy);
+
+  if (sortedWith.length === 0 && sortedEmpty.length === 0) {
+    return (
+      <p className="syllabus-gallery-annotations-empty text-secondary">
+        {getString("gallery-annotations-empty")}
+      </p>
+    );
+  }
 
   return (
-    <div className="syllabus-gallery-annotations-section flex flex-col min-w-0">
-      {withAnnotations.length > 0 ? (
+    <div
+      className="syllabus-gallery-annotations-section flex flex-col min-w-0"
+      style={
+        sortedEmpty.length > 0
+          ? ({
+              /* Fewer tiles than the pane can fit → fewer columns so the row
+                 still fills; cover max keeps a lone tile from going full-bleed. */
+              "--syllabus-annotations-cover-cols-cap": String(
+                sortedEmpty.length,
+              ),
+            } as JSX.CSSProperties)
+          : undefined
+      }
+    >
+      {sortedWith.length > 0 ? (
         <div className="syllabus-gallery-annotations-list syllabus-my-annotations-stream">
-          {withAnnotations.map(({ item, entries }) => {
+          {sortedWith.map(({ item, entries }) => {
             const group: AnnotationStreamParentGroup = {
               key: `${keyPrefix}-${item.id}`,
               parent: item,
@@ -135,7 +236,7 @@ export function GalleryAnnotationsSection({
           })}
         </div>
       ) : null}
-      {withoutAnnotations.length > 0 ? (
+      {sortedEmpty.length > 0 ? (
         <section
           className="syllabus-gallery-annotations-empty-section min-w-0"
           data-gallery-group={`${keyPrefix}-no-annotations`}
@@ -144,7 +245,7 @@ export function GalleryAnnotationsSection({
             {getString("gallery-annotations-none-heading")}
           </h2>
           <div className="syllabus-gallery-grid">
-            {withoutAnnotations.map((item) => (
+            {sortedEmpty.map((item) => (
               <GalleryTile
                 key={`${keyPrefix}-empty-${item.id}`}
                 item={item}

@@ -370,7 +370,8 @@ gallery-layout-card-title = 教学大纲卡片
 gallery-layout-annotations = 批注
 gallery-layout-annotations-title = 带全部批注的封面
 gallery-annotations-empty = 暂无批注
-gallery-annotations-none-heading = 无批注的条目
+gallery-annotations-none-heading = 无批注
+gallery-annotations-show-empty = 显示无批注的条目
 gallery-layout-magazine = 杂志
 gallery-layout-magazine-title = 混合尺寸的杂志布局
 

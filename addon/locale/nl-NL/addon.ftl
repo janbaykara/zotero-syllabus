@@ -372,7 +372,8 @@ gallery-layout-card-title = Syllabuskaarten
 gallery-layout-annotations = Annotaties
 gallery-layout-annotations-title = Omslagen met alle annotaties
 gallery-annotations-empty = Geen annotaties
-gallery-annotations-none-heading = Items zonder annotaties
+gallery-annotations-none-heading = Geen annotaties
+gallery-annotations-show-empty = Items zonder annotaties tonen
 gallery-layout-magazine = Magazine
 gallery-layout-magazine-title = Magazinelay-out met verschillende groottes
 

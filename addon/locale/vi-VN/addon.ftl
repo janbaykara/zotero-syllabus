@@ -372,7 +372,8 @@ gallery-layout-card-title = Thẻ đề cương
 gallery-layout-annotations = Chú thích
 gallery-layout-annotations-title = Bìa kèm tất cả chú thích
 gallery-annotations-empty = Không có chú thích
-gallery-annotations-none-heading = Mục không có chú thích
+gallery-annotations-none-heading = Không có chú thích
+gallery-annotations-show-empty = Hiện mục không có chú thích
 gallery-layout-magazine = Tạp chí
 gallery-layout-magazine-title = Bố cục tạp chí nhiều kích thước
 

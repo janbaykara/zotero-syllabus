@@ -372,7 +372,8 @@ gallery-layout-card-title = 강의계획서 카드
 gallery-layout-annotations = 주석
 gallery-layout-annotations-title = 모든 주석이 있는 표지
 gallery-annotations-empty = 주석 없음
-gallery-annotations-none-heading = 주석 없는 항목
+gallery-annotations-none-heading = 주석 없음
+gallery-annotations-show-empty = 주석 없는 항목 표시
 gallery-layout-magazine = 매거진
 gallery-layout-magazine-title = 다양한 크기의 매거진 레이아웃
 

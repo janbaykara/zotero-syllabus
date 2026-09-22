@@ -52,6 +52,7 @@ export const PLUGIN_PREF_DEFAULTS: {
   myAnnotationsGroupBy: "none",
   myAnnotationsOrder: "newestLast",
   annotationsQuoteOrder: "location",
+  galleryShowItemsWithoutAnnotations: true,
   magazineTypeSize: "small",
   generateReadingScheduleCollection: false,
   readingScheduleCollectionKey: "",

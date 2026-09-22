@@ -57,7 +57,7 @@ import {
   isWebGalleryItem,
 } from "../utils/itemCover";
 import { GalleryCover } from "./GalleryCover";
-import { GalleryAnnotationsSection } from "./GalleryAnnotationsRow";
+import { GalleryAnnotationsSection, useItemIdsWithAnnotations } from "./GalleryAnnotationsRow";
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
 import { useZoteroItemsViewRegularItemIds } from "./react-zotero-sync/itemsViewItems";
 import {
@@ -109,6 +109,7 @@ import {
 } from "./galleryLayout";
 import { useMagazineTypeSize, type MagazineTypeSize } from "./magazineTypeSize";
 import { useAnnotationsQuoteOrder } from "./myAnnotationsPrefs";
+import { useBooleanPref } from "./react-zotero-sync/booleanPref";
 import type { AnnotationsQuoteOrder } from "./explorerQueries";
 import {
   GALLERY_TOUR_EVENT_CLOSE_SETTINGS,
@@ -208,6 +209,8 @@ export function GalleryPage({
   const [magazineTypeSize, setMagazineTypeSize, magazineTypeSizeGlobal] =
     useMagazineTypeSize(viewKey);
   const [density] = useZoteroItemDensity();
+  const [showItemsWithoutAnnotations, setShowItemsWithoutAnnotations] =
+    useBooleanPref("galleryShowItemsWithoutAnnotations");
   const [syllabusMetadata] = useZoteroSyllabusMetadata(collectionIdOrZero);
   const { classGroups, furtherReadingItems } = useSyllabusClassGroups(
     collectionIdOrZero,
@@ -300,23 +303,156 @@ export function GalleryPage({
     ? getString("gallery-empty-filtered")
     : getString("gallery-empty");
 
+  /* When Annotations mode hides items without annotations, also hide groups
+     (and subcollection branches) that then have nothing left to show. */
+  const hideEmptyAnnotationGroups =
+    layout === "annotations" && !showItemsWithoutAnnotations;
+  const allItemsForAnnotationFilter = useMemo(
+    () => syllabusItems.map(({ zoteroItem }) => zoteroItem),
+    [syllabusItems],
+  );
+  const annotatedItemIds = useItemIdsWithAnnotations(
+    allItemsForAnnotationFilter,
+    hideEmptyAnnotationGroups,
+  );
+  const annotationGroupsReady =
+    !hideEmptyAnnotationGroups || annotatedItemIds != null;
+
+  const visibleTypeGroups = useMemo(() => {
+    if (!hideEmptyAnnotationGroups) {
+      return typeGroups;
+    }
+    if (!annotatedItemIds) {
+      return [];
+    }
+    return typeGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => annotatedItemIds.has(item.id)),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [typeGroups, hideEmptyAnnotationGroups, annotatedItemIds]);
+
+  const visibleCreatorGroups = useMemo(() => {
+    if (!hideEmptyAnnotationGroups) {
+      return creatorGroups;
+    }
+    if (!annotatedItemIds) {
+      return [];
+    }
+    return creatorGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => annotatedItemIds.has(item.id)),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [creatorGroups, hideEmptyAnnotationGroups, annotatedItemIds]);
+
+  const visibleUncreditedItems = useMemo(() => {
+    if (!hideEmptyAnnotationGroups) {
+      return uncreditedItems;
+    }
+    if (!annotatedItemIds) {
+      return [];
+    }
+    return uncreditedItems.filter((item) => annotatedItemIds.has(item.id));
+  }, [uncreditedItems, hideEmptyAnnotationGroups, annotatedItemIds]);
+
+  const visibleTagGroups = useMemo(() => {
+    if (!hideEmptyAnnotationGroups) {
+      return tagGroups;
+    }
+    if (!annotatedItemIds) {
+      return [];
+    }
+    return tagGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => annotatedItemIds.has(item.id)),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [tagGroups, hideEmptyAnnotationGroups, annotatedItemIds]);
+
+  const visibleUntaggedItems = useMemo(() => {
+    if (!hideEmptyAnnotationGroups) {
+      return untaggedItems;
+    }
+    if (!annotatedItemIds) {
+      return [];
+    }
+    return untaggedItems.filter((item) => annotatedItemIds.has(item.id));
+  }, [untaggedItems, hideEmptyAnnotationGroups, annotatedItemIds]);
+
+  const visibleClassGroups = useMemo(() => {
+    if (!hideEmptyAnnotationGroups) {
+      return classGroups;
+    }
+    if (!annotatedItemIds) {
+      return [];
+    }
+    return classGroups
+      .map((group) => ({
+        ...group,
+        itemAssignments: group.itemAssignments.filter(({ item }) =>
+          annotatedItemIds.has(item.id),
+        ),
+      }))
+      .filter((group) => group.itemAssignments.length > 0);
+  }, [classGroups, hideEmptyAnnotationGroups, annotatedItemIds]);
+
+  const visibleFurtherReadingItems = useMemo(() => {
+    if (!hideEmptyAnnotationGroups) {
+      return furtherReadingItems;
+    }
+    if (!annotatedItemIds) {
+      return [];
+    }
+    return furtherReadingItems.filter(({ item }) =>
+      annotatedItemIds.has(item.id),
+    );
+  }, [furtherReadingItems, hideEmptyAnnotationGroups, annotatedItemIds]);
+
+  const visibleSubcollectionRoot = useMemo(() => {
+    if (!hideEmptyAnnotationGroups) {
+      return subcollectionRoot;
+    }
+    if (!annotatedItemIds || !subcollectionRoot) {
+      return null;
+    }
+    return pruneSubcollectionByAnnotatedIds(
+      subcollectionRoot,
+      annotatedItemIds,
+    );
+  }, [subcollectionRoot, hideEmptyAnnotationGroups, annotatedItemIds]);
+
+  const visibleFlatItems = useMemo(() => {
+    const items = syllabusItems.map(({ zoteroItem }) => zoteroItem);
+    if (!hideEmptyAnnotationGroups) {
+      return items;
+    }
+    if (!annotatedItemIds) {
+      return [];
+    }
+    return items.filter((item) => annotatedItemIds.has(item.id));
+  }, [syllabusItems, hideEmptyAnnotationGroups, annotatedItemIds]);
+
   const navGroups = useMemo((): GalleryNavGroup[] => {
     if (groupBy === "type") {
-      return typeGroups.map(({ itemType, label }) => ({
+      return visibleTypeGroups.map(({ itemType, label }) => ({
         id: `type-${itemType}`,
         label,
         icon: { kind: "item-type", itemType },
       }));
     }
     if (groupBy === "creator") {
-      const groups: GalleryNavGroup[] = creatorGroups.map(
+      const groups: GalleryNavGroup[] = visibleCreatorGroups.map(
         ({ label }, index) => ({
           id: `creator-${index}`,
           label,
           icon: { kind: "creator" },
         }),
       );
-      if (uncreditedItems.length > 0) {
+      if (visibleUncreditedItems.length > 0) {
         groups.push({
           id: "uncredited",
           label: getString("gallery-uncredited"),
@@ -326,12 +462,14 @@ export function GalleryPage({
       return groups;
     }
     if (groupBy === "tags") {
-      const groups: GalleryNavGroup[] = tagGroups.map(({ tag }, index) => ({
-        id: `tag-${index}`,
-        label: tag,
-        icon: { kind: "tag" },
-      }));
-      if (untaggedItems.length > 0) {
+      const groups: GalleryNavGroup[] = visibleTagGroups.map(
+        ({ tag }, index) => ({
+          id: `tag-${index}`,
+          label: tag,
+          icon: { kind: "tag" },
+        }),
+      );
+      if (visibleUntaggedItems.length > 0) {
         groups.push({
           id: "untagged",
           label: getString("gallery-untagged"),
@@ -341,23 +479,20 @@ export function GalleryPage({
       return groups;
     }
     if (groupBy === "subcollections") {
-      if (!subcollectionRoot || !subtreeHasContent(subcollectionRoot)) {
+      if (
+        !visibleSubcollectionRoot ||
+        !subtreeHasContent(visibleSubcollectionRoot)
+      ) {
         return [];
       }
       return flattenSubcollectionNavGroups(
-        subcollectionRoot,
+        visibleSubcollectionRoot,
         getString("gallery-in-this-collection"),
       );
     }
     if (groupBy === "classes") {
       const groups: GalleryNavGroup[] = [];
-      for (const group of classGroups) {
-        if (
-          group.itemAssignments.length === 0 &&
-          (isFiltered || group.classNumber == null)
-        ) {
-          continue;
-        }
+      for (const group of visibleClassGroups) {
         const key = String(group.classNumber ?? "unnumbered");
         groups.push({
           id: `class-${key}`,
@@ -369,7 +504,7 @@ export function GalleryPage({
           icon: { kind: "class" },
         });
       }
-      if (furtherReadingItems.length > 0) {
+      if (visibleFurtherReadingItems.length > 0) {
         groups.push({
           id: "further-reading",
           label: getString("further-reading-heading"),
@@ -380,18 +515,17 @@ export function GalleryPage({
     }
     return [];
   }, [
-    classGroups,
     collectionIdOrZero,
-    creatorGroups,
-    furtherReadingItems.length,
     groupBy,
-    isFiltered,
-    subcollectionRoot,
     syllabusMetadata,
-    tagGroups,
-    typeGroups,
-    uncreditedItems.length,
-    untaggedItems.length,
+    visibleClassGroups,
+    visibleCreatorGroups,
+    visibleFurtherReadingItems,
+    visibleSubcollectionRoot,
+    visibleTagGroups,
+    visibleTypeGroups,
+    visibleUncreditedItems,
+    visibleUntaggedItems,
   ]);
 
   const updateActiveFromScroll = useCallback(() => {
@@ -673,6 +807,7 @@ export function GalleryPage({
       sortBy={sortBy}
       collectionId={collectionIdOrZero}
       selectedItemIds={selectedItemIds}
+      showItemsWithoutAnnotations={showItemsWithoutAnnotations}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
@@ -850,6 +985,8 @@ export function GalleryPage({
               magazineTypeSize={magazineTypeSize}
               onMagazineTypeSize={setMagazineTypeSize}
               magazineTypeSizeGlobal={magazineTypeSizeGlobal}
+              showItemsWithoutAnnotations={showItemsWithoutAnnotations}
+              onShowItemsWithoutAnnotations={setShowItemsWithoutAnnotations}
               navGroups={navGroups}
               activeGroupId={activeGroupId}
               onSelectGroup={handleSelectGroup}
@@ -893,13 +1030,10 @@ export function GalleryPage({
               </>
             ) : null}
             {groupBy === "none" &&
-              (syllabusItems.length === 0 ? (
+              (!annotationGroupsReady ? null : visibleFlatItems.length === 0 ? (
                 <p className="text-secondary text-lg">{emptyMessage}</p>
               ) : (
-                renderItems(
-                  syllabusItems.map(({ zoteroItem }) => zoteroItem),
-                  "all",
-                )
+                renderItems(visibleFlatItems, "all")
               ))}
 
             {groupBy === "auto" &&
@@ -920,10 +1054,11 @@ export function GalleryPage({
               ))}
 
             {groupBy === "type" &&
-              (typeGroups.length === 0 ? (
+              (!annotationGroupsReady ? null : visibleTypeGroups.length ===
+                0 ? (
                 <p className="text-secondary text-lg">{emptyMessage}</p>
               ) : (
-                typeGroups.map(({ itemType, label, items }) => (
+                visibleTypeGroups.map(({ itemType, label, items }) => (
                   <section
                     key={itemType}
                     className="syllabus-gallery-section"
@@ -938,11 +1073,12 @@ export function GalleryPage({
               ))}
 
             {groupBy === "creator" &&
-              (creatorGroups.length === 0 && uncreditedItems.length === 0 ? (
+              (!annotationGroupsReady ? null : visibleCreatorGroups.length ===
+                  0 && visibleUncreditedItems.length === 0 ? (
                 <p className="text-secondary text-lg">{emptyMessage}</p>
               ) : (
                 <>
-                  {creatorGroups.map(({ key, label, items }, index) => (
+                  {visibleCreatorGroups.map(({ key, label, items }, index) => (
                     <section
                       key={key}
                       className="syllabus-gallery-section"
@@ -954,7 +1090,7 @@ export function GalleryPage({
                       {renderItems(items, `creator-${key}`)}
                     </section>
                   ))}
-                  {uncreditedItems.length > 0 && (
+                  {visibleUncreditedItems.length > 0 && (
                     <section
                       className="syllabus-gallery-section"
                       data-gallery-group="uncredited"
@@ -965,18 +1101,19 @@ export function GalleryPage({
                       <p className="syllabus-gallery-class-description">
                         {getString("gallery-uncredited-desc")}
                       </p>
-                      {renderItems(uncreditedItems, "uncredited")}
+                      {renderItems(visibleUncreditedItems, "uncredited")}
                     </section>
                   )}
                 </>
               ))}
 
             {groupBy === "tags" &&
-              (tagGroups.length === 0 && untaggedItems.length === 0 ? (
+              (!annotationGroupsReady ? null : visibleTagGroups.length === 0 &&
+                visibleUntaggedItems.length === 0 ? (
                 <p className="text-secondary text-lg">{emptyMessage}</p>
               ) : (
                 <>
-                  {tagGroups.map(({ tag, items }, index) => (
+                  {visibleTagGroups.map(({ tag, items }, index) => (
                     <section
                       key={tag}
                       className="syllabus-gallery-section"
@@ -988,7 +1125,7 @@ export function GalleryPage({
                       {renderItems(items, `tag-${tag}`)}
                     </section>
                   ))}
-                  {untaggedItems.length > 0 && (
+                  {visibleUntaggedItems.length > 0 && (
                     <section
                       className="syllabus-gallery-section"
                       data-gallery-group="untagged"
@@ -999,14 +1136,15 @@ export function GalleryPage({
                       <p className="syllabus-gallery-class-description">
                         {getString("gallery-untagged-desc")}
                       </p>
-                      {renderItems(untaggedItems, "untagged")}
+                      {renderItems(visibleUntaggedItems, "untagged")}
                     </section>
                   )}
                 </>
               ))}
 
             {groupBy === "subcollections" &&
-              (!subcollectionRoot || !subtreeHasContent(subcollectionRoot) ? (
+              (!annotationGroupsReady ? null : !visibleSubcollectionRoot ||
+                !subtreeHasContent(visibleSubcollectionRoot) ? (
                 <p className="text-secondary text-lg">
                   {isFiltered
                     ? emptyMessage
@@ -1014,7 +1152,7 @@ export function GalleryPage({
                 </p>
               ) : (
                 <GallerySubcollectionSection
-                  node={subcollectionRoot}
+                  node={visibleSubcollectionRoot}
                   depth={0}
                   isRoot
                   resolveItems={resolveSubcollectionItems}
@@ -1023,19 +1161,12 @@ export function GalleryPage({
               ))}
 
             {groupBy === "classes" &&
-              (classGroups.every(
-                (group) => group.itemAssignments.length === 0,
-              ) && furtherReadingItems.length === 0 ? (
+              (!annotationGroupsReady ? null : visibleClassGroups.length ===
+                  0 && visibleFurtherReadingItems.length === 0 ? (
                 <p className="text-secondary text-lg">{emptyMessage}</p>
               ) : (
                 <>
-                  {classGroups.map((group) => {
-                    if (
-                      group.itemAssignments.length === 0 &&
-                      (isFiltered || group.classNumber == null)
-                    ) {
-                      return null;
-                    }
+                  {visibleClassGroups.map((group) => {
                     const key = String(group.classNumber ?? "unnumbered");
                     return (
                       <section
@@ -1056,7 +1187,7 @@ export function GalleryPage({
                       </section>
                     );
                   })}
-                  {furtherReadingItems.length > 0 && (
+                  {visibleFurtherReadingItems.length > 0 && (
                     <section
                       className="syllabus-gallery-section"
                       data-gallery-group="further-reading"
@@ -1068,7 +1199,7 @@ export function GalleryPage({
                         {getString("further-reading-empty-desc")}
                       </p>
                       {renderItems(
-                        furtherReadingItems.map((entry) => entry.item),
+                        visibleFurtherReadingItems.map((entry) => entry.item),
                         "further-reading",
                       )}
                     </section>
@@ -1196,6 +1327,21 @@ function filterSubcollectionNode(
       ),
   };
   return next;
+}
+
+/** Keep branches that still have annotated items in this node or any descendant. */
+function pruneSubcollectionByAnnotatedIds(
+  node: SubcollectionNode,
+  annotatedIds: Set<number>,
+): SubcollectionNode | null {
+  const children = node.children
+    .map((child) => pruneSubcollectionByAnnotatedIds(child, annotatedIds))
+    .filter((child): child is SubcollectionNode => child != null);
+  const itemIds = node.itemIds.filter((id) => annotatedIds.has(id));
+  if (itemIds.length === 0 && children.length === 0) {
+    return null;
+  }
+  return { ...node, itemIds, children };
 }
 
 function GallerySubcollectionSection({
@@ -1514,6 +1660,8 @@ function GalleryPageHeader({
   magazineTypeSize,
   onMagazineTypeSize,
   magazineTypeSizeGlobal,
+  showItemsWithoutAnnotations,
+  onShowItemsWithoutAnnotations,
   navGroups,
   activeGroupId,
   onSelectGroup,
@@ -1534,6 +1682,8 @@ function GalleryPageHeader({
   magazineTypeSize: MagazineTypeSize;
   onMagazineTypeSize: (size: MagazineTypeSize) => void;
   magazineTypeSizeGlobal: GalleryGlobalSetting<MagazineTypeSize>;
+  showItemsWithoutAnnotations: boolean;
+  onShowItemsWithoutAnnotations: (show: boolean) => void;
   navGroups: GalleryNavGroup[];
   activeGroupId: string | null;
   onSelectGroup: (id: string) => void;
@@ -1713,13 +1863,27 @@ function GalleryPageHeader({
                   />
                 ) : null}
                 {layout === "annotations" ? (
-                  <GallerySegmentedControl
-                    label={getString("annotations-quote-order-menu")}
-                    ariaLabel={getString("annotations-quote-order-menu")}
-                    value={quoteOrder}
-                    onChange={setQuoteOrder}
-                    options={quoteOrderOptions}
-                  />
+                  <>
+                    <GallerySegmentedControl
+                      label={getString("annotations-quote-order-menu")}
+                      ariaLabel={getString("annotations-quote-order-menu")}
+                      value={quoteOrder}
+                      onChange={setQuoteOrder}
+                      options={quoteOrderOptions}
+                    />
+                    <label className="syllabus-gallery-toolbar-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={showItemsWithoutAnnotations}
+                        onChange={(e) =>
+                          onShowItemsWithoutAnnotations(e.currentTarget.checked)
+                        }
+                      />
+                      <span>
+                        {getString("gallery-annotations-show-empty")}
+                      </span>
+                    </label>
+                  </>
                 ) : null}
               </div>
             </div>

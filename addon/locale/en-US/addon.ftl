@@ -370,7 +370,8 @@ gallery-layout-card-title = Syllabus cards
 gallery-layout-annotations = Annotations
 gallery-layout-annotations-title = Covers with all annotations
 gallery-annotations-empty = No annotations
-gallery-annotations-none-heading = Items with no annotations
+gallery-annotations-none-heading = No annotations
+gallery-annotations-show-empty = Show items with no annotations
 gallery-layout-magazine = Magazine
 gallery-layout-magazine-title = Mixed-size magazine layout
 

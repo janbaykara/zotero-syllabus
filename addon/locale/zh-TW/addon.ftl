@@ -372,7 +372,8 @@ gallery-layout-card-title = 教學大綱卡片
 gallery-layout-annotations = 註解
 gallery-layout-annotations-title = 含全部註解的封面
 gallery-annotations-empty = 沒有註解
-gallery-annotations-none-heading = 沒有註解的項目
+gallery-annotations-none-heading = 沒有註解
+gallery-annotations-show-empty = 顯示沒有註解的項目
 gallery-layout-magazine = 雜誌
 gallery-layout-magazine-title = 混合尺寸的雜誌版面
 
