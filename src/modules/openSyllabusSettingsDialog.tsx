@@ -21,10 +21,12 @@ export function closeSyllabusSettingsDialog(): void {
 }
 
 function collectionTitle(collectionId: number): string {
-  const collection =
-    getCachedCollectionById(collectionId) ||
-    Zotero.Collections.get(collectionId);
-  return collection?.name?.trim() || getString("settings-title");
+  const cached = getCachedCollectionById(collectionId);
+  const collection = cached || Zotero.Collections.get(collectionId) || null;
+  if (!collection) {
+    return getString("settings-title");
+  }
+  return collection.name?.trim() || getString("settings-title");
 }
 
 /**

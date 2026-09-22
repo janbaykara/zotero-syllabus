@@ -739,7 +739,8 @@
   scroll-snap-type: x proximity;
 }
 
-.syllabus-explorer-annotation-stream-rail .syllabus-my-annotations-stream-entry {
+.syllabus-explorer-annotation-stream-rail
+  .syllabus-my-annotations-stream-entry {
   flex: 0 0 min(26rem, 85%);
   width: min(26rem, 85%);
   max-width: 100%;

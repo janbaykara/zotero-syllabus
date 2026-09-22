@@ -19,8 +19,7 @@ import {
 const ORDER_OPTIONS: {
   mode: MyAnnotationsOrder;
   labelKey:
-    | "my-annotations-order-newest-last"
-    | "my-annotations-order-newest-first";
+    "my-annotations-order-newest-last" | "my-annotations-order-newest-first";
   titleKey:
     | "my-annotations-order-newest-last-title"
     | "my-annotations-order-newest-first-title";
@@ -43,8 +42,7 @@ const ORDER_OPTIONS: {
 const QUOTE_ORDER_OPTIONS: {
   mode: AnnotationsQuoteOrder;
   labelKey:
-    | "annotations-quote-order-location"
-    | "annotations-quote-order-date-added";
+    "annotations-quote-order-location" | "annotations-quote-order-date-added";
   titleKey:
     | "annotations-quote-order-location-title"
     | "annotations-quote-order-date-added-title";

@@ -12,11 +12,22 @@ const BUILTIN_NAMES: Record<string, FluentMessageId> = {
   optional: "priority-default-optional",
 };
 
+function localizedBuiltinName(id: string, fallback: string): string {
+  const key = BUILTIN_NAMES[id];
+  if (!key) return fallback;
+  try {
+    return getString(key);
+  } catch {
+    // Tests / early startup may lack Fluent (`addon`).
+    return fallback;
+  }
+}
+
 /** Built-in defaults with locale-aware display names. */
 export function getBuiltInDefaultPriorities(): Priority[] {
   return DEFAULT_PRIORITIES.map((p) => ({
     ...p,
-    name: BUILTIN_NAMES[p.id] ? getString(BUILTIN_NAMES[p.id]) : p.name,
+    name: localizedBuiltinName(p.id, p.name),
   }));
 }
 
@@ -44,7 +55,11 @@ export function getGlobalDefaultPriorities(): Priority[] {
         );
       }
     } catch (error) {
-      ztoolkit.log("Failed to parse defaultPriorities pref:", error);
+      try {
+        ztoolkit.log("Failed to parse defaultPriorities pref:", error);
+      } catch {
+        // ztoolkit may be unavailable in the test runner sandbox.
+      }
     }
   }
   return getBuiltInDefaultPriorities();

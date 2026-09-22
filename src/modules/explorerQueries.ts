@@ -88,8 +88,7 @@ export function compareAnnotationsQuoteOrder(
     if (!sa && sb) {
       return 1;
     }
-    const page =
-      pageLabelSortKey(a.pageLabel) - pageLabelSortKey(b.pageLabel);
+    const page = pageLabelSortKey(a.pageLabel) - pageLabelSortKey(b.pageLabel);
     if (page) {
       return page;
     }
@@ -105,9 +104,7 @@ export function sortAnnotationsByQuoteOrder(
   entries: MyAnnotationStreamEntry[],
   order: AnnotationsQuoteOrder,
 ): MyAnnotationStreamEntry[] {
-  return [...entries].sort((a, b) =>
-    compareAnnotationsQuoteOrder(a, b, order),
-  );
+  return [...entries].sort((a, b) => compareAnnotationsQuoteOrder(a, b, order));
 }
 
 export type ExplorerAnnotationGroup = {

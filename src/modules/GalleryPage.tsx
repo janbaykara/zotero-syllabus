@@ -832,9 +832,7 @@ export function GalleryPage({
           )}
         >
           <div
-            className={
-              layout === "annotations" ? "container-padded" : "px-6"
-            }
+            className={layout === "annotations" ? "container-padded" : "px-6"}
           >
             <GalleryPageHeader
               title={title || getString("untitled")}

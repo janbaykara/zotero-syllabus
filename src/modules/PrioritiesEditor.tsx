@@ -119,11 +119,7 @@ export function PrioritiesEditor({
           onDelete={() => handleDelete(priority.id)}
         />
       ))}
-      <div
-        style={ROW_GRID}
-        className="hover:bg-quinary/25"
-        role="listitem"
-      >
+      <div style={ROW_GRID} className="hover:bg-quinary/25" role="listitem">
         <button
           type="button"
           onClick={handleAdd}

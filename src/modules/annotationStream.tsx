@@ -1,6 +1,12 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
-import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
 import { Check, Copy } from "lucide-preact";
@@ -16,9 +22,7 @@ import { getPref } from "../utils/prefs";
 import { GalleryTile } from "./GalleryPage";
 import type { MagazineTileClick } from "./MagazineTile";
 import type { MyAnnotationStreamEntry } from "./explorerQueries";
-import {
-  sortAnnotationsByQuoteOrder,
-} from "./explorerQueries";
+import { sortAnnotationsByQuoteOrder } from "./explorerQueries";
 import {
   getAnnotationsQuoteOrder,
   useAnnotationsQuoteOrder,

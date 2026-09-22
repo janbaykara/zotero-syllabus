@@ -166,8 +166,7 @@ export function openPreactDialog(
       },
       unloadCallback: () => {
         const lastButtonId = dialog.dialogData._lastButtonId as
-          | string
-          | undefined;
+          string | undefined;
         try {
           options.onUnload?.(lastButtonId, handle);
         } catch (error) {

@@ -6,7 +6,7 @@ import {
 } from "../src/modules/syllabusNote";
 import { COLLECTION_SYLLABUS_DOCUMENT_VERSION } from "../src/utils/schemas";
 
-describe("countAssignmentsWithPriority", function () {
+describe("priority remap helpers", function () {
   it("counts assignments using a priority id", function () {
     const document = {
       ...emptyCollectionDocument(),
@@ -24,9 +24,7 @@ describe("countAssignmentsWithPriority", function () {
     assert.equal(countAssignmentsWithPriority(document, "optional"), 1);
     assert.equal(countAssignmentsWithPriority(document, "missing"), 0);
   });
-});
 
-describe("applyPriorityListReplacement", function () {
   const nextPriorities = [
     { id: "essential", name: "Essential", color: "#000", order: 1 },
     { id: "optional", name: "Optional", color: "#999", order: 2 },
@@ -51,11 +49,7 @@ describe("applyPriorityListReplacement", function () {
     };
 
     const remaps = new Map<string, string | null>([["custom", "optional"]]);
-    const next = applyPriorityListReplacement(
-      document,
-      nextPriorities,
-      remaps,
-    );
+    const next = applyPriorityListReplacement(document, nextPriorities, remaps);
 
     assert.deepEqual(
       next.priorities.map((p) => p.id),
@@ -80,11 +74,7 @@ describe("applyPriorityListReplacement", function () {
     };
 
     const remaps = new Map<string, string | null>([["custom", null]]);
-    const next = applyPriorityListReplacement(
-      document,
-      nextPriorities,
-      remaps,
-    );
+    const next = applyPriorityListReplacement(document, nextPriorities, remaps);
 
     assert.isUndefined(next.items.AAAA[0].priority);
   });
