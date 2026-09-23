@@ -2520,8 +2520,7 @@
 }
 
 .syllabus-explorer-customize,
-.syllabus-explorer-shelf-controls button,
-.syllabus-explorer-layout-btn {
+.syllabus-explorer-shelf-controls button {
   appearance: none;
   border: 1px solid
     color-mix(in srgb, var(--fill-primary, #111) 18%, transparent);
@@ -2877,37 +2876,25 @@
   font-size: 0.8125rem;
 }
 
-.syllabus-explorer-shelf-setting {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  padding: 0.15rem 0 0.65rem;
+.syllabus-explorer-shelf-configure .syllabus-explorer-configure-popover {
+  min-width: 16rem;
+  max-width: none;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--material-background, var(--color-background, #fff));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
-.syllabus-explorer-shelf-setting .syllabus-explorer-layout-toggle {
-  padding: 0 0.9rem;
+.syllabus-explorer-shelf-configure .syllabus-explorer-remove-shelf {
+  padding-inline: 0.15rem;
 }
 
 .syllabus-explorer-remove-shelf.has-settings {
-  margin-top: 0.1rem;
+  margin-top: 0.55rem;
+  padding-top: 0.55rem;
   border-top: 1px solid
     color-mix(in srgb, var(--fill-primary, #111) 10%, transparent);
-}
-
-.syllabus-explorer-layout-toggle {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-}
-
-.syllabus-explorer-layout-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.syllabus-explorer-layout-btn.is-selected {
-  background: color-mix(in srgb, var(--fill-primary, #111) 12%, transparent);
 }
 
 .syllabus-explorer-add-label {

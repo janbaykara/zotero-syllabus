@@ -18,7 +18,6 @@ import {
   CalendarPlus,
   Folder,
   FolderOpen,
-  Globe,
   GraduationCap,
   Highlighter,
   Image,
@@ -105,6 +104,10 @@ import {
 import { MagazineItems } from "./MagazineItems";
 import { MagazineHome } from "./MagazineHome";
 import { GalleryTile } from "./GalleryTile";
+import {
+  GallerySegmentedControl,
+  type GallerySegmentOption,
+} from "./GallerySegmentedControl";
 import { GalleryViewportProvider } from "./galleryVisibility";
 import { useGallerySortBy, type GallerySortBy } from "./gallerySort";
 import { collectionHasSyllabusNote } from "./syllabusNote";
@@ -1622,13 +1625,6 @@ function magazinePackingOptions(): GallerySegmentOption<MagazinePacking>[] {
   ];
 }
 
-type GallerySegmentOption<T extends string> = {
-  mode: T;
-  label: string;
-  title: string;
-  Icon: typeof LayoutGrid;
-};
-
 function currentGalleryOption<T extends string>(
   options: GallerySegmentOption<T>[],
   value: T,
@@ -1913,75 +1909,6 @@ function GalleryPageHeader({
           </div>
         </nav>
       ) : null}
-    </div>
-  );
-}
-
-function GallerySegmentedControl<T extends string>({
-  label,
-  ariaLabel,
-  value,
-  onChange,
-  options,
-  tourPrefix,
-  globalSetting,
-}: {
-  label: string;
-  ariaLabel: string;
-  value: T;
-  onChange: (mode: T) => void;
-  options: GallerySegmentOption<T>[];
-  tourPrefix?: string;
-  globalSetting?: GalleryGlobalSetting<T>;
-}) {
-  return (
-    <div className="syllabus-gallery-toolbar-cluster">
-      <div className="syllabus-gallery-toolbar-heading">
-        <span className="syllabus-gallery-groupby-label">{label}</span>
-        {globalSetting ? (
-          <button
-            type="button"
-            className={twMerge(
-              "syllabus-gallery-save-global",
-              globalSetting.isCustom && "is-active",
-            )}
-            title={
-              globalSetting.isCustom
-                ? getString("gallery-save-globally-active-title")
-                : getString("gallery-save-globally-title")
-            }
-            aria-label={getString("gallery-save-globally")}
-            aria-pressed={globalSetting.isCustom}
-            onClick={(event) => {
-              event.stopPropagation();
-              globalSetting.saveGlobally();
-            }}
-          >
-            <Globe size={14} strokeWidth={2} aria-hidden="true" />
-          </button>
-        ) : null}
-      </div>
-      <div
-        role="radiogroup"
-        aria-label={ariaLabel}
-        className="syllabus-gallery-groupby"
-      >
-        {options.map(({ mode, label: optionLabel, title, Icon }) => (
-          <button
-            key={mode}
-            type="button"
-            role="radio"
-            aria-checked={value === mode}
-            title={title}
-            className="syllabus-gallery-groupby-btn"
-            data-tour={tourPrefix ? `${tourPrefix}-${mode}` : undefined}
-            onClick={() => onChange(mode)}
-          >
-            <Icon size={12} strokeWidth={2} aria-hidden="true" />
-            {optionLabel}
-          </button>
-        ))}
-      </div>
     </div>
   );
 }

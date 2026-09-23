@@ -73,6 +73,7 @@ import type { GalleryLayout } from "./galleryLayout";
 import type { GalleryGroupBy } from "./galleryGroupBy";
 import type { GallerySortBy } from "./gallerySort";
 import { GalleryTile } from "./GalleryPage";
+import { GallerySegmentedControl } from "./GallerySegmentedControl";
 import { type MagazineTileClick } from "./MagazineTile";
 import { ExplorerMagazineRail } from "./ExplorerMagazineRail";
 import {
@@ -699,146 +700,68 @@ function ExplorerShelfSettingsMenu({
           aria-label={getString("explorer-configure")}
           style={popoverStyle}
         >
-          {showLayout ? (
-            <div className="syllabus-explorer-shelf-setting">
-              <div className="syllabus-explorer-configure-heading">
-                {getString("gallery-menu-view")}
-              </div>
-              <div
-                role="radiogroup"
-                aria-label={getString("gallery-menu-view")}
-                className="syllabus-explorer-layout-toggle"
-              >
-                {layoutsForExplorerShelf(shelf.type).map((mode) => {
-                  const Icon = LAYOUT_ICONS[mode];
-                  const selected = shelf.layout === mode;
-                  return (
-                    <button
-                      key={mode}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      title={getString(LAYOUT_TITLE_IDS[mode])}
-                      className={twMerge(
-                        "syllabus-explorer-layout-btn",
-                        selected && "is-selected",
-                      )}
-                      onClick={() =>
-                        isCollection
-                          ? patchCollection({ layout: mode })
-                          : onChange({ ...shelf, layout: mode })
-                      }
-                    >
-                      <Icon size={12} strokeWidth={2} aria-hidden="true" />
-                      {getString(LAYOUT_LABEL_IDS[mode])}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
-          {isCollection ? (
-            <>
-              <div className="syllabus-explorer-shelf-setting">
-                <div className="syllabus-explorer-configure-heading">
-                  {getString("gallery-menu-sort")}
-                </div>
-                <div
-                  role="radiogroup"
-                  aria-label={getString("gallery-menu-sort")}
-                  className="syllabus-explorer-layout-toggle"
-                >
-                  {sortModes.map((mode) => {
-                    const Icon = SORT_ICONS[mode];
-                    const selected = collectionSortBy === mode;
-                    return (
-                      <button
-                        key={mode}
-                        type="button"
-                        role="radio"
-                        aria-checked={selected}
-                        title={getString(SORT_TITLE_IDS[mode])}
-                        className={twMerge(
-                          "syllabus-explorer-layout-btn",
-                          selected && "is-selected",
-                        )}
-                        onClick={() => patchCollection({ sortBy: mode })}
-                      >
-                        <Icon size={12} strokeWidth={2} aria-hidden="true" />
-                        {getString(SORT_LABEL_IDS[mode])}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="syllabus-explorer-shelf-setting">
-                <div className="syllabus-explorer-configure-heading">
-                  {getString("gallery-menu-group")}
-                </div>
-                <div
-                  role="radiogroup"
-                  aria-label={getString("gallery-menu-group")}
-                  className="syllabus-explorer-layout-toggle"
-                >
-                  {groupModes.map((mode) => {
-                    const Icon = GROUP_ICONS[mode];
-                    const selected = collectionGroupBy === mode;
-                    return (
-                      <button
-                        key={mode}
-                        type="button"
-                        role="radio"
-                        aria-checked={selected}
-                        title={getString(GROUP_TITLE_IDS[mode])}
-                        className={twMerge(
-                          "syllabus-explorer-layout-btn",
-                          selected && "is-selected",
-                        )}
-                        onClick={() => patchCollection({ groupBy: mode })}
-                      >
-                        <Icon size={12} strokeWidth={2} aria-hidden="true" />
-                        {getString(GROUP_LABEL_IDS[mode])}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          ) : null}
-          {showDensity ? (
-            <div className="syllabus-explorer-shelf-setting">
-              <div className="syllabus-explorer-configure-heading">
-                {getString("settings-density")}
-              </div>
-              <div
-                role="radiogroup"
-                aria-label={getString("settings-density")}
-                className="syllabus-explorer-layout-toggle"
-              >
-                {ITEM_DENSITIES.map((mode) => {
-                  const Icon = DENSITY_ICONS[mode];
-                  const selected = density === mode;
-                  return (
-                    <button
-                      key={mode}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      title={getString(DENSITY_TITLE_IDS[mode])}
-                      onClick={() => setDensity(mode)}
-                      className={twMerge(
-                        "syllabus-explorer-layout-btn",
-                        selected && "is-selected",
-                      )}
-                    >
-                      <Icon size={12} strokeWidth={2} aria-hidden="true" />
-                      {densityLabel(mode)}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
+          <div className="syllabus-gallery-toolbar">
+            {showLayout ? (
+              <GallerySegmentedControl
+                label={getString("gallery-menu-view")}
+                ariaLabel={getString("gallery-menu-view")}
+                value={shelf.layout}
+                onChange={(mode) =>
+                  isCollection
+                    ? patchCollection({ layout: mode })
+                    : onChange({ ...shelf, layout: mode })
+                }
+                options={layoutsForExplorerShelf(shelf.type).map((mode) => ({
+                  mode,
+                  label: getString(LAYOUT_LABEL_IDS[mode]),
+                  title: getString(LAYOUT_TITLE_IDS[mode]),
+                  Icon: LAYOUT_ICONS[mode],
+                }))}
+              />
+            ) : null}
+            {isCollection ? (
+              <>
+                <GallerySegmentedControl
+                  label={getString("gallery-menu-sort")}
+                  ariaLabel={getString("gallery-menu-sort")}
+                  value={collectionSortBy}
+                  onChange={(mode) => patchCollection({ sortBy: mode })}
+                  options={sortModes.map((mode) => ({
+                    mode,
+                    label: getString(SORT_LABEL_IDS[mode]),
+                    title: getString(SORT_TITLE_IDS[mode]),
+                    Icon: SORT_ICONS[mode],
+                  }))}
+                />
+                <GallerySegmentedControl
+                  label={getString("gallery-menu-group")}
+                  ariaLabel={getString("gallery-menu-group")}
+                  value={collectionGroupBy}
+                  onChange={(mode) => patchCollection({ groupBy: mode })}
+                  options={groupModes.map((mode) => ({
+                    mode,
+                    label: getString(GROUP_LABEL_IDS[mode]),
+                    title: getString(GROUP_TITLE_IDS[mode]),
+                    Icon: GROUP_ICONS[mode],
+                  }))}
+                />
+              </>
+            ) : null}
+            {showDensity ? (
+              <GallerySegmentedControl
+                label={getString("settings-density")}
+                ariaLabel={getString("settings-density")}
+                value={density}
+                onChange={setDensity}
+                options={ITEM_DENSITIES.map((mode) => ({
+                  mode,
+                  label: densityLabel(mode),
+                  title: getString(DENSITY_TITLE_IDS[mode]),
+                  Icon: DENSITY_ICONS[mode],
+                }))}
+              />
+            ) : null}
+          </div>
           <button
             type="button"
             className={twMerge(
