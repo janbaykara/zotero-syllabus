@@ -20,7 +20,7 @@ import {
   setDefaultOptions,
   startOfWeek,
 } from "date-fns";
-import { useZoteroItemDensity } from "./react-zotero-sync/itemDensity";
+import { useItemDensity } from "./react-zotero-sync/itemDensity";
 import { useSyllabi } from "./react-zotero-sync/useSyllabi";
 import { getPref } from "../utils/prefs";
 import { isSameWeek } from "date-fns/fp";
@@ -36,6 +36,7 @@ import { PinnedSection, usePinnedScheduleData } from "./PinnedSection";
 import { SyllabusViewMenu } from "./SyllabusViewMenu";
 import { useGalleryLayout } from "./galleryLayout";
 import { useMagazinePacking } from "./magazinePacking";
+import { READING_SCHEDULE_VIEW_KEY } from "../utils/viewScope";
 import { GalleryViewportProvider } from "./galleryVisibility";
 import {
   ScheduleStickyTopsContext,
@@ -47,7 +48,7 @@ setDefaultOptions({
   weekStartsOn: 1,
 });
 
-const READING_SCHEDULE_LAYOUT_KEY = "reading-schedule";
+const READING_SCHEDULE_LAYOUT_KEY = READING_SCHEDULE_VIEW_KEY;
 
 /** Fallbacks if sticky bands aren't in the DOM yet. */
 const SCHEDULE_WEEK_BAND_PX = 40;
@@ -56,14 +57,12 @@ const SCHEDULE_DATE_BAND_PX = 36;
 const SCHEDULE_HEADER_GAP_PX = 12;
 
 export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
-  const [density] = useZoteroItemDensity();
-  const [layout, setLayout] = useGalleryLayout(
-    READING_SCHEDULE_LAYOUT_KEY,
-    "card",
-  );
-  const [magazinePacking, setMagazinePacking] = useMagazinePacking(
+  const [density] = useItemDensity(READING_SCHEDULE_LAYOUT_KEY);
+  const [layout, setLayout, layoutGlobal] = useGalleryLayout(
     READING_SCHEDULE_LAYOUT_KEY,
   );
+  const [magazinePacking, setMagazinePacking, magazinePackingGlobal] =
+    useMagazinePacking(READING_SCHEDULE_LAYOUT_KEY);
   const pageRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const [stickyTops, setStickyTops] = useState<ScheduleStickyTops>({
@@ -131,14 +130,17 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
           </div>
           <div className="inline-flex items-center gap-2.5 shrink grow-0">
             <SyllabusViewMenu
+              viewKey={READING_SCHEDULE_LAYOUT_KEY}
               showLayout
               layout={layout}
               onLayoutChange={setLayout}
+              layoutGlobal={layoutGlobal}
               magazinePacking={magazinePacking}
               onMagazinePackingChange={setMagazinePacking}
+              magazinePackingGlobal={magazinePackingGlobal}
               showCheckboxes={false}
               showScheduleCollection
-              colorFilterScope="reading-schedule"
+              colorFilterScope={READING_SCHEDULE_LAYOUT_KEY}
             />
           </div>
         </div>

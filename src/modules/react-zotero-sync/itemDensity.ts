@@ -1,8 +1,17 @@
 import { useCallback, useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
 import { config } from "../../../package.json";
-import { zoteroCache } from "../../utils/cache";
-import { getPrefKey, getPrefValue, setPref } from "../../utils/prefs";
+import { getPrefKey, getPrefValue } from "../../utils/prefs";
+import {
+  getViewPref,
+  getViewPrefDefault,
+  saveViewPrefGlobally,
+  setViewPref,
+  setViewPrefDefault,
+  useViewPref,
+  type ViewPrefGlobalSetting,
+  type ViewPrefSpec,
+} from "../../utils/viewPref";
 
 export const ITEM_DENSITIES = ["row", "standard", "expanded"] as const;
 
@@ -25,13 +34,51 @@ export function coerceItemDensity(value: unknown): ItemDensity {
   return "expanded";
 }
 
+/** Map key is `itemDensities` — `itemDensity` is a leftover scalar cleared on migrate. */
+const itemDensitySpec: ViewPrefSpec<ItemDensity> = {
+  mapKey: `${config.prefsPrefix}.itemDensities`,
+  defaultKey: "defaultItemDensity",
+  coerce: coerceItemDensity,
+};
+
+export function getDefaultItemDensity(): ItemDensity {
+  return getViewPrefDefault(itemDensitySpec);
+}
+
 export function getItemDensity(): ItemDensity {
   return coerceItemDensity(getPrefValue("defaultItemDensity"));
 }
 
 export function setItemDensity(density: ItemDensity): void {
-  setPref("defaultItemDensity", density);
-  zoteroCache.invalidatePref(getPrefKey("defaultItemDensity"));
+  setViewPrefDefault(itemDensitySpec, density);
+}
+
+export function getViewItemDensity(viewKey: string | number): ItemDensity {
+  return getViewPref(itemDensitySpec, viewKey);
+}
+
+export function setViewItemDensity(
+  viewKey: string | number,
+  density: ItemDensity,
+): void {
+  setViewPref(itemDensitySpec, viewKey, density);
+}
+
+export function saveItemDensityGlobally(
+  viewKey: string | number,
+  density: ItemDensity,
+): void {
+  saveViewPrefGlobally(itemDensitySpec, viewKey, density);
+}
+
+export function useItemDensity(
+  viewKey: string | number,
+): [
+  ItemDensity,
+  (density: ItemDensity) => void,
+  ViewPrefGlobalSetting<ItemDensity>,
+] {
+  return useViewPref(itemDensitySpec, viewKey);
 }
 
 export function nextItemDensity(current: ItemDensity): ItemDensity {

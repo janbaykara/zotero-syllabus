@@ -64,6 +64,8 @@ export interface ClassGroupComponentProps {
   /** Browse layout when locked (Card / Cover / Magazine). Ignored while editing. */
   layout?: GalleryLayout;
   magazinePacking?: MagazinePacking;
+  colorFilterScope?: string;
+  showItemsWithoutAnnotations?: boolean;
   onResetSortOrder?: () => void;
   selectedIdentifiers?: Set<string>;
   onIdentifierClick?: (
@@ -113,6 +115,8 @@ export function ClassGroupComponent({
   isLocked = false,
   layout = "card",
   magazinePacking = "vertical",
+  colorFilterScope,
+  showItemsWithoutAnnotations,
   onResetSortOrder,
   selectedIdentifiers = new Set(),
   onIdentifierClick,
@@ -620,7 +624,8 @@ export function ClassGroupComponent({
               isLocked
               template="strip"
               magazinePacking={magazinePacking}
-              colorFilterScope={String(collectionId)}
+              colorFilterScope={colorFilterScope || String(collectionId)}
+              showItemsWithoutAnnotations={showItemsWithoutAnnotations}
               rows={itemAssignments
                 .filter(({ assignment }) => !!assignment.id)
                 .map(({ item, assignment }) => ({

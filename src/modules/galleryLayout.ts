@@ -1,8 +1,16 @@
-import { useCallback, useEffect, useState } from "preact/hooks";
 import * as z from "zod";
 import { config } from "../../package.json";
-import { getCachedPref, zoteroCache } from "../utils/cache";
-import { getPref, getPrefKey, setPref } from "../utils/prefs";
+import {
+  getViewPref,
+  getViewPrefDefault,
+  saveViewPrefGlobally,
+  setViewPref,
+  setViewPrefDefault,
+  useViewPref,
+  type ViewPrefGlobalSetting,
+  type ViewPrefSpec,
+} from "../utils/viewPref";
+import { isSyllabusDisplayViewKey } from "../utils/viewScope";
 
 export const GALLERY_LAYOUT_MODES = [
   "card",
@@ -106,16 +114,11 @@ export function readingItemsPackClass(
   return "is-fill";
 }
 
-export type GalleryGlobalSetting<T> = {
-  isCustom: boolean;
-  saveGlobally: () => void;
-  globalValue: T;
-};
+export type GalleryGlobalSetting<T> = ViewPrefGlobalSetting<T>;
 
 const GalleryLayoutSchema = z.enum(GALLERY_LAYOUT_MODES);
-const GalleryLayoutMapSchema = z.record(z.string(), z.unknown());
 
-function prefKey() {
+function layoutMapKey() {
   return `${config.prefsPrefix}.galleryLayout`;
 }
 
@@ -124,44 +127,66 @@ export function coerceGalleryLayout(value: unknown): GalleryLayout {
   return parsed.success ? parsed.data : "cover";
 }
 
+function coerceSyllabusLayout(value: unknown): GalleryLayout {
+  const parsed = GalleryLayoutSchema.safeParse(value);
+  return parsed.success ? parsed.data : "card";
+}
+
+const galleryLayoutSpec: ViewPrefSpec<GalleryLayout> = {
+  mapKey: layoutMapKey(),
+  defaultKey: "defaultGalleryLayout",
+  coerce: coerceGalleryLayout,
+};
+
+const syllabusLayoutSpec: ViewPrefSpec<GalleryLayout> = {
+  mapKey: layoutMapKey(),
+  defaultKey: "defaultSyllabusLayout",
+  coerce: coerceSyllabusLayout,
+};
+
+export function layoutSpecForView(
+  viewKey: string | number,
+): ViewPrefSpec<GalleryLayout> {
+  return isSyllabusDisplayViewKey(String(viewKey))
+    ? syllabusLayoutSpec
+    : galleryLayoutSpec;
+}
+
 export function getDefaultGalleryLayout(): GalleryLayout {
-  return coerceGalleryLayout(getPref("defaultGalleryLayout"));
+  return getViewPrefDefault(galleryLayoutSpec);
 }
 
 export function setDefaultGalleryLayout(mode: GalleryLayout): void {
-  setPref("defaultGalleryLayout", mode);
-  zoteroCache.invalidatePref(getPrefKey("defaultGalleryLayout"));
+  setViewPrefDefault(galleryLayoutSpec, mode);
+}
+
+export function getDefaultSyllabusLayout(): GalleryLayout {
+  return getViewPrefDefault(syllabusLayoutSpec);
+}
+
+export function setDefaultSyllabusLayout(mode: GalleryLayout): void {
+  setViewPrefDefault(syllabusLayoutSpec, mode);
 }
 
 export function getGalleryLayout(
   viewKey: string | number,
   unsetDefault?: GalleryLayout,
 ): GalleryLayout {
-  const map = getCachedPref(prefKey(), GalleryLayoutMapSchema) || {};
-  const key = String(viewKey);
-  if (!(key in map)) {
-    return unsetDefault ?? getDefaultGalleryLayout();
-  }
-  return coerceGalleryLayout(map[key]);
+  return getViewPref(layoutSpecForView(viewKey), viewKey, unsetDefault);
 }
 
 export function setGalleryLayout(
   viewKey: string | number,
   mode: GalleryLayout,
 ): void {
-  const key = prefKey();
-  const map = getCachedPref(key, GalleryLayoutMapSchema) || {};
-  map[String(viewKey)] = mode;
-  Zotero.Prefs.set(key, JSON.stringify(map), true);
-  zoteroCache.invalidatePref(key);
+  setViewPref(layoutSpecForView(viewKey), viewKey, mode);
 }
 
 export function saveGalleryLayoutGlobally(
   viewKey: string | number,
   mode: GalleryLayout,
 ): void {
-  setDefaultGalleryLayout(mode);
-  setGalleryLayout(viewKey, mode);
+  saveViewPrefGlobally(layoutSpecForView(viewKey), viewKey, mode);
 }
 
 export function useGalleryLayout(
@@ -172,50 +197,5 @@ export function useGalleryLayout(
   (mode: GalleryLayout) => void,
   GalleryGlobalSetting<GalleryLayout>,
 ] {
-  const [mode, setMode] = useState<GalleryLayout>(() =>
-    getGalleryLayout(viewKey, unsetDefault),
-  );
-  const [globalValue, setGlobalValue] = useState<GalleryLayout>(() =>
-    getDefaultGalleryLayout(),
-  );
-
-  useEffect(() => {
-    const refresh = () => {
-      setMode(getGalleryLayout(viewKey, unsetDefault));
-      setGlobalValue(getDefaultGalleryLayout());
-    };
-    refresh();
-    const observerIDs = [
-      Zotero.Prefs.registerObserver(prefKey(), refresh, true),
-      Zotero.Prefs.registerObserver(
-        getPrefKey("defaultGalleryLayout"),
-        refresh,
-        true,
-      ),
-    ];
-    return () => {
-      for (const observerID of observerIDs) {
-        Zotero.Prefs.unregisterObserver(observerID);
-      }
-    };
-  }, [viewKey, unsetDefault]);
-
-  const setLayout = useCallback(
-    (next: GalleryLayout) => {
-      setMode(next);
-      setGalleryLayout(viewKey, next);
-    },
-    [viewKey],
-  );
-
-  const saveGlobally = useCallback(() => {
-    saveGalleryLayoutGlobally(viewKey, mode);
-    setGlobalValue(mode);
-  }, [mode, viewKey]);
-
-  return [
-    mode,
-    setLayout,
-    { isCustom: mode !== globalValue, saveGlobally, globalValue },
-  ];
+  return useViewPref(layoutSpecForView(viewKey), viewKey, unsetDefault);
 }

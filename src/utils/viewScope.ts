@@ -21,6 +21,19 @@ export const SPECIAL_VIEW_PREF_KEY = /^[SDURPTFY]\d+$/;
 export const NAMED_VIEW_PREF_KEY =
   /^(reading-schedule|syllabus:\d+|feed|explorer|explorer-pinned)$/;
 
+export const READING_SCHEDULE_VIEW_KEY = "reading-schedule";
+
+export function syllabusViewKey(collectionId: number | string): string {
+  return `syllabus:${collectionId}`;
+}
+
+/** Syllabus page / Reading Schedule — use `defaultSyllabusLayout`, not gallery’s cover default. */
+export function isSyllabusDisplayViewKey(viewKey: string): boolean {
+  return (
+    viewKey === READING_SCHEDULE_VIEW_KEY || /^syllabus:\d+$/.test(viewKey)
+  );
+}
+
 export function isSpecialViewPrefKey(key: string): boolean {
   return SPECIAL_VIEW_PREF_KEY.test(key);
 }

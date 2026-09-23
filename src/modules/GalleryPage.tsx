@@ -57,7 +57,7 @@ import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata"
 import { ProseText } from "./ProseText";
 import {
   ITEM_DENSITIES,
-  useZoteroItemDensity,
+  useItemDensity,
   type ItemDensity,
 } from "./react-zotero-sync/itemDensity";
 import { densityLabel } from "./browsePage";
@@ -91,8 +91,8 @@ import {
   type GalleryLayout,
 } from "./galleryLayout";
 import { useMagazinePacking, type MagazinePacking } from "./magazinePacking";
-import { useAnnotationsQuoteOrder } from "./myAnnotationsPrefs";
-import { useBooleanPref } from "./react-zotero-sync/booleanPref";
+import { useViewQuoteOrder } from "./myAnnotationsPrefs";
+import { useShowItemsWithoutAnnotations } from "./showItemsWithoutAnnotations";
 import type { AnnotationsQuoteOrder } from "./explorerQueries";
 import {
   GALLERY_TOUR_EVENT_CLOSE_SETTINGS,
@@ -107,6 +107,7 @@ import { MagazineItems } from "./MagazineItems";
 import { MagazineHome } from "./MagazineHome";
 import { GalleryTile } from "./GalleryTile";
 import {
+  GalleryPrefCheckbox,
   GallerySegmentedControl,
   type GallerySegmentOption,
 } from "./GallerySegmentedControl";
@@ -184,9 +185,12 @@ export function GalleryPage({
   const [sortBy, setSortBy, sortByGlobal] = useGallerySortBy(viewKey);
   const [magazinePacking, setMagazinePacking, magazinePackingGlobal] =
     useMagazinePacking(viewKey);
-  const [density] = useZoteroItemDensity();
-  const [showItemsWithoutAnnotations, setShowItemsWithoutAnnotations] =
-    useBooleanPref("galleryShowItemsWithoutAnnotations");
+  const [density] = useItemDensity(viewKey);
+  const [
+    showItemsWithoutAnnotations,
+    setShowItemsWithoutAnnotations,
+    showEmptyGlobal,
+  ] = useShowItemsWithoutAnnotations(viewKey);
   const [syllabusMetadata] = useZoteroSyllabusMetadata(collectionIdOrZero);
   const { classGroups, furtherReadingItems } = useSyllabusClassGroups(
     collectionIdOrZero,
@@ -1005,6 +1009,7 @@ export function GalleryPage({
               magazinePackingGlobal={magazinePackingGlobal}
               showItemsWithoutAnnotations={showItemsWithoutAnnotations}
               onShowItemsWithoutAnnotations={setShowItemsWithoutAnnotations}
+              showEmptyGlobal={showEmptyGlobal}
               annotationColors={annotationColors}
               colorFilterScope={viewKey}
               navGroups={navGroups}
@@ -1658,6 +1663,7 @@ function GalleryPageHeader({
   magazinePackingGlobal,
   showItemsWithoutAnnotations,
   onShowItemsWithoutAnnotations,
+  showEmptyGlobal,
   annotationColors,
   colorFilterScope,
   navGroups,
@@ -1682,6 +1688,7 @@ function GalleryPageHeader({
   magazinePackingGlobal: GalleryGlobalSetting<MagazinePacking>;
   showItemsWithoutAnnotations: boolean;
   onShowItemsWithoutAnnotations: (show: boolean) => void;
+  showEmptyGlobal: GalleryGlobalSetting<boolean>;
   annotationColors: string[];
   colorFilterScope: string;
   navGroups: GalleryNavGroup[];
@@ -1748,9 +1755,10 @@ function GalleryPageHeader({
   const layoutOptions = galleryLayoutOptions();
   const sortOptions = gallerySortOptions();
   const quoteOrderOptions = galleryQuoteOrderOptions();
-  const [quoteOrder, setQuoteOrder] = useAnnotationsQuoteOrder();
+  const [quoteOrder, setQuoteOrder, quoteOrderGlobal] =
+    useViewQuoteOrder(colorFilterScope);
   const densityOptions = galleryDensityOptions();
-  const [density, setDensity] = useZoteroItemDensity();
+  const [density, setDensity, densityGlobal] = useItemDensity(colorFilterScope);
   const allGroupBy = galleryGroupByOptions();
   const groupByOptions = allGroupBy.filter((option) => {
     if (option.mode === "auto" && layout !== "magazine") {
@@ -1817,77 +1825,81 @@ function GalleryPageHeader({
               data-tour="gallery-settings"
             >
               <div className="syllabus-gallery-toolbar">
-                <GallerySegmentedControl
-                  label={getString("gallery-menu-view")}
-                  ariaLabel={getString("gallery-menu-view")}
-                  value={layout}
-                  onChange={onLayout}
-                  options={layoutOptions}
-                  tourPrefix="gallery-layout"
-                  globalSetting={layoutGlobal}
-                />
-                <GallerySegmentedControl
-                  label={getString("gallery-menu-sort")}
-                  ariaLabel={getString("gallery-menu-sort")}
-                  value={sortBy}
-                  onChange={onSortBy}
-                  options={sortOptions}
-                  globalSetting={sortByGlobal}
-                />
-                <GallerySegmentedControl
-                  label={getString("gallery-menu-group")}
-                  ariaLabel={getString("gallery-menu-group")}
-                  value={groupBy}
-                  onChange={onGroupBy}
-                  options={groupByOptions}
-                  tourPrefix="gallery-group"
-                  globalSetting={groupByGlobal}
-                />
-                {layout === "card" ? (
+                <div className="syllabus-gallery-toolbar-section">
                   <GallerySegmentedControl
-                    label={getString("settings-density")}
-                    ariaLabel={getString("settings-density")}
-                    value={density}
-                    onChange={setDensity}
-                    options={densityOptions}
+                    label={getString("gallery-menu-view")}
+                    ariaLabel={getString("gallery-menu-view")}
+                    value={layout}
+                    onChange={onLayout}
+                    options={layoutOptions}
+                    tourPrefix="gallery-layout"
+                    globalSetting={layoutGlobal}
                   />
-                ) : null}
-                {layout === "magazine" ? (
-                  <>
-                    <GallerySegmentedControl
-                      label={getString("gallery-menu-packing")}
-                      ariaLabel={getString("gallery-menu-packing")}
-                      value={magazinePacking}
-                      onChange={onMagazinePacking}
-                      options={magazinePackingOptions()}
-                      globalSetting={magazinePackingGlobal}
-                    />
-                  </>
-                ) : null}
-                {layout === "annotations" ? (
-                  <>
-                    <GallerySegmentedControl
-                      label={getString("annotations-quote-order-menu")}
-                      ariaLabel={getString("annotations-quote-order-menu")}
-                      value={quoteOrder}
-                      onChange={setQuoteOrder}
-                      options={quoteOrderOptions}
-                    />
-                    <AnnotationColorFilter
-                      colors={annotationColors}
-                      scope={colorFilterScope}
-                    />
-                    <label className="syllabus-gallery-toolbar-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={showItemsWithoutAnnotations}
-                        onChange={(e) =>
-                          onShowItemsWithoutAnnotations(e.currentTarget.checked)
-                        }
+                  <GallerySegmentedControl
+                    label={getString("gallery-menu-sort")}
+                    ariaLabel={getString("gallery-menu-sort")}
+                    value={sortBy}
+                    onChange={onSortBy}
+                    options={sortOptions}
+                    globalSetting={sortByGlobal}
+                  />
+                  <GallerySegmentedControl
+                    label={getString("gallery-menu-group")}
+                    ariaLabel={getString("gallery-menu-group")}
+                    value={groupBy}
+                    onChange={onGroupBy}
+                    options={groupByOptions}
+                    tourPrefix="gallery-group"
+                    globalSetting={groupByGlobal}
+                  />
+                </div>
+                {layout === "card" ||
+                layout === "magazine" ||
+                layout === "annotations" ? (
+                  <div className="syllabus-gallery-toolbar-section">
+                    {layout === "card" ? (
+                      <GallerySegmentedControl
+                        label={getString("settings-density")}
+                        ariaLabel={getString("settings-density")}
+                        value={density}
+                        onChange={setDensity}
+                        options={densityOptions}
+                        globalSetting={densityGlobal}
                       />
-                      <span>{getString("gallery-annotations-show-empty")}</span>
-                    </label>
-                  </>
+                    ) : null}
+                    {layout === "magazine" ? (
+                      <GallerySegmentedControl
+                        label={getString("gallery-menu-packing")}
+                        ariaLabel={getString("gallery-menu-packing")}
+                        value={magazinePacking}
+                        onChange={onMagazinePacking}
+                        options={magazinePackingOptions()}
+                        globalSetting={magazinePackingGlobal}
+                      />
+                    ) : null}
+                    {layout === "annotations" ? (
+                      <>
+                        <GallerySegmentedControl
+                          label={getString("annotations-quote-order-menu")}
+                          ariaLabel={getString("annotations-quote-order-menu")}
+                          value={quoteOrder}
+                          onChange={setQuoteOrder}
+                          options={quoteOrderOptions}
+                          globalSetting={quoteOrderGlobal}
+                        />
+                        <AnnotationColorFilter
+                          colors={annotationColors}
+                          scope={colorFilterScope}
+                        />
+                        <GalleryPrefCheckbox
+                          label={getString("gallery-annotations-show-empty")}
+                          checked={showItemsWithoutAnnotations}
+                          onChange={onShowItemsWithoutAnnotations}
+                          globalSetting={showEmptyGlobal}
+                        />
+                      </>
+                    ) : null}
+                  </div>
                 ) : null}
               </div>
             </div>

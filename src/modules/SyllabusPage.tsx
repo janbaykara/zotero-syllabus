@@ -30,8 +30,8 @@ import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata"
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
 import { useZoteroItemsViewRegularItemIds } from "./react-zotero-sync/itemsViewItems";
 import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
-import { useZoteroItemDensity } from "./react-zotero-sync/itemDensity";
-import { useZoteroReaderMode } from "./react-zotero-sync/readerMode";
+import { useItemDensity } from "./react-zotero-sync/itemDensity";
+import { useReaderMode } from "./react-zotero-sync/readerMode";
 import { isZotero8OrLater } from "../utils/zotero";
 import { getItemTitle, sortItems } from "../utils/items";
 import slugify from "slugify";
@@ -113,13 +113,16 @@ import {
 import { useSyllabusDocumentGeneration } from "./react-zotero-sync/collectionDocument";
 import { SyllabusViewMenu } from "./SyllabusViewMenu";
 import { useGalleryLayout } from "./galleryLayout";
+import { useMagazinePacking } from "./magazinePacking";
+import { useShowItemsWithoutAnnotations } from "./showItemsWithoutAnnotations";
+import { GallerySaveGlobalButton } from "./GallerySegmentedControl";
+import { syllabusViewKey } from "../utils/viewScope";
 import { GalleryViewportProvider } from "./galleryVisibility";
 import {
   useExistingAnnotationColors,
   useItemIdsWithAnnotations,
 } from "./GalleryAnnotationsRow";
 import { ReadingItemsLayout } from "./readingItemsLayout";
-import { useBooleanPref } from "./react-zotero-sync/booleanPref";
 import { TextInput } from "./syllabusInputs";
 import { SyllabusItemCard } from "./SyllabusItemCard";
 import { bibliographyToHtml } from "./Bibliography";
@@ -781,20 +784,16 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   // Track item order changes to trigger re-computation
   const [itemOrderVersion, setItemOrderVersion] = useState(0);
 
-  // Item density — reactive to preference changes
-  const [density] = useZoteroItemDensity();
-
-  // Reader mode state - reactive to preference changes
-  const [readerMode] = useZoteroReaderMode();
-
-  const [browseLayout, setBrowseLayout] = useGalleryLayout(
-    `syllabus:${collectionId}`,
-    "card",
-  );
+  const displayViewKey = syllabusViewKey(collectionId);
+  const [density] = useItemDensity(displayViewKey);
+  const [readerMode] = useReaderMode(displayViewKey);
+  const [browseLayout, setBrowseLayout, browseLayoutGlobal] =
+    useGalleryLayout(displayViewKey);
+  const [magazinePacking, setMagazinePacking, magazinePackingGlobal] =
+    useMagazinePacking(displayViewKey);
   const effectiveLayout = isLocked ? browseLayout : "card";
-  const [showItemsWithoutAnnotations] = useBooleanPref(
-    "galleryShowItemsWithoutAnnotations",
-  );
+  const [showItemsWithoutAnnotations] =
+    useShowItemsWithoutAnnotations(displayViewKey);
 
   const [isPinned, setIsPinned] = useState(() => {
     const collection = getCachedCollectionById(collectionId);
@@ -1295,8 +1294,11 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     setItemOrderVersion((v) => v + 1);
   }, [syllabusMetadata]);
 
-  const [furtherReadingSortBy, setFurtherReadingSortBy] =
-    useFurtherReadingSortBy(collectionId);
+  const [
+    furtherReadingSortBy,
+    setFurtherReadingSortBy,
+    furtherReadingSortGlobal,
+  ] = useFurtherReadingSortBy(collectionId);
 
   // Compute class groups and further reading items from synced items
   // Re-compute when items change or item order changes
@@ -2966,11 +2968,16 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                 </div>
                 <div className="inline-flex items-center gap-2.5 shrink grow-0">
                   <SyllabusViewMenu
+                    viewKey={displayViewKey}
                     showLayout={isLocked}
                     layout={browseLayout}
                     onLayoutChange={setBrowseLayout}
+                    layoutGlobal={browseLayoutGlobal}
+                    magazinePacking={magazinePacking}
+                    onMagazinePackingChange={setMagazinePacking}
+                    magazinePackingGlobal={magazinePackingGlobal}
                     annotationColors={annotationColors}
-                    colorFilterScope={String(collectionId)}
+                    colorFilterScope={displayViewKey}
                   />
                   <div
                     className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
@@ -3157,7 +3164,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   readerMode={readerMode}
                   isLocked={isLocked}
                   layout={effectiveLayout}
-                  magazinePacking="vertical"
+                  magazinePacking={magazinePacking}
+                  colorFilterScope={displayViewKey}
+                  showItemsWithoutAnnotations={showItemsWithoutAnnotations}
                   onResetSortOrder={() => setItemOrderVersion((v) => v + 1)}
                   selectedIdentifiers={selectedIdentifiers}
                   onIdentifierClick={handleIdentifierClick}
@@ -3310,6 +3319,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                           aria-hidden="true"
                         />
                         <span>{getString("sort-label")}</span>
+                        <GallerySaveGlobalButton
+                          globalSetting={furtherReadingSortGlobal}
+                        />
                         <select
                           value={furtherReadingSortBy}
                           onChange={async (e) => {
@@ -3473,8 +3485,11 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                         readerMode={readerMode}
                         isLocked
                         template="strip"
-                        magazinePacking="vertical"
-                        colorFilterScope={String(collectionId)}
+                        magazinePacking={magazinePacking}
+                        colorFilterScope={displayViewKey}
+                        showItemsWithoutAnnotations={
+                          showItemsWithoutAnnotations
+                        }
                         rows={furtherReadingItems.map(
                           ({ item, assignment }) => ({
                             key: `further-${item.id}-${assignment?.id || "item"}`,

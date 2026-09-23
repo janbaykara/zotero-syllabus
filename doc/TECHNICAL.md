@@ -2,7 +2,7 @@
 
 This document is for people changing the plugin. End-user behaviour is in [README.md](../README.md).
 
-Contents: [collection note](#collection-note) · [item merges](#item-merges) · [preferences](#preferences) · [Extra absorb](#item-extra-legacy-absorb) · [class folders](#class-subcollections) · [practical rules](#practical-rules) · [localization](#localization) · [reading-list connectors](#reading-list-connectors) · [cloud publish](#cloud-publish) · [local development](#local-development) · [project structure](#project-structure) · [references](#references)
+Contents: [collection note](#collection-note) · [item merges](#item-merges) · [preferences](#preferences) · [Extra absorb](#item-extra-legacy-absorb) · [class folders](#class-subcollections) · [practical rules](#practical-rules) · [localization](#localization) · [reading-list connectors](#reading-list-connectors) · [cloud publish](#cloud-publish) · [local development](#local-development) · [project structure](#project-structure) · [references](#references) · [display prefs](DISPLAY-PREFS.md)
 
 A **syllabus is one Zotero collection** that you have turned into a syllabus (or that had a legacy `collectionMetadata` preference). Items in that collection are the membership. Everything else — classes, assignments, course metadata — is stored in a **collection note** so it syncs with the library. Plugin **prefs** hold UI chrome only (and leftover legacy data). **Class subcollections** are a derived, one-way view of the note.
 
@@ -90,7 +90,7 @@ There is no extra sync protocol. Zotero already syncs the trashed loser, the sur
 
 Prefix: `extensions.zotero.syllabus`.
 
-**Still prefs** (see [`src/utils/prefs.ts`](../src/utils/prefs.ts) and [`addon/prefs.js`](../addon/prefs.js)): plugin enable, compact/reader mode, debug, bibliography, row colouring, WPM. Per-collection **view mode** (Items / Syllabus / Tags) is stored in `collectionViewModes`, keyed by collection id. Class folders with no saved mode inherit the parent’s mode.
+**Still prefs** (see [`src/utils/prefs.ts`](../src/utils/prefs.ts) and [`addon/prefs.js`](../addon/prefs.js)): plugin enable, debug, bibliography, row colouring, WPM. Gallery / syllabus **display chrome** (layout, sort, density, reader mode, …) is per view with a “Save as default” globe — see [DISPLAY-PREFS.md](DISPLAY-PREFS.md). Per-collection **view mode** (Items / Syllabus / Gallery) is stored in `collectionViewModes`, keyed by collection id. Class folders with no saved mode inherit the parent’s mode.
 
 **No longer prefs:** collection syllabus content used to live in `extensions.zotero.syllabus.collectionMetadata`. On startup, [`src/modules/migratePrefsToNotes.ts`](../src/modules/migratePrefsToNotes.ts) copies each remaining object that has classes into that collection’s note (and Extra assignments into the same note), then deletes that prefs entry only after a successful write. Entries with no classes are deleted without creating a note. Failed or missing collections stay in the pref and retry next launch.
 
@@ -126,7 +126,7 @@ Pin state is tags only (not syllabus JSON). Shelf order is a per-library pref (`
 
 ## Gallery page
 
-Per-collection layout / sort / group / magazine packing prefs, plus “Save as default” for the library. Modes: Card, Cover, Annotations, Magazine (vertical / grid / packed). End-user steps: [README — Gallery](../README.md#gallery).
+Display chrome is per view with “Save as default” — see [DISPLAY-PREFS.md](DISPLAY-PREFS.md). Modes: Card, Cover, Annotations, Magazine (vertical / grid / packed). End-user steps: [README — Gallery](../README.md#gallery).
 
 ## Gallery notes
 

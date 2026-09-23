@@ -30,7 +30,10 @@ import { ExplorerCoverItem } from "./ExplorerMagazineRail";
 import type { MagazineTileClick } from "./MagazineTile";
 import type { ReadingTileChrome } from "./readingAssignmentChrome";
 import type { MyAnnotationStreamEntry } from "./explorerQueries";
-import { sortAnnotationsByQuoteOrder } from "./explorerQueries";
+import {
+  sortAnnotationsByQuoteOrder,
+  type AnnotationsQuoteOrder,
+} from "./explorerQueries";
 import {
   ANNOTATION_COLOR_FILTER_EXPLORER,
   getAnnotationsQuoteOrder,
@@ -368,6 +371,7 @@ export function AnnotationStreamGroup({
   chrome,
   emptyLabel,
   showGalleryNote = false,
+  quoteOrder: quoteOrderProp,
   onClick,
   onDoubleClick,
   onContextMenu,
@@ -379,12 +383,14 @@ export function AnnotationStreamGroup({
   /** Shown in the quote stack when the group has no entries. */
   emptyLabel?: string;
   showGalleryNote?: boolean;
+  quoteOrder?: AnnotationsQuoteOrder;
   onClick: MagazineTileClick;
   onDoubleClick: (item: Zotero.Item) => void;
   onContextMenu: MagazineTileClick;
 }) {
   const parent = group.parent;
-  const [quoteOrder] = useAnnotationsQuoteOrder();
+  const [defaultQuoteOrder] = useAnnotationsQuoteOrder();
+  const quoteOrder = quoteOrderProp ?? defaultQuoteOrder;
   const entries = useMemo(
     () => sortAnnotationsByQuoteOrder(group.entries, quoteOrder),
     [group.entries, quoteOrder],
@@ -501,11 +507,14 @@ export function openAnnotationGroupInReader(
 function AnnotationCoverSidecar({
   group,
   emptyLabel,
+  quoteOrder: quoteOrderProp,
 }: {
   group: AnnotationStreamParentGroup;
   emptyLabel?: string;
+  quoteOrder?: AnnotationsQuoteOrder;
 }) {
-  const [quoteOrder] = useAnnotationsQuoteOrder();
+  const [defaultQuoteOrder] = useAnnotationsQuoteOrder();
+  const quoteOrder = quoteOrderProp ?? defaultQuoteOrder;
   const entries = useMemo(
     () => sortAnnotationsByQuoteOrder(group.entries, quoteOrder),
     [group.entries, quoteOrder],

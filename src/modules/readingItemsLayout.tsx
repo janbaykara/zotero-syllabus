@@ -31,7 +31,7 @@ import type { MagazineSectionTemplate } from "./magazineDesks";
 import type { MagazinePacking } from "./magazinePacking";
 import type { ReadingTileChrome } from "./readingAssignmentChrome";
 import { GalleryAnnotationsSection } from "./GalleryAnnotationsRow";
-import { useBooleanPref } from "./react-zotero-sync/booleanPref";
+import { useShowItemsWithoutAnnotations } from "./showItemsWithoutAnnotations";
 import { SyllabusItemCard } from "./SyllabusItemCard";
 import { SyllabusManager } from "./syllabus";
 import { getString } from "../utils/locale";
@@ -148,6 +148,7 @@ export function ReadingItemsLayout({
   /** Gallery / Reading Schedule Magazine packing (ignored when magazineRail). */
   magazinePacking = "packed" as MagazinePacking,
   colorFilterScope,
+  showItemsWithoutAnnotations: showEmptyProp,
   className,
   onItemClick,
 }: {
@@ -163,12 +164,14 @@ export function ReadingItemsLayout({
   magazineRail?: boolean;
   magazinePacking?: MagazinePacking;
   colorFilterScope?: string;
+  showItemsWithoutAnnotations?: boolean;
   className?: string;
   onItemClick?: (item: Zotero.Item, collectionId: number) => void;
 }) {
-  const [showItemsWithoutAnnotations] = useBooleanPref(
-    "galleryShowItemsWithoutAnnotations",
+  const [scopedShowEmpty] = useShowItemsWithoutAnnotations(
+    colorFilterScope || "",
   );
+  const showItemsWithoutAnnotations = showEmptyProp ?? scopedShowEmpty;
   const handleClick = useCallback<MagazineTileClick>(
     (item, e) => {
       e.stopPropagation();

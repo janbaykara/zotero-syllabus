@@ -15,6 +15,26 @@ describe("collectionPrefs", function () {
       COLLECTION_ID_PREF_KEYS as readonly string[],
       `${config.prefsPrefix}.annotationColorFilter`,
     );
+    assert.include(
+      COLLECTION_ID_PREF_KEYS as readonly string[],
+      `${config.prefsPrefix}.galleryPacking`,
+    );
+    assert.include(
+      COLLECTION_ID_PREF_KEYS as readonly string[],
+      `${config.prefsPrefix}.itemDensities`,
+    );
+    assert.include(
+      COLLECTION_ID_PREF_KEYS as readonly string[],
+      `${config.prefsPrefix}.readerModes`,
+    );
+    assert.include(
+      COLLECTION_ID_PREF_KEYS as readonly string[],
+      `${config.prefsPrefix}.showItemsWithoutAnnotations`,
+    );
+    assert.include(
+      COLLECTION_ID_PREF_KEYS as readonly string[],
+      `${config.prefsPrefix}.annotationsQuoteOrderByView`,
+    );
   });
 
   describe("pruneStaleCollectionIdMap", function () {

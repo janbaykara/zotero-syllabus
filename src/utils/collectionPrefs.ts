@@ -14,7 +14,12 @@ export const COLLECTION_ID_PREF_KEYS = [
   `${config.prefsPrefix}.gallerySort`,
   `${config.prefsPrefix}.annotationColorFilter`,
   `${config.prefsPrefix}.galleryTypeSize`,
+  `${config.prefsPrefix}.galleryPacking`,
   `${config.prefsPrefix}.furtherReadingSort`,
+  `${config.prefsPrefix}.itemDensities`,
+  `${config.prefsPrefix}.readerModes`,
+  `${config.prefsPrefix}.showItemsWithoutAnnotations`,
+  `${config.prefsPrefix}.annotationsQuoteOrderByView`,
   `${config.prefsPrefix}.publishUrls`,
 ] as const;
 

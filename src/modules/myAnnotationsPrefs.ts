@@ -11,7 +11,6 @@ import { coerceGallerySortBy, type GallerySortBy } from "./gallerySort";
 import { getPref, getPrefKey, setPref } from "../utils/prefs";
 import { getCachedPref, zoteroCache } from "../utils/cache";
 import {
-  annotationColorFilterFromMap,
   parseAnnotationColorFilter,
   serializeAnnotationColorFilter,
 } from "../utils/annotationColors";
@@ -19,6 +18,16 @@ import {
   coerceAnnotationsQuoteOrder,
   type AnnotationsQuoteOrder,
 } from "./explorerQueries";
+import {
+  getViewPref,
+  getViewPrefDefault,
+  saveViewPrefGlobally,
+  setViewPref,
+  setViewPrefDefault,
+  useViewPref,
+  type ViewPrefGlobalSetting,
+  type ViewPrefSpec,
+} from "../utils/viewPref";
 
 export const MY_ANNOTATIONS_LAYOUTS = ["vertical", "grid"] as const;
 export type MyAnnotationsLayout = (typeof MY_ANNOTATIONS_LAYOUTS)[number];
@@ -203,86 +212,132 @@ export function useMyAnnotationsOrder(): [
   return [mode, setOrder];
 }
 
-const ColorFilterMapSchema = z.record(z.string(), z.unknown());
-
 export const ANNOTATION_COLOR_FILTER_FEED = "feed";
 export const ANNOTATION_COLOR_FILTER_EXPLORER = "explorer";
+export const ANNOTATION_COLOR_FILTER_EXPLORER_PINNED = "explorer-pinned";
 
 export function annotationColorFilterPrefKey(): string {
   return `${config.prefsPrefix}.annotationColorFilter`;
 }
 
-export function getAnnotationColorFilter(scope: string): string[] {
-  return annotationColorFilterFromMap(
-    getCachedPref(annotationColorFilterPrefKey(), ColorFilterMapSchema),
-    scope,
-    getPref("myAnnotationsColorFilter"),
+export function colorFilterInheritsDefault(scope: string): boolean {
+  return (
+    scope !== ANNOTATION_COLOR_FILTER_FEED &&
+    scope !== ANNOTATION_COLOR_FILTER_EXPLORER &&
+    scope !== ANNOTATION_COLOR_FILTER_EXPLORER_PINNED
   );
+}
+
+const colorFilterSpec: ViewPrefSpec<string[]> = {
+  mapKey: `${config.prefsPrefix}.annotationColorFilter`,
+  defaultKey: "defaultAnnotationColorFilter",
+  coerce: parseAnnotationColorFilter,
+  serialize: serializeAnnotationColorFilter,
+  equal: (a, b) =>
+    serializeAnnotationColorFilter(a) === serializeAnnotationColorFilter(b),
+  inheritDefault: colorFilterInheritsDefault,
+};
+
+export function getDefaultAnnotationColorFilter(): string[] {
+  return getViewPrefDefault(colorFilterSpec);
+}
+
+export function getAnnotationColorFilter(scope: string): string[] {
+  if (
+    !colorFilterInheritsDefault(scope) &&
+    scope === ANNOTATION_COLOR_FILTER_FEED
+  ) {
+    const map = getCachedPref(
+      annotationColorFilterPrefKey(),
+      z.record(z.string(), z.unknown()),
+    );
+    if (!map || !Object.prototype.hasOwnProperty.call(map, scope)) {
+      return parseAnnotationColorFilter(getPref("myAnnotationsColorFilter"));
+    }
+  }
+  return getViewPref(colorFilterSpec, scope);
 }
 
 export function setAnnotationColorFilter(
   scope: string,
   hexes: readonly string[],
 ): void {
-  const key = String(scope);
-  if (!key) {
-    return;
-  }
-  const prefKey = annotationColorFilterPrefKey();
-  const map = {
-    ...(getCachedPref(prefKey, ColorFilterMapSchema) || {}),
-  };
-  const serialized = serializeAnnotationColorFilter(hexes);
-  if (serialized) {
-    map[key] = serialized;
-  } else {
-    delete map[key];
-  }
-  Zotero.Prefs.set(prefKey, JSON.stringify(map), true);
-  zoteroCache.invalidatePref(prefKey);
-  if (key === ANNOTATION_COLOR_FILTER_FEED) {
+  const parsed = parseAnnotationColorFilter(hexes.join(","));
+  setViewPref(colorFilterSpec, scope, parsed);
+  if (scope === ANNOTATION_COLOR_FILTER_FEED) {
     setPref("myAnnotationsColorFilter", "");
     zoteroCache.invalidatePref(getPrefKey("myAnnotationsColorFilter"));
   }
 }
 
+export function saveAnnotationColorFilterGlobally(
+  scope: string,
+  hexes: readonly string[],
+): void {
+  saveViewPrefGlobally(
+    colorFilterSpec,
+    scope,
+    parseAnnotationColorFilter(hexes.join(",")),
+  );
+}
+
 export function useAnnotationColorFilter(
   scope: string,
-): [string[], (hexes: readonly string[]) => void] {
-  const [hexes, setHexes] = useState<string[]>(() =>
-    getAnnotationColorFilter(scope),
-  );
-
-  useEffect(() => {
-    const refresh = () => setHexes(getAnnotationColorFilter(scope));
-    refresh();
-    const observerID = Zotero.Prefs.registerObserver(
-      annotationColorFilterPrefKey(),
-      refresh,
-      true,
-    );
-    return () => Zotero.Prefs.unregisterObserver(observerID);
-  }, [scope]);
-
+): [
+  string[],
+  (hexes: readonly string[]) => void,
+  ViewPrefGlobalSetting<string[]>,
+] {
+  const [hexes, setHexes, global] = useViewPref(colorFilterSpec, scope);
   const setFilter = useCallback(
     (next: readonly string[]) => {
       const parsed = parseAnnotationColorFilter(next.join(","));
       setHexes(parsed);
-      setAnnotationColorFilter(scope, parsed);
+      if (scope === ANNOTATION_COLOR_FILTER_FEED) {
+        setPref("myAnnotationsColorFilter", "");
+        zoteroCache.invalidatePref(getPrefKey("myAnnotationsColorFilter"));
+      }
     },
-    [scope],
+    [scope, setHexes],
   );
-
-  return [hexes, setFilter];
+  return [hexes, setFilter, global];
 }
 
+const quoteOrderSpec: ViewPrefSpec<AnnotationsQuoteOrder> = {
+  mapKey: `${config.prefsPrefix}.annotationsQuoteOrderByView`,
+  defaultKey: "annotationsQuoteOrder",
+  coerce: coerceAnnotationsQuoteOrder,
+};
+
 export function getAnnotationsQuoteOrder(): AnnotationsQuoteOrder {
-  return coerceAnnotationsQuoteOrder(getPref("annotationsQuoteOrder"));
+  return getViewPrefDefault(quoteOrderSpec);
 }
 
 export function setAnnotationsQuoteOrder(mode: AnnotationsQuoteOrder): void {
-  setPref("annotationsQuoteOrder", mode);
-  zoteroCache.invalidatePref(getPrefKey("annotationsQuoteOrder"));
+  setViewPrefDefault(quoteOrderSpec, mode);
+}
+
+export function getViewQuoteOrder(
+  viewKey: string | number,
+): AnnotationsQuoteOrder {
+  return getViewPref(quoteOrderSpec, viewKey);
+}
+
+export function setViewQuoteOrder(
+  viewKey: string | number,
+  mode: AnnotationsQuoteOrder,
+): void {
+  setViewPref(quoteOrderSpec, viewKey, mode);
+}
+
+export function useViewQuoteOrder(
+  viewKey: string | number,
+): [
+  AnnotationsQuoteOrder,
+  (mode: AnnotationsQuoteOrder) => void,
+  ViewPrefGlobalSetting<AnnotationsQuoteOrder>,
+] {
+  return useViewPref(quoteOrderSpec, viewKey);
 }
 
 export function useAnnotationsQuoteOrder(): [

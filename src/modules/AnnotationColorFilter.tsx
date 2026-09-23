@@ -8,7 +8,11 @@ import {
   annotationSwatchUsesDarkMark,
   toggleAnnotationColorFilter,
 } from "../utils/annotationColors";
-import { useAnnotationColorFilter } from "./myAnnotationsPrefs";
+import {
+  colorFilterInheritsDefault,
+  useAnnotationColorFilter,
+} from "./myAnnotationsPrefs";
+import { GallerySaveGlobalButton } from "./GallerySegmentedControl";
 
 /** Swatch group of colours that actually exist; multiple can be on. */
 export function AnnotationColorFilter({
@@ -18,7 +22,9 @@ export function AnnotationColorFilter({
   colors: string[];
   scope: string;
 }) {
-  const [colorFilter, setColorFilter] = useAnnotationColorFilter(scope);
+  const [colorFilter, setColorFilter, colorFilterGlobal] =
+    useAnnotationColorFilter(scope);
+  const showGlobe = colorFilterInheritsDefault(scope);
   if (colors.length === 0) {
     return null;
   }
@@ -28,19 +34,24 @@ export function AnnotationColorFilter({
         <span className="syllabus-gallery-groupby-label">
           {getString("my-annotations-menu-color")}
         </span>
-        <button
-          type="button"
-          className="syllabus-gallery-save-global"
-          disabled={colorFilter.length === 0}
-          title={getString("my-annotations-menu-color-clear")}
-          aria-label={getString("my-annotations-menu-color-clear")}
-          onClick={(event) => {
-            event.stopPropagation();
-            setColorFilter([]);
-          }}
-        >
-          <X size={14} strokeWidth={2} aria-hidden="true" />
-        </button>
+        <div className="syllabus-gallery-toolbar-heading-actions">
+          <button
+            type="button"
+            className="syllabus-gallery-save-global"
+            disabled={colorFilter.length === 0}
+            title={getString("my-annotations-menu-color-clear")}
+            aria-label={getString("my-annotations-menu-color-clear")}
+            onClick={(event) => {
+              event.stopPropagation();
+              setColorFilter([]);
+            }}
+          >
+            <X size={14} strokeWidth={2} aria-hidden="true" />
+          </button>
+          {showGlobe ? (
+            <GallerySaveGlobalButton globalSetting={colorFilterGlobal} />
+          ) : null}
+        </div>
       </div>
       <div
         role="group"

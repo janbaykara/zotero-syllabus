@@ -20,17 +20,21 @@ import { getString } from "../utils/locale";
 import { confirmPrompt } from "../utils/window";
 import {
   ITEM_DENSITIES,
-  useZoteroItemDensity,
+  useItemDensity,
   type ItemDensity,
 } from "./react-zotero-sync/itemDensity";
-import { useZoteroReaderMode } from "./react-zotero-sync/readerMode";
+import { useReaderMode } from "./react-zotero-sync/readerMode";
 import { useReadingScheduleCollectionPref } from "./react-zotero-sync/readingScheduleCollectionPref";
 import { densityLabel } from "./browsePage";
-import type { GalleryLayout } from "./galleryLayout";
+import type { GalleryGlobalSetting, GalleryLayout } from "./galleryLayout";
 import type { MagazinePacking } from "./magazinePacking";
-import { useBooleanPref } from "./react-zotero-sync/booleanPref";
 import { AnnotationColorFilter } from "./AnnotationColorFilter";
-import { useAnnotationsQuoteOrder } from "./myAnnotationsPrefs";
+import { useViewQuoteOrder } from "./myAnnotationsPrefs";
+import { useShowItemsWithoutAnnotations } from "./showItemsWithoutAnnotations";
+import {
+  GalleryPrefCheckbox,
+  GallerySegmentedControl,
+} from "./GallerySegmentedControl";
 import type { AnnotationsQuoteOrder } from "./explorerQueries";
 import type { FluentMessageId } from "../../typings/i10n";
 
@@ -141,23 +145,29 @@ function confirmReadingScheduleCollectionToggle(enable: boolean): boolean {
 }
 
 export function SyllabusViewMenu({
+  viewKey,
   showLayout = false,
   layout = "card",
   onLayoutChange,
+  layoutGlobal,
   magazinePacking = "packed",
   onMagazinePackingChange,
+  magazinePackingGlobal,
   showCheckboxes = true,
   showScheduleCollection = false,
   annotationColors = [],
   colorFilterScope,
 }: {
+  viewKey: string;
   /** Card / Cover / Annotations / Magazine — Reading Schedule and locked syllabus. */
   showLayout?: boolean;
   layout?: GalleryLayout;
   onLayoutChange?: (layout: GalleryLayout) => void;
+  layoutGlobal?: GalleryGlobalSetting<GalleryLayout>;
   /** Reading Schedule Magazine packing (omit on locked syllabus). */
   magazinePacking?: MagazinePacking;
   onMagazinePackingChange?: (packing: MagazinePacking) => void;
+  magazinePackingGlobal?: GalleryGlobalSetting<MagazinePacking>;
   showCheckboxes?: boolean;
   /** Library “Reading Schedule” collection toggle (schedule page only). */
   showScheduleCollection?: boolean;
@@ -166,13 +176,17 @@ export function SyllabusViewMenu({
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const [density, setDensity] = useZoteroItemDensity();
-  const [readerMode, setReaderMode] = useZoteroReaderMode();
+  const [density, setDensity, densityGlobal] = useItemDensity(viewKey);
+  const [readerMode, setReaderMode, readerModeGlobal] = useReaderMode(viewKey);
   const [generateCollection, setGenerateCollection] =
     useReadingScheduleCollectionPref();
-  const [quoteOrder, setQuoteOrder] = useAnnotationsQuoteOrder();
-  const [showItemsWithoutAnnotations, setShowItemsWithoutAnnotations] =
-    useBooleanPref("galleryShowItemsWithoutAnnotations");
+  const [quoteOrder, setQuoteOrder, quoteOrderGlobal] =
+    useViewQuoteOrder(viewKey);
+  const [
+    showItemsWithoutAnnotations,
+    setShowItemsWithoutAnnotations,
+    showEmptyGlobal,
+  ] = useShowItemsWithoutAnnotations(viewKey);
   const showDensity = !showLayout || layout === "card";
 
   const handleGenerateCollectionChange = useCallback(
@@ -237,194 +251,139 @@ export function SyllabusViewMenu({
           data-tour="syllabus-view-settings"
         >
           <div className="syllabus-gallery-toolbar">
-            {showLayout ? (
-              <div className="syllabus-gallery-toolbar-cluster">
-                <div className="syllabus-gallery-toolbar-heading">
-                  <span className="syllabus-gallery-groupby-label">
-                    {getString("gallery-menu-view")}
-                  </span>
-                </div>
-                <div
-                  role="radiogroup"
-                  aria-label={getString("gallery-menu-view")}
-                  className="syllabus-gallery-groupby"
-                >
-                  {LAYOUT_OPTIONS.map(({ mode, labelKey, titleKey, Icon }) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      role="radio"
-                      aria-checked={layout === mode}
-                      title={getString(titleKey)}
-                      className="syllabus-gallery-groupby-btn"
-                      onClick={() => onLayoutChange?.(mode)}
-                    >
-                      <Icon size={12} strokeWidth={2} aria-hidden="true" />
-                      {getString(labelKey)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-            {showLayout && layout === "magazine" && onMagazinePackingChange ? (
-              <div className="syllabus-gallery-toolbar-cluster">
-                <div className="syllabus-gallery-toolbar-heading">
-                  <span className="syllabus-gallery-groupby-label">
-                    {getString("gallery-menu-packing")}
-                  </span>
-                </div>
-                <div
-                  role="radiogroup"
-                  aria-label={getString("gallery-menu-packing")}
-                  className="syllabus-gallery-groupby"
-                >
-                  {PACKING_OPTIONS.map(({ mode, labelKey, titleKey, Icon }) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      role="radio"
-                      aria-checked={magazinePacking === mode}
-                      title={getString(titleKey)}
-                      className="syllabus-gallery-groupby-btn"
-                      onClick={() => onMagazinePackingChange(mode)}
-                    >
-                      <Icon size={12} strokeWidth={2} aria-hidden="true" />
-                      {getString(labelKey)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-            {showLayout && layout === "annotations" ? (
-              <div className="syllabus-gallery-toolbar-cluster">
-                <div className="syllabus-gallery-toolbar-heading">
-                  <span className="syllabus-gallery-groupby-label">
-                    {getString("annotations-quote-order-menu")}
-                  </span>
-                </div>
-                <div
-                  role="radiogroup"
-                  aria-label={getString("annotations-quote-order-menu")}
-                  className="syllabus-gallery-groupby"
-                >
-                  {QUOTE_ORDER_OPTIONS.map(
-                    ({ mode, labelKey, titleKey, Icon }) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        role="radio"
-                        aria-checked={quoteOrder === mode}
-                        title={getString(titleKey)}
-                        className="syllabus-gallery-groupby-btn"
-                        onClick={() => setQuoteOrder(mode)}
-                      >
-                        <Icon size={12} strokeWidth={2} aria-hidden="true" />
-                        {getString(labelKey)}
-                      </button>
-                    ),
-                  )}
-                </div>
-                <label className="flex items-center gap-2.5 cursor-pointer text-sm">
-                  <input
-                    type="checkbox"
-                    checked={showItemsWithoutAnnotations}
-                    onChange={(e) =>
-                      setShowItemsWithoutAnnotations(e.currentTarget.checked)
-                    }
-                    className="w-4 h-4 cursor-pointer accent-accent-green! shrink-0"
+            {showLayout || showCheckboxes ? (
+              <div className="syllabus-gallery-toolbar-section">
+                {showLayout ? (
+                  <GallerySegmentedControl
+                    label={getString("gallery-menu-view")}
+                    ariaLabel={getString("gallery-menu-view")}
+                    value={layout}
+                    onChange={(mode) => onLayoutChange?.(mode)}
+                    options={LAYOUT_OPTIONS.map(
+                      ({ mode, labelKey, titleKey, Icon }) => ({
+                        mode,
+                        label: getString(labelKey),
+                        title: getString(titleKey),
+                        Icon,
+                      }),
+                    )}
+                    globalSetting={layoutGlobal}
                   />
-                  <span className="font-medium leading-snug">
-                    {getString("gallery-annotations-show-empty")}
-                  </span>
-                </label>
-                {colorFilterScope ? (
-                  <AnnotationColorFilter
-                    colors={annotationColors}
-                    scope={colorFilterScope}
+                ) : null}
+                {showCheckboxes ? (
+                  <GalleryPrefCheckbox
+                    label={getString("page-view-checkboxes")}
+                    title={
+                      readerMode
+                        ? getString("page-reader-disable")
+                        : getString("page-reader-enable")
+                    }
+                    checked={readerMode}
+                    onChange={setReaderMode}
+                    globalSetting={readerModeGlobal}
                   />
                 ) : null}
               </div>
             ) : null}
-            {showDensity ? (
-              <div className="syllabus-gallery-toolbar-cluster">
-                <div className="syllabus-gallery-toolbar-heading">
-                  <span className="syllabus-gallery-groupby-label">
-                    {getString("settings-density")}
-                  </span>
-                </div>
-                <div
-                  role="radiogroup"
-                  aria-label={getString("settings-density")}
-                  className="syllabus-gallery-groupby"
-                >
-                  {ITEM_DENSITIES.map((mode) => {
-                    const Icon = DENSITY_ICONS[mode];
-                    return (
-                      <button
-                        key={mode}
-                        type="button"
-                        role="radio"
-                        aria-checked={density === mode}
-                        title={getString(DENSITY_TITLE_IDS[mode])}
-                        className="syllabus-gallery-groupby-btn"
-                        onClick={() => setDensity(mode)}
-                      >
-                        <Icon size={12} strokeWidth={2} aria-hidden="true" />
-                        {densityLabel(mode)}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
-            {showCheckboxes ? (
-              <div className="syllabus-gallery-toolbar-cluster">
-                <label
-                  className="flex items-center gap-2.5 cursor-pointer text-sm"
-                  title={
-                    readerMode
-                      ? getString("page-reader-disable")
-                      : getString("page-reader-enable")
-                  }
-                >
-                  <input
-                    type="checkbox"
-                    checked={readerMode}
-                    onChange={(e) => setReaderMode(e.currentTarget.checked)}
-                    className="w-4 h-4 cursor-pointer accent-accent-green! shrink-0"
+            {showDensity ||
+            (showLayout && layout === "magazine" && onMagazinePackingChange) ||
+            (showLayout && layout === "annotations") ? (
+              <div className="syllabus-gallery-toolbar-section">
+                {showDensity ? (
+                  <GallerySegmentedControl
+                    label={getString("settings-density")}
+                    ariaLabel={getString("settings-density")}
+                    value={density}
+                    onChange={setDensity}
+                    options={ITEM_DENSITIES.map((mode) => ({
+                      mode,
+                      label: densityLabel(mode),
+                      title: getString(DENSITY_TITLE_IDS[mode]),
+                      Icon: DENSITY_ICONS[mode],
+                    }))}
+                    globalSetting={densityGlobal}
                   />
-                  <span className="font-medium leading-snug">
-                    {getString("page-view-checkboxes")}
-                  </span>
-                </label>
+                ) : null}
+                {showLayout &&
+                layout === "magazine" &&
+                onMagazinePackingChange ? (
+                  <GallerySegmentedControl
+                    label={getString("gallery-menu-packing")}
+                    ariaLabel={getString("gallery-menu-packing")}
+                    value={magazinePacking}
+                    onChange={onMagazinePackingChange}
+                    options={PACKING_OPTIONS.map(
+                      ({ mode, labelKey, titleKey, Icon }) => ({
+                        mode,
+                        label: getString(labelKey),
+                        title: getString(titleKey),
+                        Icon,
+                      }),
+                    )}
+                    globalSetting={magazinePackingGlobal}
+                  />
+                ) : null}
+                {showLayout && layout === "annotations" ? (
+                  <>
+                    <GallerySegmentedControl
+                      label={getString("annotations-quote-order-menu")}
+                      ariaLabel={getString("annotations-quote-order-menu")}
+                      value={quoteOrder}
+                      onChange={setQuoteOrder}
+                      options={QUOTE_ORDER_OPTIONS.map(
+                        ({ mode, labelKey, titleKey, Icon }) => ({
+                          mode,
+                          label: getString(labelKey),
+                          title: getString(titleKey),
+                          Icon,
+                        }),
+                      )}
+                      globalSetting={quoteOrderGlobal}
+                    />
+                    {colorFilterScope ? (
+                      <AnnotationColorFilter
+                        colors={annotationColors}
+                        scope={colorFilterScope}
+                      />
+                    ) : null}
+                    <GalleryPrefCheckbox
+                      label={getString("gallery-annotations-show-empty")}
+                      checked={showItemsWithoutAnnotations}
+                      onChange={setShowItemsWithoutAnnotations}
+                      globalSetting={showEmptyGlobal}
+                    />
+                  </>
+                ) : null}
               </div>
             ) : null}
             {showScheduleCollection ? (
-              <div className="syllabus-gallery-toolbar-cluster">
-                <div className="syllabus-gallery-toolbar-heading">
-                  <span className="syllabus-gallery-groupby-label">
-                    {getString("schedule-settings-library")}
-                  </span>
+              <div className="syllabus-gallery-toolbar-section">
+                <div className="syllabus-gallery-toolbar-cluster">
+                  <div className="syllabus-gallery-toolbar-heading">
+                    <span className="syllabus-gallery-groupby-label">
+                      {getString("schedule-settings-library")}
+                    </span>
+                  </div>
+                  <p className="text-secondary text-xs leading-snug m-0 max-w-72">
+                    {getString("schedule-settings-desc")}
+                  </p>
+                  <label
+                    className="flex items-start gap-2.5 cursor-pointer text-sm"
+                    data-tour="reading-schedule-generate-collection"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={generateCollection}
+                      onChange={(e) =>
+                        handleGenerateCollectionChange(e.currentTarget.checked)
+                      }
+                      className="w-4 h-4 mt-0.5 cursor-pointer accent-accent-green! shrink-0"
+                    />
+                    <span className="font-medium leading-snug">
+                      {getString("schedule-settings-checkbox")}
+                    </span>
+                  </label>
                 </div>
-                <p className="text-secondary text-xs leading-snug m-0 max-w-72">
-                  {getString("schedule-settings-desc")}
-                </p>
-                <label
-                  className="flex items-start gap-2.5 cursor-pointer text-sm"
-                  data-tour="reading-schedule-generate-collection"
-                >
-                  <input
-                    type="checkbox"
-                    checked={generateCollection}
-                    onChange={(e) =>
-                      handleGenerateCollectionChange(e.currentTarget.checked)
-                    }
-                    className="w-4 h-4 mt-0.5 cursor-pointer accent-accent-green! shrink-0"
-                  />
-                  <span className="font-medium leading-snug">
-                    {getString("schedule-settings-checkbox")}
-                  </span>
-                </label>
               </div>
             ) : null}
           </div>

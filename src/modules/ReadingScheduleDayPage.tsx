@@ -9,7 +9,7 @@ import {
   selectCollectionInLibrary,
 } from "./ClassReadingBlock";
 import {
-  useZoteroItemDensity,
+  useItemDensity,
   type ItemDensity,
 } from "./react-zotero-sync/itemDensity";
 import { useSyllabi } from "./react-zotero-sync/useSyllabi";
@@ -27,8 +27,9 @@ import {
 import { getString, getUiDir } from "../utils/locale";
 import { useGalleryLayout } from "./galleryLayout";
 import { GalleryViewportProvider } from "./galleryVisibility";
+import { READING_SCHEDULE_VIEW_KEY } from "../utils/viewScope";
 
-const READING_SCHEDULE_LAYOUT_KEY = "reading-schedule";
+const READING_SCHEDULE_LAYOUT_KEY = READING_SCHEDULE_VIEW_KEY;
 
 function pickInitialDateKey(
   availableKeys: string[],
@@ -56,8 +57,8 @@ export function ReadingScheduleDayPage({
 }: {
   collectionId: number;
 }) {
-  const [density] = useZoteroItemDensity();
-  const [layout] = useGalleryLayout(READING_SCHEDULE_LAYOUT_KEY, "card");
+  const [density] = useItemDensity(READING_SCHEDULE_LAYOUT_KEY);
+  const [layout] = useGalleryLayout(READING_SCHEDULE_LAYOUT_KEY);
   const pageRef = useRef<HTMLDivElement>(null);
   const allSyllabi = useSyllabi();
   const context = useMemo(

@@ -24,8 +24,11 @@ declare namespace _ZoteroTypes {
       "latestTourVersion": number;
       "latestGalleryTourVersion": number;
       "defaultGalleryLayout": string;
+      "defaultSyllabusLayout": string;
       "defaultGallerySort": string;
       "defaultGalleryGroupBy": string;
+      "defaultFurtherReadingSort": string;
+      "defaultAnnotationColorFilter": string;
       "myAnnotationsLayout": string;
       "myAnnotationsSort": string;
       "myAnnotationsGroupBy": string;

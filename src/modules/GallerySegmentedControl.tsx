@@ -5,6 +5,67 @@ import { twMerge } from "tailwind-merge";
 import { getString } from "../utils/locale";
 import type { GalleryGlobalSetting } from "./galleryLayout";
 
+export function GallerySaveGlobalButton<T>({
+  globalSetting,
+}: {
+  globalSetting: GalleryGlobalSetting<T>;
+}) {
+  return (
+    <button
+      type="button"
+      className={twMerge(
+        "syllabus-gallery-save-global",
+        globalSetting.isCustom && "is-active",
+      )}
+      title={
+        globalSetting.isCustom
+          ? getString("gallery-save-globally-active-title")
+          : getString("gallery-save-globally-title")
+      }
+      aria-label={getString("gallery-save-globally")}
+      aria-pressed={globalSetting.isCustom}
+      onClick={(event) => {
+        event.stopPropagation();
+        globalSetting.saveGlobally();
+      }}
+    >
+      <Globe size={14} strokeWidth={2} aria-hidden="true" />
+    </button>
+  );
+}
+
+export function GalleryPrefCheckbox({
+  label,
+  title,
+  checked,
+  onChange,
+  globalSetting,
+}: {
+  label: string;
+  title?: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  globalSetting?: GalleryGlobalSetting<boolean>;
+}) {
+  return (
+    <div className="syllabus-gallery-toolbar-cluster">
+      <div className="syllabus-gallery-toolbar-heading">
+        <label className="syllabus-gallery-toolbar-checkbox" title={title}>
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={(event) => onChange(event.currentTarget.checked)}
+          />
+          <span className="syllabus-gallery-groupby-label">{label}</span>
+        </label>
+        {globalSetting ? (
+          <GallerySaveGlobalButton globalSetting={globalSetting} />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export type GallerySegmentOption<T extends string> = {
   mode: T;
   label: string;
@@ -34,26 +95,7 @@ export function GallerySegmentedControl<T extends string>({
       <div className="syllabus-gallery-toolbar-heading">
         <span className="syllabus-gallery-groupby-label">{label}</span>
         {globalSetting ? (
-          <button
-            type="button"
-            className={twMerge(
-              "syllabus-gallery-save-global",
-              globalSetting.isCustom && "is-active",
-            )}
-            title={
-              globalSetting.isCustom
-                ? getString("gallery-save-globally-active-title")
-                : getString("gallery-save-globally-title")
-            }
-            aria-label={getString("gallery-save-globally")}
-            aria-pressed={globalSetting.isCustom}
-            onClick={(event) => {
-              event.stopPropagation();
-              globalSetting.saveGlobally();
-            }}
-          >
-            <Globe size={14} strokeWidth={2} aria-hidden="true" />
-          </button>
+          <GallerySaveGlobalButton globalSetting={globalSetting} />
         ) : null}
       </div>
       <div

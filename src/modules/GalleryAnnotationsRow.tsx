@@ -19,7 +19,10 @@ import {
 import type { GallerySortBy } from "./gallerySort";
 import { GalleryTile } from "./GalleryPage";
 import type { MagazineTileClick } from "./MagazineTile";
-import { useAnnotationColorFilter } from "./myAnnotationsPrefs";
+import {
+  useAnnotationColorFilter,
+  useViewQuoteOrder,
+} from "./myAnnotationsPrefs";
 import type { ReadingTileChrome } from "./readingAssignmentChrome";
 
 type AnnotationPartition = {
@@ -217,6 +220,7 @@ export function GalleryAnnotationsSection({
 
   const [partition, setPartition] = useState<AnnotationPartition | null>(null);
   const [colorFilter] = useAnnotationColorFilter(colorFilterScope);
+  const [quoteOrder] = useViewQuoteOrder(colorFilterScope);
 
   useEffect(() => {
     let cancelled = false;
@@ -308,6 +312,7 @@ export function GalleryAnnotationsSection({
                 collectionId={collectionId}
                 showGalleryNote={showGalleryNote}
                 chrome={chromeByItemId?.get(item.id)}
+                quoteOrder={quoteOrder}
                 onClick={onClick}
                 onDoubleClick={onDoubleClick}
                 onContextMenu={onContextMenu}

@@ -38,6 +38,7 @@ const PREF_KEYS = [
   `${config.prefsPrefix}.galleryGroupBy`,
   `${config.prefsPrefix}.galleryTypeSize`,
   `${config.prefsPrefix}.defaultGalleryLayout`,
+  `${config.prefsPrefix}.defaultSyllabusLayout`,
   `${config.prefsPrefix}.defaultGallerySort`,
   `${config.prefsPrefix}.defaultGalleryGroupBy`,
   `${config.prefsPrefix}.magazineTypeSize`,

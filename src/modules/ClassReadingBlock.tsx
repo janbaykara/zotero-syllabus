@@ -5,9 +5,10 @@ import { twMerge } from "tailwind-merge";
 import { ChevronLeft } from "lucide-preact";
 import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
 import {
-  useZoteroItemDensity,
+  useItemDensity,
   type ItemDensity,
 } from "./react-zotero-sync/itemDensity";
+import { syllabusViewKey } from "../utils/viewScope";
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
@@ -402,7 +403,7 @@ export function ClassSubcollectionPage({
   classCollectionId: number;
   classNumber: number | null;
 }) {
-  const [density] = useZoteroItemDensity();
+  const [density] = useItemDensity(syllabusViewKey(parentCollectionId));
   const [parentTitle] = useZoteroCollectionTitle(parentCollectionId);
   const [syllabusMetadata] = useZoteroSyllabusMetadata(parentCollectionId);
   const syllabusItems = useZoteroCollectionItems(parentCollectionId);
