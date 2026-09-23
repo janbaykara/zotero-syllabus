@@ -59,6 +59,7 @@ managed-folder-banner-class =
 managed-folder-banner-schedule =
     Non aggiungere né rimuovere elementi qui. Questa cartella del calendario delle letture è tenuta in sincrono con i programmi; le modifiche manuali vengono sovrascritte.
 menuHelp-openUserGuide = Apri la guida utente di Zotero Syllabus
+menuHelp-openDocumentation = Documentazione di Zotero Syllabus
 userGuide-start-title = Benvenuto in Zotero Syllabus
 userGuide-start-desc =
     Trasforma qualsiasi raccolta Zotero in una lista di letture del corso: organizza per lezione, imposta le priorità e tieni traccia di cosa leggere dopo.
@@ -580,6 +581,7 @@ reading-time-hours-and-minutes =
 explorer-configure = Configure
 explorer-configure-display = Display on Home
 explorer-configure-reorder = Reorder
+explorer-configure-add-collection-hint = Right-click any collection to add it to Home.
 explorer-library-count =
     { $count ->
         [one] { $count } item

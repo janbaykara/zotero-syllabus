@@ -57,6 +57,7 @@ managed-folder-banner-class =
 managed-folder-banner-schedule =
     请勿在此添加或移除条目。此阅读日程文件夹会与各教学大纲同步，手动更改会被覆盖。
 menuHelp-openUserGuide = 打开 Zotero Syllabus 用户指南
+menuHelp-openDocumentation = Zotero Syllabus 文档
 userGuide-start-title = 欢迎使用 Zotero Syllabus
 userGuide-start-desc =
     将任意 Zotero 分类变成课程阅读清单——按课堂组织、设置优先级，并跟踪接下来要读什么。
@@ -578,6 +579,7 @@ reading-time-hours-and-minutes =
 explorer-configure = 配置
 explorer-configure-display = 在主页显示
 explorer-configure-reorder = 重新排序
+explorer-configure-add-collection-hint = 右键点击任意分类即可添加到主页。
 explorer-library-count = { $count } 个条目
 explorer-nav-aria = 栏目
 explorer-customize = 自定义

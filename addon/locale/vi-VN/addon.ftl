@@ -59,6 +59,7 @@ managed-folder-banner-class =
 managed-folder-banner-schedule =
     Đừng thêm hoặc gỡ mục tại đây. Thư mục lịch đọc này được đồng bộ với các đề cương của bạn; chỉnh sửa thủ công sẽ bị ghi đè.
 menuHelp-openUserGuide = Mở hướng dẫn sử dụng Zotero Syllabus
+menuHelp-openDocumentation = Tài liệu Zotero Syllabus
 userGuide-start-title = Chào mừng đến với Zotero Syllabus
 userGuide-start-desc =
     Biến bất kỳ bộ sưu tập Zotero nào thành danh sách đọc học phần — sắp xếp theo buổi học, đặt mức ưu tiên và theo dõi bài cần đọc tiếp.
@@ -580,6 +581,7 @@ reading-time-hours-and-minutes =
 explorer-configure = Configure
 explorer-configure-display = Display on Home
 explorer-configure-reorder = Reorder
+explorer-configure-add-collection-hint = Right-click any collection to add it to Home.
 explorer-library-count =
     { $count ->
         [one] { $count } item

@@ -17,3 +17,5 @@ no-readings-scheduled-description = Tambahkan tanggal bacaan ke kelas agar tampi
 
 menuHelp-openUserGuide =
     .label = Buka Panduan Pengguna Zotero Syllabus
+menuHelp-openDocumentation =
+    .label = Dokumentasi Zotero Syllabus

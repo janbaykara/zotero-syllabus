@@ -17,3 +17,5 @@ no-readings-scheduled-description = 수업에 읽기 날짜를 추가하면 여�
 
 menuHelp-openUserGuide =
     .label = Zotero Syllabus 사용자 가이드 열기
+menuHelp-openDocumentation =
+    .label = Zotero Syllabus 문서

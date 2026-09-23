@@ -17,3 +17,5 @@ no-readings-scheduled-description = Thêm ngày đọc vào các buổi học đ
 
 menuHelp-openUserGuide =
     .label = Mở hướng dẫn sử dụng Zotero Syllabus
+menuHelp-openDocumentation =
+    .label = Tài liệu Zotero Syllabus

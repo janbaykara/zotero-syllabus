@@ -17,3 +17,5 @@ no-readings-scheduled-description = أضف تواريخ قراءة إلى الم
 
 menuHelp-openUserGuide =
     .label = فتح دليل مستخدم Zotero Syllabus
+menuHelp-openDocumentation =
+    .label = وثائق Zotero Syllabus

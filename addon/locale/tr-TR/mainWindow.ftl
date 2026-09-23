@@ -17,3 +17,5 @@ no-readings-scheduled-description = Burada görmek için derslere okuma tarihler
 
 menuHelp-openUserGuide =
     .label = Zotero Syllabus Kullanıcı Kılavuzunu Aç
+menuHelp-openDocumentation =
+    .label = Zotero Syllabus Belgeleri

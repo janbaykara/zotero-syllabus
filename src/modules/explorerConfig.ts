@@ -594,6 +594,16 @@ export function isExplorerShelfEnabled(shelf: ExplorerShelf): boolean {
   return shelf.enabled !== false;
 }
 
+/** Hide a shelf on Home. The row stays in the catalog so it can be turned back on. */
+export function withRemovedExplorerShelf(
+  shelves: ExplorerShelf[],
+  id: string,
+): ExplorerShelf[] {
+  return shelves.map((shelf) =>
+    shelf.id === id ? { ...shelf, enabled: false } : shelf,
+  );
+}
+
 function matchesCollectionShelf(
   shelf: ExplorerShelf,
   libraryID: number,

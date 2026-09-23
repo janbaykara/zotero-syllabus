@@ -35,6 +35,10 @@ const PLAYGROUND_COLLECTION_NAME = "Syllabus Tour";
 const TOUR_EVENT_OPEN_SETTINGS = "syllabus-tour-open-settings";
 const TOUR_EVENT_CLOSE_SETTINGS = "syllabus-tour-close-settings";
 
+/** Default-branch README on the public repo — stays current as features land. */
+export const DOCUMENTATION_URL =
+  "https://github.com/janbaykara/zotero-syllabus#readme";
+
 /** Last MenuManager ID returned by registerMenu (CSS-escaped pluginID-menuID). */
 let registeredHelpMenuID: string | null = null;
 
@@ -455,12 +459,16 @@ async function ensureTourClassReadingDate(
 }
 
 function registerUserGuideHelpMenu() {
-  const onCommand = () => {
+  const openTour = () => {
     const win = Zotero.getMainWindow();
     if (win) {
       void showUserGuide(win, true);
     }
   };
+  const openDocumentation = () => {
+    Zotero.launchURL(DOCUMENTATION_URL);
+  };
+  const helpIcon = `chrome://${config.addonRef}/content/icons/favicon.png`;
 
   if (typeof Zotero.MenuManager?.registerMenu === "function") {
     const menuID = `${config.addonRef}-menuHelp`;
@@ -480,10 +488,23 @@ function registerUserGuideHelpMenu() {
         menus: [
           {
             menuType: "menuitem",
-            l10nID: `${config.addonRef}-menuHelp-openUserGuide`,
-            icon: `chrome://${config.addonRef}/content/icons/favicon.png`,
+            l10nID: `${config.addonRef}-menuHelp-openDocumentation`,
+            icon: helpIcon,
             onShowing: (_event, context) => {
-              // Ensure a label if document.l10n missed the plugin FTL
+              if (!context.menuElem?.getAttribute("label")) {
+                context.menuElem?.setAttribute(
+                  "label",
+                  getString("menuHelp-openDocumentation"),
+                );
+              }
+            },
+            onCommand: openDocumentation,
+          },
+          {
+            menuType: "menuitem",
+            l10nID: `${config.addonRef}-menuHelp-openUserGuide`,
+            icon: helpIcon,
+            onShowing: (_event, context) => {
               if (!context.menuElem?.getAttribute("label")) {
                 context.menuElem?.setAttribute(
                   "label",
@@ -491,19 +512,26 @@ function registerUserGuideHelpMenu() {
                 );
               }
             },
-            onCommand,
+            onCommand: openTour,
           },
         ],
       }) || null;
     return;
   }
 
+  ztoolkit.Menu.unregister(`${config.addonRef}-menuHelp-openDocumentation`);
   ztoolkit.Menu.unregister(`${config.addonRef}-menuHelp-openUserGuide`);
+  ztoolkit.Menu.register("menuHelp", {
+    tag: "menuitem",
+    id: `${config.addonRef}-menuHelp-openDocumentation`,
+    label: getString("menuHelp-openDocumentation"),
+    commandListener: openDocumentation,
+  });
   ztoolkit.Menu.register("menuHelp", {
     tag: "menuitem",
     id: `${config.addonRef}-menuHelp-openUserGuide`,
     label: getString("menuHelp-openUserGuide"),
-    commandListener: onCommand,
+    commandListener: openTour,
   });
 }
 

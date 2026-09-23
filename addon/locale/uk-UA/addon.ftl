@@ -59,6 +59,7 @@ managed-folder-banner-class =
 managed-folder-banner-schedule =
     Не додавайте й не вилучайте записи тут. Ця тека графіка читання синхронізується з вашими силабусами; ручні зміни буде перезаписано.
 menuHelp-openUserGuide = Відкрити посібник користувача Zotero Syllabus
+menuHelp-openDocumentation = Документація Zotero Syllabus
 userGuide-start-title = Ласкаво просимо до Zotero Syllabus
 userGuide-start-desc =
     Перетворіть будь-яку колекцію Zotero на список літератури курсу — організуйте за заняттями, задайте пріоритети й відстежуйте, що читати далі.
@@ -586,6 +587,7 @@ reading-time-hours-and-minutes =
 explorer-configure = Configure
 explorer-configure-display = Display on Home
 explorer-configure-reorder = Reorder
+explorer-configure-add-collection-hint = Right-click any collection to add it to Home.
 explorer-library-count =
     { $count ->
         [one] { $count } item

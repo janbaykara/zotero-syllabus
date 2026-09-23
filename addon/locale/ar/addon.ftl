@@ -59,6 +59,7 @@ managed-folder-banner-class =
 managed-folder-banner-schedule =
     لا تُضف عناصر هنا ولا تُزلها. يُزامن مجلد جدول القراءات هذا مع مناهجك؛ وتُستبدل التعديلات اليدوية.
 menuHelp-openUserGuide = فتح دليل مستخدم Zotero Syllabus
+menuHelp-openDocumentation = وثائق Zotero Syllabus
 userGuide-start-title = مرحبًا بك في Zotero Syllabus
 userGuide-start-desc =
     حوّل أي مجموعة في Zotero إلى قائمة قراءات للمقرر — نظّمها حسب المحاضرة، وحدّد الأولويات، وتابع ما ينبغي قراءته تاليًا.
@@ -580,6 +581,7 @@ reading-time-hours-and-minutes =
 explorer-configure = Configure
 explorer-configure-display = Display on Home
 explorer-configure-reorder = Reorder
+explorer-configure-add-collection-hint = Right-click any collection to add it to Home.
 explorer-library-count =
     { $count ->
         [one] { $count } item

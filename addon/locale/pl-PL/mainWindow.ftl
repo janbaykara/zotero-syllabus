@@ -17,3 +17,5 @@ no-readings-scheduled-description = Dodaj terminy lektur do zajęć, aby zobaczy
 
 menuHelp-openUserGuide =
     .label = Otwórz przewodnik Zotero Syllabus
+menuHelp-openDocumentation =
+    .label = Dokumentacja Zotero Syllabus

@@ -17,3 +17,5 @@ no-readings-scheduled-description = 为课程添加阅读日期以在此处查�
 
 menuHelp-openUserGuide =
     .label = 打开 Zotero Syllabus 用户指南
+menuHelp-openDocumentation =
+    .label = Zotero Syllabus 文档

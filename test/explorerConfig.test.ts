@@ -12,6 +12,7 @@ import {
   isExplorerShelfEnabled,
   layoutsForExplorerShelf,
   mergeExplorerCatalog,
+  withRemovedExplorerShelf,
   withToggledCollectionShelf,
 } from "../src/modules/explorerConfig";
 
@@ -362,6 +363,35 @@ describe("explorer shelves", function () {
         "classes",
       );
     }
+  });
+
+  it("removes any shelf from Home without dropping it from the catalog", function () {
+    const base = defaultExplorerShelves();
+    const pinned = base[0];
+    assert.ok(pinned);
+    const removed = withRemovedExplorerShelf(base, pinned.id);
+    assert.isFalse(isExplorerShelfEnabled(removed[0]));
+    assert.deepEqual(removed.slice(1), base.slice(1));
+    assert.equal(removed.length, base.length);
+
+    const unchanged = withRemovedExplorerShelf(base, "missing");
+    assert.deepEqual(unchanged, base);
+
+    const withCollection = withToggledCollectionShelf(base, 1, "NESTED");
+    const collection = withCollection.find(
+      (row) => row.type === "collection" && row.collectionKey === "NESTED",
+    );
+    assert.ok(collection);
+    const hiddenCollection = withRemovedExplorerShelf(
+      withCollection,
+      collection!.id,
+    );
+    assert.isFalse(isCollectionShelfOnHome(hiddenCollection, 1, "NESTED"));
+    assert.ok(
+      hiddenCollection.some(
+        (row) => row.type === "collection" && row.collectionKey === "NESTED",
+      ),
+    );
   });
 
   it("toggles a collection onto and off Home", function () {

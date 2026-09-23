@@ -71,6 +71,10 @@ _Thank you for contributing in solidarity._
 
 ## A tour of the features
 
+In Zotero, open this page anytime from **Help → Zotero Syllabus Documentation**. For a short walkthrough in the app, use **Help → Open Zotero Syllabus User Guide**.
+
+Turn individual views on or off in **Preferences → Zotero Syllabus → Views** (Syllabus, Gallery, Home, Reading Schedule, Annotation Feed).
+
 ### Add assignments to classes
 
 Items are grouped by class number, and can be given a priority. Assign classes a name and description. Customize the terminology (e.g., "week", "class", "session", "section") and define custom priority levels with your own names and colors.
@@ -96,7 +100,7 @@ If you merge duplicate items in Zotero, the surviving item keeps its class assig
 
 ### Course documents
 
-Pin important course information to the top of the syllabus.
+Give items the **Course Information** priority (or your own top priority) so handouts and links stay at the top of the syllabus. This is separate from [pinning](#pinned) an item to Home or Reading Schedule.
 
 ![Syllabus module interface showing class organization](doc/images/module.png)
 
@@ -138,7 +142,7 @@ Right-click an item to re-assign class number or priority.
 
 ![Reading schedule](doc/images/reading.png)
 
-Pin individual items or whole syllabi to a **Pinned** section on Reading Schedule and the library Homepage (next incomplete reading from each pinned syllabus). With the Reading Schedule collection enabled, pinned items also appear in a `Pinned` folder.
+The top of this view is a **Pinned** section — see [Pinned](#pinned).
 
 #### And keep track of what you've read already
 
@@ -146,11 +150,123 @@ Pin individual items or whole syllabi to a **Pinned** section on Reading Schedul
 
 ### Gallery view
 
-Browse a collection as a cover grid. Switch with the **Table / Gallery / Syllabus** control in the items toolbar (managed collections use **Checklist** instead of Syllabus).
+Browse a collection as covers, cards, a magazine spread, or an annotation stream. Switch with the **Table / Gallery / Syllabus** control in the items toolbar (managed collections use **Checklist** instead of Syllabus).
 
-Covers come from attached images, EPUB/PDF art, ISBN lookups, or type-specific placeholders. Reading progress shows under each item when available. Use the ⋯ menu to change layout, sort, and grouping (type, tags, subcollections, or classes on a syllabus). If Zotero’s **Show Items from Subcollections** is on, Gallery includes those items too.
+Covers come from attached images, EPUB/PDF art, ISBN lookups, or type-specific placeholders. Reading progress shows under each item when available. If Zotero’s **Show Items from Subcollections** is on, Gallery includes those items too. You can attach a [Gallery note](#gallery-notes) to an item in this collection.
+
+Open **View options** from the `(view / sort / group)` control in the header. Choices are stored per collection. The globe button (**Save as default**) copies the current choice to every collection that has not set its own.
+
+When you group items, a pill strip under the title jumps to each section.
 
 ![Gallery view with book covers and reading progress](doc/images/gallery.png)
+
+#### View modes
+
+- **Cover** — artwork in a grid. Best for scanning books, papers, and web pages at a glance.
+- **Card** — the same syllabus item cards, in a narrower reading column. **Density** (Row / Standard / Expanded) is available in this mode.
+- **Magazine** — mixed-size tiles with titles, blurbs, and [Gallery notes](#gallery-notes). **Packing** chooses the spread:
+  - **Vertical** — covers with abstracts in a reading stack (narrow column).
+  - **Grid** — equal-size magazine tiles across the pane.
+  - **Packed** — mixed-size tiles, like a contents page.
+- **Annotations** — covers with every highlight and note on the item. **Quotes** orders those excerpts by location in the document or by date added. Check **Show items with no annotations** to keep unread items in the list.
+
+Click a cover or card to select it in Zotero; double-click opens the best attachment.
+
+#### Sort
+
+- **Auto** — collection order, or syllabus class order when you are on a syllabus.
+- **A–Z** — title.
+- **Date** — item date, newest first.
+- **Added** — date added, newest first.
+- **Last Read** — most recently opened first.
+
+#### Group by
+
+- **None** — one continuous list.
+- **Automatic** — Magazine only; builds shelves from classes, child collections, and frequent tags.
+- **Type** — books, journal articles, web pages, and so on.
+- **Creator**
+- **Tags**
+- **Collections** — child collections (when this folder has any).
+- **Classes** — syllabus collections only.
+
+### Gallery notes
+
+A Gallery note is a short, collection-specific caption on an item — a reminder, a why-this-matters line, or a quote you want next to the cover. It is not the same as a normal Zotero note, a syllabus [reading instruction](#add-reading-instructions-to-assignments), or a pin [intention](#intention-notes).
+
+The note belongs to **this collection**. The same item in another collection can have a different Gallery note, or none.
+
+#### Add or edit
+
+1. Select the collection (Table or Gallery).
+2. Right-click an item → **Add Gallery Note** (or **Edit Gallery Note** if one already exists).
+3. Write in Zotero’s note editor.
+
+You can also click a Gallery note already shown on a card, cover, or magazine tile to open it.
+
+#### How it looks
+
+- **Card** — under the title, like a reading instruction.
+- **Cover** — beside the cover.
+- **Magazine** — under the title (above any reading instruction or abstract). A longer note can also give that tile a larger slot in the spread.
+- **Annotations** — the same note still shows with the item.
+
+#### Remove
+
+Right-click the item → **Remove Gallery Note**. That deletes only the Gallery note for this collection, not your other notes on the item.
+
+### Home view
+
+At the library root, switch to **Home** for shelves of recent items, upcoming deadlines, and more.
+
+Default shelves include **Pinned**, **Upcoming reading deadlines**, **Watch now**, **Listen now**, **Recently read**, and **Recently added**.
+
+- Use **Configure** at the top of Home to show, hide, and reorder shelves.
+- Each shelf has its own **Configure** for layout (and sort / group on collection shelves). **Remove shelf** hides it; turn it back on from the Home Configure list.
+- Right-click any collection in the sidebar and choose **Add to Home** to show it as its own shelf (this is not the same as [pinning](#pinned)).
+- From the deadlines and annotations shelves you can jump to **Reading Schedule** or **Annotation Feed**.
+
+### Pinned
+
+Keep a short list of items and collections on **Home** (the Pinned shelf) and at the top of **Reading Schedule**. Use it for “read this next,” a course you are in the middle of, or anything you do not want to hunt for.
+
+This is not the same as **Add to Home** (a collection becomes its own shelf) or the **Course Information** priority (handouts stay at the top of a syllabus).
+
+#### Pin an item
+
+- Right-click one or more items → **Add to Pinned**.
+- Or open an item and use **Add to Pinned** in the item pane.
+
+#### Pin a collection
+
+- Right-click a collection in the sidebar → **Pin collection**.
+- On a syllabus, use the pin button next to Print / Lock / Settings.
+
+Pin the syllabus collection itself, not a class folder or the auto-managed Reading Schedule folder.
+
+A **pinned syllabus** shows **Next up** — the first incomplete reading in class order — plus progress (`done` of `total`). Marking that reading done advances Next up. A **pinned ordinary collection** shows items from that folder.
+
+#### Intention notes
+
+On a pinned item, **Edit intention** opens a child note for why you pinned it (a reminder, a deadline, a quote). Unpinning an item that has an intention note asks whether to **Keep** the note, **Delete** it, or **Cancel**.
+
+#### Where pinned things appear
+
+- **Home → Pinned** (on by default; uncheck it in Home **Configure**, or use **Remove shelf** on the Pinned shelf).
+- **Reading Schedule → Pinned** at the top of the calendar.
+- If **Preferences → Zotero Syllabus → Generate a “Reading Schedule” collection** is on, pinned *items* are also mirrored in a `Pinned` folder under Reading Schedule. That folder is auto-managed — do not add or remove items there by hand.
+
+Drag to reorder on the Pinned shelf. The order is remembered per library.
+
+#### Unpin
+
+- Right-click → **Remove from Pinned** / **Unpin collection**.
+- Use the pin button again on the item pane or syllabus.
+- On Reading Schedule, the done checkbox on a pinned row asks to unpin.
+
+### Annotation Feed
+
+A chronological timeline of your highlights and notes across sources. Open it from Home, or from the toolbar when the view is enabled. Use the options menu to change order, layout, and how copied quotes are formatted.
 
 ### Import a reading list
 

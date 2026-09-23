@@ -977,14 +977,7 @@ export function GalleryPage({
             isZotero8OrLater() ? "md:pt-8 pt-6" : "pt-8",
           )}
         >
-          <div
-            className={
-              layout === "annotations" ||
-              (layout === "magazine" && magazinePacking === "vertical")
-                ? "container-padded"
-                : "px-6"
-            }
-          >
+          <div className="px-6">
             <GalleryPageHeader
               title={title || getString("untitled")}
               groupBy={groupBy}
@@ -1014,7 +1007,8 @@ export function GalleryPage({
           <div
             className={twMerge(
               "pt-4",
-              layout === "annotations" ||
+              layout === "card" ||
+                layout === "annotations" ||
                 (layout === "magazine" && magazinePacking === "vertical")
                 ? "container-padded"
                 : "px-6",

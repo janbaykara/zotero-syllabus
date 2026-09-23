@@ -36,6 +36,7 @@ import {
   Shapes,
   Sparkles,
   Tags,
+  Trash2,
   User,
   Video,
 } from "lucide-preact";
@@ -108,6 +109,7 @@ import {
   mergeExplorerCatalog,
   savedSearchShelfKey,
   useExplorerShelves,
+  withRemovedExplorerShelf,
   type ExplorerShelf,
   type ExplorerShelfType,
 } from "./explorerConfig";
@@ -608,6 +610,9 @@ function ExplorerConfigureMenu({
               </li>
             ))}
           </ul>
+          <p className="syllabus-explorer-configure-hint">
+            {getString("explorer-configure-add-collection-hint")}
+          </p>
         </div>
       ) : null}
     </div>
@@ -617,15 +622,17 @@ function ExplorerConfigureMenu({
 function ExplorerShelfSettingsMenu({
   shelf,
   onChange,
+  onRemove,
 }: {
   shelf: ExplorerShelf;
   onChange: (shelf: ExplorerShelf) => void;
+  onRemove: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const popoverStyle = useExplorerPopover(open, setOpen, rootRef);
-  const titleId = `syllabus-explorer-shelf-settings-${shelf.id}`;
   const [density, setDensity] = useZoteroItemDensity();
+  const showLayout = shelfShowsLayout(shelf);
   const showDensity =
     shelf.type === "upcoming-deadlines" && shelf.layout === "card";
   const collection = collectionForShelf(shelf);
@@ -644,6 +651,7 @@ function ExplorerShelfSettingsMenu({
     ? explorerCollectionGroupByModes(shelf.layout, isSyllabus)
     : [];
   const sortModes = explorerCollectionSortByModes();
+  const hasSettings = showLayout || isCollection || showDensity;
 
   const patchCollection = (
     patch: Partial<{
@@ -688,48 +696,47 @@ function ExplorerShelfSettingsMenu({
         <div
           className="syllabus-explorer-configure-popover"
           role="dialog"
-          aria-labelledby={titleId}
+          aria-label={getString("explorer-configure")}
           style={popoverStyle}
         >
-          <div id={titleId} className="syllabus-explorer-configure-heading">
-            {getString("gallery-options-title")}
-          </div>
-          <div className="syllabus-explorer-shelf-setting">
-            <div className="syllabus-explorer-configure-heading">
-              {getString("gallery-menu-view")}
+          {showLayout ? (
+            <div className="syllabus-explorer-shelf-setting">
+              <div className="syllabus-explorer-configure-heading">
+                {getString("gallery-menu-view")}
+              </div>
+              <div
+                role="radiogroup"
+                aria-label={getString("gallery-menu-view")}
+                className="syllabus-explorer-layout-toggle"
+              >
+                {layoutsForExplorerShelf(shelf.type).map((mode) => {
+                  const Icon = LAYOUT_ICONS[mode];
+                  const selected = shelf.layout === mode;
+                  return (
+                    <button
+                      key={mode}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      title={getString(LAYOUT_TITLE_IDS[mode])}
+                      className={twMerge(
+                        "syllabus-explorer-layout-btn",
+                        selected && "is-selected",
+                      )}
+                      onClick={() =>
+                        isCollection
+                          ? patchCollection({ layout: mode })
+                          : onChange({ ...shelf, layout: mode })
+                      }
+                    >
+                      <Icon size={12} strokeWidth={2} aria-hidden="true" />
+                      {getString(LAYOUT_LABEL_IDS[mode])}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div
-              role="radiogroup"
-              aria-label={getString("gallery-menu-view")}
-              className="syllabus-explorer-layout-toggle"
-            >
-              {layoutsForExplorerShelf(shelf.type).map((mode) => {
-                const Icon = LAYOUT_ICONS[mode];
-                const selected = shelf.layout === mode;
-                return (
-                  <button
-                    key={mode}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    title={getString(LAYOUT_TITLE_IDS[mode])}
-                    className={twMerge(
-                      "syllabus-explorer-layout-btn",
-                      selected && "is-selected",
-                    )}
-                    onClick={() =>
-                      isCollection
-                        ? patchCollection({ layout: mode })
-                        : onChange({ ...shelf, layout: mode })
-                    }
-                  >
-                    <Icon size={12} strokeWidth={2} aria-hidden="true" />
-                    {getString(LAYOUT_LABEL_IDS[mode])}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          ) : null}
           {isCollection ? (
             <>
               <div className="syllabus-explorer-shelf-setting">
@@ -832,6 +839,20 @@ function ExplorerShelfSettingsMenu({
               </div>
             </div>
           ) : null}
+          <button
+            type="button"
+            className={twMerge(
+              "syllabus-save-format-option syllabus-explorer-remove-shelf",
+              hasSettings && "has-settings",
+            )}
+            onClick={() => {
+              setOpen(false);
+              onRemove();
+            }}
+          >
+            <Trash2 size={16} strokeWidth={2} aria-hidden="true" />
+            {getString("explorer-remove-shelf")}
+          </button>
         </div>
       ) : null}
     </div>
@@ -1665,9 +1686,9 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                         <div className="h-4" />
                       )}
                     </div>
-                    {shelf.type === "upcoming-deadlines" &&
-                    isOptionalFeatureEnabled("readingSchedule") ? (
-                      <div className="inline-flex items-center gap-2 shrink-0">
+                    <div className="inline-flex items-center gap-2 shrink-0">
+                      {shelf.type === "upcoming-deadlines" &&
+                      isOptionalFeatureEnabled("readingSchedule") ? (
                         <button
                           type="button"
                           className="syllabus-explorer-customize syllabus-explorer-shelf-goto"
@@ -1690,42 +1711,32 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                             />
                           )}
                         </button>
-                        <ExplorerShelfSettingsMenu
-                          shelf={shelf}
-                          onChange={(next) =>
-                            setShelves(
-                              shelves.map((row) =>
-                                row.id === next.id ? next : row,
-                              ),
-                            )
-                          }
-                        />
-                      </div>
-                    ) : shelf.type === "recent-annotations" &&
+                      ) : null}
+                      {shelf.type === "recent-annotations" &&
                       isOptionalFeatureEnabled("annotations") ? (
-                      <button
-                        type="button"
-                        className="syllabus-explorer-customize syllabus-explorer-shelf-goto"
-                        onClick={() => openMyAnnotationsTab(libraryID)}
-                      >
-                        <span>
-                          {getString("explorer-go-to-my-annotations")}
-                        </span>
-                        {getUiDir() === "rtl" ? (
-                          <ChevronLeft
-                            size={12}
-                            strokeWidth={2}
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          <ChevronRight
-                            size={12}
-                            strokeWidth={2}
-                            aria-hidden="true"
-                          />
-                        )}
-                      </button>
-                    ) : shelfShowsLayout(shelf) ? (
+                        <button
+                          type="button"
+                          className="syllabus-explorer-customize syllabus-explorer-shelf-goto"
+                          onClick={() => openMyAnnotationsTab(libraryID)}
+                        >
+                          <span>
+                            {getString("explorer-go-to-my-annotations")}
+                          </span>
+                          {getUiDir() === "rtl" ? (
+                            <ChevronLeft
+                              size={12}
+                              strokeWidth={2}
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <ChevronRight
+                              size={12}
+                              strokeWidth={2}
+                              aria-hidden="true"
+                            />
+                          )}
+                        </button>
+                      ) : null}
                       <ExplorerShelfSettingsMenu
                         shelf={shelf}
                         onChange={(next) =>
@@ -1735,8 +1746,13 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                             ),
                           )
                         }
+                        onRemove={() =>
+                          setShelves(
+                            withRemovedExplorerShelf(shelves, shelf.id),
+                          )
+                        }
                       />
-                    ) : null}
+                    </div>
                   </div>
                   {shelf.type === "upcoming-deadlines" ? (
                     <ExplorerDeadlineShelf

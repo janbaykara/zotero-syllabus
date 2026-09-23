@@ -122,11 +122,15 @@ The Reading Schedule UI has a **Pinned** section above the calendar. The library
 - **Next up from a pinned syllabus** — the collection’s Syllabus note also has tag `pinned`; the UI shows the first assignment in `classOrder` / `itemOrder` whose status is not `done`.
 - When **Generate Reading Schedule collection** is on, a child folder named `Pinned` under each library’s `Reading Schedule` root mirrors pinned **items** only (next-up is derived in the UI).
 
-Pin state is tags only (not syllabus JSON). See [`src/modules/pinned.ts`](../src/modules/pinned.ts). Syllabus pages expose pin/unpin next to Print / Lock / Settings.
+Pin state is tags only (not syllabus JSON). Shelf order is a per-library pref (`pinnedShelfOrder`). See [`src/modules/pinned.ts`](../src/modules/pinned.ts). Syllabus pages expose pin/unpin next to Print / Lock / Settings. End-user steps: [README — Pinned](../README.md#pinned).
+
+## Gallery page
+
+Per-collection layout / sort / group / magazine packing prefs, plus “Save as default” for the library. Modes: Card, Cover, Annotations, Magazine (vertical / grid / packed). End-user steps: [README — Gallery view](../README.md#gallery-view).
 
 ## Gallery notes
 
-Collection-scoped notes on regular items for Gallery / card views. Each note is a **child note** tagged `zotero-syllabus-gallery:{collectionKey}` (collection **key**, not numeric id). Edited via Zotero’s built-in note editor (`ZoteroPane.selectItem`). Shown in Row/card like a reading instruction, beside Cover tiles (span 2), and above Magazine blurbs (and boosts magazine role size from note length). See [`src/modules/galleryNote.ts`](../src/modules/galleryNote.ts).
+Collection-scoped notes on regular items for Gallery / card views. Each note is a **child note** tagged `zotero-syllabus-gallery:{collectionKey}` (collection **key**, not numeric id). Edited via Zotero’s built-in note editor (`ZoteroPane.selectItem`). Shown in Row/card like a reading instruction, beside Cover tiles (span 2), and above Magazine blurbs (and boosts magazine role size from note length). See [`src/modules/galleryNote.ts`](../src/modules/galleryNote.ts). End-user steps: [README — Gallery notes](../README.md#gallery-notes).
 
 ## Practical rules
 

@@ -59,6 +59,7 @@ managed-folder-banner-class =
 managed-folder-banner-schedule =
     여기에 항목을 추가하거나 제거하지 마세요. 이 읽기 일정 폴더는 강의계획서와 동기화되며, 수동 편집은 덮어쓰입니다.
 menuHelp-openUserGuide = Zotero Syllabus 사용자 가이드 열기
+menuHelp-openDocumentation = Zotero Syllabus 문서
 userGuide-start-title = Zotero Syllabus에 오신 것을 환영합니다
 userGuide-start-desc =
     어떤 Zotero 컬렉션이든 강의 읽기 목록으로 바꿀 수 있습니다. 수업별로 정리하고, 우선순위를 정하고, 다음에 읽을 것을 추적하세요.
@@ -580,6 +581,7 @@ reading-time-hours-and-minutes =
 explorer-configure = Configure
 explorer-configure-display = Display on Home
 explorer-configure-reorder = Reorder
+explorer-configure-add-collection-hint = Right-click any collection to add it to Home.
 explorer-library-count =
     { $count ->
         [one] { $count } item

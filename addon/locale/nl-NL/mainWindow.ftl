@@ -17,3 +17,5 @@ no-readings-scheduled-description = Voeg leesdata toe aan bijeenkomsten om ze hi
 
 menuHelp-openUserGuide =
     .label = Gebruikershandleiding van Zotero Syllabus openen
+menuHelp-openDocumentation =
+    .label = Zotero Syllabus-documentatie

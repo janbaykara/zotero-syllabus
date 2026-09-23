@@ -59,6 +59,7 @@ managed-folder-banner-class =
 managed-folder-banner-schedule =
     Jangan menambah atau menghapus item di sini. Folder jadwal bacaan ini diselaraskan dengan silabus Anda; suntingan manual akan ditimpa.
 menuHelp-openUserGuide = Buka Panduan Pengguna Zotero Syllabus
+menuHelp-openDocumentation = Dokumentasi Zotero Syllabus
 userGuide-start-title = Selamat datang di Zotero Syllabus
 userGuide-start-desc =
     Ubah koleksi Zotero mana pun menjadi daftar bacaan mata kuliah — susun menurut kelas, tetapkan prioritas, dan lacak bacaan berikutnya.
@@ -580,6 +581,7 @@ reading-time-hours-and-minutes =
 explorer-configure = Configure
 explorer-configure-display = Display on Home
 explorer-configure-reorder = Reorder
+explorer-configure-add-collection-hint = Right-click any collection to add it to Home.
 explorer-library-count =
     { $count ->
         [one] { $count } item

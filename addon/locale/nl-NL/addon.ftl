@@ -59,6 +59,7 @@ managed-folder-banner-class =
 managed-folder-banner-schedule =
     Voeg hier geen items toe en verwijder er geen. Deze leesschema-map wordt gesynchroniseerd met uw syllabi; handmatige wijzigingen worden overschreven.
 menuHelp-openUserGuide = Gebruikershandleiding van Zotero Syllabus openen
+menuHelp-openDocumentation = Zotero Syllabus-documentatie
 userGuide-start-title = Welkom bij Zotero Syllabus
 userGuide-start-desc =
     Maak van elke Zotero-collectie een leeslijst voor de cursus — orden per bijeenkomst, stel prioriteiten in en houd bij wat u hierna moet lezen.
@@ -580,6 +581,7 @@ reading-time-hours-and-minutes =
 explorer-configure = Configure
 explorer-configure-display = Display on Home
 explorer-configure-reorder = Reorder
+explorer-configure-add-collection-hint = Right-click any collection to add it to Home.
 explorer-library-count =
     { $count ->
         [one] { $count } item

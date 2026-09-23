@@ -59,6 +59,7 @@ managed-folder-banner-class =
 managed-folder-banner-schedule =
     N’ajoutez ni ne retirez de documents ici. Ce dossier du planning des lectures est synchronisé avec vos syllabus ; les modifications manuelles sont écrasées.
 menuHelp-openUserGuide = Ouvrir le guide d’utilisation de Zotero Syllabus
+menuHelp-openDocumentation = Documentation de Zotero Syllabus
 userGuide-start-title = Bienvenue dans Zotero Syllabus
 userGuide-start-desc =
     Transformez n’importe quelle collection Zotero en liste de lectures du cours — organisez par séance, définissez des priorités et suivez ce qu’il reste à lire.
@@ -580,6 +581,7 @@ reading-time-hours-and-minutes =
 explorer-configure = Configurer
 explorer-configure-display = Afficher sur l’accueil
 explorer-configure-reorder = Réorganiser
+explorer-configure-add-collection-hint = Cliquez avec le bouton droit sur n’importe quelle collection pour l’ajouter à l’accueil.
 explorer-library-count =
     { $count ->
         [one] { $count } document

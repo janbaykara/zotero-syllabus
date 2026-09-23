@@ -59,6 +59,7 @@ managed-folder-banner-class =
 managed-folder-banner-schedule =
     請勿在此新增或移除條目。此閱讀日程資料夾會與各教學大綱同步，手動變更會被覆寫。
 menuHelp-openUserGuide = 開啟 Zotero Syllabus 使用指南
+menuHelp-openDocumentation = Zotero Syllabus 文件
 userGuide-start-title = 歡迎使用 Zotero Syllabus
 userGuide-start-desc =
     將任意 Zotero 分類變成課程閱讀清單——按課堂組織、設定優先順序，並追蹤接下來要讀什麼。
@@ -580,6 +581,7 @@ reading-time-hours-and-minutes =
 explorer-configure = Configure
 explorer-configure-display = Display on Home
 explorer-configure-reorder = Reorder
+explorer-configure-add-collection-hint = Right-click any collection to add it to Home.
 explorer-library-count =
     { $count ->
         [one] { $count } item

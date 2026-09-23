@@ -17,3 +17,5 @@ no-readings-scheduled-description = Добавьте даты чтения к з
 
 menuHelp-openUserGuide =
     .label = Открыть руководство пользователя Zotero Syllabus
+menuHelp-openDocumentation =
+    .label = Документация Zotero Syllabus

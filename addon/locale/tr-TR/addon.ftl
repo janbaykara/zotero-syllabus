@@ -59,6 +59,7 @@ managed-folder-banner-class =
 managed-folder-banner-schedule =
     Buraya öğe eklemeyin veya çıkarmayın. Bu okuma takvimi klasörü izlencelerinizle eşzamanlı tutulur; elle yapılan düzenlemelerin üzerine yazılır.
 menuHelp-openUserGuide = Zotero Syllabus Kullanıcı Kılavuzunu Aç
+menuHelp-openDocumentation = Zotero Syllabus Belgeleri
 userGuide-start-title = Zotero Syllabus’a hoş geldiniz
 userGuide-start-desc =
     Herhangi bir Zotero koleksiyonunu ders okuma listesine dönüştürün — derslere göre düzenleyin, öncelikleri belirleyin ve sıradaki okumayı izleyin.
@@ -580,6 +581,7 @@ reading-time-hours-and-minutes =
 explorer-configure = Configure
 explorer-configure-display = Display on Home
 explorer-configure-reorder = Reorder
+explorer-configure-add-collection-hint = Right-click any collection to add it to Home.
 explorer-library-count =
     { $count ->
         [one] { $count } item

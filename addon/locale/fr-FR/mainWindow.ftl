@@ -17,3 +17,5 @@ no-readings-scheduled-description = Ajoutez des dates de lecture aux séances po
 
 menuHelp-openUserGuide =
     .label = Ouvrir le guide d’utilisation de Zotero Syllabus
+menuHelp-openDocumentation =
+    .label = Documentation de Zotero Syllabus

@@ -17,3 +17,5 @@ no-readings-scheduled-description = Add reading dates to classes to see them her
 
 menuHelp-openUserGuide =
     .label = Open Zotero Syllabus User Guide
+menuHelp-openDocumentation =
+    .label = Zotero Syllabus Documentation

@@ -59,6 +59,7 @@ managed-folder-banner-class =
 managed-folder-banner-schedule =
     Fügen Sie hier keine Einträge hinzu und entfernen Sie keine. Dieser Lektüreplan-Ordner wird mit Ihren Lehrplänen synchron gehalten; manuelle Änderungen werden überschrieben.
 menuHelp-openUserGuide = Benutzerhandbuch von Zotero Syllabus öffnen
+menuHelp-openDocumentation = Zotero Syllabus-Dokumentation
 userGuide-start-title = Willkommen bei Zotero Syllabus
 userGuide-start-desc =
     Wandeln Sie jede Zotero-Sammlung in eine Lektüreliste um — nach Sitzung gliedern, Prioritäten setzen und den nächsten Lesestoff im Blick behalten.
@@ -580,6 +581,7 @@ reading-time-hours-and-minutes =
 explorer-configure = Konfigurieren
 explorer-configure-display = Auf der Startseite anzeigen
 explorer-configure-reorder = Reihenfolge ändern
+explorer-configure-add-collection-hint = Rechtsklick auf eine beliebige Sammlung, um sie zur Startseite hinzuzufügen.
 explorer-library-count =
     { $count ->
         [one] { $count } Eintrag
