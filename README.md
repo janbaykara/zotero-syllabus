@@ -289,7 +289,7 @@ On a pinned item, **Edit intention** opens a child note for why you pinned it. U
 
 - **Home → Pinned** (on by default; uncheck it in Home **Configure**, or use **Remove shelf**).
 - **Reading Schedule → Pinned** at the top of the calendar.
-- If the generated Reading Schedule collection is on, pinned *items* are also mirrored in a `Pinned` folder. That folder is auto-managed.
+- If the generated Reading Schedule collection is on, pinned _items_ are also mirrored in a `Pinned` folder. That folder is auto-managed.
 
 Drag to reorder on the Pinned shelf. The order is remembered per library.
 

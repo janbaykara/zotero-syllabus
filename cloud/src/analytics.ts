@@ -373,9 +373,7 @@ function applyDailyTopSyllabi(
     if (!perKey) continue;
     d.topSyllabi = [...perKey.entries()]
       .map(([key, pageViews]) => ({ key, pageViews }))
-      .sort(
-        (a, b) => b.pageViews - a.pageViews || a.key.localeCompare(b.key),
-      )
+      .sort((a, b) => b.pageViews - a.pageViews || a.key.localeCompare(b.key))
       .slice(0, DAILY_TOP_LIMIT);
   }
 }

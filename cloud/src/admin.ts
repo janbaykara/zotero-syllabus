@@ -272,9 +272,7 @@ function renderDailyChart(
           return `<div class="bar-tip-row"><span class="bar-tip-name">${name}</span><span class="bar-tip-n">${escapeHtml(formatCount(t.pageViews))}</span></div>`;
         })
         .join("");
-      const list = topRows
-        ? `<div class="bar-tip-list">${topRows}</div>`
-        : "";
+      const list = topRows ? `<div class="bar-tip-list">${topRows}</div>` : "";
       const ariaTop = top
         .map((t) => {
           const name = syllabusChartLabel(syllabiByKey, t.key);
