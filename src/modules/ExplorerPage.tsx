@@ -44,6 +44,7 @@ import { renderComponent } from "../utils/react";
 import { isZotero8OrLater, libraryDisplayName } from "../utils/zotero";
 import { getCachedCollectionByKey } from "../utils/cache";
 import { isSyllabusMemberItem, openItemBestAttachment } from "../utils/items";
+import { collectAnnotationColors } from "../utils/annotationColors";
 import { getString, getUiDir } from "../utils/locale";
 import { formatRelativeReadingDate, formatReadingDate } from "../utils/dates";
 import {
@@ -73,6 +74,8 @@ import type { GalleryLayout } from "./galleryLayout";
 import type { GalleryGroupBy } from "./galleryGroupBy";
 import type { GallerySortBy } from "./gallerySort";
 import { GalleryTile } from "./GalleryPage";
+import { AnnotationColorFilter } from "./AnnotationColorFilter";
+import { ANNOTATION_COLOR_FILTER_EXPLORER } from "./myAnnotationsPrefs";
 import { GallerySegmentedControl } from "./GallerySegmentedControl";
 import { type MagazineTileClick } from "./MagazineTile";
 import { ExplorerMagazineRail } from "./ExplorerMagazineRail";
@@ -624,10 +627,12 @@ function ExplorerShelfSettingsMenu({
   shelf,
   onChange,
   onRemove,
+  annotationColors = [],
 }: {
   shelf: ExplorerShelf;
   onChange: (shelf: ExplorerShelf) => void;
   onRemove: () => void;
+  annotationColors?: string[];
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -652,7 +657,9 @@ function ExplorerShelfSettingsMenu({
     ? explorerCollectionGroupByModes(shelf.layout, isSyllabus)
     : [];
   const sortModes = explorerCollectionSortByModes();
-  const hasSettings = showLayout || isCollection || showDensity;
+  const showColorFilter = shelf.type === "recent-annotations";
+  const hasSettings =
+    showLayout || isCollection || showDensity || showColorFilter;
 
   const patchCollection = (
     patch: Partial<{
@@ -759,6 +766,12 @@ function ExplorerShelfSettingsMenu({
                   title: getString(DENSITY_TITLE_IDS[mode]),
                   Icon: DENSITY_ICONS[mode],
                 }))}
+              />
+            ) : null}
+            {showColorFilter ? (
+              <AnnotationColorFilter
+                colors={annotationColors}
+                scope={ANNOTATION_COLOR_FILTER_EXPLORER}
               />
             ) : null}
           </div>
@@ -1662,6 +1675,13 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
                       ) : null}
                       <ExplorerShelfSettingsMenu
                         shelf={shelf}
+                        annotationColors={
+                          shelf.type === "recent-annotations"
+                            ? collectAnnotationColors(
+                                data.annotations.map((row) => row.color),
+                              )
+                            : undefined
+                        }
                         onChange={(next) =>
                           setShelves(
                             shelves.map((row) =>

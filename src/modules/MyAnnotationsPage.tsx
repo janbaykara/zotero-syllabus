@@ -12,7 +12,10 @@ import { isZotero8OrLater } from "../utils/zotero";
 import { getString, getUiDir } from "../utils/locale";
 import { openZoteroItemContextMenu } from "../utils/itemContextMenu";
 import { renderComponent } from "../utils/react";
+import { annotationMatchesColorFilter } from "../utils/annotationColors";
 import {
+  ANNOTATION_COLOR_FILTER_FEED,
+  useAnnotationColorFilter,
   useMyAnnotationsOrder,
   type MyAnnotationsOrder,
 } from "./myAnnotationsPrefs";
@@ -77,9 +80,10 @@ function LoadPreviousButton({
 const NEAR_EDGE_PX = 80;
 
 export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
-  const { rows, hasMore, loading, loadingMore, loadPrevious } =
+  const { rows, colors, hasMore, loading, loadingMore, loadPrevious } =
     useMyAnnotationsStream(libraryID);
   const [order, setOrder] = useMyAnnotationsOrder();
+  const [colorFilter] = useAnnotationColorFilter(ANNOTATION_COLOR_FILTER_FEED);
   const { selectedItemIds } = useItemIdentifierSelection();
   const pageRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -90,7 +94,13 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
   const prevRowCountRef = useRef(0);
   const skipNextPinTrackRef = useRef(false);
 
-  const displayRows = useMemo(() => sortStreamRows(rows, order), [rows, order]);
+  const displayRows = useMemo(
+    () =>
+      sortStreamRows(rows, order).filter((row) =>
+        annotationMatchesColorFilter(row.color, colorFilter),
+      ),
+    [rows, order, colorFilter],
+  );
   const displayGroups = useMemo(
     () => groupAdjacentStreamEntries(displayRows),
     [displayRows],
@@ -242,7 +252,11 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
               </p>
             </div>
             <div className="inline-flex items-center gap-2.5 shrink grow-0">
-              <MyAnnotationsMenu order={order} onOrder={handleOrderChange} />
+              <MyAnnotationsMenu
+                order={order}
+                onOrder={handleOrderChange}
+                colors={colors}
+              />
             </div>
           </div>
         </div>
@@ -250,13 +264,17 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
       <GalleryViewportProvider rootRef={pageRef}>
         <div className="syllabus-my-annotations-body syllabus-my-annotations-stream container-padded pt-6 pb-10 flex flex-col gap-6 min-w-0">
           {order === "newestLast" ? loadPreviousControl : null}
-          {loading && displayRows.length === 0 ? (
+          {loading && rows.length === 0 ? (
             <p className="text-secondary text-base">
               {getString("my-annotations-load-previous-loading")}
             </p>
           ) : displayRows.length === 0 ? (
             <p className="text-secondary text-base">
-              {getString("my-annotations-empty")}
+              {getString(
+                rows.length === 0
+                  ? "my-annotations-empty"
+                  : "my-annotations-empty-color-filter",
+              )}
             </p>
           ) : (
             displayGroups.map((group) => (

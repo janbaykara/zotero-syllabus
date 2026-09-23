@@ -114,7 +114,10 @@ import { useSyllabusDocumentGeneration } from "./react-zotero-sync/collectionDoc
 import { SyllabusViewMenu } from "./SyllabusViewMenu";
 import { useGalleryLayout } from "./galleryLayout";
 import { GalleryViewportProvider } from "./galleryVisibility";
-import { useItemIdsWithAnnotations } from "./GalleryAnnotationsRow";
+import {
+  useExistingAnnotationColors,
+  useItemIdsWithAnnotations,
+} from "./GalleryAnnotationsRow";
 import { ReadingItemsLayout } from "./readingItemsLayout";
 import { useBooleanPref } from "./react-zotero-sync/booleanPref";
 import { TextInput } from "./syllabusInputs";
@@ -1319,6 +1322,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   const annotatedItemIds = useItemIdsWithAnnotations(
     allItemsForAnnotationFilter,
     hideEmptyAnnotationGroups,
+  );
+  const annotationColors = useExistingAnnotationColors(
+    effectiveLayout === "annotations" ? allItemsForAnnotationFilter : [],
   );
 
   const visibleClassGroups = useMemo(() => {
@@ -2963,6 +2969,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                     showLayout={isLocked}
                     layout={browseLayout}
                     onLayoutChange={setBrowseLayout}
+                    annotationColors={annotationColors}
+                    colorFilterScope={String(collectionId)}
                   />
                   <div
                     className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
@@ -3466,6 +3474,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                         isLocked
                         template="strip"
                         magazinePacking="vertical"
+                        colorFilterScope={String(collectionId)}
                         rows={furtherReadingItems.map(
                           ({ item, assignment }) => ({
                             key: `further-${item.id}-${assignment?.id || "item"}`,

@@ -11,7 +11,9 @@ import {
 import { getString } from "../utils/locale";
 import { useBooleanPref } from "./react-zotero-sync/booleanPref";
 import type { AnnotationsQuoteOrder } from "./explorerQueries";
+import { AnnotationColorFilter } from "./AnnotationColorFilter";
 import {
+  ANNOTATION_COLOR_FILTER_FEED,
   useAnnotationsQuoteOrder,
   type MyAnnotationsOrder,
 } from "./myAnnotationsPrefs";
@@ -66,9 +68,11 @@ const QUOTE_ORDER_OPTIONS: {
 export function MyAnnotationsMenu({
   order,
   onOrder,
+  colors,
 }: {
   order: MyAnnotationsOrder;
   onOrder: (mode: MyAnnotationsOrder) => void;
+  colors: string[];
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -183,6 +187,10 @@ export function MyAnnotationsMenu({
                 )}
               </div>
             </div>
+            <AnnotationColorFilter
+              colors={colors}
+              scope={ANNOTATION_COLOR_FILTER_FEED}
+            />
             <div className="syllabus-gallery-toolbar-cluster">
               <div className="syllabus-gallery-toolbar-heading">
                 <span className="syllabus-gallery-groupby-label">

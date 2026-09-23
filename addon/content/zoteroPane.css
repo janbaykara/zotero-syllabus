@@ -382,9 +382,14 @@
   cursor: pointer;
 }
 
-.syllabus-gallery-save-global:hover {
+.syllabus-gallery-save-global:hover:not(:disabled) {
   color: var(--fill-primary);
   background: var(--fill-quinary, rgba(0, 0, 0, 0.06));
+}
+
+.syllabus-gallery-save-global:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
 .syllabus-gallery-save-global:focus-visible {
@@ -456,6 +461,41 @@
   outline: 2px solid #7b4ddb;
   outline-offset: 2px;
   z-index: 1;
+}
+
+.syllabus-annotation-color-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.syllabus-annotation-color-filter-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  margin: 0;
+  padding: 0;
+  border: 0.5px solid rgba(0, 0, 0, 0.18);
+  border-radius: 4px;
+  background: var(--swatch-color);
+  color: #fff;
+  cursor: pointer;
+}
+
+.syllabus-annotation-color-filter-btn.is-light {
+  color: #1a1a1a;
+}
+
+.syllabus-annotation-color-filter-btn[aria-checked="true"] {
+  box-shadow: 0 0 0 2px #7b4ddb;
+}
+
+.syllabus-annotation-color-filter-btn:focus-visible {
+  outline: 2px solid #7b4ddb;
+  outline-offset: 2px;
 }
 
 .syllabus-gallery-section {

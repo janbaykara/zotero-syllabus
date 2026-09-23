@@ -536,6 +536,7 @@ export function PinnedSection({
             showPriority={false}
             coverRail={false}
             magazinePacking={magazinePacking}
+            colorFilterScope={embedded ? "explorer-pinned" : "reading-schedule"}
             rows={itemLayoutRows}
             onItemClick={(item, collectionId) => {
               const reading = nextUp.find(

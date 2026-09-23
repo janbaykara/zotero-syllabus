@@ -19,6 +19,7 @@ import {
   annotationCommentToDisplayHtml,
   annotationCommentToPlainText,
 } from "../utils/annotationComment";
+import { annotationMatchesColorFilter } from "../utils/annotationColors";
 import { copyStringToClipboard } from "../utils/clipboard";
 import { getItemCitationKey } from "../utils/citeKey";
 import { getString } from "../utils/locale";
@@ -31,7 +32,9 @@ import type { ReadingTileChrome } from "./readingAssignmentChrome";
 import type { MyAnnotationStreamEntry } from "./explorerQueries";
 import { sortAnnotationsByQuoteOrder } from "./explorerQueries";
 import {
+  ANNOTATION_COLOR_FILTER_EXPLORER,
   getAnnotationsQuoteOrder,
+  useAnnotationColorFilter,
   useAnnotationsQuoteOrder,
 } from "./myAnnotationsPrefs";
 
@@ -587,14 +590,28 @@ export function ExplorerAnnotationShelf({
   onDoubleClick: (item: Zotero.Item) => void;
   onContextMenu: MagazineTileClick;
 }) {
-  const groups = useMemo(
-    () => groupAdjacentStreamEntries(annotations),
-    [annotations],
+  const [colorFilter] = useAnnotationColorFilter(
+    ANNOTATION_COLOR_FILTER_EXPLORER,
   );
+  const visible = useMemo(
+    () =>
+      annotations.filter((entry) =>
+        annotationMatchesColorFilter(entry.color, colorFilter),
+      ),
+    [annotations, colorFilter],
+  );
+  const groups = useMemo(() => groupAdjacentStreamEntries(visible), [visible]);
   if (annotations.length === 0) {
     return (
       <p className="text-secondary text-base">
         {getString("explorer-shelf-empty")}
+      </p>
+    );
+  }
+  if (visible.length === 0) {
+    return (
+      <p className="text-secondary text-base">
+        {getString("my-annotations-empty-color-filter")}
       </p>
     );
   }

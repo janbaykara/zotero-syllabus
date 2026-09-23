@@ -147,6 +147,7 @@ export function ReadingItemsLayout({
   magazineRail = false,
   /** Gallery / Reading Schedule Magazine packing (ignored when magazineRail). */
   magazinePacking = "packed" as MagazinePacking,
+  colorFilterScope,
   className,
   onItemClick,
 }: {
@@ -161,6 +162,7 @@ export function ReadingItemsLayout({
   coverRail?: boolean;
   magazineRail?: boolean;
   magazinePacking?: MagazinePacking;
+  colorFilterScope?: string;
   className?: string;
   onItemClick?: (item: Zotero.Item, collectionId: number) => void;
 }) {
@@ -272,6 +274,9 @@ export function ReadingItemsLayout({
           selectedItemIds={null}
           showItemsWithoutAnnotations={showItemsWithoutAnnotations}
           chromeByItemId={chromeByItemId}
+          colorFilterScope={
+            colorFilterScope || String(rows[0]?.collectionId ?? "")
+          }
           onClick={handleClick}
           onDoubleClick={handleDoubleClick}
           onContextMenu={handleContextMenu}

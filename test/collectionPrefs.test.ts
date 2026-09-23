@@ -6,9 +6,17 @@ import {
   pruneStaleCollectionIdMap,
   pruneStaleCollectionPrefs,
 } from "../src/utils/collectionPrefs";
+import { isNamedViewPrefKey } from "../src/utils/viewScope";
 import { zoteroCache } from "../src/utils/cache";
 
 describe("collectionPrefs", function () {
+  it("prunes the annotation colour-filter map with other collection prefs", function () {
+    assert.include(
+      COLLECTION_ID_PREF_KEYS as readonly string[],
+      `${config.prefsPrefix}.annotationColorFilter`,
+    );
+  });
+
   describe("pruneStaleCollectionIdMap", function () {
     it("drops keys that are not in the live id set", function () {
       const { next, removed } = pruneStaleCollectionIdMap(
@@ -51,6 +59,25 @@ describe("collectionPrefs", function () {
       );
       assert.deepEqual(next, { "12": "gallery", S99: "gallery" });
       assert.equal(removed, 0);
+    });
+
+    it("preserves feed and explorer colour-filter keys", function () {
+      const { next, removed } = pruneStaleCollectionIdMap(
+        {
+          "12": "#ffd400",
+          feed: "#2ea8e5",
+          explorer: "#ff6666",
+          "99": "#aaaaaa",
+        },
+        [12],
+        { preserve: isNamedViewPrefKey },
+      );
+      assert.deepEqual(next, {
+        "12": "#ffd400",
+        feed: "#2ea8e5",
+        explorer: "#ff6666",
+      });
+      assert.equal(removed, 1);
     });
 
     it("can preserve named reading-schedule and syllabus layout keys", function () {

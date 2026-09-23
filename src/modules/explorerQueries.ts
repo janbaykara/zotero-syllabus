@@ -8,6 +8,7 @@ import {
 import { useSyncExternalStore } from "react-dom/src";
 import { getCachedItem } from "../utils/cache";
 import { isSyllabusMemberItem } from "../utils/items";
+import { collectAnnotationColors } from "../utils/annotationColors";
 import {
   DEFAULT_HIGHLIGHT_COLOR,
   normalizeHighlightColor,
@@ -547,7 +548,11 @@ function compareAnnotationNewestFirst(
 export async function searchMyAnnotationsStream(
   libraryID: number,
   options: { limit?: number } = {},
-): Promise<{ rows: MyAnnotationStreamEntry[]; hasMore: boolean }> {
+): Promise<{
+  rows: MyAnnotationStreamEntry[];
+  hasMore: boolean;
+  colors: string[];
+}> {
   const limit = Math.max(1, options.limit ?? MY_ANNOTATIONS_STREAM_PAGE_SIZE);
   const ids = await searchItemIds(libraryID, [
     ["itemType", "is", "annotation"],
@@ -580,6 +585,7 @@ export async function searchMyAnnotationsStream(
   return {
     rows: rows.slice(0, limit),
     hasMore,
+    colors: collectAnnotationColors(rows.map((row) => row.color)),
   };
 }
 
@@ -1026,6 +1032,7 @@ export function useMyAnnotatedRecentlyRead(
 
 export type MyAnnotationsStreamState = {
   rows: MyAnnotationStreamEntry[];
+  colors: string[];
   hasMore: boolean;
   loading: boolean;
   loadingMore: boolean;
@@ -1036,6 +1043,7 @@ export function useMyAnnotationsStream(
   libraryID: number,
 ): MyAnnotationsStreamState {
   const [rows, setRows] = useState<MyAnnotationStreamEntry[]>([]);
+  const [colors, setColors] = useState<string[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -1061,6 +1069,7 @@ export function useMyAnnotationsStream(
         }
         loadedLimitRef.current = limit;
         setRows(next.rows);
+        setColors(next.colors);
         setHasMore(next.hasMore);
       } finally {
         if (token === loadTokenRef.current) {
@@ -1108,6 +1117,7 @@ export function useMyAnnotationsStream(
 
   return {
     rows,
+    colors,
     hasMore,
     loading,
     loadingMore,

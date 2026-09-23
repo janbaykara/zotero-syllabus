@@ -620,6 +620,7 @@ export function ClassGroupComponent({
               isLocked
               template="strip"
               magazinePacking={magazinePacking}
+              colorFilterScope={String(collectionId)}
               rows={itemAssignments
                 .filter(({ assignment }) => !!assignment.id)
                 .map(({ item, assignment }) => ({

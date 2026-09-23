@@ -3,6 +3,10 @@ import { h, Fragment } from "preact";
 import type { JSX } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { getString } from "../utils/locale";
+import {
+  annotationMatchesColorFilter,
+  collectAnnotationColors,
+} from "../utils/annotationColors";
 import { sortItems } from "../utils/items";
 import {
   AnnotationStreamGroup,
@@ -15,6 +19,7 @@ import {
 import type { GallerySortBy } from "./gallerySort";
 import { GalleryTile } from "./GalleryPage";
 import type { MagazineTileClick } from "./MagazineTile";
+import { useAnnotationColorFilter } from "./myAnnotationsPrefs";
 import type { ReadingTileChrome } from "./readingAssignmentChrome";
 
 type AnnotationPartition = {
@@ -118,6 +123,53 @@ export function useItemIdsWithAnnotations(
   return enabled ? annotatedIds : null;
 }
 
+/** Distinct highlight colours present on the given items' annotations. */
+export function useExistingAnnotationColors(items: Zotero.Item[]): string[] {
+  const idsKey = useMemo(
+    () =>
+      uniqueItems(items)
+        .map((item) => item.id)
+        .sort((a, b) => a - b)
+        .join(","),
+    [items],
+  );
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const [colors, setColors] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!idsKey) {
+      setColors([]);
+      return;
+    }
+    let cancelled = false;
+    void Promise.all(
+      uniqueItems(itemsRef.current).map((item) =>
+        annotationsStreamForParent(item),
+      ),
+    )
+      .then((streams) => {
+        if (cancelled) {
+          return;
+        }
+        setColors(
+          collectAnnotationColors(streams.flat().map((entry) => entry.color)),
+        );
+      })
+      .catch((err) => {
+        ztoolkit.log("useExistingAnnotationColors failed", err);
+        if (!cancelled) {
+          setColors([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [idsKey]);
+
+  return colors;
+}
+
 export function GalleryAnnotationsSection({
   items,
   keyPrefix,
@@ -127,6 +179,7 @@ export function GalleryAnnotationsSection({
   showItemsWithoutAnnotations = true,
   showGalleryNote = false,
   chromeByItemId,
+  colorFilterScope,
   onClick,
   onDoubleClick,
   onContextMenu,
@@ -139,6 +192,7 @@ export function GalleryAnnotationsSection({
   showItemsWithoutAnnotations?: boolean;
   showGalleryNote?: boolean;
   chromeByItemId?: ReadonlyMap<number, ReadingTileChrome> | null;
+  colorFilterScope: string;
   onClick: MagazineTileClick;
   onDoubleClick: (item: Zotero.Item) => void;
   onContextMenu: MagazineTileClick;
@@ -162,6 +216,7 @@ export function GalleryAnnotationsSection({
   sortByRef.current = sortBy;
 
   const [partition, setPartition] = useState<AnnotationPartition | null>(null);
+  const [colorFilter] = useAnnotationColorFilter(colorFilterScope);
 
   useEffect(() => {
     let cancelled = false;
@@ -196,13 +251,28 @@ export function GalleryAnnotationsSection({
 
   const { withAnnotations, withoutAnnotations } = partition;
   const emptyItems = showItemsWithoutAnnotations ? withoutAnnotations : [];
-  const sortedWith = withAnnotations;
+  const sortedWith = withAnnotations
+    .map(({ item, entries }) => ({
+      item,
+      entries: entries.filter((entry) =>
+        annotationMatchesColorFilter(entry.color, colorFilter),
+      ),
+    }))
+    .filter((row) => row.entries.length > 0);
   const sortedEmpty = sortItems(emptyItems, sortBy);
+  const colorFilterEmpty =
+    sortedWith.length === 0 &&
+    withAnnotations.length > 0 &&
+    colorFilter.length > 0;
 
   if (sortedWith.length === 0 && sortedEmpty.length === 0) {
     return (
       <p className="syllabus-gallery-annotations-empty text-secondary">
-        {getString("gallery-annotations-empty")}
+        {getString(
+          colorFilterEmpty
+            ? "my-annotations-empty-color-filter"
+            : "gallery-annotations-empty",
+        )}
       </p>
     );
   }

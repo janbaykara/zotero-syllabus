@@ -138,6 +138,7 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
               onMagazinePackingChange={setMagazinePacking}
               showCheckboxes={false}
               showScheduleCollection
+              colorFilterScope="reading-schedule"
             />
           </div>
         </div>

@@ -21,6 +21,7 @@ pref("myAnnotationsLayout", "grid");
 pref("myAnnotationsSort", "lastRead");
 pref("myAnnotationsGroupBy", "none");
 pref("myAnnotationsOrder", "newestLast");
+pref("myAnnotationsColorFilter", "");
 pref("annotationsQuoteOrder", "location");
 pref("galleryShowItemsWithoutAnnotations", true);
 pref("magazineTypeSize", "small");

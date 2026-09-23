@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "preact/hooks";
+import * as z from "zod";
+import { config } from "../../package.json";
 import {
   coerceGalleryGroupBy,
   resolveGalleryGroupBy,
@@ -7,7 +9,12 @@ import {
 } from "./galleryGroupBy";
 import { coerceGallerySortBy, type GallerySortBy } from "./gallerySort";
 import { getPref, getPrefKey, setPref } from "../utils/prefs";
-import { zoteroCache } from "../utils/cache";
+import { getCachedPref, zoteroCache } from "../utils/cache";
+import {
+  annotationColorFilterFromMap,
+  parseAnnotationColorFilter,
+  serializeAnnotationColorFilter,
+} from "../utils/annotationColors";
 import {
   coerceAnnotationsQuoteOrder,
   type AnnotationsQuoteOrder,
@@ -194,6 +201,79 @@ export function useMyAnnotationsOrder(): [
   }, []);
 
   return [mode, setOrder];
+}
+
+const ColorFilterMapSchema = z.record(z.string(), z.unknown());
+
+export const ANNOTATION_COLOR_FILTER_FEED = "feed";
+export const ANNOTATION_COLOR_FILTER_EXPLORER = "explorer";
+
+export function annotationColorFilterPrefKey(): string {
+  return `${config.prefsPrefix}.annotationColorFilter`;
+}
+
+export function getAnnotationColorFilter(scope: string): string[] {
+  return annotationColorFilterFromMap(
+    getCachedPref(annotationColorFilterPrefKey(), ColorFilterMapSchema),
+    scope,
+    getPref("myAnnotationsColorFilter"),
+  );
+}
+
+export function setAnnotationColorFilter(
+  scope: string,
+  hexes: readonly string[],
+): void {
+  const key = String(scope);
+  if (!key) {
+    return;
+  }
+  const prefKey = annotationColorFilterPrefKey();
+  const map = {
+    ...(getCachedPref(prefKey, ColorFilterMapSchema) || {}),
+  };
+  const serialized = serializeAnnotationColorFilter(hexes);
+  if (serialized) {
+    map[key] = serialized;
+  } else {
+    delete map[key];
+  }
+  Zotero.Prefs.set(prefKey, JSON.stringify(map), true);
+  zoteroCache.invalidatePref(prefKey);
+  if (key === ANNOTATION_COLOR_FILTER_FEED) {
+    setPref("myAnnotationsColorFilter", "");
+    zoteroCache.invalidatePref(getPrefKey("myAnnotationsColorFilter"));
+  }
+}
+
+export function useAnnotationColorFilter(
+  scope: string,
+): [string[], (hexes: readonly string[]) => void] {
+  const [hexes, setHexes] = useState<string[]>(() =>
+    getAnnotationColorFilter(scope),
+  );
+
+  useEffect(() => {
+    const refresh = () => setHexes(getAnnotationColorFilter(scope));
+    refresh();
+    const observerID = Zotero.Prefs.registerObserver(
+      annotationColorFilterPrefKey(),
+      refresh,
+      true,
+    );
+    return () => Zotero.Prefs.unregisterObserver(observerID);
+  }, [scope]);
+
+  const setFilter = useCallback(
+    (next: readonly string[]) => {
+      const parsed = parseAnnotationColorFilter(next.join(","));
+      setHexes(parsed);
+      setAnnotationColorFilter(scope, parsed);
+    },
+    [scope],
+  );
+
+  return [hexes, setFilter];
 }
 
 export function getAnnotationsQuoteOrder(): AnnotationsQuoteOrder {

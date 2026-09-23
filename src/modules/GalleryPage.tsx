@@ -40,8 +40,10 @@ import {
 import { renderComponent } from "../utils/react";
 import { isZotero8OrLater } from "../utils/zotero";
 import { openItemBestAttachment, sortItems } from "../utils/items";
+import { AnnotationColorFilter } from "./AnnotationColorFilter";
 import {
   GalleryAnnotationsSection,
+  useExistingAnnotationColors,
   useItemIdsWithAnnotations,
 } from "./GalleryAnnotationsRow";
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
@@ -288,6 +290,9 @@ export function GalleryPage({
   const annotatedItemIds = useItemIdsWithAnnotations(
     allItemsForAnnotationFilter,
     hideEmptyAnnotationGroups,
+  );
+  const annotationColors = useExistingAnnotationColors(
+    layout === "annotations" ? allItemsForAnnotationFilter : [],
   );
   const annotationGroupsReady =
     !hideEmptyAnnotationGroups || annotatedItemIds != null;
@@ -789,6 +794,7 @@ export function GalleryPage({
       showItemsWithoutAnnotations={showItemsWithoutAnnotations}
       showGalleryNote={true}
       chromeByItemId={chromeByItemId}
+      colorFilterScope={viewKey}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
@@ -999,6 +1005,8 @@ export function GalleryPage({
               magazinePackingGlobal={magazinePackingGlobal}
               showItemsWithoutAnnotations={showItemsWithoutAnnotations}
               onShowItemsWithoutAnnotations={setShowItemsWithoutAnnotations}
+              annotationColors={annotationColors}
+              colorFilterScope={viewKey}
               navGroups={navGroups}
               activeGroupId={activeGroupId}
               onSelectGroup={handleSelectGroup}
@@ -1650,6 +1658,8 @@ function GalleryPageHeader({
   magazinePackingGlobal,
   showItemsWithoutAnnotations,
   onShowItemsWithoutAnnotations,
+  annotationColors,
+  colorFilterScope,
   navGroups,
   activeGroupId,
   onSelectGroup,
@@ -1672,6 +1682,8 @@ function GalleryPageHeader({
   magazinePackingGlobal: GalleryGlobalSetting<MagazinePacking>;
   showItemsWithoutAnnotations: boolean;
   onShowItemsWithoutAnnotations: (show: boolean) => void;
+  annotationColors: string[];
+  colorFilterScope: string;
   navGroups: GalleryNavGroup[];
   activeGroupId: string | null;
   onSelectGroup: (id: string) => void;
@@ -1860,6 +1872,10 @@ function GalleryPageHeader({
                       value={quoteOrder}
                       onChange={setQuoteOrder}
                       options={quoteOrderOptions}
+                    />
+                    <AnnotationColorFilter
+                      colors={annotationColors}
+                      scope={colorFilterScope}
                     />
                     <label className="syllabus-gallery-toolbar-checkbox">
                       <input

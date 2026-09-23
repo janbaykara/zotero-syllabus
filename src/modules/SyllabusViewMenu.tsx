@@ -29,6 +29,7 @@ import { densityLabel } from "./browsePage";
 import type { GalleryLayout } from "./galleryLayout";
 import type { MagazinePacking } from "./magazinePacking";
 import { useBooleanPref } from "./react-zotero-sync/booleanPref";
+import { AnnotationColorFilter } from "./AnnotationColorFilter";
 import { useAnnotationsQuoteOrder } from "./myAnnotationsPrefs";
 import type { AnnotationsQuoteOrder } from "./explorerQueries";
 import type { FluentMessageId } from "../../typings/i10n";
@@ -147,6 +148,8 @@ export function SyllabusViewMenu({
   onMagazinePackingChange,
   showCheckboxes = true,
   showScheduleCollection = false,
+  annotationColors = [],
+  colorFilterScope,
 }: {
   /** Card / Cover / Annotations / Magazine — Reading Schedule and locked syllabus. */
   showLayout?: boolean;
@@ -158,6 +161,8 @@ export function SyllabusViewMenu({
   showCheckboxes?: boolean;
   /** Library “Reading Schedule” collection toggle (schedule page only). */
   showScheduleCollection?: boolean;
+  annotationColors?: string[];
+  colorFilterScope?: string;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -332,6 +337,12 @@ export function SyllabusViewMenu({
                     {getString("gallery-annotations-show-empty")}
                   </span>
                 </label>
+                {colorFilterScope ? (
+                  <AnnotationColorFilter
+                    colors={annotationColors}
+                    scope={colorFilterScope}
+                  />
+                ) : null}
               </div>
             ) : null}
             {showDensity ? (

@@ -18,7 +18,8 @@ export type SpecialGalleryRowType = (typeof SPECIAL_GALLERY_ROW_TYPES)[number];
 export const SPECIAL_VIEW_PREF_KEY = /^[SDURPTFY]\d+$/;
 
 /** Named gallery/syllabus view keys that are not collection ids (must survive pref pruning). */
-export const NAMED_VIEW_PREF_KEY = /^(reading-schedule|syllabus:\d+)$/;
+export const NAMED_VIEW_PREF_KEY =
+  /^(reading-schedule|syllabus:\d+|feed|explorer|explorer-pinned)$/;
 
 export function isSpecialViewPrefKey(key: string): boolean {
   return SPECIAL_VIEW_PREF_KEY.test(key);

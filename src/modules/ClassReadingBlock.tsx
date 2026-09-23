@@ -355,6 +355,7 @@ export function ClassReadingBlock({
           coverRail={coverRail && layout === "cover"}
           magazineRail={magazineRail && layout === "magazine"}
           magazinePacking={magazinePacking}
+          colorFilterScope="reading-schedule"
           rows={classReading.items
             .filter(({ assignment }) => !!assignment.id)
             .map(({ item, assignment }) => ({
