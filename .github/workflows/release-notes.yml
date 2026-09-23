@@ -1,4 +1,4 @@
-# Enrich a published GitHub release with package size, synthesized highlights, and commits.
+# Enrich a published GitHub release with package size and commits.
 name: Release notes
 
 on:
@@ -44,23 +44,8 @@ jobs:
             echo "tag=v${version}" >> "$GITHUB_OUTPUT"
           fi
 
-      # Optional AI: OPENAI_API_KEY / ANTHROPIC_API_KEY, else CURSOR_API_KEY via SDK.
-      # Without those (or if AI echoes subjects), highlights use a thematic area fallback.
-      - name: Install Cursor SDK for AI summary
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
-        run: |
-          if [ -n "$CURSOR_API_KEY" ] && [ -z "$OPENAI_API_KEY" ] && [ -z "$ANTHROPIC_API_KEY" ]; then
-            npm install --no-save @cursor/sdk
-          fi
-
       - name: Update release notes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
         run: node scripts/generate-release-notes.mjs --tag "${{ steps.tag.outputs.tag }}" --update
