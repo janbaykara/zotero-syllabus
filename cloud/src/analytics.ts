@@ -19,11 +19,19 @@ export type SyllabusViewCounts = {
   citationDownloads: number;
 };
 
+export type DailyTopSyllabus = {
+  /** `${userId}/${libraryId}/${collectionKey}` */
+  key: string;
+  pageViews: number;
+};
+
 export type DailyViewCounts = {
   day: string; // YYYY-MM-DD
   pageViews: number;
   fileDownloads: number;
   citationDownloads: number;
+  /** Top syllabi by page views that day (at most 3). */
+  topSyllabi: DailyTopSyllabus[];
 };
 
 export type ViewStats = {
@@ -96,7 +104,13 @@ function emptyDailySeries(days: number): DailyViewCounts[] {
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i),
     );
     const day = d.toISOString().slice(0, 10);
-    out.push({ day, pageViews: 0, fileDownloads: 0, citationDownloads: 0 });
+    out.push({
+      day,
+      pageViews: 0,
+      fileDownloads: 0,
+      citationDownloads: 0,
+      topSyllabi: [],
+    });
   }
   return out;
 }
@@ -208,9 +222,24 @@ GROUP BY event, userId, libraryId, collectionKey
 FORMAT JSON
 `.trim();
 
-  const [dailyRes, perRes] = await Promise.all([
+  const dailyBySyllabusSql = `
+SELECT
+  toDate(timestamp) AS day,
+  blob2 AS userId,
+  blob3 AS libraryId,
+  blob4 AS collectionKey,
+  SUM(_sample_interval) AS hits
+FROM ${ANALYTICS_DATASET}
+WHERE timestamp >= NOW() - INTERVAL '30' DAY
+  AND blob1 = '${EVENT_PAGE_VIEW}'
+GROUP BY day, userId, libraryId, collectionKey
+FORMAT JSON
+`.trim();
+
+  const [dailyRes, perRes, dailyBySyllabusRes] = await Promise.all([
     runAnalyticsSql(env, dailySql),
     runAnalyticsSql(env, perSyllabusSql),
+    runAnalyticsSql(env, dailyBySyllabusSql),
   ]);
 
   // Empty dataset (no writes yet) surfaces as a SQL error — treat as zeros.
@@ -298,6 +327,10 @@ FORMAT JSON
       counts.citationDownloads += hits;
   }
 
+  if (dailyBySyllabusRes.ok) {
+    applyDailyTopSyllabi(daily, dayIndex, dailyBySyllabusRes.rows);
+  }
+
   return {
     available: true,
     pageViews30d,
@@ -306,4 +339,43 @@ FORMAT JSON
     daily,
     bySyllabus,
   };
+}
+
+const DAILY_TOP_LIMIT = 3;
+
+function applyDailyTopSyllabi(
+  daily: DailyViewCounts[],
+  dayIndex: Map<string, number>,
+  rows: Array<Record<string, unknown>>,
+): void {
+  const byDay = new Map<string, Map<string, number>>();
+  for (const row of rows) {
+    const day = asString(row.day).slice(0, 10);
+    if (!dayIndex.has(day)) continue;
+    const key = syllabusStatsKey(
+      asString(row.userId),
+      asString(row.libraryId),
+      asString(row.collectionKey),
+    );
+    if (!key || key === "//") continue;
+    const hits = asNumber(row.hits);
+    if (hits <= 0) continue;
+    let perKey = byDay.get(day);
+    if (!perKey) {
+      perKey = new Map();
+      byDay.set(day, perKey);
+    }
+    perKey.set(key, (perKey.get(key) || 0) + hits);
+  }
+
+  for (const d of daily) {
+    const perKey = byDay.get(d.day);
+    if (!perKey) continue;
+    d.topSyllabi = [...perKey.entries()]
+      .map(([key, pageViews]) => ({ key, pageViews }))
+      .sort(
+        (a, b) => b.pageViews - a.pageViews || a.key.localeCompare(b.key),
+      )
+      .slice(0, DAILY_TOP_LIMIT);
+  }
 }

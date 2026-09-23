@@ -226,24 +226,74 @@ function formatCount(n: number | undefined): string {
   return String(Math.round(n));
 }
 
-function renderDailyChart(views: ViewStats): string {
+function visitsLabel(n: number): string {
+  return `${Math.round(n)} ${n === 1 ? "visit" : "visits"}`;
+}
+
+function syllabusChartLabel(
+  syllabiByKey: Map<string, PublishedSyllabus>,
+  key: string,
+): string {
+  const s = syllabiByKey.get(key);
+  if (s) {
+    const code = s.courseCode.trim();
+    const title = s.title.trim();
+    if (code && title) return `${code} — ${title}`;
+    if (code) return code;
+    if (title) return title;
+    if (s.collectionKey) return s.collectionKey;
+  }
+  const parts = key.split("/");
+  return parts[2] || key;
+}
+
+function renderDailyChart(
+  views: ViewStats,
+  syllabi: PublishedSyllabus[],
+): string {
   if (!views.available) {
     return `<p class="muted chart-note">${escapeHtml(views.error || "Views unavailable")}</p>`;
   }
+  const syllabiByKey = new Map(
+    syllabi.map((s) => [
+      syllabusStatsKey(s.userId, s.libraryId, s.collectionKey),
+      s,
+    ]),
+  );
   const max = Math.max(1, ...views.daily.map((d) => d.pageViews));
   const bars = views.daily
     .map((d) => {
       const pct = Math.round((d.pageViews / max) * 100);
-      const title = `${d.day}: ${d.pageViews} views, ${d.fileDownloads} files, ${d.citationDownloads} citations`;
-      return `<div class="bar" title="${escapeHtml(title)}" style="height:${pct}%"></div>`;
+      const total = visitsLabel(d.pageViews);
+      const top = d.topSyllabi || [];
+      const topRows = top
+        .map((t) => {
+          const name = escapeHtml(syllabusChartLabel(syllabiByKey, t.key));
+          return `<div class="bar-tip-row"><span class="bar-tip-name">${name}</span><span class="bar-tip-n">${escapeHtml(formatCount(t.pageViews))}</span></div>`;
+        })
+        .join("");
+      const list = topRows
+        ? `<div class="bar-tip-list">${topRows}</div>`
+        : "";
+      const ariaTop = top
+        .map((t) => {
+          const name = syllabusChartLabel(syllabiByKey, t.key);
+          return `${name}: ${visitsLabel(t.pageViews)}`;
+        })
+        .join("; ");
+      const aria = ariaTop
+        ? `${d.day}: ${total}. ${ariaTop}`
+        : `${d.day}: ${total}`;
+      return `<div class="bar" role="listitem" tabindex="0" aria-label="${escapeHtml(aria)}" style="--pct:${pct}%"><template class="bar-tip"><div class="bar-tip-head"><span class="bar-tip-date">${escapeHtml(d.day)}</span><span class="bar-tip-total">${escapeHtml(total)}</span></div>${list}</template><div class="bar-fill"></div></div>`;
     })
     .join("");
   const first = views.daily[0]?.day || "";
   const last = views.daily[views.daily.length - 1]?.day || "";
   return `<div class="chart-wrap">
   <div class="chart-label muted">Page views by day (30d)</div>
-  <div class="chart" role="img" aria-label="Daily page views for the last 30 days">${bars}</div>
+  <div class="chart" role="list" aria-label="Daily page views for the last 30 days">${bars}</div>
   <div class="chart-axis muted"><span>${escapeHtml(first)}</span><span>${escapeHtml(last)}</span></div>
+  <div class="chart-hover" hidden></div>
 </div>`;
 }
 
@@ -370,6 +420,8 @@ ${trs}
     .totals div strong { display: block; font-size: 1.15rem; }
     .totals div span { color: #6b7280; font-size: 12px; }
     .chart-wrap {
+      position: relative;
+      overflow: visible;
       margin: 0.75rem 0 1.25rem; padding: 0.85rem 1rem;
       background: #fff; border: 1px solid #e5e7eb; border-radius: 6px;
     }
@@ -379,10 +431,52 @@ ${trs}
       height: 88px; width: 100%;
     }
     .chart .bar {
+      position: relative;
       flex: 1 1 0; min-width: 0;
-      background: #3b82f6; border-radius: 2px 2px 0 0;
-      min-height: 2px;
+      height: 100%;
+      display: flex; align-items: flex-end;
+      background: transparent;
+      outline: none;
     }
+    .chart .bar-fill {
+      width: 100%;
+      height: var(--pct, 0%);
+      min-height: 2px;
+      background: #3b82f6;
+      border-radius: 2px 2px 0 0;
+    }
+    .chart .bar:hover,
+    .chart .bar:focus-visible,
+    .chart .bar.is-active { background: rgba(59, 130, 246, 0.08); }
+    .chart .bar:hover .bar-fill,
+    .chart .bar:focus-visible .bar-fill,
+    .chart .bar.is-active .bar-fill { background: #1d4ed8; }
+    .chart-hover {
+      margin-top: 0.65rem;
+      padding: 0.55rem 0.7rem;
+      background: #f8fafc;
+      color: #111;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .chart-hover[hidden] { display: none; }
+    .chart-hover .bar-tip-head {
+      display: flex; justify-content: space-between; gap: 1rem;
+      align-items: baseline;
+    }
+    .chart-hover .bar-tip-date { color: #6b7280; font-size: 11px; }
+    .chart-hover .bar-tip-total { font-weight: 600; }
+    .chart-hover .bar-tip-list { margin-top: 0.35rem; }
+    .chart-hover .bar-tip-row {
+      display: flex; justify-content: space-between; gap: 0.75rem;
+      margin-top: 0.15rem;
+    }
+    .chart-hover .bar-tip-name {
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .chart-hover .bar-tip-n { color: #6b7280; flex: 0 0 auto; }
     .chart-axis {
       display: flex; justify-content: space-between;
       margin-top: 0.35rem; font-size: 11px;
@@ -448,7 +542,7 @@ ${trs}
     <div><strong>${downloadsTotal}</strong><span>File downloads (30d)</span></div>
     <div><strong>${citationsTotal}</strong><span>Citations (30d)</span></div>
   </div>
-  ${renderDailyChart(views)}
+  ${renderDailyChart(views, report.syllabi)}
   ${body}
   <script>
   (function () {
@@ -507,6 +601,39 @@ ${trs}
         cmp = av.text < bv.text ? -1 : av.text > bv.text ? 1 : 0;
       }
       return dir === "desc" ? -cmp : cmp;
+    }
+
+    var chart = document.querySelector(".chart");
+    var hover = document.querySelector(".chart-hover");
+    if (chart && hover) {
+      var activeBar = null;
+      function showBar(bar) {
+        var src = bar.querySelector(".bar-tip");
+        if (!src) return;
+        if (activeBar) activeBar.classList.remove("is-active");
+        activeBar = bar;
+        bar.classList.add("is-active");
+        hover.innerHTML = src.innerHTML || "";
+        hover.hidden = false;
+      }
+      function hideBar() {
+        if (activeBar) activeBar.classList.remove("is-active");
+        activeBar = null;
+        hover.hidden = true;
+        hover.innerHTML = "";
+      }
+      chart.addEventListener("pointerover", function (e) {
+        var bar = e.target.closest(".bar");
+        if (bar) showBar(bar);
+      });
+      chart.addEventListener("pointerleave", hideBar);
+      chart.addEventListener("focusin", function (e) {
+        var bar = e.target.closest(".bar");
+        if (bar) showBar(bar);
+      });
+      chart.addEventListener("focusout", function (e) {
+        if (!chart.contains(e.relatedTarget)) hideBar();
+      });
     }
 
     document.querySelectorAll("table.sortable").forEach(function (table) {
