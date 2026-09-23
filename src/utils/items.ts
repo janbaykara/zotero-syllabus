@@ -365,13 +365,27 @@ export function sortItems(
   return [...items];
 }
 
+export type ReaderOpenLocation = {
+  attachmentID?: number;
+  pageIndex?: number;
+};
+
+function firstViewableAttachmentId(item: Zotero.Item): number {
+  try {
+    const attachments = item.getAttachments();
+    const viewableAttachment = attachments.find((attId) => {
+      const att = getCachedItem(attId);
+      return !!(att && att.isAttachment());
+    });
+    return viewableAttachment || 0;
+  } catch {
+    return 0;
+  }
+}
+
 /** Open the first viewable attachment, or the item URL if none. */
 export function openItemBestAttachment(item: Zotero.Item): void {
-  const attachments = item.getAttachments();
-  const viewableAttachment = attachments.find((attId) => {
-    const att = getCachedItem(attId);
-    return !!(att && att.isAttachment());
-  });
+  const viewableAttachment = firstViewableAttachmentId(item);
   if (viewableAttachment) {
     const pane = ztoolkit.getGlobal("ZoteroPane");
     void pane.viewPDF(viewableAttachment);
@@ -381,6 +395,72 @@ export function openItemBestAttachment(item: Zotero.Item): void {
   if (url) {
     Zotero.launchURL(url);
   }
+}
+
+type ReaderNavigateLocation = {
+  pageIndex?: number;
+  annotationID?: string;
+  annotationKey?: string;
+};
+
+async function openAttachmentAtReaderLocation(
+  attachmentID: number,
+  location?: ReaderNavigateLocation,
+): Promise<void> {
+  try {
+    const attachment = await Zotero.Items.getAsync(attachmentID);
+    if (!attachment) {
+      ztoolkit.log(
+        "openAttachmentAtReaderLocation: attachment not found",
+        attachmentID,
+      );
+      return;
+    }
+    // Prefer FileHandlers (respects external PDF reader prefs) then Reader.
+    const opened = await Zotero.FileHandlers.open(attachment, { location });
+    if (opened) {
+      return;
+    }
+  } catch (error) {
+    ztoolkit.log(
+      "openAttachmentAtReaderLocation: FileHandlers.open failed",
+      error,
+    );
+  }
+
+  try {
+    await Zotero.Reader.open(attachmentID, location);
+  } catch (error) {
+    ztoolkit.log("openAttachmentAtReaderLocation: Reader.open failed", error);
+  }
+}
+
+/** Open the best attachment, optionally scrolled to a 0-based PDF page. */
+export function openItemAtReaderLocation(
+  item: Zotero.Item,
+  location?: ReaderOpenLocation | null,
+): void {
+  void (async () => {
+    try {
+      const attachmentID =
+        Number(location?.attachmentID || 0) || firstViewableAttachmentId(item);
+      if (!attachmentID) {
+        const url = item.getField("url");
+        if (url) {
+          Zotero.launchURL(url);
+        }
+        return;
+      }
+      const pageIndex = location?.pageIndex;
+      const readerLocation =
+        typeof pageIndex === "number" && pageIndex >= 0
+          ? { pageIndex }
+          : undefined;
+      await openAttachmentAtReaderLocation(attachmentID, readerLocation);
+    } catch (error) {
+      ztoolkit.log("openItemAtReaderLocation failed:", error);
+    }
+  })();
 }
 
 /**
@@ -426,29 +506,7 @@ export async function openAnnotationInReader(
   }
 
   const location = { annotationID: key, annotationKey: key };
-  try {
-    const attachment = await Zotero.Items.getAsync(attachmentID);
-    if (!attachment) {
-      ztoolkit.log(
-        "openAnnotationInReader: attachment not found",
-        attachmentID,
-      );
-      return;
-    }
-    // Prefer FileHandlers (respects external PDF reader prefs) then Reader.
-    const opened = await Zotero.FileHandlers.open(attachment, { location });
-    if (opened) {
-      return;
-    }
-  } catch (error) {
-    ztoolkit.log("openAnnotationInReader: FileHandlers.open failed", error);
-  }
-
-  try {
-    await Zotero.Reader.open(attachmentID, location);
-  } catch (error) {
-    ztoolkit.log("openAnnotationInReader: Reader.open failed", error);
-  }
+  await openAttachmentAtReaderLocation(attachmentID, location);
 }
 
 /** Resolve an annotation by id and open it in the reader. */

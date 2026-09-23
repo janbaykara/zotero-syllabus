@@ -395,6 +395,7 @@ magazine-shelf-watch-title = Video mới thêm
 magazine-shelf-listen = Nghe
 magazine-shelf-listen-title = Âm thanh mới thêm
 magazine-highlights = Đoạn tô sáng
+magazine-blurb-open = Mở đoạn trích này trong trình đọc
 gallery-options-aria = Tùy chọn chế độ xem thư viện ảnh
 gallery-options-title = Tùy chọn xem
 gallery-menu-view = Xem

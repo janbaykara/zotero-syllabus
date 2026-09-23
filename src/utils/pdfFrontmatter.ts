@@ -53,6 +53,54 @@ export function splitPdfCachePages(raw: string): string[] {
   return [raw];
 }
 
+function normalizeSearchText(text: string): string {
+  return text.replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function snippetNeedles(snippet: string): string[] {
+  const normalized = normalizeSearchText(snippet);
+  if (normalized.length < 16) {
+    return [];
+  }
+  const needles = [normalized.slice(0, 80)];
+  if (normalized.length > 40) {
+    needles.push(normalized.slice(0, 40));
+  }
+  const words = normalized.split(" ").filter((word) => word.length > 2);
+  if (words.length >= 6) {
+    needles.push(words.slice(0, 6).join(" "));
+  }
+  return [...new Set(needles.filter((needle) => needle.length >= 16))];
+}
+
+/**
+ * 0-based PDF page for a standfirst / abstract snippet, when the cache kept
+ * form-feed page breaks. Undefined if the text cannot be placed.
+ */
+export function pageIndexOfSnippet(
+  raw: string,
+  snippet: string,
+): number | undefined {
+  const needles = snippetNeedles(snippet);
+  if (needles.length === 0) {
+    return undefined;
+  }
+  const pages = splitPdfCachePages(raw);
+  if (pages.length === 0) {
+    return undefined;
+  }
+  for (let index = 0; index < pages.length; index++) {
+    const haystack = normalizeSearchText(pages[index]);
+    if (!haystack) {
+      continue;
+    }
+    if (needles.some((needle) => haystack.includes(needle))) {
+      return index;
+    }
+  }
+  return undefined;
+}
+
 function firstNonEmptyLine(text: string): string {
   return (
     text
@@ -194,9 +242,9 @@ function looksLikeRunningProse(
 }
 
 const ABSTRACT_HEAD =
-  /(?:^|\n)[ \t]*(?:abstract|r[eé]sum[eé]|resumen|zusammenfassung)\b[ \t]*(?:[:.\-–—][ \t]*|(?=\n))/i;
+  /(?:^|[\n\f\u000c])[ \t]*(?:abstract|r[eé]sum[eé]|resumen|zusammenfassung)\b[ \t]*(?:[:.\-–—][ \t]*|(?=[\n\f\u000c]))/i;
 const ABSTRACT_END =
-  /(?:^|\n)\s*(?:key\s*words?|keywords|mot[s]?\s+cl[ée]s|palabras\s+clave)\s*[:.\-–—]/i;
+  /(?:^|[\n\f\u000c])\s*(?:key\s*words?|keywords|mot[s]?\s+cl[ée]s|palabras\s+clave)\s*[:.\-–—]/i;
 
 /** Journal PDFs: skip the masthead and return the abstract paragraph. */
 export function sliceFromPdfAbstract(text: string): string {

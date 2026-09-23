@@ -211,6 +211,7 @@ export type FluentMessageId =
   | 'links-add'
   | 'links-delete'
   | 'links-edit'
+  | 'magazine-blurb-open'
   | 'magazine-highlights'
   | 'magazine-shelf-listen'
   | 'magazine-shelf-listen-title'

@@ -11,7 +11,8 @@ import {
   sortItems,
   type ItemSortMode,
 } from "../utils/items";
-import { getItemBlurb, usableAbstractSnippet } from "../utils/itemBlurb";
+import { usableAbstractSnippet } from "../utils/itemBlurb";
+import { useMagazineBlurb } from "./useMagazineBlurb";
 import {
   getItemHighlightSample,
   type ItemHighlight,
@@ -104,8 +105,11 @@ export const MagazineTile = memo(function MagazineTile({
     () => getReadingTimeSync(item, { roundUp: true }),
     [item],
   );
-  const abstractNote = useMemo(() => usableAbstractSnippet(item), [item]);
-  const [blurb, setBlurb] = useState(abstractNote);
+  const {
+    blurb,
+    open: openBlurb,
+    onKeyDown: onBlurbKeyDown,
+  } = useMagazineBlurb(item, visible);
   const [highlights, setHighlights] = useState<ItemHighlight[]>([]);
   const publication = useMemo(
     () => getItemField(item, "publicationTitle"),
@@ -118,10 +122,6 @@ export const MagazineTile = memo(function MagazineTile({
   const hideGraphic = isTextHeavyGalleryItem(item);
   const usePhotoBanner = !hideGraphic && (isWebGalleryItem(item) || playable);
   const useGalleryCover = !hideGraphic && !usePhotoBanner;
-
-  useEffect(() => {
-    setBlurb(abstractNote);
-  }, [abstractNote]);
 
   useEffect(() => {
     setCover(placeholder);
@@ -141,21 +141,6 @@ export const MagazineTile = memo(function MagazineTile({
       cancelled = true;
     };
   }, [visible, item, usePhotoBanner]);
-
-  useEffect(() => {
-    if (!visible || abstractNote) {
-      return;
-    }
-    let cancelled = false;
-    void getItemBlurb(item).then((text) => {
-      if (!cancelled && text) {
-        setBlurb(text);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [visible, item, abstractNote]);
 
   useEffect(() => {
     if (!showHighlights) {
@@ -311,7 +296,17 @@ export const MagazineTile = memo(function MagazineTile({
           <div className="syllabus-magazine-instruction">{instruction}</div>
         ) : null}
         {blurb ? (
-          <div className="syllabus-magazine-abstract">{blurb}</div>
+          <div
+            className="syllabus-magazine-abstract"
+            role="button"
+            tabIndex={0}
+            title={getString("magazine-blurb-open")}
+            aria-label={getString("magazine-blurb-open")}
+            onClick={openBlurb}
+            onKeyDown={onBlurbKeyDown}
+          >
+            {blurb}
+          </div>
         ) : !instruction && !galleryNote && fallbackMeta ? (
           <div className="syllabus-magazine-meta">{fallbackMeta}</div>
         ) : null}

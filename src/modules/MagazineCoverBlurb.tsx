@@ -1,11 +1,11 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h } from "preact";
 import type { ComponentChildren, JSX } from "preact";
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { useMemo, useRef } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
 import { sortItems, type ItemSortMode } from "../utils/items";
-import { getItemBlurb, usableAbstractSnippet } from "../utils/itemBlurb";
 import { getString } from "../utils/locale";
+import { useMagazineBlurb } from "./useMagazineBlurb";
 import { GalleryTile } from "./GalleryTile";
 import { openGalleryNoteByCollectionId } from "./galleryNote";
 import { useNearViewport } from "./galleryVisibility";
@@ -72,37 +72,24 @@ function MagazineAutoSidecar({
   visible: boolean;
 }) {
   const galleryNote = useGalleryNoteText(item, collectionId);
-  const abstractNote = useMemo(() => usableAbstractSnippet(item), [item]);
-  const [blurb, setBlurb] = useState(abstractNote);
-  const [blurbResolved, setBlurbResolved] = useState(Boolean(abstractNote));
-
-  useEffect(() => {
-    setBlurb(abstractNote);
-    setBlurbResolved(Boolean(abstractNote));
-  }, [abstractNote]);
-
-  useEffect(() => {
-    if (!visible || abstractNote) {
-      return;
-    }
-    let cancelled = false;
-    void getItemBlurb(item).then((text) => {
-      if (cancelled) {
-        return;
-      }
-      if (text) {
-        setBlurb(text);
-      }
-      setBlurbResolved(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [visible, item, abstractNote]);
+  const {
+    blurb,
+    resolved: blurbResolved,
+    open,
+    onKeyDown,
+  } = useMagazineBlurb(item, visible);
 
   if (blurb) {
     return (
-      <div className="syllabus-explorer-magazine-text is-blurb">
+      <div
+        className="syllabus-explorer-magazine-text is-blurb"
+        role="button"
+        tabIndex={0}
+        title={getString("magazine-blurb-open")}
+        aria-label={getString("magazine-blurb-open")}
+        onClick={open}
+        onKeyDown={onKeyDown}
+      >
         <span className="syllabus-explorer-magazine-blurb-body">{blurb}</span>
       </div>
     );

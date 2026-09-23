@@ -395,6 +395,7 @@ magazine-shelf-watch-title = Video yang baru ditambahkan
 magazine-shelf-listen = Dengar
 magazine-shelf-listen-title = Audio yang baru ditambahkan
 magazine-highlights = Sorotan
+magazine-blurb-open = Buka kutipan ini di pembaca
 gallery-options-aria = Opsi tampilan galeri
 gallery-options-title = Opsi tampilan
 gallery-menu-view = Tampilan

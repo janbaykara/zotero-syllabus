@@ -393,6 +393,7 @@ magazine-shelf-watch-title = 最近添加的视频
 magazine-shelf-listen = 收听
 magazine-shelf-listen-title = 最近添加的音频
 magazine-highlights = 高亮
+magazine-blurb-open = 在阅读器中打开此摘录
 gallery-options-aria = 图库视图选项
 gallery-options-title = 视图选项
 gallery-menu-view = 视图

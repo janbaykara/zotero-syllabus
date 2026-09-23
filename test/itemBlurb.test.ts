@@ -2,11 +2,13 @@ import { assert } from "chai";
 import { PDF_BLURB_FIXTURES } from "./fixtures/pdfBlurbs";
 import {
   blurbFromAttachmentText,
+  extractAttachmentBlurb,
   isShopCopyAbstract,
 } from "../src/utils/itemBlurb";
 import {
   firstPdfContentText,
   isPdfFrontmatterPage,
+  pageIndexOfSnippet,
   shouldSkipFrontmatter,
 } from "../src/utils/pdfFrontmatter";
 
@@ -58,6 +60,25 @@ describe("pdf frontmatter", function () {
     assert.include(content, "infant");
     assert.notInclude(content.toLowerCase(), "isbn");
     assert.notInclude(content.toLowerCase(), "all rights reserved");
+  });
+
+  it("reports the chapter page index from form-feed PDF text", function () {
+    const extracted = extractAttachmentBlurb(BOOK_PAGES, {
+      skipFrontmatter: true,
+    });
+    assert.include(extracted.text, "infant");
+    assert.equal(extracted.pageIndex, 4);
+    assert.equal(pageIndexOfSnippet(BOOK_PAGES, extracted.text), 4);
+  });
+
+  it("reports the journal abstract page index", function () {
+    const pages = [
+      "Journal of Housing 12(3)\nMasthead and editors",
+      "ABSTRACT: This chapter argues that housing is infrastructure for everyday life in cities under pressure. The argument is developed through three urban cases that follow repairs, rents, and waiting lists.\nKey words: housing, infrastructure",
+    ].join("\f");
+    const extracted = extractAttachmentBlurb(pages);
+    assert.include(extracted.text, "housing is infrastructure");
+    assert.equal(extracted.pageIndex, 1);
   });
 
   it("skips a leading imprint when pages are not broken", function () {

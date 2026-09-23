@@ -395,6 +395,7 @@ magazine-shelf-watch-title = Son eklenen videolar
 magazine-shelf-listen = Dinle
 magazine-shelf-listen-title = Son eklenen sesler
 magazine-highlights = Vurgular
+magazine-blurb-open = Bu alıntıyı okuyucuda aç
 gallery-options-aria = Galeri görünümü seçenekleri
 gallery-options-title = Görünüm seçenekleri
 gallery-menu-view = Görünüm

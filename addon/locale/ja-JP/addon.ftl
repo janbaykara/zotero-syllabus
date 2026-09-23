@@ -395,6 +395,7 @@ magazine-shelf-watch-title = 最近追加した動画
 magazine-shelf-listen = 聴く
 magazine-shelf-listen-title = 最近追加した音声
 magazine-highlights = ハイライト
+magazine-blurb-open = この抜粋をリーダーで開く
 gallery-options-aria = ギャラリー表示オプション
 gallery-options-title = 表示オプション
 gallery-menu-view = 表示

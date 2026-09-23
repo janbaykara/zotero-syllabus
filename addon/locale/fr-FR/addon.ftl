@@ -395,6 +395,7 @@ magazine-shelf-watch-title = Vidéos ajoutées récemment
 magazine-shelf-listen = À écouter
 magazine-shelf-listen-title = Audio ajouté récemment
 magazine-highlights = Surlignages
+magazine-blurb-open = Ouvrir cet extrait dans le lecteur
 gallery-options-aria = Options de la vue Galerie
 gallery-options-title = Options d’affichage
 gallery-menu-view = Affichage

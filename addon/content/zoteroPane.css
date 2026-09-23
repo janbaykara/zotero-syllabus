@@ -1101,6 +1101,7 @@
 }
 
 .syllabus-explorer-magazine-text.is-blurb {
+  cursor: pointer;
   /* Quote + body share this box; pad keeps both inside overflow clippers.
      (A rail with overflow-x:auto computes overflow-y to auto too, so hangs
      outside this box get clipped.) */
@@ -2116,6 +2117,10 @@
 
 .syllabus-magazine-tile[data-role="compact"] .syllabus-magazine-instruction {
   -webkit-line-clamp: 2;
+}
+
+.syllabus-magazine-abstract {
+  cursor: pointer;
 }
 
 .syllabus-magazine-abstract,

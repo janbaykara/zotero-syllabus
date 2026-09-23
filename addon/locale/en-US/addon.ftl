@@ -393,6 +393,7 @@ magazine-shelf-watch-title = Recently added videos
 magazine-shelf-listen = Listen
 magazine-shelf-listen-title = Recently added audio
 magazine-highlights = Highlights
+magazine-blurb-open = Open this excerpt in the reader
 gallery-options-aria = Gallery view options
 gallery-options-title = View options
 gallery-menu-view = View

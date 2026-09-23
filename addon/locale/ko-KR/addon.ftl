@@ -395,6 +395,7 @@ magazine-shelf-watch-title = 최근 추가된 동영상
 magazine-shelf-listen = 듣기
 magazine-shelf-listen-title = 최근 추가된 오디오
 magazine-highlights = 형광 표시
+magazine-blurb-open = 이 발췌문을 리더에서 열기
 gallery-options-aria = 갤러리 보기 옵션
 gallery-options-title = 보기 옵션
 gallery-menu-view = 보기

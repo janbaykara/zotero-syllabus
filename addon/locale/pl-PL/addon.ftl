@@ -395,6 +395,7 @@ magazine-shelf-watch-title = Ostatnio dodane filmy
 magazine-shelf-listen = Słuchaj
 magazine-shelf-listen-title = Ostatnio dodane nagrania
 magazine-highlights = Wyróżnienia
+magazine-blurb-open = Otwórz ten fragment w czytniku
 gallery-options-aria = Opcje widoku galerii
 gallery-options-title = Opcje widoku
 gallery-menu-view = Widok

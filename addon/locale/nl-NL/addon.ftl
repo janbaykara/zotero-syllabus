@@ -395,6 +395,7 @@ magazine-shelf-watch-title = Onlangs toegevoegde video’s
 magazine-shelf-listen = Luisteren
 magazine-shelf-listen-title = Onlangs toegevoegde audio
 magazine-highlights = Markeringen
+magazine-blurb-open = Dit fragment in de lezer openen
 gallery-options-aria = Opties voor galerijweergave
 gallery-options-title = Weergaveopties
 gallery-menu-view = Weergave

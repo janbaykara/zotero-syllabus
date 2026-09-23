@@ -395,6 +395,7 @@ magazine-shelf-watch-title = 最近新增的影片
 magazine-shelf-listen = 收聽
 magazine-shelf-listen-title = 最近新增的音訊
 magazine-highlights = 螢光標註
+magazine-blurb-open = 在閱讀器中開啟此摘錄
 gallery-options-aria = 圖庫檢視選項
 gallery-options-title = 檢視選項
 gallery-menu-view = 檢視
