@@ -6,11 +6,18 @@ import {
   isShopCopyAbstract,
 } from "../src/utils/itemBlurb";
 import {
+  firstPdfContentPick,
   firstPdfContentText,
   isPdfFrontmatterPage,
   pageIndexOfSnippet,
+  printedPageLabelFromPage,
   shouldSkipFrontmatter,
 } from "../src/utils/pdfFrontmatter";
+import {
+  expandPdfPageLabelRanges,
+  pageIndexForPrintedLabel,
+  parsePdfPageLabelNums,
+} from "../src/utils/pdfPageLabels";
 
 const CHAPTER = `Chapter 1
 The First Bond
@@ -69,6 +76,59 @@ describe("pdf frontmatter", function () {
     assert.include(extracted.text, "infant");
     assert.equal(extracted.pageIndex, 4);
     assert.equal(pageIndexOfSnippet(BOOK_PAGES, extracted.text), 4);
+  });
+
+  it("skips acknowledgement continuations and takes printed page 1", function () {
+    const pages = [
+      "Beyond Doer and Done To\nIn Beyond Doer and Done To, Jessica Benjamin expands her theory of mutual recognition.",
+      "Contents\nAcknowledgments vii\nIntroduction: recognition, intersubjectivity and the Third 1",
+      "Acknowledgments\nAs this book has been written over almost two decades, there are any number of individuals and members of my community to whom I am most grateful.",
+      "Frosch, Sue Grand, Orna Guralnik. Chapter 1 first appeared as “Beyond doer and done to,” Psychoanalytic Quarterly, 2004.\nviii Acknowledgments",
+      "was taken from Relational Psychoanalysis Volume IV.\nAcknowledgments ix",
+      "",
+      "Introduction\nRecognition, intersubjectivity and the Third\nI.\nThis book develops the basic ideas of an intersubjective psychoanalysis organized around the idea of recognition. In contrast to the time when I first strove to formulate a theory of intersubjectivity it is now a dominant view.",
+    ].join("\f");
+    assert.equal(
+      printedPageLabelFromPage("Frosch, Sue Grand.\nviii Acknowledgments"),
+      "viii",
+    );
+    assert.equal(
+      printedPageLabelFromPage(
+        "I\nNATURE AND SIGNIFICANCE OF PLAY AS A CULTURAL PHENOMENON\nPLAY is older than culture, for culture always presupposes human society.",
+      ),
+      "",
+    );
+    assert.equal(
+      printedPageLabelFromPage(
+        "I.\nIs Love an Art?\nIS LOVE an art? Then it requires knowledge and effort.",
+      ),
+      "",
+    );
+    const pick = firstPdfContentPick(pages);
+    assert.include(pick.text, "This book develops the basic ideas");
+    assert.notMatch(pick.text, /Frosch|Chapter 1 first appeared/i);
+    assert.equal(pick.pageLabel, "1");
+    const extracted = extractAttachmentBlurb(pages, { skipFrontmatter: true });
+    assert.include(extracted.text, "This book develops the basic ideas");
+    assert.equal(extracted.pageLabel, "1");
+  });
+
+  it("maps Cover / roman / decimal PDF page labels to printed page 1", function () {
+    const objects = new Map<number, string>([
+      [23, "<<\n/P (Cover)\n>>"],
+      [24, "<<\n/S /r\n>>"],
+      [25, "<<\n/S /D\n>>"],
+    ]);
+    const ranges = parsePdfPageLabelNums(
+      "0 23 0 R 1 24 0 R 11 25 0 R",
+      objects,
+    );
+    const labels = expandPdfPageLabelRanges(ranges, 16);
+    assert.equal(labels[0], "Cover");
+    assert.equal(labels[1], "i");
+    assert.equal(labels[10], "x");
+    assert.equal(labels[11], "1");
+    assert.equal(pageIndexForPrintedLabel(labels, "1"), 11);
   });
 
   it("reports the journal abstract page index", function () {

@@ -1,5 +1,6 @@
 import { getCachedItem } from "./cache";
 import { compareLocale } from "./locale";
+import { pageIndexForPrintedLabel, readPdfPageLabels } from "./pdfPageLabels";
 
 /**
  * Display title for any item type. `getField("title")` is empty for types that
@@ -368,6 +369,7 @@ export function sortItems(
 export type ReaderOpenLocation = {
   attachmentID?: number;
   pageIndex?: number;
+  pageLabel?: string;
 };
 
 function firstViewableAttachmentId(item: Zotero.Item): number {
@@ -435,6 +437,77 @@ async function openAttachmentAtReaderLocation(
   }
 }
 
+async function labelsFromOpenReader(
+  attachmentID: number,
+): Promise<string[] | null> {
+  try {
+    const readers = (
+      Zotero.Reader as {
+        _readers?: Array<{
+          itemID?: number;
+          _iframeWindow?: {
+            PDFViewerApplication?: {
+              pdfDocument?: { getPageLabels?: () => Promise<string[]> };
+            };
+            wrappedJSObject?: {
+              PDFViewerApplication?: {
+                pdfDocument?: { getPageLabels?: () => Promise<string[]> };
+              };
+            };
+          };
+        }>;
+      }
+    )._readers;
+    const reader = readers?.find((entry) => entry.itemID === attachmentID);
+    const win = reader?._iframeWindow;
+    const app =
+      win?.PDFViewerApplication || win?.wrappedJSObject?.PDFViewerApplication;
+    const labels = await app?.pdfDocument?.getPageLabels?.();
+    return Array.isArray(labels) ? labels : null;
+  } catch {
+    return null;
+  }
+}
+
+async function labelsFromPdfFile(
+  attachmentID: number,
+): Promise<string[] | null> {
+  try {
+    const attachment = await Zotero.Items.getAsync(attachmentID);
+    if (!attachment) {
+      return null;
+    }
+    const path = (await (attachment as Zotero.Item).getFilePathAsync()) || "";
+    if (!path || typeof IOUtils === "undefined") {
+      return null;
+    }
+    const bytes = await IOUtils.read(path);
+    return readPdfPageLabels(bytes);
+  } catch (error) {
+    ztoolkit.log("labelsFromPdfFile failed:", error);
+    return null;
+  }
+}
+
+async function resolvePrintedPageIndex(
+  attachmentID: number,
+  pageLabel?: string,
+): Promise<number | undefined> {
+  const want = String(pageLabel || "").trim();
+  if (!want) {
+    return undefined;
+  }
+  const fromReader = await labelsFromOpenReader(attachmentID);
+  if (fromReader) {
+    return pageIndexForPrintedLabel(fromReader, want);
+  }
+  const fromFile = await labelsFromPdfFile(attachmentID);
+  if (fromFile) {
+    return pageIndexForPrintedLabel(fromFile, want);
+  }
+  return undefined;
+}
+
 /** Open the best attachment, optionally scrolled to a 0-based PDF page. */
 export function openItemAtReaderLocation(
   item: Zotero.Item,
@@ -451,7 +524,11 @@ export function openItemAtReaderLocation(
         }
         return;
       }
-      const pageIndex = location?.pageIndex;
+      const fromLabel = await resolvePrintedPageIndex(
+        attachmentID,
+        location?.pageLabel,
+      );
+      const pageIndex = fromLabel != null ? fromLabel : location?.pageIndex;
       const readerLocation =
         typeof pageIndex === "number" && pageIndex >= 0
           ? { pageIndex }

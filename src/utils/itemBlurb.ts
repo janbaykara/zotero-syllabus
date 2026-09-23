@@ -1,7 +1,7 @@
 import { getCachedItem } from "./cache";
 import { getItemAbstractSnippet, snippetFromAbstractNote } from "./items";
 import {
-  firstPdfContentText,
+  firstPdfContentPick,
   pageIndexOfSnippet,
   shouldSkipFrontmatter,
   sliceFromPdfAbstract,
@@ -12,6 +12,8 @@ export type ItemBlurbLocation = {
   text: string;
   attachmentID?: number;
   pageIndex?: number;
+  /** Printed PDF label (usually `"1"` after roman prelims). */
+  pageLabel?: string;
 };
 
 const BLURB_READ_BYTES = 12_000;
@@ -74,14 +76,17 @@ function joinPath(...parts: string[]): string {
 export function extractAttachmentBlurb(
   raw: string,
   options?: { skipFrontmatter?: boolean },
-): { text: string; pageIndex?: number } {
+): { text: string; pageIndex?: number; pageLabel?: string } {
   const cleanedRaw = cleanAttachmentExtractText(raw);
   let text = cleanedRaw;
+  let pageLabel: string | undefined;
   const fromAbstract = sliceFromPdfAbstract(text);
   if (fromAbstract) {
     text = fromAbstract;
   } else if (options?.skipFrontmatter) {
-    text = firstPdfContentText(text);
+    const pick = firstPdfContentPick(text);
+    text = pick.text;
+    pageLabel = pick.pageLabel;
   } else {
     const fromProse = sliceFromFirstProseParagraph(text);
     if (fromProse) {
@@ -100,6 +105,7 @@ export function extractAttachmentBlurb(
   return {
     text: cleaned,
     pageIndex: pageIndexOfSnippet(cleanedRaw, cleaned),
+    pageLabel,
   };
 }
 
@@ -236,7 +242,7 @@ async function locateSnippetInAttachments(
 async function readOneAttachmentBlurb(
   att: Zotero.Item,
   skipFrontmatter: boolean,
-): Promise<{ text: string; pageIndex?: number }> {
+): Promise<{ text: string; pageIndex?: number; pageLabel?: string }> {
   const raw = await readAttachmentSearchText(att, skipFrontmatter);
   if (!raw) {
     return { text: "" };

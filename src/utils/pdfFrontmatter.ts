@@ -241,10 +241,15 @@ function looksLikeRunningProse(
   return lower / words.length > 0.35;
 }
 
-const ABSTRACT_HEAD =
-  /(?:^|[\n\f\u000c])[ \t]*(?:abstract|r[eé]sum[eé]|resumen|zusammenfassung)\b[ \t]*(?:[:.\-–—][ \t]*|(?=[\n\f\u000c]))/i;
-const ABSTRACT_END =
-  /(?:^|[\n\f\u000c])\s*(?:key\s*words?|keywords|mot[s]?\s+cl[ée]s|palabras\s+clave)\s*[:.\-–—]/i;
+const PAGE_BREAK_CLASS = `\\n\\u000c`;
+const ABSTRACT_HEAD = new RegExp(
+  `(?:^|[${PAGE_BREAK_CLASS}])[ \\t]*(?:abstract|r[eé]sum[eé]|resumen|zusammenfassung)\\b[ \\t]*(?:[:.\\-–—][ \\t]*|(?=[${PAGE_BREAK_CLASS}]))`,
+  "i",
+);
+const ABSTRACT_END = new RegExp(
+  `(?:^|[${PAGE_BREAK_CLASS}])\\s*(?:key\\s*words?|keywords|mot[s]?\\s+cl[ée]s|palabras\\s+clave)\\s*[:.\\-–—]`,
+  "i",
+);
 
 /** Journal PDFs: skip the masthead and return the abstract paragraph. */
 export function sliceFromPdfAbstract(text: string): string {
@@ -376,10 +381,97 @@ function afterLastImprint(text: string): string {
   return (newline >= 0 ? rest.slice(newline) : rest).trim() || text;
 }
 
+const ROMAN_PAGE =
+  /^(?:m{0,3})(?:cm|cd|d?c{0,3})(?:xc|xl|l?x{0,3})(?:ix|iv|v?i{0,3})$/i;
+
+const PRELIM_ESSAY_HEADING =
+  /^(?:foreword|preface|prologue|translator['\u2019]?s (?:note|foreword|preface)|author['\u2019]?s (?:note|preface))\b/i;
+
+/** `I.` / `I` + title is Chapter I, not printed page i. */
+function looksLikeChapterNumeral(line: string, nextLine = ""): boolean {
+  const t = line.trim();
+  if (/^[ivxlcdm]{1,3}\.$/i.test(t)) {
+    return true;
+  }
+  const title = nextLine.trim();
+  return (
+    /^[ivxlcdm]{1,3}$/i.test(t) &&
+    title.length >= 8 &&
+    /^[A-Z]/.test(title) &&
+    !/^\d+$/.test(title)
+  );
+}
+
+/** Running header/footer like `viii Acknowledgments` or a lone `vi`. */
+export function printedPageLabelFromPage(page: string): string {
+  const lines = page
+    .split(/\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length === 0) {
+    return "";
+  }
+  const positions = [0, 1, lines.length - 1, lines.length - 2];
+  for (const index of positions) {
+    const line = lines[index];
+    if (!line || line.length > 48) {
+      continue;
+    }
+    if (looksLikeChapterNumeral(line, lines[index + 1] || "")) {
+      continue;
+    }
+    const withName = line.match(
+      /^(?:contents|acknowledg(?:e)?ments?|introduction)\s+([ivxlcdm]+|\d{1,4})$/i,
+    );
+    if (withName) {
+      return withName[1];
+    }
+    const nameAfter = line.match(
+      /^([ivxlcdm]+|\d{1,4})\s+(?:contents|acknowledg(?:e)?ments?|introduction|preface)$/i,
+    );
+    if (nameAfter) {
+      return nameAfter[1];
+    }
+    const bullet = line.match(/^([ivxlcdm]+|\d{1,4})\s*[•·.]\s+\S+/i);
+    if (bullet && !looksLikeChapterNumeral(`${bullet[1]}.`, "")) {
+      return bullet[1];
+    }
+    const bulletEnd = line.match(/\S+\s*[•·]\s+([ivxlcdm]+|\d{1,4})$/i);
+    if (bulletEnd) {
+      return bulletEnd[1];
+    }
+    if (ROMAN_PAGE.test(line) && line.length <= 8) {
+      return line;
+    }
+    if (/^\d{1,4}$/.test(line)) {
+      return line;
+    }
+  }
+  return "";
+}
+
+function hasAcknowledgmentsRunningHead(page: string): boolean {
+  const lines = page
+    .split(/\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const ends = [...lines.slice(0, 2), ...lines.slice(-2)];
+  return ends.some(
+    (line) => line.length < 48 && /acknowledg(?:e)?ments?/i.test(line),
+  );
+}
+
 /** Title, copyright, TOC, dedication, acknowledgements — not chapter prose. */
 export function isPdfFrontmatterPage(text: string): boolean {
   const trimmed = text.replace(/\s+/g, " ").trim();
   if (!trimmed) {
+    return true;
+  }
+  const printed = printedPageLabelFromPage(text);
+  if (printed && ROMAN_PAGE.test(printed)) {
+    return true;
+  }
+  if (hasAcknowledgmentsRunningHead(text)) {
     return true;
   }
   if (looksLikeToc(text)) {
@@ -437,14 +529,18 @@ function contentHeadingRank(line: string, page = ""): number {
     .toLowerCase()
     .replace(/['\u2019]/g, "'")
     .trim();
-  if (/chapter\s*(?:1|i|one)\b/.test(t) || /^i\./.test(t) || /^i$/.test(t)) {
+  // Anchor at the start — permissions lines often mention "Chapter 1 first appeared".
+  if (/^(?:chapter\s*(?:1|i|one)\b|i\.|i$)/.test(t) || /^i\s*$/.test(t)) {
     if (page && looksLikeRunningChapterHeader(page)) {
       return 1;
     }
     return 3;
   }
-  if (/\bintroduction\b|\bintroductory note\b/.test(t)) {
+  if (/^(?:\d+\s+)?(?:introduction|introductory note)\b/.test(t)) {
     return 2;
+  }
+  if (PRELIM_ESSAY_HEADING.test(t)) {
+    return 0;
   }
   return 1;
 }
@@ -625,46 +721,154 @@ function bestFallbackPage(pages: string[]): string {
   return "";
 }
 
+export type PdfContentPick = {
+  text: string;
+  /** Printed label when we landed on arabic page 1 after roman prelims. */
+  pageLabel?: string;
+};
+
+function isClearPrelimPage(page: string): boolean {
+  if (!page.trim()) {
+    return true;
+  }
+  if (hasAcknowledgmentsRunningHead(page)) {
+    return true;
+  }
+  if (looksLikeToc(page)) {
+    return true;
+  }
+  const first = firstNonEmptyLine(page);
+  if (/^(?:table of )?contents$/i.test(first)) {
+    return true;
+  }
+  const heading = collapseSpacedLetterRuns(
+    headingPrefix(page).replace(/^(?:[ivxlcdm]+\s+|viii\s+|\d+\s+)/i, ""),
+  );
+  return new RegExp(SKIP_HEADING.source, SKIP_HEADING.flags).test(heading);
+}
+
+function pageHasBodyProse(page: string): boolean {
+  return Boolean(
+    sliceFromFirstProseParagraph(page) ||
+    looksLikeRunningProse(page, { minWords: 30, minSentences: 1 }),
+  );
+}
+
+function isPrelimEssayPage(page: string): boolean {
+  const heading = collapseSpacedLetterRuns(
+    headingPrefix(page).replace(/^(?:[ivxlcdm]+\s+|viii\s+|\d+\s+)/i, ""),
+  );
+  return PRELIM_ESSAY_HEADING.test(heading);
+}
+
+/** Printed arabic 1 that looks like the book’s opening, not a foreword. */
+function pageWithPrintedOne(pages: string[]): string | "" {
+  for (const page of pages) {
+    if (printedPageLabelFromPage(page) !== "1") {
+      continue;
+    }
+    if (
+      isClearPrelimPage(page) ||
+      looksLikeToc(page) ||
+      isPrelimEssayPage(page)
+    ) {
+      continue;
+    }
+    if (!pageHasBodyProse(page)) {
+      continue;
+    }
+    const rank = contentHeadingRank(firstNonEmptyLine(page), page);
+    if (rank < 2) {
+      const laterBetter = pages.some(
+        (other) =>
+          other !== page &&
+          !isPdfFrontmatterPage(other) &&
+          contentHeadingRank(firstNonEmptyLine(other), other) >= 2,
+      );
+      if (laterBetter) {
+        continue;
+      }
+    }
+    return page;
+  }
+  return "";
+}
+
+function inferPrintedLabelAfterPrelims(
+  pages: string[],
+  picked: string,
+): string | undefined {
+  const printed = printedPageLabelFromPage(picked);
+  if (printed && /^\d+$/.test(printed)) {
+    return printed;
+  }
+  const pickIndex = pages.indexOf(picked);
+  if (pickIndex < 0) {
+    return printed || undefined;
+  }
+  const sawRoman = pages.slice(0, pickIndex).some((page) => {
+    const label = printedPageLabelFromPage(page);
+    return Boolean(label && ROMAN_PAGE.test(label));
+  });
+  return sawRoman ? "1" : printed || undefined;
+}
+
 /**
  * Drop title/copyright/TOC pages and return the first stretch of running
  * content (chapter, introduction, or similar). Empty if nothing looks like
  * prose — better no blurb than an imprint page.
  */
-export function firstPdfContentText(raw: string): string {
+export function firstPdfContentPick(raw: string): PdfContentPick {
   const pages = splitPdfCachePages(raw).filter(Boolean);
   let picked: string;
+  let pageLabel: string | undefined;
   if (pages.length > 1) {
     const scan = pages.slice(0, MAX_PAGES_TO_SCAN);
-    const ranked: Array<{ rank: number; index: number; page: string }> = [];
-    for (let index = 0; index < scan.length; index++) {
-      const page = scan[index];
-      if (isPdfFrontmatterPage(page)) {
-        continue;
-      }
-      ranked.push({
-        rank: contentHeadingRank(firstNonEmptyLine(page), page),
-        index,
-        page,
-      });
-    }
-    if (ranked.length > 0) {
-      ranked.sort((a, b) => {
-        if (b.rank !== a.rank) {
-          return b.rank - a.rank;
-        }
-        const chapterA = chapterNumberFromLine(firstNonEmptyLine(a.page));
-        const chapterB = chapterNumberFromLine(firstNonEmptyLine(b.page));
-        if (chapterA != null && chapterB != null && chapterA !== chapterB) {
-          return chapterA - chapterB;
-        }
-        return a.index - b.index;
-      });
-      picked = ranked[0].page;
+    const printedOne = pageWithPrintedOne(scan);
+    if (printedOne) {
+      picked = printedOne;
+      pageLabel = "1";
     } else {
-      picked = bestFallbackPage(scan);
+      const ranked: Array<{ rank: number; index: number; page: string }> = [];
+      for (let index = 0; index < scan.length; index++) {
+        const page = scan[index];
+        if (isPdfFrontmatterPage(page)) {
+          continue;
+        }
+        ranked.push({
+          rank: contentHeadingRank(firstNonEmptyLine(page), page),
+          index,
+          page,
+        });
+      }
+      if (ranked.length > 0) {
+        ranked.sort((a, b) => {
+          if (b.rank !== a.rank) {
+            return b.rank - a.rank;
+          }
+          const chapterA = chapterNumberFromLine(firstNonEmptyLine(a.page));
+          const chapterB = chapterNumberFromLine(firstNonEmptyLine(b.page));
+          if (chapterA != null && chapterB != null && chapterA !== chapterB) {
+            return chapterA - chapterB;
+          }
+          return a.index - b.index;
+        });
+        picked = ranked[0].page;
+        pageLabel = inferPrintedLabelAfterPrelims(scan, picked);
+      } else {
+        picked = bestFallbackPage(scan);
+        pageLabel = inferPrintedLabelAfterPrelims(scan, picked);
+      }
     }
   } else {
     picked = skipLeadingFrontmatterBlocks(afterLastImprint(raw));
   }
-  return sliceFromFirstProseParagraph(picked) || picked;
+  return {
+    text: sliceFromFirstProseParagraph(picked) || picked,
+    pageLabel,
+  };
+}
+
+export function firstPdfContentText(raw: string): string {
+  return firstPdfContentPick(raw).text;
 }
