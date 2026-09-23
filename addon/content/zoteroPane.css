@@ -948,93 +948,356 @@
   }
 }
 
-/* Explorer recent-annotations: same stream groups, horizontal rail.
-   Cover is fixed; quote columns are ~2.66× cover width. Short quotes
-   stack top-to-bottom within the clamp-height band before wrapping to
-   the next column (flex column-wrap needs a definite height).
-   Firefox won't grow the wrap container's width — AnnotationStreamGroup
-   measures children and sets an explicit width so the next cover clears. */
-.syllabus-explorer-annotation-stream-rail {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 1.6rem;
-  overflow-x: auto;
-  overflow-y: visible;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  padding-block: 0.15rem 0.35rem;
-  scroll-snap-type: x proximity;
-  --syllabus-annotations-cover-min: 7.5rem;
-  --syllabus-annotations-cover-max: 10rem;
-  --syllabus-annotations-cover-width: clamp(
-    var(--syllabus-annotations-cover-min),
-    9rem,
-    var(--syllabus-annotations-cover-max)
-  );
+/* Annotation sidecar on the Cover rail: quote columns are ~2.66× cover.
+   Short quotes stack within a cover-height band, then wrap to the next
+   column. Firefox won't grow a column-wrap flex — AnnotationCoverSidecar
+   measures children and sets an explicit width. */
+.syllabus-explorer-cover-rail:has(.syllabus-my-annotations-stream-stack) {
   --syllabus-explorer-annotation-col-width: calc(
-    2.66 * var(--syllabus-annotations-cover-width)
+    2.66 * var(--syllabus-explorer-cover-width, 148px)
   );
-  /* One fully line-clamped quote + meta + body padding — tall enough
-     for a long annotation alone, short enough that two brief ones pack. */
-  --syllabus-explorer-annotation-stack-height: calc(
-    1.2rem * 1.55 * 8 + 0.45rem + 1.35rem + 0.7rem
-  );
-  --syllabus-explorer-entry-gap: 1.1rem;
   --syllabus-explorer-annotation-gap: 0.65rem;
+  --syllabus-explorer-annotation-col-gap: 1.5rem;
 }
 
-.syllabus-explorer-annotation-stream-rail
-  .syllabus-my-annotations-stream-entry {
-  flex: 0 0 auto;
-  width: auto;
-  max-width: none;
-  scroll-snap-align: start;
-  padding-block: 0.25rem;
-  box-sizing: border-box;
-  gap: var(--syllabus-explorer-entry-gap);
+.syllabus-explorer-cover-item > .syllabus-explorer-annotation-sidecar {
+  position: relative;
+  /* Stretch to the cover row; min-height:0 so this box does not size it. */
+  align-self: stretch;
+  height: 100%;
+  min-height: 0;
+  min-width: var(--syllabus-explorer-annotation-col-width);
+  width: max-content;
 }
 
-.syllabus-explorer-annotation-stream-rail
-  .syllabus-my-annotations-stream-avatar {
-  position: static;
-  top: auto;
-}
-
-.syllabus-explorer-annotation-stream-rail
-  .syllabus-my-annotations-stream-stack {
-  flex: 0 0 auto;
+.syllabus-explorer-cover-item
+  > .syllabus-explorer-annotation-sidecar
+  > .syllabus-my-annotations-stream-stack {
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
   flex-wrap: wrap;
+  justify-content: flex-end;
   align-content: flex-start;
   align-items: stretch;
-  height: var(--syllabus-explorer-annotation-stack-height);
+  /* Fill the sidecar (cover-row used height). Do not set a pixel height —
+     that feeds back into the cover row and collapses the art. */
+  height: auto;
   width: max-content;
   max-width: none;
   min-width: 0;
-  gap: var(--syllabus-explorer-annotation-gap);
+  row-gap: var(--syllabus-explorer-annotation-gap);
+  column-gap: var(--syllabus-explorer-annotation-col-gap);
   overflow: visible;
   padding-block: 0.05rem 0.2rem;
+  box-sizing: border-box;
 }
 
-.syllabus-explorer-annotation-stream-rail
+.syllabus-explorer-cover-item
+  > .syllabus-explorer-annotation-sidecar
+  > .syllabus-my-annotations-stream-copy-all-wrap {
+  position: absolute;
+  inset-inline-start: 0;
+  top: 100%;
+  margin-block-start: 0.25rem;
+}
+
+.syllabus-explorer-cover-rail
+  .syllabus-explorer-cover-item
   .syllabus-my-annotations-stream-body-wrap {
   flex: 0 0 auto;
   width: var(--syllabus-explorer-annotation-col-width);
   max-width: var(--syllabus-explorer-annotation-col-width);
   scroll-snap-align: start;
   box-sizing: border-box;
+  padding-inline: 0.15rem 0.25rem;
 }
 
-.syllabus-explorer-annotation-stream-rail
+.syllabus-explorer-cover-rail
+  .syllabus-explorer-cover-item
   .syllabus-my-annotations-stream-quote {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 8;
   overflow: hidden;
+}
+
+/* Magazine sidecar (blurb / note) beside an unchanged Cover-mode tile. */
+.syllabus-explorer-cover-rail:has(.syllabus-explorer-cover-item),
+.syllabus-explorer-class-segment-covers:has(.syllabus-explorer-cover-item) {
+  grid-auto-columns: max-content;
+}
+
+.syllabus-explorer-cover-item {
+  --magazine-type-scale: 1;
+  --syllabus-explorer-entry-gap: 1.1rem;
+  --syllabus-explorer-magazine-blurb-width: calc(
+    2.6 * var(--syllabus-explorer-cover-width, 148px)
+  );
+  --syllabus-explorer-magazine-note-width: calc(
+    1.6 * var(--syllabus-explorer-cover-width, 148px)
+  );
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 2;
+  /* One column until a real sidecar exists — empty max-content + gap
+     was leaving a sliver to the right of Cover-sized tiles. */
+  grid-template-columns: var(--syllabus-explorer-cover-width, 148px);
+  column-gap: 0;
+  align-items: end;
+  width: var(--syllabus-explorer-cover-width, 148px);
+  max-width: var(--syllabus-explorer-cover-width, 148px);
+  box-sizing: border-box;
+  scroll-snap-align: start;
+}
+
+.syllabus-explorer-cover-item:has(> .syllabus-explorer-magazine-text),
+.syllabus-explorer-cover-item:has(> .syllabus-gallery-note),
+.syllabus-explorer-cover-item:has(> .syllabus-explorer-annotation-sidecar) {
+  grid-template-columns: var(--syllabus-explorer-cover-width, 148px) max-content;
+  column-gap: var(--syllabus-explorer-entry-gap);
+  width: max-content;
+  max-width: none;
+}
+
+.syllabus-explorer-cover-item > .syllabus-gallery-tile,
+.syllabus-explorer-cover-item > .syllabus-my-annotations-stream-avatar-empty {
+  grid-column: 1;
+  grid-row: span 2;
+}
+
+.syllabus-explorer-cover-item > .syllabus-my-annotations-stream-avatar-empty {
+  width: var(--syllabus-explorer-cover-width, 148px);
+  max-width: var(--syllabus-explorer-cover-width, 148px);
+}
+
+.syllabus-explorer-cover-item
+  > :not(.syllabus-gallery-tile):not(
+    .syllabus-my-annotations-stream-avatar-empty
+  ) {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+}
+
+.syllabus-explorer-cover-item > .syllabus-explorer-annotation-sidecar {
+  align-self: stretch;
+  min-height: 0;
+}
+
+.syllabus-explorer-magazine-text {
+  flex: 0 0 auto;
+  min-width: 0;
+  box-sizing: border-box;
+  padding-block: 0.15rem 0.2rem;
+  font-family: var(--syllabus-magazine-serif);
+  font-size: calc(1.15rem * var(--magazine-type-scale, 1));
+  font-weight: 450;
+  line-height: 1.5;
+  color: var(--fill-primary, inherit);
+}
+
+.syllabus-explorer-magazine-text.is-blurb {
+  /* Quote + body share this box; pad keeps both inside overflow clippers.
+     (A rail with overflow-x:auto computes overflow-y to auto too, so hangs
+     outside this box get clipped.) */
+  --magazine-blurb-quote-pad: 1.85rem;
+  --magazine-blurb-end-pad: 0.45rem;
+  --magazine-blurb-quote-top: 0.55rem;
+  position: relative;
+  box-sizing: border-box;
+  width: calc(
+    var(--syllabus-explorer-magazine-blurb-width) +
+      var(--magazine-blurb-quote-pad) + var(--magazine-blurb-end-pad)
+  );
+  max-width: calc(
+    var(--syllabus-explorer-magazine-blurb-width) +
+      var(--magazine-blurb-quote-pad) + var(--magazine-blurb-end-pad)
+  );
+  padding-block-start: var(--magazine-blurb-quote-top);
+  padding-inline: var(--magazine-blurb-quote-pad) var(--magazine-blurb-end-pad);
+  overflow: visible;
+  margin-block-start: 0;
+  margin-inline: 0;
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+}
+
+.syllabus-explorer-magazine-blurb-body {
+  position: relative;
+  z-index: 1;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 9;
+  overflow: hidden;
+  /* No inline padding — -webkit-box + padding can clip glyphs. */
+  padding-inline: 0;
+  box-sizing: border-box;
+}
+
+/* Faint oversized opening quote — lives in the blurb’s start/top pad. */
+.syllabus-explorer-magazine-text.is-blurb::before {
+  content: "\201C";
+  position: absolute;
+  top: 0;
+  left: 0.1rem;
+  z-index: 0;
+  font-family: Georgia, "Palatino Linotype", Palatino, "Times New Roman", serif;
+  font-size: 7.125em;
+  font-weight: 400;
+  font-style: normal;
+  line-height: 0.7;
+  letter-spacing: 0;
+  color: var(--fill-primary, #111);
+  opacity: 0.08;
+  pointer-events: none;
+  user-select: none;
+}
+
+.syllabus-explorer-cover-item > .syllabus-gallery-note {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  width: var(--syllabus-explorer-magazine-note-width);
+  max-width: var(--syllabus-explorer-magazine-note-width);
+  max-height: 100%;
+  box-sizing: border-box;
+}
+
+.syllabus-explorer-cover-item > .syllabus-gallery-note:focus-visible {
+  outline: 2px solid var(--accent-blue, #1d4ed8);
+  outline-offset: 1px;
+}
+
+/* Gallery / Reading Schedule Magazine: vertical Cover + Blurb packing. */
+.syllabus-magazine-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  --magazine-type-scale: 1;
+  --syllabus-annotations-cover-min: 140px;
+  --syllabus-annotations-cover-max: 11rem;
+  --syllabus-annotations-cover-width: clamp(
+    var(--syllabus-annotations-cover-min),
+    10rem,
+    var(--syllabus-annotations-cover-max)
+  );
+  --syllabus-explorer-magazine-note-width: calc(
+    1.6 * var(--syllabus-annotations-cover-width)
+  );
+  --syllabus-explorer-entry-gap: 1.1rem;
+}
+
+.syllabus-magazine-page.is-large-type .syllabus-magazine-vertical {
+  --magazine-type-scale: 1.25;
+}
+
+.syllabus-magazine-vertical .syllabus-explorer-cover-item {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  column-gap: var(--syllabus-explorer-entry-gap, 1.1rem);
+  grid: none;
+}
+
+.syllabus-magazine-vertical
+  .syllabus-explorer-cover-item
+  > .syllabus-gallery-tile,
+.syllabus-magazine-vertical
+  .syllabus-explorer-cover-item
+  > .syllabus-my-annotations-stream-avatar-empty {
+  position: sticky;
+  top: 0.5rem;
+  flex: none;
+  width: var(--syllabus-annotations-cover-width);
+  max-width: var(--syllabus-annotations-cover-width);
+  grid-column: auto;
+  grid-row: auto;
+  align-self: start;
+}
+
+.syllabus-magazine-vertical
+  .syllabus-explorer-cover-item
+  > :not(.syllabus-gallery-tile):not(
+    .syllabus-my-annotations-stream-avatar-empty
+  ) {
+  flex: 1 1 auto;
+  min-width: 0;
+  grid-column: auto;
+  grid-row: auto;
+  align-self: start;
+}
+
+.syllabus-magazine-vertical .syllabus-explorer-magazine-text {
+  flex: 1 1 auto;
+  width: auto;
+  max-width: none;
+  min-width: 0;
+}
+
+.syllabus-magazine-vertical .syllabus-explorer-magazine-text.is-blurb {
+  width: auto;
+  max-width: none;
+  overflow: visible;
+  padding-inline: var(--magazine-blurb-quote-pad, 1.35rem)
+    var(--magazine-blurb-end-pad, 0.4rem);
+}
+
+.syllabus-magazine-vertical .syllabus-explorer-magazine-blurb-body {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+
+.syllabus-magazine-vertical
+  .syllabus-explorer-cover-item
+  > .syllabus-gallery-note {
+  width: auto;
+  max-width: none;
+}
+
+/* Equal-grid Magazine packing: at most 4 across, generous tile width
+   (same idea as Cover’s reading-tile pack). */
+.syllabus-magazine-grid[data-magazine-packing="grid"] {
+  --magazine-grid-gap: 1.25rem;
+  --magazine-grid-col-min: max(
+    13rem,
+    calc((100% - 3 * var(--magazine-grid-gap)) / 4)
+  );
+  grid-auto-flow: row;
+  column-gap: var(--magazine-grid-gap);
+  row-gap: 1.75rem;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(var(--magazine-grid-col-min), 1fr)
+  );
+}
+
+.syllabus-magazine-grid[data-magazine-packing="grid"]
+  > .syllabus-magazine-tile {
+  grid-column: auto;
+  grid-row: auto;
+}
+
+.syllabus-magazine-grid[data-magazine-packing="grid"]
+  .syllabus-magazine-tile[data-role="compact"]
+  .syllabus-magazine-cover,
+.syllabus-magazine-grid[data-magazine-packing="grid"]
+  .syllabus-magazine-tile[data-role="tall"]
+  .syllabus-magazine-cover {
+  aspect-ratio: 2 / 3;
+  max-height: none;
 }
 
 /* Reading Cover/Magazine: fixed tile sized so 4 + gaps fit in the
@@ -1453,14 +1716,20 @@
   align-items: center;
   gap: 0.45em;
   margin: 0 0 1rem;
-  padding-top: 0.55rem;
-  border-top: 3px solid var(--fill-primary, #111);
-  font-family: var(--syllabus-magazine-serif);
-  font-size: calc(1.65rem * var(--magazine-type-scale, 1));
+  /* Match Gallery / plugin UI type — not Magazine tile Newsreader. */
+  font-family: inherit;
+  font-size: 24px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 1.15;
+  line-height: 1.2;
   color: var(--fill-primary, inherit);
+}
+
+.syllabus-magazine-page .syllabus-gallery-section-title-muted {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--fill-secondary, #8c8c8c);
 }
 
 .syllabus-magazine-home {
@@ -2625,9 +2894,10 @@
 }
 
 .syllabus-explorer-cover-rail {
+  --syllabus-explorer-cover-width: 148px;
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 148px;
+  grid-auto-columns: var(--syllabus-explorer-cover-width);
   grid-template-rows: max-content max-content;
   justify-content: start;
   align-items: end;
@@ -2635,6 +2905,13 @@
   overflow-x: auto;
   padding-bottom: 0.4rem;
   scroll-snap-type: x mandatory;
+  box-sizing: border-box;
+  /* Edge pad: shadows / peeks stay inside the scrollport; neg margin keeps
+     covers flush with the shelf header (fits the explorer page gutter). */
+  --explorer-rail-edge-pad: 1.25rem;
+  padding-inline: var(--explorer-rail-edge-pad);
+  margin-inline: calc(var(--explorer-rail-edge-pad) * -1);
+  scroll-padding-inline: var(--explorer-rail-edge-pad);
 }
 
 .syllabus-pinned-shelf-tile {
@@ -2737,15 +3014,10 @@
   bottom: -0.75rem;
 }
 
-/* Stack fans paint past the 148px column. Pad the scrollport so they aren’t
-   clipped, and cancel with negative margin so covers + captions stay flush
-   with the shelf header (fan may reach the content/window edge). */
+/* Stack fans paint past the 148px column — need a bit more than the shared
+   cover-rail edge pad. */
 .syllabus-explorer-cover-rail:has(.syllabus-pinned-collection-cover) {
-  /* Hover fan + rotated AABB; keep ≥ fan overhang past the front cover. */
-  --pinned-stack-rail-pad: 1.5rem;
-  padding-inline: var(--pinned-stack-rail-pad);
-  margin-inline: calc(var(--pinned-stack-rail-pad) * -1);
-  scroll-padding-inline: var(--pinned-stack-rail-pad);
+  --explorer-rail-edge-pad: 1.5rem;
 }
 
 /* Pinned syllabus in Cover mode: same 2-row subgrid as GalleryTile so covers
@@ -3040,6 +3312,7 @@
    Four shared rows (kicker / title / cover / meta) via nested subgrid so captions
    line up across class segments even when cover heights differ between groups. */
 .syllabus-explorer-class-cover-rail {
+  --syllabus-explorer-cover-width: 148px;
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: max-content;
@@ -3050,6 +3323,11 @@
   overflow-x: auto;
   padding-bottom: 0.4rem;
   scroll-snap-type: x mandatory;
+  box-sizing: border-box;
+  --explorer-rail-edge-pad: 1.25rem;
+  padding-inline: var(--explorer-rail-edge-pad);
+  margin-inline: calc(var(--explorer-rail-edge-pad) * -1);
+  scroll-padding-inline: var(--explorer-rail-edge-pad);
 }
 
 .syllabus-explorer-class-segment {
@@ -3070,6 +3348,7 @@
   grid-template-rows: subgrid;
   grid-row: span 2;
   row-gap: inherit;
+  position: relative;
   width: 100%;
   box-sizing: border-box;
   margin: 0;
@@ -3080,6 +3359,10 @@
   font: inherit;
   text-align: start;
   border-radius: 0;
+}
+
+.syllabus-explorer-class-segment-header::after {
+  content: none;
 }
 
 button.syllabus-explorer-class-segment-header {
@@ -3105,6 +3388,19 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   min-height: calc(11px * 1.2);
 }
 
+/* Stick the kicker (not empty spacers) to the rail scrollport. Width must
+   be max-content — a 100% header has no room to offset inside its segment. */
+.syllabus-explorer-class-segment-kicker:not(:empty) {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 2;
+  width: max-content;
+  max-width: min(36rem, 70vw);
+  box-sizing: border-box;
+  padding-inline-end: 0.85rem;
+  background-color: var(--color-background, var(--material-background, #fff));
+}
+
 .syllabus-explorer-class-segment-kicker:empty::before {
   content: "\00a0";
   font-size: 11px;
@@ -3117,7 +3413,7 @@ button.syllabus-explorer-class-segment-header:focus-visible {
 .syllabus-explorer-class-segment-covers {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 148px;
+  grid-auto-columns: var(--syllabus-explorer-cover-width, 148px);
   grid-template-rows: subgrid;
   grid-row: span 2;
   justify-content: start;
@@ -3156,6 +3452,10 @@ button.syllabus-explorer-class-segment-header:focus-visible {
       );
   }
 
+  .syllabus-explorer-class-segment-header::after {
+    content: none;
+  }
+
   .syllabus-explorer-class-segment-title {
     padding-bottom: 0;
     border-bottom: none;
@@ -3183,7 +3483,6 @@ button.syllabus-explorer-class-segment-header:focus-visible {
 }
 
 .syllabus-explorer-class-segment-date {
-  margin-inline-start: auto;
   font-size: 12px;
   font-weight: 500;
   color: var(--fill-secondary, #8c8c8c);
@@ -3195,22 +3494,45 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   line-height: 1.25;
   letter-spacing: -0.01em;
   color: var(--fill-primary);
-  overflow: hidden;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 0.4em;
-  /* Padding under the rule doubles as the gap before covers (covers is
-     subgridded — no margin-top there, or shared cover/meta tracks break). */
-  padding-bottom: 1rem;
+  display: block;
+  align-self: stretch;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  /* Rule lives on this full-width box, under the text — not on the
+     header, where bottom:0 sat on the title baseline. */
+  padding-bottom: 0.75rem;
   border-bottom: 1px solid
     var(
       --fill-quaternary,
       color-mix(in srgb, var(--fill-secondary, #8c8c8c) 35%, transparent)
     );
+  background: transparent;
 }
 
-.syllabus-explorer-class-segment-title > span {
+.syllabus-explorer-class-segment-title-inner {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4em;
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 2;
+  width: max-content;
+  max-width: min(36rem, 70vw);
+  box-sizing: border-box;
+  padding-inline-end: 0.85rem;
+  background-color: var(--color-background, var(--material-background, #fff));
+}
+
+.syllabus-explorer-class-segment-title-inner > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.syllabus-explorer-class-segment-title-inner > span {
   overflow: hidden;
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -3236,8 +3558,8 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   grid-row: span 2;
   box-sizing: border-box;
   flex: none;
-  width: 148px;
-  max-width: 148px;
+  width: var(--syllabus-explorer-cover-width, 148px);
+  max-width: var(--syllabus-explorer-cover-width, 148px);
   min-width: 0;
   margin-bottom: 0;
   overflow: hidden;
@@ -3322,6 +3644,13 @@ button.syllabus-explorer-class-segment-header:focus-visible {
     display: flex;
     align-items: end;
     gap: 1.15rem;
+  }
+
+  .syllabus-explorer-cover-item {
+    display: flex;
+    flex-direction: row;
+    align-items: end;
+    grid: none;
   }
 
   .syllabus-explorer-cover-rail .syllabus-gallery-tile,
@@ -3579,6 +3908,9 @@ button.syllabus-explorer-class-segment-header:focus-visible {
 .syllabus-my-annotations-stream-entry:hover
   .syllabus-my-annotations-stream-copy-all,
 .syllabus-my-annotations-stream-entry:focus-within
+  .syllabus-my-annotations-stream-copy-all,
+.syllabus-explorer-cover-item:hover .syllabus-my-annotations-stream-copy-all,
+.syllabus-explorer-cover-item:focus-within
   .syllabus-my-annotations-stream-copy-all,
 .syllabus-my-annotations-stream-copy-all:focus-visible,
 .syllabus-my-annotations-stream-copy-all.is-copied {

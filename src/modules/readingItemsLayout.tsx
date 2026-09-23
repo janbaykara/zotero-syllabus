@@ -24,9 +24,14 @@ import {
 } from "./galleryLayout";
 import type { ItemDensity } from "./react-zotero-sync/itemDensity";
 import { GalleryTile } from "./GalleryPage";
-import { MagazineGrid, type MagazineTileClick } from "./MagazineTile";
+import type { MagazineTileClick } from "./MagazineTile";
+import { MagazineItems } from "./MagazineItems";
+import { ExplorerMagazineRail } from "./ExplorerMagazineRail";
 import type { MagazineSectionTemplate } from "./magazineDesks";
+import type { MagazinePacking } from "./magazinePacking";
 import type { ReadingTileChrome } from "./readingAssignmentChrome";
+import { GalleryAnnotationsSection } from "./GalleryAnnotationsRow";
+import { useBooleanPref } from "./react-zotero-sync/booleanPref";
 import { SyllabusItemCard } from "./SyllabusItemCard";
 import { SyllabusManager } from "./syllabus";
 import { getString } from "../utils/locale";
@@ -125,7 +130,8 @@ export function useReadingItemsPack(
 }
 
 /**
- * Shared Card / Cover / Magazine body for Reading Schedule and locked syllabus.
+ * Shared Card / Cover / Annotations / Magazine body for Reading Schedule
+ * and locked syllabus.
  */
 export function ReadingItemsLayout({
   layout,
@@ -137,6 +143,10 @@ export function ReadingItemsLayout({
   showPriority = true,
   /** Home shelves: horizontal scroll instead of wrapping pack grid. */
   coverRail = false,
+  /** Home Upcoming deadlines Magazine: Cover + Blurb rail. */
+  magazineRail = false,
+  /** Gallery / Reading Schedule Magazine packing (ignored when magazineRail). */
+  magazinePacking = "packed" as MagazinePacking,
   className,
   onItemClick,
 }: {
@@ -149,9 +159,14 @@ export function ReadingItemsLayout({
   /** Cover/magazine priority badge (off on Pinned; Reading Schedule Cover shows it). */
   showPriority?: boolean;
   coverRail?: boolean;
+  magazineRail?: boolean;
+  magazinePacking?: MagazinePacking;
   className?: string;
   onItemClick?: (item: Zotero.Item, collectionId: number) => void;
 }) {
+  const [showItemsWithoutAnnotations] = useBooleanPref(
+    "galleryShowItemsWithoutAnnotations",
+  );
   const handleClick = useCallback<MagazineTileClick>(
     (item, e) => {
       e.stopPropagation();
@@ -192,7 +207,12 @@ export function ReadingItemsLayout({
     return map;
   }, [rows, readerMode, showPriority]);
 
-  const usePack = layout !== "card" && !coverRail;
+  const usePack =
+    layout !== "card" &&
+    layout !== "annotations" &&
+    !coverRail &&
+    !magazineRail &&
+    !(layout === "magazine" && magazinePacking === "vertical");
   const { wrapRef, pack } = useReadingItemsPack(layout, rows.length, usePack);
   const packClass = readingItemsPackClass(pack);
   const tileStyle = {
@@ -223,6 +243,43 @@ export function ReadingItemsLayout({
     );
   }
 
+  if (layout === "magazine" && magazineRail) {
+    const collectionId = rows[0]?.collectionId ?? 0;
+    return (
+      <ExplorerMagazineRail
+        className={className}
+        items={rows.map((row) => row.item)}
+        keyPrefix={rows[0]?.key || "reading"}
+        sortBy="auto"
+        collectionId={collectionId}
+        selectedItemIds={null}
+        chromeByItemId={chromeByItemId}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+        onContextMenu={handleContextMenu}
+      />
+    );
+  }
+
+  if (layout === "annotations") {
+    return (
+      <div className={className}>
+        <GalleryAnnotationsSection
+          items={rows.map((row) => row.item)}
+          keyPrefix={rows[0]?.key || "reading"}
+          sortBy="auto"
+          collectionId={rows[0]?.collectionId ?? 0}
+          selectedItemIds={null}
+          showItemsWithoutAnnotations={showItemsWithoutAnnotations}
+          chromeByItemId={chromeByItemId}
+          onClick={handleClick}
+          onDoubleClick={handleDoubleClick}
+          onContextMenu={handleContextMenu}
+        />
+      </div>
+    );
+  }
+
   if (layout === "cover" || layout === "magazine") {
     const grid =
       layout === "cover" ? (
@@ -243,13 +300,15 @@ export function ReadingItemsLayout({
           ))}
         </div>
       ) : (
-        <MagazineGrid
+        <MagazineItems
           className={twMerge(packClass, className)}
           style={tileStyle}
           items={rows.map((row) => row.item)}
           keyPrefix={rows[0]?.key || "reading"}
           sortBy="auto"
           template={template}
+          packing={magazinePacking}
+          collectionId={rows[0]?.collectionId ?? 0}
           selectedItemIds={null}
           chromeByItemId={chromeByItemId}
           onClick={handleClick}
@@ -259,7 +318,14 @@ export function ReadingItemsLayout({
       );
 
     return (
-      <div ref={wrapRef} className={readingContentWidthClass(layout, pack)}>
+      <div
+        ref={wrapRef}
+        className={
+          layout === "magazine" && magazinePacking === "vertical"
+            ? "container-padded"
+            : readingContentWidthClass(layout, pack)
+        }
+      >
         {grid}
       </div>
     );

@@ -376,6 +376,13 @@ gallery-annotations-none-heading = Keine Annotationen
 gallery-annotations-show-empty = Einträge ohne Annotationen anzeigen
 gallery-layout-magazine = Magazin
 gallery-layout-magazine-title = Gemischtes Magazin-Layout
+gallery-menu-packing = Anordnung
+gallery-packing-vertical = Vertikal
+gallery-packing-vertical-title = Cover mit Abstracts in einer Leseliste
+gallery-packing-grid = Raster
+gallery-packing-grid-title = Gleich große Magazin-Kacheln
+gallery-packing-packed = Gepackt
+gallery-packing-packed-title = Magazinlayout mit gemischten Größen
 
 # Gallery notes (collection-scoped child notes)
 gallery-note-add = Add Gallery Note

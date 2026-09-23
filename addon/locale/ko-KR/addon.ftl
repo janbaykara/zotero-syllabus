@@ -376,6 +376,13 @@ gallery-annotations-none-heading = 주석 없음
 gallery-annotations-show-empty = 주석 없는 항목 표시
 gallery-layout-magazine = 매거진
 gallery-layout-magazine-title = 다양한 크기의 매거진 레이아웃
+gallery-menu-packing = Packing
+gallery-packing-vertical = Vertical
+gallery-packing-vertical-title = Covers with abstracts in a reading stack
+gallery-packing-grid = Grid
+gallery-packing-grid-title = Equal-size magazine tiles
+gallery-packing-packed = Packed
+gallery-packing-packed-title = Mixed-size magazine layout
 
 # Gallery notes (collection-scoped child notes)
 gallery-note-add = Add Gallery Note

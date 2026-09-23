@@ -376,6 +376,13 @@ gallery-annotations-none-heading = Not yok
 gallery-annotations-show-empty = Notu olmayan öğeleri göster
 gallery-layout-magazine = Magazin
 gallery-layout-magazine-title = Karışık boyutlu magazin düzeni
+gallery-menu-packing = Packing
+gallery-packing-vertical = Vertical
+gallery-packing-vertical-title = Covers with abstracts in a reading stack
+gallery-packing-grid = Grid
+gallery-packing-grid-title = Equal-size magazine tiles
+gallery-packing-packed = Packed
+gallery-packing-packed-title = Mixed-size magazine layout
 
 # Gallery notes (collection-scoped child notes)
 gallery-note-add = Add Gallery Note

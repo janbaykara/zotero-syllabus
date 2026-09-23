@@ -14,10 +14,6 @@ import {
   type GalleryGroupByAllow,
 } from "./galleryGroupBy";
 import { coerceGallerySortBy, type GallerySortBy } from "./gallerySort";
-import {
-  coerceMagazineTypeSize,
-  type MagazineTypeSize,
-} from "./magazineTypeSize";
 
 export const EXPLORER_SHELF_TYPES = [
   "pinned",
@@ -75,7 +71,6 @@ export const EXPLORER_ANNOTATION_SHELF_LIMIT = 20;
 
 export const DEFAULT_COLLECTION_SHELF_GROUP_BY: GalleryGroupBy = "classes";
 export const DEFAULT_COLLECTION_SHELF_SORT_BY: GallerySortBy = "auto";
-export const DEFAULT_COLLECTION_SHELF_TYPE_SIZE: MagazineTypeSize = "small";
 
 type ExplorerShelfBase = {
   id: string;
@@ -89,7 +84,6 @@ export type ExplorerCollectionShelf = ExplorerShelfBase & {
   collectionKey: string;
   groupBy?: GalleryGroupBy;
   sortBy?: GallerySortBy;
-  magazineTypeSize?: MagazineTypeSize;
 };
 
 export type ExplorerShelf = ExplorerShelfBase &
@@ -121,7 +115,6 @@ const ExplorerShelfSchema = z
     limit: z.number().positive().optional(),
     groupBy: z.unknown().optional(),
     sortBy: z.unknown().optional(),
-    magazineTypeSize: z.unknown().optional(),
     libraryID: z.number().int().positive().optional(),
     collectionKey: z.string().optional(),
     searchKey: z.string().optional(),
@@ -336,11 +329,6 @@ export function coerceExplorerShelf(value: unknown): ExplorerShelf | null {
         ...(raw.sortBy !== undefined
           ? { sortBy: coerceGallerySortBy(raw.sortBy) }
           : {}),
-        ...(raw.magazineTypeSize !== undefined
-          ? {
-              magazineTypeSize: coerceMagazineTypeSize(raw.magazineTypeSize),
-            }
-          : {}),
       };
       break;
     case "saved-search":
@@ -529,7 +517,6 @@ export function createCollectionShelf(
     collectionKey,
     groupBy: DEFAULT_COLLECTION_SHELF_GROUP_BY,
     sortBy: DEFAULT_COLLECTION_SHELF_SORT_BY,
-    magazineTypeSize: DEFAULT_COLLECTION_SHELF_TYPE_SIZE,
   };
 }
 
@@ -543,18 +530,6 @@ export function explorerShelfSortBy(
   return shelf.sortBy != null
     ? coerceGallerySortBy(shelf.sortBy)
     : DEFAULT_COLLECTION_SHELF_SORT_BY;
-}
-
-/** Resolved magazine type size for a collection shelf. */
-export function explorerShelfMagazineTypeSize(
-  shelf: ExplorerCollectionShelf | ExplorerShelf,
-): MagazineTypeSize {
-  if (shelf.type !== "collection") {
-    return DEFAULT_COLLECTION_SHELF_TYPE_SIZE;
-  }
-  return shelf.magazineTypeSize != null
-    ? coerceMagazineTypeSize(shelf.magazineTypeSize)
-    : DEFAULT_COLLECTION_SHELF_TYPE_SIZE;
 }
 
 /**

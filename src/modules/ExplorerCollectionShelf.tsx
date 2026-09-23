@@ -30,7 +30,11 @@ import { collectionHasSyllabusNote } from "./syllabusNote";
 import { GalleryTile, GalleryGroupIcon } from "./GalleryPage";
 import type { GalleryGroupIconSpec } from "./galleryGroupNav";
 import { collectionGroupIconSpec } from "./galleryGroupNav";
-import { MagazineGrid, type MagazineTileClick } from "./MagazineTile";
+import { type MagazineTileClick } from "./MagazineTile";
+import {
+  ExplorerCoverItem,
+  ExplorerMagazineRail,
+} from "./ExplorerMagazineRail";
 import { SlimSyllabusItemCard } from "./browsePage";
 import { SyllabusItemCard } from "./SyllabusItemCard";
 import {
@@ -40,13 +44,11 @@ import {
 import type { GalleryLayout } from "./galleryLayout";
 import type { GalleryGroupBy } from "./galleryGroupBy";
 import type { GallerySortBy } from "./gallerySort";
-import type { MagazineTypeSize } from "./magazineTypeSize";
 import type { ItemDensity } from "./react-zotero-sync/itemDensity";
 import type { MagazineSectionTemplate } from "./magazineDesks";
 import type { JSX } from "preact";
 import {
   explorerShelfGroupBy,
-  explorerShelfMagazineTypeSize,
   explorerShelfSortBy,
   type ExplorerCollectionShelf,
 } from "./explorerConfig";
@@ -146,8 +148,10 @@ function ClassSegmentHeader({
           aria-hidden="true"
         />
         <div className="syllabus-explorer-class-segment-title">
-          <GalleryGroupIcon spec={{ kind: "class" }} />
-          <span>{getString("gallery-unnumbered")}</span>
+          <div className="syllabus-explorer-class-segment-title-inner">
+            <GalleryGroupIcon spec={{ kind: "class" }} />
+            <span>{getString("gallery-unnumbered")}</span>
+          </div>
         </div>
       </button>
     );
@@ -185,8 +189,10 @@ function ClassSegmentHeader({
         ) : null}
       </div>
       <div className="syllabus-explorer-class-segment-title">
-        <GalleryGroupIcon spec={{ kind: "class" }} />
-        <span>{title || className}</span>
+        <div className="syllabus-explorer-class-segment-title-inner">
+          <GalleryGroupIcon spec={{ kind: "class" }} />
+          <span>{title || className}</span>
+        </div>
       </div>
     </button>
   );
@@ -195,8 +201,10 @@ function ClassSegmentHeader({
 function SegmentHeader({ segment }: { segment: ExplorerShelfSegment }) {
   const title = (
     <div className="syllabus-explorer-class-segment-title">
-      {segment.icon ? <GalleryGroupIcon spec={segment.icon} /> : null}
-      <span>{segment.title}</span>
+      <div className="syllabus-explorer-class-segment-title-inner">
+        {segment.icon ? <GalleryGroupIcon spec={segment.icon} /> : null}
+        <span>{segment.title}</span>
+      </div>
     </div>
   );
   if (segment.onOpen) {
@@ -238,11 +246,13 @@ function SegmentHeader({ segment }: { segment: ExplorerShelfSegment }) {
   );
 }
 
-/** Horizontal Cover rail: one segment per group. */
+/** Horizontal Cover rail: one segment per group. Magazine reuses the same
+ *  rail/headers so class titles span the full segment width. */
 export function ExplorerSegmentedCoverRail({
   segments,
   keyPrefix,
   collectionId = 0,
+  magazine = false,
   selectedItemIds,
   onClick,
   onDoubleClick,
@@ -252,6 +262,8 @@ export function ExplorerSegmentedCoverRail({
   segments: ExplorerShelfSegment[];
   keyPrefix: string;
   collectionId?: number;
+  /** Magazine adds a blurb/note column beside each Cover tile. */
+  magazine?: boolean;
   selectedItemIds: number[] | null;
   onClick: MagazineTileClick;
   onDoubleClick: (item: Zotero.Item) => void;
@@ -301,18 +313,31 @@ export function ExplorerSegmentedCoverRail({
               <SegmentHeader segment={segment} />
             )}
             <div className="syllabus-explorer-class-segment-covers">
-              {segment.items.map((item) => (
-                <GalleryTile
-                  key={`${keyPrefix}-${segment.key}-${item.id}`}
-                  item={item}
-                  collectionId={segmentCollectionId}
-                  selected={selectedItemIds?.includes(item.id) || false}
-                  chrome={chromeByItemId?.get(item.id)}
-                  onClick={onClick}
-                  onDoubleClick={onDoubleClick}
-                  onContextMenu={onContextMenu}
-                />
-              ))}
+              {segment.items.map((item) =>
+                magazine ? (
+                  <ExplorerCoverItem
+                    key={`${keyPrefix}-${segment.key}-${item.id}`}
+                    item={item}
+                    collectionId={segmentCollectionId}
+                    chrome={chromeByItemId?.get(item.id)}
+                    selected={selectedItemIds?.includes(item.id) || false}
+                    onClick={onClick}
+                    onDoubleClick={onDoubleClick}
+                    onContextMenu={onContextMenu}
+                  />
+                ) : (
+                  <GalleryTile
+                    key={`${keyPrefix}-${segment.key}-${item.id}`}
+                    item={item}
+                    collectionId={segmentCollectionId}
+                    selected={selectedItemIds?.includes(item.id) || false}
+                    chrome={chromeByItemId?.get(item.id)}
+                    onClick={onClick}
+                    onDoubleClick={onDoubleClick}
+                    onContextMenu={onContextMenu}
+                  />
+                ),
+              )}
             </div>
           </section>
         );
@@ -324,6 +349,8 @@ export function ExplorerSegmentedCoverRail({
 function FlatCoverRail({
   items,
   keyPrefix,
+  collectionId = 0,
+  magazine = false,
   selectedItemIds,
   onClick,
   onDoubleClick,
@@ -331,6 +358,8 @@ function FlatCoverRail({
 }: {
   items: Zotero.Item[];
   keyPrefix: string;
+  collectionId?: number;
+  magazine?: boolean;
   selectedItemIds: number[] | null;
   onClick: MagazineTileClick;
   onDoubleClick: (item: Zotero.Item) => void;
@@ -345,16 +374,28 @@ function FlatCoverRail({
   }
   return (
     <div className="syllabus-explorer-cover-rail">
-      {items.map((item) => (
-        <GalleryTile
-          key={`${keyPrefix}-${item.id}`}
-          item={item}
-          selected={selectedItemIds?.includes(item.id) || false}
-          onClick={onClick}
-          onDoubleClick={onDoubleClick}
-          onContextMenu={onContextMenu}
-        />
-      ))}
+      {items.map((item) =>
+        magazine ? (
+          <ExplorerCoverItem
+            key={`${keyPrefix}-${item.id}`}
+            item={item}
+            collectionId={collectionId}
+            selected={selectedItemIds?.includes(item.id) || false}
+            onClick={onClick}
+            onDoubleClick={onDoubleClick}
+            onContextMenu={onContextMenu}
+          />
+        ) : (
+          <GalleryTile
+            key={`${keyPrefix}-${item.id}`}
+            item={item}
+            selected={selectedItemIds?.includes(item.id) || false}
+            onClick={onClick}
+            onDoubleClick={onDoubleClick}
+            onContextMenu={onContextMenu}
+          />
+        ),
+      )}
     </div>
   );
 }
@@ -473,7 +514,7 @@ export function ExplorerCollectionShelfBody({
   syllabus,
   fallbackItems,
   keyPrefix,
-  template,
+  template: _template,
   density,
   selectedIdentifiers,
   selectedItemIds,
@@ -507,10 +548,8 @@ export function ExplorerCollectionShelfBody({
   const groupBy = explorerShelfGroupBy(shelf, {
     classes: isSyllabus,
     subcollections: true,
-    magazine: layout === "magazine",
+    magazine: layout === "magazine" || layout === "cover",
   });
-  const magazineTypeSize = explorerShelfMagazineTypeSize(shelf);
-
   const collectionItems = useZoteroCollectionItems(collectionId, {
     recursive: "pref",
   });
@@ -696,11 +735,10 @@ export function ExplorerCollectionShelfBody({
       );
     }
     return (
-      <MagazineGrid
+      <ExplorerMagazineRail
         items={items}
         keyPrefix={`${keyPrefix}-${segmentKey}`}
         sortBy={sortBy}
-        template={template}
         collectionId={collectionId}
         selectedItemIds={selectedItemIds}
         onClick={onClick}
@@ -711,12 +749,15 @@ export function ExplorerCollectionShelfBody({
     );
   };
 
-  if (layout === "cover") {
+  if (layout === "cover" || layout === "magazine") {
+    const magazine = layout === "magazine";
     if (groupBy === "none" || groupBy === "auto") {
       return (
         <FlatCoverRail
           items={flatItems}
           keyPrefix={keyPrefix}
+          collectionId={collectionId}
+          magazine={magazine}
           selectedItemIds={selectedItemIds}
           onClick={onClick}
           onDoubleClick={onDoubleClick}
@@ -729,6 +770,7 @@ export function ExplorerCollectionShelfBody({
         segments={segments}
         keyPrefix={keyPrefix}
         collectionId={collectionId}
+        magazine={magazine}
         selectedItemIds={selectedItemIds}
         onClick={onClick}
         onDoubleClick={onDoubleClick}
@@ -746,30 +788,7 @@ export function ExplorerCollectionShelfBody({
         </p>
       );
     }
-    if (layout === "card") {
-      return renderSegmentBody({ key: "all", title: "", items: flatItems });
-    }
-    return (
-      <div
-        className={twMerge(
-          layout === "magazine" &&
-            magazineTypeSize === "large" &&
-            "is-large-type",
-        )}
-      >
-        <MagazineGrid
-          items={flatItems}
-          keyPrefix={keyPrefix}
-          sortBy={sortBy}
-          template={template}
-          collectionId={collectionId}
-          selectedItemIds={selectedItemIds}
-          onClick={onClick}
-          onDoubleClick={onDoubleClick}
-          onContextMenu={onContextMenu}
-        />
-      </div>
-    );
+    return renderSegmentBody({ key: "all", title: "", items: flatItems });
   }
 
   if (segments.length === 0) {
@@ -781,14 +800,7 @@ export function ExplorerCollectionShelfBody({
   }
 
   return (
-    <div
-      className={twMerge(
-        "flex flex-col gap-8",
-        layout === "magazine" &&
-          magazineTypeSize === "large" &&
-          "is-large-type",
-      )}
-    >
+    <div className="flex flex-col gap-8">
       {segments.map((segment) => {
         const classHeader = classBundle?.classHeaders?.[segment.key];
         const heading =
@@ -830,7 +842,7 @@ export function explorerCollectionGroupByModes(
   isSyllabus: boolean,
 ): GalleryGroupBy[] {
   const modes: GalleryGroupBy[] = ["none"];
-  if (layout === "magazine") {
+  if (layout === "magazine" || layout === "cover") {
     modes.push("auto");
   }
   modes.push("type", "creator", "tags", "subcollections");
@@ -844,8 +856,4 @@ export function explorerCollectionSortByModes(): Array<
   Exclude<GallerySortBy, "lastRead">
 > {
   return ["auto", "title", "date", "dateAdded"];
-}
-
-export function explorerCollectionTypeSizeModes(): MagazineTypeSize[] {
-  return ["small", "large"];
 }

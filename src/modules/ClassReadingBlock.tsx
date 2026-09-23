@@ -25,6 +25,7 @@ import { getString, getUiDir } from "../utils/locale";
 import { ProseText } from "./ProseText";
 import type { GalleryLayout } from "./galleryLayout";
 import { readingContentWidthClass } from "./galleryLayout";
+import type { MagazinePacking } from "./magazinePacking";
 import { ReadingItemsLayout } from "./readingItemsLayout";
 import { useScheduleStickyTop } from "./scheduleSticky";
 
@@ -205,6 +206,8 @@ export function ClassReadingBlock({
   fullWidthItems = false,
   stickyHeading = false,
   showPriority,
+  magazineRail = false,
+  magazinePacking = "packed",
   onCollectionClick,
   onItemClick,
 }: {
@@ -225,6 +228,10 @@ export function ClassReadingBlock({
    * off for Card/Magazine where class context already frames the list.
    */
   showPriority?: boolean;
+  /** Home Upcoming deadlines Magazine: horizontal Cover + Blurb rail. */
+  magazineRail?: boolean;
+  /** Reading Schedule Magazine packing (ignored when magazineRail). */
+  magazinePacking?: MagazinePacking;
   onCollectionClick?: () => void;
   onItemClick?: (item: Zotero.Item) => void;
 }) {
@@ -333,7 +340,7 @@ export function ClassReadingBlock({
       ) : null}
       <div
         className={
-          layout === "card" && !fullWidthItems
+          (layout === "card" || layout === "annotations") && !fullWidthItems
             ? readingContentWidthClass("card")
             : "w-full min-w-0 max-w-full"
         }
@@ -346,6 +353,8 @@ export function ClassReadingBlock({
           template="strip"
           showPriority={showPriorityBadge}
           coverRail={coverRail && layout === "cover"}
+          magazineRail={magazineRail && layout === "magazine"}
+          magazinePacking={magazinePacking}
           rows={classReading.items
             .filter(({ assignment }) => !!assignment.id)
             .map(({ item, assignment }) => ({

@@ -54,6 +54,7 @@ export const PLUGIN_PREF_DEFAULTS: {
   annotationsQuoteOrder: "location",
   galleryShowItemsWithoutAnnotations: true,
   magazineTypeSize: "small",
+  magazinePacking: "packed",
   generateReadingScheduleCollection: false,
   readingScheduleCollectionKey: "",
   customIcons: true,

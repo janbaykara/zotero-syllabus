@@ -12,11 +12,9 @@ import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
 import {
   ArrowDownAZ,
-  ALargeSmall,
   BookOpen,
   Calendar,
   CalendarPlus,
-  CaseSensitive,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -73,9 +71,9 @@ import type { FluentMessageId } from "../../typings/i10n";
 import type { GalleryLayout } from "./galleryLayout";
 import type { GalleryGroupBy } from "./galleryGroupBy";
 import type { GallerySortBy } from "./gallerySort";
-import type { MagazineTypeSize } from "./magazineTypeSize";
 import { GalleryTile } from "./GalleryPage";
-import { MagazineGrid, type MagazineTileClick } from "./MagazineTile";
+import { type MagazineTileClick } from "./MagazineTile";
+import { ExplorerMagazineRail } from "./ExplorerMagazineRail";
 import {
   SlimSyllabusItemCard,
   useItemIdentifierSelection,
@@ -88,7 +86,6 @@ import {
   ExplorerSegmentedCoverRail,
   explorerCollectionGroupByModes,
   explorerCollectionSortByModes,
-  explorerCollectionTypeSizeModes,
   type ExplorerShelfSegment,
 } from "./ExplorerCollectionShelf";
 import {
@@ -104,7 +101,6 @@ import {
 } from "./galleryGroupNav";
 import {
   explorerShelfGroupBy,
-  explorerShelfMagazineTypeSize,
   explorerShelfSortBy,
   isExplorerCollectionShelf,
   isExplorerShelfEnabled,
@@ -330,21 +326,6 @@ const GROUP_ICONS: Record<GalleryGroupBy, typeof LayoutGrid> = {
   tags: Tags,
   subcollections: Folder,
   classes: GraduationCap,
-};
-
-const TYPE_SIZE_LABEL_IDS: Record<MagazineTypeSize, FluentMessageId> = {
-  small: "gallery-type-small",
-  large: "gallery-type-large",
-};
-
-const TYPE_SIZE_TITLE_IDS: Record<MagazineTypeSize, FluentMessageId> = {
-  small: "gallery-type-small-title",
-  large: "gallery-type-large-title",
-};
-
-const TYPE_SIZE_ICONS: Record<MagazineTypeSize, typeof CaseSensitive> = {
-  small: CaseSensitive,
-  large: ALargeSmall,
 };
 
 const DENSITY_ICONS: Record<
@@ -656,24 +637,19 @@ function ExplorerShelfSettingsMenu({
     ? explorerShelfGroupBy(shelf, {
         classes: isSyllabus,
         subcollections: true,
-        magazine: shelf.layout === "magazine",
+        magazine: shelf.layout === "magazine" || shelf.layout === "cover",
       })
     : "none";
-  const collectionTypeSize = isCollection
-    ? explorerShelfMagazineTypeSize(shelf)
-    : "small";
   const groupModes = isCollection
     ? explorerCollectionGroupByModes(shelf.layout, isSyllabus)
     : [];
   const sortModes = explorerCollectionSortByModes();
-  const typeSizeModes = explorerCollectionTypeSizeModes();
 
   const patchCollection = (
     patch: Partial<{
       layout: GalleryLayout;
       groupBy: GalleryGroupBy;
       sortBy: GallerySortBy;
-      magazineTypeSize: MagazineTypeSize;
     }>,
   ) => {
     if (!isExplorerCollectionShelf(shelf)) {
@@ -820,42 +796,6 @@ function ExplorerShelfSettingsMenu({
                   })}
                 </div>
               </div>
-              {shelf.layout === "magazine" ? (
-                <div className="syllabus-explorer-shelf-setting">
-                  <div className="syllabus-explorer-configure-heading">
-                    {getString("gallery-menu-type-size")}
-                  </div>
-                  <div
-                    role="radiogroup"
-                    aria-label={getString("gallery-menu-type-size")}
-                    className="syllabus-explorer-layout-toggle"
-                  >
-                    {typeSizeModes.map((mode) => {
-                      const Icon = TYPE_SIZE_ICONS[mode];
-                      const selected = collectionTypeSize === mode;
-                      return (
-                        <button
-                          key={mode}
-                          type="button"
-                          role="radio"
-                          aria-checked={selected}
-                          title={getString(TYPE_SIZE_TITLE_IDS[mode])}
-                          className={twMerge(
-                            "syllabus-explorer-layout-btn",
-                            selected && "is-selected",
-                          )}
-                          onClick={() =>
-                            patchCollection({ magazineTypeSize: mode })
-                          }
-                        >
-                          <Icon size={12} strokeWidth={2} aria-hidden="true" />
-                          {getString(TYPE_SIZE_LABEL_IDS[mode])}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
             </>
           ) : null}
           {showDensity ? (
@@ -1051,7 +991,7 @@ function ExplorerShelfBody({
   items,
   layout,
   keyPrefix,
-  template,
+  template: _template,
   collectionId,
   density,
   selectedIdentifiers,
@@ -1126,11 +1066,11 @@ function ExplorerShelfBody({
     );
   }
   return (
-    <MagazineGrid
+    <ExplorerMagazineRail
       items={items}
       keyPrefix={keyPrefix}
       sortBy="auto"
-      template={template}
+      collectionId={collectionId}
       selectedItemIds={selectedItemIds}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
@@ -1159,7 +1099,7 @@ function upcomingDeadlineSegmentKey(classReading: ClassReading): string {
   return `${classReading.collectionId}-${classReading.classNumber}-${classReading.readingDate || ""}`;
 }
 
-/** Cover mode: one horizontal segment per class / deadline (Collection shelf pattern). */
+/** Cover / Magazine: one horizontal segment per class / deadline (Collection shelf). */
 function buildUpcomingDeadlineCoverSegments(
   readings: ClassReading[],
 ): ExplorerShelfSegment[] {
@@ -1233,12 +1173,13 @@ function ExplorerDeadlineShelf({
     );
   }
 
-  if (layout === "cover") {
+  if (layout === "cover" || layout === "magazine") {
     const segments = buildUpcomingDeadlineCoverSegments(readings);
     return (
       <ExplorerSegmentedCoverRail
         segments={segments}
         keyPrefix="upcoming-deadlines"
+        magazine={layout === "magazine"}
         selectedItemIds={selectedItemIds}
         onClick={onClick}
         onDoubleClick={onDoubleClick}
@@ -1264,6 +1205,7 @@ function ExplorerDeadlineShelf({
             showCollectionLink
             fullWidthItems
             showPriority
+            magazineRail={false}
             onCollectionClick={() =>
               openCollectionSyllabusPage(classReading.collectionId)
             }

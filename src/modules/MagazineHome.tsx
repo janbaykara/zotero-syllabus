@@ -8,12 +8,12 @@ import type { SubcollectionNode } from "./subcollectionGroups";
 import {
   magazineSectionTemplate,
   pickMagazineDesks,
-  pickRecentMediaItems,
   remainderItemIds,
   type MagazineDeskInput,
 } from "./magazineDesks";
-import { MagazineGrid, type MagazineTileClick } from "./MagazineTile";
-import { MagazineShelf } from "./MagazineShelf";
+import { type MagazineTileClick } from "./MagazineTile";
+import { MagazineItems } from "./MagazineItems";
+import type { MagazinePacking } from "./magazinePacking";
 
 function collectChildDesks(
   root: SubcollectionNode | null,
@@ -55,6 +55,7 @@ export function MagazineHome({
   classDesks = [],
   subcollectionRoot,
   sortBy,
+  packing = "packed",
   selectedItemIds,
   onClick,
   onDoubleClick,
@@ -65,14 +66,12 @@ export function MagazineHome({
   classDesks?: MagazineDeskInput[];
   subcollectionRoot: SubcollectionNode | null;
   sortBy: ItemSortMode;
+  packing?: MagazinePacking;
   selectedItemIds: number[] | null | undefined;
   onClick: MagazineTileClick;
   onDoubleClick: (item: Zotero.Item) => void;
   onContextMenu: MagazineTileClick;
 }) {
-  const videos = pickRecentMediaItems(items, "video");
-  const audio = pickRecentMediaItems(items, "audio");
-  const shelfIds = [...videos, ...audio].map((item) => item.id);
   const byId = new Map(items.map((item) => [item.id, item]));
 
   const subDesks = collectChildDesks(subcollectionRoot);
@@ -89,7 +88,7 @@ export function MagazineHome({
   const restIds = remainderItemIds(
     items.map((item) => item.id),
     desks,
-    shelfIds,
+    [],
   );
   const restItems = restIds
     .map((id) => byId.get(id))
@@ -105,22 +104,6 @@ export function MagazineHome({
 
   return (
     <div className="syllabus-magazine-home">
-      <MagazineShelf
-        kind="video"
-        items={videos}
-        selectedItemIds={selectedItemIds}
-        onClick={onClick}
-        onDoubleClick={onDoubleClick}
-        onContextMenu={onContextMenu}
-      />
-      <MagazineShelf
-        kind="audio"
-        items={audio}
-        selectedItemIds={selectedItemIds}
-        onClick={onClick}
-        onDoubleClick={onDoubleClick}
-        onContextMenu={onContextMenu}
-      />
       {desks.map((desk, index) => {
         const deskItems = desk.itemIds
           .map((id) => byId.get(id))
@@ -139,10 +122,11 @@ export function MagazineHome({
               <Icon size={16} strokeWidth={2} aria-hidden="true" />
               <span>{desk.title}</span>
             </h2>
-            <MagazineGrid
+            <MagazineItems
               items={deskItems}
               keyPrefix={desk.id}
               template={magazineSectionTemplate(index)}
+              packing={packing}
               {...tileProps}
             />
           </section>
@@ -158,10 +142,11 @@ export function MagazineHome({
               <span>{getString("gallery-in-this-collection")}</span>
             </h2>
           ) : null}
-          <MagazineGrid
+          <MagazineItems
             items={restItems}
             keyPrefix="well"
             template={magazineSectionTemplate(desks.length)}
+            packing={packing}
             {...tileProps}
           />
         </section>

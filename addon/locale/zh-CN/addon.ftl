@@ -374,6 +374,13 @@ gallery-annotations-none-heading = 无批注
 gallery-annotations-show-empty = 显示无批注的条目
 gallery-layout-magazine = 杂志
 gallery-layout-magazine-title = 混合尺寸的杂志布局
+gallery-menu-packing = 排布
+gallery-packing-vertical = 纵向
+gallery-packing-vertical-title = 封面与摘要的阅读列表
+gallery-packing-grid = 网格
+gallery-packing-grid-title = 等大杂志卡片
+gallery-packing-packed = 混排
+gallery-packing-packed-title = 混合尺寸的杂志布局
 
 # Gallery notes (collection-scoped child notes)
 gallery-note-add = Add Gallery Note

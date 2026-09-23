@@ -46,6 +46,7 @@ import { getString } from "../utils/locale";
 import { TabManager } from "../utils/tabManager";
 import type { ItemDensity } from "./react-zotero-sync/itemDensity";
 import type { GalleryLayout } from "./galleryLayout";
+import type { MagazinePacking } from "./magazinePacking";
 import {
   ReadingItemsLayout,
   readingContextLabel,
@@ -221,6 +222,7 @@ export function usePinnedScheduleData(libraryID?: number) {
 export function PinnedSection({
   density,
   layout = "card",
+  magazinePacking = "packed",
   showLibraryName,
   pinnedItems,
   nextUp,
@@ -231,6 +233,7 @@ export function PinnedSection({
 }: {
   density: ItemDensity;
   layout?: GalleryLayout;
+  magazinePacking?: MagazinePacking;
   showLibraryName: boolean;
   pinnedItems: Zotero.Item[];
   nextUp: NextUpReading[];
@@ -518,7 +521,7 @@ export function PinnedSection({
         className={
           embedded
             ? undefined
-            : layout === "card"
+            : layout === "card" || layout === "annotations"
               ? "container-padded"
               : "w-full min-w-0 max-w-full"
         }
@@ -532,6 +535,7 @@ export function PinnedSection({
             template="strip"
             showPriority={false}
             coverRail={false}
+            magazinePacking={magazinePacking}
             rows={itemLayoutRows}
             onItemClick={(item, collectionId) => {
               const reading = nextUp.find(

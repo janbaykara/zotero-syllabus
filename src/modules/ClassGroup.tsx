@@ -19,6 +19,7 @@ import { TextInput, ReadingDateInput } from "./syllabusInputs";
 import { SyllabusItemCard } from "./SyllabusItemCard";
 import { isOsFileDrag } from "../utils/nativeFileDrop";
 import type { GalleryLayout } from "./galleryLayout";
+import type { MagazinePacking } from "./magazinePacking";
 import { ReadingItemsLayout } from "./readingItemsLayout";
 import { selectItemInCollection } from "./ClassReadingBlock";
 
@@ -62,6 +63,7 @@ export interface ClassGroupComponentProps {
   isLocked?: boolean;
   /** Browse layout when locked (Card / Cover / Magazine). Ignored while editing. */
   layout?: GalleryLayout;
+  magazinePacking?: MagazinePacking;
   onResetSortOrder?: () => void;
   selectedIdentifiers?: Set<string>;
   onIdentifierClick?: (
@@ -110,6 +112,7 @@ export function ClassGroupComponent({
   readerMode = false,
   isLocked = false,
   layout = "card",
+  magazinePacking = "vertical",
   onResetSortOrder,
   selectedIdentifiers = new Set(),
   onIdentifierClick,
@@ -548,7 +551,7 @@ export function ClassGroupComponent({
       ) : null}
       <div
         className={twMerge(
-          !isLocked || layout === "card"
+          !isLocked || layout === "card" || layout === "annotations"
             ? "container-padded"
             : "w-full min-w-0 max-w-full",
         )}
@@ -616,6 +619,7 @@ export function ClassGroupComponent({
               readerMode={readerMode}
               isLocked
               template="strip"
+              magazinePacking={magazinePacking}
               rows={itemAssignments
                 .filter(({ assignment }) => !!assignment.id)
                 .map(({ item, assignment }) => ({

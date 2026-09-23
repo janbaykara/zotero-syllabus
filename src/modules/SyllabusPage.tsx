@@ -114,7 +114,9 @@ import { useSyllabusDocumentGeneration } from "./react-zotero-sync/collectionDoc
 import { SyllabusViewMenu } from "./SyllabusViewMenu";
 import { useGalleryLayout } from "./galleryLayout";
 import { GalleryViewportProvider } from "./galleryVisibility";
+import { useItemIdsWithAnnotations } from "./GalleryAnnotationsRow";
 import { ReadingItemsLayout } from "./readingItemsLayout";
+import { useBooleanPref } from "./react-zotero-sync/booleanPref";
 import { TextInput } from "./syllabusInputs";
 import { SyllabusItemCard } from "./SyllabusItemCard";
 import { bibliographyToHtml } from "./Bibliography";
@@ -787,6 +789,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     "card",
   );
   const effectiveLayout = isLocked ? browseLayout : "card";
+  const [showItemsWithoutAnnotations] = useBooleanPref(
+    "galleryShowItemsWithoutAnnotations",
+  );
 
   const [isPinned, setIsPinned] = useState(() => {
     const collection = getCachedCollectionById(collectionId);
@@ -1300,33 +1305,79 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       itemOrderVersion,
     );
 
-  const visibleClassGroups = useMemo(
-    () =>
+  const hideEmptyAnnotationGroups =
+    effectiveLayout === "annotations" && !showItemsWithoutAnnotations;
+  const allItemsForAnnotationFilter = useMemo(
+    () => [
+      ...classGroups.flatMap((group) =>
+        group.itemAssignments.map(({ item }) => item),
+      ),
+      ...unsortedFurtherReading.map(({ item }) => item),
+    ],
+    [classGroups, unsortedFurtherReading],
+  );
+  const annotatedItemIds = useItemIdsWithAnnotations(
+    allItemsForAnnotationFilter,
+    hideEmptyAnnotationGroups,
+  );
+
+  const visibleClassGroups = useMemo(() => {
+    const groups =
       isLocked || isFiltered
         ? classGroups.filter((group) => !isEmptyClassGroup(group))
-        : classGroups,
-    [classGroups, isLocked, isFiltered],
-  );
+        : classGroups;
+    if (!hideEmptyAnnotationGroups) {
+      return groups;
+    }
+    if (!annotatedItemIds) {
+      return [];
+    }
+    return groups
+      .map((group) => ({
+        ...group,
+        itemAssignments: group.itemAssignments.filter(({ item }) =>
+          annotatedItemIds.has(item.id),
+        ),
+      }))
+      .filter((group) => group.itemAssignments.length > 0);
+  }, [
+    classGroups,
+    isLocked,
+    isFiltered,
+    hideEmptyAnnotationGroups,
+    annotatedItemIds,
+  ]);
 
   const furtherReadingItems = useMemo(() => {
     // Manual drag order (synced on the syllabus note) wins over the local sort pref.
-    if (SyllabusManager.getFurtherReadingOrder(collectionId).length > 0) {
-      return unsortedFurtherReading;
+    const sorted =
+      SyllabusManager.getFurtherReadingOrder(collectionId).length > 0
+        ? unsortedFurtherReading
+        : (() => {
+            const byId = new Map(
+              unsortedFurtherReading.map((entry) => [entry.item.id, entry]),
+            );
+            return sortItems(
+              unsortedFurtherReading.map((entry) => entry.item),
+              furtherReadingSortBy,
+            )
+              .map((item) => byId.get(item.id))
+              .filter((entry): entry is FurtherReadingEntry => entry != null);
+          })();
+    if (!hideEmptyAnnotationGroups) {
+      return sorted;
     }
-    const byId = new Map(
-      unsortedFurtherReading.map((entry) => [entry.item.id, entry]),
-    );
-    return sortItems(
-      unsortedFurtherReading.map((entry) => entry.item),
-      furtherReadingSortBy,
-    )
-      .map((item) => byId.get(item.id))
-      .filter((entry): entry is FurtherReadingEntry => entry != null);
+    if (!annotatedItemIds) {
+      return [];
+    }
+    return sorted.filter(({ item }) => annotatedItemIds.has(item.id));
   }, [
     unsortedFurtherReading,
     furtherReadingSortBy,
     collectionId,
     itemOrderVersion,
+    hideEmptyAnnotationGroups,
+    annotatedItemIds,
   ]);
 
   const furtherReadingHasManualOrder =
@@ -2836,6 +2887,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           isLocked &&
             effectiveLayout === "magazine" &&
             "syllabus-magazine-page",
+          isLocked &&
+            effectiveLayout === "annotations" &&
+            "syllabus-gallery-annotations-page",
           fileDrop.isDraggingFile && "file-drag-over",
         )}
         data-item-density={density}
@@ -3095,6 +3149,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   readerMode={readerMode}
                   isLocked={isLocked}
                   layout={effectiveLayout}
+                  magazinePacking="vertical"
                   onResetSortOrder={() => setItemOrderVersion((v) => v + 1)}
                   selectedIdentifiers={selectedIdentifiers}
                   onIdentifierClick={handleIdentifierClick}
@@ -3286,7 +3341,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                 )}
                 <div
                   className={
-                    isLocked && effectiveLayout !== "card"
+                    isLocked &&
+                    effectiveLayout !== "card" &&
+                    effectiveLayout !== "annotations"
                       ? "w-full min-w-0 max-w-full"
                       : "container-padded"
                   }
@@ -3408,6 +3465,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                         readerMode={readerMode}
                         isLocked
                         template="strip"
+                        magazinePacking="vertical"
                         rows={furtherReadingItems.map(
                           ({ item, assignment }) => ({
                             key: `further-${item.id}-${assignment?.id || "item"}`,

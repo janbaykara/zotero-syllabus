@@ -376,6 +376,13 @@ gallery-annotations-none-heading = Không có chú thích
 gallery-annotations-show-empty = Hiện mục không có chú thích
 gallery-layout-magazine = Tạp chí
 gallery-layout-magazine-title = Bố cục tạp chí nhiều kích thước
+gallery-menu-packing = Packing
+gallery-packing-vertical = Vertical
+gallery-packing-vertical-title = Covers with abstracts in a reading stack
+gallery-packing-grid = Grid
+gallery-packing-grid-title = Equal-size magazine tiles
+gallery-packing-packed = Packed
+gallery-packing-packed-title = Mixed-size magazine layout
 
 # Gallery notes (collection-scoped child notes)
 gallery-note-add = Add Gallery Note

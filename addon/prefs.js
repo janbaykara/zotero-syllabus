@@ -24,6 +24,7 @@ pref("myAnnotationsOrder", "newestLast");
 pref("annotationsQuoteOrder", "location");
 pref("galleryShowItemsWithoutAnnotations", true);
 pref("magazineTypeSize", "small");
+pref("magazinePacking", "packed");
 pref("generateReadingScheduleCollection", false);
 pref("readingScheduleCollectionKey", "");
 pref("customIcons", true);

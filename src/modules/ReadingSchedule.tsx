@@ -35,6 +35,7 @@ import { openItemBestAttachment } from "../utils/items";
 import { PinnedSection, usePinnedScheduleData } from "./PinnedSection";
 import { SyllabusViewMenu } from "./SyllabusViewMenu";
 import { useGalleryLayout } from "./galleryLayout";
+import { useMagazinePacking } from "./magazinePacking";
 import { GalleryViewportProvider } from "./galleryVisibility";
 import {
   ScheduleStickyTopsContext,
@@ -59,6 +60,9 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
   const [layout, setLayout] = useGalleryLayout(
     READING_SCHEDULE_LAYOUT_KEY,
     "card",
+  );
+  const [magazinePacking, setMagazinePacking] = useMagazinePacking(
+    READING_SCHEDULE_LAYOUT_KEY,
   );
   const pageRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -130,6 +134,8 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
               showLayout
               layout={layout}
               onLayoutChange={setLayout}
+              magazinePacking={magazinePacking}
+              onMagazinePackingChange={setMagazinePacking}
               showCheckboxes={false}
               showScheduleCollection
             />
@@ -268,6 +274,7 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
         "syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background",
         `density-${density}`,
         layout === "magazine" && "syllabus-magazine-page",
+        layout === "annotations" && "syllabus-gallery-annotations-page",
       )}
       data-item-density={density}
       dir={getUiDir()}
@@ -280,6 +287,7 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
             <PinnedSection
               density={density}
               layout={layout}
+              magazinePacking={magazinePacking}
               showLibraryName={showLibrarySource}
               pinnedItems={pinnedItems}
               nextUp={nextUp}
@@ -332,6 +340,7 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
                                     classReading={classReading}
                                     density={density}
                                     layout={layout}
+                                    magazinePacking={magazinePacking}
                                     showLibraryName={showLibrarySource}
                                     stickyHeading
                                     onCollectionClick={() =>

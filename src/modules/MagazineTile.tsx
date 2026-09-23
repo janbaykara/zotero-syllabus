@@ -30,6 +30,7 @@ import { useNearViewport } from "./galleryVisibility";
 import { GalleryCover } from "./GalleryCover";
 import type { MagazineSectionTemplate } from "./magazineDesks";
 import { assignMagazineRoles, type MagazineTileRole } from "./magazineLayout";
+import type { MagazinePacking } from "./magazinePacking";
 import {
   ReadingDoneCheckbox,
   ReadingPriorityBadge,
@@ -385,6 +386,7 @@ export function MagazineGrid({
   keyPrefix,
   sortBy,
   template = "lead",
+  packing = "packed",
   collectionId = 0,
   showGalleryNote = false,
   selectedItemIds,
@@ -399,6 +401,11 @@ export function MagazineGrid({
   keyPrefix: string;
   sortBy: ItemSortMode;
   template?: MagazineSectionTemplate;
+  /**
+   * Equal-grid vs packed masonry. Vertical Cover+Blurb is rendered by
+   * callers via MagazineVerticalList (avoids GalleryTile cycle).
+   */
+  packing?: Exclude<MagazinePacking, "vertical">;
   collectionId?: number;
   showGalleryNote?: boolean;
   selectedItemIds: number[] | null | undefined;
@@ -418,28 +425,35 @@ export function MagazineGrid({
     [showGalleryNote],
   );
   const sorted = sortItems(uniqueItems(items), sortBy);
-  const roles = assignMagazineRoles(
-    sorted.map((item) => {
-      const chrome = chromeByItemId?.get(item.id);
-      const noteCollectionId = chrome?.collectionId ?? collectionId;
-      void noteTick;
-      const noteLen =
-        showGalleryNote && noteCollectionId
-          ? readGalleryNoteText(item, noteCollectionId).length
-          : 0;
-      return {
-        id: item.id,
-        itemType: item.itemType,
-        abstractLength: Math.max(usableAbstractSnippet(item).length, noteLen),
-      };
-    }),
-    { template },
-  );
+  const equalGrid = packing === "grid";
+  const roles: MagazineTileRole[] = equalGrid
+    ? sorted.map(() => "compact")
+    : assignMagazineRoles(
+        sorted.map((item) => {
+          const chrome = chromeByItemId?.get(item.id);
+          const noteCollectionId = chrome?.collectionId ?? collectionId;
+          void noteTick;
+          const noteLen =
+            showGalleryNote && noteCollectionId
+              ? readGalleryNoteText(item, noteCollectionId).length
+              : 0;
+          return {
+            id: item.id,
+            itemType: item.itemType,
+            abstractLength: Math.max(
+              usableAbstractSnippet(item).length,
+              noteLen,
+            ),
+          };
+        }),
+        { template },
+      );
   return (
     <div
       className={twMerge("syllabus-magazine-grid", className)}
       style={style}
-      data-magazine-template={template}
+      data-magazine-template={equalGrid ? "grid" : template}
+      data-magazine-packing={packing}
     >
       {sorted.map((item, index) => (
         <MagazineTile
@@ -450,6 +464,7 @@ export function MagazineGrid({
           onClick={onClick}
           onDoubleClick={onDoubleClick}
           onContextMenu={onContextMenu}
+          showHighlights={!equalGrid}
           collectionId={collectionId}
           showGalleryNote={showGalleryNote}
           chrome={chromeByItemId?.get(item.id)}

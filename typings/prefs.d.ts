@@ -33,6 +33,7 @@ declare namespace _ZoteroTypes {
       "annotationsQuoteOrder": string;
       "galleryShowItemsWithoutAnnotations": boolean;
       "magazineTypeSize": string;
+      "magazinePacking": string;
       "generateReadingScheduleCollection": boolean;
       "readingScheduleCollectionKey": string;
       "customIcons": boolean;

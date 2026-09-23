@@ -3,12 +3,18 @@ import { h, Fragment } from "preact";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import {
   Image,
+  LayoutGrid,
   LayoutList,
   Maximize2,
   MoreHorizontal,
   Newspaper,
+  AlignJustify,
+  StretchHorizontal,
   Rows2,
   Rows3,
+  Highlighter,
+  ListOrdered,
+  CalendarPlus,
 } from "lucide-preact";
 import { getString } from "../utils/locale";
 import { confirmPrompt } from "../utils/window";
@@ -21,6 +27,10 @@ import { useZoteroReaderMode } from "./react-zotero-sync/readerMode";
 import { useReadingScheduleCollectionPref } from "./react-zotero-sync/readingScheduleCollectionPref";
 import { densityLabel } from "./browsePage";
 import type { GalleryLayout } from "./galleryLayout";
+import type { MagazinePacking } from "./magazinePacking";
+import { useBooleanPref } from "./react-zotero-sync/booleanPref";
+import { useAnnotationsQuoteOrder } from "./myAnnotationsPrefs";
+import type { AnnotationsQuoteOrder } from "./explorerQueries";
 import type { FluentMessageId } from "../../typings/i10n";
 
 const DENSITY_ICONS: Record<
@@ -57,10 +67,62 @@ const LAYOUT_OPTIONS: {
     Icon: Image,
   },
   {
+    mode: "annotations",
+    labelKey: "gallery-layout-annotations",
+    titleKey: "gallery-layout-annotations-title",
+    Icon: Highlighter,
+  },
+  {
     mode: "magazine",
     labelKey: "gallery-layout-magazine",
     titleKey: "gallery-layout-magazine-title",
     Icon: Newspaper,
+  },
+];
+
+const QUOTE_ORDER_OPTIONS: {
+  mode: AnnotationsQuoteOrder;
+  labelKey: FluentMessageId;
+  titleKey: FluentMessageId;
+  Icon: typeof ListOrdered;
+}[] = [
+  {
+    mode: "location",
+    labelKey: "annotations-quote-order-location",
+    titleKey: "annotations-quote-order-location-title",
+    Icon: ListOrdered,
+  },
+  {
+    mode: "dateAdded",
+    labelKey: "annotations-quote-order-date-added",
+    titleKey: "annotations-quote-order-date-added-title",
+    Icon: CalendarPlus,
+  },
+];
+
+const PACKING_OPTIONS: {
+  mode: MagazinePacking;
+  labelKey: FluentMessageId;
+  titleKey: FluentMessageId;
+  Icon: typeof LayoutGrid;
+}[] = [
+  {
+    mode: "vertical",
+    labelKey: "gallery-packing-vertical",
+    titleKey: "gallery-packing-vertical-title",
+    Icon: AlignJustify,
+  },
+  {
+    mode: "grid",
+    labelKey: "gallery-packing-grid",
+    titleKey: "gallery-packing-grid-title",
+    Icon: LayoutGrid,
+  },
+  {
+    mode: "packed",
+    labelKey: "gallery-packing-packed",
+    titleKey: "gallery-packing-packed-title",
+    Icon: StretchHorizontal,
   },
 ];
 
@@ -81,13 +143,18 @@ export function SyllabusViewMenu({
   showLayout = false,
   layout = "card",
   onLayoutChange,
+  magazinePacking = "packed",
+  onMagazinePackingChange,
   showCheckboxes = true,
   showScheduleCollection = false,
 }: {
-  /** Card / Cover / Magazine — Reading Schedule and locked syllabus. */
+  /** Card / Cover / Annotations / Magazine — Reading Schedule and locked syllabus. */
   showLayout?: boolean;
   layout?: GalleryLayout;
   onLayoutChange?: (layout: GalleryLayout) => void;
+  /** Reading Schedule Magazine packing (omit on locked syllabus). */
+  magazinePacking?: MagazinePacking;
+  onMagazinePackingChange?: (packing: MagazinePacking) => void;
   showCheckboxes?: boolean;
   /** Library “Reading Schedule” collection toggle (schedule page only). */
   showScheduleCollection?: boolean;
@@ -98,6 +165,9 @@ export function SyllabusViewMenu({
   const [readerMode, setReaderMode] = useZoteroReaderMode();
   const [generateCollection, setGenerateCollection] =
     useReadingScheduleCollectionPref();
+  const [quoteOrder, setQuoteOrder] = useAnnotationsQuoteOrder();
+  const [showItemsWithoutAnnotations, setShowItemsWithoutAnnotations] =
+    useBooleanPref("galleryShowItemsWithoutAnnotations");
   const showDensity = !showLayout || layout === "card";
 
   const handleGenerateCollectionChange = useCallback(
@@ -189,6 +259,79 @@ export function SyllabusViewMenu({
                     </button>
                   ))}
                 </div>
+              </div>
+            ) : null}
+            {showLayout && layout === "magazine" && onMagazinePackingChange ? (
+              <div className="syllabus-gallery-toolbar-cluster">
+                <div className="syllabus-gallery-toolbar-heading">
+                  <span className="syllabus-gallery-groupby-label">
+                    {getString("gallery-menu-packing")}
+                  </span>
+                </div>
+                <div
+                  role="radiogroup"
+                  aria-label={getString("gallery-menu-packing")}
+                  className="syllabus-gallery-groupby"
+                >
+                  {PACKING_OPTIONS.map(({ mode, labelKey, titleKey, Icon }) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      role="radio"
+                      aria-checked={magazinePacking === mode}
+                      title={getString(titleKey)}
+                      className="syllabus-gallery-groupby-btn"
+                      onClick={() => onMagazinePackingChange(mode)}
+                    >
+                      <Icon size={12} strokeWidth={2} aria-hidden="true" />
+                      {getString(labelKey)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {showLayout && layout === "annotations" ? (
+              <div className="syllabus-gallery-toolbar-cluster">
+                <div className="syllabus-gallery-toolbar-heading">
+                  <span className="syllabus-gallery-groupby-label">
+                    {getString("annotations-quote-order-menu")}
+                  </span>
+                </div>
+                <div
+                  role="radiogroup"
+                  aria-label={getString("annotations-quote-order-menu")}
+                  className="syllabus-gallery-groupby"
+                >
+                  {QUOTE_ORDER_OPTIONS.map(
+                    ({ mode, labelKey, titleKey, Icon }) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        role="radio"
+                        aria-checked={quoteOrder === mode}
+                        title={getString(titleKey)}
+                        className="syllabus-gallery-groupby-btn"
+                        onClick={() => setQuoteOrder(mode)}
+                      >
+                        <Icon size={12} strokeWidth={2} aria-hidden="true" />
+                        {getString(labelKey)}
+                      </button>
+                    ),
+                  )}
+                </div>
+                <label className="flex items-center gap-2.5 cursor-pointer text-sm">
+                  <input
+                    type="checkbox"
+                    checked={showItemsWithoutAnnotations}
+                    onChange={(e) =>
+                      setShowItemsWithoutAnnotations(e.currentTarget.checked)
+                    }
+                    className="w-4 h-4 cursor-pointer accent-accent-green! shrink-0"
+                  />
+                  <span className="font-medium leading-snug">
+                    {getString("gallery-annotations-show-empty")}
+                  </span>
+                </label>
               </div>
             ) : null}
             {showDensity ? (

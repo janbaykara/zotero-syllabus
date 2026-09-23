@@ -167,6 +167,7 @@ export function ReadingScheduleDayPage({
         "syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background",
         `density-${density}`,
         layout === "magazine" && "syllabus-magazine-page",
+        layout === "annotations" && "syllabus-gallery-annotations-page",
       )}
       data-item-density={density}
       dir={getUiDir()}

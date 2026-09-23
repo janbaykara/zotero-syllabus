@@ -1,6 +1,5 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
-import { memo } from "preact/compat";
 import {
   useCallback,
   useEffect,
@@ -12,12 +11,11 @@ import {
 import type { ComponentChildren, JSX, RefObject } from "preact";
 import { twMerge } from "tailwind-merge";
 import {
-  ALargeSmall,
+  AlignJustify,
   ArrowDownAZ,
   BookOpen,
   Calendar,
   CalendarPlus,
-  CaseSensitive,
   Folder,
   FolderOpen,
   Globe,
@@ -34,29 +32,15 @@ import {
   Rows3,
   Shapes,
   Sparkles,
+  StretchHorizontal,
   Tag,
   Tags,
   User,
   UserX,
-  PinOff,
 } from "lucide-preact";
 import { renderComponent } from "../utils/react";
 import { isZotero8OrLater } from "../utils/zotero";
-import {
-  getItemCreatorLine,
-  getItemTitle,
-  openItemBestAttachment,
-  sortItems,
-} from "../utils/items";
-import {
-  faviconUrlForHostname,
-  getItemHostname,
-  getVideoSiteHostname,
-  isAudioGalleryItem,
-  isVideoGalleryItem,
-  isWebGalleryItem,
-} from "../utils/itemCover";
-import { GalleryCover } from "./GalleryCover";
+import { openItemBestAttachment, sortItems } from "../utils/items";
 import {
   GalleryAnnotationsSection,
   useItemIdsWithAnnotations,
@@ -70,11 +54,6 @@ import {
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { ProseText } from "./ProseText";
-import {
-  openGalleryNoteByCollectionId,
-  galleryNoteFingerprint,
-} from "./galleryNote";
-import { useGalleryNoteText } from "./useGalleryNoteText";
 import {
   ITEM_DENSITIES,
   useZoteroItemDensity,
@@ -110,7 +89,7 @@ import {
   type GalleryGlobalSetting,
   type GalleryLayout,
 } from "./galleryLayout";
-import { useMagazineTypeSize, type MagazineTypeSize } from "./magazineTypeSize";
+import { useMagazinePacking, type MagazinePacking } from "./magazinePacking";
 import { useAnnotationsQuoteOrder } from "./myAnnotationsPrefs";
 import { useBooleanPref } from "./react-zotero-sync/booleanPref";
 import type { AnnotationsQuoteOrder } from "./explorerQueries";
@@ -121,13 +100,12 @@ import {
 } from "./galleryTour";
 import {
   magazineSectionTemplate,
-  pickRecentMediaItems,
   type MagazineDeskInput,
 } from "./magazineDesks";
-import { MagazineGrid } from "./MagazineTile";
+import { MagazineItems } from "./MagazineItems";
 import { MagazineHome } from "./MagazineHome";
-import { MagazineShelf } from "./MagazineShelf";
-import { GalleryViewportProvider, useNearViewport } from "./galleryVisibility";
+import { GalleryTile } from "./GalleryTile";
+import { GalleryViewportProvider } from "./galleryVisibility";
 import { useGallerySortBy, type GallerySortBy } from "./gallerySort";
 import { collectionHasSyllabusNote } from "./syllabusNote";
 import { useCollectionCreatorGroups } from "./creatorGroups";
@@ -149,18 +127,7 @@ import {
 import { OsFileDropOverlay } from "./OsFileDropOverlay";
 import type { SettingsSyllabusMetadata } from "../utils/schemas";
 import {
-  getPrimaryAttachmentProgress,
-  type AttachmentReadingProgress,
-} from "../utils/readingProgress";
-import {
-  getItemReadStatusName,
-  getReadStatusMetadata,
-} from "../zotero-reading-list/compat";
-import {
-  ReadingDoneCheckbox,
-  ReadingPriorityBadge,
   chromeByItemIdFromAssignments,
-  readingChromeEqual,
   type ReadingTileChrome,
 } from "./readingAssignmentChrome";
 
@@ -210,8 +177,8 @@ export function GalleryPage({
     magazine: layout === "magazine",
   });
   const [sortBy, setSortBy, sortByGlobal] = useGallerySortBy(viewKey);
-  const [magazineTypeSize, setMagazineTypeSize, magazineTypeSizeGlobal] =
-    useMagazineTypeSize(viewKey);
+  const [magazinePacking, setMagazinePacking, magazinePackingGlobal] =
+    useMagazinePacking(viewKey);
   const [density] = useZoteroItemDensity();
   const [showItemsWithoutAnnotations, setShowItemsWithoutAnnotations] =
     useBooleanPref("galleryShowItemsWithoutAnnotations");
@@ -854,11 +821,12 @@ export function GalleryPage({
     keyPrefix: string,
     template = magazineSectionTemplate(0),
   ) => (
-    <MagazineGrid
+    <MagazineItems
       items={items}
       keyPrefix={keyPrefix}
       sortBy={sortBy}
       template={template}
+      packing={magazinePacking}
       collectionId={collectionIdOrZero}
       showGalleryNote={true}
       selectedItemIds={selectedItemIds}
@@ -900,11 +868,12 @@ export function GalleryPage({
     );
     if (layout === "magazine") {
       return (
-        <MagazineGrid
+        <MagazineItems
           items={rows.map(({ item }) => item)}
           keyPrefix={keyPrefix}
           sortBy={sortBy}
           template={magazineSectionTemplate(magazineSectionIndex++)}
+          packing={magazinePacking}
           collectionId={collectionIdOrZero}
           showGalleryNote={true}
           selectedItemIds={selectedItemIds}
@@ -988,9 +957,6 @@ export function GalleryPage({
       className={twMerge(
         "syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background focus:outline-none relative",
         layout === "magazine" && "syllabus-magazine-page",
-        layout === "magazine" &&
-          magazineTypeSize === "large" &&
-          "is-large-type",
         layout === "annotations" && "syllabus-gallery-annotations-page",
         density !== "expanded" && `density-${density}`,
         fileDrop.isDraggingFile && "file-drag-over",
@@ -1012,7 +978,12 @@ export function GalleryPage({
           )}
         >
           <div
-            className={layout === "annotations" ? "container-padded" : "px-6"}
+            className={
+              layout === "annotations" ||
+              (layout === "magazine" && magazinePacking === "vertical")
+                ? "container-padded"
+                : "px-6"
+            }
           >
             <GalleryPageHeader
               title={title || getString("untitled")}
@@ -1027,9 +998,9 @@ export function GalleryPage({
               layout={layout}
               onLayout={setLayout}
               layoutGlobal={layoutGlobal}
-              magazineTypeSize={magazineTypeSize}
-              onMagazineTypeSize={setMagazineTypeSize}
-              magazineTypeSizeGlobal={magazineTypeSizeGlobal}
+              magazinePacking={magazinePacking}
+              onMagazinePacking={setMagazinePacking}
+              magazinePackingGlobal={magazinePackingGlobal}
               showItemsWithoutAnnotations={showItemsWithoutAnnotations}
               onShowItemsWithoutAnnotations={setShowItemsWithoutAnnotations}
               navGroups={navGroups}
@@ -1043,37 +1014,12 @@ export function GalleryPage({
           <div
             className={twMerge(
               "pt-4",
-              layout === "annotations" ? "container-padded" : "px-6",
+              layout === "annotations" ||
+                (layout === "magazine" && magazinePacking === "vertical")
+                ? "container-padded"
+                : "px-6",
             )}
           >
-            {layout === "magazine" &&
-            groupBy !== "none" &&
-            groupBy !== "auto" ? (
-              <>
-                <MagazineShelf
-                  kind="video"
-                  items={pickRecentMediaItems(
-                    syllabusItems.map(({ zoteroItem }) => zoteroItem),
-                    "video",
-                  )}
-                  selectedItemIds={selectedItemIds}
-                  onClick={handleClick}
-                  onDoubleClick={handleDoubleClick}
-                  onContextMenu={handleContextMenu}
-                />
-                <MagazineShelf
-                  kind="audio"
-                  items={pickRecentMediaItems(
-                    syllabusItems.map(({ zoteroItem }) => zoteroItem),
-                    "audio",
-                  )}
-                  selectedItemIds={selectedItemIds}
-                  onClick={handleClick}
-                  onDoubleClick={handleDoubleClick}
-                  onContextMenu={handleContextMenu}
-                />
-              </>
-            ) : null}
             {groupBy === "none" &&
               (!annotationGroupsReady ? null : visibleFlatItems.length === 0 ? (
                 <p className="text-secondary text-lg">{emptyMessage}</p>
@@ -1091,6 +1037,7 @@ export function GalleryPage({
                   classDesks={magazineClassDesks}
                   subcollectionRoot={subcollectionRoot}
                   sortBy={sortBy}
+                  packing={magazinePacking}
                   selectedItemIds={selectedItemIds}
                   onClick={handleClick}
                   onDoubleClick={handleDoubleClick}
@@ -1658,19 +1605,25 @@ function galleryDensityOptions(): GallerySegmentOption<ItemDensity>[] {
   }));
 }
 
-function magazineTypeSizeOptions(): GallerySegmentOption<MagazineTypeSize>[] {
+function magazinePackingOptions(): GallerySegmentOption<MagazinePacking>[] {
   return [
     {
-      mode: "small",
-      label: getString("gallery-type-small"),
-      title: getString("gallery-type-small-title"),
-      Icon: CaseSensitive,
+      mode: "vertical",
+      label: getString("gallery-packing-vertical"),
+      title: getString("gallery-packing-vertical-title"),
+      Icon: AlignJustify,
     },
     {
-      mode: "large",
-      label: getString("gallery-type-large"),
-      title: getString("gallery-type-large-title"),
-      Icon: ALargeSmall,
+      mode: "grid",
+      label: getString("gallery-packing-grid"),
+      title: getString("gallery-packing-grid-title"),
+      Icon: LayoutGrid,
+    },
+    {
+      mode: "packed",
+      label: getString("gallery-packing-packed"),
+      title: getString("gallery-packing-packed-title"),
+      Icon: StretchHorizontal,
     },
   ];
 }
@@ -1702,9 +1655,9 @@ function GalleryPageHeader({
   layout,
   onLayout,
   layoutGlobal,
-  magazineTypeSize,
-  onMagazineTypeSize,
-  magazineTypeSizeGlobal,
+  magazinePacking,
+  onMagazinePacking,
+  magazinePackingGlobal,
   showItemsWithoutAnnotations,
   onShowItemsWithoutAnnotations,
   navGroups,
@@ -1724,9 +1677,9 @@ function GalleryPageHeader({
   layout: GalleryLayout;
   onLayout: (mode: GalleryLayout) => void;
   layoutGlobal: GalleryGlobalSetting<GalleryLayout>;
-  magazineTypeSize: MagazineTypeSize;
-  onMagazineTypeSize: (size: MagazineTypeSize) => void;
-  magazineTypeSizeGlobal: GalleryGlobalSetting<MagazineTypeSize>;
+  magazinePacking: MagazinePacking;
+  onMagazinePacking: (packing: MagazinePacking) => void;
+  magazinePackingGlobal: GalleryGlobalSetting<MagazinePacking>;
   showItemsWithoutAnnotations: boolean;
   onShowItemsWithoutAnnotations: (show: boolean) => void;
   navGroups: GalleryNavGroup[];
@@ -1898,14 +1851,16 @@ function GalleryPageHeader({
                   />
                 ) : null}
                 {layout === "magazine" ? (
-                  <GallerySegmentedControl
-                    label={getString("gallery-menu-type-size")}
-                    ariaLabel={getString("gallery-menu-type-size")}
-                    value={magazineTypeSize}
-                    onChange={onMagazineTypeSize}
-                    options={magazineTypeSizeOptions()}
-                    globalSetting={magazineTypeSizeGlobal}
-                  />
+                  <>
+                    <GallerySegmentedControl
+                      label={getString("gallery-menu-packing")}
+                      ariaLabel={getString("gallery-menu-packing")}
+                      value={magazinePacking}
+                      onChange={onMagazinePacking}
+                      options={magazinePackingOptions()}
+                      globalSetting={magazinePackingGlobal}
+                    />
+                  </>
                 ) : null}
                 {layout === "annotations" ? (
                   <>
@@ -2048,292 +2003,7 @@ function uniqueItems(items: Zotero.Item[]): Zotero.Item[] {
   });
 }
 
-type GalleryTileProps = {
-  item: Zotero.Item;
-  collectionId?: number;
-  /** Only Gallery Page should pass true; all other surfaces default off. */
-  showGalleryNote?: boolean;
-  selected: boolean;
-  interactive?: boolean;
-  chrome?: ReadingTileChrome | null;
-  onClick: (item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) => void;
-  onDoubleClick: (item: Zotero.Item) => void;
-  onContextMenu: (
-    item: Zotero.Item,
-    e: JSX.TargetedMouseEvent<HTMLElement>,
-  ) => void;
-};
-
-export const GalleryTile = memo(function GalleryTile({
-  item,
-  collectionId: collectionIdProp,
-  showGalleryNote = false,
-  selected,
-  interactive = true,
-  chrome,
-  onClick,
-  onDoubleClick,
-  onContextMenu,
-}: GalleryTileProps) {
-  const collectionId = collectionIdProp ?? chrome?.collectionId ?? 0;
-  const galleryNote = useGalleryNoteText(
-    item,
-    showGalleryNote ? collectionId : 0,
-  );
-  const tileRef = useRef<HTMLDivElement>(null);
-  const visible = useNearViewport(tileRef);
-  const title = useMemo(
-    () => getItemTitle(item) || getString("untitled"),
-    [item],
-  );
-  const creator = useMemo(() => getItemCreatorLine(item), [item]);
-  const hostname = useMemo(() => {
-    if (isVideoGalleryItem(item)) {
-      return getVideoSiteHostname(item);
-    }
-    if (isWebGalleryItem(item) || isAudioGalleryItem(item)) {
-      return getItemHostname(item);
-    }
-    return "";
-  }, [item]);
-  const faviconSrc = useMemo(
-    () => (hostname ? faviconUrlForHostname(hostname) : null),
-    [hostname],
-  );
-  const readStatusName = useMemo(() => getItemReadStatusName(item), [item]);
-  const readStatus = useMemo(
-    () => (readStatusName ? getReadStatusMetadata(readStatusName) : undefined),
-    [readStatusName],
-  );
-  const [progress, setProgress] = useState<AttachmentReadingProgress | null>(
-    null,
-  );
-
-  useEffect(() => {
-    if (!visible) {
-      return;
-    }
-    let cancelled = false;
-    void getPrimaryAttachmentProgress(item).then((resolved) => {
-      if (!cancelled) {
-        setProgress(resolved);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [visible, item]);
-
-  const instruction = chrome?.assignment?.classInstruction?.trim() || "";
-  const priorityId =
-    chrome?.showPriority === false ? "" : chrome?.assignment?.priority || "";
-  const done = chrome?.readerMode && chrome.assignment?.status === "done";
-
-  const printUrl = (() => {
-    const raw = String(item.getField("url") || "").trim();
-    return /^https?:\/\//i.test(raw) ? raw : undefined;
-  })();
-
-  const handleGalleryNoteClick = (e: JSX.TargetedMouseEvent<HTMLElement>) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (collectionId) {
-      void openGalleryNoteByCollectionId(item, collectionId);
-    }
-  };
-
-  const meta = (
-    <div className="syllabus-gallery-meta min-w-0 px-0.5 flex flex-col gap-0.5">
-      {chrome?.contextLabel ? (
-        <div className="text-xs text-secondary truncate">
-          {chrome.contextLabel}
-        </div>
-      ) : null}
-      {priorityId ? (
-        <div className="min-w-0">
-          <ReadingPriorityBadge
-            collectionId={chrome?.collectionId ?? 0}
-            priorityId={priorityId}
-            className="min-w-0 truncate"
-          />
-        </div>
-      ) : null}
-      <div
-        className={twMerge(
-          "min-w-0",
-          chrome?.onUnpin && "flex flex-row items-start gap-0.5",
-          !chrome?.onUnpin &&
-            chrome?.readerMode &&
-            "flex flex-row items-start gap-1.5",
-        )}
-      >
-        {chrome?.onUnpin ? (
-          <>
-            <div className="syllabus-gallery-title text-sm font-medium text-primary leading-snug line-clamp-2 min-w-0 flex-1">
-              {title}
-            </div>
-            <button
-              type="button"
-              className="syllabus-pinned-collection-unpin shrink-0 text-secondary hover:text-primary hover:bg-quinary rounded p-1 cursor-pointer border-0 bg-transparent opacity-0 group-hover:opacity-100 focus-visible:opacity-100 in-[.print]:hidden"
-              title={getString("pinned-unpin-item")}
-              aria-label={getString("pinned-unpin-item")}
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                void chrome.onUnpin?.();
-              }}
-            >
-              <PinOff size={16} />
-            </button>
-          </>
-        ) : (
-          <>
-            {chrome?.readerMode ? (
-              <ReadingDoneCheckbox
-                item={item}
-                collectionId={chrome.collectionId}
-                assignment={chrome.assignment}
-                onReaderCheck={chrome.onReaderCheck}
-                className="mt-0.5 in-[.print]:hidden"
-              />
-            ) : null}
-            <div className="syllabus-gallery-title text-sm font-medium text-primary leading-snug line-clamp-2 min-w-0">
-              {title}
-            </div>
-          </>
-        )}
-      </div>
-      {hostname ? (
-        <div className="syllabus-gallery-hostrow">
-          {faviconSrc ? (
-            <img
-              src={faviconSrc}
-              alt=""
-              className="syllabus-gallery-favicon"
-              referrerPolicy="no-referrer"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = "none";
-              }}
-            />
-          ) : null}
-          <span className="truncate">{hostname}</span>
-        </div>
-      ) : creator ? (
-        <div className="syllabus-gallery-creator text-xs text-secondary truncate">
-          {creator}
-        </div>
-      ) : null}
-      {instruction ? (
-        <div className="syllabus-gallery-instruction text-xs text-secondary line-clamp-2 whitespace-pre-wrap">
-          {instruction}
-        </div>
-      ) : null}
-      {progress ? (
-        <div
-          className="syllabus-gallery-progress"
-          title={getString("gallery-page-of", {
-            args: { page: progress.page, total: progress.total },
-          })}
-        >
-          <div className="syllabus-gallery-progress-track">
-            <div
-              className="syllabus-gallery-progress-fill"
-              style={{ width: `${progress.percent}%` }}
-            />
-          </div>
-          <span className="syllabus-gallery-progress-pct">
-            {progress.percent}%
-          </span>
-        </div>
-      ) : null}
-      {readStatus ? (
-        <div className="text-[11px] text-secondary truncate uppercase tracking-wide">
-          {readStatus.icon} {readStatus.name}
-        </div>
-      ) : null}
-    </div>
-  );
-
-  const notePane =
-    galleryNote && collectionId ? (
-      <div
-        className="syllabus-gallery-note"
-        role="button"
-        tabIndex={0}
-        title={getString("gallery-note-edit")}
-        aria-label={getString("gallery-note-label")}
-        onClick={handleGalleryNoteClick}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            handleGalleryNoteClick(
-              e as unknown as JSX.TargetedMouseEvent<HTMLElement>,
-            );
-          }
-        }}
-      >
-        <ProseText text={galleryNote} />
-      </div>
-    ) : null;
-
-  return (
-    <div
-      ref={tileRef}
-      role={interactive ? "button" : undefined}
-      tabIndex={interactive ? -1 : undefined}
-      data-item-id={item.id}
-      data-print-url={printUrl}
-      className={twMerge(
-        "syllabus-gallery-tile group min-w-0 select-none relative",
-        interactive && "cursor-pointer outline-none",
-        done && "opacity-40",
-        notePane && "has-gallery-note",
-      )}
-      title={title}
-      onClick={interactive ? (e) => onClick(item, e) : undefined}
-      onDblClick={interactive ? () => onDoubleClick(item) : undefined}
-      onContextMenu={interactive ? (e) => onContextMenu(item, e) : undefined}
-    >
-      {notePane ? (
-        <>
-          <div className="syllabus-gallery-tile-main">
-            <GalleryCover item={item} selected={selected} visible={visible} />
-            {meta}
-          </div>
-          {notePane}
-        </>
-      ) : (
-        <>
-          <GalleryCover item={item} selected={selected} visible={visible} />
-          {meta}
-        </>
-      )}
-    </div>
-  );
-}, areGalleryTilePropsEqual);
-
-function areGalleryTilePropsEqual(
-  prev: GalleryTileProps,
-  next: GalleryTileProps,
-): boolean {
-  const prevCollectionId = prev.collectionId ?? prev.chrome?.collectionId ?? 0;
-  const nextCollectionId = next.collectionId ?? next.chrome?.collectionId ?? 0;
-  return (
-    prev.item.id === next.item.id &&
-    prev.item.dateModified === next.item.dateModified &&
-    prev.selected === next.selected &&
-    prev.interactive === next.interactive &&
-    !!prev.showGalleryNote === !!next.showGalleryNote &&
-    prevCollectionId === nextCollectionId &&
-    (!prev.showGalleryNote ||
-      galleryNoteFingerprint(prev.item, prevCollectionId) ===
-        galleryNoteFingerprint(next.item, nextCollectionId)) &&
-    readingChromeEqual(prev.chrome, next.chrome) &&
-    prev.onClick === next.onClick &&
-    prev.onDoubleClick === next.onDoubleClick &&
-    prev.onContextMenu === next.onContextMenu
-  );
-}
+export { GalleryTile } from "./GalleryTile";
 
 export function renderGalleryPage(
   win: _ZoteroTypes.MainWindow,

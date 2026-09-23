@@ -25,6 +25,7 @@ import { getString } from "../utils/locale";
 import { formatRelativeTimestamp } from "../utils/dates";
 import { getPref } from "../utils/prefs";
 import { GalleryTile } from "./GalleryPage";
+import { ExplorerCoverItem } from "./ExplorerMagazineRail";
 import type { MagazineTileClick } from "./MagazineTile";
 import type { ReadingTileChrome } from "./readingAssignmentChrome";
 import type { MyAnnotationStreamEntry } from "./explorerQueries";
@@ -291,7 +292,9 @@ export function AnnotationStreamBody({
 /**
  * Firefox (Zotero) does not grow a `flex-direction: column; flex-wrap: wrap`
  * container to fit wrapped columns, so overflowing quotes paint over the next
- * shelf entry. Measure the real right edge of children and set an explicit width.
+ * shelf entry. Measure the real right edge of children and set an explicit
+ * width on the stack and sidecar. Do not write height — that sizes the
+ * cover row and collapses the art.
  */
 function useExplorerRailStackWidth(
   stackRef: { current: HTMLDivElement | null },
@@ -299,11 +302,12 @@ function useExplorerRailStackWidth(
 ): void {
   useLayoutEffect(() => {
     const stack = stackRef.current;
-    if (!stack?.closest(".syllabus-explorer-annotation-stream-rail")) {
+    if (!stack?.closest(".syllabus-explorer-cover-rail")) {
       return;
     }
 
     const syncWidth = () => {
+      const sidecar = stack.parentElement;
       const stackLeft = stack.getBoundingClientRect().left;
       let maxRight = 0;
       for (const child of Array.from(stack.children)) {
@@ -313,12 +317,19 @@ function useExplorerRailStackWidth(
         );
       }
       const next = Math.ceil(maxRight);
-      const prev = stack.style.width ? Number.parseFloat(stack.style.width) : 0;
-      if (next > 0 && Math.abs(next - prev) > 1) {
-        stack.style.width = `${next}px`;
-      } else if (next <= 0 && stack.style.width) {
-        stack.style.width = "";
-      }
+      const apply = (el: HTMLElement | null) => {
+        if (!el) {
+          return;
+        }
+        const prev = el.style.width ? Number.parseFloat(el.style.width) : 0;
+        if (next > 0 && Math.abs(next - prev) > 1) {
+          el.style.width = `${next}px`;
+        } else if (next <= 0 && el.style.width) {
+          el.style.width = "";
+        }
+      };
+      apply(stack);
+      apply(sidecar);
     };
 
     syncWidth();
@@ -327,6 +338,9 @@ function useExplorerRailStackWidth(
     if (!win || typeof win.ResizeObserver !== "function") {
       return () => {
         stack.style.width = "";
+        if (stack.parentElement) {
+          stack.parentElement.style.width = "";
+        }
       };
     }
 
@@ -337,6 +351,9 @@ function useExplorerRailStackWidth(
     return () => {
       ro.disconnect();
       stack.style.width = "";
+      if (stack.parentElement) {
+        stack.parentElement.style.width = "";
+      }
     };
   }, [stackRef, layoutKey]);
 }
@@ -478,7 +495,85 @@ export function openAnnotationGroupInReader(
   }
 }
 
-/** Horizontal rail of annotation stream groups (Explorer recent-annotations). */
+function AnnotationCoverSidecar({
+  group,
+  emptyLabel,
+}: {
+  group: AnnotationStreamParentGroup;
+  emptyLabel?: string;
+}) {
+  const [quoteOrder] = useAnnotationsQuoteOrder();
+  const entries = useMemo(
+    () => sortAnnotationsByQuoteOrder(group.entries, quoteOrder),
+    [group.entries, quoteOrder],
+  );
+  const stackRef = useRef<HTMLDivElement>(null);
+  const stackLayoutKey = useMemo(
+    () =>
+      entries
+        .map(
+          (entry) =>
+            `${entry.id}:${entry.quote?.length ?? 0}:${entry.comment?.length ?? 0}`,
+        )
+        .join(","),
+    [entries],
+  );
+  useExplorerRailStackWidth(stackRef, stackLayoutKey);
+  const groupCopyText = formatGroupCopyText(entries);
+  const showCopyAll = !!groupCopyText;
+  const [copiedAll, flashCopiedAll] = useCopyFlash();
+  const copyAllLabel = copiedAll
+    ? getString("my-annotations-copied")
+    : getString("my-annotations-copy-all");
+
+  return (
+    <div className="syllabus-explorer-annotation-sidecar">
+      <div
+        ref={stackRef}
+        className="syllabus-my-annotations-stream-stack min-w-0"
+      >
+        {entries.length === 0 && emptyLabel ? (
+          <p className="syllabus-gallery-annotations-empty text-secondary">
+            {emptyLabel}
+          </p>
+        ) : (
+          entries.map((entry) => (
+            <AnnotationStreamBody key={entry.id} entry={entry} />
+          ))
+        )}
+      </div>
+      {showCopyAll ? (
+        <div className="syllabus-my-annotations-stream-copy-all-wrap">
+          <button
+            type="button"
+            className={twMerge(
+              "syllabus-my-annotations-stream-copy-all",
+              copiedAll && "is-copied",
+            )}
+            title={copyAllLabel}
+            aria-label={copyAllLabel}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (copyStringToClipboard(groupCopyText)) {
+                flashCopiedAll();
+              }
+            }}
+          >
+            {copiedAll ? (
+              <Check size={12} strokeWidth={2.5} aria-hidden="true" />
+            ) : (
+              <Copy size={12} strokeWidth={2} aria-hidden="true" />
+            )}
+            {copyAllLabel}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Horizontal Cover rail of annotation groups (same item as Magazine). */
 export function ExplorerAnnotationShelf({
   annotations,
   selectedItemIds,
@@ -504,11 +599,11 @@ export function ExplorerAnnotationShelf({
     );
   }
   return (
-    <div className="syllabus-explorer-annotation-stream-rail syllabus-my-annotations-stream">
+    <div className="syllabus-explorer-cover-rail">
       {groups.map((group) => (
-        <AnnotationStreamGroup
+        <ExplorerCoverItem
           key={group.key}
-          group={group}
+          item={group.parent}
           selected={
             !!group.parent &&
             (selectedItemIds?.includes(group.parent.id) || false)
@@ -516,7 +611,9 @@ export function ExplorerAnnotationShelf({
           onClick={onClick}
           onDoubleClick={onDoubleClick}
           onContextMenu={onContextMenu}
-        />
+        >
+          <AnnotationCoverSidecar group={group} />
+        </ExplorerCoverItem>
       ))}
     </div>
   );
