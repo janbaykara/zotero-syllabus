@@ -41,6 +41,7 @@ import { READING_SCHEDULE_VIEW_KEY } from "../utils/viewScope";
 import { GalleryViewportProvider } from "./galleryVisibility";
 import {
   ScheduleStickyTopsContext,
+  measureScheduleStickyTops,
   useScheduleStickyTop,
   type ScheduleStickyTops,
 } from "./scheduleSticky";
@@ -50,12 +51,6 @@ setDefaultOptions({
 });
 
 const READING_SCHEDULE_LAYOUT_KEY = READING_SCHEDULE_VIEW_KEY;
-
-/** Fallbacks if sticky bands aren't in the DOM yet. */
-const SCHEDULE_WEEK_BAND_PX = 40;
-const SCHEDULE_DATE_BAND_PX = 36;
-/** Clearance under the measured page header (same as Annotation Feed). */
-const SCHEDULE_HEADER_GAP_PX = 12;
 
 export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
   const [density] = useItemDensity(READING_SCHEDULE_LAYOUT_KEY);
@@ -125,9 +120,9 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
             <div className="font-semibold text-3xl">
               {getString("view-tab-reading-schedule")}
             </div>
-            <p className="text-secondary text-base mt-1">
+            <div className="text-secondary text-base mt-1">
               {getString("reading-schedule-desc")}
-            </p>
+            </div>
           </div>
           <div className="inline-flex items-center gap-2.5 shrink grow-0">
             <SyllabusViewMenu
@@ -156,9 +151,6 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
     }
     const observedBands = new WeakSet<Element>();
     const syncStickyTop = () => {
-      const primary = Math.ceil(
-        header.getBoundingClientRect().height + SCHEDULE_HEADER_GAP_PX,
-      );
       const weekEl = page.querySelector(
         ".syllabus-schedule-sticky-week",
       ) as HTMLElement | null;
@@ -171,17 +163,11 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
           observer?.observe(el);
         }
       }
-      const weekH = Math.ceil(
-        weekEl?.getBoundingClientRect().height || SCHEDULE_WEEK_BAND_PX,
-      );
-      const dateH = Math.ceil(
-        dateEl?.getBoundingClientRect().height || SCHEDULE_DATE_BAND_PX,
-      );
-      const next: ScheduleStickyTops = {
-        week: primary,
-        date: primary + weekH,
-        class: primary + weekH + dateH,
-      };
+      const next = measureScheduleStickyTops({
+        header: header.getBoundingClientRect().height,
+        week: weekEl?.getBoundingClientRect().height,
+        date: dateEl?.getBoundingClientRect().height,
+      });
       page.style.setProperty(
         "--syllabus-schedule-sticky-top",
         `${next.week}px`,
