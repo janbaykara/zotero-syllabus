@@ -141,12 +141,15 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
       );
     };
     syncStickyTop();
-    const observer = new ResizeObserver(syncStickyTop);
-    observer.observe(header);
     const win = page.ownerDocument.defaultView;
+    const observer =
+      win && typeof win.ResizeObserver === "function"
+        ? new win.ResizeObserver(syncStickyTop)
+        : null;
+    observer?.observe(header);
     win?.addEventListener("resize", syncStickyTop);
     return () => {
-      observer.disconnect();
+      observer?.disconnect();
       win?.removeEventListener("resize", syncStickyTop);
     };
   }, []);

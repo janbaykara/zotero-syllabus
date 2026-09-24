@@ -39,6 +39,8 @@ declare namespace _ZoteroTypes {
       "magazineTypeSize": string;
       "magazinePacking": string;
       "generateReadingScheduleCollection": boolean;
+      "applyReadingScheduleLayoutToPinned": boolean;
+      "showReadingSchedulePinned": boolean;
       "readingScheduleCollectionKey": string;
       "customIcons": boolean;
       "publishApiBaseUrl": string;

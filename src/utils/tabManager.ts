@@ -29,7 +29,14 @@ interface TabData<TParams = any> {
  * Each instance manages tabs of one type with typed parameters
  */
 export class TabManager<TParams = any> {
+  private readonly rendered = new Set<string>();
+
   constructor(private readonly config: TabConfig<TParams>) {}
+
+  /** Drop the “already bound” flag so the next ensureRendered remounts. */
+  invalidateMount(params?: TParams): void {
+    this.rendered.delete(this.config.getTabId(params));
+  }
 
   /**
    * Get a tab by ID
@@ -131,7 +138,7 @@ export class TabManager<TParams = any> {
       title,
       data,
       onClose: () => {
-        // Clean up reference when tab is closed
+        this.rendered.delete(tabId);
         if (this.config.onClose) {
           this.config.onClose(params);
         }
@@ -219,9 +226,23 @@ export class TabManager<TParams = any> {
       return;
     }
 
+    TabManager.selectTab(this.config.getTabId(params), win);
+    this.ensureRendered(win, params);
+  }
+
+  /** Bind Preact once; later opens only select the tab (avoids a Pinned flash). */
+  ensureRendered(win?: _ZoteroTypes.MainWindow, params?: TParams): void {
+    win = win || ztoolkit.getGlobal("Zotero").getMainWindow();
     const tabId = this.config.getTabId(params);
-    TabManager.selectTab(tabId, win);
+    const tabData = this.getTabOfType(tabId);
+    if (!tabData?.rootElement) {
+      return;
+    }
+    if (this.rendered.has(tabId) && tabData.rootElement.childElementCount > 0) {
+      return;
+    }
     this.renderTab(tabId, win);
+    this.rendered.add(tabId);
   }
 
   /**

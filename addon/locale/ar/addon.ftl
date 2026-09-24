@@ -439,20 +439,22 @@ schedule-this-week = هذا الأسبوع
 schedule-next-week = الأسبوع القادم
 schedule-settings-title = إعدادات جدول القراءات
 schedule-settings-library = مجموعة المكتبة
-schedule-settings-desc =
-    معطّل افتراضيًا. عند التمكين، تُحفظ في مكتبتي مجموعة علوية باسم «جدول القراءات» مع مجلد لكل تاريخ قراءة قريب أو قادم. تُنشأ المجلدات ويُعاد تسميتها وتُملأ تلقائيًا. إلغاء التفعيل يحذف تلك المجموعة؛ وتبقى عناصر المناهج في مكانها.
 schedule-settings-checkbox = إنشاء مجموعة «جدول القراءات»؟
+schedule-apply-to-pinned = تطبيق على Pinned
 schedule-day-managed-banner = يُدار تلقائيًا من مناهجك. تُستبدل التعديلات هنا.
 schedule-day-empty = لا توجد قراءات مجدولة لهذا اليوم.
 schedule-window-empty = لا توجد قراءات في نافذة الجدول بعد. أضف تواريخ قراءة إلى المحاضرات لعرضها هنا.
 schedule-no-dates = لا توجد تواريخ
-schedule-of-collection = من { $name }
-schedule-of-collection-in-library = من { $collection } ({ $library })
+schedule-class-named = { $nomenclature } { $number }: { $name }
+schedule-of-collection = في { $name }
+schedule-of-collection-in-library = في { $collection } ({ $library })
 schedule-open-syllabus = فتح منهاج { $title }
 class-folder-managed-banner = يُدار تلقائيًا من هذا المنهاج. تُستبدل التعديلات في هذا المجلد.
 
 # Pinned (Reading Schedule)
 pinned-section-heading = Pinned
+pinned-hide = إخفاء
+pinned-show = إظهار
 pinned-item-label = Pinned item
 pinned-next-up-from = Next up from { $name }
 pinned-menu-pin-item = Add to Pinned

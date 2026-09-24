@@ -158,7 +158,7 @@ export function ReadingItemsLayout({
   readerMode?: boolean;
   isLocked?: boolean;
   template?: MagazineSectionTemplate;
-  /** Cover/magazine priority badge (off on Pinned; Reading Schedule Cover shows it). */
+  /** Cover/magazine/annotations priority badge (off on Pinned). */
   showPriority?: boolean;
   coverRail?: boolean;
   magazineRail?: boolean;

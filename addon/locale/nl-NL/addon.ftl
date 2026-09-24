@@ -439,20 +439,22 @@ schedule-this-week = Deze week
 schedule-next-week = Volgende week
 schedule-settings-title = Instellingen van het leesschema
 schedule-settings-library = Bibliotheekcollectie
-schedule-settings-desc =
-    Standaard uit. Als dit aanstaat, wordt in Mijn bibliotheek een collectie op het hoogste niveau “Leesschema” bijgehouden, met een map voor elke recente en komende leesdatum. Mappen worden automatisch aangemaakt, hernoemd en gevuld. Uitschakelen verwijdert die collectie; items in syllabi blijven staan.
 schedule-settings-checkbox = Collectie “Leesschema” genereren?
+schedule-apply-to-pinned = Toepassen op Pinned
 schedule-day-managed-banner = Automatisch beheerd vanuit uw syllabi. Wijzigingen hier worden overschreven.
 schedule-day-empty = Geen lectuur ingepland voor deze dag.
 schedule-window-empty = Nog geen lectuur in het schemavenster. Voeg leesdata toe aan bijeenkomsten om ze hier te zien.
 schedule-no-dates = Geen data
-schedule-of-collection = van { $name }
-schedule-of-collection-in-library = van { $collection } ({ $library })
+schedule-class-named = { $nomenclature } { $number }: { $name }
+schedule-of-collection = in { $name }
+schedule-of-collection-in-library = in { $collection } ({ $library })
 schedule-open-syllabus = Syllabus van { $title } openen
 class-folder-managed-banner = Automatisch beheerd vanuit deze syllabus. Wijzigingen in deze map worden overschreven.
 
 # Pinned (Reading Schedule)
 pinned-section-heading = Pinned
+pinned-hide = Verbergen
+pinned-show = Tonen
 pinned-item-label = Pinned item
 pinned-next-up-from = Next up from { $name }
 pinned-menu-pin-item = Add to Pinned

@@ -18,13 +18,16 @@ import { GallerySaveGlobalButton } from "./GallerySegmentedControl";
 export function AnnotationColorFilter({
   colors,
   scope,
+  showGlobe: showGlobeProp,
 }: {
   colors: string[];
   scope: string;
+  showGlobe?: boolean;
 }) {
   const [colorFilter, setColorFilter, colorFilterGlobal] =
     useAnnotationColorFilter(scope);
-  const showGlobe = colorFilterInheritsDefault(scope);
+  const showGlobe =
+    (showGlobeProp ?? true) && colorFilterInheritsDefault(scope);
   if (colors.length === 0) {
     return null;
   }

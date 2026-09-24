@@ -439,20 +439,22 @@ schedule-this-week = Цього тижня
 schedule-next-week = Наступного тижня
 schedule-settings-title = Параметри графіка читання
 schedule-settings-library = Колекція в бібліотеці
-schedule-settings-desc =
-    Типово вимкнено. Якщо увімкнено, у «Моя бібліотека» підтримується колекція верхнього рівня «Графік читання» з текою для кожної недавньої та майбутньої дати читання. Теки створюються, перейменовуються й заповнюються автоматично. Вимкнення вилучає цю колекцію; записи силабусів залишаються на місці.
 schedule-settings-checkbox = Створювати колекцію «Графік читання»?
+schedule-apply-to-pinned = Застосувати до Pinned
 schedule-day-managed-banner = Керується автоматично на основі ваших силабусів. Зміни тут буде перезаписано.
 schedule-day-empty = На цей день читань не заплановано.
 schedule-window-empty = У вікні графіка ще немає читань. Додайте дати читання до занять, щоб побачити їх тут.
 schedule-no-dates = Немає дат
-schedule-of-collection = з { $name }
-schedule-of-collection-in-library = з { $collection } ({ $library })
+schedule-class-named = { $nomenclature } { $number }: { $name }
+schedule-of-collection = у { $name }
+schedule-of-collection-in-library = у { $collection } ({ $library })
 schedule-open-syllabus = Відкрити силабус: { $title }
 class-folder-managed-banner = Керується автоматично на основі цього силабуса. Зміни в цій теці буде перезаписано.
 
 # Pinned (Reading Schedule)
 pinned-section-heading = Pinned
+pinned-hide = Приховати
+pinned-show = Показати
 pinned-item-label = Pinned item
 pinned-next-up-from = Next up from { $name }
 pinned-menu-pin-item = Add to Pinned

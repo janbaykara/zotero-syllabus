@@ -557,9 +557,12 @@ export class SyllabusManager {
       this.syncMyAnnotationsTabIcon(win);
       if (this.readingScheduleTab) {
         ztoolkit.log(
-          "SyllabusManager.onMainWindowLoad: rerendering reading schedule tab",
+          "SyllabusManager.onMainWindowLoad: bind reading schedule if selected",
         );
-        this.readingScheduleTab.renderAllTabs(win);
+        this.readingScheduleTab.invalidateMount();
+        if (win.Zotero_Tabs?.selectedID === "syllabus-reading-list-tab") {
+          this.readingScheduleTab.ensureRendered(win);
+        }
       }
       ztoolkit.log(
         "SyllabusManager.onMainWindowLoad: rerendering My Annotations tabs",
@@ -635,10 +638,13 @@ export class SyllabusManager {
         };
       }
       const existing = tabs._getTab("syllabus-reading-list-tab");
-      if (existing?.tab) {
+      const iconChanged =
+        !!existing?.tab && existing.tab.data?.icon !== "calendar";
+      if (iconChanged && existing?.tab) {
         existing.tab.data = { ...existing.tab.data, icon: "calendar" };
+        tabs._update();
+        this.readingScheduleTab?.renderAllTabs(win);
       }
-      tabs._update();
     } catch (error) {
       ztoolkit.log("Error updating Reading Schedule tab icon:", error);
     }
@@ -829,6 +835,11 @@ export class SyllabusManager {
         currentTabId = newTabId;
         // Update button visibility when tab changes
         SyllabusManager.updateButtonVisibility();
+        if (newTabId === "syllabus-reading-list-tab") {
+          SyllabusManager.readingScheduleTab?.ensureRendered(
+            Zotero.getMainWindow(),
+          );
+        }
       }
     }, 300);
     this.syllabusViewTabListener = interval;
@@ -1178,12 +1189,6 @@ export class SyllabusManager {
       listeners: [
         {
           type: "command",
-          listener: () => {
-            SyllabusManager.openReadingListTab();
-          },
-        },
-        {
-          type: "click",
           listener: () => {
             SyllabusManager.openReadingListTab();
           },

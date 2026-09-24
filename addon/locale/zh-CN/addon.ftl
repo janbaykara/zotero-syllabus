@@ -437,20 +437,22 @@ schedule-this-week = 本周
 schedule-next-week = 下周
 schedule-settings-title = 阅读日程设置
 schedule-settings-library = 文库分类
-schedule-settings-desc =
-    默认关闭。启用后，将在“我的文库”中保留顶层“阅读日程”分类，并为每个近期和即将到来的阅读日期各建一个文件夹。文件夹会自动创建、重命名并填充。关闭此选项将删除该分类；教学大纲中的条目会保留。
 schedule-settings-checkbox = 生成“阅读日程”分类？
+schedule-apply-to-pinned = 应用于 Pinned
 schedule-day-managed-banner = 由各教学大纲自动管理。此处的更改会被覆盖。
 schedule-day-empty = 当天没有安排阅读。
 schedule-window-empty = 日程范围内尚无阅读。为课堂添加阅读日期即可在此查看。
 schedule-no-dates = 无日期
-schedule-of-collection = 属于 { $name }
-schedule-of-collection-in-library = 属于 { $collection }（{ $library }）
+schedule-class-named = { $nomenclature } { $number }：{ $name }
+schedule-of-collection = 在 { $name }
+schedule-of-collection-in-library = 在 { $collection }（{ $library }）
 schedule-open-syllabus = 打开 { $title } 的教学大纲
 class-folder-managed-banner = 由此教学大纲自动管理。此文件夹中的更改会被覆盖。
 
 # Pinned (Reading Schedule)
 pinned-section-heading = Pinned
+pinned-hide = 隐藏
+pinned-show = 显示
 pinned-item-label = Pinned item
 pinned-next-up-from = Next up from { $name }
 pinned-menu-pin-item = Add to Pinned

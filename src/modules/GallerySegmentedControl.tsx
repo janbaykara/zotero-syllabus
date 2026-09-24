@@ -99,7 +99,7 @@ export function GallerySegmentedControl<T extends string>({
         ) : null}
       </div>
       <div
-        role="radiogroup"
+        role="group"
         aria-label={ariaLabel}
         className="syllabus-gallery-groupby"
       >
@@ -107,8 +107,7 @@ export function GallerySegmentedControl<T extends string>({
           <button
             key={mode}
             type="button"
-            role="radio"
-            aria-checked={value === mode}
+            aria-pressed={value === mode}
             title={title}
             className="syllabus-gallery-groupby-btn"
             data-tour={tourPrefix ? `${tourPrefix}-${mode}` : undefined}

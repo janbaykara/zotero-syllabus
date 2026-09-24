@@ -21,12 +21,17 @@ export function renderComponent(
   rootId?: string,
   treeKey?: string,
 ) {
-  // Ensure window and document are available globally for Preact
-  if (typeof (globalThis as any).window === "undefined") {
-    (globalThis as any).window = win;
+  // Chrome sandboxes have window/document but not always the constructors
+  // Preact effects look up (ResizeObserver, etc.) on globalThis.
+  const g = globalThis as any;
+  if (typeof g.window === "undefined") {
+    g.window = win;
   }
-  if (typeof (globalThis as any).document === "undefined" && win.document) {
-    (globalThis as any).document = win.document;
+  if (typeof g.document === "undefined" && win.document) {
+    g.document = win.document;
+  }
+  if (typeof g.ResizeObserver === "undefined" && win.ResizeObserver) {
+    g.ResizeObserver = win.ResizeObserver;
   }
 
   // Initialize the unmount map if it doesn't exist

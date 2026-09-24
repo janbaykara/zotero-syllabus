@@ -206,7 +206,7 @@ export function ClassReadingBlock({
   coverRail = false,
   fullWidthItems = false,
   stickyHeading = false,
-  showPriority,
+  showPriority = true,
   magazineRail = false,
   magazinePacking = "packed",
   onCollectionClick,
@@ -225,8 +225,8 @@ export function ClassReadingBlock({
   /** Stick the class title under Reading Schedule week/date headers. */
   stickyHeading?: boolean;
   /**
-   * Cover/magazine priority badge. Defaults on for Cover (schedule page),
-   * off for Card/Magazine where class context already frames the list.
+   * Cover/magazine/annotations priority badge. Defaults on so Reading
+   * Schedule (and class folders) show priority in every display mode.
    */
   showPriority?: boolean;
   /** Home Upcoming deadlines Magazine: horizontal Cover + Blurb rail. */
@@ -237,9 +237,9 @@ export function ClassReadingBlock({
   onItemClick?: (item: Zotero.Item) => void;
 }) {
   const stickyTop = useScheduleStickyTop("class");
-  const showPriorityBadge = showPriority ?? layout === "cover";
-  const { singularCapitalized, singular } =
-    SyllabusManager.getNomenclatureFormatted(classReading.collectionId);
+  const { singularCapitalized } = SyllabusManager.getNomenclatureFormatted(
+    classReading.collectionId,
+  );
   const classStatus = SyllabusManager.getClassStatus(
     classReading.collectionId,
     classReading.classNumber,
@@ -309,15 +309,21 @@ export function ClassReadingBlock({
             )}
             onClick={onCollectionClick}
           >
-            {classReading.classTitle ? (
-              <>
-                <span className="font-semibold">{classReading.classTitle}</span>
-                <span className="text-secondary">, </span>
-              </>
-            ) : null}
-            <span className="text-secondary">
-              {classReading.classTitle ? singular : singularCapitalized}{" "}
-              {classReading.classNumber}
+            <span className="font-semibold">
+              {classReading.classTitle
+                ? getString("schedule-class-named", {
+                    args: {
+                      nomenclature: singularCapitalized,
+                      number: classReading.classNumber,
+                      name: classReading.classTitle,
+                    },
+                  })
+                : getString("menu-class-label", {
+                    args: {
+                      nomenclature: singularCapitalized,
+                      number: classReading.classNumber,
+                    },
+                  })}
             </span>
             {showCollectionLink ? (
               <span className="text-secondary">
@@ -352,7 +358,7 @@ export function ClassReadingBlock({
           readerMode
           isLocked
           template="strip"
-          showPriority={showPriorityBadge}
+          showPriority={showPriority}
           coverRail={coverRail && layout === "cover"}
           magazineRail={magazineRail && layout === "magazine"}
           magazinePacking={magazinePacking}

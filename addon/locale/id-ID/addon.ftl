@@ -439,20 +439,22 @@ schedule-this-week = Minggu ini
 schedule-next-week = Minggu depan
 schedule-settings-title = Pengaturan Jadwal Bacaan
 schedule-settings-library = Koleksi pustaka
-schedule-settings-desc =
-    Nonaktif secara bawaan. Jika diaktifkan, koleksi tingkat atas “Jadwal Bacaan” dipertahankan di Pustaka Saya dengan folder untuk setiap tanggal bacaan yang baru lalu dan yang akan datang. Folder dibuat, diganti namanya, dan diisi secara otomatis. Menonaktifkan opsi ini menghapus koleksi tersebut; item silabus tetap di tempatnya.
 schedule-settings-checkbox = Buat koleksi “Jadwal Bacaan”?
+schedule-apply-to-pinned = Terapkan ke Pinned
 schedule-day-managed-banner = Dikelola otomatis dari silabus Anda. Suntingan di sini akan ditimpa.
 schedule-day-empty = Tidak ada bacaan terjadwal untuk hari ini.
 schedule-window-empty = Belum ada bacaan dalam jendela jadwal. Tambahkan tanggal bacaan ke kelas agar tampil di sini.
 schedule-no-dates = Tidak ada tanggal
-schedule-of-collection = dari { $name }
-schedule-of-collection-in-library = dari { $collection } ({ $library })
+schedule-class-named = { $nomenclature } { $number }: { $name }
+schedule-of-collection = di { $name }
+schedule-of-collection-in-library = di { $collection } ({ $library })
 schedule-open-syllabus = Buka silabus { $title }
 class-folder-managed-banner = Dikelola otomatis dari silabus ini. Suntingan di folder ini akan ditimpa.
 
 # Pinned (Reading Schedule)
 pinned-section-heading = Pinned
+pinned-hide = Sembunyikan
+pinned-show = Tampilkan
 pinned-item-label = Pinned item
 pinned-next-up-from = Next up from { $name }
 pinned-menu-pin-item = Add to Pinned

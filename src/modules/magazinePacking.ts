@@ -1,5 +1,6 @@
 import * as z from "zod";
 import { config } from "../../package.json";
+import { READING_SCHEDULE_VIEW_KEY } from "../utils/viewScope";
 import {
   getViewPref,
   getViewPrefDefault,
@@ -29,6 +30,13 @@ const magazinePackingSpec: ViewPrefSpec<MagazinePacking> = {
   coerce: coerceMagazinePacking,
 };
 
+/** Gallery inherits the packed global default; Reading Schedule starts vertical. */
+function unsetMagazinePacking(
+  viewKey: string | number,
+): MagazinePacking | undefined {
+  return String(viewKey) === READING_SCHEDULE_VIEW_KEY ? "vertical" : undefined;
+}
+
 export function getDefaultMagazinePacking(): MagazinePacking {
   return getViewPrefDefault(magazinePackingSpec);
 }
@@ -38,7 +46,11 @@ export function setDefaultMagazinePacking(packing: MagazinePacking): void {
 }
 
 export function getMagazinePacking(viewKey: string | number): MagazinePacking {
-  return getViewPref(magazinePackingSpec, viewKey);
+  return getViewPref(
+    magazinePackingSpec,
+    viewKey,
+    unsetMagazinePacking(viewKey),
+  );
 }
 
 export function setMagazinePacking(
@@ -62,5 +74,9 @@ export function useMagazinePacking(
   (packing: MagazinePacking) => void,
   ViewPrefGlobalSetting<MagazinePacking>,
 ] {
-  return useViewPref(magazinePackingSpec, viewKey);
+  return useViewPref(
+    magazinePackingSpec,
+    viewKey,
+    unsetMagazinePacking(viewKey),
+  );
 }

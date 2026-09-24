@@ -36,6 +36,7 @@ import { PinnedSection, usePinnedScheduleData } from "./PinnedSection";
 import { SyllabusViewMenu } from "./SyllabusViewMenu";
 import { useGalleryLayout } from "./galleryLayout";
 import { useMagazinePacking } from "./magazinePacking";
+import { useBooleanPref } from "./react-zotero-sync/booleanPref";
 import { READING_SCHEDULE_VIEW_KEY } from "../utils/viewScope";
 import { GalleryViewportProvider } from "./galleryVisibility";
 import {
@@ -58,11 +59,11 @@ const SCHEDULE_HEADER_GAP_PX = 12;
 
 export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
   const [density] = useItemDensity(READING_SCHEDULE_LAYOUT_KEY);
-  const [layout, setLayout, layoutGlobal] = useGalleryLayout(
+  const [layout, setLayout] = useGalleryLayout(READING_SCHEDULE_LAYOUT_KEY);
+  const [magazinePacking, setMagazinePacking] = useMagazinePacking(
     READING_SCHEDULE_LAYOUT_KEY,
   );
-  const [magazinePacking, setMagazinePacking, magazinePackingGlobal] =
-    useMagazinePacking(READING_SCHEDULE_LAYOUT_KEY);
+  const [applyToPinned] = useBooleanPref("applyReadingScheduleLayoutToPinned");
   const pageRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const [stickyTops, setStickyTops] = useState<ScheduleStickyTops>({
@@ -134,12 +135,11 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
               showLayout
               layout={layout}
               onLayoutChange={setLayout}
-              layoutGlobal={layoutGlobal}
               magazinePacking={magazinePacking}
               onMagazinePackingChange={setMagazinePacking}
-              magazinePackingGlobal={magazinePackingGlobal}
               showCheckboxes={false}
               showScheduleCollection
+              showGlobal={false}
               colorFilterScope={READING_SCHEDULE_LAYOUT_KEY}
             />
           </div>
@@ -168,7 +168,7 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
       for (const el of [weekEl, dateEl]) {
         if (el && !observedBands.has(el)) {
           observedBands.add(el);
-          observer.observe(el);
+          observer?.observe(el);
         }
       }
       const weekH = Math.ceil(
@@ -202,17 +202,20 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
           : next,
       );
     };
-    const observer = new ResizeObserver(syncStickyTop);
-    observer.observe(header);
-    syncStickyTop();
     const win = page.ownerDocument.defaultView;
+    const observer =
+      win && typeof win.ResizeObserver === "function"
+        ? new win.ResizeObserver(syncStickyTop)
+        : null;
+    observer?.observe(header);
+    syncStickyTop();
     win?.addEventListener("resize", syncStickyTop);
     const raf = win?.requestAnimationFrame(() => {
       syncStickyTop();
       win.requestAnimationFrame(syncStickyTop);
     });
     return () => {
-      observer.disconnect();
+      observer?.disconnect();
       win?.removeEventListener("resize", syncStickyTop);
       if (raf != null) {
         win?.cancelAnimationFrame(raf);
@@ -289,7 +292,7 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
           <GalleryViewportProvider rootRef={pageRef}>
             <PinnedSection
               density={density}
-              layout={layout}
+              layout={applyToPinned ? layout : "cover"}
               magazinePacking={magazinePacking}
               showLibraryName={showLibrarySource}
               pinnedItems={pinnedItems}

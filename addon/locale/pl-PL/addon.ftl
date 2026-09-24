@@ -439,20 +439,22 @@ schedule-this-week = W tym tygodniu
 schedule-next-week = W przyszłym tygodniu
 schedule-settings-title = Ustawienia harmonogramu lektur
 schedule-settings-library = Kolekcja w bibliotece
-schedule-settings-desc =
-    Domyślnie wyłączone. Po włączeniu w bibliotece Moja biblioteka utrzymywana jest nadrzędna kolekcja „Harmonogram lektur” z folderem dla każdej niedawnej i nadchodzącej daty lektury. Foldery są tworzone, przemianowywane i wypełniane automatycznie. Wyłączenie tej opcji usuwa tę kolekcję; pozycje sylabusów pozostają na miejscu.
 schedule-settings-checkbox = Generować kolekcję „Harmonogram lektur”?
+schedule-apply-to-pinned = Zastosuj do Pinned
 schedule-day-managed-banner = Zarządzane automatycznie na podstawie sylabusów. Zmiany tutaj zostaną nadpisane.
 schedule-day-empty = Brak lektur zaplanowanych na ten dzień.
 schedule-window-empty = W oknie harmonogramu nie ma jeszcze lektur. Dodaj terminy lektur do zajęć, aby zobaczyć je tutaj.
 schedule-no-dates = Brak dat
-schedule-of-collection = z { $name }
-schedule-of-collection-in-library = z { $collection } ({ $library })
+schedule-class-named = { $nomenclature } { $number }: { $name }
+schedule-of-collection = w { $name }
+schedule-of-collection-in-library = w { $collection } ({ $library })
 schedule-open-syllabus = Otwórz sylabus: { $title }
 class-folder-managed-banner = Zarządzane automatycznie na podstawie tego sylabusa. Zmiany w tym folderze zostaną nadpisane.
 
 # Pinned (Reading Schedule)
 pinned-section-heading = Pinned
+pinned-hide = Ukryj
+pinned-show = Pokaż
 pinned-item-label = Pinned item
 pinned-next-up-from = Next up from { $name }
 pinned-menu-pin-item = Add to Pinned

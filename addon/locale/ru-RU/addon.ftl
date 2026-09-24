@@ -439,20 +439,22 @@ schedule-this-week = На этой неделе
 schedule-next-week = На следующей неделе
 schedule-settings-title = Параметры графика чтения
 schedule-settings-library = Коллекция в библиотеке
-schedule-settings-desc =
-    По умолчанию выключено. При включении в «Моя библиотека» поддерживается коллекция верхнего уровня «График чтения» с папкой для каждой недавней и предстоящей даты чтения. Папки создаются, переименовываются и заполняются автоматически. Отключение удаляет эту коллекцию; записи силлабусов остаются на месте.
 schedule-settings-checkbox = Создавать коллекцию «График чтения»?
+schedule-apply-to-pinned = Применить к Pinned
 schedule-day-managed-banner = Управляется автоматически на основе ваших силлабусов. Правки здесь будут перезаписаны.
 schedule-day-empty = На этот день чтений не запланировано.
 schedule-window-empty = В окне графика пока нет чтений. Добавьте даты чтения к занятиям, чтобы увидеть их здесь.
 schedule-no-dates = Нет дат
-schedule-of-collection = из { $name }
-schedule-of-collection-in-library = из { $collection } ({ $library })
+schedule-class-named = { $nomenclature } { $number }: { $name }
+schedule-of-collection = в { $name }
+schedule-of-collection-in-library = в { $collection } ({ $library })
 schedule-open-syllabus = Открыть силлабус: { $title }
 class-folder-managed-banner = Управляется автоматически на основе этого силлабуса. Правки в этой папке будут перезаписаны.
 
 # Pinned (Reading Schedule)
 pinned-section-heading = Pinned
+pinned-hide = Скрыть
+pinned-show = Показать
 pinned-item-label = Pinned item
 pinned-next-up-from = Next up from { $name }
 pinned-menu-pin-item = Add to Pinned

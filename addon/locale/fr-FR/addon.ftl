@@ -439,20 +439,22 @@ schedule-this-week = Cette semaine
 schedule-next-week = Semaine prochaine
 schedule-settings-title = Paramètres du planning des lectures
 schedule-settings-library = Collection de la bibliothèque
-schedule-settings-desc =
-    Désactivé par défaut. Une fois activé, une collection de premier niveau « Planning des lectures » est maintenue dans Ma bibliothèque, avec un dossier pour chaque date de lecture récente et à venir. Les dossiers sont créés, renommés et remplis automatiquement. Désactiver supprime cette collection ; les documents des syllabus restent en place.
 schedule-settings-checkbox = Générer la collection « Planning des lectures » ?
+schedule-apply-to-pinned = Appliquer à Pinned
 schedule-day-managed-banner = Géré automatiquement à partir de vos syllabus. Les modifications ici sont écrasées.
 schedule-day-empty = Aucune lecture planifiée pour ce jour.
 schedule-window-empty = Pas encore de lectures dans la fenêtre du planning. Ajoutez des dates de lecture aux séances pour les voir ici.
 schedule-no-dates = Aucune date
-schedule-of-collection = de { $name }
-schedule-of-collection-in-library = de { $collection } ({ $library })
+schedule-class-named = { $nomenclature } { $number } : { $name }
+schedule-of-collection = dans { $name }
+schedule-of-collection-in-library = dans { $collection } ({ $library })
 schedule-open-syllabus = Ouvrir le syllabus de { $title }
 class-folder-managed-banner = Géré automatiquement à partir de ce syllabus. Les modifications dans ce dossier sont écrasées.
 
 # Pinned (Reading Schedule)
 pinned-section-heading = Pinned
+pinned-hide = Masquer
+pinned-show = Afficher
 pinned-item-label = Pinned item
 pinned-next-up-from = Next up from { $name }
 pinned-menu-pin-item = Add to Pinned

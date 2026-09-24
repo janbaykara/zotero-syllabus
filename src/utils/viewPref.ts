@@ -33,8 +33,8 @@ function readMap(mapKey: string): Record<string, unknown> {
 }
 
 function writeMap(mapKey: string, map: Record<string, unknown>): void {
-  Zotero.Prefs.set(mapKey, JSON.stringify(map), true);
   zoteroCache.invalidatePref(mapKey);
+  Zotero.Prefs.set(mapKey, JSON.stringify(map), true);
 }
 
 function valuesEqual<T>(spec: ViewPrefSpec<T>, a: T, b: T): boolean {
@@ -113,7 +113,6 @@ export function useViewPref<T>(
       setValue(getViewPref(spec, viewKey, unsetDefault));
       setGlobalValue(getViewPrefDefault(spec));
     };
-    refresh();
     const observerIDs = [
       Zotero.Prefs.registerObserver(spec.mapKey, refresh, true),
       Zotero.Prefs.registerObserver(getPrefKey(spec.defaultKey), refresh, true),

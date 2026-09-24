@@ -439,20 +439,22 @@ schedule-this-week = Bu hafta
 schedule-next-week = Gelecek hafta
 schedule-settings-title = Okuma Takvimi Ayarları
 schedule-settings-library = Kitaplık koleksiyonu
-schedule-settings-desc =
-    Varsayılan olarak kapalıdır. Etkinleştirildiğinde Kitaplığım içinde her yakın ve yaklaşan okuma tarihi için bir klasör içeren üst düzey bir “Okuma Takvimi” koleksiyonu tutulur. Klasörler otomatik olarak oluşturulur, yeniden adlandırılır ve doldurulur. Kapatmak bu koleksiyonu siler; izlence öğeleri yerinde kalır.
 schedule-settings-checkbox = “Okuma Takvimi” koleksiyonu oluşturulsun mu?
+schedule-apply-to-pinned = Pinned’e uygula
 schedule-day-managed-banner = İzlencelerinizden otomatik yönetilir. Buradaki düzenlemelerin üzerine yazılır.
 schedule-day-empty = Bu gün için planlanmış okuma yok.
 schedule-window-empty = Takvim penceresinde henüz okuma yok. Burada görmek için derslere okuma tarihleri ekleyin.
 schedule-no-dates = Tarih yok
-schedule-of-collection = { $name } koleksiyonundan
-schedule-of-collection-in-library = { $collection } koleksiyonundan ({ $library })
+schedule-class-named = { $nomenclature } { $number }: { $name }
+schedule-of-collection = { $name } içinde
+schedule-of-collection-in-library = { $collection } ({ $library }) içinde
 schedule-open-syllabus = { $title } izlencesini aç
 class-folder-managed-banner = Bu izlenceden otomatik yönetilir. Bu klasördeki düzenlemelerin üzerine yazılır.
 
 # Pinned (Reading Schedule)
 pinned-section-heading = Pinned
+pinned-hide = Gizle
+pinned-show = Göster
 pinned-item-label = Pinned item
 pinned-next-up-from = Next up from { $name }
 pinned-menu-pin-item = Add to Pinned

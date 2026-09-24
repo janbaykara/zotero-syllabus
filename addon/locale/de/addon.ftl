@@ -439,20 +439,22 @@ schedule-this-week = Diese Woche
 schedule-next-week = Nächste Woche
 schedule-settings-title = Lektüreplan-Einstellungen
 schedule-settings-library = Bibliothekssammlung
-schedule-settings-desc =
-    Standardmäßig aus. Wenn aktiviert, wird in Meine Bibliothek eine Sammlung oberster Ebene „Lektüreplan“ mit einem Ordner für jedes kürzliche und bevorstehende Lesedatum geführt. Ordner werden automatisch angelegt, umbenannt und gefüllt. Das Deaktivieren löscht diese Sammlung; Einträge in den Lehrplänen bleiben erhalten.
 schedule-settings-checkbox = Sammlung „Lektüreplan“ erzeugen?
+schedule-apply-to-pinned = Auf Pinned anwenden
 schedule-day-managed-banner = Automatisch aus Ihren Lehrplänen verwaltet. Änderungen hier werden überschrieben.
 schedule-day-empty = Für diesen Tag ist keine Lektüre geplant.
 schedule-window-empty = Im Planungszeitraum ist noch keine Lektüre. Fügen Sie Sitzungen Lesedaten hinzu, um sie hier zu sehen.
 schedule-no-dates = Keine Daten
-schedule-of-collection = von { $name }
-schedule-of-collection-in-library = von { $collection } ({ $library })
+schedule-class-named = { $nomenclature } { $number }: { $name }
+schedule-of-collection = in { $name }
+schedule-of-collection-in-library = in { $collection } ({ $library })
 schedule-open-syllabus = Lehrplan für { $title } öffnen
 class-folder-managed-banner = Automatisch aus diesem Lehrplan verwaltet. Änderungen in diesem Ordner werden überschrieben.
 
 # Pinned (Reading Schedule)
 pinned-section-heading = Pinned
+pinned-hide = Ausblenden
+pinned-show = Einblenden
 pinned-item-label = Pinned item
 pinned-next-up-from = Next up from { $name }
 pinned-menu-pin-item = Add to Pinned

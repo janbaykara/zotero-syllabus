@@ -439,20 +439,22 @@ schedule-this-week = 今週
 schedule-next-week = 来週
 schedule-settings-title = 読書スケジュール設定
 schedule-settings-library = ライブラリコレクション
-schedule-settings-desc =
-    既定ではオフです。オンにすると、マイライブラリに最上位の「読書スケジュール」コレクションが維持され、直近および今後の各読書日にフォルダが作られます。フォルダは自動的に作成・改名・充填されます。オフにするとそのコレクションは削除されます。シラバスのアイテムはそのまま残ります。
 schedule-settings-checkbox = 「読書スケジュール」コレクションを生成しますか？
+schedule-apply-to-pinned = Pinned にも適用
 schedule-day-managed-banner = 各シラバスから自動管理されています。ここでの編集は上書きされます。
 schedule-day-empty = この日に予定された読書はありません。
 schedule-window-empty = スケジュール期間内にまだ読書がありません。授業に読書日を追加すると、ここに表示されます。
 schedule-no-dates = 日付なし
-schedule-of-collection = { $name } の
-schedule-of-collection-in-library = { $collection }（{ $library }）の
+schedule-class-named = { $nomenclature } { $number }：{ $name }
+schedule-of-collection = （{ $name }）
+schedule-of-collection-in-library = （{ $collection }（{ $library }））
 schedule-open-syllabus = { $title } のシラバスを開く
 class-folder-managed-banner = このシラバスから自動管理されています。このフォルダ内の編集は上書きされます。
 
 # Pinned (Reading Schedule)
 pinned-section-heading = Pinned
+pinned-hide = 非表示
+pinned-show = 表示
 pinned-item-label = Pinned item
 pinned-next-up-from = Next up from { $name }
 pinned-menu-pin-item = Add to Pinned

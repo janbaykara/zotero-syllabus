@@ -439,20 +439,22 @@ schedule-this-week = Tuần này
 schedule-next-week = Tuần sau
 schedule-settings-title = Cài đặt Lịch đọc
 schedule-settings-library = Bộ sưu tập thư viện
-schedule-settings-desc =
-    Tắt theo mặc định. Khi bật, một bộ sưu tập cấp cao “Lịch đọc” được giữ trong Thư viện của tôi với thư mục cho mỗi ngày đọc gần đây và sắp tới. Thư mục được tạo, đổi tên và điền tự động. Tắt sẽ xóa bộ sưu tập đó; mục đề cương vẫn được giữ.
 schedule-settings-checkbox = Tạo bộ sưu tập “Lịch đọc”?
+schedule-apply-to-pinned = Áp dụng cho Pinned
 schedule-day-managed-banner = Tự quản lý từ các đề cương của bạn. Chỉnh sửa tại đây sẽ bị ghi đè.
 schedule-day-empty = Không có bài đọc được lên lịch cho ngày này.
 schedule-window-empty = Chưa có bài đọc trong cửa sổ lịch. Thêm ngày đọc vào các buổi học để xem chúng tại đây.
 schedule-no-dates = Không có ngày
-schedule-of-collection = của { $name }
-schedule-of-collection-in-library = của { $collection } ({ $library })
+schedule-class-named = { $nomenclature } { $number }: { $name }
+schedule-of-collection = trong { $name }
+schedule-of-collection-in-library = trong { $collection } ({ $library })
 schedule-open-syllabus = Mở đề cương { $title }
 class-folder-managed-banner = Tự quản lý từ đề cương này. Chỉnh sửa trong thư mục này sẽ bị ghi đè.
 
 # Pinned (Reading Schedule)
 pinned-section-heading = Pinned
+pinned-hide = Ẩn
+pinned-show = Hiện
 pinned-item-label = Pinned item
 pinned-next-up-from = Next up from { $name }
 pinned-menu-pin-item = Add to Pinned

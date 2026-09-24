@@ -26,6 +26,7 @@ import {
 } from "./classReadings";
 import { getString, getUiDir } from "../utils/locale";
 import { useGalleryLayout } from "./galleryLayout";
+import { useMagazinePacking } from "./magazinePacking";
 import { GalleryViewportProvider } from "./galleryVisibility";
 import { READING_SCHEDULE_VIEW_KEY } from "../utils/viewScope";
 
@@ -59,6 +60,7 @@ export function ReadingScheduleDayPage({
 }) {
   const [density] = useItemDensity(READING_SCHEDULE_LAYOUT_KEY);
   const [layout] = useGalleryLayout(READING_SCHEDULE_LAYOUT_KEY);
+  const [magazinePacking] = useMagazinePacking(READING_SCHEDULE_LAYOUT_KEY);
   const pageRef = useRef<HTMLDivElement>(null);
   const allSyllabi = useSyllabi();
   const context = useMemo(
@@ -233,6 +235,7 @@ export function ReadingScheduleDayPage({
                     classReading={classReading}
                     density={density}
                     layout={layout}
+                    magazinePacking={magazinePacking}
                     onCollectionClick={() =>
                       selectCollectionInLibrary(classReading.collectionId)
                     }

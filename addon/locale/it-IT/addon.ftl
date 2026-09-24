@@ -439,20 +439,22 @@ schedule-this-week = Questa settimana
 schedule-next-week = Settimana prossima
 schedule-settings-title = Impostazioni del calendario delle letture
 schedule-settings-library = Raccolta della libreria
-schedule-settings-desc =
-    Disattivato per impostazione predefinita. Se attivato, in Libreria personale viene mantenuta una raccolta di primo livello «Calendario delle letture» con una cartella per ogni data di lettura recente e imminente. Le cartelle vengono create, rinominate e riempite automaticamente. Disattivare elimina quella raccolta; gli elementi dei programmi restano al loro posto.
 schedule-settings-checkbox = Generare la raccolta «Calendario delle letture»?
+schedule-apply-to-pinned = Applica a Pinned
 schedule-day-managed-banner = Gestito automaticamente a partire dai programmi. Le modifiche qui vengono sovrascritte.
 schedule-day-empty = Nessuna lettura programmata per questo giorno.
 schedule-window-empty = Ancora nessuna lettura nella finestra del calendario. Aggiungi date di lettura alle lezioni per vederle qui.
 schedule-no-dates = Nessuna data
-schedule-of-collection = di { $name }
-schedule-of-collection-in-library = di { $collection } ({ $library })
+schedule-class-named = { $nomenclature } { $number }: { $name }
+schedule-of-collection = in { $name }
+schedule-of-collection-in-library = in { $collection } ({ $library })
 schedule-open-syllabus = Apri il programma di { $title }
 class-folder-managed-banner = Gestito automaticamente a partire da questo programma. Le modifiche in questa cartella vengono sovrascritte.
 
 # Pinned (Reading Schedule)
 pinned-section-heading = Pinned
+pinned-hide = Nascondi
+pinned-show = Mostra
 pinned-item-label = Pinned item
 pinned-next-up-from = Next up from { $name }
 pinned-menu-pin-item = Add to Pinned

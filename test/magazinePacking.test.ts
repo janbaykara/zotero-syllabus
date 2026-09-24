@@ -37,6 +37,13 @@ describe("magazinePacking", function () {
     assert.equal(getMagazinePacking("other"), "grid");
   });
 
+  it("defaults Reading Schedule to vertical until a view value is stored", function () {
+    setDefaultMagazinePacking("grid");
+    assert.equal(getMagazinePacking("reading-schedule"), "vertical");
+    setMagazinePacking("reading-schedule", "packed");
+    assert.equal(getMagazinePacking("reading-schedule"), "packed");
+  });
+
   it("saves packing globally for the current view", function () {
     saveMagazinePackingGlobally("reading-schedule", "vertical");
     assert.equal(getDefaultMagazinePacking(), "vertical");

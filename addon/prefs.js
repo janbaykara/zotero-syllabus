@@ -30,6 +30,8 @@ pref("galleryShowItemsWithoutAnnotations", true);
 pref("magazineTypeSize", "small");
 pref("magazinePacking", "packed");
 pref("generateReadingScheduleCollection", false);
+pref("applyReadingScheduleLayoutToPinned", false);
+pref("showReadingSchedulePinned", true);
 pref("readingScheduleCollectionKey", "");
 pref("customIcons", true);
 pref("publishApiBaseUrl", "https://read.zotero-syllabus.workers.dev");

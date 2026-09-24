@@ -439,20 +439,22 @@ schedule-this-week = Esta semana
 schedule-next-week = Próxima semana
 schedule-settings-title = Configurações do cronograma de leitura
 schedule-settings-library = Coleção da biblioteca
-schedule-settings-desc =
-    Desativado por padrão. Quando ativado, uma coleção de nível superior “Cronograma de leitura” é mantida em Minha Biblioteca, com uma pasta para cada data de leitura recente e futura. Pastas são criadas, renomeadas e preenchidas automaticamente. Desativar exclui essa coleção; os itens dos programas permanecem no lugar.
 schedule-settings-checkbox = Gerar coleção “Cronograma de leitura”?
+schedule-apply-to-pinned = Aplicar a Pinned
 schedule-day-managed-banner = Gerenciado automaticamente a partir dos seus programas. Edições aqui são sobrescritas.
 schedule-day-empty = Nenhuma leitura agendada para este dia.
 schedule-window-empty = Ainda não há leituras na janela do cronograma. Adicione datas de leitura às aulas para vê-las aqui.
 schedule-no-dates = Sem datas
-schedule-of-collection = de { $name }
-schedule-of-collection-in-library = de { $collection } ({ $library })
+schedule-class-named = { $nomenclature } { $number }: { $name }
+schedule-of-collection = em { $name }
+schedule-of-collection-in-library = em { $collection } ({ $library })
 schedule-open-syllabus = Abrir programa de { $title }
 class-folder-managed-banner = Gerenciado automaticamente a partir deste programa. Edições nesta pasta são sobrescritas.
 
 # Pinned (Reading Schedule)
 pinned-section-heading = Pinned
+pinned-hide = Ocultar
+pinned-show = Mostrar
 pinned-item-label = Pinned item
 pinned-next-up-from = Next up from { $name }
 pinned-menu-pin-item = Add to Pinned

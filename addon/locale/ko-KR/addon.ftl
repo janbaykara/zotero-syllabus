@@ -439,20 +439,22 @@ schedule-this-week = 이번 주
 schedule-next-week = 다음 주
 schedule-settings-title = 읽기 일정 설정
 schedule-settings-library = 라이브러리 컬렉션
-schedule-settings-desc =
-    기본적으로 꺼져 있습니다. 켜면 내 라이브러리에 최상위 “읽기 일정” 컬렉션이 유지되며, 최근 및 다가오는 각 읽기 날짜마다 폴더가 생깁니다. 폴더는 자동으로 만들고, 이름을 바꾸며, 채웁니다. 끄면 해당 컬렉션이 삭제됩니다. 강의계획서 항목은 그대로 남습니다.
 schedule-settings-checkbox = “읽기 일정” 컬렉션을 생성할까요?
+schedule-apply-to-pinned = Pinned에 적용
 schedule-day-managed-banner = 강의계획서에서 자동 관리됩니다. 여기서의 편집은 덮어쓰입니다.
 schedule-day-empty = 이 날에 예정된 읽기가 없습니다.
 schedule-window-empty = 일정 구간에 아직 읽기가 없습니다. 수업에 읽기 날짜를 추가하면 여기에 표시됩니다.
 schedule-no-dates = 날짜 없음
-schedule-of-collection = { $name }의
-schedule-of-collection-in-library = { $collection } ({ $library })의
+schedule-class-named = { $nomenclature } { $number }: { $name }
+schedule-of-collection = { $name }에서
+schedule-of-collection-in-library = { $collection } ({ $library })에서
 schedule-open-syllabus = { $title } 강의계획서 열기
 class-folder-managed-banner = 이 강의계획서에서 자동 관리됩니다. 이 폴더의 편집은 덮어쓰입니다.
 
 # Pinned (Reading Schedule)
 pinned-section-heading = Pinned
+pinned-hide = 숨기기
+pinned-show = 표시
 pinned-item-label = Pinned item
 pinned-next-up-from = Next up from { $name }
 pinned-menu-pin-item = Add to Pinned

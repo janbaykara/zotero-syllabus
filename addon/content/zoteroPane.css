@@ -308,7 +308,7 @@
   top: calc(100% + 0.35rem);
   inset-inline-end: 0;
   z-index: 50;
-  min-width: 16rem;
+  min-width: max-content;
   padding: 0.75rem;
   border: 0.5px solid var(--fill-quinary, #d9d9d9);
   border-radius: 8px;
@@ -470,7 +470,8 @@
   border-end-end-radius: 4px;
 }
 
-.syllabus-gallery-groupby-btn[aria-checked="true"] {
+.syllabus-gallery-groupby-btn[aria-checked="true"],
+.syllabus-gallery-groupby-btn[aria-pressed="true"] {
   background-color: #7b4ddb;
   color: #fff;
   border-color: #7b4ddb;

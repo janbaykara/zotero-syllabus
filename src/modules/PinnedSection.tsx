@@ -65,6 +65,7 @@ import { openZoteroItemContextMenu } from "../utils/itemContextMenu";
 import { openZoteroCollectionContextMenu } from "../utils/collectionContextMenu";
 import { setLibraryViewMode } from "./explorerConfig";
 import { useScheduleStickyTop } from "./scheduleSticky";
+import { useBooleanPref } from "./react-zotero-sync/booleanPref";
 
 function itemHasViewableAttachment(item: Zotero.Item): boolean {
   return item.getAttachments().some((attId) => {
@@ -247,6 +248,11 @@ export function PinnedSection({
 }) {
   /** Cover mode renders pinned collections as stacks — omit them from item tiles. */
   const coverMode = layout === "cover";
+
+  const [showPinned, setShowPinned] = useBooleanPref(
+    "showReadingSchedulePinned",
+  );
+  const pinnedVisible = embedded || showPinned;
 
   const orderLibraryID = useMemo(
     () => resolvePinnedOrderLibraryID(libraryID, pinnedItems, nextUp),
@@ -512,48 +518,59 @@ export function PinnedSection({
 
   return (
     <div
-      className={embedded ? undefined : "mt-6 mb-10"}
+      className={
+        embedded ? undefined : pinnedVisible ? "mt-6 mb-10" : "mt-6 mb-6"
+      }
       data-tour={embedded ? "explorer-shelf-pinned" : "reading-schedule-pinned"}
     >
-      {embedded ? null : <PinnedStickyHeading />}
+      {embedded ? null : (
+        <PinnedStickyHeading
+          visible={showPinned}
+          onToggle={() => setShowPinned(!showPinned)}
+        />
+      )}
 
-      <div
-        className={
-          embedded
-            ? undefined
-            : layout === "card" || layout === "annotations"
-              ? "container-padded"
-              : "w-full min-w-0 max-w-full"
-        }
-      >
-        {coverBody}
-        {!coverMode && layout !== "card" ? (
-          <ReadingItemsLayout
-            layout={layout}
-            density={density}
-            isLocked
-            template="strip"
-            showPriority={false}
-            coverRail={false}
-            magazinePacking={magazinePacking}
-            colorFilterScope={embedded ? "explorer-pinned" : "reading-schedule"}
-            rows={itemLayoutRows}
-            onItemClick={(item, collectionId) => {
-              const reading = nextUp.find(
-                (entry) =>
-                  entry.item?.id === item.id &&
-                  entry.collection.id === collectionId,
-              );
-              if (reading) {
-                openPinnedCollection(reading);
-                return;
+      {pinnedVisible ? (
+        <div
+          className={
+            embedded
+              ? undefined
+              : layout === "card" || layout === "annotations"
+                ? "container-padded"
+                : "w-full min-w-0 max-w-full"
+          }
+        >
+          {coverBody}
+          {!coverMode && layout !== "card" ? (
+            <ReadingItemsLayout
+              layout={layout}
+              density={density}
+              isLocked
+              template="strip"
+              showPriority={false}
+              coverRail={false}
+              magazinePacking={magazinePacking}
+              colorFilterScope={
+                embedded ? "explorer-pinned" : "reading-schedule"
               }
-              activatePinnedItem(item, embedded);
-            }}
-          />
-        ) : null}
-        {cardBody}
-      </div>
+              rows={itemLayoutRows}
+              onItemClick={(item, collectionId) => {
+                const reading = nextUp.find(
+                  (entry) =>
+                    entry.item?.id === item.id &&
+                    entry.collection.id === collectionId,
+                );
+                if (reading) {
+                  openPinnedCollection(reading);
+                  return;
+                }
+                activatePinnedItem(item, embedded);
+              }}
+            />
+          ) : null}
+          {cardBody}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1156,13 +1173,34 @@ function NextUpRow({
   );
 }
 
-function PinnedStickyHeading() {
+function PinnedStickyHeading({
+  visible,
+  onToggle,
+}: {
+  visible: boolean;
+  onToggle: () => void;
+}) {
   const top = useScheduleStickyTop("week");
+  const toggleLabel = visible
+    ? getString("pinned-hide")
+    : getString("pinned-show");
   return (
     <div className="syllabus-schedule-sticky-week mb-4" style={top}>
-      <div className="container-padded text-3xl text-tertiary flex items-center gap-2">
-        <Pin size={22} className="shrink-0" aria-hidden="true" />
-        {getString("pinned-section-heading")}
+      <div className="container-padded text-tertiary flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0 text-3xl">
+          <Pin size={22} className="shrink-0" aria-hidden="true" />
+          {getString("pinned-section-heading")}
+        </div>
+        <button
+          type="button"
+          className="text-sm font-medium text-secondary hover:text-primary bg-transparent border-0 cursor-pointer p-0 shrink-0 in-[.print]:hidden"
+          title={toggleLabel}
+          aria-label={toggleLabel}
+          aria-expanded={visible}
+          onClick={onToggle}
+        >
+          {toggleLabel}
+        </button>
       </div>
     </div>
   );

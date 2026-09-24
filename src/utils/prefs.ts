@@ -60,6 +60,8 @@ export const PLUGIN_PREF_DEFAULTS: {
   magazineTypeSize: "small",
   magazinePacking: "packed",
   generateReadingScheduleCollection: false,
+  applyReadingScheduleLayoutToPinned: false,
+  showReadingSchedulePinned: true,
   readingScheduleCollectionKey: "",
   customIcons: true,
   publishApiBaseUrl: "https://read.zotero-syllabus.workers.dev",

@@ -437,20 +437,22 @@ schedule-this-week = This week
 schedule-next-week = Next week
 schedule-settings-title = Reading Schedule Settings
 schedule-settings-library = Library collection
-schedule-settings-desc =
-    Off by default. When enabled, a top-level “Reading Schedule” collection is kept in My Library with a folder for each recent and upcoming reading date. Folders are created, renamed, and filled automatically. Turning this off deletes that collection; syllabus items stay in place.
 schedule-settings-checkbox = Generate “Reading Schedule” collection?
+schedule-apply-to-pinned = Apply to Pinned
 schedule-day-managed-banner = Auto-managed from your syllabi. Edits here are overwritten.
 schedule-day-empty = No readings scheduled for this day.
 schedule-window-empty = No readings in the schedule window yet. Add reading dates to classes to see them here.
 schedule-no-dates = No dates
-schedule-of-collection = of { $name }
-schedule-of-collection-in-library = of { $collection } ({ $library })
+schedule-class-named = { $nomenclature } { $number }: { $name }
+schedule-of-collection = in { $name }
+schedule-of-collection-in-library = in { $collection } ({ $library })
 schedule-open-syllabus = Open syllabus for { $title }
 class-folder-managed-banner = Auto-managed from this syllabus. Edits in this folder are overwritten.
 
 # Pinned (Reading Schedule)
 pinned-section-heading = Pinned
+pinned-hide = Hide
+pinned-show = Show
 pinned-item-label = Pinned item
 pinned-next-up-from = Next up from { $name }
 pinned-menu-pin-item = Add to Pinned
