@@ -24,7 +24,7 @@ import { copyStringToClipboard } from "../utils/clipboard";
 import { getItemCitationKey } from "../utils/citeKey";
 import { getString } from "../utils/locale";
 import { formatRelativeTimestamp } from "../utils/dates";
-import { getPref } from "../utils/prefs";
+import { getPrefValue } from "../utils/prefs";
 import { GalleryTile } from "./GalleryPage";
 import { ExplorerCoverItem } from "./ExplorerMagazineRail";
 import type { MagazineTileClick } from "./MagazineTile";
@@ -49,12 +49,20 @@ function toMarkdownBlockquote(text: string): string {
     .join("\n");
 }
 
+function isCopyPrefOn(value: unknown): boolean {
+  return value === true || value === "true";
+}
+
+export function annotationHasCopyText(entry: MyAnnotationStreamEntry): boolean {
+  return !!(entry.quote || entry.comment);
+}
+
 /** Plain text for clipboard: quote and/or comment, optional blockquote + cite key. */
 export function formatAnnotationCopyText(
   entry: MyAnnotationStreamEntry,
 ): string {
-  const blockquote = getPref("myAnnotationsCopyBlockquote");
-  const citeKey = getPref("myAnnotationsCopyCiteKey");
+  const blockquote = isCopyPrefOn(getPrefValue("myAnnotationsCopyBlockquote"));
+  const citeKey = isCopyPrefOn(getPrefValue("myAnnotationsCopyCiteKey"));
   const parts: string[] = [];
   if (entry.quote) {
     let quote = entry.quote;
@@ -167,7 +175,7 @@ export function AnnotationStreamBody({
   const pageText = entry.pageLabel
     ? formatAnnotationPageLabel(entry.pageLabel)
     : "";
-  const copyText = formatAnnotationCopyText(entry);
+  const hasCopy = annotationHasCopyText(entry);
   const [copied, flashCopied] = useCopyFlash();
   const openInReader = () => {
     openAnnotationIdInReader(entry.id);
@@ -179,7 +187,7 @@ export function AnnotationStreamBody({
       openInReader();
     }
   };
-  const showMeta = !!(pageText || stamp || copyText);
+  const showMeta = !!(pageText || stamp || hasCopy);
   const copyLabel = copied
     ? getString("my-annotations-copied")
     : getString("my-annotations-copy");
@@ -235,7 +243,7 @@ export function AnnotationStreamBody({
                 {stamp.relative}
               </time>
             ) : null}
-            {copyText ? (
+            {hasCopy ? (
               <>
                 {pageText || stamp ? (
                   <span
@@ -256,7 +264,9 @@ export function AnnotationStreamBody({
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (copyStringToClipboard(copyText)) {
+                    if (
+                      copyStringToClipboard(formatAnnotationCopyText(entry))
+                    ) {
                       flashCopied();
                     }
                   }}
@@ -407,8 +417,7 @@ export function AnnotationStreamGroup({
     [entries],
   );
   useExplorerRailStackWidth(stackRef, stackLayoutKey);
-  const groupCopyText = formatGroupCopyText(entries);
-  const showCopyAll = !!groupCopyText;
+  const showCopyAll = entries.some(annotationHasCopyText);
   const [copiedAll, flashCopiedAll] = useCopyFlash();
   const copyAllLabel = copiedAll
     ? getString("my-annotations-copied")
@@ -453,7 +462,7 @@ export function AnnotationStreamGroup({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (copyStringToClipboard(groupCopyText)) {
+                if (copyStringToClipboard(formatGroupCopyText(entries))) {
                   flashCopiedAll();
                 }
               }}
@@ -531,8 +540,7 @@ function AnnotationCoverSidecar({
     [entries],
   );
   useExplorerRailStackWidth(stackRef, stackLayoutKey);
-  const groupCopyText = formatGroupCopyText(entries);
-  const showCopyAll = !!groupCopyText;
+  const showCopyAll = entries.some(annotationHasCopyText);
   const [copiedAll, flashCopiedAll] = useCopyFlash();
   const copyAllLabel = copiedAll
     ? getString("my-annotations-copied")
@@ -567,7 +575,7 @@ function AnnotationCoverSidecar({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              if (copyStringToClipboard(groupCopyText)) {
+              if (copyStringToClipboard(formatGroupCopyText(entries))) {
                 flashCopiedAll();
               }
             }}

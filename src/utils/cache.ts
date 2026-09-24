@@ -163,6 +163,7 @@ class ZoteroCache {
     if (!schema) {
       const value = Zotero.Prefs.get(key, true) as T;
       this.prefCache.set(key, value);
+      this.registerPrefObserver(key);
       return value;
     }
 
