@@ -33,7 +33,11 @@ import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
 import { useItemDensity } from "./react-zotero-sync/itemDensity";
 import { useReaderMode } from "./react-zotero-sync/readerMode";
 import { isZotero8OrLater } from "../utils/zotero";
-import { getItemTitle, sortItems } from "../utils/items";
+import {
+  getItemTitle,
+  isSyllabusAssignableItem,
+  sortItems,
+} from "../utils/items";
 import slugify from "slugify";
 import {
   openSyllabusSettingsDialog,
@@ -141,6 +145,14 @@ import {
   useOsFileDropHandlers,
 } from "../utils/nativeFileDrop";
 import { OsFileDropOverlay } from "./OsFileDropOverlay";
+import {
+  assignImportedOsFilesToSyllabus,
+  clearSyllabusFileDropzoneHighlights,
+  highlightSyllabusFileDropzones,
+  hitTargetFromDragEvent,
+  resolveSyllabusFileDropTarget,
+  type SyllabusFileDropTarget,
+} from "./syllabusFileDrop";
 
 export { SyllabusItemCard } from "./SyllabusItemCard";
 export { Bibliography } from "./Bibliography";
@@ -767,6 +779,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     [],
   );
 
+  const [osFileDropTarget, setOsFileDropTarget] =
+    useState<SyllabusFileDropTarget>({ kind: "collection" });
+
   const fileDrop = useOsFileDropHandlers({
     onOsFileDrop: async (event) => {
       const files = Array.from(event.dataTransfer?.files || []);
@@ -775,9 +790,27 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           await importSyllabusMetadataFromFile(collectionId, file);
         }
       }
-      await importDroppedOsFilesIntoCurrentView(event, {
+      const added = await importDroppedOsFilesIntoCurrentView(event, {
         skipFileName: isSyllabusNoteFileName,
       });
+      if (isLocked || added.length === 0) {
+        return;
+      }
+      await assignImportedOsFilesToSyllabus(
+        added,
+        collectionId,
+        resolveSyllabusFileDropTarget(hitTargetFromDragEvent(event)),
+      );
+    },
+    onOsFileDragHover: (event) => {
+      if (!event) {
+        clearSyllabusFileDropzoneHighlights();
+        setOsFileDropTarget({ kind: "collection" });
+        return;
+      }
+      const hit = hitTargetFromDragEvent(event);
+      setOsFileDropTarget(resolveSyllabusFileDropTarget(hit));
+      highlightSyllabusFileDropzones(hit);
     },
   });
 
@@ -1018,7 +1051,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           const itemId = parseInt(identifierStr.replace("item:", ""), 10);
           if (!isNaN(itemId)) {
             const item = getCachedItem(itemId);
-            if (item && item.isRegularItem()) {
+            if (item && isSyllabusAssignableItem(item)) {
               await itemProcessor(item);
               itemsToSave.add(item);
             }
@@ -1828,7 +1861,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
             }
           }
 
-          if (!draggedItem || !draggedItem.isRegularItem()) continue;
+          if (!draggedItem || !isSyllabusAssignableItem(draggedItem)) continue;
 
           // Update assignment to target class
           await SyllabusManager.updateClassAssignment(
@@ -1868,7 +1901,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           // This item is either unassigned or has assignments in a different class
           try {
             const item = getCachedItem(itemId);
-            if (item && item.isRegularItem()) {
+            if (item && isSyllabusAssignableItem(item)) {
               // Check if item has any assignments for this collection
               const syllabusData = SyllabusManager.getItemSyllabusData(item);
               const collection = getCachedCollectionById(collectionId);
@@ -2050,7 +2083,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     if (isNaN(itemId)) return;
 
     const draggedItem = getCachedItem(itemId);
-    if (!draggedItem || !draggedItem.isRegularItem()) return;
+    if (!draggedItem || !isSyllabusAssignableItem(draggedItem)) return;
 
     // Get source assignment ID from drag data (if dragging from a class)
     const sourceAssignmentId = e.dataTransfer.getData(
@@ -2898,7 +2931,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           isLocked &&
             effectiveLayout === "annotations" &&
             "syllabus-gallery-annotations-page",
-          fileDrop.isDraggingFile && "file-drag-over",
+          fileDrop.isDraggingFile &&
+            osFileDropTarget.kind === "collection" &&
+            "file-drag-over",
         )}
         data-item-density={density}
         dir={getUiDir()}
@@ -2908,7 +2943,11 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         onDragLeave={fileDrop.onDragLeave}
         onDrop={fileDrop.onDrop}
       >
-        <OsFileDropOverlay visible={fileDrop.isDraggingFile} />
+        <OsFileDropOverlay
+          visible={
+            fileDrop.isDraggingFile && osFileDropTarget.kind === "collection"
+          }
+        />
         <div className="pb-12">
           <div
             syllabus-view-title-container
@@ -3230,35 +3269,39 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                       </div>
                     )}
 
-                    {!isLocked && isDragging && density === "expanded" && (
-                      <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
-                        <div className="syllabus-class-header-container">
-                          <div className="syllabus-class-header">
-                            {getString("page-add-to-class", {
-                              args: {
-                                nomenclature: singularCapitalized,
-                                number: nextClassNumber,
-                              },
-                            })}
+                    {!isLocked &&
+                      (isDragging || fileDrop.isDraggingFile) &&
+                      density === "expanded" && (
+                        <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
+                          <div className="syllabus-class-header-container">
+                            <div className="syllabus-class-header">
+                              {getString("page-add-to-class", {
+                                args: {
+                                  nomenclature: singularCapitalized,
+                                  number: nextClassNumber,
+                                },
+                              })}
+                            </div>
+                          </div>
+                          <div
+                            className="syllabus-class-items syllabus-add-class-dropzone-items"
+                            data-syllabus-file-drop="class"
+                            data-syllabus-class-number={nextClassNumber}
+                            onDrop={(e) => handleDrop(e, nextClassNumber)}
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                          >
+                            <div className="syllabus-add-class-dropzone-placeholder bg-quinary rounded-md p-16 text-secondary border-2 border-dashed border-secondary">
+                              {getString("page-drop-create-class", {
+                                args: {
+                                  nomenclature: singularCapitalized,
+                                  number: nextClassNumber,
+                                },
+                              })}
+                            </div>
                           </div>
                         </div>
-                        <div
-                          className="syllabus-class-items syllabus-add-class-dropzone-items"
-                          onDrop={(e) => handleDrop(e, nextClassNumber)}
-                          onDragOver={handleDragOver}
-                          onDragLeave={handleDragLeave}
-                        >
-                          <div className="syllabus-add-class-dropzone-placeholder bg-quinary rounded-md p-16 text-secondary border-2 border-dashed border-secondary">
-                            {getString("page-drop-create-class", {
-                              args: {
-                                nomenclature: singularCapitalized,
-                                number: nextClassNumber,
-                              },
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                      )}
 
                     {!isLocked && !hasNoClasses && (
                       <div className="syllabus-create-class-control in-[.print]:hidden">
@@ -3282,6 +3325,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                 id="toc-further-reading"
                 className="syllabus-class-group in-[.print]:scheme-light"
                 data-tour="syllabus-further-reading"
+                data-syllabus-file-drop={
+                  isLocked ? undefined : "further-reading"
+                }
               >
                 <div
                   className={twMerge(

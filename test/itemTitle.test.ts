@@ -4,8 +4,13 @@ import {
   getItemCreatorLine,
   getItemField,
   getItemTitle,
+  getViewableAttachmentIds,
+  isAssignedStandaloneAttachment,
+  isStandaloneAttachment,
+  isSyllabusAssignableItem,
   isSyllabusMemberItem,
   readItemNote,
+  regularParentItem,
 } from "../src/utils/items";
 
 async function createItem(
@@ -107,6 +112,73 @@ describe("item fields", function () {
       assert.isFalse(isSyllabusMemberItem(feedLike));
       assert.isTrue(isSyllabusMemberItem(feedLike, { includeFeedItems: true }));
       assert.isFalse(isSyllabusMemberItem(null));
+    });
+  });
+
+  describe("standalone attachments", function () {
+    it("treats unparented attachments as standalone", function () {
+      const attachment = {
+        key: "ATTKEY",
+        deleted: false,
+        isAttachment: () => true,
+        parentItemID: false,
+      } as unknown as Zotero.Item;
+      assert.isTrue(isStandaloneAttachment(attachment));
+      assert.isTrue(
+        isAssignedStandaloneAttachment(attachment, new Set(["ATTKEY"])),
+      );
+      assert.isTrue(isSyllabusAssignableItem(attachment));
+      assert.isFalse(
+        isAssignedStandaloneAttachment(attachment, new Set(["OTHER"])),
+      );
+    });
+
+    it("does not treat parented attachments as standalone", function () {
+      const parent = {
+        key: "PARENTKEY",
+        libraryID: 1,
+        deleted: false,
+        isRegularItem: () => true,
+      } as unknown as Zotero.Item;
+      const attachment = {
+        key: "ATTKEY",
+        libraryID: 1,
+        deleted: false,
+        isNote: () => false,
+        isAttachment: () => true,
+        isRegularItem: () => false,
+        parentItemID: 10,
+        parentItem: parent,
+      } as unknown as Zotero.Item;
+      assert.isFalse(isStandaloneAttachment(attachment));
+      assert.equal(regularParentItem(attachment), parent);
+    });
+
+    it("treats a standalone attachment as its own viewable file", function () {
+      const attachment = {
+        id: 42,
+        key: "ATTKEY",
+        deleted: false,
+        isAttachment: () => true,
+        getAttachments: () => {
+          throw new Error(
+            "getAttachments() cannot be called on attachment items",
+          );
+        },
+      } as unknown as Zotero.Item;
+      assert.deepEqual(getViewableAttachmentIds(attachment), [42]);
+    });
+
+    it("does not remap a regular item to a parent", function () {
+      const book = {
+        key: "BOOK",
+        libraryID: 1,
+        deleted: false,
+        isNote: () => false,
+        isRegularItem: () => true,
+        parentItemID: false,
+      } as unknown as Zotero.Item;
+      assert.isNull(regularParentItem(book));
     });
   });
 

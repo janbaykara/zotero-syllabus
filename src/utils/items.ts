@@ -199,6 +199,80 @@ export function isSyllabusMemberItem(
   }
 }
 
+/** Top-level file in a collection, before Recognize Document creates a parent. */
+export function isStandaloneAttachment(
+  item: Zotero.Item | false | null | undefined,
+): item is Zotero.Item {
+  if (!item) {
+    return false;
+  }
+  try {
+    if (item.deleted) {
+      return false;
+    }
+    if (typeof item.isAttachment !== "function" || !item.isAttachment()) {
+      return false;
+    }
+    return !item.parentItemID;
+  } catch {
+    return false;
+  }
+}
+
+export function isAssignedStandaloneAttachment(
+  item: Zotero.Item | false | null | undefined,
+  assignedKeys: ReadonlySet<string>,
+): item is Zotero.Item {
+  return isStandaloneAttachment(item) && assignedKeys.has(item.key);
+}
+
+/** Regular readings plus standalone files assigned on the syllabus. */
+export function isSyllabusAssignableItem(
+  item: Zotero.Item | false | null | undefined,
+): item is Zotero.Item {
+  return isSyllabusMemberItem(item) || isStandaloneAttachment(item);
+}
+
+/** Bibliographic parent after a standalone attachment is recognized. */
+export function regularParentItem(
+  item: Zotero.Item | false | null | undefined,
+): Zotero.Item | null {
+  if (!item) {
+    return null;
+  }
+  try {
+    if (item.deleted || item.isNote()) {
+      return null;
+    }
+    if (typeof item.isRegularItem === "function" && item.isRegularItem()) {
+      return null;
+    }
+    let parent: Zotero.Item | false | undefined = item.parentItem;
+    if (!parent && item.parentItemID) {
+      try {
+        parent = Zotero.Items.get(item.parentItemID) || false;
+      } catch {
+        parent = false;
+      }
+      if (!parent) {
+        parent = getCachedItem(item.parentItemID);
+      }
+    }
+    if (!parent || parent.deleted) {
+      return null;
+    }
+    if (typeof parent.isRegularItem !== "function" || !parent.isRegularItem()) {
+      return null;
+    }
+    if (parent.libraryID !== item.libraryID) {
+      return null;
+    }
+    return parent;
+  } catch {
+    return null;
+  }
+}
+
 export function sortItemsByTitle(items: Zotero.Item[]): Zotero.Item[] {
   return [...items].sort((a, b) =>
     compareLocale(getItemTitle(a), getItemTitle(b)),
@@ -372,17 +446,32 @@ export type ReaderOpenLocation = {
   pageLabel?: string;
 };
 
-function firstViewableAttachmentId(item: Zotero.Item): number {
+/** Child attachment IDs, or [] for standalone attachments (Zotero throws). */
+export function getChildAttachmentIds(item: Zotero.Item): number[] {
   try {
-    const attachments = item.getAttachments();
-    const viewableAttachment = attachments.find((attId) => {
-      const att = getCachedItem(attId);
-      return !!(att && att.isAttachment());
-    });
-    return viewableAttachment || 0;
+    if (typeof item.isAttachment === "function" && item.isAttachment()) {
+      return [];
+    }
+    return item.getAttachments() || [];
   } catch {
-    return 0;
+    return [];
   }
+}
+
+/** Files to show/open: children, or the item itself when it is an attachment. */
+export function getViewableAttachmentIds(item: Zotero.Item): number[] {
+  try {
+    if (typeof item.isAttachment === "function" && item.isAttachment()) {
+      return item.id ? [item.id] : [];
+    }
+  } catch {
+    // Fall through to child lookup.
+  }
+  return getChildAttachmentIds(item);
+}
+
+function firstViewableAttachmentId(item: Zotero.Item): number {
+  return getViewableAttachmentIds(item)[0] || 0;
 }
 
 /** Open the first viewable attachment, or the item URL if none. */

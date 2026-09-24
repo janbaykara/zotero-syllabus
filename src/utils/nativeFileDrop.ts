@@ -10,12 +10,38 @@ function logNativeFileDrop(message: string, error?: unknown): void {
   }
 }
 
-const ZOTERO_DRAG_TYPES = [
-  "zotero/item",
-  "zotero/collection",
-  "zotero/search",
-  "application/x-syllabus-assignment-ids",
-];
+const ZOTERO_DRAG_TYPES = ["zotero/item", "zotero/collection", "zotero/search"];
+
+function dataTransferTypeList(
+  types: DataTransfer["types"] | null | undefined,
+): string[] {
+  if (!types) {
+    return [];
+  }
+  try {
+    return Array.from(types as unknown as string[]);
+  } catch {
+    return [];
+  }
+}
+
+function isZoteroOrSyllabusItemDrag(
+  dataTransfer: DataTransfer | null | undefined,
+): boolean {
+  if (!dataTransfer) {
+    return false;
+  }
+  if (
+    ZOTERO_DRAG_TYPES.some((type) =>
+      dataTransferHasType(dataTransfer.types, type),
+    )
+  ) {
+    return true;
+  }
+  return dataTransferTypeList(dataTransfer.types).some((type) =>
+    type.startsWith("application/x-syllabus-"),
+  );
+}
 
 const OS_FILE_DRAG_TYPES = [
   "application/x-moz-file",
@@ -98,11 +124,7 @@ export function isOsFileDrag(
   if (!dataTransfer) {
     return false;
   }
-  if (
-    ZOTERO_DRAG_TYPES.some((type) =>
-      dataTransferHasType(dataTransfer.types, type),
-    )
-  ) {
+  if (isZoteroOrSyllabusItemDrag(dataTransfer)) {
     return false;
   }
   return OS_FILE_DRAG_TYPES.some((type) =>
@@ -503,6 +525,7 @@ function customViewDropRoot(): HTMLElement | null {
 export function useOsFileDropHandlers(options: {
   onOsFileDrop: (event: DragEvent) => void | Promise<void>;
   acceptDrop?: () => boolean;
+  onOsFileDragHover?: (event: DragEvent | null) => void;
 }): {
   isDraggingFile: boolean;
   onDragEnter: (event: JSX.TargetedDragEvent<HTMLElement>) => void;
@@ -515,6 +538,19 @@ export function useOsFileDropHandlers(options: {
   onOsFileDropRef.current = options.onOsFileDrop;
   const acceptDropRef = useRef(options.acceptDrop);
   acceptDropRef.current = options.acceptDrop;
+  const onOsFileDragHoverRef = useRef(options.onOsFileDragHover);
+  onOsFileDragHoverRef.current = options.onOsFileDragHover;
+
+  const setDraggingFile = useCallback((next: boolean, event?: DragEvent) => {
+    setIsDraggingFile(next);
+    if (next && event) {
+      onOsFileDragHoverRef.current?.(event);
+      return;
+    }
+    if (!next) {
+      onOsFileDragHoverRef.current?.(null);
+    }
+  }, []);
 
   const canHandle = useCallback(
     (dataTransfer: DataTransfer | null | undefined) => {
@@ -535,9 +571,9 @@ export function useOsFileDropHandlers(options: {
         return;
       }
       allowOsFileDragEvent(event);
-      setIsDraggingFile(true);
+      setDraggingFile(true, event);
     },
-    [canHandle],
+    [canHandle, setDraggingFile],
   );
 
   const onDragOver = useCallback(
@@ -546,6 +582,7 @@ export function useOsFileDropHandlers(options: {
         return;
       }
       allowOsFileDragEvent(event);
+      onOsFileDragHoverRef.current?.(event);
     },
     [canHandle],
   );
@@ -556,10 +593,10 @@ export function useOsFileDropHandlers(options: {
         return;
       }
       if (isLeavingDropTarget(event.currentTarget, event.relatedTarget)) {
-        setIsDraggingFile(false);
+        setDraggingFile(false);
       }
     },
-    [],
+    [setDraggingFile],
   );
 
   const onDrop = useCallback(
@@ -568,10 +605,10 @@ export function useOsFileDropHandlers(options: {
         return;
       }
       allowOsFileDragEvent(event);
-      setIsDraggingFile(false);
+      setDraggingFile(false);
       void onOsFileDropRef.current(event);
     },
-    [canHandle],
+    [canHandle, setDraggingFile],
   );
 
   useEffect(() => {
@@ -584,20 +621,21 @@ export function useOsFileDropHandlers(options: {
         return;
       }
       allowOsFileDragEvent(event);
-      setIsDraggingFile(true);
+      setDraggingFile(true, event);
     };
     const handleOver = (event: DragEvent) => {
       if (!canHandle(event.dataTransfer)) {
         return;
       }
       allowOsFileDragEvent(event);
+      onOsFileDragHoverRef.current?.(event);
     };
     const handleLeave = (event: DragEvent) => {
       if (!isOsFileDrag(event.dataTransfer)) {
         return;
       }
       if (isLeavingDropTarget(root, event.relatedTarget)) {
-        setIsDraggingFile(false);
+        setDraggingFile(false);
       }
     };
     const handleDrop = (event: DragEvent) => {
@@ -605,7 +643,7 @@ export function useOsFileDropHandlers(options: {
         return;
       }
       allowOsFileDragEvent(event);
-      setIsDraggingFile(false);
+      setDraggingFile(false);
       void onOsFileDropRef.current(event);
     };
     root.addEventListener("dragenter", handleEnter, true);
@@ -618,14 +656,14 @@ export function useOsFileDropHandlers(options: {
       root.removeEventListener("dragleave", handleLeave, true);
       root.removeEventListener("drop", handleDrop, true);
     };
-  }, [canHandle]);
+  }, [canHandle, setDraggingFile]);
 
   useEffect(() => {
-    const handleDragEnd = () => setIsDraggingFile(false);
+    const handleDragEnd = () => setDraggingFile(false);
     const doc = Zotero.getMainWindow()?.document ?? document;
     doc.addEventListener("dragend", handleDragEnd);
     return () => doc.removeEventListener("dragend", handleDragEnd);
-  }, []);
+  }, [setDraggingFile]);
 
   return { isDraggingFile, onDragEnter, onDragOver, onDragLeave, onDrop };
 }

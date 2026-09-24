@@ -16,7 +16,12 @@ import {
   getReadStatusMetadata,
 } from "../zotero-reading-list/compat";
 import { getReadingTimeSync, formatReadingTime } from "../utils/readingTime";
-import { getItemCreatorLine, getItemField, getItemTitle } from "../utils/items";
+import {
+  getItemCreatorLine,
+  getItemField,
+  getItemTitle,
+  getViewableAttachmentIds,
+} from "../utils/items";
 import { GalleryCover } from "./GalleryCover";
 import { getString } from "../utils/locale";
 import { isOsFileDrag } from "../utils/nativeFileDrop";
@@ -139,7 +144,13 @@ export function SyllabusItemCard({
     [item, collectionId],
   );
   const title = getItemTitle(item) || getString("untitled");
-  const itemTypeLabel = Zotero.ItemTypes.getLocalizedString(item.itemType);
+  const itemTypeLabel = (() => {
+    try {
+      return Zotero.ItemTypes.getLocalizedString(item.itemType);
+    } catch {
+      return "";
+    }
+  })();
   const author = getItemCreatorLine(item);
   const date = getItemField(item, "date");
   const year = useMemo(() => {
@@ -169,6 +180,13 @@ export function SyllabusItemCard({
   useEffect(() => {
     (async () => {
       if (slim || density !== "expanded") return;
+      try {
+        if (typeof item.isAttachment === "function" && item.isAttachment()) {
+          return;
+        }
+      } catch {
+        return;
+      }
       if (getPref("showBibliography")) {
         const cslStyle = syllabusMetadata.cslStyle || null;
         const ref = await generateBibliographicReference(item, true, cslStyle);
@@ -178,8 +196,7 @@ export function SyllabusItemCard({
   }, [item, slim, density, syllabusMetadata.cslStyle]);
 
   const viewableAttachments = useMemo(() => {
-    return item
-      .getAttachments()
+    return getViewableAttachmentIds(item)
       .map((attId) => {
         try {
           const att = getCachedItem(attId);
@@ -414,8 +431,7 @@ export function SyllabusItemCard({
     __e?: JSX.TargetedMouseEvent<HTMLElement>,
   ) {
     const url = item.getField("url");
-    const attachments = item.getAttachments();
-    const viewableAttachment = attachments.find((attId) => {
+    const viewableAttachment = getViewableAttachmentIds(item).find((attId) => {
       const att = getCachedItem(attId);
       if (att && att.isAttachment()) {
         return true;

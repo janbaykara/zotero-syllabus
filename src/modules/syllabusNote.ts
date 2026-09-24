@@ -43,8 +43,10 @@ import {
 import {
   getItemField,
   getItemTitle,
+  isStandaloneAttachment,
   isSyllabusMemberItem,
   readItemNote,
+  regularParentItem,
 } from "../utils/items";
 import {
   exportIdFromItem,
@@ -479,13 +481,19 @@ export function documentHasOrphanItemKeys(
 ): boolean {
   for (const key of Object.keys(document.items || {})) {
     const item = Zotero.Items.getByLibraryAndKey(collection.libraryID, key);
-    if (!item || !isSyllabusMemberItem(item)) {
+    if (
+      !item ||
+      !(isSyllabusMemberItem(item) || isStandaloneAttachment(item))
+    ) {
       return true;
     }
   }
   for (const key of document.furtherReadingOrder || []) {
     const item = Zotero.Items.getByLibraryAndKey(collection.libraryID, key);
-    if (!item || !isSyllabusMemberItem(item)) {
+    if (
+      !item ||
+      !(isSyllabusMemberItem(item) || isStandaloneAttachment(item))
+    ) {
       return true;
     }
   }
@@ -1046,6 +1054,59 @@ function patchCachedDocumentsWithKeyMap(
   }
 }
 
+function addKeyRemap(
+  keyMapsByLibrary: Map<number, Record<string, string>>,
+  libraryID: number,
+  oldKey: string,
+  newKey: string,
+): void {
+  if (!oldKey || !newKey || oldKey === newKey) {
+    return;
+  }
+  const map = keyMapsByLibrary.get(libraryID) || {};
+  map[oldKey] = newKey;
+  keyMapsByLibrary.set(libraryID, map);
+}
+
+function addAttachmentParentRemaps(
+  keyMapsByLibrary: Map<number, Record<string, string>>,
+  item: Zotero.Item,
+): void {
+  const parent = regularParentItem(item);
+  if (parent && anyCachedDocumentHasItemKey(item.key, item.libraryID)) {
+    addKeyRemap(keyMapsByLibrary, item.libraryID, item.key, parent.key);
+    return;
+  }
+  try {
+    if (!item.isRegularItem()) {
+      return;
+    }
+  } catch {
+    return;
+  }
+  let attachmentIds: number[];
+  try {
+    attachmentIds = item.getAttachments() || [];
+  } catch {
+    return;
+  }
+  for (const attachmentId of attachmentIds) {
+    let attachment: Zotero.Item | false | undefined;
+    try {
+      attachment =
+        Zotero.Items.get(attachmentId) || getCachedItem(attachmentId);
+    } catch {
+      attachment = getCachedItem(attachmentId);
+    }
+    if (
+      attachment &&
+      anyCachedDocumentHasItemKey(attachment.key, item.libraryID)
+    ) {
+      addKeyRemap(keyMapsByLibrary, item.libraryID, attachment.key, item.key);
+    }
+  }
+}
+
 function patchCachedDocumentsFromModifyIds(
   ids: number[],
 ): Map<number, Record<string, string>> {
@@ -1061,7 +1122,15 @@ function patchCachedDocumentsFromModifyIds(
       continue;
     }
     try {
-      if (item.deleted || item.isNote() || !item.isRegularItem()) {
+      if (item.deleted || item.isNote()) {
+        continue;
+      }
+    } catch {
+      continue;
+    }
+    addAttachmentParentRemaps(keyMapsByLibrary, item);
+    try {
+      if (!item.isRegularItem()) {
         continue;
       }
     } catch {
@@ -1074,9 +1143,7 @@ function patchCachedDocumentsFromModifyIds(
       if (!anyCachedDocumentHasItemKey(oldKey, item.libraryID)) {
         continue;
       }
-      const map = keyMapsByLibrary.get(item.libraryID) || {};
-      map[oldKey] = item.key;
-      keyMapsByLibrary.set(item.libraryID, map);
+      addKeyRemap(keyMapsByLibrary, item.libraryID, oldKey, item.key);
     }
   }
   for (const [libraryID, keyMap] of keyMapsByLibrary) {
@@ -1179,7 +1246,19 @@ async function remapMergedKeysFromItemIds(
         continue;
       }
       try {
-        if (item.isNote() || !item.isRegularItem()) {
+        if (item.isNote()) {
+          continue;
+        }
+      } catch {
+        continue;
+      }
+
+      if (event !== "trash" && !item.deleted) {
+        addAttachmentParentRemaps(keyMapsByLibrary, item);
+      }
+
+      try {
+        if (!item.isRegularItem()) {
           continue;
         }
       } catch {
@@ -1285,6 +1364,11 @@ async function mergedKeyMapForOrphanedKeys(
           continue;
         }
       } catch {
+        continue;
+      }
+      const parent = regularParentItem(item);
+      if (parent) {
+        keyMap[itemKey] = parent.key;
         continue;
       }
     }

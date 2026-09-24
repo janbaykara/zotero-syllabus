@@ -357,6 +357,14 @@ export function ClassGroupComponent({
     <div
       id={tocId}
       data-tour="syllabus-class-group"
+      data-syllabus-file-drop={isLocked ? undefined : "class"}
+      data-syllabus-class-number={
+        isLocked
+          ? undefined
+          : classNumber == null
+            ? "null"
+            : String(classNumber)
+      }
       className={twMerge(
         "syllabus-class-group in-[.print]:scheme-light",
         readerMode && classIsDone ? "opacity-40" : "",
@@ -562,13 +570,14 @@ export function ClassGroupComponent({
       >
         <div
           className={twMerge(
-            "syllabus-class-items box-border! rounded-lg",
+            "syllabus-class-items box-border! rounded-lg group/class-items",
             // Horizontal-only negative margin so dropzone outline can bleed;
             // keep real top margin as a breather after the class description.
             density !== "expanded"
               ? "space-y-2 px-1 pb-1 -mx-1"
               : "mt-2 space-y-4 px-2 pb-2 -mx-2",
-            "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:outline-accent-blue! data-[dropzone-active='true']:text-accent-blue! transition-all duration-200 outline-transparent outline-2! outline-dashed!",
+            itemAssignments.length > 0 &&
+              "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:outline-accent-blue! data-[dropzone-active='true']:text-accent-blue! transition-all duration-200 outline-transparent outline-2! outline-dashed!",
             !isZotero8OrLater() && "compat-space-y",
           )}
           onDrop={
@@ -605,7 +614,8 @@ export function ClassGroupComponent({
           {!isLocked && itemAssignments.length === 0 && classNumber !== null ? (
             <div
               className={twMerge(
-                "text-center bg-quinary/50 rounded-md p-8 text-secondary border-2 border-dashed border-tertiary/50 in-[.print]:hidden",
+                "text-center bg-quinary/50 rounded-md p-8 text-secondary border-2 border-dashed border-tertiary/50 in-[.print]:hidden transition-colors duration-200",
+                "group-data-[dropzone-active=true]/class-items:bg-accent-blue/15 group-data-[dropzone-active=true]/class-items:border-accent-blue group-data-[dropzone-active=true]/class-items:text-accent-blue",
                 density !== "expanded" ? "p-4" : "p-8",
               )}
             >

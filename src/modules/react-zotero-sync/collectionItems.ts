@@ -6,7 +6,10 @@ import {
   GetByLibraryAndKeyArgs,
   ItemSyllabusAssignment,
 } from "../syllabus";
-import { isSyllabusMemberItem } from "../../utils/items";
+import {
+  isAssignedStandaloneAttachment,
+  isSyllabusMemberItem,
+} from "../../utils/items";
 import {
   getCachedItem,
   isItemRemovalEvent,
@@ -54,21 +57,43 @@ function shouldIncludeSubcollections(
   return false;
 }
 
+function assignedDocumentItemKeys(collection: Zotero.Collection): Set<string> {
+  const document = getCollectionDocument(collection);
+  const keys = new Set<string>();
+  for (const [key, assignments] of Object.entries(document.items || {})) {
+    if (assignments?.length) {
+      keys.add(key);
+    }
+  }
+  return keys;
+}
+
+function isSyllabusViewItem(
+  item: Zotero.Item,
+  assignedKeys: ReadonlySet<string>,
+): boolean {
+  return (
+    isSyllabusMemberItem(item) ||
+    isAssignedStandaloneAttachment(item, assignedKeys)
+  );
+}
+
 function collectRegularItems(
   collection: Zotero.Collection,
   recursive: boolean,
 ): Zotero.Item[] {
+  const assignedKeys = assignedDocumentItemKeys(collection);
   if (!recursive) {
     return collection
       .getChildItems()
-      .filter((item) => isSyllabusMemberItem(item));
+      .filter((item) => isSyllabusViewItem(item, assignedKeys));
   }
 
   const seen = new Set<number>();
   const items: Zotero.Item[] = [];
   const walk = (col: Zotero.Collection) => {
     for (const item of col.getChildItems()) {
-      if (!isSyllabusMemberItem(item) || seen.has(item.id)) {
+      if (!isSyllabusViewItem(item, assignedKeys) || seen.has(item.id)) {
         continue;
       }
       seen.add(item.id);

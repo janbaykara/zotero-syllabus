@@ -62,6 +62,16 @@ describe("nativeFileDrop", function () {
           ]),
         ),
       );
+      assert.isFalse(
+        isOsFileDrag(
+          fakeDataTransfer([
+            "Files",
+            "application/x-moz-file",
+            "text/plain",
+            "application/x-syllabus-assignment-id",
+          ]),
+        ),
+      );
       assert.isFalse(isOsFileDrag(fakeDataTransfer(["text/plain"])));
     });
 

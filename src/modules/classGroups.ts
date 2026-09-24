@@ -5,7 +5,11 @@ import {
   SyllabusManager,
   classByNumber,
 } from "./syllabus";
-import { sortItems, sortItemsByTitle } from "../utils/items";
+import {
+  isStandaloneAttachment,
+  sortItems,
+  sortItemsByTitle,
+} from "../utils/items";
 import type { GallerySortBy } from "./gallerySort";
 
 export type SyllabusClassGroup = {
@@ -134,7 +138,7 @@ export function buildSyllabusClassGroups(
 
   for (const __item of syllabusItems) {
     const item = __item.zoteroItem;
-    if (!item.isRegularItem()) continue;
+    if (!item.isRegularItem() && !isStandaloneAttachment(item)) continue;
     const assignments = __item.assignments;
 
     // If no assignments or all assignments are classless, add to further reading
