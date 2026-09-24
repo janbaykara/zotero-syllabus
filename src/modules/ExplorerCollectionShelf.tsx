@@ -13,6 +13,7 @@ import {
 import {
   buildSyllabusClassGroups,
   sortClassAssignmentRows,
+  sortItemRows,
   type ClassAssignmentRow,
   type SyllabusClassGroup,
 } from "./classGroups";
@@ -458,9 +459,8 @@ function buildClassSegments(
       key: "further-reading",
       title: getString("further-reading-heading"),
       icon: { kind: "further-reading" },
-      items: sortSegmentItems(
-        furtherReadingItems.map((entry) => entry.item),
-        sortBy,
+      items: uniqueItems(
+        sortItemRows(furtherReadingItems, sortBy).map((entry) => entry.item),
       ),
       onOpen: () =>
         openCollectionSyllabusAtClass(collectionId, "further-reading"),

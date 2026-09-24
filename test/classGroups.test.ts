@@ -1,5 +1,8 @@
 import { assert } from "chai";
-import { buildSyllabusClassGroups } from "../src/modules/classGroups";
+import {
+  applyFurtherReadingOrder,
+  buildSyllabusClassGroups,
+} from "../src/modules/classGroups";
 import { SettingsSyllabusMetadataSchema } from "../src/utils/schemas";
 
 function fakeItem(options: {
@@ -84,5 +87,19 @@ describe("buildSyllabusClassGroups", function () {
     const classOne = classGroups.find((group) => group.classNumber === 1);
     assert.equal(classOne?.itemAssignments.length ?? 0, 0);
     assert.equal(furtherReadingItems.length, 0);
+  });
+
+  it("applies stored further-reading order and keeps leftovers", function () {
+    const alpha = fakeItem({ id: 1, key: "ALPHA", regular: true });
+    const beta = fakeItem({ id: 2, key: "BETA", regular: true });
+    const gamma = fakeItem({ id: 3, key: "GAMMA", regular: true });
+    const ordered = applyFurtherReadingOrder(
+      [{ item: alpha }, { item: beta }, { item: gamma }],
+      ["GAMMA", "ALPHA"],
+    );
+    assert.deepEqual(
+      ordered.map((entry) => entry.item.key),
+      ["GAMMA", "ALPHA", "BETA"],
+    );
   });
 });

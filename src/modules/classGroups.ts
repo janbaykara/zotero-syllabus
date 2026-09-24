@@ -32,11 +32,11 @@ export type ClassAssignmentRow = {
   assignment: ItemSyllabusAssignment;
 };
 
-/** Keep syllabus order for `auto`; otherwise sort by item fields. */
-export function sortClassAssignmentRows(
-  rows: ClassAssignmentRow[],
+/** Keep incoming (syllabus / further-reading) order for `auto`. */
+export function sortItemRows<T extends { item: Zotero.Item }>(
+  rows: T[],
   sortBy: GallerySortBy,
-): ClassAssignmentRow[] {
+): T[] {
   if (sortBy === "auto") {
     return rows;
   }
@@ -49,6 +49,14 @@ export function sortClassAssignmentRows(
   return [...rows].sort(
     (a, b) => (order.get(a.item.id) ?? 0) - (order.get(b.item.id) ?? 0),
   );
+}
+
+/** Keep syllabus order for `auto`; otherwise sort by item fields. */
+export function sortClassAssignmentRows(
+  rows: ClassAssignmentRow[],
+  sortBy: GallerySortBy,
+): ClassAssignmentRow[] {
+  return sortItemRows(rows, sortBy);
 }
 
 /** No class, priority, or instruction — may still carry reading `status`. */

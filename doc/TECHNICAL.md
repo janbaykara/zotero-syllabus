@@ -119,7 +119,7 @@ The Reading Schedule UI has a **Pinned** section above the calendar. The library
 
 - **Pinned items** — regular items tagged `pinned`. Optional intention = child note tagged `zotero-syllabus-pinned-intention`.
 - **Pinned collections** — Syllabus notes tagged `pinned`, or (for non-syllabus collections) a marker note tagged `zotero-syllabus-pinned-collection` + `pinned`.
-- **Next up from a pinned syllabus** — the collection’s Syllabus note also has tag `pinned`; the UI shows the first assignment in `classOrder` / `itemOrder` whose status is not `done`.
+- **Next up from a pinned syllabus** — the collection’s Syllabus note also has tag `pinned`. The pin always stays on the shelf: first incomplete class assignment in `classOrder` / `itemOrder`, then further reading in `furtherReadingOrder`. Caught-up, empty, or further-reading-only syllabi still display.
 - When **Generate Reading Schedule collection** is on, a child folder named `Pinned` under each library’s `Reading Schedule` root mirrors pinned **items** only (next-up is derived in the UI).
 
 Pin state is tags only (not syllabus JSON). Shelf order is a per-library pref (`pinnedShelfOrder`). See [`src/modules/pinned.ts`](../src/modules/pinned.ts). Syllabus pages expose pin/unpin next to Print / Lock / Settings. End-user steps: [README — Pinning](../README.md#pinning).

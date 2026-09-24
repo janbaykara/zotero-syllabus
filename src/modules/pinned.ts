@@ -1,8 +1,9 @@
 /**
  * Pinned items (tag on regular items) and pinned collections (tag on the
  * Syllabus note, or a marker note for non-syllabus collections). Optional
- * intention child notes for items. Next-up = first incomplete assignment
- * in class order (syllabi only).
+ * intention child notes for items. Pinned syllabi always appear: next-up is
+ * the first incomplete class assignment, then further reading in stored
+ * order; a caught-up or empty syllabus still stays on the shelf.
  */
 
 import * as z from "zod";
@@ -755,7 +756,8 @@ function sortAssignmentsForClass(
 /**
  * Syllabus progress in item currency, driven by class completion:
  * items in a done class count as done even when unread.
- * Missing/deleted items are skipped so the bar matches what the UI shows.
+ * Further-reading assignments count; unnumbered (priority / instruction)
+ * rows do not. Missing/deleted items are skipped so the bar matches the UI.
  */
 export function getSyllabusItemProgress(
   collection: Zotero.Collection,
@@ -785,6 +787,13 @@ export function getSyllabusItemProgress(
         doc.classOrder,
       );
       if (classNumber == null) {
+        if (!isFurtherReadingAssignment(assignment, doc)) {
+          continue;
+        }
+        total += 1;
+        if (assignment.status === "done") {
+          done += 1;
+        }
         continue;
       }
       total += 1;
@@ -801,28 +810,49 @@ export function getSyllabusItemProgress(
   return { done, total, percent };
 }
 
-/**
- * First incomplete class assignment in syllabus order, or null if caught up.
- * Also gathers up to 3 unread items (from that class onward) for the cover stack.
- */
-export function getNextUpAssignment(
+function isFurtherReadingAssignment(
+  assignment: ItemSyllabusAssignment,
+  doc: CollectionSyllabusDocument,
+): boolean {
+  return (
+    assignmentClassNumber(assignment, doc.classes, doc.classOrder) == null &&
+    !assignment.priority &&
+    !assignment.classInstruction
+  );
+}
+
+function pickDocumentFurtherReadingAssignment(
+  assignments: ItemSyllabusAssignment[] | undefined,
+  doc: CollectionSyllabusDocument,
+): ItemSyllabusAssignment | undefined {
+  const classless = (assignments || []).filter((assignment) =>
+    isFurtherReadingAssignment(assignment, doc),
+  );
+  return (
+    classless.find((assignment) => assignment.status === "done") || classless[0]
+  );
+}
+
+type ClassDisplayEntry = {
+  item: Zotero.Item;
+  assignment: ItemSyllabusAssignment;
+  classNumber: number;
+  classTitle: string;
+  classDone: boolean;
+};
+
+function collectClassDisplayEntries(
   collection: Zotero.Collection,
-  document?: CollectionSyllabusDocument,
-): NextUpReading | null {
-  const doc = document || getCollectionDocument(collection);
+  doc: CollectionSyllabusDocument,
+): ClassDisplayEntry[] {
   const classIds = orderedClassIds(doc);
   const libraryID = collection.libraryID;
-
-  let next: NextUpReading | null = null;
-  const unreadItems: Zotero.Item[] = [];
+  const result: ClassDisplayEntry[] = [];
 
   for (let index = 0; index < classIds.length; index++) {
     const classId = classIds[index];
     const classNumber = index + 1;
     const classMeta = doc.classes?.[classId];
-    if (classMeta?.status === "done") {
-      continue;
-    }
     const entries: Array<{
       item: Zotero.Item;
       assignment: ItemSyllabusAssignment;
@@ -836,9 +866,6 @@ export function getNextUpAssignment(
           doc.classOrder,
         );
         if (num !== classNumber) {
-          continue;
-        }
-        if (assignment.status === "done") {
           continue;
         }
         const item = resolveLibraryItem(libraryID, itemKey);
@@ -855,34 +882,174 @@ export function getNextUpAssignment(
       doc.priorities,
     );
     for (const entry of sorted) {
-      if (!next) {
-        next = {
-          collection,
-          libraryID,
-          isSyllabus: true,
-          classNumber,
-          classTitle: classMeta?.title || "",
-          item: entry.item,
-          assignment: entry.assignment,
-          unreadItems: [],
-          progress: null,
-        };
-      }
-      if (unreadItems.length < 3) {
-        unreadItems.push(entry.item);
-      }
+      result.push({
+        ...entry,
+        classNumber,
+        classTitle: classMeta?.title || "",
+        classDone: classMeta?.status === "done",
+      });
     }
-    if (next && unreadItems.length >= 3) {
+  }
+
+  return result;
+}
+
+type FurtherReadingDisplayEntry = {
+  item: Zotero.Item;
+  assignment?: ItemSyllabusAssignment;
+};
+
+function collectFurtherReadingDisplayEntries(
+  collection: Zotero.Collection,
+  doc: CollectionSyllabusDocument,
+): FurtherReadingDisplayEntry[] {
+  const libraryID = collection.libraryID;
+  const entries: FurtherReadingDisplayEntry[] = [];
+  const seen = new Set<string>();
+
+  const consider = (itemKey: string) => {
+    if (!itemKey || seen.has(itemKey)) {
+      return;
+    }
+    const assignments = doc.items?.[itemKey] || [];
+    if (
+      assignments.length > 0 &&
+      !assignments.every((assignment) =>
+        isFurtherReadingAssignment(assignment, doc),
+      )
+    ) {
+      return;
+    }
+    const item = resolveLibraryItem(libraryID, itemKey);
+    if (!item) {
+      return;
+    }
+    seen.add(itemKey);
+    entries.push({
+      item,
+      assignment: pickDocumentFurtherReadingAssignment(assignments, doc),
+    });
+  };
+
+  for (const itemKey of Object.keys(doc.items || {})) {
+    consider(itemKey);
+  }
+  for (const key of doc.furtherReadingOrder || []) {
+    consider(key);
+  }
+  for (const item of collectionRegularItems(collection)) {
+    consider(item.key);
+  }
+
+  const titled = [...entries].sort((a, b) =>
+    compareLocale(getItemTitle(a.item), getItemTitle(b.item)),
+  );
+  return applyPinnedShelfOrder(
+    titled,
+    (entry) => entry.item.key,
+    doc.furtherReadingOrder || [],
+  );
+}
+
+/**
+ * Pinned-shelf reading for a syllabus. Always returned so a pin stays visible
+ * when classes are done, empty, or every item sits in further reading.
+ * Next-up prefers the first incomplete class assignment (class `itemOrder`),
+ * then further reading (`furtherReadingOrder`). The cover stack follows that
+ * same order; if nothing is unread, it shows the first items instead.
+ */
+export function getNextUpAssignment(
+  collection: Zotero.Collection,
+  document?: CollectionSyllabusDocument,
+): NextUpReading {
+  const doc = document || getCollectionDocument(collection);
+  const libraryID = collection.libraryID;
+  const classEntries = collectClassDisplayEntries(collection, doc);
+  const furtherEntries = collectFurtherReadingDisplayEntries(collection, doc);
+
+  let next: {
+    classNumber: number | null;
+    classTitle: string;
+    item: Zotero.Item;
+    assignment: ItemSyllabusAssignment | null;
+  } | null = null;
+  const unreadItems: Zotero.Item[] = [];
+  const seenUnread = new Set<number>();
+
+  const pushCover = (item: Zotero.Item) => {
+    if (seenUnread.has(item.id) || unreadItems.length >= 3) {
+      return;
+    }
+    seenUnread.add(item.id);
+    unreadItems.push(item);
+  };
+
+  for (const entry of classEntries) {
+    if (entry.classDone || entry.assignment.status === "done") {
+      continue;
+    }
+    if (!next) {
+      next = {
+        classNumber: entry.classNumber,
+        classTitle: entry.classTitle,
+        item: entry.item,
+        assignment: entry.assignment,
+      };
+    }
+    pushCover(entry.item);
+    if (unreadItems.length >= 3) {
       break;
     }
   }
 
-  if (!next) {
-    return null;
+  if (unreadItems.length < 3) {
+    for (const entry of furtherEntries) {
+      if (entry.assignment?.status === "done") {
+        continue;
+      }
+      if (!next) {
+        next = {
+          classNumber: null,
+          classTitle: "",
+          item: entry.item,
+          assignment: entry.assignment ?? null,
+        };
+      }
+      pushCover(entry.item);
+      if (unreadItems.length >= 3) {
+        break;
+      }
+    }
   }
-  next.unreadItems = unreadItems;
-  next.progress = getSyllabusItemProgress(collection, doc);
-  return next;
+
+  if (unreadItems.length === 0) {
+    for (const entry of classEntries) {
+      pushCover(entry.item);
+      if (unreadItems.length >= 3) {
+        break;
+      }
+    }
+    if (unreadItems.length < 3) {
+      for (const entry of furtherEntries) {
+        pushCover(entry.item);
+        if (unreadItems.length >= 3) {
+          break;
+        }
+      }
+    }
+  }
+
+  return {
+    collection,
+    libraryID,
+    isSyllabus: true,
+    classNumber: next?.classNumber ?? null,
+    classTitle: next?.classTitle ?? "",
+    item: next?.item ?? unreadItems[0] ?? null,
+    assignment: next?.assignment ?? null,
+    unreadItems,
+    progress: getSyllabusItemProgress(collection, doc),
+  };
 }
 
 /** Cover-stack reading for a pinned non-syllabus collection. */
@@ -954,10 +1121,7 @@ export async function listNextUpReadings(
   const readings: NextUpReading[] = [];
   for (const collection of collections) {
     if (collectionHasSyllabusNote(collection)) {
-      const next = getNextUpAssignment(collection);
-      if (next) {
-        readings.push(next);
-      }
+      readings.push(getNextUpAssignment(collection));
       continue;
     }
     readings.push(getPinnedCollectionReading(collection));

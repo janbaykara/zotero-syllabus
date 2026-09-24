@@ -348,14 +348,16 @@ export function PinnedSection({
     }
     const rows = [...pinnedLayoutRows];
     for (const reading of nextUp) {
-      if (!reading.isSyllabus || !reading.item || !reading.assignment) {
+      if (!reading.item) {
         continue;
       }
       rows.push({
-        key: `pinned-next-${reading.collection.id}-${reading.assignment.id}`,
+        key: `pinned-next-${reading.collection.id}-${reading.assignment?.id ?? "collection"}`,
         item: reading.item,
         collectionId: reading.collection.id,
-        assignment: reading.assignment,
+        assignment: reading.assignment ?? {
+          id: `pinned-collection-${reading.collection.id}`,
+        },
         classNumber: reading.classNumber ?? undefined,
         slim: true,
         contextLabel: readingContextLabel({
@@ -1089,11 +1091,12 @@ function NextUpRow({
   };
 
   const open = () => openPinnedCollection(reading);
-  const headerLabel = reading.isSyllabus
-    ? getString("pinned-next-up-from", {
-        args: { name: reading.collection.name },
-      })
-    : reading.collection.name;
+  const headerLabel =
+    reading.isSyllabus && reading.assignment
+      ? getString("pinned-next-up-from", {
+          args: { name: reading.collection.name },
+        })
+      : reading.collection.name;
 
   return (
     <div className="relative">

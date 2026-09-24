@@ -177,6 +177,301 @@ describe("pinned", function () {
     }
   });
 
+  it("still shows a pinned syllabus when every class is done", async function () {
+    const book = new Zotero.Item("book");
+    book.libraryID = Zotero.Libraries.userLibraryID;
+    book.setField("title", "Finished reading");
+    await book.saveTx();
+    items.push(book);
+
+    const collection = new Zotero.Collection();
+    collection.libraryID = Zotero.Libraries.userLibraryID;
+    collection.name = "Caught-up course";
+    await collection.saveTx();
+
+    try {
+      const document = CollectionSyllabusDocumentSchema.parse({
+        version: 2,
+        classes: {
+          "class-a": { number: 1, title: "Week 1", status: "done" },
+        },
+        classOrder: ["class-a"],
+        items: {
+          [book.key]: [
+            {
+              id: "a1",
+              classId: "class-a",
+              status: null,
+              priority: "essential",
+            },
+          ],
+        },
+      });
+
+      const next = getNextUpAssignment(collection, document);
+      assert.isTrue(next.isSyllabus);
+      assert.isNull(next.assignment);
+      assert.equal(next.item!.id, book.id);
+      assert.deepEqual(
+        next.unreadItems.map((item) => item.id),
+        [book.id],
+      );
+      assert.deepEqual(next.progress, { done: 1, total: 1, percent: 100 });
+    } finally {
+      try {
+        await collection.eraseTx({ deleteItems: false });
+      } catch {
+        /* ignore */
+      }
+    }
+  });
+
+  it("still shows a pinned syllabus with no classes", async function () {
+    const collection = new Zotero.Collection();
+    collection.libraryID = Zotero.Libraries.userLibraryID;
+    collection.name = "Empty class list";
+    await collection.saveTx();
+
+    try {
+      const document = CollectionSyllabusDocumentSchema.parse({
+        version: 2,
+        classes: {},
+        classOrder: [],
+        items: {},
+      });
+
+      const next = getNextUpAssignment(collection, document);
+      assert.isTrue(next.isSyllabus);
+      assert.isNull(next.item);
+      assert.isNull(next.assignment);
+      assert.deepEqual(next.unreadItems, []);
+      assert.deepEqual(next.progress, { done: 0, total: 0, percent: 0 });
+    } finally {
+      try {
+        await collection.eraseTx({ deleteItems: false });
+      } catch {
+        /* ignore */
+      }
+    }
+  });
+
+  it("uses further-reading order for pinned display when nothing is in a class", async function () {
+    const first = new Zotero.Item("book");
+    first.libraryID = Zotero.Libraries.userLibraryID;
+    first.setField("title", "Alpha further");
+    await first.saveTx();
+    items.push(first);
+
+    const second = new Zotero.Item("book");
+    second.libraryID = Zotero.Libraries.userLibraryID;
+    second.setField("title", "Beta further");
+    await second.saveTx();
+    items.push(second);
+
+    const collection = new Zotero.Collection();
+    collection.libraryID = Zotero.Libraries.userLibraryID;
+    collection.name = "Further-reading course";
+    await collection.saveTx();
+
+    try {
+      const document = CollectionSyllabusDocumentSchema.parse({
+        version: 2,
+        classes: {},
+        classOrder: [],
+        furtherReadingOrder: [second.key, first.key],
+        items: {
+          [first.key]: [
+            {
+              id: "f1",
+              status: null,
+            },
+          ],
+          [second.key]: [
+            {
+              id: "f2",
+              status: null,
+            },
+          ],
+        },
+      });
+
+      const next = getNextUpAssignment(collection, document);
+      assert.isTrue(next.isSyllabus);
+      assert.equal(next.item!.id, second.id);
+      assert.equal(next.assignment!.id, "f2");
+      assert.isNull(next.classNumber);
+      assert.deepEqual(
+        next.unreadItems.map((item) => item.id),
+        [second.id, first.id],
+      );
+      assert.deepEqual(next.progress, { done: 0, total: 2, percent: 0 });
+    } finally {
+      try {
+        await collection.eraseTx({ deleteItems: false });
+      } catch {
+        /* ignore */
+      }
+    }
+  });
+
+  it("still shows a pinned syllabus when every assignment is done", async function () {
+    const book = new Zotero.Item("book");
+    book.libraryID = Zotero.Libraries.userLibraryID;
+    book.setField("title", "Completed reading");
+    await book.saveTx();
+    items.push(book);
+
+    const collection = new Zotero.Collection();
+    collection.libraryID = Zotero.Libraries.userLibraryID;
+    collection.name = "All items done";
+    await collection.saveTx();
+
+    try {
+      const document = CollectionSyllabusDocumentSchema.parse({
+        version: 2,
+        classes: {
+          "class-a": { number: 1, title: "Week 1" },
+        },
+        classOrder: ["class-a"],
+        items: {
+          [book.key]: [
+            {
+              id: "a1",
+              classId: "class-a",
+              status: "done",
+              priority: "essential",
+            },
+          ],
+        },
+      });
+
+      const next = getNextUpAssignment(collection, document);
+      assert.isTrue(next.isSyllabus);
+      assert.isNull(next.assignment);
+      assert.equal(next.item!.id, book.id);
+      assert.deepEqual(next.progress, { done: 1, total: 1, percent: 100 });
+    } finally {
+      try {
+        await collection.eraseTx({ deleteItems: false });
+      } catch {
+        /* ignore */
+      }
+    }
+  });
+
+  it("uses further reading as next-up after class assignments are done", async function () {
+    const classBook = new Zotero.Item("book");
+    classBook.libraryID = Zotero.Libraries.userLibraryID;
+    classBook.setField("title", "Done class book");
+    await classBook.saveTx();
+    items.push(classBook);
+
+    const furtherBook = new Zotero.Item("book");
+    furtherBook.libraryID = Zotero.Libraries.userLibraryID;
+    furtherBook.setField("title", "Unread further");
+    await furtherBook.saveTx();
+    items.push(furtherBook);
+
+    const collection = new Zotero.Collection();
+    collection.libraryID = Zotero.Libraries.userLibraryID;
+    collection.name = "Class then further";
+    await collection.saveTx();
+
+    try {
+      const document = CollectionSyllabusDocumentSchema.parse({
+        version: 2,
+        classes: {
+          "class-a": { number: 1, title: "Week 1" },
+        },
+        classOrder: ["class-a"],
+        furtherReadingOrder: [furtherBook.key],
+        items: {
+          [classBook.key]: [
+            {
+              id: "a1",
+              classId: "class-a",
+              status: "done",
+              priority: "essential",
+            },
+          ],
+          [furtherBook.key]: [
+            {
+              id: "f1",
+              status: null,
+            },
+          ],
+        },
+      });
+
+      const next = getNextUpAssignment(collection, document);
+      assert.equal(next.item!.id, furtherBook.id);
+      assert.equal(next.assignment!.id, "f1");
+      assert.isNull(next.classNumber);
+      assert.deepEqual(
+        next.unreadItems.map((item) => item.id),
+        [furtherBook.id],
+      );
+    } finally {
+      try {
+        await collection.eraseTx({ deleteItems: false });
+      } catch {
+        /* ignore */
+      }
+    }
+  });
+
+  it("counts further-reading assignments toward progress", async function () {
+    const live: Zotero.Item[] = [];
+    for (const title of ["Class unread", "Further done", "Further unread"]) {
+      const item = new Zotero.Item("book");
+      item.libraryID = Zotero.Libraries.userLibraryID;
+      item.setField("title", title);
+      await item.saveTx();
+      live.push(item);
+      items.push(item);
+    }
+    const [classItem, furtherDone, furtherUnread] = live;
+
+    const document = CollectionSyllabusDocumentSchema.parse({
+      version: 2,
+      classes: {
+        "class-a": { number: 1, title: "Week 1" },
+      },
+      classOrder: ["class-a"],
+      furtherReadingOrder: [furtherUnread.key, furtherDone.key],
+      items: {
+        [classItem.key]: [
+          {
+            id: "c1",
+            classId: "class-a",
+            status: null,
+            priority: "essential",
+          },
+        ],
+        [furtherDone.key]: [
+          {
+            id: "f1",
+            status: "done",
+          },
+        ],
+        [furtherUnread.key]: [
+          {
+            id: "f2",
+            status: null,
+          },
+        ],
+      },
+    });
+    const collection = {
+      libraryID: Zotero.Libraries.userLibraryID,
+    } as Zotero.Collection;
+    assert.deepEqual(getSyllabusItemProgress(collection, document), {
+      done: 1,
+      total: 3,
+      percent: 33,
+    });
+  });
+
   it("counts all items in done classes toward progress", async function () {
     const live: Zotero.Item[] = [];
     for (const title of ["A", "B", "C", "D"]) {

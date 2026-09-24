@@ -63,7 +63,11 @@ import {
 import { densityLabel } from "./browsePage";
 import { SlimSyllabusItemCard, useItemIdentifierSelection } from "./browsePage";
 import { SyllabusItemCard } from "./SyllabusItemCard";
-import { sortClassAssignmentRows, useSyllabusClassGroups } from "./classGroups";
+import {
+  sortClassAssignmentRows,
+  sortItemRows,
+  useSyllabusClassGroups,
+} from "./classGroups";
 import { useGalleryGroupBy, type GalleryGroupBy } from "./galleryGroupBy";
 import {
   findActiveGalleryGroupId,
@@ -1201,7 +1205,9 @@ export function GalleryPage({
                         {getString("further-reading-empty-desc")}
                       </p>
                       {renderItems(
-                        visibleFurtherReadingItems.map((entry) => entry.item),
+                        sortItemRows(visibleFurtherReadingItems, sortBy).map(
+                          (entry) => entry.item,
+                        ),
                         "further-reading",
                       )}
                     </section>
