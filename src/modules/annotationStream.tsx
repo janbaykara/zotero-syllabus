@@ -23,7 +23,7 @@ import { annotationMatchesColorFilter } from "../utils/annotationColors";
 import { copyStringToClipboard } from "../utils/clipboard";
 import { getItemCitationKey } from "../utils/citeKey";
 import { getString } from "../utils/locale";
-import { formatRelativeTimestamp } from "../utils/dates";
+import { annotationActivityGap, formatRelativeTimestamp } from "../utils/dates";
 import { getPrefValue } from "../utils/prefs";
 import { GalleryTile } from "./GalleryPage";
 import { ExplorerCoverItem } from "./ExplorerMagazineRail";
@@ -147,6 +147,72 @@ export function groupAdjacentStreamEntries(
     });
   }
   return groups;
+}
+
+function streamEntryAdded(entry: MyAnnotationStreamEntry): string | undefined {
+  return entry.dateAdded || entry.dateModified;
+}
+
+export function AnnotationActivityGap({
+  from,
+  to,
+}: {
+  from: string | undefined;
+  to: string | undefined;
+}) {
+  const gap = annotationActivityGap(from, to);
+  if (!gap) {
+    return null;
+  }
+  const label = getString(
+    gap.later
+      ? "annotations-activity-gap-later"
+      : "annotations-activity-gap-earlier",
+    { args: { unit: gap.unit, count: gap.count } },
+  );
+  return (
+    <div
+      className="syllabus-annotations-activity-gap"
+      role="separator"
+      data-activity-gap={gap.unit}
+      data-activity-gap-count={gap.count}
+    >
+      <span
+        className="syllabus-annotations-activity-gap-rule"
+        aria-hidden="true"
+      />
+      <span className="syllabus-annotations-activity-gap-label">{label}</span>
+      <span
+        className="syllabus-annotations-activity-gap-rule"
+        aria-hidden="true"
+      />
+    </div>
+  );
+}
+
+function AnnotationStreamEntries({
+  entries,
+  quoteOrder,
+}: {
+  entries: MyAnnotationStreamEntry[];
+  quoteOrder: AnnotationsQuoteOrder;
+}) {
+  const showGaps = quoteOrder === "dateAdded";
+  return (
+    <>
+      {entries.map((entry, i) => (
+        <Fragment key={entry.id}>
+          {showGaps && i > 0 ? (
+            <AnnotationActivityGap
+              from={streamEntryAdded(entries[i - 1])}
+              to={streamEntryAdded(entry)}
+            />
+          ) : null}
+          <AnnotationStreamBody entry={entry} />
+        </Fragment>
+      ))}
+    </>
+  );
 }
 
 function formatAnnotationPageLabel(page: string): string {
@@ -486,9 +552,7 @@ export function AnnotationStreamGroup({
             {emptyLabel}
           </p>
         ) : (
-          entries.map((entry) => (
-            <AnnotationStreamBody key={entry.id} entry={entry} />
-          ))
+          <AnnotationStreamEntries entries={entries} quoteOrder={quoteOrder} />
         )}
       </div>
     </article>
@@ -557,9 +621,7 @@ function AnnotationCoverSidecar({
             {emptyLabel}
           </p>
         ) : (
-          entries.map((entry) => (
-            <AnnotationStreamBody key={entry.id} entry={entry} />
-          ))
+          <AnnotationStreamEntries entries={entries} quoteOrder={quoteOrder} />
         )}
       </div>
       {showCopyAll ? (

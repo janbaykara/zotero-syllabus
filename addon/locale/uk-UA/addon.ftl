@@ -634,6 +634,54 @@ annotations-quote-order-location = Місце
 annotations-quote-order-location-title = Впорядковувати цитати за позицією в документі
 annotations-quote-order-date-added = Додано
 annotations-quote-order-date-added-title = Впорядковувати цитати за датою додавання (спочатку старі)
+annotations-activity-gap-later =
+    { $unit ->
+        [day] { $count ->
+            [one] день потому
+            [few] { $count } дні потому
+           *[many] { $count } днів потому
+        }
+        [week] { $count ->
+            [one] тиждень потому
+            [few] { $count } тижні потому
+           *[many] { $count } тижнів потому
+        }
+        [month] { $count ->
+            [one] місяць потому
+            [few] { $count } місяці потому
+           *[many] { $count } місяців потому
+        }
+        [year] { $count ->
+            [one] рік потому
+            [few] { $count } роки потому
+           *[many] { $count } років потому
+        }
+       *[other] потому
+    }
+annotations-activity-gap-earlier =
+    { $unit ->
+        [day] { $count ->
+            [one] днем раніше
+            [few] { $count } дні раніше
+           *[many] { $count } днів раніше
+        }
+        [week] { $count ->
+            [one] тижнем раніше
+            [few] { $count } тижні раніше
+           *[many] { $count } тижнів раніше
+        }
+        [month] { $count ->
+            [one] місяцем раніше
+            [few] { $count } місяці раніше
+           *[many] { $count } місяців раніше
+        }
+        [year] { $count ->
+            [one] роком раніше
+            [few] { $count } роки раніше
+           *[many] { $count } років раніше
+        }
+       *[other] раніше
+    }
 my-annotations-load-previous = Load previous
 my-annotations-load-previous-loading = Loading…
 my-annotations-open-in-reader = Open in reader

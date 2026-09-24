@@ -628,6 +628,54 @@ annotations-quote-order-location = الموقع
 annotations-quote-order-location-title = ترتيب الاقتباسات حسب الموضع في المستند
 annotations-quote-order-date-added = تاريخ الإضافة
 annotations-quote-order-date-added-title = ترتيب الاقتباسات حسب تاريخ الإضافة (الأقدم أولاً)
+annotations-activity-gap-later =
+    { $unit ->
+        [day] { $count ->
+            [one] بعد يوم
+            [two] بعد يومين
+           *[other] بعد { $count } أيام
+        }
+        [week] { $count ->
+            [one] بعد أسبوع
+            [two] بعد أسبوعين
+           *[other] بعد { $count } أسابيع
+        }
+        [month] { $count ->
+            [one] بعد شهر
+            [two] بعد شهرين
+           *[other] بعد { $count } أشهر
+        }
+        [year] { $count ->
+            [one] بعد سنة
+            [two] بعد سنتين
+           *[other] بعد { $count } سنوات
+        }
+       *[other] لاحقًا
+    }
+annotations-activity-gap-earlier =
+    { $unit ->
+        [day] { $count ->
+            [one] قبل يوم
+            [two] قبل يومين
+           *[other] قبل { $count } أيام
+        }
+        [week] { $count ->
+            [one] قبل أسبوع
+            [two] قبل أسبوعين
+           *[other] قبل { $count } أسابيع
+        }
+        [month] { $count ->
+            [one] قبل شهر
+            [two] قبل شهرين
+           *[other] قبل { $count } أشهر
+        }
+        [year] { $count ->
+            [one] قبل سنة
+            [two] قبل سنتين
+           *[other] قبل { $count } سنوات
+        }
+       *[other] سابقًا
+    }
 my-annotations-load-previous = Load previous
 my-annotations-load-previous-loading = Loading…
 my-annotations-open-in-reader = Open in reader

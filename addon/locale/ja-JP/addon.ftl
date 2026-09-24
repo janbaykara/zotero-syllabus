@@ -628,6 +628,22 @@ annotations-quote-order-location = 位置
 annotations-quote-order-location-title = 文書内の位置で引用を並べ替え
 annotations-quote-order-date-added = 追加日
 annotations-quote-order-date-added-title = 追加日で引用を並べ替え（古い順）
+annotations-activity-gap-later =
+    { $unit ->
+        [day] { $count }日後
+        [week] { $count }週間後
+        [month] { $count }か月後
+        [year] { $count }年後
+       *[other] 後
+    }
+annotations-activity-gap-earlier =
+    { $unit ->
+        [day] { $count }日前
+        [week] { $count }週間前
+        [month] { $count }か月前
+        [year] { $count }年前
+       *[other] 前
+    }
 my-annotations-load-previous = Load previous
 my-annotations-load-previous-loading = Loading…
 my-annotations-open-in-reader = Open in reader

@@ -628,6 +628,46 @@ annotations-quote-order-location = Localização
 annotations-quote-order-location-title = Ordenar citações pela posição no documento
 annotations-quote-order-date-added = Adicionado
 annotations-quote-order-date-added-title = Ordenar citações pela data de adição (mais antigas primeiro)
+annotations-activity-gap-later =
+    { $unit ->
+        [day] { $count ->
+            [one] um dia depois
+           *[other] { $count } dias depois
+        }
+        [week] { $count ->
+            [one] uma semana depois
+           *[other] { $count } semanas depois
+        }
+        [month] { $count ->
+            [one] um mês depois
+           *[other] { $count } meses depois
+        }
+        [year] { $count ->
+            [one] um ano depois
+           *[other] { $count } anos depois
+        }
+       *[other] depois
+    }
+annotations-activity-gap-earlier =
+    { $unit ->
+        [day] { $count ->
+            [one] um dia antes
+           *[other] { $count } dias antes
+        }
+        [week] { $count ->
+            [one] uma semana antes
+           *[other] { $count } semanas antes
+        }
+        [month] { $count ->
+            [one] um mês antes
+           *[other] { $count } meses antes
+        }
+        [year] { $count ->
+            [one] um ano antes
+           *[other] { $count } anos antes
+        }
+       *[other] antes
+    }
 my-annotations-load-previous = Load previous
 my-annotations-load-previous-loading = Loading…
 my-annotations-open-in-reader = Open in reader

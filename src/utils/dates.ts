@@ -100,6 +100,48 @@ export function calendarDayDiff(from: Date, to: Date): number {
   return Math.round((end - start) / DAY_MS);
 }
 
+export type AnnotationActivityGapUnit = "day" | "week" | "month" | "year";
+
+export type AnnotationActivityGap = {
+  unit: AnnotationActivityGapUnit;
+  count: number;
+  /** True when `to` is on a later calendar day than `from`. */
+  later: boolean;
+};
+
+/**
+ * Pause between two annotation timestamps, for “a day later” breathers.
+ * Same local calendar day (or unreadable dates) → no gap.
+ */
+export function annotationActivityGap(
+  fromValue: string | undefined,
+  toValue: string | undefined,
+): AnnotationActivityGap | null {
+  const fromMs = parseItemDateMs(fromValue);
+  const toMs = parseItemDateMs(toValue);
+  if (!fromMs || !toMs) {
+    return null;
+  }
+  const dayDiff = calendarDayDiff(new Date(fromMs), new Date(toMs));
+  if (dayDiff === 0) {
+    return null;
+  }
+  const abs = Math.abs(dayDiff);
+  let unit: AnnotationActivityGapUnit = "day";
+  let count = abs;
+  if (abs >= 365) {
+    unit = "year";
+    count = Math.max(1, Math.round(abs / 365));
+  } else if (abs >= 60) {
+    unit = "month";
+    count = Math.max(1, Math.round(abs / 30));
+  } else if (abs >= 14) {
+    unit = "week";
+    count = Math.max(1, Math.round(abs / 7));
+  }
+  return { unit, count, later: dayDiff > 0 };
+}
+
 /**
  * Locale-relative calendar label for a reading date (“tomorrow”, “in 3 days”).
  * Compares local calendar days so the time of day does not matter.

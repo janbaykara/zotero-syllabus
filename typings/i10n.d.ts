@@ -3,6 +3,8 @@
 /* eslint-disable */
 // @ts-nocheck
 export type FluentMessageId =
+  | 'annotations-activity-gap-earlier'
+  | 'annotations-activity-gap-later'
   | 'annotations-quote-order-date-added'
   | 'annotations-quote-order-date-added-title'
   | 'annotations-quote-order-location'

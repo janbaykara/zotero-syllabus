@@ -628,6 +628,22 @@ annotations-quote-order-location = 位置
 annotations-quote-order-location-title = 依文件中的位置排序引文
 annotations-quote-order-date-added = 新增時間
 annotations-quote-order-date-added-title = 依新增時間排序引文（最早在前）
+annotations-activity-gap-later =
+    { $unit ->
+        [day] { $count } 天後
+        [week] { $count } 週後
+        [month] { $count } 個月後
+        [year] { $count } 年後
+       *[other] 之後
+    }
+annotations-activity-gap-earlier =
+    { $unit ->
+        [day] { $count } 天前
+        [week] { $count } 週前
+        [month] { $count } 個月前
+        [year] { $count } 年前
+       *[other] 之前
+    }
 my-annotations-load-previous = Load previous
 my-annotations-load-previous-loading = Loading…
 my-annotations-open-in-reader = Open in reader

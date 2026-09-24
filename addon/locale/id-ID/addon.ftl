@@ -628,6 +628,46 @@ annotations-quote-order-location = Lokasi
 annotations-quote-order-location-title = Urutkan kutipan menurut posisi di dokumen
 annotations-quote-order-date-added = Ditambahkan
 annotations-quote-order-date-added-title = Urutkan kutipan menurut tanggal ditambahkan (terlama dulu)
+annotations-activity-gap-later =
+    { $unit ->
+        [day] { $count ->
+            [one] sehari kemudian
+           *[other] { $count } hari kemudian
+        }
+        [week] { $count ->
+            [one] seminggu kemudian
+           *[other] { $count } minggu kemudian
+        }
+        [month] { $count ->
+            [one] sebulan kemudian
+           *[other] { $count } bulan kemudian
+        }
+        [year] { $count ->
+            [one] setahun kemudian
+           *[other] { $count } tahun kemudian
+        }
+       *[other] kemudian
+    }
+annotations-activity-gap-earlier =
+    { $unit ->
+        [day] { $count ->
+            [one] sehari sebelumnya
+           *[other] { $count } hari sebelumnya
+        }
+        [week] { $count ->
+            [one] seminggu sebelumnya
+           *[other] { $count } minggu sebelumnya
+        }
+        [month] { $count ->
+            [one] sebulan sebelumnya
+           *[other] { $count } bulan sebelumnya
+        }
+        [year] { $count ->
+            [one] setahun sebelumnya
+           *[other] { $count } tahun sebelumnya
+        }
+       *[other] sebelumnya
+    }
 my-annotations-load-previous = Load previous
 my-annotations-load-previous-loading = Loading…
 my-annotations-open-in-reader = Open in reader

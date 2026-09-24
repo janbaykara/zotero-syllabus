@@ -628,6 +628,22 @@ annotations-quote-order-location = 위치
 annotations-quote-order-location-title = 문서 내 위치로 인용 정렬
 annotations-quote-order-date-added = 추가됨
 annotations-quote-order-date-added-title = 추가일로 인용 정렬 (오래된 순)
+annotations-activity-gap-later =
+    { $unit ->
+        [day] { $count }일 후
+        [week] { $count }주 후
+        [month] { $count }개월 후
+        [year] { $count }년 후
+       *[other] 후
+    }
+annotations-activity-gap-earlier =
+    { $unit ->
+        [day] { $count }일 전
+        [week] { $count }주 전
+        [month] { $count }개월 전
+        [year] { $count }년 전
+       *[other] 전
+    }
 my-annotations-load-previous = Load previous
 my-annotations-load-previous-loading = Loading…
 my-annotations-open-in-reader = Open in reader

@@ -1,5 +1,6 @@
 import { assert } from "chai";
 import {
+  annotationActivityGap,
   formatRelativeReadingDate,
   formatRelativeTimestamp,
   parseItemDateMs,
@@ -53,6 +54,46 @@ describe("dates", function () {
         ),
         null,
       );
+    });
+  });
+
+  describe("annotationActivityGap", function () {
+    it("returns null on the same local calendar day", function () {
+      assert.equal(
+        annotationActivityGap("2026-09-02 09:00:00", "2026-09-02 22:30:00"),
+        null,
+      );
+    });
+
+    it("describes a one-day pause in either direction", function () {
+      assert.deepEqual(
+        annotationActivityGap("2026-09-01 18:00:00", "2026-09-02 09:00:00"),
+        { unit: "day", count: 1, later: true },
+      );
+      assert.deepEqual(
+        annotationActivityGap("2026-09-02 09:00:00", "2026-09-01 18:00:00"),
+        { unit: "day", count: 1, later: false },
+      );
+    });
+
+    it("steps up to weeks, months, and years", function () {
+      assert.deepEqual(
+        annotationActivityGap("2026-08-10 12:00:00", "2026-09-02 12:00:00"),
+        { unit: "week", count: 3, later: true },
+      );
+      assert.deepEqual(
+        annotationActivityGap("2026-06-01 12:00:00", "2026-09-02 12:00:00"),
+        { unit: "month", count: 3, later: true },
+      );
+      assert.deepEqual(
+        annotationActivityGap("2024-09-02 12:00:00", "2026-09-02 12:00:00"),
+        { unit: "year", count: 2, later: true },
+      );
+    });
+
+    it("returns null for missing dates", function () {
+      assert.equal(annotationActivityGap("", "2026-09-02 12:00:00"), null);
+      assert.equal(annotationActivityGap("2026-09-02 12:00:00", ""), null);
     });
   });
 

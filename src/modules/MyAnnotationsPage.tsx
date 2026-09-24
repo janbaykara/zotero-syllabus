@@ -16,6 +16,7 @@ import { annotationMatchesColorFilter } from "../utils/annotationColors";
 import {
   ANNOTATION_COLOR_FILTER_FEED,
   useAnnotationColorFilter,
+  useAnnotationsQuoteOrder,
   useMyAnnotationsOrder,
   type MyAnnotationsOrder,
 } from "./myAnnotationsPrefs";
@@ -24,9 +25,11 @@ import { GalleryViewportProvider } from "./galleryVisibility";
 import { useItemIdentifierSelection } from "./browsePage";
 import type { MagazineTileClick } from "./MagazineTile";
 import {
+  AnnotationActivityGap,
   AnnotationStreamGroup,
   groupAdjacentStreamEntries,
   openAnnotationGroupInReader,
+  type AnnotationStreamParentGroup,
 } from "./annotationStream";
 import {
   useMyAnnotationsStream,
@@ -52,6 +55,17 @@ function sortStreamRows(
     sorted.reverse();
   }
   return sorted;
+}
+
+function streamGroupEdgeAdded(
+  group: AnnotationStreamParentGroup,
+  edge: "start" | "end",
+): string | undefined {
+  const entry =
+    edge === "start"
+      ? group.entries[0]
+      : group.entries[group.entries.length - 1];
+  return entry?.dateAdded || entry?.dateModified;
 }
 
 function LoadPreviousButton({
@@ -83,6 +97,7 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
   const { rows, colors, hasMore, loading, loadingMore, loadPrevious } =
     useMyAnnotationsStream(libraryID);
   const [order, setOrder] = useMyAnnotationsOrder();
+  const [quoteOrder] = useAnnotationsQuoteOrder();
   const [colorFilter] = useAnnotationColorFilter(ANNOTATION_COLOR_FILTER_FEED);
   const { selectedItemIds } = useItemIdentifierSelection();
   const pageRef = useRef<HTMLDivElement>(null);
@@ -280,25 +295,35 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
               )}
             </p>
           ) : (
-            displayGroups.map((group) => (
-              <AnnotationStreamGroup
-                key={group.key}
-                group={group}
-                selected={
-                  !!group.parent &&
-                  (selectedItemIds?.includes(group.parent.id) || false)
-                }
-                onClick={(_item, e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  openAnnotationGroupInReader(group);
-                }}
-                onDoubleClick={() => {
-                  openAnnotationGroupInReader(group);
-                }}
-                onContextMenu={handleContextMenu}
-              />
-            ))
+            displayGroups.map((group, i) => {
+              const prev = i > 0 ? displayGroups[i - 1] : null;
+              return (
+                <Fragment key={group.key}>
+                  {quoteOrder === "dateAdded" && prev ? (
+                    <AnnotationActivityGap
+                      from={streamGroupEdgeAdded(prev, "end")}
+                      to={streamGroupEdgeAdded(group, "start")}
+                    />
+                  ) : null}
+                  <AnnotationStreamGroup
+                    group={group}
+                    selected={
+                      !!group.parent &&
+                      (selectedItemIds?.includes(group.parent.id) || false)
+                    }
+                    onClick={(_item, e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openAnnotationGroupInReader(group);
+                    }}
+                    onDoubleClick={() => {
+                      openAnnotationGroupInReader(group);
+                    }}
+                    onContextMenu={handleContextMenu}
+                  />
+                </Fragment>
+              );
+            })
           )}
           {order === "newestFirst" ? loadPreviousControl : null}
         </div>

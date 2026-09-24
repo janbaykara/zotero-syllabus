@@ -628,6 +628,46 @@ annotations-quote-order-location = Vị trí
 annotations-quote-order-location-title = Sắp xếp trích dẫn theo vị trí trong tài liệu
 annotations-quote-order-date-added = Đã thêm
 annotations-quote-order-date-added-title = Sắp xếp trích dẫn theo ngày thêm (cũ nhất trước)
+annotations-activity-gap-later =
+    { $unit ->
+        [day] { $count ->
+            [one] một ngày sau
+           *[other] { $count } ngày sau
+        }
+        [week] { $count ->
+            [one] một tuần sau
+           *[other] { $count } tuần sau
+        }
+        [month] { $count ->
+            [one] một tháng sau
+           *[other] { $count } tháng sau
+        }
+        [year] { $count ->
+            [one] một năm sau
+           *[other] { $count } năm sau
+        }
+       *[other] sau
+    }
+annotations-activity-gap-earlier =
+    { $unit ->
+        [day] { $count ->
+            [one] một ngày trước
+           *[other] { $count } ngày trước
+        }
+        [week] { $count ->
+            [one] một tuần trước
+           *[other] { $count } tuần trước
+        }
+        [month] { $count ->
+            [one] một tháng trước
+           *[other] { $count } tháng trước
+        }
+        [year] { $count ->
+            [one] một năm trước
+           *[other] { $count } năm trước
+        }
+       *[other] trước
+    }
 my-annotations-load-previous = Load previous
 my-annotations-load-previous-loading = Loading…
 my-annotations-open-in-reader = Open in reader

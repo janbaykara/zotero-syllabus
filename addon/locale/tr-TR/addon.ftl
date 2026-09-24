@@ -628,6 +628,46 @@ annotations-quote-order-location = Konum
 annotations-quote-order-location-title = Alıntıları belgedeki konuma göre sırala
 annotations-quote-order-date-added = Eklendi
 annotations-quote-order-date-added-title = Alıntıları eklenme tarihine göre sırala (en eski önce)
+annotations-activity-gap-later =
+    { $unit ->
+        [day] { $count ->
+            [one] bir gün sonra
+           *[other] { $count } gün sonra
+        }
+        [week] { $count ->
+            [one] bir hafta sonra
+           *[other] { $count } hafta sonra
+        }
+        [month] { $count ->
+            [one] bir ay sonra
+           *[other] { $count } ay sonra
+        }
+        [year] { $count ->
+            [one] bir yıl sonra
+           *[other] { $count } yıl sonra
+        }
+       *[other] sonra
+    }
+annotations-activity-gap-earlier =
+    { $unit ->
+        [day] { $count ->
+            [one] bir gün önce
+           *[other] { $count } gün önce
+        }
+        [week] { $count ->
+            [one] bir hafta önce
+           *[other] { $count } hafta önce
+        }
+        [month] { $count ->
+            [one] bir ay önce
+           *[other] { $count } ay önce
+        }
+        [year] { $count ->
+            [one] bir yıl önce
+           *[other] { $count } yıl önce
+        }
+       *[other] önce
+    }
 my-annotations-load-previous = Load previous
 my-annotations-load-previous-loading = Loading…
 my-annotations-open-in-reader = Open in reader

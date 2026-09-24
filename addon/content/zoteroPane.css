@@ -3954,6 +3954,53 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   gap: 1.15rem;
 }
 
+.syllabus-annotations-activity-gap {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.7rem;
+  margin-block: 0.15rem;
+  color: var(--fill-secondary, #888);
+}
+
+.syllabus-annotations-activity-gap-rule {
+  flex: 1 1 1.25rem;
+  min-width: 0.75rem;
+  height: 2px;
+  background-image: radial-gradient(
+    circle closest-side,
+    color-mix(in srgb, var(--fill-secondary, #888) 55%, transparent) 90%,
+    transparent 100%
+  );
+  background-size: 7px 2px;
+  background-repeat: repeat-x;
+  background-position: center;
+}
+
+.syllabus-annotations-activity-gap-label {
+  flex: 0 0 auto;
+  font-family: system-ui, sans-serif;
+  font-size: 0.88rem;
+  font-style: normal;
+  line-height: 1.25;
+  opacity: 0.68;
+}
+
+.syllabus-my-annotations-page
+  .syllabus-my-annotations-stream
+  > .syllabus-annotations-activity-gap {
+  margin-block: -0.45rem;
+}
+
+.syllabus-explorer-cover-rail
+  .syllabus-explorer-cover-item
+  .syllabus-annotations-activity-gap {
+  flex: 0 0 auto;
+  width: var(--syllabus-explorer-annotation-col-width);
+  max-width: var(--syllabus-explorer-annotation-col-width);
+  box-sizing: border-box;
+}
+
 .syllabus-my-annotations-stream-copy-all-wrap {
   display: flex;
   justify-content: flex-end;
