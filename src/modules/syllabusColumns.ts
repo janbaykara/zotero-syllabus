@@ -60,10 +60,8 @@ export async function registerSyllabusStatusColumn() {
           ) ?? firstAssignment.classNumber;
         if (
           classNumber != null &&
-          SyllabusManager.getClassStatus(
-            selectedCollection.id,
-            classNumber,
-          ) === "done"
+          SyllabusManager.getClassStatus(selectedCollection.id, classNumber) ===
+            "done"
         ) {
           return "done";
         }
@@ -131,9 +129,7 @@ export async function registerReadingTimeColumn() {
 function isStandaloneSyllabusNote(item: Zotero.Item): boolean {
   try {
     return (
-      item.isNote() &&
-      item.isTopLevelItem() &&
-      item.hasTag(SYLLABUS_NOTE_TAG)
+      item.isNote() && item.isTopLevelItem() && item.hasTag(SYLLABUS_NOTE_TAG)
     );
   } catch {
     return false;
@@ -254,7 +250,6 @@ export async function registerSyllabusInfoColumn() {
     pluginID: addon.data.config.addonID,
     dataKey: field,
     label: getString("column-syllabus-info"),
-    hidden: false,
     dataProvider: (item: Zotero.Item, dataKey: string) => {
       if (isStandaloneSyllabusNote(item)) {
         return "";

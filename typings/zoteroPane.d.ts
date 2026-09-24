@@ -2,6 +2,13 @@
  * Augment zotero-types where the published defs lag the live ZoteroPane API.
  */
 declare namespace _ZoteroTypes {
+  namespace ItemTreeManager {
+    interface ItemTreeColumnOptions {
+      /** Initial visibility. Persisted when listed in `zoteroPersist`. */
+      hidden?: boolean;
+    }
+  }
+
   interface ZoteroPane {
     /**
      * Second arg is historically `inLibraryRoot?: boolean`; Zotero 7+ also
