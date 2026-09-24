@@ -37,7 +37,7 @@
     "date-fns": "^4.4.0",
     "docx": "^9.7.1",
     "lru-cache": "^11.5.2",
-    "lucide-preact": "^0.562.0",
+    "lucide-preact": "^1.47.0",
     "markdown-it": "^15.0.2",
     "pluralize": "^8.0.0",
     "preact": "^10.29.8",
