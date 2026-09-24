@@ -480,7 +480,8 @@ pinned-syllabus-progress = { $done } of { $total }
 column-reading-instructions = Hướng dẫn đọc
 column-status = Trạng thái
 column-reading-time = Thời gian đọc
-column-syllabus-info = Thông tin đề cương
+column-syllabus-info = Buổi học / bài tập đề cương
+column-syllabus-priority = Mức ưu tiên đề cương
 column-class-hash = #{ $number }
 
 # Progress / dialogs

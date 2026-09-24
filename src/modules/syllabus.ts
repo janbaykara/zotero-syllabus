@@ -282,6 +282,7 @@ import {
   registerSyllabusStatusColumn,
   registerReadingTimeColumn,
   registerSyllabusInfoColumn,
+  registerSyllabusPriorityColumn,
 } from "./syllabusColumns";
 
 function resolveAssignmentClassNumber(
@@ -476,6 +477,7 @@ export class SyllabusManager {
     });
     this.registerNotifier();
     this.registerSyllabusInfoColumn();
+    this.registerSyllabusPriorityColumn();
     this.registerSyllabusClassInstructionColumn();
     this.registerSyllabusStatusColumn();
     this.registerReadingTimeColumn();
@@ -1742,6 +1744,7 @@ export class SyllabusManager {
   static registerSyllabusStatusColumn = registerSyllabusStatusColumn;
   static registerReadingTimeColumn = registerReadingTimeColumn;
   static registerSyllabusInfoColumn = registerSyllabusInfoColumn;
+  static registerSyllabusPriorityColumn = registerSyllabusPriorityColumn;
 
   static reloadItemPane() {
     ztoolkit.log("SyllabusManager.reloadItemPane");

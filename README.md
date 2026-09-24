@@ -144,7 +144,7 @@ Drag to reorder within a class, or reset to natural order. Drag between classes 
 
 ![Drag and drop functionality demonstration](doc/images/drag-drop.gif)
 
-In **Table** view, a sortable **Syllabus Info** column summarises class, priority, and status. Sort by it to see readings in syllabus order.
+In **Table** view, a sortable **Syllabus Class / Assignment** column summarises class, priority, and status. Sort by it to see readings in syllabus order.
 
 ![Standard Zotero list view](doc/images/list.png)
 

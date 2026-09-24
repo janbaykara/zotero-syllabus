@@ -42,6 +42,7 @@ export type FluentMessageId =
   | 'column-reading-time'
   | 'column-status'
   | 'column-syllabus-info'
+  | 'column-syllabus-priority'
   | 'dialog-ok'
   | 'dialog-publish-confirm-cancel'
   | 'dialog-publish-confirm-ok'

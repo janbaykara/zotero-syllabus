@@ -480,7 +480,8 @@ pinned-syllabus-progress = { $done } of { $total }
 column-reading-instructions = Instrucciones de lectura
 column-status = Estado
 column-reading-time = Tiempo de lectura
-column-syllabus-info = Info del programa
+column-syllabus-info = Clase / asignación del programa
+column-syllabus-priority = Prioridad del programa
 column-class-hash = #{ $number }
 
 # Progress / dialogs

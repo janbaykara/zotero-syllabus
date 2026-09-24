@@ -3,6 +3,7 @@ import { getPref } from "../utils/prefs";
 import { getReadingTimeSync, formatReadingTime } from "../utils/readingTime";
 import { getString } from "../utils/locale";
 import { SyllabusManager } from "./syllabus";
+import { SYLLABUS_NOTE_TAG } from "./syllabusNote";
 
 export async function registerSyllabusClassInstructionColumn() {
   const field = "syllabus-class-instruction";
@@ -46,8 +47,26 @@ export async function registerSyllabusStatusColumn() {
           item,
           selectedCollection.id,
         );
-        // Return "done" or "" for sorting (empty string sorts first)
-        return firstAssignment?.status === "done" ? "done" : "";
+        if (!firstAssignment) {
+          return "";
+        }
+        if (firstAssignment.status === "done") {
+          return "done";
+        }
+        const classNumber =
+          SyllabusManager.getClassNumber(
+            selectedCollection.id,
+            firstAssignment.classId,
+          ) ?? firstAssignment.classNumber;
+        if (
+          classNumber != null &&
+          SyllabusManager.getClassStatus(
+            selectedCollection.id,
+            classNumber,
+          ) === "done"
+        ) {
+          return "done";
+        }
       }
 
       return "";
@@ -100,10 +119,121 @@ export async function registerReadingTimeColumn() {
       if (dataStr && dataStr !== "") {
         const minutes = parseInt(dataStr, 10);
         if (!isNaN(minutes) && minutes > 0) {
-          const formatted = formatReadingTime(minutes);
-          container.textContent = formatted;
-          container.style.color = "var(--fill-secondary)";
-          container.style.fontSize = "0.9em";
+          container.textContent = formatReadingTime(minutes);
+        }
+      }
+
+      return container;
+    },
+  });
+}
+
+function isStandaloneSyllabusNote(item: Zotero.Item): boolean {
+  try {
+    return (
+      item.isNote() &&
+      item.isTopLevelItem() &&
+      item.hasTag(SYLLABUS_NOTE_TAG)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function appendSyllabusInfoParts(
+  doc: Document,
+  container: HTMLElement,
+  parts: {
+    priority: string;
+    classNumber: string;
+    classTitle: string;
+    collectionId?: number;
+  },
+) {
+  const { priority, classNumber, classTitle, collectionId } = parts;
+
+  if (classNumber) {
+    const classNumberSpan = doc.createElement("span");
+    classNumberSpan.textContent = getString("column-class-hash", {
+      args: { number: classNumber },
+    });
+    container.appendChild(classNumberSpan);
+  }
+
+  if (classTitle) {
+    const titleSpan = doc.createElement("span");
+    titleSpan.textContent = classTitle;
+    container.appendChild(titleSpan);
+  } else if (!classNumber && !priority) {
+    const furtherSpan = doc.createElement("span");
+    furtherSpan.textContent = getString("further-reading-heading");
+    furtherSpan.style.color = "var(--fill-secondary)";
+    container.appendChild(furtherSpan);
+  }
+
+  if (priority) {
+    const priorityElements = SyllabusManager.createPriorityDisplay(
+      doc,
+      collectionId,
+      priority,
+    );
+    for (const element of priorityElements) {
+      element.style.color = "var(--fill-secondary)";
+      container.appendChild(element);
+    }
+  }
+}
+
+export async function registerSyllabusPriorityColumn() {
+  const field = "syllabus-priority";
+  await Zotero.ItemTreeManager.registerColumns({
+    pluginID: addon.data.config.addonID,
+    dataKey: field,
+    label: getString("column-syllabus-priority"),
+    hidden: true,
+    dataProvider: (item: Zotero.Item, dataKey: string) => {
+      if (isStandaloneSyllabusNote(item)) {
+        return "";
+      }
+
+      const selectedCollection = getSelectedCollection();
+      if (!selectedCollection) {
+        return "";
+      }
+
+      const firstAssignment = SyllabusManager.getFirstAssignment(
+        item,
+        selectedCollection.id,
+      );
+      const priority = firstAssignment?.priority;
+      if (!priority) {
+        return "";
+      }
+
+      const order = SyllabusManager.getPriorityOrderForCollection(
+        selectedCollection.id,
+        priority,
+      );
+      return `${String(order).padStart(4, "0")}|${priority}|${selectedCollection.id}`;
+    },
+    renderCell: (index, data, column, isFirstColumn, doc) => {
+      const container = doc.createElement("span");
+      container.className = `cell ${column.className}`;
+      container.style.display = "flex";
+      container.style.alignItems = "center";
+      container.style.gap = "6px";
+
+      const parts = String(data).split("|");
+      if (parts.length >= 2 && parts[1]) {
+        const priority = parts[1];
+        const collectionId = parts[2] ? parseInt(parts[2], 10) : undefined;
+        const priorityElements = SyllabusManager.createPriorityDisplay(
+          doc,
+          Number.isNaN(collectionId) ? undefined : collectionId,
+          priority,
+        );
+        for (const element of priorityElements) {
+          container.appendChild(element);
         }
       }
 
@@ -124,7 +254,12 @@ export async function registerSyllabusInfoColumn() {
     pluginID: addon.data.config.addonID,
     dataKey: field,
     label: getString("column-syllabus-info"),
+    hidden: false,
     dataProvider: (item: Zotero.Item, dataKey: string) => {
+      if (isStandaloneSyllabusNote(item)) {
+        return "";
+      }
+
       const selectedCollection = getSelectedCollection();
 
       if (selectedCollection) {
@@ -150,6 +285,12 @@ export async function registerSyllabusInfoColumn() {
               : "";
           const priority = firstAssignment.priority || "";
           return `${sortKey}|${priority}|${classNumber ?? ""}|${classTitle}|${selectedCollection.id}`;
+        }
+        if (
+          SyllabusManager.getFullClassNumberRange(selectedCollection.id)
+            .length > 0
+        ) {
+          return `||||${selectedCollection.id}`;
         }
       }
 
@@ -199,39 +340,12 @@ export async function registerSyllabusInfoColumn() {
         previousClassNumber = currentClassNumber;
         previousSortKey = sortKey;
 
-        // Display class number if available
-        if (classNumber) {
-          const classNumberSpan = doc.createElement("span");
-          classNumberSpan.textContent = getString("column-class-hash", {
-            args: { number: classNumber },
-          });
-          classNumberSpan.style.fontWeight = "500";
-          container.appendChild(classNumberSpan);
-        }
-
-        // Display priority if available - use collection-specific colors and labels
-        if (priority) {
-          const collectionIdNum = collectionId
-            ? parseInt(collectionId, 10)
-            : undefined;
-          const priorityElements = SyllabusManager.createPriorityDisplay(
-            doc,
-            collectionIdNum,
-            priority,
-          );
-          for (const element of priorityElements) {
-            container.appendChild(element);
-          }
-        }
-
-        // Display class title at the end if available
-        if (classTitle) {
-          const titleSpan = doc.createElement("span");
-          titleSpan.textContent = classTitle;
-          titleSpan.style.color = "var(--fill-secondary)";
-          titleSpan.style.fontSize = "1em";
-          container.appendChild(titleSpan);
-        }
+        appendSyllabusInfoParts(doc, container, {
+          priority,
+          classNumber,
+          classTitle,
+          collectionId: collectionId ? parseInt(collectionId, 10) : undefined,
+        });
       } else if (parts.length >= 4) {
         // Backward compatibility: handle old format without collectionId
         const priority = parts[1];
@@ -250,36 +364,11 @@ export async function registerSyllabusInfoColumn() {
         }
         previousClassNumber = currentClassNumber;
 
-        // Display class number if available
-        if (classNumber) {
-          const classNumberSpan = doc.createElement("span");
-          classNumberSpan.textContent = getString("column-class-hash", {
-            args: { number: classNumber },
-          });
-          classNumberSpan.style.fontWeight = "500";
-          container.appendChild(classNumberSpan);
-        }
-
-        // Display priority if available (using default colors/labels - no collectionId)
-        if (priority) {
-          const priorityElements = SyllabusManager.createPriorityDisplay(
-            doc,
-            undefined, // No collectionId for backward compatibility
-            priority,
-          );
-          for (const element of priorityElements) {
-            container.appendChild(element);
-          }
-        }
-
-        // Display class title at the end if available
-        if (classTitle) {
-          const titleSpan = doc.createElement("span");
-          titleSpan.textContent = classTitle;
-          titleSpan.style.color = "var(--fill-secondary)";
-          titleSpan.style.fontSize = "1em";
-          container.appendChild(titleSpan);
-        }
+        appendSyllabusInfoParts(doc, container, {
+          priority,
+          classNumber,
+          classTitle,
+        });
       }
 
       // Add thin left border colored by class number
