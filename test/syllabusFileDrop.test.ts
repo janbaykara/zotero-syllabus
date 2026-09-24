@@ -11,6 +11,7 @@ function dropNode(
   parent: EventTarget | null = null,
 ): EventTarget {
   return {
+    nodeType: 1,
     getAttribute: (name: string) => attrs[name] ?? null,
     parentElement: parent,
   } as unknown as EventTarget;
@@ -89,6 +90,7 @@ describe("syllabusFileDrop", function () {
         "data-syllabus-class-number": "4",
       });
       const overlay = {
+        nodeType: 1,
         className: SYLLABUS_FILE_DROP_OVERLAY_CLASS,
         closest: (selector: string) =>
           selector === `.${SYLLABUS_FILE_DROP_OVERLAY_CLASS}` ? overlay : null,
