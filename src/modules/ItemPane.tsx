@@ -2,7 +2,14 @@
 import { h, Fragment } from "preact";
 import { useState, useCallback, useMemo } from "preact/hooks";
 import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
-import { Square, SquareCheck } from "lucide-preact";
+import {
+  BookOpen,
+  Pin,
+  PinOff,
+  Plus,
+  Square,
+  SquareCheck,
+} from "lucide-preact";
 import { twMerge } from "tailwind-merge";
 import { useZoteroItem } from "./react-zotero-sync/item";
 import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
@@ -24,7 +31,8 @@ import {
   unpinItemWithNotePrompt,
 } from "./pinned";
 import { enqueuePinnedReadingScheduleSync } from "./readingScheduleCollection";
-import { Pin, PinOff, BookOpen } from "lucide-preact";
+import { isOptionalFeatureEnabled } from "./optionalFeatures";
+import { openAddToClassDialog } from "./openAddToClassDialog";
 
 interface ItemPaneProps {
   editable: boolean;
@@ -83,10 +91,13 @@ export function ItemPane({ editable }: ItemPaneProps) {
 
   if (selectedItemIds.length > 1) {
     return (
-      <div>
-        {getString("item-pane-n-selected", {
-          args: { count: selectedItemIds.length },
-        })}
+      <div className="flex flex-col gap-2 pb-2" dir={getUiDir()}>
+        <div>
+          {getString("item-pane-n-selected", {
+            args: { count: selectedItemIds.length },
+          })}
+        </div>
+        {editable ? <AddToClassButton /> : null}
       </div>
     );
   }
@@ -397,6 +408,7 @@ function ItemPaneContent({
       dir={getUiDir()}
     >
       <PinnedItemPaneControls item={itemVersion.item} />
+      {editable ? <AddToClassButton /> : null}
       {allAssignmentsByCollection.map((group) => {
         const isCurrentCollection = group.collectionId === currentCollectionId;
         return (
@@ -482,7 +494,7 @@ function ItemPaneContent({
                       "transparent";
                   }}
                 >
-                  + Create assignment
+                  {getString("item-pane-create-assignment")}
                 </button>
               </div>
             )}
@@ -792,9 +804,33 @@ function AssignmentEditor({
   );
 }
 
+function AddToClassButton() {
+  return (
+    <button
+      type="button"
+      onClick={() => openAddToClassDialog()}
+      className="px-2 py-1 text-xs font-medium rounded-md cursor-pointer border-0 bg-transparent text-secondary hover:bg-quinary"
+      title={getString("item-pane-add-to-class")}
+    >
+      <span className="flex items-center gap-2">
+        <Plus className="w-4 h-4" />
+        {getString("item-pane-add-to-class")}
+      </span>
+    </button>
+  );
+}
+
 function PinnedItemPaneControls({ item }: { item: Zotero.Item }) {
   const [pinned, setPinned] = useState(() => isPinnedItem(item));
   const [busy, setBusy] = useState(false);
+
+  // Pinning only surfaces on Home and Reading Schedule.
+  if (
+    !isOptionalFeatureEnabled("explorer") &&
+    !isOptionalFeatureEnabled("readingSchedule")
+  ) {
+    return null;
+  }
 
   try {
     if (!item.isRegularItem()) {

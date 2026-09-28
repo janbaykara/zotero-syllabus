@@ -168,6 +168,7 @@ menu-assign-to-class = 指派到課堂
 menu-no-collection = （未選取分類）
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = 新增到新{ $nomenclature } { $number }
+menu-search-classes = 搜尋課堂…
 menu-set-reading-status = 設定閱讀狀態
 status-done = 已完成
 status-not-done = 未完成
@@ -267,6 +268,14 @@ field-instructions = 說明
 placeholder-instructions = 為此作業新增說明…
 assignment-delete = 刪除作業
 item-pane-select-collection = 選取一個分類以檢視教學大綱作業
+item-pane-add-to-class = 新增到課堂…
+item-pane-create-assignment = 建立作業
+add-to-class-window-title = 新增到課堂
+add-to-class-search = 搜尋課程大綱和課堂
+add-to-class-empty = 沒有符合的課堂
+add-to-class-no-syllabi = 請先將一個收藏集轉為課程大綱，才能把閱讀指定到課堂。
+add-to-class-syllabus-in-library = { $syllabus }（{ $library }）
+add-to-class-cancel = 取消
 
 # Settings
 settings-title = 教學大綱設定

@@ -166,6 +166,7 @@ menu-assign-to-class = Assign to a class
 menu-no-collection = (No collection selected)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = Add to new { $nomenclature } { $number }
+menu-search-classes = Search classes…
 menu-set-reading-status = Set Reading Status
 status-done = Done
 status-not-done = Not Done
@@ -265,6 +266,14 @@ field-instructions = Instructions
 placeholder-instructions = Add instructions for this assignment…
 assignment-delete = Delete assignment
 item-pane-select-collection = Select a collection to view syllabus assignments
+item-pane-add-to-class = Add to class…
+item-pane-create-assignment = Create assignment
+add-to-class-window-title = Add to a class
+add-to-class-search = Search syllabi and classes
+add-to-class-empty = No matching classes
+add-to-class-no-syllabi = Turn a collection into a syllabus to assign readings to classes.
+add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-cancel = Cancel
 
 # Settings
 settings-title = Syllabus Settings

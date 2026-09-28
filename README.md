@@ -103,12 +103,13 @@ Structure a collection by class (or week / session — you choose the word). Ass
 
 #### Classes and assignments
 
-Add classes with **Add Class**, or right-click an item → **Assign to class** → **Add to new class**.
+Add classes with **Add Class**, or right-click an item → **Assign to a class** → **Add to new class**.
 
 Then assign readings by:
 
 - Dragging an item onto a class in Syllabus view.
-- Right-click → **Assign to class** and picking the class.
+- Right-click → **Assign to a class** and picking the class (the current syllabus, or another syllabus in the submenu).
+- Right-click → **Assign to a class** → **Search classes…**, or **Add to class…** in the item pane, to search every syllabus. This works even when the item pane is closed.
 
 An item can be assigned more than once (useful for breaking a long reading into chunks). Hover an item in Syllabus view and use **Duplicate**. If you merge duplicate items in Zotero, the surviving item keeps its class assignment.
 
@@ -126,7 +127,7 @@ Give items the **Course Information** priority (or your own top priority) so han
 
 #### Reading instructions, priority, and done
 
-Use the **Reading assignments** section in the item pane to set class, instruction, priority, and done status.
+Use the **Reading assignments** section in the item pane to set class, instruction, priority, and done status. **Add to class…** there (or in the item context menu) assigns the selected item to any class on any syllabus, and adds it to that collection if needed.
 
 ![Editing pane showing class number, instruction, and priority](doc/images/editing.png)
 

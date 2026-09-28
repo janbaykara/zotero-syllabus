@@ -31,6 +31,15 @@ import { itemsViewIsFilteredForTreeViewID } from "./react-zotero-sync/itemsViewI
 import { getCurrentTab, confirmPrompt } from "../utils/window";
 import { renderComponent, unmountComponent } from "../utils/react";
 import { ItemPane } from "./ItemPane";
+import { openAddToClassDialog } from "./openAddToClassDialog";
+import {
+  addItemsToClass,
+  buildAddToClassGroups,
+  libraryIDsForAddToClass,
+  selectedAssignableItems,
+  type AddToClassGroup,
+  type AddToClassRow,
+} from "./addToClass";
 import { h } from "preact";
 import { uuidv7 } from "uuidv7";
 import pluralize from "pluralize";
@@ -1748,11 +1757,10 @@ export class SyllabusManager {
 
   static reloadItemPane() {
     ztoolkit.log("SyllabusManager.reloadItemPane");
-    // Actually, don't. Let React handle the updates via subscribers.
-    this.destroyItemPaneSection();
-    setTimeout(() => {
-      this.registerSyllabusItemPaneSection();
-    }, 500);
+    if (this.syllabusItemPaneSection) {
+      return;
+    }
+    this.registerSyllabusItemPaneSection();
   }
 
   static destroyItemPaneSection() {
@@ -1783,28 +1791,13 @@ export class SyllabusManager {
         l10nID: getLocaleID("item-section-syllabus-sidenav-tooltip"),
         icon: "chrome://zotero/skin/16/universal/book.svg",
       },
-      onRender: ({ body, item, editable }) => {
-        const selectedCollection = getSelectedCollection();
+      onRender: ({ body, editable }) => {
         const win = Zotero.getMainWindow();
-
         body.textContent = "";
-
-        const root = body.ownerDocument?.createElement("div");
-        body.appendChild(root);
-
-        //   // Render Preact component
         renderComponent(
           win,
           body,
-          selectedCollection
-            ? h(ItemPane, {
-                currentCollectionId: selectedCollection.id,
-                editable,
-              })
-            : h("div", {
-                innerText: getString("item-pane-select-collection"),
-                className: "text-center text-gray-500 p-4",
-              }),
+          h(ItemPane, { editable }),
           "syllabus-item-pane",
         );
       },
@@ -1978,89 +1971,124 @@ export class SyllabusManager {
     });
   }
 
+  static addToClassRowMenuLabel(row: AddToClassRow): string {
+    if (row.kind === "further-reading") {
+      return getString("menu-none");
+    }
+    if (row.kind === "new-class") {
+      return getString("menu-add-to-new-class", {
+        args: {
+          nomenclature: row.nomenclature,
+          number: row.classNumber,
+        },
+      });
+    }
+    const classTitle = this.getClassTitle(
+      row.collectionId,
+      row.classNumber as number,
+      true,
+    );
+    return (
+      classTitle ||
+      getString("menu-class-label", {
+        args: {
+          nomenclature: row.nomenclature,
+          number: row.classNumber,
+        },
+      })
+    );
+  }
+
+  static menuChildrenForAddToClassGroup(group: AddToClassGroup) {
+    const classRows = group.rows.filter((row) => row.kind === "class");
+    const extraRows = group.rows.filter((row) => row.kind !== "class");
+    const children: any[] = classRows.map((row) => ({
+      tag: "menuitem" as const,
+      label: this.addToClassRowMenuLabel(row),
+      commandListener: () =>
+        void addItemsToClass({
+          items: selectedAssignableItems(),
+          collectionId: row.collectionId,
+          classNumber: row.classNumber,
+        }),
+    }));
+    if (classRows.length > 0 && extraRows.length > 0) {
+      children.push({ tag: "menuseparator" as const });
+    }
+    for (const [index, row] of extraRows.entries()) {
+      if (index > 0) {
+        children.push({ tag: "menuseparator" as const });
+      }
+      children.push({
+        tag: "menuitem" as const,
+        label: this.addToClassRowMenuLabel(row),
+        commandListener: () =>
+          void addItemsToClass({
+            items: selectedAssignableItems(),
+            collectionId: row.collectionId,
+            classNumber: row.classNumber,
+          }),
+      });
+    }
+    return children;
+  }
+
   static buildClassNumberChildren() {
     const selectedCollection = getSelectedCollection();
-    if (!selectedCollection) {
+    const items = selectedAssignableItems();
+    const groups = buildAddToClassGroups({
+      libraryIDs: libraryIDsForAddToClass(items),
+      currentCollectionId: selectedCollection?.id ?? null,
+    });
+    const searchItem = {
+      tag: "menuitem" as const,
+      label: getString("menu-search-classes"),
+      commandListener: () => {
+        openAddToClassDialog();
+      },
+    };
+
+    if (groups.length === 0) {
       return [
         {
           tag: "menuitem" as const,
-          label: getString("menu-no-collection"),
+          label: getString("add-to-class-no-syllabi"),
           disabled: true,
         },
+        { tag: "menuseparator" as const },
+        searchItem,
       ];
     }
 
-    // Get full range of class numbers (same logic as SyllabusPage)
-    const sortedClassNumbers = this.getFullClassNumberRange(
-      selectedCollection.id,
-    );
+    const current = groups.find((group) => group.isCurrent);
+    const others = groups.filter((group) => !group.isCurrent);
+    const children: any[] = [];
 
-    // Calculate next class number
-    const nextClassNumber =
-      sortedClassNumbers.length > 0 ? Math.max(...sortedClassNumbers) + 1 : 1;
-
-    const createClassHandler =
-      (classNumber: number | undefined) => async () => {
-        const zoteroPane = ztoolkit.getGlobal("ZoteroPane");
-        const selectedCollection = getSelectedCollection();
-        if (!selectedCollection) return;
-        const items = zoteroPane.getSelectedItems();
-        for (const item of items) {
-          if (item.isRegularItem()) {
-            await this.applyToFirstAssignment(item, selectedCollection.id, {
-              classNumber,
-            });
-            await item.saveTx();
-          }
-        }
-      };
-
-    const { singularCapitalized } = this.getNomenclatureFormatted(
-      selectedCollection.id,
-    );
-
-    const children: any[] = sortedClassNumbers.map((classNumber) => {
-      const classTitle = this.getClassTitle(
-        selectedCollection.id,
-        classNumber,
-        true,
-      );
-      return {
-        tag: "menuitem" as const,
-        label:
-          classTitle ||
-          getString("menu-class-label", {
-            args: { nomenclature: singularCapitalized, number: classNumber },
-          }),
-        commandListener: createClassHandler(classNumber),
-      };
-    });
-
-    // Add separator before "Add to new class" if there are existing classes
-    if (sortedClassNumbers.length > 0) {
-      children.push({ tag: "menuseparator" as const });
+    if (current) {
+      children.push(...this.menuChildrenForAddToClassGroup(current));
+    }
+    if (others.length > 0) {
+      if (children.length > 0) {
+        children.push({ tag: "menuseparator" as const });
+      }
+      for (const group of others) {
+        children.push({
+          tag: "menu" as const,
+          label: group.libraryName
+            ? getString("add-to-class-syllabus-in-library", {
+                args: {
+                  syllabus: group.collectionName,
+                  library: group.libraryName,
+                },
+              })
+            : group.collectionName,
+          children: this.menuChildrenForAddToClassGroup(group),
+        });
+      }
     }
 
-    children.push({
-      tag: "menuitem" as const,
-      label: getString("menu-add-to-new-class", {
-        args: {
-          nomenclature: singularCapitalized,
-          number: nextClassNumber,
-        },
-      }),
-      commandListener: createClassHandler(nextClassNumber),
-    });
-
-    // Add separator before "(None)"
     children.push({ tag: "menuseparator" as const });
-
-    children.push({
-      tag: "menuitem" as const,
-      label: getString("menu-none"),
-      commandListener: createClassHandler(undefined),
-    });
-
+    children.push(searchItem);
     return children;
   }
 
@@ -2104,6 +2132,10 @@ export class SyllabusManager {
   static setupContextMenuPinned() {
     ztoolkit.Menu.unregister("syllabus-pin-item-menu");
     ztoolkit.Menu.unregister("syllabus-pin-collection-menu");
+
+    const pinningSurfacesEnabled = () =>
+      isOptionalFeatureEnabled("explorer") ||
+      isOptionalFeatureEnabled("readingSchedule");
 
     const selectedRegularItems = (): Zotero.Item[] => {
       try {
@@ -2150,6 +2182,9 @@ export class SyllabusManager {
       label: getString("pinned-menu-pin-item"),
       icon: pinIcon,
       isHidden: () => {
+        if (!pinningSurfacesEnabled()) {
+          return true;
+        }
         return (
           selectedRegularItems().length === 0 &&
           selectedSyllabusNotes().length === 0
@@ -2235,6 +2270,9 @@ export class SyllabusManager {
       label: getString("pinned-menu-pin-syllabus"),
       icon: pinIcon,
       isHidden: () => {
+        if (!pinningSurfacesEnabled()) {
+          return true;
+        }
         const collection = getSelectedCollection();
         if (!collection) {
           return true;

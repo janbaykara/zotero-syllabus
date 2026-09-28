@@ -168,6 +168,7 @@ menu-assign-to-class = Attribuer à une séance
 menu-no-collection = (Aucune collection sélectionnée)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = Ajouter à la nouvelle { $nomenclature } { $number }
+menu-search-classes = Rechercher des séances…
 menu-set-reading-status = Définir l’état de lecture
 status-done = Lu
 status-not-done = Non lu
@@ -267,6 +268,14 @@ field-instructions = Consignes
 placeholder-instructions = Ajouter des consignes pour ce travail…
 assignment-delete = Supprimer le travail
 item-pane-select-collection = Sélectionnez une collection pour voir les attributions du syllabus
+item-pane-add-to-class = Ajouter à une séance…
+item-pane-create-assignment = Créer une assignation
+add-to-class-window-title = Ajouter à une séance
+add-to-class-search = Rechercher des syllabus et des séances
+add-to-class-empty = Aucune séance correspondante
+add-to-class-no-syllabi = Transformez une collection en syllabus pour attribuer des lectures aux séances.
+add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-cancel = Annuler
 
 # Settings
 settings-title = Paramètres du syllabus

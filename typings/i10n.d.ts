@@ -3,6 +3,12 @@
 /* eslint-disable */
 // @ts-nocheck
 export type FluentMessageId =
+  | 'add-to-class-cancel'
+  | 'add-to-class-empty'
+  | 'add-to-class-no-syllabi'
+  | 'add-to-class-search'
+  | 'add-to-class-syllabus-in-library'
+  | 'add-to-class-window-title'
   | 'annotations-activity-gap-earlier'
   | 'annotations-activity-gap-later'
   | 'annotations-quote-order-date-added'
@@ -197,10 +203,12 @@ export type FluentMessageId =
   | 'galleryTour-settings-title'
   | 'galleryTour-skip'
   | 'item-in-publication'
+  | 'item-pane-add-to-class'
   | 'item-pane-also-assigned'
   | 'item-pane-assignment-for'
   | 'item-pane-assignment-n'
   | 'item-pane-class-named'
+  | 'item-pane-create-assignment'
   | 'item-pane-current-view'
   | 'item-pane-due'
   | 'item-pane-mark-done'
@@ -230,6 +238,7 @@ export type FluentMessageId =
   | 'menu-class-label'
   | 'menu-no-collection'
   | 'menu-none'
+  | 'menu-search-classes'
   | 'menu-set-priority'
   | 'menu-set-reading-status'
   | 'menu-toggle-bibliography'

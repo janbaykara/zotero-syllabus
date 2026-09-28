@@ -168,6 +168,7 @@ menu-assign-to-class = Призначити до заняття
 menu-no-collection = (Колекцію не вибрано)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = Додати до { $nomenclature } { $number }
+menu-search-classes = Шукати заняття…
 menu-set-reading-status = Задати стан читання
 status-done = Виконано
 status-not-done = Не виконано
@@ -267,6 +268,14 @@ field-instructions = Інструкції
 placeholder-instructions = Додайте інструкції до цього завдання…
 assignment-delete = Вилучити завдання
 item-pane-select-collection = Виберіть колекцію, щоб переглянути завдання силабуса
+item-pane-add-to-class = Додати до заняття…
+item-pane-create-assignment = Створити призначення
+add-to-class-window-title = Додати до заняття
+add-to-class-search = Шукати навчальні плани й заняття
+add-to-class-empty = Немає відповідних занять
+add-to-class-no-syllabi = Перетворіть колекцію на навчальний план, щоб призначати читання заняттям.
+add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-cancel = Скасувати
 
 # Settings
 settings-title = Параметри силабуса
