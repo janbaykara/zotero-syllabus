@@ -168,6 +168,7 @@ menu-assign-to-class = Bir derse ata
 menu-no-collection = (Koleksiyon seçilmedi)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = Yeni { $nomenclature } { $number } öğesine ekle
+menu-search-classes = Ders ara…
 menu-set-reading-status = Okuma durumunu ayarla
 status-done = Tamamlandı
 status-not-done = Tamamlanmadı
@@ -270,6 +271,14 @@ field-instructions = Yönergeler
 placeholder-instructions = Bu ödev için yönerge ekleyin…
 assignment-delete = Ödevi sil
 item-pane-select-collection = İzlence ödevlerini görmek için bir koleksiyon seçin
+item-pane-add-to-class = Bir derse ekle…
+item-pane-create-assignment = Atama oluştur
+add-to-class-window-title = Bir derse ekle
+add-to-class-search = Müfredat ve ders ara
+add-to-class-empty = Eşleşen ders yok
+add-to-class-no-syllabi = Okumaları derslere atamak için önce bir koleksiyonu müfredata dönüştürün.
+add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-cancel = İptal
 
 # Settings
 settings-title = İzlence Ayarları

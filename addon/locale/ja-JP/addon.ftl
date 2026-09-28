@@ -168,6 +168,7 @@ menu-assign-to-class = 授業に割り当て
 menu-no-collection = （コレクションが選択されていません）
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = 新しい{ $nomenclature } { $number }に追加
+menu-search-classes = 授業を検索…
 menu-set-reading-status = 読書ステータスを設定
 status-done = 完了
 status-not-done = 未完了
@@ -270,6 +271,14 @@ field-instructions = 指示
 placeholder-instructions = この課題の指示を追加…
 assignment-delete = 課題を削除
 item-pane-select-collection = コレクションを選択してシラバスの課題を表示
+item-pane-add-to-class = 授業に追加…
+item-pane-create-assignment = 課題を作成
+add-to-class-window-title = 授業に追加
+add-to-class-search = シラバスと授業を検索
+add-to-class-empty = 一致する授業がありません
+add-to-class-no-syllabi = コレクションをシラバスにすると、授業に文献を割り当てられます。
+add-to-class-syllabus-in-library = { $syllabus }（{ $library }）
+add-to-class-cancel = キャンセル
 
 # Settings
 settings-title = シラバス設定

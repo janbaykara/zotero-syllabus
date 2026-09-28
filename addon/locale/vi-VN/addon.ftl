@@ -168,6 +168,7 @@ menu-assign-to-class = Gán vào buổi học
 menu-no-collection = (Chưa chọn bộ sưu tập)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = Thêm vào { $nomenclature } { $number } mới
+menu-search-classes = Tìm buổi học…
 menu-set-reading-status = Đặt trạng thái đọc
 status-done = Đã xong
 status-not-done = Chưa xong
@@ -270,6 +271,14 @@ field-instructions = Hướng dẫn
 placeholder-instructions = Thêm hướng dẫn cho bài tập này…
 assignment-delete = Xóa bài tập
 item-pane-select-collection = Chọn một bộ sưu tập để xem bài tập đề cương
+item-pane-add-to-class = Thêm vào buổi học…
+item-pane-create-assignment = Tạo phân công
+add-to-class-window-title = Thêm vào buổi học
+add-to-class-search = Tìm đề cương và buổi học
+add-to-class-empty = Không có buổi học phù hợp
+add-to-class-no-syllabi = Hãy biến một bộ sưu tập thành đề cương để gán bài đọc cho buổi học.
+add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-cancel = Hủy
 
 # Settings
 settings-title = Cài đặt đề cương

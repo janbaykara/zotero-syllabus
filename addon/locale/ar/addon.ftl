@@ -168,6 +168,7 @@ menu-assign-to-class = تعيين إلى محاضرة
 menu-no-collection = (لم يُحدد أي مجموعة)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = إضافة إلى { $nomenclature } { $number } جديد
+menu-search-classes = البحث في المحاضرات…
 menu-set-reading-status = تعيين حالة القراءة
 status-done = مكتمل
 status-not-done = غير مكتمل
@@ -270,6 +271,14 @@ field-instructions = التعليمات
 placeholder-instructions = أضف تعليمات لهذا التكليف…
 assignment-delete = حذف التكليف
 item-pane-select-collection = حدد مجموعة لعرض تكليفات المنهاج
+item-pane-add-to-class = إضافة إلى محاضرة…
+item-pane-create-assignment = إنشاء تعيين
+add-to-class-window-title = إضافة إلى محاضرة
+add-to-class-search = البحث في المقررات والمحاضرات
+add-to-class-empty = لا توجد محاضرات مطابقة
+add-to-class-no-syllabi = حوّل مجموعة إلى مقرر لتعيين القراءات إلى المحاضرات.
+add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-cancel = إلغاء
 
 # Settings
 settings-title = إعدادات المنهاج

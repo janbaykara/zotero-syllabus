@@ -168,6 +168,7 @@ menu-assign-to-class = 수업에 배정
 menu-no-collection = (선택한 컬렉션 없음)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = 새 { $nomenclature } { $number }에 추가
+menu-search-classes = 수업 검색…
 menu-set-reading-status = 읽기 상태 설정
 status-done = 완료
 status-not-done = 미완료
@@ -270,6 +271,14 @@ field-instructions = 안내
 placeholder-instructions = 이 과제에 대한 안내 추가…
 assignment-delete = 과제 삭제
 item-pane-select-collection = 컬렉션을 선택하여 강의계획서 과제 보기
+item-pane-add-to-class = 수업에 추가…
+item-pane-create-assignment = 과제 만들기
+add-to-class-window-title = 수업에 추가
+add-to-class-search = 강의계획서와 수업 검색
+add-to-class-empty = 일치하는 수업이 없습니다
+add-to-class-no-syllabi = 컬렉션을 강의계획서로 만들면 수업에 읽기를 배정할 수 있습니다.
+add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-cancel = 취소
 
 # Settings
 settings-title = 강의계획서 설정

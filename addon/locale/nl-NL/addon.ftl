@@ -168,6 +168,7 @@ menu-assign-to-class = Toewijzen aan een bijeenkomst
 menu-no-collection = (Geen collectie geselecteerd)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = Toevoegen aan nieuwe { $nomenclature } { $number }
+menu-search-classes = Bijeenkomsten zoeken…
 menu-set-reading-status = Leesstatus instellen
 status-done = Afgerond
 status-not-done = Niet afgerond
@@ -270,6 +271,14 @@ field-instructions = Aanwijzingen
 placeholder-instructions = Aanwijzingen voor deze opdracht toevoegen…
 assignment-delete = Opdracht verwijderen
 item-pane-select-collection = Selecteer een collectie om syllabustoewijzingen te zien
+item-pane-add-to-class = Toevoegen aan een bijeenkomst…
+item-pane-create-assignment = Opdracht maken
+add-to-class-window-title = Toevoegen aan een bijeenkomst
+add-to-class-search = Syllabi en bijeenkomsten zoeken
+add-to-class-empty = Geen overeenkomende bijeenkomsten
+add-to-class-no-syllabi = Zet eerst een collectie om in een syllabus om lectuur aan bijeenkomsten toe te wijzen.
+add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-cancel = Annuleren
 
 # Settings
 settings-title = Syllabusinstellingen

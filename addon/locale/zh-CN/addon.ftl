@@ -166,6 +166,7 @@ menu-assign-to-class = 分配到课堂
 menu-no-collection = （未选择分类）
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = 添加到新{ $nomenclature } { $number }
+menu-search-classes = 搜索课堂…
 menu-set-reading-status = 设置阅读状态
 status-done = 已完成
 status-not-done = 未完成
@@ -268,6 +269,14 @@ field-instructions = 说明
 placeholder-instructions = 为此作业添加说明…
 assignment-delete = 删除作业
 item-pane-select-collection = 选择一个分类以查看教学大纲作业
+item-pane-add-to-class = 添加到课堂…
+item-pane-create-assignment = 创建作业
+add-to-class-window-title = 添加到课堂
+add-to-class-search = 搜索教学大纲和课堂
+add-to-class-empty = 没有匹配的课堂
+add-to-class-no-syllabi = 请先将一个分类转为教学大纲，才能把阅读分配到课堂。
+add-to-class-syllabus-in-library = { $syllabus }（{ $library }）
+add-to-class-cancel = 取消
 
 # Settings
 settings-title = 教学大纲设置

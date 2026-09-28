@@ -168,6 +168,7 @@ menu-assign-to-class = Przypisz do zajęć
 menu-no-collection = (Nie wybrano kolekcji)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = Dodaj do nowych: { $nomenclature } { $number }
+menu-search-classes = Szukaj zajęć…
 menu-set-reading-status = Ustaw status lektury
 status-done = Ukończono
 status-not-done = Nie ukończono
@@ -270,6 +271,14 @@ field-instructions = Instrukcje
 placeholder-instructions = Dodaj instrukcje do tego zadania…
 assignment-delete = Usuń zadanie
 item-pane-select-collection = Wybierz kolekcję, aby zobaczyć zadania sylabusa
+item-pane-add-to-class = Dodaj do zajęć…
+item-pane-create-assignment = Utwórz przypisanie
+add-to-class-window-title = Dodaj do zajęć
+add-to-class-search = Szukaj sylabusów i zajęć
+add-to-class-empty = Brak pasujących zajęć
+add-to-class-no-syllabi = Przekształć kolekcję w sylabus, aby przypisywać lektury do zajęć.
+add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-cancel = Anuluj
 
 # Settings
 settings-title = Ustawienia sylabusa

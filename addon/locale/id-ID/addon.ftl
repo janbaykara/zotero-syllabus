@@ -168,6 +168,7 @@ menu-assign-to-class = Tetapkan ke kelas
 menu-no-collection = (Tidak ada koleksi yang dipilih)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = Tambahkan ke { $nomenclature } { $number } baru
+menu-search-classes = Cari kelas…
 menu-set-reading-status = Atur status bacaan
 status-done = Selesai
 status-not-done = Belum selesai
@@ -270,6 +271,14 @@ field-instructions = Instruksi
 placeholder-instructions = Tambahkan instruksi untuk tugas ini…
 assignment-delete = Hapus tugas
 item-pane-select-collection = Pilih koleksi untuk melihat tugas silabus
+item-pane-add-to-class = Tambahkan ke kelas…
+item-pane-create-assignment = Buat penugasan
+add-to-class-window-title = Tambahkan ke kelas
+add-to-class-search = Cari silabus dan kelas
+add-to-class-empty = Tidak ada kelas yang cocok
+add-to-class-no-syllabi = Ubah koleksi menjadi silabus untuk menetapkan bacaan ke kelas.
+add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-cancel = Batal
 
 # Settings
 settings-title = Pengaturan silabus

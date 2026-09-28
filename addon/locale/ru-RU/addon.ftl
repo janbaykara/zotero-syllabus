@@ -168,6 +168,7 @@ menu-assign-to-class = Назначить занятию
 menu-no-collection = (Коллекция не выбрана)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = Добавить в { $nomenclature } { $number }
+menu-search-classes = Найти занятие…
 menu-set-reading-status = Задать статус чтения
 status-done = Выполнено
 status-not-done = Не выполнено
@@ -270,6 +271,14 @@ field-instructions = Инструкции
 placeholder-instructions = Добавьте инструкции к этому заданию…
 assignment-delete = Удалить задание
 item-pane-select-collection = Выберите коллекцию, чтобы увидеть задания силлабуса
+item-pane-add-to-class = Добавить к занятию…
+item-pane-create-assignment = Создать назначение
+add-to-class-window-title = Добавить к занятию
+add-to-class-search = Искать учебные планы и занятия
+add-to-class-empty = Подходящих занятий нет
+add-to-class-no-syllabi = Превратите коллекцию в учебный план, чтобы назначать чтения занятиям.
+add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-cancel = Отмена
 
 # Settings
 settings-title = Параметры силлабуса

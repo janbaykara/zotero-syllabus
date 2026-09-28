@@ -168,6 +168,7 @@ menu-assign-to-class = Assegna a una lezione
 menu-no-collection = (Nessuna raccolta selezionata)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = Aggiungi alla nuova { $nomenclature } { $number }
+menu-search-classes = Cerca lezioni…
 menu-set-reading-status = Imposta stato di lettura
 status-done = Completato
 status-not-done = Non completato
@@ -270,6 +271,14 @@ field-instructions = Istruzioni
 placeholder-instructions = Aggiungi istruzioni per questo compito…
 assignment-delete = Elimina compito
 item-pane-select-collection = Seleziona una raccolta per vedere le assegnazioni del programma
+item-pane-add-to-class = Aggiungi a una lezione…
+item-pane-create-assignment = Crea assegnazione
+add-to-class-window-title = Aggiungi a una lezione
+add-to-class-search = Cerca syllabus e lezioni
+add-to-class-empty = Nessuna lezione corrispondente
+add-to-class-no-syllabi = Trasforma una raccolta in un syllabus per assegnare letture alle lezioni.
+add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-cancel = Annulla
 
 # Settings
 settings-title = Impostazioni del programma

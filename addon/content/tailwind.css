@@ -5,7 +5,6 @@
   :root, :host {
     --color-red-400: oklch(70.4% 0.191 22.216);
     --color-red-500: oklch(63.7% 0.237 25.331);
-    --color-gray-500: oklch(55.1% 0.027 264.364);
     --color-white: #fff;
     --spacing: 0.25rem;
     --container-md: 28rem;
@@ -452,6 +451,9 @@
   .max-h-64 {
     max-height: calc(var(--spacing) * 64);
   }
+  .max-h-96 {
+    max-height: calc(var(--spacing) * 96);
+  }
   .max-h-\[1\.375rem\]\! {
     max-height: 1.375rem !important;
   }
@@ -772,6 +774,9 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .overflow-auto {
+    overflow: auto;
+  }
   .overflow-hidden {
     overflow: hidden;
   }
@@ -996,6 +1001,9 @@
   .px-2 {
     padding-inline: calc(var(--spacing) * 2);
   }
+  .px-2\.5 {
+    padding-inline: calc(var(--spacing) * 2.5);
+  }
   .px-3 {
     padding-inline: calc(var(--spacing) * 3);
   }
@@ -1167,9 +1175,6 @@
   }
   .text-accent-blue {
     color: var(--color-accent-blue);
-  }
-  .text-gray-500 {
-    color: var(--color-gray-500);
   }
   .text-primary {
     color: var(--color-primary);

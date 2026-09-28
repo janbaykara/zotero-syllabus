@@ -168,6 +168,7 @@ menu-assign-to-class = Einer Sitzung zuweisen
 menu-no-collection = (Keine Sammlung ausgewählt)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = Zu neuer { $nomenclature } { $number } hinzufügen
+menu-search-classes = Sitzungen durchsuchen…
 menu-set-reading-status = Lesestatus festlegen
 status-done = Erledigt
 status-not-done = Nicht erledigt
@@ -270,6 +271,14 @@ field-instructions = Hinweise
 placeholder-instructions = Hinweise zu dieser Aufgabe hinzufügen…
 assignment-delete = Aufgabe löschen
 item-pane-select-collection = Wählen Sie eine Sammlung, um Lehrplan-Aufgaben anzuzeigen
+item-pane-add-to-class = Zu einer Sitzung hinzufügen…
+item-pane-create-assignment = Aufgabe erstellen
+add-to-class-window-title = Zu einer Sitzung hinzufügen
+add-to-class-search = Lehrpläne und Sitzungen durchsuchen
+add-to-class-empty = Keine passenden Sitzungen
+add-to-class-no-syllabi = Wandle zuerst eine Sammlung in einen Lehrplan um, um Lektüre Sitzungen zuzuweisen.
+add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-cancel = Abbrechen
 
 # Settings
 settings-title = Lehrplaneinstellungen
