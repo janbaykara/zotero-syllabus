@@ -1386,6 +1386,9 @@
     .group-hover\/pinned-collection\:opacity-100:is(:where(.group\/pinned-collection):hover *) {
       opacity: 100%;
     }
+    .group-hover\/pinned-collection\:opacity-100:is(:where(.group\/pinned-collection):hover *) {
+      opacity: 100%;
+    }
   }
   .group-data-\[dropzone-active\=true\]\/class-items\:border-accent-blue:is(:where(.group\/class-items)[data-dropzone-active="true"] *) {
     border-color: var(--color-accent-blue);

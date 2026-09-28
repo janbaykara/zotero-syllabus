@@ -1,6 +1,7 @@
 import { getCachedItem } from "./cache";
 import { compareLocale } from "./locale";
 import { pageIndexForPrintedLabel, readPdfPageLabels } from "./pdfPageLabels";
+import { itemBelongsInCollection } from "./zotero";
 
 /**
  * Display title for any item type. `getField("title")` is empty for types that
@@ -231,6 +232,44 @@ export function isSyllabusAssignableItem(
   item: Zotero.Item | false | null | undefined,
 ): item is Zotero.Item {
   return isSyllabusMemberItem(item) || isStandaloneAttachment(item);
+}
+
+/**
+ * Prefer the item itself when it can live on a syllabus; otherwise the
+ * bibliographic parent of a child attachment. Notes and other types stay out.
+ */
+export function resolveAssignableItem(
+  item: Zotero.Item | false | null | undefined,
+): Zotero.Item | null {
+  if (isSyllabusAssignableItem(item)) {
+    return item;
+  }
+  const parent = regularParentItem(item);
+  return isSyllabusAssignableItem(parent) ? parent : null;
+}
+
+/**
+ * Deduplicate picker results and drop items that cannot join this collection
+ * (other library, notes, child attachments without a regular parent).
+ */
+export function resolveItemsForClassAssignment(
+  items: readonly Zotero.Item[],
+  collection: Zotero.Collection,
+): Zotero.Item[] {
+  const seen = new Set<number>();
+  const resolved: Zotero.Item[] = [];
+  for (const raw of items) {
+    const item = resolveAssignableItem(raw);
+    if (!item || seen.has(item.id)) {
+      continue;
+    }
+    if (!itemBelongsInCollection(item, collection)) {
+      continue;
+    }
+    seen.add(item.id);
+    resolved.push(item);
+  }
+  return resolved;
 }
 
 /** Bibliographic parent after a standalone attachment is recognized. */

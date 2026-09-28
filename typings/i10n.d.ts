@@ -29,6 +29,8 @@ export type FluentMessageId =
   | 'attachment-view'
   | 'attachment-zip'
   | 'bibliography-heading'
+  | 'class-add-readings'
+  | 'class-add-readings-aria'
   | 'class-delete'
   | 'class-dropzone-hint'
   | 'class-due-date-label'

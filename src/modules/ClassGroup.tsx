@@ -22,6 +22,7 @@ import type { GalleryLayout } from "./galleryLayout";
 import type { MagazinePacking } from "./magazinePacking";
 import { ReadingItemsLayout } from "./readingItemsLayout";
 import { selectItemInCollection } from "./ClassReadingBlock";
+import { pickAndAddItemsToClass } from "./addItemsToClass";
 
 export type ItemDropIndicator = {
   classNumber: number | null;
@@ -216,6 +217,17 @@ export function ClassGroupComponent({
     }
   };
 
+  const handleAddReadings = async () => {
+    if (classNumber == null) {
+      return;
+    }
+    try {
+      await pickAndAddItemsToClass(collectionId, classNumber);
+    } catch (err) {
+      ztoolkit.log("Error adding readings to class:", err);
+    }
+  };
+
   const handleClassStatusToggle = async () => {
     if (classNumber !== null && classNumber !== undefined) {
       try {
@@ -366,7 +378,7 @@ export function ClassGroupComponent({
             : String(classNumber)
       }
       className={twMerge(
-        "syllabus-class-group in-[.print]:scheme-light",
+        "syllabus-class-group group/class in-[.print]:scheme-light",
         readerMode && classIsDone ? "opacity-40" : "",
       )}
     >
@@ -698,6 +710,30 @@ export function ClassGroupComponent({
               );
             })
           ) : null}
+          {!isLocked && classNumber != null && (
+            <button
+              type="button"
+              className="flex items-center justify-center gap-2 w-full opacity-0 group-hover/class:opacity-100 focus-visible:opacity-100 transition-opacity in-[.print]:hidden text-xs text-secondary hover:text-primary cursor-pointer bg-transparent border-0 p-2"
+              onClick={() => {
+                void handleAddReadings();
+              }}
+              title={getString("class-add-readings-aria", {
+                args: {
+                  nomenclature: singularCapitalized,
+                  number: classNumber,
+                },
+              })}
+              aria-label={getString("class-add-readings-aria", {
+                args: {
+                  nomenclature: singularCapitalized,
+                  number: classNumber,
+                },
+              })}
+            >
+              <Plus size={12} />
+              {getString("class-add-readings")}
+            </button>
+          )}
         </div>
       </div>
     </div>

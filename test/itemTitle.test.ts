@@ -11,6 +11,7 @@ import {
   isSyllabusMemberItem,
   readItemNote,
   regularParentItem,
+  resolveAssignableItem,
 } from "../src/utils/items";
 
 async function createItem(
@@ -152,6 +153,23 @@ describe("item fields", function () {
       } as unknown as Zotero.Item;
       assert.isFalse(isStandaloneAttachment(attachment));
       assert.equal(regularParentItem(attachment), parent);
+      assert.equal(resolveAssignableItem(attachment), parent);
+    });
+
+    it("resolves regular items and standalone attachments as themselves", function () {
+      const book = {
+        deleted: false,
+        isRegularItem: () => true,
+        isFeedItem: false,
+      } as unknown as Zotero.Item;
+      const attachment = {
+        deleted: false,
+        isAttachment: () => true,
+        parentItemID: false,
+      } as unknown as Zotero.Item;
+      assert.equal(resolveAssignableItem(book), book);
+      assert.equal(resolveAssignableItem(attachment), attachment);
+      assert.isNull(resolveAssignableItem(null));
     });
 
     it("treats a standalone attachment as its own viewable file", function () {
