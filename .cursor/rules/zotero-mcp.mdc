@@ -1,0 +1,39 @@
+---
+description: Prefer Zotero Dev MCP for live Zotero/plugin verification
+alwaysApply: true
+---
+
+# Zotero Dev MCP
+
+Namespace: `user-@introfini/mcp-server-zotero-dev` (CallDynamicTool / GetDynamicTools).
+
+For anything that needs a **running Zotero** — UI checks, plugin load, prefs, DB, logs, DOM, screenshots, scaffold serve/build — **use this MCP first**. Do not guess Zotero APIs, hand-wave about “what Zotero would do,” or only reason from source when a live check would settle it.
+
+## When to use it
+
+- Verifying plugin behavior after code changes (`pnpm start` / scaffold serve → reload → inspect)
+- Reading/writing prefs, querying the library DB, checking logs/errors
+- Clicking UI, screenshots, DOM/style inspection
+- Discovering Zotero chrome APIs before writing `zotero_execute_js`
+
+## Tool map (prefer dedicated tools)
+
+| Need | Tool |
+| --- | --- |
+| Alive? | `zotero_ping` |
+| Reload / list / install plugin | `zotero_plugin_reload`, `zotero_plugin_list`, `zotero_plugin_install` |
+| Build / serve / lint / types | `zotero_scaffold_*` |
+| Prefs | `zotero_get_pref`, `zotero_set_pref`, `zotero_search_prefs`, `zotero_open_preferences` |
+| Logs | `zotero_read_logs`, `zotero_read_errors`, `zotero_watch_logs`, `zotero_clear_logs` |
+| Library SQL (SELECT only) | `zotero_db_query`, `zotero_db_schema`, `zotero_db_stats` |
+| UI | `zotero_screenshot`, `zotero_list_windows`, `zotero_click_element`, `zotero_send_keys`, `zotero_inspect_element`, `zotero_get_dom_tree`, `zotero_get_styles` |
+| API discovery / raw chrome JS | `zotero_inspect_object`, then `zotero_execute_js` |
+
+Always `GetDynamicTools` for the tool schema before calling. If the namespace needs auth, call `mcp_auth` once.
+
+## Workflow defaults
+
+1. `zotero_ping` — if down, start via `zotero_scaffold_serve` or ask the user to run `pnpm start`.
+2. After addon code changes: rebuild/serve as needed, then `zotero_plugin_reload`.
+3. Prefer screenshots + logs over long speculative answers about UI state.
+4. Use `zotero_execute_js` only when no dedicated tool fits; inspect unknown APIs first.

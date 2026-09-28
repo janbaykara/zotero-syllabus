@@ -16,3 +16,7 @@ Details: [doc/TECHNICAL.md](doc/TECHNICAL.md#localization) and `.cursor/rules/lo
 ## Lint / package manager
 
 Use **pnpm** only (`pnpm-lock.yaml`). CI runs `pnpm run lint:check` with a fresh install from that lockfile. After pulling dep changes, run `pnpm install` before linting. Prefer `pnpm lint:fix` locally, then confirm with `pnpm lint:check` (what CI runs). Do not introduce `package-lock.json`.
+
+## Zotero Dev MCP
+
+Prefer the Zotero Dev MCP (`user-@introfini/mcp-server-zotero-dev`) for live verification: plugin reload, prefs, DB, logs, UI/DOM/screenshots, and scaffold serve/build. Do not guess Zotero runtime behavior when a ping/reload/screenshot/log check would settle it. Details: `.cursor/rules/zotero-mcp.mdc`.
