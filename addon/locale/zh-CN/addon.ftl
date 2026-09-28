@@ -184,6 +184,7 @@ page-import = 导入教学大纲文件
 page-edit-settings = 编辑教学大纲设置
 page-lock = 锁定教学大纲
 page-unlock = 解锁教学大纲
+page-lock-search = 搜索时已锁定
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = 显示复选框
 page-print = 将教学大纲另存为 PDF、Word、Markdown 或 HTML

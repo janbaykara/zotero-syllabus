@@ -186,6 +186,7 @@ page-import = 강의계획서 파일 가져오기
 page-edit-settings = 강의계획서 설정 편집
 page-lock = 강의계획서 잠그기
 page-unlock = 강의계획서 잠금 해제
+page-lock-search = 검색 중에는 잠깁니다
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = 확인란 표시
 page-print = 강의계획을 PDF, Word, Markdown 또는 HTML로 저장

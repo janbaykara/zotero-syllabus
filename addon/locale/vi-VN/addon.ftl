@@ -186,6 +186,7 @@ page-import = Nhập tệp đề cương
 page-edit-settings = Sửa cài đặt đề cương
 page-lock = Khóa đề cương
 page-unlock = Mở khóa đề cương
+page-lock-search = Đã khóa khi đang tìm kiếm
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = Hiện hộp kiểm
 page-print = Lưu đề cương dưới dạng PDF, Word, Markdown hoặc HTML

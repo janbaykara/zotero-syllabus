@@ -305,6 +305,7 @@ export type FluentMessageId =
   | 'page-export'
   | 'page-import'
   | 'page-lock'
+  | 'page-lock-search'
   | 'page-print'
   | 'page-publish'
   | 'page-reader-disable'

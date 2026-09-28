@@ -186,6 +186,7 @@ page-import = Syllabusbestand importeren
 page-edit-settings = Syllabusinstellingen bewerken
 page-lock = Syllabus vergrendelen
 page-unlock = Syllabus ontgrendelen
+page-lock-search = Vergrendeld tijdens zoeken
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = Selectievakjes tonen
 page-print = Syllabus opslaan als PDF, Word, Markdown of HTML

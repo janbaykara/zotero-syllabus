@@ -184,6 +184,7 @@ page-import = Import syllabus file
 page-edit-settings = Edit syllabus settings
 page-lock = Lock syllabus
 page-unlock = Unlock syllabus
+page-lock-search = Locked while searching
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = Show checkboxes
 page-print = Save the syllabus as PDF, Word, Markdown, or HTML, or publish it online

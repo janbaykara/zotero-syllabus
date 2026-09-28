@@ -186,6 +186,7 @@ page-import = Lehrplan-Datei importieren
 page-edit-settings = Lehrplaneinstellungen bearbeiten
 page-lock = Lehrplan sperren
 page-unlock = Lehrplan entsperren
+page-lock-search = Während der Suche gesperrt
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = Kontrollkästchen anzeigen
 page-print = Syllabus als PDF, Word, Markdown oder HTML speichern
