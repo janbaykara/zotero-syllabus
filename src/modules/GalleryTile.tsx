@@ -21,7 +21,7 @@ import {
 } from "./galleryNote";
 import { useGalleryNoteText } from "./useGalleryNoteText";
 import { useNearViewport } from "./galleryVisibility";
-import { ProseText } from "./ProseText";
+import { NoteHtml } from "./NoteHtml";
 import { getString } from "../utils/locale";
 import {
   getPrimaryAttachmentProgress,
@@ -262,7 +262,7 @@ export const GalleryTile = memo(function GalleryTile({
           }
         }}
       >
-        <ProseText text={galleryNote} />
+        <NoteHtml html={galleryNote} />
       </div>
     ) : null;
 

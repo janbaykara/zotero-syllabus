@@ -130,7 +130,7 @@ Display chrome is per view with “Save as default” — see [DISPLAY-PREFS.md]
 
 ## Gallery notes
 
-Collection-scoped notes on regular items for Gallery / card views. Each note is a **child note** tagged `zotero-syllabus-gallery:{collectionKey}` (collection **key**, not numeric id). Edited via Zotero’s built-in note editor (`ZoteroPane.selectItem`). Shown in Row/card like a reading instruction, beside Cover tiles (span 2), and above Magazine blurbs (and boosts magazine role size from note length). See [`src/modules/galleryNote.ts`](../src/modules/galleryNote.ts). End-user steps: [README — Gallery notes](../README.md#gallery-notes).
+Collection-scoped notes on regular items for Gallery / card views. Each note is a **child note** tagged `zotero-syllabus-gallery:{collectionKey}` (collection **key**, not numeric id). Edited via Zotero’s built-in note editor (`ZoteroPane.selectItem`). Shown in Row/card like a reading instruction, beside Cover tiles (span 2), and above Magazine blurbs (and boosts magazine role size from note length). Display uses the stored note HTML (sanitized), not a plain-text / Markdown conversion. See [`src/modules/galleryNote.ts`](../src/modules/galleryNote.ts). End-user steps: [README — Gallery notes](../README.md#gallery-notes).
 
 ## Practical rules
 

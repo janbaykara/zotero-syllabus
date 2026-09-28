@@ -6,6 +6,7 @@
 
 import { getCachedCollectionById, getCachedItem } from "../utils/cache";
 import { readItemNote } from "../utils/items";
+import { noteHtmlToDisplayHtml } from "../utils/noteHtml";
 import { noteHtmlToPlainText } from "./pinned";
 
 /** Tag prefix; full tag is prefix + collection key. Do not localize. */
@@ -174,6 +175,7 @@ export async function ensureGalleryNote(
   return note;
 }
 
+/** Plain text for magazine tile sizing / empty checks. */
 export function readGalleryNoteText(
   item: Zotero.Item,
   collectionId: number,
@@ -183,6 +185,18 @@ export function readGalleryNoteText(
     return "";
   }
   return noteHtmlToPlainText(readItemNote(note));
+}
+
+/** Sanitized Zotero note HTML for gallery / card display. */
+export function readGalleryNoteHtml(
+  item: Zotero.Item,
+  collectionId: number,
+): string {
+  const note = findGalleryNoteForCollection(item, collectionId);
+  if (!note) {
+    return "";
+  }
+  return noteHtmlToDisplayHtml(readItemNote(note));
 }
 
 /** For memo / role features: note id + dateModified, or empty. */

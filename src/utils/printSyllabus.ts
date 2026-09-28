@@ -530,6 +530,39 @@ const PRINT_DOCUMENT_CSS = `
     text-decoration: underline;
     text-underline-offset: 2px;
   }
+  .syllabus-prose h1,
+  .syllabus-prose h2,
+  .syllabus-prose h3 {
+    margin: 0 0 0.45em;
+    font-size: inherit;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  .syllabus-prose h1:last-child,
+  .syllabus-prose h2:last-child,
+  .syllabus-prose h3:last-child {
+    margin-bottom: 0;
+  }
+  .syllabus-prose pre {
+    margin: 0 0 0.65em;
+    padding: 0.35em 0.5em;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.92em;
+    border-radius: 0.25em;
+    background: #f0f0f0;
+  }
+  .syllabus-prose pre:last-child {
+    margin-bottom: 0;
+  }
+  .syllabus-prose pre code {
+    padding: 0;
+    background: transparent;
+  }
+  .syllabus-prose hr {
+    margin: 0.5em 0;
+    border: 0;
+    border-top: 1px solid #d4d4d4;
+  }
   /* Print row density stays compact; Online HTML still shows instructions. */
   body:not(.publish-layout)[data-item-density="row"] .syllabus-item-description,
   body:not(.publish-layout)[data-item-density="row"] .syllabus-item-reference,

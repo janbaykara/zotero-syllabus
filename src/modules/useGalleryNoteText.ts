@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "preact/hooks";
 import {
   galleryNoteFingerprint,
-  readGalleryNoteText,
+  readGalleryNoteHtml,
   subscribeGalleryNoteChanges,
 } from "./galleryNote";
 
-/** Live plain text for the item’s gallery note in this collection. */
+/** Live sanitized HTML for the item’s gallery note in this collection. */
 export function useGalleryNoteText(
   item: Zotero.Item,
   collectionId: number,
@@ -15,6 +15,6 @@ export function useGalleryNoteText(
   const fingerprint = galleryNoteFingerprint(item, collectionId);
   return useMemo(() => {
     void tick;
-    return readGalleryNoteText(item, collectionId);
+    return readGalleryNoteHtml(item, collectionId);
   }, [item, collectionId, tick, fingerprint]);
 }
