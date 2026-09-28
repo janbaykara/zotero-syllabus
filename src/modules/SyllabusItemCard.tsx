@@ -10,6 +10,7 @@ import { getPref } from "../utils/prefs";
 import { generateBibliographicReference } from "../utils/cite";
 import { isZotero8OrLater } from "../utils/zotero";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
+import { NoteHtml } from "./NoteHtml";
 import { ProseText } from "./ProseText";
 import {
   getItemReadStatusName,
@@ -902,7 +903,7 @@ export function SyllabusItemCard({
                   }
                 }}
               >
-                <ProseText text={galleryNote} />
+                <NoteHtml html={galleryNote} />
               </div>
             ) : null}
             {classInstruction && (
@@ -976,7 +977,7 @@ export function SyllabusItemCard({
                       }
                     }}
                   >
-                    <ProseText text={galleryNote} />
+                    <NoteHtml html={galleryNote} />
                   </div>
                 ) : null}
                 {classInstruction && (
@@ -1048,7 +1049,7 @@ export function SyllabusItemCard({
                       }
                     }}
                   >
-                    <ProseText text={galleryNote} />
+                    <NoteHtml html={galleryNote} />
                   </div>
                 ) : null}
                 {classInstruction && (

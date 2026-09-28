@@ -38,7 +38,7 @@ import {
   readingChromeEqual,
   type ReadingTileChrome,
 } from "./readingAssignmentChrome";
-import { ProseText } from "./ProseText";
+import { NoteHtml } from "./NoteHtml";
 import {
   galleryNoteFingerprint,
   openGalleryNoteByCollectionId,
@@ -289,7 +289,7 @@ export const MagazineTile = memo(function MagazineTile({
               }
             }}
           >
-            <ProseText text={galleryNote} />
+            <NoteHtml html={galleryNote} />
           </div>
         ) : null}
         {instruction ? (

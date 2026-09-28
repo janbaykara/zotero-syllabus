@@ -8,6 +8,7 @@ import {
   galleryNoteTag,
   GALLERY_NOTE_TAG_PREFIX,
   isGalleryNoteTag,
+  readGalleryNoteHtml,
   readGalleryNoteText,
 } from "../src/modules/galleryNote";
 import { noteHtmlToPlainText } from "../src/modules/pinned";
@@ -78,13 +79,22 @@ describe("galleryNote", function () {
     assert.isNull(findGalleryNote(book, collectionB.key));
     assert.isNull(findGalleryNoteForCollection(book, collectionB.id));
 
-    noteA!.setNote("<p>Allan recommended this in&nbsp;2024</p>");
+    noteA!.setNote(
+      "<p>Allan <strong>recommended</strong> this in&nbsp;2024</p>",
+    );
     await noteA!.saveTx({ skipSelect: true });
 
     assert.equal(
       readGalleryNoteText(book, collectionA.id),
-      noteHtmlToPlainText("<p>Allan recommended this in&nbsp;2024</p>"),
+      noteHtmlToPlainText(
+        "<p>Allan <strong>recommended</strong> this in&nbsp;2024</p>",
+      ),
     );
+    assert.match(
+      readGalleryNoteHtml(book, collectionA.id),
+      /<p[^>]*>Allan <strong>recommended<\/strong> this/,
+    );
+    assert.equal(readGalleryNoteHtml(book, collectionB.id), "");
     assert.equal(readGalleryNoteText(book, collectionB.id), "");
 
     const again = await ensureGalleryNote(book, collectionA);

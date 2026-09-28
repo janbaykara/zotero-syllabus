@@ -10,7 +10,7 @@ import { GalleryTile } from "./GalleryTile";
 import { openGalleryNoteByCollectionId } from "./galleryNote";
 import { useNearViewport } from "./galleryVisibility";
 import { useGalleryNoteText } from "./useGalleryNoteText";
-import { ProseText } from "./ProseText";
+import { NoteHtml } from "./NoteHtml";
 import type { MagazineTileClick } from "./MagazineTile";
 import type { ReadingTileChrome } from "./readingAssignmentChrome";
 
@@ -57,7 +57,7 @@ function MagazineNoteSidecar({
         }
       }}
     >
-      <ProseText text={text} />
+      <NoteHtml html={text} />
     </div>
   );
 }
