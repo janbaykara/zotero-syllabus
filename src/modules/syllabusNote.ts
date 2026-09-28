@@ -43,6 +43,7 @@ import {
 import {
   getItemField,
   getItemTitle,
+  isClassNoteItem,
   isStandaloneAttachment,
   isSyllabusMemberItem,
   readItemNote,
@@ -474,6 +475,16 @@ function itemAssignmentSignature(document: CollectionSyllabusDocument): string {
   return `${parts.join("|")}#${order}`;
 }
 
+function isLiveAssignmentMember(
+  item: Zotero.Item | false | null | undefined,
+): boolean {
+  return (
+    isSyllabusMemberItem(item) ||
+    isStandaloneAttachment(item) ||
+    isClassNoteItem(item)
+  );
+}
+
 /** True when any assignment key does not resolve to a live collection member. */
 export function documentHasOrphanItemKeys(
   collection: Zotero.Collection,
@@ -481,19 +492,13 @@ export function documentHasOrphanItemKeys(
 ): boolean {
   for (const key of Object.keys(document.items || {})) {
     const item = Zotero.Items.getByLibraryAndKey(collection.libraryID, key);
-    if (
-      !item ||
-      !(isSyllabusMemberItem(item) || isStandaloneAttachment(item))
-    ) {
+    if (!item || !isLiveAssignmentMember(item)) {
       return true;
     }
   }
   for (const key of document.furtherReadingOrder || []) {
     const item = Zotero.Items.getByLibraryAndKey(collection.libraryID, key);
-    if (
-      !item ||
-      !(isSyllabusMemberItem(item) || isStandaloneAttachment(item))
-    ) {
+    if (!item || !isLiveAssignmentMember(item)) {
       return true;
     }
   }

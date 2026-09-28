@@ -71,7 +71,7 @@ optional-features-syllabus-desc =
     Structure a collection by class session, drag readings into place, and edit priorities and instructions.
 optional-features-gallery-title = Gallery view
 optional-features-gallery-desc =
-    Browse a collection as covers, magazine spreads, or cards — great for finding the next thing to open.
+    Browse a collection as covers, preview, or cards — great for finding the next thing to open.
 optional-features-explorer-title = Home view
 optional-features-explorer-desc =
     A library home with shelves for recent items, upcoming deadlines, and more.
@@ -194,6 +194,7 @@ page-save-word = Word
 page-save-markdown = Markdown
 page-save-html = HTML
 page-publish = Publish online…
+print-notes-excluded = Class notes stay private and won’t be included.
 placeholder-course-code = Course Code
 placeholder-institution = Institution
 placeholder-add-description = Add a description…
@@ -227,6 +228,9 @@ class-insert-here = Add { $nomenclature } here
 class-dropzone-hint = Drag items to { $nomenclature } { $number }
 class-add-readings = Add readings
 class-add-readings-aria = Add readings to { $nomenclature } { $number }
+class-add-note = Add a note
+class-note-priority = Class Note
+class-note-open = Open note
 due-date-clear = Clear due date
 due-date-add = Add a due date
 placeholder-select-date = Select date
@@ -384,9 +388,10 @@ gallery-layout-annotations = Annotations
 gallery-layout-annotations-title = Covers with all annotations
 gallery-annotations-empty = No annotations
 gallery-annotations-none-heading = No annotations
+gallery-preview-none-heading = No preview
 gallery-annotations-show-empty = Show items with no annotations
-gallery-layout-magazine = Magazine
-gallery-layout-magazine-title = Mixed-size magazine layout
+gallery-layout-magazine = Preview
+gallery-layout-magazine-title = Covers with excerpt previews
 gallery-menu-packing = Packing
 gallery-packing-vertical = Vertical
 gallery-packing-vertical-title = Covers with abstracts in a reading stack
@@ -413,9 +418,9 @@ gallery-menu-sort = Sort
 gallery-menu-group = Group by
 gallery-menu-type-size = Text size
 gallery-type-small = Small
-gallery-type-small-title = Smaller magazine text
+gallery-type-small-title = Smaller preview text
 gallery-type-large = Large
-gallery-type-large-title = Larger magazine text
+gallery-type-large-title = Larger preview text
 gallery-in-this-collection = In this collection
 gallery-groups-nav-aria = Groups
 gallery-group-jump = Show { $name }
@@ -430,9 +435,9 @@ galleryTour-settings-desc =
 galleryTour-cover-title = Cover view
 galleryTour-cover-desc =
     Cover shows each item as artwork — books, papers, and web pages at a glance.
-galleryTour-magazine-title = Magazine view
+galleryTour-magazine-title = Preview view
 galleryTour-magazine-desc =
-    Magazine mixes large and small tiles, like a contents page. Good when you want to browse and read blurbs.
+    Preview shows each cover beside its excerpt, like Annotations with blurbs instead of highlights. Items without a preview sit in a cover row.
 galleryTour-card-title = Card view
 galleryTour-card-desc =
     Cards use the same syllabus item layout, grouped by item type so similar readings sit together.

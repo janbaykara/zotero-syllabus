@@ -1259,6 +1259,22 @@
   user-select: none;
 }
 
+/* Note tone: sans-serif body, no decorative quote (class notes + gallery
+   notes when there is no excerpt blurb). */
+.syllabus-explorer-magazine-text.is-blurb.is-note {
+  font-family: system-ui, sans-serif;
+  font-weight: 400;
+  --magazine-blurb-quote-pad: 0.15rem;
+  --magazine-blurb-end-pad: 0.15rem;
+  --magazine-blurb-quote-top: 0.15rem;
+  width: var(--syllabus-explorer-magazine-note-width);
+  max-width: var(--syllabus-explorer-magazine-note-width);
+}
+
+.syllabus-explorer-magazine-text.is-blurb.is-note::before {
+  content: none;
+}
+
 .syllabus-explorer-cover-item > .syllabus-gallery-note {
   grid-column: 2;
   grid-row: 1;
@@ -1353,6 +1369,11 @@
   overflow: visible;
   padding-inline: var(--magazine-blurb-quote-pad, 1.35rem)
     var(--magazine-blurb-end-pad, 0.4rem);
+}
+
+.syllabus-magazine-vertical .syllabus-explorer-magazine-text.is-blurb.is-note {
+  padding-inline: var(--magazine-blurb-quote-pad, 0.15rem)
+    var(--magazine-blurb-end-pad, 0.15rem);
 }
 
 .syllabus-magazine-vertical .syllabus-explorer-magazine-blurb-body {
@@ -2694,6 +2715,24 @@
   outline: none;
 }
 
+.syllabus-save-format-divider {
+  display: block;
+  height: 0;
+  margin: 0.35rem 0.75rem;
+  border: 0;
+  border-top: 1px solid
+    color-mix(in srgb, var(--fill-primary, #111) 12%, transparent);
+}
+
+.syllabus-save-format-note {
+  margin: 0;
+  padding: 0.15rem 0.9rem 0.35rem;
+  font-size: 0.7rem;
+  line-height: 1.35;
+  color: var(--fill-secondary, inherit);
+  text-wrap: pretty;
+}
+
 .syllabus-explorer-configure-heading {
   padding: 0.15rem 0.9rem 0.45rem;
   color: var(--fill-secondary, inherit);
@@ -3806,7 +3845,8 @@ button.syllabus-explorer-class-segment-header:focus-visible {
 /* Unlayered inset matching Reading Schedule container-padded, so header and
    stream share one width even if @layer utilities lose the cascade. */
 .syllabus-my-annotations-page .container-padded,
-.syllabus-gallery-annotations-page .container-padded {
+.syllabus-gallery-annotations-page .container-padded,
+.syllabus-magazine-page .container-padded {
   max-width: var(--container-4xl, 56rem);
   margin-inline: auto;
   padding-inline: 1.5rem;
@@ -3817,7 +3857,8 @@ button.syllabus-explorer-class-segment-header:focus-visible {
 
 @media (width >= 48rem) {
   .syllabus-my-annotations-page .container-padded,
-  .syllabus-gallery-annotations-page .container-padded {
+  .syllabus-gallery-annotations-page .container-padded,
+  .syllabus-magazine-page .container-padded {
     padding-inline: 2.5rem;
   }
 }
@@ -3826,6 +3867,13 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   --syllabus-magazine-serif:
     "Newsreader", Georgia, "Palatino Linotype", Palatino, "Songti SC",
     "Hiragino Mincho ProN", serif;
+  /* Preview blurbs share this stream; keep explorer’s ~2.6× cover measure. */
+  --syllabus-explorer-magazine-blurb-width: calc(
+    2.6 * var(--syllabus-annotations-cover-width, 148px)
+  );
+  --syllabus-explorer-magazine-note-width: calc(
+    2.6 * var(--syllabus-annotations-cover-width, 148px)
+  );
 }
 
 /* Standalone Annotations Feed: same cover tokens / column steps as Gallery. */
@@ -3992,6 +4040,41 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 1.15rem;
+}
+
+/* Preview blurbs in the Annotations-style stream: fixed ~2.6× cover column
+   (same measure as the Cover-rail magazine sidecar), not full remaining width. */
+.syllabus-my-annotations-stream-stack .syllabus-explorer-magazine-text.is-blurb {
+  flex: 0 0 auto;
+  width: calc(
+    var(--syllabus-explorer-magazine-blurb-width) +
+      var(--magazine-blurb-quote-pad, 1.85rem) +
+      var(--magazine-blurb-end-pad, 0.45rem)
+  );
+  max-width: calc(
+    var(--syllabus-explorer-magazine-blurb-width) +
+      var(--magazine-blurb-quote-pad, 1.85rem) +
+      var(--magazine-blurb-end-pad, 0.45rem)
+  );
+  min-width: 0;
+  align-self: start;
+  grid-column: auto;
+  grid-row: auto;
+  box-sizing: border-box;
+}
+
+.syllabus-my-annotations-stream-stack
+  .syllabus-explorer-magazine-text.is-blurb.is-note {
+  width: var(--syllabus-explorer-magazine-note-width);
+  max-width: var(--syllabus-explorer-magazine-note-width);
+  padding-inline: var(--magazine-blurb-quote-pad, 0.15rem)
+    var(--magazine-blurb-end-pad, 0.15rem);
+}
+
+.syllabus-my-annotations-stream-stack .syllabus-explorer-magazine-blurb-body {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
 }
 
 .syllabus-annotations-activity-gap {

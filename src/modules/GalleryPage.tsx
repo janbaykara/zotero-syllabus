@@ -11,7 +11,6 @@ import {
 import type { ComponentChildren, JSX, RefObject } from "preact";
 import { twMerge } from "tailwind-merge";
 import {
-  AlignJustify,
   ArrowDownAZ,
   BookOpen,
   Calendar,
@@ -31,7 +30,6 @@ import {
   Rows3,
   Shapes,
   Sparkles,
-  StretchHorizontal,
   Tag,
   Tags,
   User,
@@ -39,7 +37,7 @@ import {
 } from "lucide-preact";
 import { renderComponent } from "../utils/react";
 import { isZotero8OrLater } from "../utils/zotero";
-import { openItemBestAttachment, sortItems } from "../utils/items";
+import { isClassNoteItem, openItemBestAttachment, sortItems } from "../utils/items";
 import { AnnotationColorFilter } from "./AnnotationColorFilter";
 import {
   GalleryAnnotationsSection,
@@ -165,6 +163,7 @@ export function GalleryPage({
   const title = isCollectionScope ? collectionTitle : treeRowTitle;
   const collectionItems = useZoteroCollectionItems(collectionIdOrZero, {
     recursive: "pref",
+    includeAssignedClassNotes: true,
   });
   const treeRowItems = useZoteroTreeRowItems(resolvedTreeViewID, {
     includeDeleted,
@@ -177,7 +176,12 @@ export function GalleryPage({
     if (!matchingIds) {
       return allItems;
     }
-    return allItems.filter(({ zoteroItem }) => matchingIds.has(zoteroItem.id));
+    // Notes are not “regular” items in Zotero’s items tree, so tag/search
+    // filters omit them from matchingIds — keep every class note listed.
+    return allItems.filter(
+      ({ zoteroItem }) =>
+        matchingIds.has(zoteroItem.id) || isClassNoteItem(zoteroItem),
+    );
   }, [allItems, matchingIds]);
   const isSyllabus =
     collectionId != null && collectionHasSyllabusNote(collectionId);
@@ -1033,7 +1037,7 @@ export function GalleryPage({
               "pt-4",
               layout === "card" ||
                 layout === "annotations" ||
-                (layout === "magazine" && magazinePacking === "vertical")
+                layout === "magazine"
                 ? "container-padded"
                 : "px-6",
             )}
@@ -1330,7 +1334,16 @@ function filterSubcollectionNode(
   }
   const next: SubcollectionNode = {
     ...node,
-    itemIds: node.itemIds.filter((id) => matchingIds.has(id)),
+    itemIds: node.itemIds.filter((id) => {
+      if (matchingIds.has(id)) {
+        return true;
+      }
+      try {
+        return isClassNoteItem(getCachedItem(id));
+      } catch {
+        return false;
+      }
+    }),
     children: node.children
       .map((child) => filterSubcollectionNode(child, matchingIds))
       .filter(
@@ -1625,29 +1638,6 @@ function galleryDensityOptions(): GallerySegmentOption<ItemDensity>[] {
   }));
 }
 
-function magazinePackingOptions(): GallerySegmentOption<MagazinePacking>[] {
-  return [
-    {
-      mode: "vertical",
-      label: getString("gallery-packing-vertical"),
-      title: getString("gallery-packing-vertical-title"),
-      Icon: AlignJustify,
-    },
-    {
-      mode: "grid",
-      label: getString("gallery-packing-grid"),
-      title: getString("gallery-packing-grid-title"),
-      Icon: LayoutGrid,
-    },
-    {
-      mode: "packed",
-      label: getString("gallery-packing-packed"),
-      title: getString("gallery-packing-packed-title"),
-      Icon: StretchHorizontal,
-    },
-  ];
-}
-
 function currentGalleryOption<T extends string>(
   options: GallerySegmentOption<T>[],
   value: T,
@@ -1668,9 +1658,9 @@ function GalleryPageHeader({
   layout,
   onLayout,
   layoutGlobal,
-  magazinePacking,
-  onMagazinePacking,
-  magazinePackingGlobal,
+  magazinePacking: _magazinePacking,
+  onMagazinePacking: _onMagazinePacking,
+  magazinePackingGlobal: _magazinePackingGlobal,
   showItemsWithoutAnnotations,
   onShowItemsWithoutAnnotations,
   showEmptyGlobal,
@@ -1863,9 +1853,7 @@ function GalleryPageHeader({
                     globalSetting={groupByGlobal}
                   />
                 </div>
-                {layout === "card" ||
-                layout === "magazine" ||
-                layout === "annotations" ? (
+                {layout === "card" || layout === "annotations" ? (
                   <div className="syllabus-gallery-toolbar-section">
                     {layout === "card" ? (
                       <GallerySegmentedControl
@@ -1875,16 +1863,6 @@ function GalleryPageHeader({
                         onChange={setDensity}
                         options={densityOptions}
                         globalSetting={densityGlobal}
-                      />
-                    ) : null}
-                    {layout === "magazine" ? (
-                      <GallerySegmentedControl
-                        label={getString("gallery-menu-packing")}
-                        ariaLabel={getString("gallery-menu-packing")}
-                        value={magazinePacking}
-                        onChange={onMagazinePacking}
-                        options={magazinePackingOptions()}
-                        globalSetting={magazinePackingGlobal}
                       />
                     ) : null}
                     {layout === "annotations" ? (

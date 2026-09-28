@@ -8,6 +8,7 @@ import {
 } from "../syllabus";
 import {
   isAssignedStandaloneAttachment,
+  isClassNoteItem,
   isSyllabusMemberItem,
 } from "../../utils/items";
 import {
@@ -39,6 +40,11 @@ export type CollectionItemsOptions = {
    * `"pref"` follows Zotero's `recursiveCollections` ("Show Items from Subcollections").
    */
   recursive?: boolean | "pref";
+  /**
+   * Include standalone class notes (assigned or not) for Syllabus / Gallery.
+   * Home shelves and Reading Schedule keep notes out.
+   */
+  includeAssignedClassNotes?: boolean;
 };
 
 function shouldIncludeSubcollections(
@@ -71,29 +77,40 @@ function assignedDocumentItemKeys(collection: Zotero.Collection): Set<string> {
 function isSyllabusViewItem(
   item: Zotero.Item,
   assignedKeys: ReadonlySet<string>,
+  includeAssignedClassNotes: boolean,
 ): boolean {
-  return (
+  if (
     isSyllabusMemberItem(item) ||
     isAssignedStandaloneAttachment(item, assignedKeys)
-  );
+  ) {
+    return true;
+  }
+  // Syllabus / Gallery list all top-level class notes (Personal + assigned).
+  return includeAssignedClassNotes && isClassNoteItem(item);
 }
 
 function collectRegularItems(
   collection: Zotero.Collection,
   recursive: boolean,
+  includeAssignedClassNotes: boolean,
 ): Zotero.Item[] {
   const assignedKeys = assignedDocumentItemKeys(collection);
   if (!recursive) {
     return collection
       .getChildItems()
-      .filter((item) => isSyllabusViewItem(item, assignedKeys));
+      .filter((item) =>
+        isSyllabusViewItem(item, assignedKeys, includeAssignedClassNotes),
+      );
   }
 
   const seen = new Set<number>();
   const items: Zotero.Item[] = [];
   const walk = (col: Zotero.Collection) => {
     for (const item of col.getChildItems()) {
-      if (!isSyllabusViewItem(item, assignedKeys) || seen.has(item.id)) {
+      if (
+        !isSyllabusViewItem(item, assignedKeys, includeAssignedClassNotes) ||
+        seen.has(item.id)
+      ) {
         continue;
       }
       seen.add(item.id);
@@ -118,10 +135,15 @@ export function useZoteroCollectionItems(
   options?: CollectionItemsOptions,
 ) {
   const recursive = options?.recursive ?? false;
-  // Create the store once per ID + recursive mode
+  const includeAssignedClassNotes = options?.includeAssignedClassNotes ?? false;
+  // Create the store once per ID + recursive mode + note inclusion
   const store = useMemo(
-    () => createCollectionItemsStore(collectionId, { recursive }),
-    [collectionId, recursive],
+    () =>
+      createCollectionItemsStore(collectionId, {
+        recursive,
+        includeAssignedClassNotes,
+      }),
+    [collectionId, recursive, includeAssignedClassNotes],
   );
 
   const __itemsFromZotero = useSyncExternalStore(
@@ -164,6 +186,7 @@ export function createCollectionItemsStore(
   options?: CollectionItemsOptions,
 ) {
   const recursiveMode = options?.recursive ?? false;
+  const includeAssignedClassNotes = options?.includeAssignedClassNotes ?? false;
 
   function getSnapshot() {
     // Read directly from Zotero
@@ -173,14 +196,16 @@ export function createCollectionItemsStore(
       return SuperJSON.stringify({ items: [] });
     }
     const recursive = shouldIncludeSubcollections(recursiveMode);
-    const items: ItemID[] = collectRegularItems(collection, recursive).map(
-      (item) => {
-        return {
-          id: item.id,
-          ...item.toJSON(),
-        };
-      },
-    );
+    const items: ItemID[] = collectRegularItems(
+      collection,
+      recursive,
+      includeAssignedClassNotes,
+    ).map((item) => {
+      return {
+        id: item.id,
+        ...item.toJSON(),
+      };
+    });
     return SuperJSON.stringify({
       items,
       documentGeneration: getDocumentGeneration(),
@@ -209,7 +234,11 @@ export function createCollectionItemsStore(
             const itemIds = ids as number[];
             for (const itemId of itemIds) {
               const item = getCachedItem(itemId);
-              if (item && isSyllabusMemberItem(item)) {
+              const isMember =
+                item &&
+                (isSyllabusMemberItem(item) ||
+                  (includeAssignedClassNotes && isClassNoteItem(item)));
+              if (isMember) {
                 const collections = item.getCollections();
                 const collection =
                   SyllabusManager.getCollectionFromIdentifier(collectionId);

@@ -3,5 +3,7 @@ export {
   ExplorerCoverItem,
   ExplorerMagazineEntry,
   ExplorerMagazineRail,
+  MagazineBlurb,
   MagazineVerticalList,
 } from "./MagazineCoverBlurb";
+export type { MagazineBlurbVariant } from "./MagazineCoverBlurb";

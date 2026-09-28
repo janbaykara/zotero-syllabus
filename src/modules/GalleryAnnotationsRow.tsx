@@ -1,13 +1,12 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
-import type { JSX } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { getString } from "../utils/locale";
 import {
   annotationMatchesColorFilter,
   collectAnnotationColors,
 } from "../utils/annotationColors";
-import { sortItems } from "../utils/items";
+import { isClassNoteItem, sortItems } from "../utils/items";
 import {
   AnnotationStreamGroup,
   type AnnotationStreamParentGroup,
@@ -17,8 +16,8 @@ import {
   type MyAnnotationStreamEntry,
 } from "./explorerQueries";
 import type { GallerySortBy } from "./gallerySort";
-import { GalleryTile } from "./GalleryPage";
 import type { MagazineTileClick } from "./MagazineTile";
+import { CoverStreamSection } from "./coverStream";
 import {
   useAnnotationColorFilter,
   useViewQuoteOrder,
@@ -254,15 +253,33 @@ export function GalleryAnnotationsSection({
   }
 
   const { withAnnotations, withoutAnnotations } = partition;
-  const emptyItems = showItemsWithoutAnnotations ? withoutAnnotations : [];
-  const sortedWith = withAnnotations
+  // Class notes always stay in the main stream (notepad + blurb), never the
+  // “no annotations” cover grid — same idea as Magazine.
+  const classNoteStream = withoutAnnotations
+    .filter((item) => isClassNoteItem(item))
+    .map((item) => ({
+      item,
+      entries: [] as MyAnnotationStreamEntry[],
+    }));
+  const emptyItems = (
+    showItemsWithoutAnnotations ? withoutAnnotations : []
+  ).filter((item) => !isClassNoteItem(item));
+  const streamById = new Map(
+    [...withAnnotations, ...classNoteStream].map((row) => [row.item.id, row]),
+  );
+  const orderedStream = sortItems(uniqueItems(items), sortBy)
+    .map((item) => streamById.get(item.id))
+    .filter((row): row is NonNullable<typeof row> => row != null);
+  const sortedWith = orderedStream
     .map(({ item, entries }) => ({
       item,
-      entries: entries.filter((entry) =>
-        annotationMatchesColorFilter(entry.color, colorFilter),
-      ),
+      entries: isClassNoteItem(item)
+        ? entries
+        : entries.filter((entry) =>
+            annotationMatchesColorFilter(entry.color, colorFilter),
+          ),
     }))
-    .filter((row) => row.entries.length > 0);
+    .filter((row) => isClassNoteItem(row.item) || row.entries.length > 0);
   const sortedEmpty = sortItems(emptyItems, sortBy);
   const colorFilterEmpty =
     sortedWith.length === 0 &&
@@ -282,70 +299,39 @@ export function GalleryAnnotationsSection({
   }
 
   return (
-    <div
-      className="syllabus-gallery-annotations-section flex flex-col min-w-0"
-      style={
-        sortedEmpty.length > 0
-          ? ({
-              /* Fewer tiles than the pane can fit → fewer columns so the row
-                 still fills; cover max keeps a lone tile from going full-bleed. */
-              "--syllabus-annotations-cover-cols-cap": String(
-                sortedEmpty.length,
-              ),
-            } as JSX.CSSProperties)
-          : undefined
-      }
+    <CoverStreamSection
+      emptyItems={sortedEmpty}
+      emptyHeading={getString("gallery-annotations-none-heading")}
+      emptyGroupKey={`${keyPrefix}-no-annotations`}
+      collectionId={collectionId}
+      selectedItemIds={selectedItemIds}
+      showGalleryNote={showGalleryNote}
+      chromeByItemId={chromeByItemId}
+      onClick={onClick}
+      onDoubleClick={onDoubleClick}
+      onContextMenu={onContextMenu}
     >
-      {sortedWith.length > 0 ? (
-        <div className="syllabus-gallery-annotations-list syllabus-my-annotations-stream">
-          {sortedWith.map(({ item, entries }) => {
-            const group: AnnotationStreamParentGroup = {
-              key: `${keyPrefix}-${item.id}`,
-              parent: item,
-              entries,
-            };
-            return (
-              <AnnotationStreamGroup
-                key={group.key}
-                group={group}
-                selected={selectedItemIds?.includes(item.id) || false}
-                collectionId={collectionId}
-                showGalleryNote={showGalleryNote}
-                chrome={chromeByItemId?.get(item.id)}
-                quoteOrder={quoteOrder}
-                onClick={onClick}
-                onDoubleClick={onDoubleClick}
-                onContextMenu={onContextMenu}
-              />
-            );
-          })}
-        </div>
-      ) : null}
-      {sortedEmpty.length > 0 ? (
-        <section
-          className="syllabus-gallery-annotations-empty-section min-w-0"
-          data-gallery-group={`${keyPrefix}-no-annotations`}
-        >
-          <h2 className="syllabus-gallery-annotations-empty-heading">
-            {getString("gallery-annotations-none-heading")}
-          </h2>
-          <div className="syllabus-gallery-grid">
-            {sortedEmpty.map((item) => (
-              <GalleryTile
-                key={`${keyPrefix}-empty-${item.id}`}
-                item={item}
-                collectionId={collectionId}
-                showGalleryNote={showGalleryNote}
-                selected={selectedItemIds?.includes(item.id) || false}
-                chrome={chromeByItemId?.get(item.id)}
-                onClick={onClick}
-                onDoubleClick={onDoubleClick}
-                onContextMenu={onContextMenu}
-              />
-            ))}
-          </div>
-        </section>
-      ) : null}
-    </div>
+      {sortedWith.map(({ item, entries }) => {
+        const group: AnnotationStreamParentGroup = {
+          key: `${keyPrefix}-${item.id}`,
+          parent: item,
+          entries,
+        };
+        return (
+          <AnnotationStreamGroup
+            key={group.key}
+            group={group}
+            selected={selectedItemIds?.includes(item.id) || false}
+            collectionId={collectionId}
+            showGalleryNote={showGalleryNote}
+            chrome={chromeByItemId?.get(item.id)}
+            quoteOrder={quoteOrder}
+            onClick={onClick}
+            onDoubleClick={onDoubleClick}
+            onContextMenu={onContextMenu}
+          />
+        );
+      })}
+    </CoverStreamSection>
   );
 }

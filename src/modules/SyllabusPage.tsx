@@ -35,6 +35,7 @@ import { useReaderMode } from "./react-zotero-sync/readerMode";
 import { isZotero8OrLater } from "../utils/zotero";
 import {
   getItemTitle,
+  isClassNoteItem,
   isSyllabusAssignableItem,
   sortItems,
 } from "../utils/items";
@@ -103,6 +104,10 @@ import {
   visibleSyllabusClassGroups,
 } from "./classGroups";
 import type { FurtherReadingEntry } from "./classGroups";
+import {
+  isDisplayOnlyAssignmentId,
+  DISPLAY_NOTE_ASSIGNMENT_PREFIX,
+} from "./classGroups";
 import {
   ClassSubcollectionPage,
   peekPendingClassScroll,
@@ -626,9 +631,12 @@ type SaveMenuAction =
 function SyllabusSaveFormatMenu({
   onSelect,
   onPublish,
+  hasClassNotes = false,
 }: {
   onSelect: (format: SyllabusExportFormat) => void;
   onPublish: () => void;
+  /** When the collection has class notes, remind that they stay private. */
+  hasClassNotes?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -694,6 +702,14 @@ function SyllabusSaveFormatMenu({
               </button>
             </li>
           </ul>
+          {hasClassNotes ? (
+            <>
+              <hr className="syllabus-save-format-divider" />
+              <p className="syllabus-save-format-note">
+                {getString("print-notes-excluded")}
+              </p>
+            </>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -729,7 +745,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   );
 
   const isPersistedLocked = syllabusMetadata.locked || false;
-  const syllabusItems = useZoteroCollectionItems(collectionId);
+  const syllabusItems = useZoteroCollectionItems(collectionId, {
+    includeAssignedClassNotes: true,
+  });
   // Visual-only search/tag filter — does not change syllabus configuration.
   const matchingIds = useZoteroItemsViewRegularItemIds(collectionId);
   const isFiltered = matchingIds != null;
@@ -738,8 +756,11 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     if (!matchingIds) {
       return syllabusItems;
     }
-    return syllabusItems.filter(({ zoteroItem }) =>
-      matchingIds.has(zoteroItem.id),
+    // Notes are not “regular” items in Zotero’s items tree, so tag/search
+    // filters omit them from matchingIds — keep every class note listed.
+    return syllabusItems.filter(
+      ({ zoteroItem }) =>
+        matchingIds.has(zoteroItem.id) || isClassNoteItem(zoteroItem),
     );
   }, [syllabusItems, matchingIds]);
   const classAssignments = useMemo(() => {
@@ -748,6 +769,10 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   const items = useMemo(() => {
     return syllabusItems.map((item) => item.zoteroItem);
   }, [syllabusItems]);
+  const hasClassNotes = useMemo(
+    () => syllabusItems.some(({ zoteroItem }) => isClassNoteItem(zoteroItem)),
+    [syllabusItems],
+  );
 
   // Track drag state for showing "Add to Class X" dropzone
   const [isDragging, setIsDragging] = useState(false);
@@ -903,6 +928,19 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     for (const identifier of selectedIdentifiers) {
       if (identifier.startsWith("assignment:")) {
         const assignmentId = identifier.replace("assignment:", "");
+        // Unassigned class notes use a display-only id — drag as the item.
+        if (isDisplayOnlyAssignmentId(assignmentId)) {
+          const noteKey = assignmentId.slice(
+            DISPLAY_NOTE_ASSIGNMENT_PREFIX.length,
+          );
+          const syllabusItem = syllabusItems.find(
+            (entry) => entry.zoteroItem.key === noteKey,
+          );
+          if (syllabusItem) {
+            itemIds.push(syllabusItem.zoteroItem.id);
+          }
+          continue;
+        }
         for (const syllabusItem of syllabusItems) {
           const matchingAssignment = syllabusItem.assignments.find(
             (a) => a.id === assignmentId,
@@ -949,10 +987,13 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           } else {
             newSet.add(identifier);
           }
+        } else if (!e) {
+          // Programmatic select (e.g. newly created note): always select.
+          newSet.clear();
+          newSet.add(identifier);
         } else {
-          // Replace selection
+          // Replace selection (click toggles off when already sole selection)
           if (prev.size > 1) {
-            // Replace selection
             newSet.clear();
             newSet.add(identifier);
           } else {
@@ -982,6 +1023,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           } else {
             pane.selectItem(itemId);
           }
+        } else if (!e) {
+          // Programmatic: keep / set Zotero selection (do not toggle off).
+          void pane.selectItem(item.id);
         } else {
           const isZoteroSelected = selectedItemIds?.includes(item.id) || false;
           if (isZoteroSelected) {
@@ -1339,8 +1383,10 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
   // Compute class groups and further reading items from synced items
   // Re-compute when items change or item order changes
-  const { classGroups, furtherReadingItems: unsortedFurtherReading } =
-    useSyllabusClassGroups(
+  const {
+    classGroups,
+    furtherReadingItems: unsortedFurtherReading,
+  } = useSyllabusClassGroups(
       collectionId,
       displaySyllabusItems,
       syllabusMetadata,
@@ -1380,8 +1426,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     return groups
       .map((group) => ({
         ...group,
-        itemAssignments: group.itemAssignments.filter(({ item }) =>
-          annotatedItemIds.has(item.id),
+        itemAssignments: group.itemAssignments.filter(
+          ({ item }) =>
+            isClassNoteItem(item) || annotatedItemIds.has(item.id),
         ),
       }))
       .filter((group) => group.itemAssignments.length > 0);
@@ -1429,7 +1476,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     SyllabusManager.getFurtherReadingOrder(collectionId).length > 0;
 
   const navigableEntries = useMemo(
-    () => getNavigableSyllabusEntries(visibleClassGroups, furtherReadingItems),
+    () =>
+      getNavigableSyllabusEntries(visibleClassGroups, furtherReadingItems),
     [visibleClassGroups, furtherReadingItems],
   );
 
@@ -1774,11 +1822,13 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       const multipleAssignmentIdsStr = e.dataTransfer.getData(
         "application/x-syllabus-assignment-ids",
       );
-      const draggedAssignmentIds = multipleAssignmentIdsStr
-        ? multipleAssignmentIdsStr.split(",").filter(Boolean)
-        : sourceAssignmentId
-          ? [sourceAssignmentId]
-          : [];
+      const draggedAssignmentIds = (
+        multipleAssignmentIdsStr
+          ? multipleAssignmentIdsStr.split(",").filter(Boolean)
+          : sourceAssignmentId
+            ? [sourceAssignmentId]
+            : []
+      ).filter((id) => !isDisplayOnlyAssignmentId(id));
       if (draggedAssignmentIds.length === 0) {
         return;
       }
@@ -1831,7 +1881,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     if (multipleAssignmentIdsStr || hasMultipleItems) {
       // Handle multiple assignments drag (or multiple items including unassigned)
       const assignmentIds = multipleAssignmentIdsStr
-        ? multipleAssignmentIdsStr.split(",").filter(Boolean)
+        ? multipleAssignmentIdsStr
+            .split(",")
+            .filter((id) => id && !isDisplayOnlyAssignmentId(id))
         : [];
       const itemIds = itemIdStr
         .split(",")
@@ -2095,9 +2147,12 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     if (!draggedItem || !isSyllabusAssignableItem(draggedItem)) return;
 
     // Get source assignment ID from drag data (if dragging from a class)
-    const sourceAssignmentId = e.dataTransfer.getData(
+    const sourceAssignmentIdRaw = e.dataTransfer.getData(
       "application/x-syllabus-assignment-id",
     );
+    const sourceAssignmentId = isDisplayOnlyAssignmentId(sourceAssignmentIdRaw)
+      ? ""
+      : sourceAssignmentIdRaw;
 
     // Get source class number for reordering
     const sourceClassNumberStr = e.dataTransfer.getData(
@@ -2412,8 +2467,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         setItemOrderVersion((v) => v + 1);
       }
     } else {
-      // Dragging from "further reading" with NO assignment: create a new assignment (COPY)
-      // Only create if we're dropping to a specific class (targetClassNumberValue is defined)
+      // No stored assignment (further reading, or display-only unassigned note):
+      // create a new class assignment when dropping onto a numbered class.
       if (targetClassNumberValue !== undefined) {
         ztoolkit.log("Creating new assignment for unassigned item:", {
           itemId: draggedItem.id,
@@ -3046,6 +3101,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   <SyllabusSaveFormatMenu
                     onSelect={handleExportFormat}
                     onPublish={handlePublish}
+                    hasClassNotes={hasClassNotes}
                   />
                   <div
                     className={twMerge(
@@ -3210,6 +3266,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                     {getString("gallery-empty-filtered")}
                   </p>
                 )}
+
               {visibleClassGroups.map((group) => (
                 <ClassGroupComponent
                   key={group.classNumber ?? "null"}
@@ -3437,7 +3494,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   className={
                     isLocked &&
                     effectiveLayout !== "card" &&
-                    effectiveLayout !== "annotations"
+                    effectiveLayout !== "annotations" &&
+                    effectiveLayout !== "magazine"
                       ? "w-full min-w-0 max-w-full"
                       : "container-padded"
                   }

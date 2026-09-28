@@ -173,10 +173,10 @@ export function takePendingClassScroll(
   return pending;
 }
 
-export function selectItemInCollection(
+export async function selectItemInCollection(
   item: Zotero.Item,
   collectionId: number,
-): void {
+): Promise<void> {
   try {
     const ZoteroPane = ztoolkit.getGlobal("ZoteroPane");
     const collection = getCachedCollectionById(collectionId);
@@ -184,12 +184,10 @@ export function selectItemInCollection(
       const collectionsView = ZoteroPane.collectionsView;
       if (collectionsView) {
         collectionsView.selectByID(collection.treeViewID);
-        if (!item.deleted) {
-          ZoteroPane.selectItem(item.id);
-        }
       }
-    } else {
-      ZoteroPane.selectItem(item.id);
+    }
+    if (!item.deleted && typeof ZoteroPane.selectItem === "function") {
+      await ZoteroPane.selectItem(item.id);
     }
   } catch (error) {
     ztoolkit.log("Error selecting item in collection:", error);

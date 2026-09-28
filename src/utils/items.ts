@@ -227,16 +227,66 @@ export function isAssignedStandaloneAttachment(
   return isStandaloneAttachment(item) && assignedKeys.has(item.key);
 }
 
-/** Regular readings plus standalone files assigned on the syllabus. */
+/** Stored identifier on the collection Syllabus document note — not a class note. */
+const SYLLABUS_DOCUMENT_NOTE_TAG = "zotero-syllabus";
+
+/**
+ * Top-level standalone note that can be assigned to a class. Excludes the
+ * collection Syllabus document (`zotero-syllabus` tag) and child notes.
+ */
+export function isClassNoteItem(
+  item: Zotero.Item | false | null | undefined,
+): boolean {
+  if (!item) {
+    return false;
+  }
+  try {
+    if (item.deleted) {
+      return false;
+    }
+    if (typeof item.isNote !== "function" || !item.isNote()) {
+      return false;
+    }
+    const topLevel =
+      typeof item.isTopLevelItem === "function"
+        ? item.isTopLevelItem()
+        : !item.parentItemID;
+    if (!topLevel) {
+      return false;
+    }
+    if (
+      typeof item.hasTag === "function" &&
+      item.hasTag(SYLLABUS_DOCUMENT_NOTE_TAG)
+    ) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function isAssignedClassNote(
+  item: Zotero.Item | false | null | undefined,
+  assignedKeys: ReadonlySet<string>,
+): boolean {
+  return Boolean(item && isClassNoteItem(item) && assignedKeys.has(item.key));
+}
+
+/** Regular readings, standalone files, or class notes. */
 export function isSyllabusAssignableItem(
   item: Zotero.Item | false | null | undefined,
 ): item is Zotero.Item {
-  return isSyllabusMemberItem(item) || isStandaloneAttachment(item);
+  return (
+    isSyllabusMemberItem(item) ||
+    isStandaloneAttachment(item) ||
+    isClassNoteItem(item)
+  );
 }
 
 /**
  * Prefer the item itself when it can live on a syllabus; otherwise the
- * bibliographic parent of a child attachment. Notes and other types stay out.
+ * bibliographic parent of a child attachment. Nested notes stay out.
  */
 export function resolveAssignableItem(
   item: Zotero.Item | false | null | undefined,
@@ -513,8 +563,57 @@ function firstViewableAttachmentId(item: Zotero.Item): number {
   return getViewableAttachmentIds(item)[0] || 0;
 }
 
-/** Open the first viewable attachment, or the item URL if none. */
+/**
+ * Open a note in a tab (Zotero 8+) or note window (Zotero 7). Respects the
+ * General → Notes “open in window” pref when `openInWindow` is omitted.
+ */
+export function openNoteItem(
+  item: Zotero.Item,
+  options?: { openInWindow?: boolean },
+): void {
+  try {
+    if (typeof item.isNote === "function" && !item.isNote()) {
+      return;
+    }
+    const pane = ztoolkit.getGlobal("ZoteroPane") as {
+      openNote?: (
+        id: number,
+        opts?: { openInWindow?: boolean },
+      ) => void | Promise<void>;
+      openNoteWindow?: (id: number) => void | Promise<void>;
+      selectItem?: (id: number) => void | Promise<void>;
+    };
+    if (typeof pane.openNote === "function") {
+      void pane.openNote(
+        item.id,
+        options?.openInWindow === undefined
+          ? undefined
+          : { openInWindow: options.openInWindow },
+      );
+      return;
+    }
+    if (typeof pane.openNoteWindow === "function") {
+      void pane.openNoteWindow(item.id);
+      return;
+    }
+    if (typeof pane.selectItem === "function") {
+      void pane.selectItem(item.id);
+    }
+  } catch (error) {
+    ztoolkit.log("openNoteItem failed:", error);
+  }
+}
+
+/** Open the first viewable attachment, URL, or note tab. */
 export function openItemBestAttachment(item: Zotero.Item): void {
+  try {
+    if (typeof item.isNote === "function" && item.isNote()) {
+      openNoteItem(item);
+      return;
+    }
+  } catch {
+    // Fall through to attachment / URL.
+  }
   const viewableAttachment = firstViewableAttachmentId(item);
   if (viewableAttachment) {
     const pane = ztoolkit.getGlobal("ZoteroPane");

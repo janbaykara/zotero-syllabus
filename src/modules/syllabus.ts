@@ -2857,7 +2857,7 @@ export class SyllabusManager {
     classNumber: number | null | undefined,
     metadata: Partial<ItemSyllabusAssignment>,
     source: "page" | "item-pane" | "context-menu",
-  ): Promise<void> {
+  ): Promise<string | undefined> {
     const assignments = [
       ...this.getItemSyllabusDataForCollection(item, collectionId),
     ];
@@ -2868,10 +2868,11 @@ export class SyllabusManager {
     });
     if (!newEntry.success) {
       ztoolkit.log("Error adding new assignment:", newEntry.error);
-      return;
+      return undefined;
     }
     assignments.push(newEntry.data);
     await this.setItemAssignments(item, collectionId, assignments, source);
+    return newEntry.data.id;
   }
 
   /**

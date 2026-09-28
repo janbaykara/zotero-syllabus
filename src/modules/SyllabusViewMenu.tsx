@@ -3,13 +3,10 @@ import { h, Fragment } from "preact";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import {
   Image,
-  LayoutGrid,
   LayoutList,
   Maximize2,
   MoreHorizontal,
   Newspaper,
-  AlignJustify,
-  StretchHorizontal,
   Rows2,
   Rows3,
   Highlighter,
@@ -107,32 +104,6 @@ const QUOTE_ORDER_OPTIONS: {
   },
 ];
 
-const PACKING_OPTIONS: {
-  mode: MagazinePacking;
-  labelKey: FluentMessageId;
-  titleKey: FluentMessageId;
-  Icon: typeof LayoutGrid;
-}[] = [
-  {
-    mode: "vertical",
-    labelKey: "gallery-packing-vertical",
-    titleKey: "gallery-packing-vertical-title",
-    Icon: AlignJustify,
-  },
-  {
-    mode: "grid",
-    labelKey: "gallery-packing-grid",
-    titleKey: "gallery-packing-grid-title",
-    Icon: LayoutGrid,
-  },
-  {
-    mode: "packed",
-    labelKey: "gallery-packing-packed",
-    titleKey: "gallery-packing-packed-title",
-    Icon: StretchHorizontal,
-  },
-];
-
 function confirmReadingScheduleCollectionToggle(enable: boolean): boolean {
   if (enable) {
     return confirmPrompt(
@@ -152,9 +123,9 @@ export function SyllabusViewMenu({
   layout = "card",
   onLayoutChange,
   layoutGlobal,
-  magazinePacking = "packed",
-  onMagazinePackingChange,
-  magazinePackingGlobal,
+  magazinePacking: _magazinePacking = "packed",
+  onMagazinePackingChange: _onMagazinePackingChange,
+  magazinePackingGlobal: _magazinePackingGlobal,
   showCheckboxes = true,
   showScheduleCollection = false,
   showGlobal = true,
@@ -346,9 +317,7 @@ export function SyllabusViewMenu({
                 ) : null}
               </div>
             ) : null}
-            {showDensity ||
-            (showLayout && layout === "magazine" && onMagazinePackingChange) ||
-            (showLayout && layout === "annotations") ? (
+            {showDensity || (showLayout && layout === "annotations") ? (
               <div className="syllabus-gallery-toolbar-section">
                 {showDensity ? (
                   <GallerySegmentedControl
@@ -364,48 +333,6 @@ export function SyllabusViewMenu({
                     }))}
                     globalSetting={showGlobal ? densityGlobal : undefined}
                   />
-                ) : null}
-                {showLayout &&
-                layout === "magazine" &&
-                onMagazinePackingChange ? (
-                  <div className="syllabus-gallery-toolbar-cluster">
-                    <div className="syllabus-gallery-toolbar-heading">
-                      <span className="syllabus-gallery-groupby-label">
-                        {getString("gallery-menu-packing")}
-                      </span>
-                      {showGlobal && magazinePackingGlobal ? (
-                        <GallerySaveGlobalButton
-                          globalSetting={magazinePackingGlobal}
-                        />
-                      ) : null}
-                    </div>
-                    <div
-                      role="radiogroup"
-                      aria-label={getString("gallery-menu-packing")}
-                      className="syllabus-gallery-groupby"
-                    >
-                      {PACKING_OPTIONS.map(
-                        ({ mode, labelKey, titleKey, Icon }) => (
-                          <button
-                            key={mode}
-                            type="button"
-                            role="radio"
-                            aria-checked={magazinePacking === mode}
-                            title={getString(titleKey)}
-                            className="syllabus-gallery-groupby-btn"
-                            onClick={() => onMagazinePackingChange(mode)}
-                          >
-                            <Icon
-                              size={12}
-                              strokeWidth={2}
-                              aria-hidden="true"
-                            />
-                            {getString(labelKey)}
-                          </button>
-                        ),
-                      )}
-                    </div>
-                  </div>
                 ) : null}
                 {showLayout && layout === "annotations" ? (
                   <>

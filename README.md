@@ -77,7 +77,7 @@ The plugin has five surfaces. Turn each on or off in **Preferences → Zotero Sy
 
 1. [Syllabus](#syllabus) — structure a collection by class.
 2. [Reading Schedule](#reading-schedule) — due dates across all your syllabi.
-3. [Gallery](#gallery) — browse a collection as covers, cards, or a magazine.
+3. [Gallery](#gallery) — browse a collection as covers, cards, or a preview.
 4. [Home](#home) — library shelves for what to open next.
 5. [Annotation Feed](#annotation-feed) — your highlights in one timeline.
 
@@ -93,6 +93,8 @@ Shared tools that show up on more than one surface: [Pinning](#pinning), [Galler
 ### Syllabus
 
 Structure a collection by class (or week / session — you choose the word). Assign readings, set priorities and instructions, drag items into place, and export or publish the list.
+
+Standalone notes in the collection can be assigned to a class like any reading. They use the same Syllabus cards and ordering, with a fixed yellow **Class Note** label instead of a priority. Unassigned notes sit at the top with priority-only items (for example Course Information). Class notes stay private: they do not appear on Reading Schedule, Gallery, Annotation Feed, class folders, print, or publish.
 
 ![Syllabus module interface showing class organization](doc/images/classes.png)
 
@@ -186,7 +188,7 @@ Optional: **Preferences → Zotero Syllabus → Generate a “Reading Schedule�
 
 ### Gallery
 
-Browse one collection as covers, cards, a magazine spread, or an annotation stream. Switch with **Gallery** in the items toolbar.
+Browse one collection as covers, cards, a preview of excerpts, or an annotation stream. Switch with **Gallery** in the items toolbar.
 
 ![Gallery view with book covers and reading progress](doc/images/gallery.png)
 
@@ -200,10 +202,7 @@ Click a cover or card to select it in Zotero; double-click opens the best attach
 
 - **Cover** — artwork in a grid. Best for scanning books, papers, and web pages at a glance.
 - **Card** — the same syllabus item cards, in a narrower reading column. **Density** (Row / Standard / Expanded) is available in this mode.
-- **Magazine** — mixed-size tiles with titles, blurbs, and [Gallery notes](#gallery-notes). **Packing** chooses the spread:
-  - **Vertical** — covers with abstracts in a reading stack (narrow column).
-  - **Grid** — equal-size magazine tiles across the pane.
-  - **Packed** — mixed-size tiles, like a contents page.
+- **Preview** — covers with excerpt blurbs beside them, using the same layout as Annotations. Items without a preview sit in a horizontal cover row.
 - **Annotations** — covers with every highlight and note on the item. **Quotes** orders those excerpts by location in the document or by date added. Check **Show items with no annotations** to keep items without highlights in the list.
 
 #### Sort
@@ -217,7 +216,7 @@ Click a cover or card to select it in Zotero; double-click opens the best attach
 #### Group by
 
 - **None** — one continuous list.
-- **Automatic** — Magazine only; builds shelves from classes, child collections, and frequent tags.
+- **Automatic** — Preview only; builds shelves from classes, child collections, and frequent tags.
 - **Type** — books, journal articles, web pages, and so on.
 - **Creator**
 - **Tags**
@@ -234,9 +233,9 @@ The note belongs to **this collection**. The same item in another collection can
 2. Right-click an item → **Add Gallery Note** (or **Edit Gallery Note**).
 3. Write in Zotero’s note editor.
 
-Click a Gallery note on a card, cover, or magazine tile to open it. Right-click → **Remove Gallery Note** deletes only this collection’s Gallery note.
+Click a Gallery note on a card, cover, or preview tile to open it. Right-click → **Remove Gallery Note** deletes only this collection’s Gallery note.
 
-How it looks: under the title on **Card** and **Magazine** (a longer note can enlarge a magazine tile); beside the cover in **Cover**; still on the item in **Annotations**.
+How it looks: under the title on **Card**; in the sidecar on **Preview**; beside the cover in **Cover**; still on the item in **Annotations**.
 
 ### Home
 
