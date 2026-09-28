@@ -186,6 +186,7 @@ page-import = シラバスファイルを読み込む
 page-edit-settings = シラバス設定を編集
 page-lock = シラバスをロック
 page-unlock = シラバスのロックを解除
+page-lock-search = 検索中はロックされます
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = チェックボックスを表示
 page-print = シラバスを PDF、Word、Markdown、または HTML として保存

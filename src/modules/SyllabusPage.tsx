@@ -98,7 +98,10 @@ import {
   getPublishedSyllabusUrl,
   setPublishedSyllabusUrl,
 } from "../utils/publishUrls";
-import { isEmptyClassGroup, useSyllabusClassGroups } from "./classGroups";
+import {
+  useSyllabusClassGroups,
+  visibleSyllabusClassGroups,
+} from "./classGroups";
 import type { FurtherReadingEntry } from "./classGroups";
 import {
   ClassSubcollectionPage,
@@ -725,11 +728,12 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     [collectionId],
   );
 
-  const isLocked = syllabusMetadata.locked || false;
+  const isPersistedLocked = syllabusMetadata.locked || false;
   const syllabusItems = useZoteroCollectionItems(collectionId);
   // Visual-only search/tag filter — does not change syllabus configuration.
   const matchingIds = useZoteroItemsViewRegularItemIds(collectionId);
   const isFiltered = matchingIds != null;
+  const isLocked = isPersistedLocked || isFiltered;
   const displaySyllabusItems = useMemo(() => {
     if (!matchingIds) {
       return syllabusItems;
@@ -1363,10 +1367,10 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   );
 
   const visibleClassGroups = useMemo(() => {
-    const groups =
-      isLocked || isFiltered
-        ? classGroups.filter((group) => !isEmptyClassGroup(group))
-        : classGroups;
+    const groups = visibleSyllabusClassGroups(classGroups, {
+      hideEmpty: isLocked,
+      requireItems: isFiltered,
+    });
     if (!hideEmptyAnnotationGroups) {
       return groups;
     }
@@ -1679,6 +1683,11 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   ) => {
     if (isOsFileDrag(e.dataTransfer)) {
       e.preventDefault();
+      return;
+    }
+    if (isLocked) {
+      e.preventDefault();
+      e.stopPropagation();
       return;
     }
     e.preventDefault();
@@ -2484,6 +2493,10 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       e.preventDefault();
       return;
     }
+    if (isLocked) {
+      e.preventDefault();
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     if (e.dataTransfer) {
@@ -3035,24 +3048,39 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                     onPublish={handlePublish}
                   />
                   <div
-                    className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"
+                    className={twMerge(
+                      "grow-0 shrink-0 flex items-center in-[.print]:hidden",
+                      isFiltered ? "cursor-default" : "cursor-pointer",
+                    )}
                     title={
-                      isLocked
-                        ? getString("page-unlock")
-                        : getString("page-lock")
+                      isFiltered
+                        ? getString("page-lock-search")
+                        : isPersistedLocked
+                          ? getString("page-unlock")
+                          : getString("page-lock")
                     }
                     aria-label={
-                      isLocked
-                        ? getString("page-unlock")
-                        : getString("page-lock")
+                      isFiltered
+                        ? getString("page-lock-search")
+                        : isPersistedLocked
+                          ? getString("page-unlock")
+                          : getString("page-lock")
                     }
                     aria-pressed={isLocked}
-                    onClick={() => setLocked(!isLocked)}
+                    aria-disabled={isFiltered || undefined}
+                    onClick={
+                      isFiltered
+                        ? undefined
+                        : () => setLocked(!isPersistedLocked)
+                    }
                   >
                     {isLocked ? (
                       <Lock
                         size={20}
-                        className="text-primary hover:text-primary hover:bg-quinary rounded p-1"
+                        className={twMerge(
+                          "text-primary rounded p-1",
+                          !isFiltered && "hover:text-primary hover:bg-quinary",
+                        )}
                       />
                     ) : (
                       <Unlock
@@ -3233,7 +3261,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
                 return (
                   <>
-                    {!isLocked && !isFiltered && hasNoClasses && (
+                    {!isLocked && hasNoClasses && (
                       <div
                         className="in-[.print]:hidden mb-6 rounded-lg border border-quinary bg-quinary/40 p-6 space-y-3"
                         data-tour="syllabus-empty-state"

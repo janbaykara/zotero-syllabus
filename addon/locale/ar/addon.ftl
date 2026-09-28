@@ -186,6 +186,7 @@ page-import = استيراد ملف المنهاج
 page-edit-settings = تحرير إعدادات المنهاج
 page-lock = قفل المنهاج
 page-unlock = إلغاء قفل المنهاج
+page-lock-search = مقفل أثناء البحث
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = إظهار مربعات الاختيار
 page-print = حفظ المنهاج كـ PDF أو Word أو Markdown أو HTML

@@ -186,6 +186,7 @@ page-import = Importuj plik sylabusa
 page-edit-settings = Edytuj ustawienia sylabusa
 page-lock = Zablokuj sylabus
 page-unlock = Odblokuj sylabus
+page-lock-search = Zablokowane podczas wyszukiwania
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = Pokaż pola wyboru
 page-print = Zapisz sylabus jako PDF, Word, Markdown lub HTML

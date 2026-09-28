@@ -186,6 +186,7 @@ page-import = Impor berkas silabus
 page-edit-settings = Sunting pengaturan silabus
 page-lock = Kunci silabus
 page-unlock = Buka kunci silabus
+page-lock-search = Terkunci saat mencari
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = Tampilkan kotak centang
 page-print = Simpan silabus sebagai PDF, Word, Markdown, atau HTML

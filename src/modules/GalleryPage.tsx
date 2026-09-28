@@ -67,6 +67,7 @@ import {
   sortClassAssignmentRows,
   sortItemRows,
   useSyllabusClassGroups,
+  visibleSyllabusClassGroups,
 } from "./classGroups";
 import { useGalleryGroupBy, type GalleryGroupBy } from "./galleryGroupBy";
 import {
@@ -371,13 +372,16 @@ export function GalleryPage({
   }, [untaggedItems, hideEmptyAnnotationGroups, annotatedItemIds]);
 
   const visibleClassGroups = useMemo(() => {
+    const groups = visibleSyllabusClassGroups(classGroups, {
+      requireItems: isFiltered,
+    });
     if (!hideEmptyAnnotationGroups) {
-      return classGroups;
+      return groups;
     }
     if (!annotatedItemIds) {
       return [];
     }
-    return classGroups
+    return groups
       .map((group) => ({
         ...group,
         itemAssignments: group.itemAssignments.filter(({ item }) =>
@@ -385,7 +389,7 @@ export function GalleryPage({
         ),
       }))
       .filter((group) => group.itemAssignments.length > 0);
-  }, [classGroups, hideEmptyAnnotationGroups, annotatedItemIds]);
+  }, [classGroups, isFiltered, hideEmptyAnnotationGroups, annotatedItemIds]);
 
   const visibleFurtherReadingItems = useMemo(() => {
     if (!hideEmptyAnnotationGroups) {

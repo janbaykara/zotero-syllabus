@@ -186,6 +186,7 @@ page-import = Importer un fichier syllabus
 page-edit-settings = Modifier les paramètres du syllabus
 page-lock = Verrouiller le syllabus
 page-unlock = Déverrouiller le syllabus
+page-lock-search = Verrouillé pendant la recherche
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = Afficher les cases à cocher
 page-print = Enregistrer le syllabus en PDF, Word, Markdown ou HTML

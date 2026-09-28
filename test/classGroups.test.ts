@@ -2,6 +2,8 @@ import { assert } from "chai";
 import {
   applyFurtherReadingOrder,
   buildSyllabusClassGroups,
+  visibleSyllabusClassGroups,
+  type SyllabusClassGroup,
 } from "../src/modules/classGroups";
 import { SettingsSyllabusMetadataSchema } from "../src/utils/schemas";
 
@@ -102,4 +104,63 @@ describe("buildSyllabusClassGroups", function () {
       ["GAMMA", "ALPHA", "BETA"],
     );
   });
+
+  it("keeps every class while editing", function () {
+    const groups = sampleClassGroups();
+    assert.deepEqual(
+      visibleSyllabusClassGroups(groups).map((g) => g.classNumber),
+      [1, 2, 3],
+    );
+  });
+
+  it("hides empty classes when locked, keeping description-only classes", function () {
+    const groups = sampleClassGroups();
+    assert.deepEqual(
+      visibleSyllabusClassGroups(groups, { hideEmpty: true }).map(
+        (g) => g.classNumber,
+      ),
+      [2, 3],
+    );
+  });
+
+  it("keeps only classes with items when searching", function () {
+    const groups = sampleClassGroups();
+    assert.deepEqual(
+      visibleSyllabusClassGroups(groups, {
+        hideEmpty: true,
+        requireItems: true,
+      }).map((g) => g.classNumber),
+      [3],
+    );
+  });
 });
+
+function sampleClassGroups(): SyllabusClassGroup[] {
+  return [
+    classGroup(1, 0),
+    classGroup(2, 0, "Intro session"),
+    classGroup(3, 2),
+  ];
+}
+
+function classGroup(
+  classNumber: number,
+  itemCount: number,
+  description = "",
+): SyllabusClassGroup {
+  return {
+    classNumber,
+    syllabusMetadata: {
+      title: "",
+      description,
+    },
+    itemAssignments: Array.from({ length: itemCount }, (_, i) => ({
+      item: fakeItem({
+        id: classNumber * 10 + i,
+        key: `K${classNumber}-${i}`,
+        regular: true,
+      }),
+      assignment: { id: `a-${classNumber}-${i}`, classNumber },
+    })),
+  };
+}

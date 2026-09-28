@@ -186,6 +186,7 @@ page-import = 匯入教學大綱檔案
 page-edit-settings = 編輯教學大綱設定
 page-lock = 鎖定教學大綱
 page-unlock = 解鎖教學大綱
+page-lock-search = 搜尋時已鎖定
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = 顯示核取方塊
 page-print = 將教學大綱另存為 PDF、Word、Markdown 或 HTML

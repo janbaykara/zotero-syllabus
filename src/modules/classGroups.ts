@@ -126,6 +126,24 @@ export function isEmptyClassGroup(group: SyllabusClassGroup): boolean {
   return group.itemAssignments.length === 0 && !description;
 }
 
+/**
+ * Browse/search visibility for class sections.
+ * `requireItems` (search) hides classes with no matching readings;
+ * `hideEmpty` (locked browse) also keeps description-only classes.
+ */
+export function visibleSyllabusClassGroups(
+  groups: SyllabusClassGroup[],
+  options: { hideEmpty?: boolean; requireItems?: boolean } = {},
+): SyllabusClassGroup[] {
+  if (options.requireItems) {
+    return groups.filter((group) => group.itemAssignments.length > 0);
+  }
+  if (options.hideEmpty) {
+    return groups.filter((group) => !isEmptyClassGroup(group));
+  }
+  return groups;
+}
+
 export function buildSyllabusClassGroups(
   collectionId: number,
   syllabusItems: {

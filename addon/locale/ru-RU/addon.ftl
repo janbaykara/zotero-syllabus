@@ -186,6 +186,7 @@ page-import = Импортировать файл силлабуса
 page-edit-settings = Изменить параметры силлабуса
 page-lock = Заблокировать силлабус
 page-unlock = Разблокировать силлабус
+page-lock-search = Заблокировано во время поиска
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = Показать флажки
 page-print = Сохранить силубус как PDF, Word, Markdown или HTML

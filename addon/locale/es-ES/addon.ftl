@@ -186,6 +186,7 @@ page-import = Importar archivo de programa
 page-edit-settings = Editar ajustes del programa
 page-lock = Bloquear programa
 page-unlock = Desbloquear programa
+page-lock-search = Bloqueado durante la búsqueda
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = Mostrar casillas
 page-print = Guardar el programa como PDF, Word, Markdown o HTML

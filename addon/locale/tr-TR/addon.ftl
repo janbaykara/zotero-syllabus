@@ -186,6 +186,7 @@ page-import = İzlence dosyasını içe aktar
 page-edit-settings = İzlence ayarlarını düzenle
 page-lock = İzlenceyi kilitle
 page-unlock = İzlencenin kilidini aç
+page-lock-search = Arama sırasında kilitli
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = Onay kutularını göster
 page-print = Müfredatı PDF, Word, Markdown veya HTML olarak kaydet
