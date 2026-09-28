@@ -1,6 +1,29 @@
+import { homedir } from "node:os";
+
 import { defineConfig } from "zotero-plugin-scaffold";
 
 import pkg from "./package.json";
+
+/** dotenv does not expand `~`; Node then treats it as a cwd-relative folder. */
+function expandUserPath(value: string | undefined): string | undefined {
+  if (value == null) return value;
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (trimmed === "~") return homedir();
+  if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
+    return homedir() + trimmed.slice(1);
+  }
+  return trimmed;
+}
+
+for (const key of [
+  "ZOTERO_PLUGIN_ZOTERO_BIN_PATH",
+  "ZOTERO_PLUGIN_PROFILE_PATH",
+  "ZOTERO_PLUGIN_DATA_DIR",
+] as const) {
+  const expanded = expandUserPath(process.env[key]);
+  if (expanded !== undefined) process.env[key] = expanded;
+}
 
 export default defineConfig({
   source: ["src", "addon"],

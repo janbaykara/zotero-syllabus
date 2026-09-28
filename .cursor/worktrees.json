@@ -1,6 +1,3 @@
 {
-  "setup-worktree": [
-    "pnpm install",
-    "if [ ! -f .env ] && [ -f \"$ROOT_WORKTREE_PATH/.env\" ]; then cp \"$ROOT_WORKTREE_PATH/.env\" .env; fi"
-  ]
+  "setup-worktree": ["pnpm install", "node scripts/copy-worktree-env.mjs"]
 }
