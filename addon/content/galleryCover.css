@@ -1,9 +1,55 @@
 /* Shared GalleryCover / expanded-card cover styles (app + published HTML). */
 
-/* Expanded density: Gallery cover art in place of the type icon. */
-.syllabus-item-thumbnail-cover {
-  flex: 0 0 auto;
+/* Expanded cards: skeuomorphic notepad cover for class notes. */
+.syllabus-item-thumbnail-cover .syllabus-note-notebook-cover {
+  width: 100%;
+  align-self: end;
 }
+
+.syllabus-note-notebook-body {
+  font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: rgba(0, 0, 0, 0.78);
+}
+
+.syllabus-note-notebook-body.is-selected {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.syllabus-note-notebook-prose.syllabus-prose {
+  font-size: 8px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.syllabus-note-notebook-prose.syllabus-prose p,
+.syllabus-note-notebook-prose.syllabus-prose ul,
+.syllabus-note-notebook-prose.syllabus-prose ol,
+.syllabus-note-notebook-prose.syllabus-prose blockquote,
+.syllabus-note-notebook-prose.syllabus-prose pre {
+  margin: 0 0 0.35em;
+}
+
+.syllabus-note-notebook-prose.syllabus-prose h1,
+.syllabus-note-notebook-prose.syllabus-prose h2,
+.syllabus-note-notebook-prose.syllabus-prose h3 {
+  margin: 0 0 0.35em;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: inherit;
+}
+
+.syllabus-note-notebook-prose.syllabus-prose a {
+  color: inherit;
+  text-decoration: underline;
+  pointer-events: none;
+}
+
+.syllabus-item-thumbnail-cover .syllabus-note-notebook-body {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
 
 .syllabus-item-thumbnail-cover .syllabus-gallery-cover-portrait,
 .syllabus-item-thumbnail-cover .syllabus-gallery-cover-video,

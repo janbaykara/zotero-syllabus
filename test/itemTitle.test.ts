@@ -5,7 +5,9 @@ import {
   getItemField,
   getItemTitle,
   getViewableAttachmentIds,
+  isAssignedClassNote,
   isAssignedStandaloneAttachment,
+  isClassNoteItem,
   isStandaloneAttachment,
   isSyllabusAssignableItem,
   isSyllabusMemberItem,
@@ -171,7 +173,50 @@ describe("item fields", function () {
       assert.equal(resolveAssignableItem(attachment), attachment);
       assert.isNull(resolveAssignableItem(null));
     });
+  });
 
+  describe("class notes", function () {
+    it("treats top-level notes as class notes and assignable", function () {
+      const note = {
+        key: "NOTEKEY",
+        deleted: false,
+        isNote: () => true,
+        isTopLevelItem: () => true,
+        parentItemID: false,
+        hasTag: () => false,
+      } as unknown as Zotero.Item;
+      assert.isTrue(isClassNoteItem(note));
+      assert.isTrue(isAssignedClassNote(note, new Set(["NOTEKEY"])));
+      assert.isTrue(isSyllabusAssignableItem(note));
+      assert.equal(resolveAssignableItem(note), note);
+      assert.isFalse(isAssignedClassNote(note, new Set(["OTHER"])));
+    });
+
+    it("excludes the syllabus document and child notes", function () {
+      const syllabusDoc = {
+        key: "SYL",
+        deleted: false,
+        isNote: () => true,
+        isTopLevelItem: () => true,
+        parentItemID: false,
+        hasTag: (tag: string) => tag === "zotero-syllabus",
+      } as unknown as Zotero.Item;
+      const child = {
+        key: "CHILD",
+        deleted: false,
+        isNote: () => true,
+        isTopLevelItem: () => false,
+        parentItemID: 9,
+        hasTag: () => false,
+      } as unknown as Zotero.Item;
+      assert.isFalse(isClassNoteItem(syllabusDoc));
+      assert.isFalse(isSyllabusAssignableItem(syllabusDoc));
+      assert.isFalse(isClassNoteItem(child));
+      assert.isNull(resolveAssignableItem(child));
+    });
+  });
+
+  describe("viewable attachments", function () {
     it("treats a standalone attachment as its own viewable file", function () {
       const attachment = {
         id: 42,

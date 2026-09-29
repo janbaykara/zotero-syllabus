@@ -482,7 +482,7 @@ export async function ensureClassSubcollections(
       if (!meta) {
         continue;
       }
-      if (desiredItemKeysForClass(next, classId).size === 0) {
+      if (desiredItemKeysForClass(next, classId, parent.libraryID).size === 0) {
         const stale = childByKey(parent, meta.subcollectionKey);
         if (stale) {
           await eraseManagedChild(stale);
@@ -527,6 +527,7 @@ export async function ensureClassSubcollections(
 function desiredItemKeysForClass(
   document: CollectionSyllabusDocument,
   classId: string,
+  libraryID: number,
 ): Set<string> {
   const keys = new Set<string>();
   const classNumber =
@@ -548,9 +549,19 @@ function desiredItemKeysForClass(
         ) === classNumber
       );
     });
-    if (belongs) {
-      keys.add(itemKey);
+    if (!belongs) {
+      continue;
     }
+    // Class folders are reading shelves — skip notes and non-regular items.
+    try {
+      const item = Zotero.Items.getByLibraryAndKey(libraryID, itemKey);
+      if (!item || item.deleted || !item.isRegularItem()) {
+        continue;
+      }
+    } catch {
+      continue;
+    }
+    keys.add(itemKey);
   }
   return keys;
 }
@@ -629,7 +640,7 @@ export async function syncClassSubcollectionItems(
       await syncItemsForChild(
         parent,
         child,
-        desiredItemKeysForClass(document, classId),
+        desiredItemKeysForClass(document, classId, parent.libraryID),
       );
     } catch (error) {
       ztoolkit.log("Error syncing class subcollection items:", classId, error);

@@ -6,6 +6,7 @@ import {
   classByNumber,
 } from "./syllabus";
 import {
+  isClassNoteItem,
   isStandaloneAttachment,
   sortItems,
   sortItemsByTitle,
@@ -26,6 +27,20 @@ export type FurtherReadingEntry = {
   item: Zotero.Item;
   assignment?: ItemSyllabusAssignment;
 };
+
+/** Prefix for render-only assignment ids on unassigned class notes. */
+export const DISPLAY_NOTE_ASSIGNMENT_PREFIX = "note:";
+
+/** True for ids invented for UI (not stored on the syllabus document). */
+export function isDisplayOnlyAssignmentId(
+  id: string | undefined | null,
+): boolean {
+  return typeof id === "string" && id.startsWith(DISPLAY_NOTE_ASSIGNMENT_PREFIX);
+}
+
+export function displayAssignmentIdForNote(item: Zotero.Item): string {
+  return `${DISPLAY_NOTE_ASSIGNMENT_PREFIX}${item.key}`;
+}
 
 export type ClassAssignmentRow = {
   item: Zotero.Item;
@@ -120,7 +135,7 @@ export function applyFurtherReadingOrder<T extends { item: Zotero.Item }>(
   return ordered;
 }
 
-/** No assigned readings and no class description. */
+/** No assigned readings/notes and no class description. */
 export function isEmptyClassGroup(group: SyllabusClassGroup): boolean {
   const description = (group.syllabusMetadata?.description || "").trim();
   return group.itemAssignments.length === 0 && !description;
@@ -164,8 +179,48 @@ export function buildSyllabusClassGroups(
 
   for (const __item of syllabusItems) {
     const item = __item.zoteroItem;
-    if (!item.isRegularItem() && !isStandaloneAttachment(item)) continue;
+    const isNote = isClassNoteItem(item);
+    if (!item.isRegularItem() && !isStandaloneAttachment(item) && !isNote) {
+      continue;
+    }
     const assignments = __item.assignments;
+
+    // Class notes: class-assigned → that class; otherwise the unnumbered top
+    // group alongside priority-only (e.g. Course Information) items.
+    if (isNote) {
+      const classAssignments = assignments.filter(
+        (a) => !isClasslessAssignment(a, collectionId),
+      );
+      if (classAssignments.length === 0) {
+        if (!itemsByClass.has(null)) {
+          itemsByClass.set(null, []);
+        }
+        const existing = pickFurtherReadingAssignment(
+          assignments,
+          collectionId,
+        );
+        const assignment: ItemSyllabusAssignment = existing?.id
+          ? existing
+          : {
+              ...(existing || {}),
+              id: displayAssignmentIdForNote(item),
+            };
+        itemsByClass.get(null)!.push({ item, assignment });
+        continue;
+      }
+      for (const assignment of classAssignments) {
+        const resolvedClassNumber =
+          SyllabusManager.getClassNumber(collectionId, assignment.classId) ??
+          assignment.classNumber;
+        const normalizedClassNumber =
+          resolvedClassNumber === undefined ? null : resolvedClassNumber;
+        if (!itemsByClass.has(normalizedClassNumber)) {
+          itemsByClass.set(normalizedClassNumber, []);
+        }
+        itemsByClass.get(normalizedClassNumber)!.push({ item, assignment });
+      }
+      continue;
+    }
 
     // If no assignments or all assignments are classless, add to further reading
     if (

@@ -104,7 +104,7 @@ After each note persist, [`src/modules/classSubcollections.ts`](../src/modules/c
 
 - One child collection per class that has assigned readings, named like `Class 1: Title` (or `Week 1: …` when nomenclature is set). A reading deadline is appended (`— Friday 28th Aug`); when the class is marked done, the name ends with `✅`. Classes with no assignments do not get a folder; existing folders for those classes are removed.
 - The class record stores `subcollectionKey` (Zotero collection key). It is stripped from UI metadata and preserved across number-keyed merges.
-- Desired items = regular items with assignments for that `classId`. Missing items are added to the folder; extras are removed from the **folder only**. Items stay on the parent.
+- Desired items = regular items with assignments for that `classId`. Missing items are added to the folder; extras are removed from the **folder only**. Items stay on the parent. Assigned standalone notes are never placed in class folders.
 - User edits in a folder never update the note. Removing an item from the folder is restored on the next sync; adding a stray item is dropped. Deleting a managed folder for a class that still has assignments recreates it from the note.
 - Extra child collections that are not class folders (and do not have their own syllabus note) are removed.
 - This is controlled per syllabus by **Create subcollections?** in Syllabus Settings (off by default for new syllabi and for collections migrated from legacy prefs). Turning it on asks for confirmation: existing child collections become managed, extra folders can be deleted, and class-folder membership is rewritten from the note. Turning it off stops create/rename/delete; leftover folders are not removed.
@@ -112,6 +112,10 @@ After each note persist, [`src/modules/classSubcollections.ts`](../src/modules/c
 On startup, folders are ensured for every syllabus that has the setting on. New folder keys are written back to the note; if keys are already present, only membership is synced.
 
 Class-folder Syllabus view is a single-class page (same class renderer as the Reading Schedule) with a link back to the parent. Document reads/writes for a class folder resolve to the parent note (`getClassSubcollectionContext` / `resolveSyllabusRoot`). Unmanaged nested collections do not inherit that note: they are ordinary folders until turned into their own syllabus.
+
+## Class notes
+
+Standalone notes in a syllabus collection can be assigned like readings (`document.items[noteKey]`). On the Syllabus tab they use the same cards and manual order as other class items, with a permanent yellow **Class Note** label instead of a configurable priority. Notes with no class assignment sit in the unnumbered top group alongside priority-only items (for example Course Information). In Preview / Cover browse layouts (Syllabus and Gallery) they use the notepad cover with note HTML in the blurb column. Creation uses `createAndAssignClassNote` (`src/modules/classNote.ts`); opening is `ZoteroPane.selectItem` / double-click `openNote` so the native note editor is the editor. Membership helpers: `isClassNoteItem` / `isAssignedClassNote` in `src/utils/items.ts` (excludes the collection Syllabus document tagged `zotero-syllabus`). Class notes stay off Reading Schedule, Annotation Feed, class folders, print, and publish.
 
 ## Pinned (Reading Schedule)
 
@@ -126,11 +130,11 @@ Pin state is tags only (not syllabus JSON). Shelf order is a per-library pref (`
 
 ## Gallery page
 
-Display chrome is per view with “Save as default” — see [DISPLAY-PREFS.md](DISPLAY-PREFS.md). Modes: Card, Cover, Annotations, Magazine (vertical / grid / packed). End-user steps: [README — Gallery](../README.md#gallery).
+Display chrome is per view with “Save as default” — see [DISPLAY-PREFS.md](DISPLAY-PREFS.md). Modes: Card, Cover, Annotations, Preview (same cover+sidecar layout as Annotations, with excerpt blurbs). End-user steps: [README — Gallery](../README.md#gallery).
 
 ## Gallery notes
 
-Collection-scoped notes on regular items for Gallery / card views. Each note is a **child note** tagged `zotero-syllabus-gallery:{collectionKey}` (collection **key**, not numeric id). Edited via Zotero’s built-in note editor (`ZoteroPane.selectItem`). Shown in Row/card like a reading instruction, beside Cover tiles (span 2), and above Magazine blurbs (and boosts magazine role size from note length). Display uses the stored note HTML (sanitized), not a plain-text / Markdown conversion. See [`src/modules/galleryNote.ts`](../src/modules/galleryNote.ts). End-user steps: [README — Gallery notes](../README.md#gallery-notes).
+Collection-scoped notes on regular items for Gallery / card views. Each note is a **child note** tagged `zotero-syllabus-gallery:{collectionKey}` (collection **key**, not numeric id). Edited via Zotero’s built-in note editor (`ZoteroPane.selectItem`). Shown in Row/card like a reading instruction, beside Cover tiles (span 2), and in the Preview sidecar when there is no excerpt blurb. Display uses the stored note HTML (sanitized), not a plain-text / Markdown conversion. See [`src/modules/galleryNote.ts`](../src/modules/galleryNote.ts). End-user steps: [README — Gallery notes](../README.md#gallery-notes).
 
 ## Practical rules
 

@@ -8,6 +8,8 @@ import {
   getItemCreatorByline,
   getItemField,
   getItemTitle,
+  isClassNoteItem,
+  readItemNote,
   sortItems,
   type ItemSortMode,
 } from "../utils/items";
@@ -29,6 +31,8 @@ import {
 import { getString } from "../utils/locale";
 import { useNearViewport } from "./galleryVisibility";
 import { GalleryCover } from "./GalleryCover";
+import { NoteNotebookCover } from "./NoteNotebookCover";
+import { selectItemInCollection } from "./ClassReadingBlock";
 import type { MagazineSectionTemplate } from "./magazineDesks";
 import { assignMagazineRoles, type MagazineTileRole } from "./magazineLayout";
 import type { MagazinePacking } from "./magazinePacking";
@@ -110,6 +114,11 @@ export const MagazineTile = memo(function MagazineTile({
     open: openBlurb,
     onKeyDown: onBlurbKeyDown,
   } = useMagazineBlurb(item, visible);
+  const isClassNote = isClassNoteItem(item);
+  const noteHtml = useMemo(
+    () => (isClassNote ? readItemNote(item) : ""),
+    [isClassNote, item],
+  );
   const [highlights, setHighlights] = useState<ItemHighlight[]>([]);
   const publication = useMemo(
     () => getItemField(item, "publicationTitle"),
@@ -120,8 +129,9 @@ export const MagazineTile = memo(function MagazineTile({
   const [cover, setCover] = useState<ResolvedCover>(placeholder);
   const playable = isPlayableGalleryItem(item);
   const hideGraphic = isTextHeavyGalleryItem(item);
-  const usePhotoBanner = !hideGraphic && (isWebGalleryItem(item) || playable);
-  const useGalleryCover = !hideGraphic && !usePhotoBanner;
+  const usePhotoBanner =
+    !isClassNote && !hideGraphic && (isWebGalleryItem(item) || playable);
+  const useGalleryCover = !isClassNote && !hideGraphic && !usePhotoBanner;
 
   useEffect(() => {
     setCover(placeholder);
@@ -178,7 +188,13 @@ export const MagazineTile = memo(function MagazineTile({
   };
 
   let coverNode = null;
-  if (useGalleryCover) {
+  if (isClassNote) {
+    coverNode = (
+      <div className="syllabus-magazine-cover is-gallery">
+        <NoteNotebookCover item={item} selected={false} />
+      </div>
+    );
+  } else if (useGalleryCover) {
     coverNode = (
       <div className="syllabus-magazine-cover is-gallery">
         <GalleryCover item={item} selected={false} visible={visible} />
@@ -230,6 +246,7 @@ export const MagazineTile = memo(function MagazineTile({
         selected && "is-selected",
         playable && "is-playable",
         done && "opacity-40",
+        isClassNote && "is-class-note in-[.print]:hidden",
       )}
       title={title}
       onClick={(e) => onClick(item, e)}
@@ -241,7 +258,13 @@ export const MagazineTile = memo(function MagazineTile({
         {chrome?.contextLabel ? (
           <div className="syllabus-magazine-context">{chrome.contextLabel}</div>
         ) : null}
-        {priorityId ? (
+        {isClassNote ? (
+          <div className="syllabus-magazine-assignment-row">
+            <span className="uppercase font-semibold tracking-wide text-sm">
+              {getString("class-note-priority")}
+            </span>
+          </div>
+        ) : priorityId ? (
           <div className="syllabus-magazine-assignment-row">
             <ReadingPriorityBadge
               collectionId={chrome?.collectionId ?? 0}
@@ -249,16 +272,16 @@ export const MagazineTile = memo(function MagazineTile({
             />
           </div>
         ) : null}
-        {publication ? (
+        {publication && !isClassNote ? (
           <div className="syllabus-magazine-kicker">{publication}</div>
         ) : null}
         <div
           className={twMerge(
             "syllabus-magazine-title-row",
-            chrome?.readerMode && "has-checkbox",
+            chrome?.readerMode && !isClassNote && "has-checkbox",
           )}
         >
-          {chrome?.readerMode ? (
+          {chrome?.readerMode && !isClassNote ? (
             <ReadingDoneCheckbox
               item={item}
               collectionId={chrome.collectionId}
@@ -269,10 +292,10 @@ export const MagazineTile = memo(function MagazineTile({
           ) : null}
           <div className="syllabus-magazine-title">{title}</div>
         </div>
-        {creator ? (
+        {creator && !isClassNote ? (
           <div className="syllabus-magazine-byline">{creator}</div>
         ) : null}
-        {galleryNote ? (
+        {galleryNote && !isClassNote ? (
           <div
             className="syllabus-magazine-gallery-note"
             role="button"
@@ -292,10 +315,38 @@ export const MagazineTile = memo(function MagazineTile({
             <NoteHtml html={galleryNote} />
           </div>
         ) : null}
-        {instruction ? (
+        {instruction && !isClassNote ? (
           <div className="syllabus-magazine-instruction">{instruction}</div>
         ) : null}
-        {blurb ? (
+        {isClassNote && noteHtml ? (
+          <div
+            className="syllabus-magazine-abstract"
+            role="button"
+            tabIndex={0}
+            title={getString("class-note-open")}
+            aria-label={getString("class-note-open")}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              const cid = chrome?.collectionId ?? collectionId;
+              if (cid) {
+                selectItemInCollection(item, cid);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                e.stopPropagation();
+                const cid = chrome?.collectionId ?? collectionId;
+                if (cid) {
+                  selectItemInCollection(item, cid);
+                }
+              }
+            }}
+          >
+            <NoteHtml html={noteHtml} />
+          </div>
+        ) : blurb ? (
           <div
             className="syllabus-magazine-abstract"
             role="button"
@@ -310,7 +361,7 @@ export const MagazineTile = memo(function MagazineTile({
         ) : !instruction && !galleryNote && fallbackMeta ? (
           <div className="syllabus-magazine-meta">{fallbackMeta}</div>
         ) : null}
-        {highlights.length > 0 ? (
+        {!isClassNote && highlights.length > 0 ? (
           <ul
             className="syllabus-magazine-highlights"
             aria-label={getString("magazine-highlights")}
@@ -331,7 +382,7 @@ export const MagazineTile = memo(function MagazineTile({
             ))}
           </ul>
         ) : null}
-        {durationMinutes && !playable ? (
+        {durationMinutes && !playable && !isClassNote ? (
           <div className="syllabus-magazine-duration">
             {formatReadingTime(durationMinutes)}
           </div>

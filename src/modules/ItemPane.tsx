@@ -33,6 +33,7 @@ import {
 import { enqueuePinnedReadingScheduleSync } from "./readingScheduleCollection";
 import { isOptionalFeatureEnabled } from "./optionalFeatures";
 import { openAddToClassDialog } from "./openAddToClassDialog";
+import { isClassNoteItem } from "../utils/items";
 
 interface ItemPaneProps {
   editable: boolean;
@@ -44,6 +45,8 @@ interface AssignmentEditorProps {
   assignmentIndex: number;
   editable: boolean;
   isSaving: boolean;
+  /** Class notes: class assignment only — no priority, done, instructions, duplicate. */
+  isClassNote?: boolean;
   priorityOptions: Array<{
     value: string;
     label: string;
@@ -411,6 +414,7 @@ function ItemPaneContent({
       {editable ? <AddToClassButton /> : null}
       {allAssignmentsByCollection.map((group) => {
         const isCurrentCollection = group.collectionId === currentCollectionId;
+        const classNote = isClassNoteItem(itemVersion.item);
         return (
           <div key={group.collectionId} className="flex flex-col gap-2">
             {/* Collection Heading */}
@@ -463,6 +467,7 @@ function ItemPaneContent({
                   collectionId={group.collectionId}
                   editable={editable}
                   isSaving={isSaving}
+                  isClassNote={classNote}
                   priorityOptions={getPriorityOptions(group.collectionId)}
                   onPriorityChange={handlePriorityChange}
                   onClassNumberChange={handleClassNumberChange}
@@ -475,7 +480,7 @@ function ItemPaneContent({
             })}
 
             {/* Create New Assignment Button for this collection */}
-            {editable && (
+            {editable && !classNote && (
               <div>
                 <button
                   onClick={() =>
@@ -511,6 +516,7 @@ function AssignmentEditor({
   collectionId,
   editable,
   isSaving,
+  isClassNote = false,
   priorityOptions,
   onPriorityChange,
   onClassNumberChange,
@@ -594,7 +600,7 @@ function AssignmentEditor({
             </div>
           )}
         </div>
-        {editable && (
+        {editable && !isClassNote && (
           <button
             type="button"
             onClick={() =>
@@ -676,112 +682,121 @@ function AssignmentEditor({
       </div>
 
       {/* Priority - Dropdown and Quick Buttons */}
-      <div className="flex flex-row gap-2">
-        <label className="w-1/4 shrink-0 grow-0">
-          {getString("field-priority")}
-        </label>
-        <div className="flex flex-col gap-1 -my-1">
-          {/* Quick Priority Buttons */}
-          {editable && (
-            <div className="flex flex-wrap">
-              {priorityOptions
-                .filter((opt) => opt.value !== "")
-                .map((opt) => {
-                  const isSelected = opt.value === (assignment.priority || "");
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() =>
-                        onPriorityChange(
-                          assignment.id!,
-                          collectionId,
-                          isSelected ? ("" as any) : (opt.value as any),
-                        )
-                      }
-                      disabled={isSaving}
-                      className={twMerge(
-                        "px-2 py-1 text-xs font-medium inline-flex flex-row gap-2 items-center flex-nowrap",
-                        "hover:bg-quinary active:bg-quarternary hover:border-quinary hover:text-primary rounded-md",
-                        isSelected ? "bg-quinary" : "bg-transparent",
-                        isSelected ? "border-quinary" : "border-transparent",
-                        isSelected ? "text-primary" : "text-secondary",
-                        isSaving
-                          ? "opacity-30 cursor-not-allowed"
-                          : "opacity-100 cursor-pointer",
-                      )}
-                      title={opt.label}
-                    >
-                      {opt.color && (
-                        <span
-                          className="w-2 h-2 rounded-full inline-block"
-                          style={{ backgroundColor: opt.color }}
-                        />
-                      )}
-                      {opt.label}
-                    </button>
-                  );
-                })}
-              <button
-                type="button"
-                onClick={() =>
-                  onPriorityChange(assignment.id!, collectionId, "" as any)
-                }
-                disabled={isSaving || !assignment.priority}
-                className={twMerge(
-                  "px-2 py-0.5 text-xs font-medium text-secondary bg-transparent border border-transparent rounded-md cursor-pointer transition-all duration-150 opacity-30 hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-50",
-                  isSaving || !assignment.priority
-                    ? "opacity-30 cursor-not-allowed"
-                    : "opacity-100 cursor-pointer",
-                )}
-                title={getString("priority-clear")}
-              >
-                {getString("priority-clear")}
-              </button>
-            </div>
-          )}
+      {!isClassNote && (
+        <div className="flex flex-row gap-2">
+          <label className="w-1/4 shrink-0 grow-0">
+            {getString("field-priority")}
+          </label>
+          <div className="flex flex-col gap-1 -my-1">
+            {/* Quick Priority Buttons */}
+            {editable && (
+              <div className="flex flex-wrap">
+                {priorityOptions
+                  .filter((opt) => opt.value !== "")
+                  .map((opt) => {
+                    const isSelected =
+                      opt.value === (assignment.priority || "");
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() =>
+                          onPriorityChange(
+                            assignment.id!,
+                            collectionId,
+                            isSelected ? ("" as any) : (opt.value as any),
+                          )
+                        }
+                        disabled={isSaving}
+                        className={twMerge(
+                          "px-2 py-1 text-xs font-medium inline-flex flex-row gap-2 items-center flex-nowrap",
+                          "hover:bg-quinary active:bg-quarternary hover:border-quinary hover:text-primary rounded-md",
+                          isSelected ? "bg-quinary" : "bg-transparent",
+                          isSelected ? "border-quinary" : "border-transparent",
+                          isSelected ? "text-primary" : "text-secondary",
+                          isSaving
+                            ? "opacity-30 cursor-not-allowed"
+                            : "opacity-100 cursor-pointer",
+                        )}
+                        title={opt.label}
+                      >
+                        {opt.color && (
+                          <span
+                            className="w-2 h-2 rounded-full inline-block"
+                            style={{ backgroundColor: opt.color }}
+                          />
+                        )}
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                <button
+                  type="button"
+                  onClick={() =>
+                    onPriorityChange(assignment.id!, collectionId, "" as any)
+                  }
+                  disabled={isSaving || !assignment.priority}
+                  className={twMerge(
+                    "px-2 py-0.5 text-xs font-medium text-secondary bg-transparent border border-transparent rounded-md cursor-pointer transition-all duration-150 opacity-30 hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-50",
+                    isSaving || !assignment.priority
+                      ? "opacity-30 cursor-not-allowed"
+                      : "opacity-100 cursor-pointer",
+                  )}
+                  title={getString("priority-clear")}
+                >
+                  {getString("priority-clear")}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Instructions — local-state TextInput so document sync cannot erase typing */}
-      <div className="flex flex-row gap-2">
-        <label className="w-1/4 shrink-0 grow-0">
-          {getString("field-instructions")}
-        </label>
-        <TextInput
-          elementType="textarea"
-          initialValue={assignment.classInstruction || ""}
-          onSave={(instruction) =>
-            onInstructionChange(assignment.id!, collectionId, instruction)
-          }
-          placeholder={getString("placeholder-instructions")}
-          emptyBehavior="delete"
-          fieldSizing="fixed"
-          readOnly={!editable}
-          className="-my-2 p-2 w-full border border-transparent rounded-md bg-background text-primary resize-vertical font-inherit min-h-15 transition-border-color duration-150 box-border hover:not-focus:bg-quinary hover:not-focus:cursor-pointer field-sizing-fixed!"
-        />
-      </div>
+      {!isClassNote && (
+        <div className="flex flex-row gap-2">
+          <label className="w-1/4 shrink-0 grow-0">
+            {getString("field-instructions")}
+          </label>
+          <TextInput
+            elementType="textarea"
+            initialValue={assignment.classInstruction || ""}
+            onSave={(instruction) =>
+              onInstructionChange(assignment.id!, collectionId, instruction)
+            }
+            placeholder={getString("placeholder-instructions")}
+            emptyBehavior="delete"
+            fieldSizing="fixed"
+            readOnly={!editable}
+            className="-my-2 p-2 w-full border border-transparent rounded-md bg-background text-primary resize-vertical font-inherit min-h-15 transition-border-color duration-150 box-border hover:not-focus:bg-quinary hover:not-focus:cursor-pointer field-sizing-fixed!"
+          />
+        </div>
+      )}
 
       {/* Action Buttons */}
       {editable && (
         <div className="flex justify-between relative flex-0">
-          <button
-            type="button"
-            onClick={() =>
-              onDuplicate(assignment.id!, collectionId, assignment)
-            }
-            disabled={isSaving}
-            className={twMerge(
-              "px-2 py-1 text-xs font-medium",
-              "inline-flex flex-row gap-2 items-center flex-nowrap",
-            )}
-            title={getString("assignment-duplicate")}
-          >
-            <span className="text-2xl leading-none">⧉</span>
-            <span className="text-sm">
-              {getString("assignment-duplicate-label")}
-            </span>
-          </button>
+          {!isClassNote ? (
+            <button
+              type="button"
+              onClick={() =>
+                onDuplicate(assignment.id!, collectionId, assignment)
+              }
+              disabled={isSaving}
+              className={twMerge(
+                "px-2 py-1 text-xs font-medium",
+                "inline-flex flex-row gap-2 items-center flex-nowrap",
+              )}
+              title={getString("assignment-duplicate")}
+            >
+              <span className="text-2xl leading-none">⧉</span>
+              <span className="text-sm">
+                {getString("assignment-duplicate-label")}
+              </span>
+            </button>
+          ) : (
+            <span />
+          )}
           <button
             type="button"
             onClick={() => onDelete(assignment.id!, collectionId)}

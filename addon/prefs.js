@@ -27,6 +27,7 @@ pref("myAnnotationsOrder", "newestLast");
 pref("myAnnotationsColorFilter", "");
 pref("annotationsQuoteOrder", "location");
 pref("galleryShowItemsWithoutAnnotations", true);
+pref("syllabusShowClassNotes", true);
 pref("magazineTypeSize", "small");
 pref("magazinePacking", "packed");
 pref("generateReadingScheduleCollection", false);

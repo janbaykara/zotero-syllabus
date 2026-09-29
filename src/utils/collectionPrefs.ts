@@ -19,6 +19,7 @@ export const COLLECTION_ID_PREF_KEYS = [
   `${config.prefsPrefix}.itemDensities`,
   `${config.prefsPrefix}.readerModes`,
   `${config.prefsPrefix}.showItemsWithoutAnnotations`,
+  `${config.prefsPrefix}.showClassNotes`,
   `${config.prefsPrefix}.annotationsQuoteOrderByView`,
   `${config.prefsPrefix}.publishUrls`,
 ] as const;

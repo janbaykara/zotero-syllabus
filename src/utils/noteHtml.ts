@@ -138,3 +138,94 @@ export function noteHtmlToDisplayHtml(html: string | null | undefined): string {
     return "";
   }
 }
+
+/**
+ * Short sanitized preview of a note for cover thumbnails — enough to fill
+ * a cover face without parsing / painting a long document.
+ */
+export function truncateNoteHtmlForPreview(
+  html: string | null | undefined,
+  maxChars = 360,
+): string {
+  const sanitized = noteHtmlToDisplayHtml(html);
+  if (!sanitized) {
+    return "";
+  }
+  if ((sanitized.replace(/<[^>]+>/g, "").length || 0) <= maxChars) {
+    return sanitized;
+  }
+
+  try {
+    const doc = new DOMParser().parseFromString(
+      `<body>${sanitized}</body>`,
+      "text/html",
+    );
+    if (!doc.body) {
+      return sanitized.slice(0, maxChars);
+    }
+    const out = doc.createElement("div");
+    let remaining = maxChars;
+
+    const takeNode = (node: Node, parent: Node): boolean => {
+      if (remaining <= 0) {
+        return false;
+      }
+      if (node.nodeType === 3 /* TEXT_NODE */) {
+        const text = node.textContent || "";
+        if (!text) {
+          return true;
+        }
+        if (text.length <= remaining) {
+          parent.appendChild(doc.createTextNode(text));
+          remaining -= text.length;
+          return true;
+        }
+        parent.appendChild(doc.createTextNode(text.slice(0, remaining)));
+        remaining = 0;
+        return false;
+      }
+      if (node.nodeType !== 1 /* ELEMENT_NODE */) {
+        return true;
+      }
+      const el = node as Element;
+      const tag = el.tagName.toLowerCase();
+      if (tag === "br" || tag === "hr") {
+        parent.appendChild(doc.createElement(tag));
+        return true;
+      }
+      const clone = doc.createElement(tag);
+      if (tag === "a") {
+        const href = el.getAttribute("href");
+        if (href) {
+          clone.setAttribute("href", href);
+        }
+      }
+      parent.appendChild(clone);
+      const kids = el.childNodes;
+      for (let i = 0; i < kids.length; i++) {
+        const child = kids.item(i);
+        if (!child) {
+          continue;
+        }
+        if (!takeNode(child, clone)) {
+          return false;
+        }
+      }
+      return true;
+    };
+
+    const top = doc.body.childNodes;
+    for (let i = 0; i < top.length; i++) {
+      const child = top.item(i);
+      if (!child) {
+        continue;
+      }
+      if (!takeNode(child, out)) {
+        break;
+      }
+    }
+    return serializeXhtmlFragment(out);
+  } catch {
+    return sanitized.slice(0, maxChars);
+  }
+}

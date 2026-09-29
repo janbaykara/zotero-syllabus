@@ -2,7 +2,7 @@ import { useMemo } from "preact/hooks";
 import { useSyncExternalStore } from "react-dom/src";
 import { ItemSyllabusAssignment } from "../syllabus";
 import { getCachedItem } from "../../utils/cache";
-import { isSyllabusMemberItem } from "../../utils/items";
+import { isSyllabusAssignableItem } from "../../utils/items";
 import { createCollectionDocumentStore } from "./collectionDocument";
 import {
   getCollectionDocument,
@@ -35,7 +35,7 @@ export function useZoteroItemAssignments(
       return [];
     }
     const item = getCachedItem(itemId);
-    if (!isSyllabusMemberItem(item)) {
+    if (!isSyllabusAssignableItem(item)) {
       return [];
     }
     return getHydratedItemAssignments(

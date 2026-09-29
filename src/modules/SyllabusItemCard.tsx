@@ -22,13 +22,23 @@ import {
   getItemField,
   getItemTitle,
   getViewableAttachmentIds,
+  isClassNoteItem,
+  openNoteItem,
 } from "../utils/items";
 import { GalleryCover } from "./GalleryCover";
+import {
+  NOTE_PAD_YELLOW,
+  NoteNotebookCover,
+} from "./NoteNotebookCover";
+import { isDisplayOnlyAssignmentId } from "./classGroups";
 import { getString } from "../utils/locale";
 import { isOsFileDrag } from "../utils/nativeFileDrop";
 import type { ItemDensity } from "./react-zotero-sync/itemDensity";
 import { openGalleryNoteByCollectionId } from "./galleryNote";
 import { useGalleryNoteText } from "./useGalleryNoteText";
+
+/** Sticky-note yellow for the permanent Class Note priority chip. */
+const CLASS_NOTE_PRIORITY_COLOR = NOTE_PAD_YELLOW;
 
 export function SyllabusItemCard({
   className,
@@ -145,6 +155,7 @@ export function SyllabusItemCard({
     [item, collectionId],
   );
   const title = getItemTitle(item) || getString("untitled");
+  const isClassNote = isClassNoteItem(item);
   const itemTypeLabel = (() => {
     try {
       return Zotero.ItemTypes.getLocalizedString(item.itemType);
@@ -332,7 +343,9 @@ export function SyllabusItemCard({
       } else {
         // Single drag (original behavior)
         e.dataTransfer.setData("text/plain", String(item.id));
-        if (assignment?.id) {
+        // Display-only ids (unassigned class notes) are not on the document —
+        // omit them so drop creates a real class assignment.
+        if (assignment?.id && !isDisplayOnlyAssignmentId(assignment.id)) {
           e.dataTransfer.setData(
             "application/x-syllabus-assignment-id",
             assignment.id,
@@ -431,6 +444,10 @@ export function SyllabusItemCard({
     item: Zotero.Item,
     __e?: JSX.TargetedMouseEvent<HTMLElement>,
   ) {
+    if (isClassNoteItem(item)) {
+      openNoteItem(item);
+      return;
+    }
     const url = item.getField("url");
     const viewableAttachment = getViewableAttachmentIds(item).find((attId) => {
       const att = getCachedItem(attId);
@@ -491,6 +508,11 @@ export function SyllabusItemCard({
         backgroundColor: priorityColor + "15",
       }
     : {};
+  /** Row mode stays transparent until hover — then match Standard’s tint. */
+  const rowHoverTint = priority
+    ? priorityColor + "15"
+    : "var(--material-sidepane)";
+  const [rowHovered, setRowHovered] = useState(false);
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
     if (isOsFileDrag(e.dataTransfer)) {
@@ -559,7 +581,13 @@ export function SyllabusItemCard({
 
   return (
     <div
-      style={colors}
+      style={
+        density === "row"
+          ? !isIdentifierSelected && rowHovered
+            ? { backgroundColor: rowHoverTint }
+            : undefined
+          : colors
+      }
       className={twMerge(
         "syllabus-item-card in-[.print]:scheme-light",
         "rounded-lg flex shrink-0",
@@ -567,7 +595,8 @@ export function SyllabusItemCard({
           ? "flex-row items-start"
           : "flex-row items-start justify-between",
         "bg-background-sidepane text-primary",
-        density === "row" && "bg-transparent!",
+        density === "row" && !isIdentifierSelected && "bg-transparent",
+        isClassNote && "in-[.print]:hidden",
         "relative",
         isLocked ? "cursor-default" : "cursor-grab",
         // For hovering contextual btns
@@ -584,12 +613,15 @@ export function SyllabusItemCard({
           "not-in-[.print]:outline-2! not-in-[.print]:outline-accent-blue",
         isIdentifierSelected && "not-in-[.print]:bg-accent-blue! scheme-dark",
         // isZoteroSelected && isIdentifierSelected && "outline-none!",
-        readerMode && assignmentStatus === "done" ? "opacity-40" : "",
+        readerMode && !isClassNote && assignmentStatus === "done"
+          ? "opacity-40"
+          : "",
         dropEdge === "before" && "is-drop-before",
         dropEdge === "after" && "is-drop-after",
         className,
       )}
       data-item-id={item.id}
+      data-density={density === "row" ? "row" : undefined}
       data-syllabus-identifier={identifier}
       data-syllabus-class-number={
         isFurtherReading
@@ -604,6 +636,12 @@ export function SyllabusItemCard({
           : undefined
       }
       draggable={!isLocked}
+      onMouseEnter={
+        density === "row" ? () => setRowHovered(true) : undefined
+      }
+      onMouseLeave={
+        density === "row" ? () => setRowHovered(false) : undefined
+      }
       onClick={(e) => {
         if (customOnClick) {
           customOnClick(item, e);
@@ -622,7 +660,7 @@ export function SyllabusItemCard({
       onDragOver={isLocked ? undefined : handleItemDragOver}
       onDrop={isLocked ? undefined : handleItemDrop}
     >
-      {readerMode && (
+      {readerMode && !isClassNote && (
         <input
           type="checkbox"
           checked={onReaderCheck ? false : assignmentStatus === "done"}
@@ -689,7 +727,14 @@ export function SyllabusItemCard({
           }
         >
           {density === "expanded" ? (
-            <GalleryCover item={item} selected={false} visible />
+            isClassNote ? (
+              <NoteNotebookCover
+                item={item}
+                selected={isIdentifierSelected}
+              />
+            ) : (
+              <GalleryCover item={item} selected={false} visible />
+            )
           ) : (
             <span
               className="icon icon-css icon-item-type cell-icon"
@@ -741,14 +786,20 @@ export function SyllabusItemCard({
                   </div>
                 )}
               </div>
-              {!!priority && (
-                <PriorityIcon
-                  id={priority}
-                  colors={!isIdentifierSelected}
-                  className="shrink-0 text-[12px] leading-snug"
-                  collectionId={collectionId}
-                />
-              )}
+              {(isClassNote || !!priority) &&
+                (isClassNote ? (
+                  <ClassNotePriorityLabel
+                    colors={!isIdentifierSelected}
+                    className="shrink-0 text-[12px] leading-snug"
+                  />
+                ) : (
+                  <PriorityIcon
+                    id={priority!}
+                    colors={!isIdentifierSelected}
+                    className="shrink-0 text-[12px] leading-snug"
+                    collectionId={collectionId}
+                  />
+                ))}
               {(!!viewableAttachments?.length || uniqueUrls.length > 0) && (
                 <div
                   className="syllabus-item-actions shrink-0 inline-flex flex-row gap-1 items-center self-center in-[.print]:hidden [&_.syllabus-action-label]:hidden"
@@ -932,14 +983,20 @@ export function SyllabusItemCard({
                   >
                     {title}
                   </div>
-                  {!!priority && (
-                    <PriorityIcon
-                      id={priority}
-                      colors={!isIdentifierSelected}
-                      className="shrink-0 grow-0 text-right block"
-                      collectionId={collectionId}
-                    />
-                  )}
+                  {(isClassNote || !!priority) &&
+                    (isClassNote ? (
+                      <ClassNotePriorityLabel
+                        colors={!isIdentifierSelected}
+                        className="shrink-0 grow-0 text-right block"
+                      />
+                    ) : (
+                      <PriorityIcon
+                        id={priority!}
+                        colors={!isIdentifierSelected}
+                        className="shrink-0 grow-0 text-right block"
+                        collectionId={collectionId}
+                      />
+                    ))}
                 </div>
                 <div className="syllabus-item-metadata text-secondary flex flex-row gap-4">
                   <span className="flex flex-row gap-1 flex-wrap character-separator [--character-separator:'•']">
@@ -989,13 +1046,19 @@ export function SyllabusItemCard({
             ) : (
               <>
                 <div className="flex flex-row gap-3 items-baseline justify-start">
-                  {!!priority && (
+                  {(isClassNote || !!priority) && (
                     <div className="grow-0 shrink-0">
-                      <PriorityIcon
-                        id={priority}
-                        colors={!isIdentifierSelected}
-                        collectionId={collectionId}
-                      />
+                      {isClassNote ? (
+                        <ClassNotePriorityLabel
+                          colors={!isIdentifierSelected}
+                        />
+                      ) : (
+                        <PriorityIcon
+                          id={priority!}
+                          colors={!isIdentifierSelected}
+                          collectionId={collectionId}
+                        />
+                      )}
                     </div>
                   )}
                   {!slim && itemTypeLabel && (
@@ -1230,89 +1293,98 @@ export function SyllabusItemCard({
           >
             {!!assignment?.id && (
               <>
-                <div className="focus-states-target">
-                  <button
-                    className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      try {
-                        // Always pass identifier - handler will check if it's in selection
-                        if (onDuplicate) {
-                          const identifier = {
-                            assignmentId: assignment.id,
-                            itemId: undefined,
-                          };
-                          await onDuplicate(identifier);
+                {!isClassNote && (
+                  <div className="focus-states-target">
+                    <button
+                      className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          // Always pass identifier - handler will check if it's in selection
+                          if (onDuplicate) {
+                            const identifier = {
+                              assignmentId: assignment.id,
+                              itemId: undefined,
+                            };
+                            await onDuplicate(identifier);
+                          }
+                        } catch (err) {
+                          ztoolkit.log("Error duplicating assignment:", err);
                         }
-                      } catch (err) {
-                        ztoolkit.log("Error duplicating assignment:", err);
-                      }
-                    }}
-                    title={getString("assignment-duplicate")}
-                    aria-label={getString("assignment-duplicate")}
-                  >
-                    <span
-                      className="syllabus-action-icon"
-                      style={{
-                        fontSize: "16px",
-                        lineHeight: "1",
                       }}
+                      title={getString("assignment-duplicate")}
+                      aria-label={getString("assignment-duplicate")}
                     >
-                      ⧉
-                    </span>
-                    <span className="syllabus-action-label">
-                      {getString("assignment-duplicate-label")}
-                    </span>
-                  </button>
-                </div>
-                <div className="focus-states-target">
-                  <button
-                    className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      try {
-                        // Always pass identifier - handler will check if it's in selection
-                        if (onDelete) {
-                          const identifier = {
-                            assignmentId: assignment.id,
-                            itemId: undefined,
-                          };
-                          await onDelete(identifier);
+                      <span
+                        className="syllabus-action-icon"
+                        style={{
+                          fontSize: "16px",
+                          lineHeight: "1",
+                        }}
+                      >
+                        ⧉
+                      </span>
+                      <span className="syllabus-action-label">
+                        {getString("assignment-duplicate-label")}
+                      </span>
+                    </button>
+                  </div>
+                )}
+                {!isDisplayOnlyAssignmentId(assignment.id) &&
+                  !(
+                    isClassNote &&
+                    (classNumber === null || classNumber === undefined)
+                  ) && (
+                  <div className="focus-states-target">
+                    <button
+                      className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          // Always pass identifier - handler will check if it's in selection
+                          if (onDelete) {
+                            const identifier = {
+                              assignmentId: assignment.id,
+                              itemId: undefined,
+                            };
+                            await onDelete(identifier);
+                          }
+                        } catch (err) {
+                          ztoolkit.log("Error deleting assignment:", err);
                         }
-                      } catch (err) {
-                        ztoolkit.log("Error deleting assignment:", err);
-                      }
-                    }}
-                    title={
-                      classNumber !== null && classNumber !== undefined
-                        ? getString("assignment-unassign-class")
-                        : getString("assignment-unassign-syllabus")
-                    }
-                    aria-label={
-                      classNumber !== null && classNumber !== undefined
-                        ? getString("assignment-unassign-class")
-                        : getString("assignment-unassign-syllabus")
-                    }
-                  >
-                    <span
-                      className="syllabus-action-icon"
-                      style={{
-                        fontSize: "18px",
-                        lineHeight: "1",
-                        fontWeight: "bold",
                       }}
+                      title={
+                        classNumber !== null && classNumber !== undefined
+                          ? getString("assignment-unassign-class")
+                          : getString("assignment-unassign-syllabus")
+                      }
+                      aria-label={
+                        classNumber !== null && classNumber !== undefined
+                          ? getString("assignment-unassign-class")
+                          : getString("assignment-unassign-syllabus")
+                      }
                     >
-                      ×
-                    </span>
-                    <span className="syllabus-action-label">
-                      {getString("assignment-unassign-label")}
-                    </span>
-                  </button>
-                </div>
-                &middot;
+                      <span
+                        className="syllabus-action-icon"
+                        style={{
+                          fontSize: "18px",
+                          lineHeight: "1",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        ×
+                      </span>
+                      <span className="syllabus-action-label">
+                        {getString("assignment-unassign-label")}
+                      </span>
+                    </button>
+                  </div>
+                )}
+                {!isClassNote && <>&middot;</>}
               </>
             )}
-            {(() => {
+            {!isClassNote &&
+              (() => {
               const priorityOptions = syllabusMetadata.priorities || [];
               return [
                 ...priorityOptions.map((priorityOption: Priority) => {
@@ -1392,6 +1464,41 @@ export function SyllabusItemCard({
         </div>
       )}
     </div>
+  );
+}
+
+function ClassNotePriorityLabel({
+  colors = true,
+  className,
+}: {
+  colors?: boolean;
+  className?: string;
+}) {
+  const label = getString("class-note-priority");
+  const color = CLASS_NOTE_PRIORITY_COLOR;
+  return (
+    <span
+      className={twMerge(
+        "uppercase font-semibold tracking-wide inline-flex flex-row gap-1.5 items-baseline",
+        className,
+      )}
+    >
+      <span
+        className="w-3 h-3 rounded-full inline-block in-[.print]:hidden"
+        style={{
+          backgroundColor: colors ? color : "var(--color-primary)",
+        }}
+      />
+      <span
+        className="rounded-md px-1 py-0.25 whitespace-nowrap"
+        style={{
+          backgroundColor: colors ? color + "15" : undefined,
+          color: colors ? color : undefined,
+        }}
+      >
+        {label}
+      </span>
+    </span>
   );
 }
 

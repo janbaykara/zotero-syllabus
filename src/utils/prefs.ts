@@ -57,6 +57,7 @@ export const PLUGIN_PREF_DEFAULTS: {
   myAnnotationsColorFilter: "",
   annotationsQuoteOrder: "location",
   galleryShowItemsWithoutAnnotations: true,
+  syllabusShowClassNotes: true,
   magazineTypeSize: "small",
   magazinePacking: "packed",
   generateReadingScheduleCollection: false,

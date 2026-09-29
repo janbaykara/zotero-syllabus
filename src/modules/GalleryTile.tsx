@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
 import { PinOff } from "lucide-preact";
-import { getItemCreatorLine, getItemTitle } from "../utils/items";
+import { getItemCreatorLine, getItemTitle, isClassNoteItem } from "../utils/items";
 import {
   faviconUrlForHostname,
   getItemHostname,
@@ -15,6 +15,7 @@ import {
   isWebGalleryItem,
 } from "../utils/itemCover";
 import { GalleryCover } from "./GalleryCover";
+import { NoteNotebookCover } from "./NoteNotebookCover";
 import {
   galleryNoteFingerprint,
   openGalleryNoteByCollectionId,
@@ -266,6 +267,13 @@ export const GalleryTile = memo(function GalleryTile({
       </div>
     ) : null;
 
+  const isClassNote = isClassNoteItem(item);
+  const coverNode = isClassNote ? (
+    <NoteNotebookCover item={item} selected={selected} />
+  ) : (
+    <GalleryCover item={item} selected={selected} visible={visible} />
+  );
+
   return (
     <div
       ref={tileRef}
@@ -278,6 +286,7 @@ export const GalleryTile = memo(function GalleryTile({
         interactive && "cursor-pointer outline-none",
         done && "opacity-40",
         notePane && "has-gallery-note",
+        isClassNote && "is-class-note in-[.print]:hidden",
       )}
       title={title}
       onClick={interactive ? (e) => onClick(item, e) : undefined}
@@ -287,15 +296,15 @@ export const GalleryTile = memo(function GalleryTile({
       {notePane ? (
         <>
           <div className="syllabus-gallery-tile-main">
-            <GalleryCover item={item} selected={selected} visible={visible} />
-            {meta}
+            {coverNode}
+            {isClassNote ? null : meta}
           </div>
           {notePane}
         </>
       ) : (
         <>
-          <GalleryCover item={item} selected={selected} visible={visible} />
-          {meta}
+          {coverNode}
+          {isClassNote ? null : meta}
         </>
       )}
     </div>

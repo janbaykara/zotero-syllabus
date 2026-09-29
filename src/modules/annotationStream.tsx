@@ -12,8 +12,11 @@ import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
 import { Check, Copy } from "lucide-preact";
 import {
+  isClassNoteItem,
   openAnnotationIdInReader,
   openItemBestAttachment,
+  openNoteItem,
+  readItemNote,
 } from "../utils/items";
 import {
   annotationCommentToDisplayHtml,
@@ -25,8 +28,11 @@ import { getItemCitationKey } from "../utils/citeKey";
 import { getString } from "../utils/locale";
 import { annotationActivityGap, formatRelativeTimestamp } from "../utils/dates";
 import { getPrefValue } from "../utils/prefs";
-import { GalleryTile } from "./GalleryPage";
+import { CoverStreamRow } from "./coverStream";
 import { ExplorerCoverItem } from "./ExplorerMagazineRail";
+import { MagazineBlurb } from "./MagazineCoverBlurb";
+import { NoteHtml } from "./NoteHtml";
+import { selectItemInCollection } from "./ClassReadingBlock";
 import type { MagazineTileClick } from "./MagazineTile";
 import type { ReadingTileChrome } from "./readingAssignmentChrome";
 import type { MyAnnotationStreamEntry } from "./explorerQueries";
@@ -483,39 +489,70 @@ export function AnnotationStreamGroup({
     [entries],
   );
   useExplorerRailStackWidth(stackRef, stackLayoutKey);
-  const showCopyAll = entries.some(annotationHasCopyText);
+  const showCopyAll =
+    !isClassNoteItem(parent) && entries.some(annotationHasCopyText);
   const [copiedAll, flashCopiedAll] = useCopyFlash();
   const copyAllLabel = copiedAll
     ? getString("my-annotations-copied")
     : getString("my-annotations-copy-all");
+  const noteHtml = useMemo(
+    () => (parent && isClassNoteItem(parent) ? readItemNote(parent) : ""),
+    [parent],
+  );
+
+  const sidecar =
+    parent && isClassNoteItem(parent) && noteHtml ? (
+      <MagazineBlurb
+        variant="note"
+        className="is-class-note"
+        title={getString("class-note-open")}
+        aria-label={getString("class-note-open")}
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          if (collectionId) {
+            selectItemInCollection(parent, collectionId);
+          }
+        }}
+        onDblClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          openNoteItem(parent);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+            if (collectionId) {
+              selectItemInCollection(parent, collectionId);
+            }
+          }
+        }}
+      >
+        <NoteHtml html={noteHtml} />
+      </MagazineBlurb>
+    ) : entries.length === 0 && emptyLabel ? (
+      <p className="syllabus-gallery-annotations-empty text-secondary">
+        {emptyLabel}
+      </p>
+    ) : (
+      <AnnotationStreamEntries entries={entries} quoteOrder={quoteOrder} />
+    );
 
   return (
-    <article
-      className={twMerge(
-        "syllabus-my-annotations-stream-entry",
-        selected && "is-selected",
-      )}
-      data-parent-id={parent?.id ?? ""}
-      data-item-id={parent?.id ?? ""}
-      data-annotation-count={entries.length}
-    >
-      <div className="syllabus-my-annotations-stream-avatar">
-        {parent ? (
-          <GalleryTile
-            item={parent}
-            collectionId={collectionId}
-            showGalleryNote={showGalleryNote}
-            selected={selected}
-            interactive
-            chrome={chrome}
-            onClick={onClick}
-            onDoubleClick={onDoubleClick}
-            onContextMenu={onContextMenu}
-          />
-        ) : (
-          <div className="syllabus-my-annotations-stream-avatar-empty" />
-        )}
-        {showCopyAll ? (
+    <CoverStreamRow
+      item={parent}
+      selected={selected}
+      collectionId={collectionId}
+      showGalleryNote={showGalleryNote}
+      chrome={chrome}
+      annotationCount={entries.length}
+      onClick={onClick}
+      onDoubleClick={onDoubleClick}
+      onContextMenu={onContextMenu}
+      stackRef={stackRef}
+      extraAvatar={
+        showCopyAll ? (
           <div className="syllabus-my-annotations-stream-copy-all-wrap">
             <button
               type="button"
@@ -541,21 +578,11 @@ export function AnnotationStreamGroup({
               {copyAllLabel}
             </button>
           </div>
-        ) : null}
-      </div>
-      <div
-        ref={stackRef}
-        className="syllabus-my-annotations-stream-stack min-w-0"
-      >
-        {entries.length === 0 && emptyLabel ? (
-          <p className="syllabus-gallery-annotations-empty text-secondary">
-            {emptyLabel}
-          </p>
-        ) : (
-          <AnnotationStreamEntries entries={entries} quoteOrder={quoteOrder} />
-        )}
-      </div>
-    </article>
+        ) : null
+      }
+    >
+      {sidecar}
+    </CoverStreamRow>
   );
 }
 

@@ -1,6 +1,7 @@
 import type { ItemDensity } from "./react-zotero-sync/itemDensity";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
+import { flushSync } from "preact/compat";
 import { useState, useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
@@ -8,96 +9,200 @@ import { SettingsClassMetadata } from "./syllabus";
 import { useDebouncedEffect } from "../utils/react/useDebouncedEffect";
 import { ProseText } from "./ProseText";
 import { getString } from "../utils/locale";
+import {
+  formatReadingDate,
+  parseReadingDate,
+  toLocalDateKey,
+} from "../utils/dates";
+
+function readingDateToInputValue(iso: string | undefined | null): string {
+  if (!iso) {
+    return "";
+  }
+  const date = parseReadingDate(iso);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return toLocalDateKey(date);
+}
+
+function isoFromInputValue(value: string): string {
+  const date = parseReadingDate(value);
+  return new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+  ).toISOString();
+}
 
 export function ReadingDateInput({
   initialValue,
-  defaultDate,
   onSave,
   density = "expanded",
 }: {
   initialValue?: SettingsClassMetadata["readingDate"]; // ISO date string
-  defaultDate?: SettingsClassMetadata["readingDate"]; // ISO date string from previous class
+  /** @deprecated Ignored — Add due date seeds today. */
+  defaultDate?: SettingsClassMetadata["readingDate"];
   onSave: (date: string | undefined) => void | Promise<void>;
   density?: ItemDensity;
 }) {
-  const [value, setValue] = useState(
-    initialValue ? new Date(initialValue).toISOString().split("T")[0] : "",
-  );
+  const [value, setValue] = useState(readingDateToInputValue(initialValue));
+  const [picking, setPicking] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const pickingRef = useRef(false);
+  pickingRef.current = picking;
 
   useEffect(() => {
-    if (initialValue) {
-      setValue(new Date(initialValue).toISOString().split("T")[0]);
-    } else {
-      setValue("");
+    // Avoid clobbering an in-progress pick with a stale prop write.
+    if (pickingRef.current) {
+      return;
     }
+    setValue(readingDateToInputValue(initialValue));
   }, [initialValue]);
-
-  const handleFocus = () => {
-    // If the field is empty and we have a default date, populate it
-    if (!value && defaultDate) {
-      const defaultDateString = new Date(defaultDate)
-        .toISOString()
-        .split("T")[0];
-      setValue(defaultDateString);
-    }
-  };
 
   useDebouncedEffect(
     () => {
+      // Don't persist while the native picker is open — a parent re-render
+      // remounts the input and detaches the popup.
+      if (pickingRef.current) {
+        return;
+      }
       if (value) {
-        const date = new Date(value);
-        if (!isNaN(date.getTime())) {
-          const isoString = date.toISOString();
-          if (isoString !== initialValue) {
-            onSave(isoString);
-          }
+        const isoString = isoFromInputValue(value);
+        if (isoString !== initialValue) {
+          onSave(isoString);
         }
       } else if (initialValue) {
         onSave(undefined);
       }
     },
-    [initialValue, value],
+    [initialValue, value, picking],
     500,
   );
 
   function clear() {
     setValue("");
+    setPicking(false);
     onSave(undefined);
   }
+
+  function startPicking() {
+    const today = toLocalDateKey(new Date());
+    // Commit DOM synchronously inside the click gesture so showPicker()
+    // targets the same input the user activated.
+    flushSync(() => {
+      setValue(today);
+      setPicking(true);
+    });
+    const el = inputRef.current;
+    if (!el) {
+      return;
+    }
+    el.focus();
+    try {
+      (el as HTMLInputElement & { showPicker?: () => void }).showPicker?.();
+    } catch {
+      // showPicker can throw if the input isn't eligible
+    }
+  }
+
+  function syncFromInput() {
+    const live = inputRef.current?.value;
+    if (live != null && live !== "") {
+      setValue(live);
+    }
+  }
+
+  function onDateChange(e: JSX.TargetedEvent<HTMLInputElement>) {
+    setValue(e.currentTarget.value);
+  }
+
+  function onPickerBlur() {
+    // Native pickers often blur before `change`, and swapping trees on
+    // setPicking(false) used to remount the input and drop the selection.
+    // Read the live DOM value first, keep the same <input>, then exit pick.
+    window.setTimeout(() => {
+      syncFromInput();
+      setPicking(false);
+    }, 250);
+  }
+
+  const linkButtonClass =
+    "inline-flex items-center justify-center gap-1 cursor-pointer bg-transparent border-0 p-0 text-xs text-secondary hover:text-primary";
+  const hoverRevealClass =
+    "hidden group-hover/class:inline-flex group-focus-within/class:inline-flex";
+  const idleHideOnHoverClass =
+    "inline-flex group-hover/class:hidden group-focus-within/class:hidden";
+
+  const dateInputClass = twMerge(
+    "px-2 py-1 border border-quinary rounded-md bg-background text-secondary focus:outline-3 focus:outline-accent-blue focus:outline-offset-2",
+    density !== "expanded" ? "text-sm" : "text-base",
+  );
+
+  const showAdd = !value && !picking;
+  const showIdle = Boolean(value) && !picking;
+  const showEditor = picking || Boolean(value);
 
   return (
     <div
       className="flex flex-row items-center gap-2"
       data-tour="syllabus-class-reading-date"
     >
-      <label
-        className={twMerge(
-          "text-tertiary shrink-0",
-          density !== "expanded" ? "text-sm" : "text-base",
-        )}
-      >
-        {value ? (
+      {showAdd ? (
+        <button
+          key="add"
+          type="button"
+          className={twMerge(linkButtonClass, hoverRevealClass)}
+          onClick={startPicking}
+        >
           <span
-            onClick={clear}
-            className="underline text-secondary cursor-pointer"
-          >
-            {getString("due-date-clear")}
+            className="syllabus-class-add-icon syllabus-class-add-icon-due-date"
+            aria-hidden="true"
+          />
+          {getString("due-date-add")}
+        </button>
+      ) : null}
+
+      {showIdle ? (
+        <div
+          key="idle"
+          className={twMerge(
+            idleHideOnHoverClass,
+            "items-baseline gap-1 text-secondary",
+          )}
+        >
+          <span className="text-tertiary">
+            {getString("class-due-date-label")}{" "}
           </span>
-        ) : (
-          <span>{getString("due-date-add")}</span>
-        )}
-      </label>
-      <input
-        type="date"
-        value={value}
-        onChange={(e) => setValue(e.currentTarget.value)}
-        onFocus={handleFocus}
-        className={twMerge(
-          "px-2 py-1 border border-quinary rounded-md bg-background text-secondary focus:outline-3 focus:outline-accent-blue focus:outline-offset-2",
-          density !== "expanded" ? "text-sm" : "text-base",
-        )}
-        placeholder={getString("placeholder-select-date")}
-      />
+          <span className="text-secondary">
+            {formatReadingDate(value || initialValue || "")}
+          </span>
+        </div>
+      ) : null}
+
+      {showEditor ? (
+        <div
+          key="editor"
+          className={twMerge(
+            "flex-row items-center gap-2",
+            // Keep this node mounted across pick → idle so the <input> is
+            // not recreated (that detaches an open native date picker).
+            picking ? "inline-flex" : hoverRevealClass,
+          )}
+        >
+          <button type="button" className={linkButtonClass} onClick={clear}>
+            {getString("due-date-clear")}
+          </button>
+          <input
+            ref={inputRef}
+            type="date"
+            value={value}
+            onInput={onDateChange}
+            onChange={onDateChange}
+            onBlur={picking ? onPickerBlur : undefined}
+            className={dateInputClass}
+            placeholder={getString("placeholder-select-date")}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

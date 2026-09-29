@@ -139,14 +139,13 @@ export function ReadingItemsLayout({
   rows,
   readerMode = false,
   isLocked = true,
-  template = "strip",
+  template: _template = "strip",
   showPriority = true,
   /** Home shelves: horizontal scroll instead of wrapping pack grid. */
   coverRail = false,
   /** Home Upcoming deadlines Magazine: Cover + Blurb rail. */
   magazineRail = false,
-  /** Gallery / Reading Schedule Magazine packing (ignored when magazineRail). */
-  magazinePacking = "packed" as MagazinePacking,
+  magazinePacking: _magazinePacking = "packed" as MagazinePacking,
   colorFilterScope,
   showItemsWithoutAnnotations: showEmptyProp,
   className,
@@ -215,9 +214,9 @@ export function ReadingItemsLayout({
   const usePack =
     layout !== "card" &&
     layout !== "annotations" &&
+    layout !== "magazine" &&
     !coverRail &&
-    !magazineRail &&
-    !(layout === "magazine" && magazinePacking === "vertical");
+    !magazineRail;
   const { wrapRef, pack } = useReadingItemsPack(layout, rows.length, usePack);
   const packClass = readingItemsPackClass(pack);
   const tileStyle = {
@@ -288,9 +287,27 @@ export function ReadingItemsLayout({
     );
   }
 
-  if (layout === "cover" || layout === "magazine") {
-    const grid =
-      layout === "cover" ? (
+  if (layout === "magazine") {
+    return (
+      <div className={className}>
+        <MagazineItems
+          items={rows.map((row) => row.item)}
+          keyPrefix={rows[0]?.key || "reading"}
+          sortBy="auto"
+          collectionId={rows[0]?.collectionId ?? 0}
+          selectedItemIds={null}
+          chromeByItemId={chromeByItemId}
+          onClick={handleClick}
+          onDoubleClick={handleDoubleClick}
+          onContextMenu={handleContextMenu}
+        />
+      </div>
+    );
+  }
+
+  if (layout === "cover") {
+    return (
+      <div ref={wrapRef} className={readingContentWidthClass(layout, pack)}>
         <div
           className={twMerge("syllabus-gallery-grid", packClass, className)}
           style={tileStyle}
@@ -307,34 +324,6 @@ export function ReadingItemsLayout({
             />
           ))}
         </div>
-      ) : (
-        <MagazineItems
-          className={twMerge(packClass, className)}
-          style={tileStyle}
-          items={rows.map((row) => row.item)}
-          keyPrefix={rows[0]?.key || "reading"}
-          sortBy="auto"
-          template={template}
-          packing={magazinePacking}
-          collectionId={rows[0]?.collectionId ?? 0}
-          selectedItemIds={null}
-          chromeByItemId={chromeByItemId}
-          onClick={handleClick}
-          onDoubleClick={handleDoubleClick}
-          onContextMenu={handleContextMenu}
-        />
-      );
-
-    return (
-      <div
-        ref={wrapRef}
-        className={
-          layout === "magazine" && magazinePacking === "vertical"
-            ? "container-padded"
-            : readingContentWidthClass(layout, pack)
-        }
-      >
-        {grid}
       </div>
     );
   }

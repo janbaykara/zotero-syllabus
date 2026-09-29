@@ -14,7 +14,8 @@ import { FEATURE_FLAG } from "./featureFlags";
 import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
 import { formatReadingDate } from "../utils/dates";
 import { getString } from "../utils/locale";
-import { isZotero8OrLater } from "../utils/zotero";
+import { getCachedCollectionById } from "../utils/cache";
+import { collectionLibraryIsEditable, isZotero8OrLater } from "../utils/zotero";
 import { TextInput, ReadingDateInput } from "./syllabusInputs";
 import { SyllabusItemCard } from "./SyllabusItemCard";
 import { isOsFileDrag } from "../utils/nativeFileDrop";
@@ -23,6 +24,7 @@ import type { MagazinePacking } from "./magazinePacking";
 import { ReadingItemsLayout } from "./readingItemsLayout";
 import { selectItemInCollection } from "./ClassReadingBlock";
 import { pickAndAddItemsToClass } from "./addItemsToClass";
+import { createAndAssignClassNote } from "./classNote";
 
 export type ItemDropIndicator = {
   classNumber: number | null;
@@ -128,6 +130,10 @@ export function ClassGroupComponent({
   onDuplicate,
 }: ClassGroupComponentProps) {
   const selectedItemIds = useZoteroSelectedItemIds();
+  const libraryEditable = collectionLibraryIsEditable(
+    getCachedCollectionById(collectionId),
+  );
+  const canAddNote = !isLocked && libraryEditable && classNumber != null;
 
   // Get nomenclature for this collection
   const { singular, singularCapitalized } =
@@ -225,6 +231,24 @@ export function ClassGroupComponent({
       await pickAndAddItemsToClass(collectionId, classNumber);
     } catch (err) {
       ztoolkit.log("Error adding readings to class:", err);
+    }
+  };
+
+  const handleAddNote = async () => {
+    if (classNumber == null || !canAddNote) {
+      return;
+    }
+    try {
+      const created = await createAndAssignClassNote(
+        collectionId,
+        classNumber,
+      );
+      if (created && onIdentifierClick) {
+        // Select in Syllabus UI (blue highlight); Zotero select already ran.
+        onIdentifierClick(created.note, created.assignmentId);
+      }
+    } catch (err) {
+      ztoolkit.log("Error adding class note:", err);
     }
   };
 
@@ -486,7 +510,12 @@ export function ClassGroupComponent({
                     </div>
                   )}
                   {!isLocked && (
-                    <>
+                    <div
+                      className={twMerge(
+                        "flex-row items-baseline gap-1",
+                        "hidden group-hover/class:inline-flex group-focus-within/class:inline-flex",
+                      )}
+                    >
                       {hasManualOrder && (
                         <button
                           className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
@@ -535,7 +564,7 @@ export function ClassGroupComponent({
                       >
                         <div className="text-2xl text-center">×</div>
                       </button>
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
@@ -575,7 +604,10 @@ export function ClassGroupComponent({
       ) : null}
       <div
         className={twMerge(
-          !isLocked || layout === "card" || layout === "annotations"
+          !isLocked ||
+          layout === "card" ||
+          layout === "annotations" ||
+          layout === "magazine"
             ? "container-padded"
             : "w-full min-w-0 max-w-full",
         )}
@@ -638,7 +670,9 @@ export function ClassGroupComponent({
                 },
               })}
             </div>
-          ) : itemAssignments.length > 0 && isLocked && layout !== "card" ? (
+          ) : itemAssignments.length > 0 &&
+            isLocked &&
+            layout !== "card" ? (
             <ReadingItemsLayout
               layout={layout}
               density={density}
@@ -711,28 +745,58 @@ export function ClassGroupComponent({
             })
           ) : null}
           {!isLocked && classNumber != null && (
-            <button
-              type="button"
-              className="flex items-center justify-center gap-2 w-full opacity-0 group-hover/class:opacity-100 focus-visible:opacity-100 transition-opacity in-[.print]:hidden text-xs text-secondary hover:text-primary cursor-pointer bg-transparent border-0 p-2"
-              onClick={() => {
-                void handleAddReadings();
-              }}
-              title={getString("class-add-readings-aria", {
-                args: {
-                  nomenclature: singularCapitalized,
-                  number: classNumber,
-                },
-              })}
-              aria-label={getString("class-add-readings-aria", {
-                args: {
-                  nomenclature: singularCapitalized,
-                  number: classNumber,
-                },
-              })}
-            >
-              <Plus size={12} />
-              {getString("class-add-readings")}
-            </button>
+            <div className="flex items-center justify-center gap-2 w-full opacity-0 group-hover/class:opacity-100 focus-within:opacity-100 focus-visible:opacity-100 transition-opacity in-[.print]:hidden p-2">
+              <button
+                type="button"
+                className="inline-flex items-center justify-center gap-1 cursor-pointer bg-transparent border-0 p-0 text-xs text-secondary hover:text-primary"
+                onClick={() => {
+                  void handleAddReadings();
+                }}
+                title={getString("class-add-readings-aria", {
+                  args: {
+                    nomenclature: singularCapitalized,
+                    number: classNumber,
+                  },
+                })}
+                aria-label={getString("class-add-readings-aria", {
+                  args: {
+                    nomenclature: singularCapitalized,
+                    number: classNumber,
+                  },
+                })}
+              >
+                <span
+                  className="syllabus-class-add-icon syllabus-class-add-icon-item"
+                  aria-hidden="true"
+                />
+                {getString("class-add-readings")}
+              </button>
+              {canAddNote ? (
+                <>
+                  <span
+                    className="text-xs text-tertiary select-none"
+                    aria-hidden="true"
+                  >
+                    ·
+                  </span>
+                  <button
+                    type="button"
+                    className="inline-flex items-center justify-center gap-1 cursor-pointer bg-transparent border-0 p-0 text-xs text-secondary hover:text-primary"
+                    onClick={() => {
+                      void handleAddNote();
+                    }}
+                    title={getString("class-add-note")}
+                    aria-label={getString("class-add-note")}
+                  >
+                    <span
+                      className="syllabus-class-add-icon syllabus-class-add-icon-note"
+                      aria-hidden="true"
+                    />
+                    {getString("class-add-note")}
+                  </button>
+                </>
+              ) : null}
+            </div>
           )}
         </div>
       </div>
