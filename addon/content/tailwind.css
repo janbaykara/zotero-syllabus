@@ -237,6 +237,9 @@
   .mx-0\! {
     margin-inline: 0px !important;
   }
+  .mx-1 {
+    margin-inline: var(--spacing);
+  }
   .-my-1 {
     margin-block: calc(var(--spacing) * -1);
   }

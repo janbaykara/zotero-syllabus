@@ -447,6 +447,15 @@ export async function searchRecentAnnotations(
 export const MY_ANNOTATIONS_STREAM_PAGE_SIZE = 50;
 export const MY_ANNOTATIONS_STREAM_LOOKBACK_DAYS = 365;
 
+/** Trim; empty/whitespace means “no search” (live 365-day timeline). */
+export function normalizeMyAnnotationsSearchQuery(query: unknown): string {
+  return String(query ?? "").trim();
+}
+
+export function isMyAnnotationsSearchActive(query: unknown): boolean {
+  return normalizeMyAnnotationsSearchQuery(query).length > 0;
+}
+
 function annotationParentItem(item: Zotero.Item): Zotero.Item | null {
   try {
     const attachment = item.parentItem;
@@ -460,6 +469,71 @@ function annotationParentItem(item: Zotero.Item): Zotero.Item | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Map a title / full-text / annotation search hit to the regular parent work
+ * whose annotations should appear in the feed.
+ */
+export function resolveMyAnnotationsSearchHitParent(
+  item: Zotero.Item,
+): Zotero.Item | null {
+  try {
+    if (item.deleted) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+  try {
+    if (typeof item.isAnnotation === "function" && item.isAnnotation()) {
+      return annotationParentItem(item);
+    }
+  } catch {
+    // Fall through to attachment / regular checks.
+  }
+  try {
+    if (typeof item.isAttachment === "function" && item.isAttachment()) {
+      const parent = parentOfAttachment(item);
+      return parent && isSyllabusMemberItem(parent) ? parent : null;
+    }
+  } catch {
+    // Fall through to regular-item check.
+  }
+  return isSyllabusMemberItem(item) ? item : null;
+}
+
+/** Unique bibliographic parents from mixed search hits, first-seen order. */
+export function uniqueParentsFromSearchHits(
+  items: Zotero.Item[],
+): Zotero.Item[] {
+  const seen = new Set<number>();
+  const parents: Zotero.Item[] = [];
+  for (const item of items) {
+    const parent = resolveMyAnnotationsSearchHitParent(item);
+    if (!parent || seen.has(parent.id)) {
+      continue;
+    }
+    seen.add(parent.id);
+    parents.push(parent);
+  }
+  return parents;
+}
+
+/** Keep first occurrence of each annotation id. */
+export function dedupeMyAnnotationStreamRows(
+  rows: MyAnnotationStreamEntry[],
+): MyAnnotationStreamEntry[] {
+  const seen = new Set<number>();
+  const out: MyAnnotationStreamEntry[] = [];
+  for (const row of rows) {
+    if (seen.has(row.id)) {
+      continue;
+    }
+    seen.add(row.id);
+    out.push(row);
+  }
+  return out;
 }
 
 /** Prefer reader page label; fall back to 1-based pageIndex from position JSON. */
@@ -541,19 +615,68 @@ function compareAnnotationNewestFirst(
   );
 }
 
+async function searchMyAnnotationsStreamByQuery(
+  libraryID: number,
+  query: string,
+  limit: number,
+): Promise<{
+  rows: MyAnnotationStreamEntry[];
+  hasMore: boolean;
+  colors: string[];
+}> {
+  const [quoteIds, commentIds] = await Promise.all([
+    searchItemIds(libraryID, [["annotationText", "contains", query]]),
+    searchItemIds(libraryID, [["annotationComment", "contains", query]]),
+  ]);
+  const hitIds = [...new Set([...quoteIds, ...commentIds])];
+  const collected: MyAnnotationStreamEntry[] = [];
+  for (const id of hitIds) {
+    const item = resolveItem(id);
+    if (!item) {
+      continue;
+    }
+    try {
+      if (item.deleted) {
+        continue;
+      }
+    } catch {
+      continue;
+    }
+    const row = mapAnnotationStreamEntry(item);
+    if (row) {
+      collected.push(row);
+    }
+  }
+  const rows = dedupeMyAnnotationStreamRows(collected).sort(
+    compareAnnotationNewestFirst,
+  );
+  const hasMore = rows.length > limit;
+  return {
+    rows: rows.slice(0, limit),
+    hasMore,
+    colors: collectAnnotationColors(rows.map((row) => row.color)),
+  };
+}
+
 /**
- * Newest `limit` annotations in the lookback window (descending).
- * Increase `limit` to "load previous" (older history from the live end).
+ * Newest `limit` annotations (descending).
+ * Empty `query` → live lookback window. Non-empty → matching annotation
+ * quotes/comments across the library.
+ * Increase `limit` to "load previous".
  */
 export async function searchMyAnnotationsStream(
   libraryID: number,
-  options: { limit?: number } = {},
+  options: { limit?: number; query?: string } = {},
 ): Promise<{
   rows: MyAnnotationStreamEntry[];
   hasMore: boolean;
   colors: string[];
 }> {
   const limit = Math.max(1, options.limit ?? MY_ANNOTATIONS_STREAM_PAGE_SIZE);
+  const query = normalizeMyAnnotationsSearchQuery(options.query);
+  if (query) {
+    return searchMyAnnotationsStreamByQuery(libraryID, query, limit);
+  }
   const ids = await searchItemIds(libraryID, [
     ["itemType", "is", "annotation"],
     [
@@ -1041,6 +1164,7 @@ export type MyAnnotationsStreamState = {
 
 export function useMyAnnotationsStream(
   libraryID: number,
+  query = "",
 ): MyAnnotationsStreamState {
   const [rows, setRows] = useState<MyAnnotationStreamEntry[]>([]);
   const [colors, setColors] = useState<string[]>([]);
@@ -1049,6 +1173,7 @@ export function useMyAnnotationsStream(
   const [loadingMore, setLoadingMore] = useState(false);
   const loadedLimitRef = useRef(MY_ANNOTATIONS_STREAM_PAGE_SIZE);
   const loadTokenRef = useRef(0);
+  const normalizedQuery = normalizeMyAnnotationsSearchQuery(query);
 
   const reload = useCallback(
     async (mode: "initial" | "refresh" | "more") => {
@@ -1057,13 +1182,19 @@ export function useMyAnnotationsStream(
         setLoadingMore(true);
       } else if (mode === "initial") {
         setLoading(true);
+        setRows([]);
+        setColors([]);
+        setHasMore(false);
       }
       try {
         const limit =
           mode === "more"
             ? loadedLimitRef.current + MY_ANNOTATIONS_STREAM_PAGE_SIZE
             : Math.max(MY_ANNOTATIONS_STREAM_PAGE_SIZE, loadedLimitRef.current);
-        const next = await searchMyAnnotationsStream(libraryID, { limit });
+        const next = await searchMyAnnotationsStream(libraryID, {
+          limit,
+          query: normalizedQuery,
+        });
         if (token !== loadTokenRef.current) {
           return;
         }
@@ -1078,7 +1209,7 @@ export function useMyAnnotationsStream(
         }
       }
     },
-    [libraryID],
+    [libraryID, normalizedQuery],
   );
 
   useEffect(() => {
@@ -1106,7 +1237,7 @@ export function useMyAnnotationsStream(
       }
       loadTokenRef.current += 1;
     };
-  }, [libraryID, reload]);
+  }, [libraryID, normalizedQuery, reload]);
 
   const loadPrevious = useCallback(async () => {
     if (!hasMore || loadingMore || loading) {

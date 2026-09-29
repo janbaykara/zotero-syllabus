@@ -6,12 +6,14 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
 } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
 import { isZotero8OrLater } from "../utils/zotero";
 import { getString, getUiDir } from "../utils/locale";
 import { openZoteroItemContextMenu } from "../utils/itemContextMenu";
 import { renderComponent } from "../utils/react";
+import { useDebouncedEffect } from "../utils/react/useDebouncedEffect";
 import { annotationMatchesColorFilter } from "../utils/annotationColors";
 import {
   ANNOTATION_COLOR_FILTER_FEED,
@@ -32,6 +34,8 @@ import {
   type AnnotationStreamParentGroup,
 } from "./annotationStream";
 import {
+  isMyAnnotationsSearchActive,
+  normalizeMyAnnotationsSearchQuery,
   useMyAnnotationsStream,
   type MyAnnotationStreamEntry,
 } from "./explorerQueries";
@@ -94,8 +98,29 @@ function LoadPreviousButton({
 const NEAR_EDGE_PX = 80;
 
 export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const applySearchInput = useCallback(
+    (value: string, options?: { immediate?: boolean }) => {
+      setSearchInput(value);
+      const normalized = normalizeMyAnnotationsSearchQuery(value);
+      // Clear immediately; paste also commits without waiting for debounce.
+      if (!normalized || options?.immediate) {
+        setDebouncedQuery(normalized);
+      }
+    },
+    [],
+  );
+  useDebouncedEffect(
+    () => {
+      setDebouncedQuery(normalizeMyAnnotationsSearchQuery(searchInput));
+    },
+    [searchInput],
+    300,
+  );
   const { rows, colors, hasMore, loading, loadingMore, loadPrevious } =
-    useMyAnnotationsStream(libraryID);
+    useMyAnnotationsStream(libraryID, debouncedQuery);
+  const searchActive = isMyAnnotationsSearchActive(debouncedQuery);
   const [order, setOrder] = useMyAnnotationsOrder();
   const [quoteOrder] = useAnnotationsQuoteOrder();
   const [colorFilter] = useAnnotationColorFilter(ANNOTATION_COLOR_FILTER_FEED);
@@ -108,6 +133,15 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
   >({ kind: "live" });
   const prevRowCountRef = useRef(0);
   const skipNextPinTrackRef = useRef(false);
+
+  useEffect(() => {
+    if (searchActive) {
+      return;
+    }
+    pinnedToLiveRef.current = true;
+    pendingScrollRef.current = { kind: "live" };
+    skipNextPinTrackRef.current = true;
+  }, [searchActive]);
 
   const displayRows = useMemo(
     () =>
@@ -261,13 +295,49 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
       >
         <div className="container-padded bg-background">
           <div className="flex flex-row items-center gap-2 justify-between">
-            <div className="min-w-0">
+            <div className="min-w-0 shrink">
               <div className="font-semibold text-3xl">
                 {getString("view-tab-my-annotations")}
               </div>
               <p className="text-secondary text-base mt-1">
                 {getString("my-annotations-desc")}
               </p>
+            </div>
+            <div className="flex-1 min-w-0 max-w-md mx-1">
+              <input
+                type="search"
+                value={searchInput}
+                onInput={(e) =>
+                  applySearchInput((e.target as HTMLInputElement).value)
+                }
+                onSearch={(e) =>
+                  applySearchInput((e.target as HTMLInputElement).value)
+                }
+                onPaste={(e) => {
+                  const input = e.currentTarget as HTMLInputElement;
+                  const pasted = e.clipboardData?.getData("text") ?? "";
+                  if (!pasted) {
+                    return;
+                  }
+                  e.preventDefault();
+                  const start = input.selectionStart ?? searchInput.length;
+                  const end = input.selectionEnd ?? searchInput.length;
+                  const next =
+                    searchInput.slice(0, start) +
+                    pasted +
+                    searchInput.slice(end);
+                  applySearchInput(next, { immediate: true });
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape" && searchInput) {
+                    e.preventDefault();
+                    applySearchInput("");
+                  }
+                }}
+                placeholder={getString("my-annotations-search-placeholder")}
+                aria-label={getString("my-annotations-search-aria")}
+                className="w-full box-border px-2 py-1 text-base rounded-md border border-quinary bg-background text-secondary focus:outline-3 focus:outline-accent-blue focus:outline-offset-2"
+              />
             </div>
             <div className="inline-flex items-center gap-2.5 shrink grow-0">
               <MyAnnotationsMenu
@@ -289,9 +359,11 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
           ) : displayRows.length === 0 ? (
             <p className="text-secondary text-base">
               {getString(
-                rows.length === 0
-                  ? "my-annotations-empty"
-                  : "my-annotations-empty-color-filter",
+                searchActive
+                  ? "my-annotations-empty-search"
+                  : rows.length === 0
+                    ? "my-annotations-empty"
+                    : "my-annotations-empty-color-filter",
               )}
             </p>
           ) : (
