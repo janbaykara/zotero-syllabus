@@ -167,6 +167,35 @@
   bottom: -1px;
 }
 
+.syllabus-class-items {
+  overflow: visible;
+}
+
+.syllabus-item-drop-host {
+  position: relative;
+  overflow: visible;
+}
+
+.syllabus-reorder-drop-line {
+  position: absolute;
+  z-index: 30;
+  left: 0.25rem;
+  right: 0.25rem;
+  height: 3px;
+  pointer-events: none;
+  background: var(--accent-blue, #2255e0);
+  border-radius: 2px;
+}
+
+.syllabus-reorder-drop-line-before {
+  /* Sit in the space-y gap above the host, not on the card edge. */
+  top: -0.65rem;
+}
+
+.syllabus-reorder-drop-line-after {
+  bottom: -0.65rem;
+}
+
 .syllabus-gallery-sticky {
   padding-bottom: 0.5rem;
 }
@@ -3977,7 +4006,7 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   --syllabus-magazine-serif:
     "Newsreader", Georgia, "Palatino Linotype", Palatino, "Songti SC",
     "Hiragino Mincho ProN", serif;
-  /* Preview blurbs share this stream; keep explorer’s ~2.6× cover measure. */
+  /* Fallback measure for base blurb rules; stream rows override to fill. */
   --syllabus-explorer-magazine-blurb-width: calc(
     2.6 * var(--syllabus-annotations-cover-width, 148px)
   );
@@ -4150,25 +4179,28 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 1.15rem;
+  align-items: stretch;
 }
 
-/* Preview blurbs in the Annotations-style stream: fixed ~2.6× cover column
-   (same measure as the Cover-rail magazine sidecar), not full remaining width. */
+/* CoverStreamRow (Preview / Annotations / My Annotations): sidecar fills
+   the remaining row beside the cover. Explorer Cover-rail keeps its own
+   fixed ~2.6× columns under .syllabus-explorer-cover-rail. */
+.syllabus-my-annotations-stream-entry
+  > .syllabus-my-annotations-stream-stack
+  > * {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 .syllabus-my-annotations-stream-stack
   .syllabus-explorer-magazine-text.is-blurb {
-  flex: 0 0 auto;
-  width: calc(
-    var(--syllabus-explorer-magazine-blurb-width) +
-      var(--magazine-blurb-quote-pad, 1.85rem) +
-      var(--magazine-blurb-end-pad, 0.45rem)
-  );
-  max-width: calc(
-    var(--syllabus-explorer-magazine-blurb-width) +
-      var(--magazine-blurb-quote-pad, 1.85rem) +
-      var(--magazine-blurb-end-pad, 0.45rem)
-  );
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: none;
   min-width: 0;
-  align-self: start;
+  align-self: stretch;
   grid-column: auto;
   grid-row: auto;
   box-sizing: border-box;
@@ -4176,8 +4208,8 @@ button.syllabus-explorer-class-segment-header:focus-visible {
 
 .syllabus-my-annotations-stream-stack
   .syllabus-explorer-magazine-text.is-blurb.is-note {
-  width: var(--syllabus-explorer-magazine-note-width);
-  max-width: var(--syllabus-explorer-magazine-note-width);
+  width: 100%;
+  max-width: none;
   padding-inline: var(--magazine-blurb-quote-pad, 0.15rem)
     var(--magazine-blurb-end-pad, 0.15rem);
 }

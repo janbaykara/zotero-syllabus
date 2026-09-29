@@ -270,7 +270,7 @@ function MagazinePreviewSidecar({
   const ref = useRef<HTMLDivElement>(null);
   const visible = useNearViewport(ref);
   return (
-    <div ref={ref} className="min-w-0">
+    <div ref={ref} className="min-w-0 w-full">
       <MagazineAutoSidecar
         item={item}
         collectionId={collectionId}
