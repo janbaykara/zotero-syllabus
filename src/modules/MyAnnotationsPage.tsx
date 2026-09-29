@@ -20,9 +20,11 @@ import {
   useAnnotationColorFilter,
   useAnnotationsQuoteOrder,
   useMyAnnotationsOrder,
+  useMyAnnotationsSearchScope,
   type MyAnnotationsOrder,
 } from "./myAnnotationsPrefs";
 import { MyAnnotationsMenu } from "./MyAnnotationsMenu";
+import { MyAnnotationsSearchMenu } from "./MyAnnotationsSearchMenu";
 import { GalleryViewportProvider } from "./galleryVisibility";
 import { useItemIdentifierSelection } from "./browsePage";
 import type { MagazineTileClick } from "./MagazineTile";
@@ -34,6 +36,7 @@ import {
   type AnnotationStreamParentGroup,
 } from "./annotationStream";
 import {
+  isFulltextStreamEntry,
   isMyAnnotationsSearchActive,
   normalizeMyAnnotationsSearchQuery,
   useMyAnnotationsStream,
@@ -100,6 +103,7 @@ const NEAR_EDGE_PX = 80;
 export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
   const [searchInput, setSearchInput] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [searchScope, setSearchScope] = useMyAnnotationsSearchScope();
   const applySearchInput = useCallback(
     (value: string, options?: { immediate?: boolean }) => {
       setSearchInput(value);
@@ -119,7 +123,7 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
     300,
   );
   const { rows, colors, hasMore, loading, loadingMore, loadPrevious } =
-    useMyAnnotationsStream(libraryID, debouncedQuery);
+    useMyAnnotationsStream(libraryID, debouncedQuery, searchScope);
   const searchActive = isMyAnnotationsSearchActive(debouncedQuery);
   const [order, setOrder] = useMyAnnotationsOrder();
   const [quoteOrder] = useAnnotationsQuoteOrder();
@@ -145,8 +149,10 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
 
   const displayRows = useMemo(
     () =>
-      sortStreamRows(rows, order).filter((row) =>
-        annotationMatchesColorFilter(row.color, colorFilter),
+      sortStreamRows(rows, order).filter(
+        (row) =>
+          isFulltextStreamEntry(row) ||
+          annotationMatchesColorFilter(row.color, colorFilter),
       ),
     [rows, order, colorFilter],
   );
@@ -303,43 +309,14 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
                 {getString("my-annotations-desc")}
               </p>
             </div>
-            <div className="flex-1 min-w-0 max-w-md mx-1">
-              <input
-                type="search"
-                value={searchInput}
-                onInput={(e) =>
-                  applySearchInput((e.target as HTMLInputElement).value)
-                }
-                onSearch={(e) =>
-                  applySearchInput((e.target as HTMLInputElement).value)
-                }
-                onPaste={(e) => {
-                  const input = e.currentTarget as HTMLInputElement;
-                  const pasted = e.clipboardData?.getData("text") ?? "";
-                  if (!pasted) {
-                    return;
-                  }
-                  e.preventDefault();
-                  const start = input.selectionStart ?? searchInput.length;
-                  const end = input.selectionEnd ?? searchInput.length;
-                  const next =
-                    searchInput.slice(0, start) +
-                    pasted +
-                    searchInput.slice(end);
-                  applySearchInput(next, { immediate: true });
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape" && searchInput) {
-                    e.preventDefault();
-                    applySearchInput("");
-                  }
-                }}
-                placeholder={getString("my-annotations-search-placeholder")}
-                aria-label={getString("my-annotations-search-aria")}
-                className="w-full box-border px-2 py-1 text-base rounded-md border border-quinary bg-background text-secondary focus:outline-3 focus:outline-accent-blue focus:outline-offset-2"
-              />
-            </div>
             <div className="inline-flex items-center gap-2.5 shrink grow-0">
+              <MyAnnotationsSearchMenu
+                searchInput={searchInput}
+                onSearchInput={applySearchInput}
+                searchScope={searchScope}
+                onSearchScope={setSearchScope}
+                searchActive={searchActive}
+              />
               <MyAnnotationsMenu
                 order={order}
                 onOrder={handleOrderChange}
@@ -383,6 +360,8 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
                       !!group.parent &&
                       (selectedItemIds?.includes(group.parent.id) || false)
                     }
+                    searchQuery={debouncedQuery}
+                    richText
                     onClick={(_item, e) => {
                       e.preventDefault();
                       e.stopPropagation();

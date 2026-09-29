@@ -14,10 +14,12 @@ import { Check, Copy } from "lucide-preact";
 import {
   isClassNoteItem,
   openAnnotationIdInReader,
+  openItemAtReaderLocation,
   openItemBestAttachment,
   openNoteItem,
   readItemNote,
 } from "../utils/items";
+import { getCachedItem } from "../utils/cache";
 import {
   annotationCommentToDisplayHtml,
   annotationCommentToPlainText,
@@ -28,6 +30,11 @@ import { getItemCitationKey } from "../utils/citeKey";
 import { getString } from "../utils/locale";
 import { annotationActivityGap, formatRelativeTimestamp } from "../utils/dates";
 import { getPrefValue } from "../utils/prefs";
+import {
+  segmentSearchHighlights,
+  highlightSearchInHtml,
+  type SearchHighlightSegment,
+} from "../utils/searchHighlight";
 import { CoverStreamRow } from "./coverStream";
 import { ExplorerCoverItem } from "./ExplorerMagazineRail";
 import { MagazineBlurb } from "./MagazineCoverBlurb";
@@ -35,7 +42,10 @@ import { NoteHtml } from "./NoteHtml";
 import { selectItemInCollection } from "./ClassReadingBlock";
 import type { MagazineTileClick } from "./MagazineTile";
 import type { ReadingTileChrome } from "./readingAssignmentChrome";
-import type { MyAnnotationStreamEntry } from "./explorerQueries";
+import {
+  isFulltextStreamEntry,
+  type MyAnnotationStreamEntry,
+} from "./explorerQueries";
 import {
   sortAnnotationsByQuoteOrder,
   type AnnotationsQuoteOrder,
@@ -196,12 +206,81 @@ export function AnnotationActivityGap({
   );
 }
 
+function TextWithBreaks({ text }: { text: string }) {
+  const parts = String(text ?? "").split("\n");
+  return (
+    <>
+      {parts.map((part, index) => (
+        <Fragment key={index}>
+          {index > 0 ? <br /> : null}
+          {part}
+        </Fragment>
+      ))}
+    </>
+  );
+}
+
+function AnnotationSearchText({
+  text,
+  query,
+  richText = false,
+}: {
+  text: string;
+  query?: string;
+  richText?: boolean;
+}) {
+  const segments = segmentSearchHighlights(text, query || "");
+  return (
+    <>
+      {segments.map((segment, index) => (
+        <SearchHighlightMark
+          key={`${index}:${segment.kind || "t"}`}
+          segment={segment}
+          richText={richText}
+        />
+      ))}
+    </>
+  );
+}
+
+function SearchHighlightMark({
+  segment,
+  richText = false,
+}: {
+  segment: SearchHighlightSegment;
+  richText?: boolean;
+}) {
+  const content = richText ? (
+    <TextWithBreaks text={segment.text} />
+  ) : (
+    segment.text
+  );
+  if (!segment.kind) {
+    return <>{content}</>;
+  }
+  return (
+    <mark
+      className={
+        segment.kind === "full"
+          ? "syllabus-search-hit syllabus-search-hit-full"
+          : "syllabus-search-hit syllabus-search-hit-word"
+      }
+    >
+      {content}
+    </mark>
+  );
+}
+
 function AnnotationStreamEntries({
   entries,
   quoteOrder,
+  searchQuery,
+  richText,
 }: {
   entries: MyAnnotationStreamEntry[];
   quoteOrder: AnnotationsQuoteOrder;
+  searchQuery?: string;
+  richText?: boolean;
 }) {
   const showGaps = quoteOrder === "dateAdded";
   return (
@@ -214,7 +293,11 @@ function AnnotationStreamEntries({
               to={streamEntryAdded(entry)}
             />
           ) : null}
-          <AnnotationStreamBody entry={entry} />
+          <AnnotationStreamBody
+            entry={entry}
+            searchQuery={searchQuery}
+            richText={richText}
+          />
         </Fragment>
       ))}
     </>
@@ -238,21 +321,55 @@ function formatAnnotationPageLabel(page: string): string {
   return getString("my-annotations-page", { args: { page } });
 }
 
+/** Open a stream row in the reader (annotation target or full-text page). */
+export function openStreamEntryInReader(entry: MyAnnotationStreamEntry): void {
+  if (isFulltextStreamEntry(entry)) {
+    if (entry.parent) {
+      openItemAtReaderLocation(entry.parent, {
+        attachmentID: entry.attachmentID,
+        pageIndex: entry.pageIndex,
+        pageLabel: entry.pageLabel || undefined,
+      });
+      return;
+    }
+    if (entry.attachmentID) {
+      const attachment = getCachedItem(entry.attachmentID);
+      if (attachment) {
+        openItemAtReaderLocation(attachment, {
+          attachmentID: entry.attachmentID,
+          pageIndex: entry.pageIndex,
+          pageLabel: entry.pageLabel || undefined,
+        });
+      }
+    }
+    return;
+  }
+  openAnnotationIdInReader(entry.id);
+}
+
 export function AnnotationStreamBody({
   entry,
+  searchQuery,
+  richText = false,
 }: {
   entry: MyAnnotationStreamEntry;
+  searchQuery?: string;
+  /** Annotation Feed only: keep line breaks and comment HTML. */
+  richText?: boolean;
 }) {
-  const stamp = formatRelativeTimestamp(entry.dateAdded || entry.dateModified);
+  const isFulltext = isFulltextStreamEntry(entry);
+  const stamp = isFulltext
+    ? null
+    : formatRelativeTimestamp(entry.dateAdded || entry.dateModified);
   const pageText = entry.pageLabel
     ? formatAnnotationPageLabel(entry.pageLabel)
     : "";
   const hasCopy = annotationHasCopyText(entry);
   const [copied, flashCopied] = useCopyFlash();
   const openInReader = () => {
-    openAnnotationIdInReader(entry.id);
+    openStreamEntryInReader(entry);
   };
-  const onOpenKeyDown = (e: JSX.TargetedKeyboardEvent<HTMLDivElement>) => {
+  const onOpenKeyDown = (e: JSX.TargetedKeyboardEvent<HTMLElement>) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       e.stopPropagation();
@@ -263,11 +380,23 @@ export function AnnotationStreamBody({
   const copyLabel = copied
     ? getString("my-annotations-copied")
     : getString("my-annotations-copy");
+  const query = String(searchQuery || "").trim();
+  const commentHtml = entry.comment
+    ? annotationCommentToDisplayHtml(entry.comment)
+    : "";
+  const commentDisplayHtml =
+    richText && query && commentHtml
+      ? highlightSearchInHtml(commentHtml, query)
+      : commentHtml;
 
   return (
     <div
-      className="syllabus-my-annotations-stream-body-wrap min-w-0"
+      className={twMerge(
+        "syllabus-my-annotations-stream-body-wrap min-w-0",
+        richText && "is-rich-text",
+      )}
       data-annotation-id={entry.id}
+      data-stream-kind={isFulltext ? "fulltext" : "annotation"}
     >
       <div className="syllabus-my-annotations-stream-body min-w-0">
         {entry.quote ? (
@@ -283,12 +412,26 @@ export function AnnotationStreamBody({
             }}
             onKeyDown={onOpenKeyDown}
           >
-            <mark
-              className="syllabus-magazine-highlight-mark"
-              style={{ "--highlight-color": entry.color } as JSX.CSSProperties}
-            >
-              {entry.quote}
-            </mark>
+            {isFulltext ? (
+              <AnnotationSearchText
+                text={entry.quote}
+                query={query}
+                richText={richText}
+              />
+            ) : (
+              <mark
+                className="syllabus-magazine-highlight-mark"
+                style={
+                  { "--highlight-color": entry.color } as JSX.CSSProperties
+                }
+              >
+                <AnnotationSearchText
+                  text={entry.quote}
+                  query={query}
+                  richText={richText}
+                />
+              </mark>
+            )}
           </div>
         ) : null}
         {showMeta ? (
@@ -354,7 +497,7 @@ export function AnnotationStreamBody({
             ) : null}
           </div>
         ) : null}
-        {entry.comment ? (
+        {entry.comment && commentDisplayHtml ? (
           <div
             className="syllabus-my-annotations-stream-comment"
             role="button"
@@ -366,10 +509,8 @@ export function AnnotationStreamBody({
               openInReader();
             }}
             onKeyDown={onOpenKeyDown}
-            // Zotero comments are plain text + a few inline HTML tags.
-            dangerouslySetInnerHTML={{
-              __html: annotationCommentToDisplayHtml(entry.comment),
-            }}
+            // Sanitized annotation comment HTML (+ optional search marks).
+            dangerouslySetInnerHTML={{ __html: commentDisplayHtml }}
           />
         ) : null}
       </div>
@@ -454,6 +595,8 @@ export function AnnotationStreamGroup({
   emptyLabel,
   showGalleryNote = false,
   quoteOrder: quoteOrderProp,
+  searchQuery,
+  richText = false,
   onClick,
   onDoubleClick,
   onContextMenu,
@@ -466,6 +609,10 @@ export function AnnotationStreamGroup({
   emptyLabel?: string;
   showGalleryNote?: boolean;
   quoteOrder?: AnnotationsQuoteOrder;
+  /** Active Annotation Feed search query for in-quote emphasis. */
+  searchQuery?: string;
+  /** Annotation Feed only: line breaks in quotes + HTML comments. */
+  richText?: boolean;
   onClick: MagazineTileClick;
   onDoubleClick: (item: Zotero.Item) => void;
   onContextMenu: MagazineTileClick;
@@ -483,10 +630,10 @@ export function AnnotationStreamGroup({
       entries
         .map(
           (entry) =>
-            `${entry.id}:${entry.quote?.length ?? 0}:${entry.comment?.length ?? 0}`,
+            `${entry.id}:${entry.quote?.length ?? 0}:${entry.comment?.length ?? 0}:${searchQuery || ""}`,
         )
         .join(","),
-    [entries],
+    [entries, searchQuery],
   );
   useExplorerRailStackWidth(stackRef, stackLayoutKey);
   const showCopyAll =
@@ -536,7 +683,12 @@ export function AnnotationStreamGroup({
         {emptyLabel}
       </p>
     ) : (
-      <AnnotationStreamEntries entries={entries} quoteOrder={quoteOrder} />
+      <AnnotationStreamEntries
+        entries={entries}
+        quoteOrder={quoteOrder}
+        searchQuery={searchQuery}
+        richText={richText}
+      />
     );
 
   return (
@@ -596,7 +748,7 @@ export function openAnnotationGroupInReader(
   );
   const first = ordered[0];
   if (first) {
-    openAnnotationIdInReader(first.id);
+    openStreamEntryInReader(first);
     return;
   }
   if (group.parent) {
@@ -701,8 +853,10 @@ export function ExplorerAnnotationShelf({
   );
   const visible = useMemo(
     () =>
-      annotations.filter((entry) =>
-        annotationMatchesColorFilter(entry.color, colorFilter),
+      annotations.filter(
+        (entry) =>
+          isFulltextStreamEntry(entry) ||
+          annotationMatchesColorFilter(entry.color, colorFilter),
       ),
     [annotations, colorFilter],
   );

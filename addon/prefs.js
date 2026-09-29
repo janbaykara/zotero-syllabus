@@ -24,6 +24,7 @@ pref("myAnnotationsLayout", "grid");
 pref("myAnnotationsSort", "lastRead");
 pref("myAnnotationsGroupBy", "none");
 pref("myAnnotationsOrder", "newestLast");
+pref("myAnnotationsSearchScope", "both");
 pref("myAnnotationsColorFilter", "");
 pref("annotationsQuoteOrder", "location");
 pref("galleryShowItemsWithoutAnnotations", true);

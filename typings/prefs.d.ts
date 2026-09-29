@@ -33,6 +33,7 @@ declare namespace _ZoteroTypes {
       "myAnnotationsSort": string;
       "myAnnotationsGroupBy": string;
       "myAnnotationsOrder": string;
+      "myAnnotationsSearchScope": string;
       "myAnnotationsColorFilter": string;
       "annotationsQuoteOrder": string;
       "galleryShowItemsWithoutAnnotations": boolean;

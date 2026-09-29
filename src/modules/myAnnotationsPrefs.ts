@@ -16,7 +16,9 @@ import {
 } from "../utils/annotationColors";
 import {
   coerceAnnotationsQuoteOrder,
+  coerceMyAnnotationsSearchScope,
   type AnnotationsQuoteOrder,
+  type MyAnnotationsSearchScope,
 } from "./explorerQueries";
 import {
   getViewPref,
@@ -28,6 +30,8 @@ import {
   type ViewPrefGlobalSetting,
   type ViewPrefSpec,
 } from "../utils/viewPref";
+
+export type { MyAnnotationsSearchScope };
 
 export const MY_ANNOTATIONS_LAYOUTS = ["vertical", "grid"] as const;
 export type MyAnnotationsLayout = (typeof MY_ANNOTATIONS_LAYOUTS)[number];
@@ -210,6 +214,50 @@ export function useMyAnnotationsOrder(): [
   }, []);
 
   return [mode, setOrder];
+}
+
+export const MY_ANNOTATIONS_SEARCH_SCOPES = [
+  "both",
+  "annotations",
+  "fulltext",
+] as const;
+
+export function getMyAnnotationsSearchScope(): MyAnnotationsSearchScope {
+  return coerceMyAnnotationsSearchScope(getPref("myAnnotationsSearchScope"));
+}
+
+export function setMyAnnotationsSearchScope(
+  mode: MyAnnotationsSearchScope,
+): void {
+  setPref("myAnnotationsSearchScope", mode);
+  zoteroCache.invalidatePref(getPrefKey("myAnnotationsSearchScope"));
+}
+
+export function useMyAnnotationsSearchScope(): [
+  MyAnnotationsSearchScope,
+  (mode: MyAnnotationsSearchScope) => void,
+] {
+  const [mode, setMode] = useState<MyAnnotationsSearchScope>(() =>
+    getMyAnnotationsSearchScope(),
+  );
+
+  useEffect(() => {
+    const refresh = () => setMode(getMyAnnotationsSearchScope());
+    refresh();
+    const observerID = Zotero.Prefs.registerObserver(
+      getPrefKey("myAnnotationsSearchScope"),
+      refresh,
+      true,
+    );
+    return () => Zotero.Prefs.unregisterObserver(observerID);
+  }, []);
+
+  const setScope = useCallback((next: MyAnnotationsSearchScope) => {
+    setMode(next);
+    setMyAnnotationsSearchScope(next);
+  }, []);
+
+  return [mode, setScope];
 }
 
 export const ANNOTATION_COLOR_FILTER_FEED = "feed";

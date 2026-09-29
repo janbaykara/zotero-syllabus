@@ -54,6 +54,7 @@ export const PLUGIN_PREF_DEFAULTS: {
   myAnnotationsSort: "lastRead",
   myAnnotationsGroupBy: "none",
   myAnnotationsOrder: "newestLast",
+  myAnnotationsSearchScope: "both",
   myAnnotationsColorFilter: "",
   annotationsQuoteOrder: "location",
   galleryShowItemsWithoutAnnotations: true,

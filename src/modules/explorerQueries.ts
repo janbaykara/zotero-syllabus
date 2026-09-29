@@ -13,6 +13,13 @@ import {
   DEFAULT_HIGHLIGHT_COLOR,
   normalizeHighlightColor,
 } from "../utils/itemHighlights";
+import {
+  attachmentForFulltextHit,
+  findMatchingParagraphsInFulltext,
+  paragraphOverlapsAnnotationQuote,
+  readAttachmentFulltext,
+  syntheticFulltextStreamId,
+} from "../utils/fulltextParagraphs";
 import { savedSearchShelfKey, type ExplorerShelf } from "./explorerConfig";
 
 export const EXPLORER_MEDIA_LIMIT = 10;
@@ -34,9 +41,13 @@ export type ExplorerAnnotation = {
   parent: Zotero.Item | null;
 };
 
+export type MyAnnotationStreamKind = "annotation" | "fulltext";
+
 /** Flat stream row for My Annotations timeline (quote + comment kept separate). */
 export type MyAnnotationStreamEntry = {
   id: number;
+  /** Real annotation vs full-text paragraph hit. Defaults to annotation. */
+  kind?: MyAnnotationStreamKind;
   quote: string;
   comment: string;
   color: string;
@@ -51,7 +62,32 @@ export type MyAnnotationStreamEntry = {
    */
   sortIndex: string;
   parent: Zotero.Item | null;
+  /** Attachment opened for full-text hits. */
+  attachmentID?: number;
+  /** 0-based PDF page for full-text hits when form-feeds allow placement. */
+  pageIndex?: number;
 };
+
+export function isFulltextStreamEntry(entry: MyAnnotationStreamEntry): boolean {
+  return entry.kind === "fulltext";
+}
+
+export const MY_ANNOTATIONS_SEARCH_SCOPES = [
+  "both",
+  "annotations",
+  "fulltext",
+] as const;
+export type MyAnnotationsSearchScope =
+  (typeof MY_ANNOTATIONS_SEARCH_SCOPES)[number];
+
+export function coerceMyAnnotationsSearchScope(
+  value: unknown,
+): MyAnnotationsSearchScope {
+  if (value === "annotations" || value === "fulltext") {
+    return value;
+  }
+  return "both";
+}
 
 export const ANNOTATIONS_QUOTE_ORDERS = ["location", "dateAdded"] as const;
 export type AnnotationsQuoteOrder = (typeof ANNOTATIONS_QUOTE_ORDERS)[number];
@@ -587,6 +623,7 @@ function mapAnnotationStreamEntry(
   }
   return {
     id: item.id,
+    kind: "annotation",
     quote,
     comment,
     color,
@@ -615,20 +652,9 @@ function compareAnnotationNewestFirst(
   );
 }
 
-async function searchMyAnnotationsStreamByQuery(
-  libraryID: number,
-  query: string,
-  limit: number,
-): Promise<{
-  rows: MyAnnotationStreamEntry[];
-  hasMore: boolean;
-  colors: string[];
-}> {
-  const [quoteIds, commentIds] = await Promise.all([
-    searchItemIds(libraryID, [["annotationText", "contains", query]]),
-    searchItemIds(libraryID, [["annotationComment", "contains", query]]),
-  ]);
-  const hitIds = [...new Set([...quoteIds, ...commentIds])];
+async function collectAnnotationStreamHits(
+  hitIds: number[],
+): Promise<MyAnnotationStreamEntry[]> {
   const collected: MyAnnotationStreamEntry[] = [];
   for (const id of hitIds) {
     const item = resolveItem(id);
@@ -647,26 +673,176 @@ async function searchMyAnnotationsStreamByQuery(
       collected.push(row);
     }
   }
-  const rows = dedupeMyAnnotationStreamRows(collected).sort(
-    compareAnnotationNewestFirst,
-  );
+  return collected;
+}
+
+async function collectFulltextStreamHits(
+  hitIds: number[],
+  query: string,
+): Promise<MyAnnotationStreamEntry[]> {
+  const collected: MyAnnotationStreamEntry[] = [];
+  const seenAttachments = new Set<number>();
+  for (const id of hitIds) {
+    const item = resolveItem(id);
+    if (!item) {
+      continue;
+    }
+    const attachment = attachmentForFulltextHit(item);
+    if (!attachment || seenAttachments.has(attachment.id)) {
+      continue;
+    }
+    seenAttachments.add(attachment.id);
+    const parent = resolveMyAnnotationsSearchHitParent(item);
+    if (!parent) {
+      continue;
+    }
+    const raw = await readAttachmentFulltext(attachment).catch(() => "");
+    if (!raw) {
+      continue;
+    }
+    for (const hit of findMatchingParagraphsInFulltext(raw, query)) {
+      collected.push({
+        id: syntheticFulltextStreamId(
+          attachment.id,
+          hit.pageIndex,
+          hit.paragraphIndex,
+        ),
+        kind: "fulltext",
+        quote: hit.text,
+        comment: "",
+        color: "",
+        dateAdded: "",
+        dateModified: "",
+        pageLabel: hit.pageLabel || "",
+        sortIndex: "",
+        parent,
+        attachmentID: attachment.id,
+        pageIndex: hit.pageIndex,
+      });
+    }
+  }
+  return collected;
+}
+
+/** Drop full-text paragraphs that overlap a returned annotation quote. */
+export function dedupeFulltextAgainstAnnotations(
+  annotations: MyAnnotationStreamEntry[],
+  fulltext: MyAnnotationStreamEntry[],
+): MyAnnotationStreamEntry[] {
+  if (!fulltext.length || !annotations.length) {
+    return fulltext;
+  }
+  return fulltext.filter((para) => {
+    const parentId = para.parent?.id;
+    return !annotations.some(
+      (ann) =>
+        ann.parent?.id === parentId &&
+        paragraphOverlapsAnnotationQuote(para.quote, ann.quote),
+    );
+  });
+}
+
+function compareSearchStreamRows(
+  a: MyAnnotationStreamEntry,
+  b: MyAnnotationStreamEntry,
+): number {
+  const aFull = isFulltextStreamEntry(a);
+  const bFull = isFulltextStreamEntry(b);
+  if (!aFull && !bFull) {
+    return compareAnnotationNewestFirst(a, b);
+  }
+  const aParent = a.parent?.id ?? 0;
+  const bParent = b.parent?.id ?? 0;
+  if (aParent !== bParent) {
+    // Keep parents roughly newest-annotation-first when mixed.
+    const aDate = dateMs(a.dateAdded) || dateMs(a.dateModified);
+    const bDate = dateMs(b.dateAdded) || dateMs(b.dateModified);
+    if (aDate || bDate) {
+      return bDate - aDate || aParent - bParent;
+    }
+    return aParent - bParent;
+  }
+  if (aFull !== bFull) {
+    // Annotations before full-text under the same parent.
+    return aFull ? 1 : -1;
+  }
+  if (aFull && bFull) {
+    const page =
+      (a.pageIndex ?? Number.POSITIVE_INFINITY) -
+      (b.pageIndex ?? Number.POSITIVE_INFINITY);
+    if (page) {
+      return page;
+    }
+    return a.id - b.id;
+  }
+  return compareAnnotationNewestFirst(a, b);
+}
+
+async function searchMyAnnotationsStreamByQuery(
+  libraryID: number,
+  query: string,
+  limit: number,
+  scope: MyAnnotationsSearchScope,
+): Promise<{
+  rows: MyAnnotationStreamEntry[];
+  hasMore: boolean;
+  colors: string[];
+}> {
+  const wantAnnotations = scope === "both" || scope === "annotations";
+  const wantFulltext = scope === "both" || scope === "fulltext";
+  const [quoteIds, commentIds, fulltextIds] = await Promise.all([
+    wantAnnotations
+      ? searchItemIds(libraryID, [["annotationText", "contains", query]])
+      : Promise.resolve([] as number[]),
+    wantAnnotations
+      ? searchItemIds(libraryID, [["annotationComment", "contains", query]])
+      : Promise.resolve([] as number[]),
+    wantFulltext
+      ? searchItemIds(libraryID, [["fulltextContent", "contains", query]])
+      : Promise.resolve([] as number[]),
+  ]);
+  const annotationRows = wantAnnotations
+    ? await collectAnnotationStreamHits([
+        ...new Set([...quoteIds, ...commentIds]),
+      ])
+    : [];
+  const fulltextRows = wantFulltext
+    ? await collectFulltextStreamHits([...new Set(fulltextIds)], query)
+    : [];
+  const dedupedFulltext =
+    scope === "both"
+      ? dedupeFulltextAgainstAnnotations(annotationRows, fulltextRows)
+      : fulltextRows;
+  const rows = dedupeMyAnnotationStreamRows([
+    ...annotationRows,
+    ...dedupedFulltext,
+  ]).sort(compareSearchStreamRows);
   const hasMore = rows.length > limit;
+  const sliced = rows.slice(0, limit);
   return {
-    rows: rows.slice(0, limit),
+    rows: sliced,
     hasMore,
-    colors: collectAnnotationColors(rows.map((row) => row.color)),
+    colors: collectAnnotationColors(
+      sliced
+        .filter((row) => !isFulltextStreamEntry(row))
+        .map((row) => row.color),
+    ),
   };
 }
 
 /**
  * Newest `limit` annotations (descending).
  * Empty `query` → live lookback window. Non-empty → matching annotation
- * quotes/comments across the library.
+ * quotes/comments and/or full-text paragraphs per `scope`.
  * Increase `limit` to "load previous".
  */
 export async function searchMyAnnotationsStream(
   libraryID: number,
-  options: { limit?: number; query?: string } = {},
+  options: {
+    limit?: number;
+    query?: string;
+    scope?: MyAnnotationsSearchScope;
+  } = {},
 ): Promise<{
   rows: MyAnnotationStreamEntry[];
   hasMore: boolean;
@@ -674,8 +850,9 @@ export async function searchMyAnnotationsStream(
 }> {
   const limit = Math.max(1, options.limit ?? MY_ANNOTATIONS_STREAM_PAGE_SIZE);
   const query = normalizeMyAnnotationsSearchQuery(options.query);
+  const scope = coerceMyAnnotationsSearchScope(options.scope);
   if (query) {
-    return searchMyAnnotationsStreamByQuery(libraryID, query, limit);
+    return searchMyAnnotationsStreamByQuery(libraryID, query, limit, scope);
   }
   const ids = await searchItemIds(libraryID, [
     ["itemType", "is", "annotation"],
@@ -1165,6 +1342,7 @@ export type MyAnnotationsStreamState = {
 export function useMyAnnotationsStream(
   libraryID: number,
   query = "",
+  scope: MyAnnotationsSearchScope = "both",
 ): MyAnnotationsStreamState {
   const [rows, setRows] = useState<MyAnnotationStreamEntry[]>([]);
   const [colors, setColors] = useState<string[]>([]);
@@ -1174,6 +1352,7 @@ export function useMyAnnotationsStream(
   const loadedLimitRef = useRef(MY_ANNOTATIONS_STREAM_PAGE_SIZE);
   const loadTokenRef = useRef(0);
   const normalizedQuery = normalizeMyAnnotationsSearchQuery(query);
+  const searchScope = coerceMyAnnotationsSearchScope(scope);
 
   const reload = useCallback(
     async (mode: "initial" | "refresh" | "more") => {
@@ -1194,6 +1373,7 @@ export function useMyAnnotationsStream(
         const next = await searchMyAnnotationsStream(libraryID, {
           limit,
           query: normalizedQuery,
+          scope: searchScope,
         });
         if (token !== loadTokenRef.current) {
           return;
@@ -1209,7 +1389,7 @@ export function useMyAnnotationsStream(
         }
       }
     },
-    [libraryID, normalizedQuery],
+    [libraryID, normalizedQuery, searchScope],
   );
 
   useEffect(() => {
@@ -1237,7 +1417,7 @@ export function useMyAnnotationsStream(
       }
       loadTokenRef.current += 1;
     };
-  }, [libraryID, normalizedQuery, reload]);
+  }, [libraryID, normalizedQuery, searchScope, reload]);
 
   const loadPrevious = useCallback(async () => {
     if (!hasMore || loadingMore || loading) {
