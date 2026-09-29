@@ -26,9 +26,6 @@ import { selectItemInCollection } from "./ClassReadingBlock";
 import { pickAndAddItemsToClass } from "./addItemsToClass";
 import { createAndAssignClassNote } from "./classNote";
 
-const ADD_ITEM_ICON = "chrome://zotero/skin/20/universal/add-item.svg";
-const ADD_NOTE_ICON = "chrome://zotero/skin/16/universal/note.svg";
-
 export type ItemDropIndicator = {
   classNumber: number | null;
   /** Distinguishes further-reading drops from a null class group. */
@@ -513,7 +510,12 @@ export function ClassGroupComponent({
                     </div>
                   )}
                   {!isLocked && (
-                    <>
+                    <div
+                      className={twMerge(
+                        "flex-row items-baseline gap-1",
+                        "hidden group-hover/class:inline-flex group-focus-within/class:inline-flex",
+                      )}
+                    >
                       {hasManualOrder && (
                         <button
                           className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
@@ -562,7 +564,7 @@ export function ClassGroupComponent({
                       >
                         <div className="text-2xl text-center">×</div>
                       </button>
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
@@ -763,12 +765,9 @@ export function ClassGroupComponent({
                   },
                 })}
               >
-                <img
-                  src={ADD_ITEM_ICON}
-                  alt=""
-                  width={12}
-                  height={12}
-                  className="shrink-0 opacity-80"
+                <span
+                  className="syllabus-class-add-icon syllabus-class-add-icon-item"
+                  aria-hidden="true"
                 />
                 {getString("class-add-readings")}
               </button>
@@ -789,12 +788,9 @@ export function ClassGroupComponent({
                     title={getString("class-add-note")}
                     aria-label={getString("class-add-note")}
                   >
-                    <img
-                      src={ADD_NOTE_ICON}
-                      alt=""
-                      width={12}
-                      height={12}
-                      className="shrink-0 opacity-80"
+                    <span
+                      className="syllabus-class-add-icon syllabus-class-add-icon-note"
+                      aria-hidden="true"
                     />
                     {getString("class-add-note")}
                   </button>

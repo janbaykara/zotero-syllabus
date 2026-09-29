@@ -1174,9 +1174,6 @@
   .opacity-40 {
     opacity: 40%;
   }
-  .opacity-80 {
-    opacity: 80%;
-  }
   .opacity-85 {
     opacity: 85%;
   }
@@ -1306,12 +1303,24 @@
   .not-in-\[\.print\]\:outline-accent-blue:not(:where(:is(.print)) *) {
     outline-color: var(--color-accent-blue);
   }
+  .group-focus-within\/class\:hidden:is(:where(.group\/class):focus-within *) {
+    display: none;
+  }
+  .group-focus-within\/class\:inline-flex:is(:where(.group\/class):focus-within *) {
+    display: inline-flex;
+  }
   @media (hover: hover) {
     .group-hover\:flex:is(:where(.group):hover *) {
       display: flex;
     }
     .group-hover\:opacity-100:is(:where(.group):hover *) {
       opacity: 100%;
+    }
+    .group-hover\/class\:hidden:is(:where(.group\/class):hover *) {
+      display: none;
+    }
+    .group-hover\/class\:inline-flex:is(:where(.group\/class):hover *) {
+      display: inline-flex;
     }
     .group-hover\/class\:opacity-100:is(:where(.group\/class):hover *) {
       opacity: 100%;

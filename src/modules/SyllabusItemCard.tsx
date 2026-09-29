@@ -613,7 +613,9 @@ export function SyllabusItemCard({
           "not-in-[.print]:outline-2! not-in-[.print]:outline-accent-blue",
         isIdentifierSelected && "not-in-[.print]:bg-accent-blue! scheme-dark",
         // isZoteroSelected && isIdentifierSelected && "outline-none!",
-        readerMode && assignmentStatus === "done" ? "opacity-40" : "",
+        readerMode && !isClassNote && assignmentStatus === "done"
+          ? "opacity-40"
+          : "",
         dropEdge === "before" && "is-drop-before",
         dropEdge === "after" && "is-drop-after",
         className,
@@ -658,7 +660,7 @@ export function SyllabusItemCard({
       onDragOver={isLocked ? undefined : handleItemDragOver}
       onDrop={isLocked ? undefined : handleItemDrop}
     >
-      {readerMode && (
+      {readerMode && !isClassNote && (
         <input
           type="checkbox"
           checked={onReaderCheck ? false : assignmentStatus === "done"}

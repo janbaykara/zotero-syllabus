@@ -115,6 +115,32 @@
   box-sizing: border-box !important;
 }
 
+/* Class “Add readings / Add note” — Zotero SVGs tint via currentColor. */
+.syllabus-class-add-icon {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  fill: currentColor;
+  -moz-context-properties: fill, fill-opacity;
+  opacity: 0.85;
+}
+
+.syllabus-class-add-icon-item {
+  background-image: url("chrome://zotero/skin/20/universal/add-item.svg");
+}
+
+.syllabus-class-add-icon-note {
+  background-image: url("chrome://zotero/skin/16/universal/note.svg");
+}
+
+.syllabus-class-add-icon-due-date {
+  background-image: url("chrome://syllabus/content/icons/calendar.svg");
+}
+
 /* Class-level dimming already applies; don't stack item opacity on top. */
 .opacity-40 .syllabus-item-card.opacity-40 {
   opacity: 1;
