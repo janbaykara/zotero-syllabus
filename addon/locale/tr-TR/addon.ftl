@@ -190,6 +190,7 @@ page-unlock = İzlencenin kilidini aç
 page-lock-search = Arama sırasında kilitli
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = Onay kutularını göster
+page-view-notes = Notları göster
 page-print = Müfredatı PDF, Word, Markdown veya HTML olarak kaydet
 page-save-pdf = PDF
 page-save-word = Word

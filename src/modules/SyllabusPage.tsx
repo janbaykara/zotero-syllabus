@@ -127,6 +127,7 @@ import { SyllabusViewMenu } from "./SyllabusViewMenu";
 import { useGalleryLayout } from "./galleryLayout";
 import { useMagazinePacking } from "./magazinePacking";
 import { useShowItemsWithoutAnnotations } from "./showItemsWithoutAnnotations";
+import { useShowClassNotes } from "./showClassNotes";
 import { GallerySaveGlobalButton } from "./GallerySegmentedControl";
 import { syllabusViewKey } from "../utils/viewScope";
 import { GalleryViewportProvider } from "./galleryVisibility";
@@ -752,17 +753,23 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   const matchingIds = useZoteroItemsViewRegularItemIds(collectionId);
   const isFiltered = matchingIds != null;
   const isLocked = isPersistedLocked || isFiltered;
+  const displayViewKey = syllabusViewKey(collectionId);
+  const [showClassNotes] = useShowClassNotes(displayViewKey);
   const displaySyllabusItems = useMemo(() => {
+    const includeNotes = (zoteroItem: Zotero.Item) =>
+      showClassNotes || !isClassNoteItem(zoteroItem);
     if (!matchingIds) {
-      return syllabusItems;
+      return syllabusItems.filter(({ zoteroItem }) => includeNotes(zoteroItem));
     }
     // Notes are not “regular” items in Zotero’s items tree, so tag/search
-    // filters omit them from matchingIds — keep every class note listed.
+    // filters omit them from matchingIds — keep every class note listed
+    // when Show notes is on.
     return syllabusItems.filter(
       ({ zoteroItem }) =>
-        matchingIds.has(zoteroItem.id) || isClassNoteItem(zoteroItem),
+        includeNotes(zoteroItem) &&
+        (matchingIds.has(zoteroItem.id) || isClassNoteItem(zoteroItem)),
     );
-  }, [syllabusItems, matchingIds]);
+  }, [syllabusItems, matchingIds, showClassNotes]);
   const classAssignments = useMemo(() => {
     return syllabusItems.map((item) => item.assignments).flat();
   }, [syllabusItems]);
@@ -846,7 +853,6 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   // Track item order changes to trigger re-computation
   const [itemOrderVersion, setItemOrderVersion] = useState(0);
 
-  const displayViewKey = syllabusViewKey(collectionId);
   const [density] = useItemDensity(displayViewKey);
   const [readerMode] = useReaderMode(displayViewKey);
   const [browseLayout, setBrowseLayout, browseLayoutGlobal] =

@@ -190,6 +190,7 @@ page-unlock = Mở khóa đề cương
 page-lock-search = Đã khóa khi đang tìm kiếm
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = Hiện hộp kiểm
+page-view-notes = Hiện ghi chú
 page-print = Lưu đề cương dưới dạng PDF, Word, Markdown hoặc HTML
 page-save-pdf = PDF
 page-save-word = Word

@@ -190,6 +190,7 @@ page-unlock = Buka kunci silabus
 page-lock-search = Terkunci saat mencari
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = Tampilkan kotak centang
+page-view-notes = Tampilkan catatan
 page-print = Simpan silabus sebagai PDF, Word, Markdown, atau HTML
 page-save-pdf = PDF
 page-save-word = Word

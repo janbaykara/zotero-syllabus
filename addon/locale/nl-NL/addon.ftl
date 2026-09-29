@@ -190,6 +190,7 @@ page-unlock = Syllabus ontgrendelen
 page-lock-search = Vergrendeld tijdens zoeken
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = Selectievakjes tonen
+page-view-notes = Toon notities
 page-print = Syllabus opslaan als PDF, Word, Markdown of HTML
 page-save-pdf = PDF
 page-save-word = Word

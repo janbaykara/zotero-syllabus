@@ -190,6 +190,7 @@ page-unlock = Lehrplan entsperren
 page-lock-search = Während der Suche gesperrt
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = Kontrollkästchen anzeigen
+page-view-notes = Notizen anzeigen
 page-print = Syllabus als PDF, Word, Markdown oder HTML speichern
 page-save-pdf = PDF
 page-save-word = Word

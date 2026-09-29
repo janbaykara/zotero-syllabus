@@ -29,6 +29,7 @@ import type { MagazinePacking } from "./magazinePacking";
 import { AnnotationColorFilter } from "./AnnotationColorFilter";
 import { useViewQuoteOrder } from "./myAnnotationsPrefs";
 import { useShowItemsWithoutAnnotations } from "./showItemsWithoutAnnotations";
+import { useShowClassNotes } from "./showClassNotes";
 import {
   GalleryPrefCheckbox,
   GallerySaveGlobalButton,
@@ -166,6 +167,8 @@ export function SyllabusViewMenu({
     setShowItemsWithoutAnnotations,
     showEmptyGlobal,
   ] = useShowItemsWithoutAnnotations(viewKey);
+  const [showClassNotes, setShowClassNotes, showClassNotesGlobal] =
+    useShowClassNotes(viewKey);
   const showDensity = !showLayout || layout === "card";
 
   const handleGenerateCollectionChange = useCallback(
@@ -313,6 +316,16 @@ export function SyllabusViewMenu({
                     checked={readerMode}
                     onChange={setReaderMode}
                     globalSetting={showGlobal ? readerModeGlobal : undefined}
+                  />
+                ) : null}
+                {showCheckboxes ? (
+                  <GalleryPrefCheckbox
+                    label={getString("page-view-notes")}
+                    checked={showClassNotes}
+                    onChange={setShowClassNotes}
+                    globalSetting={
+                      showGlobal ? showClassNotesGlobal : undefined
+                    }
                   />
                 ) : null}
               </div>

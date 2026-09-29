@@ -190,6 +190,7 @@ page-unlock = إلغاء قفل المنهاج
 page-lock-search = مقفل أثناء البحث
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = إظهار مربعات الاختيار
+page-view-notes = إظهار الملاحظات
 page-print = حفظ المنهاج كـ PDF أو Word أو Markdown أو HTML
 page-save-pdf = PDF
 page-save-word = Word

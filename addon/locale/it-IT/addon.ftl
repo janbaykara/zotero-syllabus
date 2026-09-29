@@ -190,6 +190,7 @@ page-unlock = Sblocca il programma
 page-lock-search = Bloccato durante la ricerca
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = Mostra caselle di controllo
+page-view-notes = Mostra note
 page-print = Salva il programma come PDF, Word, Markdown o HTML
 page-save-pdf = PDF
 page-save-word = Word

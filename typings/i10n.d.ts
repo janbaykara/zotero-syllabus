@@ -332,6 +332,7 @@ export type FluentMessageId =
   | 'page-toc-title'
   | 'page-unlock'
   | 'page-view-checkboxes'
+  | 'page-view-notes'
   | 'page-view-options-aria'
   | 'panel-demo-header'
   | 'panel-demo-sidenav'

@@ -190,6 +190,7 @@ page-unlock = シラバスのロックを解除
 page-lock-search = 検索中はロックされます
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = チェックボックスを表示
+page-view-notes = ノートを表示
 page-print = シラバスを PDF、Word、Markdown、または HTML として保存
 page-save-pdf = PDF
 page-save-word = Word

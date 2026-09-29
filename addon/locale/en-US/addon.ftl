@@ -188,6 +188,7 @@ page-unlock = Unlock syllabus
 page-lock-search = Locked while searching
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = Show checkboxes
+page-view-notes = Show notes
 page-print = Save the syllabus as PDF, Word, Markdown, or HTML, or publish it online
 page-save-pdf = PDF
 page-save-word = Word

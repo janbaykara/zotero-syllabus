@@ -190,6 +190,7 @@ page-unlock = 解鎖教學大綱
 page-lock-search = 搜尋時已鎖定
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = 顯示核取方塊
+page-view-notes = 顯示筆記
 page-print = 將教學大綱另存為 PDF、Word、Markdown 或 HTML
 page-save-pdf = PDF
 page-save-word = Word

@@ -190,6 +190,7 @@ page-unlock = Розблокувати силабус
 page-lock-search = Заблоковано під час пошуку
 page-view-options-aria = Syllabus view options
 page-view-checkboxes = Показати прапорці
+page-view-notes = Показати нотатки
 page-print = Зберегти силабус як PDF, Word, Markdown або HTML
 page-save-pdf = PDF
 page-save-word = Word
