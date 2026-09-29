@@ -154,20 +154,18 @@ export function TableOfContents({
                 }}
                 className="block font-medium decoration-none! text-primary! hover:text-accent-blue hover:bg-quinary rounded-md px-1 hover:underline cursor-pointer py-1"
               >
-                {entry.label}
-                <span className="text-secondary">
-                  {(() => {
-                    const readingDate = entry.syllabusMetadata?.readingDate;
-                    if (!readingDate) {
-                      return "";
-                    }
-                    return (
-                      <span className="ml-2 text-secondary">
-                        {formatReadingDate(readingDate)}
-                      </span>
-                    );
-                  })()}
-                </span>
+                <span className="block">{entry.label}</span>
+                {(() => {
+                  const readingDate = entry.syllabusMetadata?.readingDate;
+                  if (!readingDate) {
+                    return null;
+                  }
+                  return (
+                    <span className="block text-secondary font-normal">
+                      {formatReadingDate(readingDate)}
+                    </span>
+                  );
+                })()}
               </a>
             ))
           )}
