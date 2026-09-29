@@ -8,11 +8,14 @@ import {
 } from "../utils/annotationColors";
 import { isClassNoteItem, sortItems } from "../utils/items";
 import {
+  AnnotationActivityGap,
   AnnotationStreamGroup,
+  groupAdjacentStreamEntries,
   type AnnotationStreamParentGroup,
 } from "./annotationStream";
 import {
   annotationsStreamForParent,
+  sortAnnotationsByQuoteOrder,
   type MyAnnotationStreamEntry,
 } from "./explorerQueries";
 import type { GallerySortBy } from "./gallerySort";
@@ -23,6 +26,17 @@ import {
   useViewQuoteOrder,
 } from "./myAnnotationsPrefs";
 import type { ReadingTileChrome } from "./readingAssignmentChrome";
+
+function streamGroupEdgeAdded(
+  group: AnnotationStreamParentGroup,
+  edge: "start" | "end",
+): string | undefined {
+  const entry =
+    edge === "start"
+      ? group.entries[0]
+      : group.entries[group.entries.length - 1];
+  return entry?.dateAdded || entry?.dateModified;
+}
 
 type AnnotationPartition = {
   withAnnotations: Array<{
@@ -298,6 +312,33 @@ export function GalleryAnnotationsSection({
     );
   }
 
+  // “Added”: chronological stream with adjacent same-item runs (Feed-style).
+  // “Location”: one group per item; quotes ordered by document position.
+  const streamGroups: AnnotationStreamParentGroup[] =
+    quoteOrder === "dateAdded"
+      ? [
+          ...groupAdjacentStreamEntries(
+            sortAnnotationsByQuoteOrder(
+              sortedWith.flatMap(({ item, entries }) =>
+                isClassNoteItem(item) ? [] : entries,
+              ),
+              "dateAdded",
+            ),
+          ),
+          ...sortedWith
+            .filter(({ item }) => isClassNoteItem(item))
+            .map(({ item, entries }) => ({
+              key: `${keyPrefix}-${item.id}`,
+              parent: item,
+              entries,
+            })),
+        ]
+      : sortedWith.map(({ item, entries }) => ({
+          key: `${keyPrefix}-${item.id}`,
+          parent: item,
+          entries,
+        }));
+
   return (
     <CoverStreamSection
       emptyItems={sortedEmpty}
@@ -311,25 +352,36 @@ export function GalleryAnnotationsSection({
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
     >
-      {sortedWith.map(({ item, entries }) => {
-        const group: AnnotationStreamParentGroup = {
-          key: `${keyPrefix}-${item.id}`,
-          parent: item,
-          entries,
-        };
+      {streamGroups.map((group, i) => {
+        const parent = group.parent;
+        const prev = i > 0 ? streamGroups[i - 1] : null;
+        const showGap =
+          quoteOrder === "dateAdded" &&
+          prev &&
+          !isClassNoteItem(prev.parent) &&
+          !isClassNoteItem(parent);
         return (
-          <AnnotationStreamGroup
-            key={group.key}
-            group={group}
-            selected={selectedItemIds?.includes(item.id) || false}
-            collectionId={collectionId}
-            showGalleryNote={showGalleryNote}
-            chrome={chromeByItemId?.get(item.id)}
-            quoteOrder={quoteOrder}
-            onClick={onClick}
-            onDoubleClick={onDoubleClick}
-            onContextMenu={onContextMenu}
-          />
+          <Fragment key={group.key}>
+            {showGap ? (
+              <AnnotationActivityGap
+                from={streamGroupEdgeAdded(prev, "end")}
+                to={streamGroupEdgeAdded(group, "start")}
+              />
+            ) : null}
+            <AnnotationStreamGroup
+              group={group}
+              selected={
+                !!parent && (selectedItemIds?.includes(parent.id) || false)
+              }
+              collectionId={collectionId}
+              showGalleryNote={showGalleryNote}
+              chrome={parent ? chromeByItemId?.get(parent.id) : undefined}
+              quoteOrder={quoteOrder}
+              onClick={onClick}
+              onDoubleClick={onDoubleClick}
+              onContextMenu={onContextMenu}
+            />
+          </Fragment>
         );
       })}
     </CoverStreamSection>

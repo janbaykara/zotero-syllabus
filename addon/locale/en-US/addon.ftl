@@ -652,7 +652,7 @@ annotations-quote-order-menu = Sort annotations
 annotations-quote-order-location = Location
 annotations-quote-order-location-title = Order quotes by position in the document
 annotations-quote-order-date-added = Added
-annotations-quote-order-date-added-title = Order quotes by date added (oldest first)
+annotations-quote-order-date-added-title = Order by when annotated (oldest first); group only consecutive highlights from the same item
 annotations-activity-gap-later =
     { $unit ->
         [day] { $count ->
