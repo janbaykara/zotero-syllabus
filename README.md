@@ -252,13 +252,15 @@ Default shelves: **[Pinned](#pinning)**, **Upcoming reading deadlines**, **Watch
 
 A timeline of your highlights and notes across sources, in chronological order. Enable it in Views, then open the **Annotation Feed** tab (toolbar, or **Go to Annotation Feed** from Home).
 
+Use the search box to find annotations across your whole library by **quote** or **comment** text. Clear the box to return to the recent (365-day) timeline.
+
 Open the options menu to:
 
 - **Order** — newest last (oldest at the top) or newest first.
 - **Layout** — **Vertical** (stacked covers with quotes underneath) or **Grid** (a wall of covers and quotes).
 - **Copy** — when you copy from the feed, optionally prefix Markdown blockquotes (`>`) and append Pandoc cite keys (`[@…]`, from Better BibTeX or the item Citation Key field). The same defaults live in Preferences.
 
-**Load previous** fetches an earlier page. Click a quote to open it in the reader.
+**Load previous** fetches an earlier page (of the live timeline or of the current search results). Click a quote to open it in the reader.
 
 Quote order under each item (by location in the document, or by date added) is shared with Gallery Annotations and Home’s recent-annotations shelf.
 
