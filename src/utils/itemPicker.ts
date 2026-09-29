@@ -1,4 +1,5 @@
 import { getCachedItem } from "./cache";
+import { isTestEnv } from "./env";
 
 type SelectItemsDialogIO = {
   singleSelection: boolean;
@@ -17,7 +18,7 @@ type SelectItemsDialogIO = {
 export async function pickLibraryItems(options?: {
   libraryID?: number;
 }): Promise<Zotero.Item[]> {
-  if ((__env__ as string) === "test") {
+  if (isTestEnv()) {
     return [];
   }
   const win = Zotero.getMainWindow();

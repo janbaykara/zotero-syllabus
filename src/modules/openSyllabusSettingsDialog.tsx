@@ -2,6 +2,7 @@
 import { h } from "preact";
 import { getString } from "../utils/locale";
 import { getCachedCollectionById } from "../utils/cache";
+import { isTestEnv } from "../utils/env";
 import {
   openPreactDialog,
   type PreactDialogHandle,
@@ -34,7 +35,7 @@ function collectionTitle(collectionId: number): string {
  * Reuses the window when the same collection is already open.
  */
 export function openSyllabusSettingsDialog(collectionId: number): void {
-  if ((__env__ as string) === "test") {
+  if (isTestEnv()) {
     return;
   }
 

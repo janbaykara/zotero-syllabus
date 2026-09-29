@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
 import { getString, getUiDir } from "../utils/locale";
 import { getSelectedCollection } from "../utils/zotero";
+import { isTestEnv } from "../utils/env";
 import {
   openPreactDialog,
   type PreactDialogHandle,
@@ -171,7 +172,7 @@ function ClassGroupList({
 export function openAddToClassDialog(options?: {
   items?: Zotero.Item[];
 }): void {
-  if ((__env__ as string) === "test") {
+  if (isTestEnv()) {
     return;
   }
 

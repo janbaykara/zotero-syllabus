@@ -1389,10 +1389,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
   // Compute class groups and further reading items from synced items
   // Re-compute when items change or item order changes
-  const {
-    classGroups,
-    furtherReadingItems: unsortedFurtherReading,
-  } = useSyllabusClassGroups(
+  const { classGroups, furtherReadingItems: unsortedFurtherReading } =
+    useSyllabusClassGroups(
       collectionId,
       displaySyllabusItems,
       syllabusMetadata,
@@ -1433,8 +1431,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       .map((group) => ({
         ...group,
         itemAssignments: group.itemAssignments.filter(
-          ({ item }) =>
-            isClassNoteItem(item) || annotatedItemIds.has(item.id),
+          ({ item }) => isClassNoteItem(item) || annotatedItemIds.has(item.id),
         ),
       }))
       .filter((group) => group.itemAssignments.length > 0);
@@ -1482,8 +1479,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     SyllabusManager.getFurtherReadingOrder(collectionId).length > 0;
 
   const navigableEntries = useMemo(
-    () =>
-      getNavigableSyllabusEntries(visibleClassGroups, furtherReadingItems),
+    () => getNavigableSyllabusEntries(visibleClassGroups, furtherReadingItems),
     [visibleClassGroups, furtherReadingItems],
   );
 

@@ -4070,7 +4070,8 @@ button.syllabus-explorer-class-segment-header:focus-visible {
 
 /* Preview blurbs in the Annotations-style stream: fixed ~2.6× cover column
    (same measure as the Cover-rail magazine sidecar), not full remaining width. */
-.syllabus-my-annotations-stream-stack .syllabus-explorer-magazine-text.is-blurb {
+.syllabus-my-annotations-stream-stack
+  .syllabus-explorer-magazine-text.is-blurb {
   flex: 0 0 auto;
   width: calc(
     var(--syllabus-explorer-magazine-blurb-width) +

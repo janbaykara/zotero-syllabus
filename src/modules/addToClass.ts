@@ -203,7 +203,11 @@ export async function addItemsToClass(options: {
       });
       await item.saveTx();
     } catch (error) {
-      ztoolkit.log("Error adding item to class:", error);
+      try {
+        ztoolkit.log("Error adding item to class:", error);
+      } catch {
+        // Tests (and early boot) may not have ztoolkit.
+      }
     }
   }
 }

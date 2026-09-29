@@ -35,7 +35,9 @@ export const DISPLAY_NOTE_ASSIGNMENT_PREFIX = "note:";
 export function isDisplayOnlyAssignmentId(
   id: string | undefined | null,
 ): boolean {
-  return typeof id === "string" && id.startsWith(DISPLAY_NOTE_ASSIGNMENT_PREFIX);
+  return (
+    typeof id === "string" && id.startsWith(DISPLAY_NOTE_ASSIGNMENT_PREFIX)
+  );
 }
 
 export function displayAssignmentIdForNote(item: Zotero.Item): string {

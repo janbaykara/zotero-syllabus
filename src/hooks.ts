@@ -301,17 +301,40 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
   // Create ztoolkit for every window
   addon.data.ztoolkit = createZToolkit();
 
-  // Register stylesheets
-  registerStyleSheet(win);
+  // Stylesheets must never abort chrome setup.
+  try {
+    registerStyleSheet(win);
+  } catch (error) {
+    try {
+      ztoolkit.log("Error registering syllabus stylesheets:", error);
+    } catch {
+      Zotero.debug?.(
+        `Error registering syllabus stylesheets: ${String(error)}`,
+      );
+    }
+  }
 
-  // Fluent must be in the document before any DOM that uses data-l10n-id
-  // (Help menu, item-pane section headers, etc.)
-  const mainWindowFtl = `${addon.data.config.addonRef}-mainWindow.ftl`;
-  win.MozXULElement.insertFTLIfNeeded(mainWindowFtl);
-  await win.document.l10n?.addResourceIds?.([mainWindowFtl]);
+  // Fluent must be in the document before any DOM that uses data-l10n-id.
+  // Never let a missing/failed FTL abort toolbar / syllabus chrome.
+  try {
+    const mainWindowFtl = `${addon.data.config.addonRef}-mainWindow.ftl`;
+    win.MozXULElement.insertFTLIfNeeded(mainWindowFtl);
+    await win.document.l10n?.addResourceIds?.([mainWindowFtl]);
+  } catch (error) {
+    ztoolkit.log("Error loading mainWindow fluent:", error);
+  }
 
-  SyllabusManager.onMainWindowLoad(win);
-  registerUserGuideHelpMenu();
+  try {
+    SyllabusManager.onMainWindowLoad(win);
+  } catch (error) {
+    ztoolkit.log("Error in SyllabusManager.onMainWindowLoad:", error);
+  }
+
+  try {
+    registerUserGuideHelpMenu();
+  } catch (error) {
+    ztoolkit.log("Error registering user guide help menu:", error);
+  }
 
   // First-run / outdated tour — wait for toolbar chrome to exist
   Zotero.Promise.delay(800).then(() => {

@@ -26,10 +26,7 @@ import {
   openNoteItem,
 } from "../utils/items";
 import { GalleryCover } from "./GalleryCover";
-import {
-  NOTE_PAD_YELLOW,
-  NoteNotebookCover,
-} from "./NoteNotebookCover";
+import { NOTE_PAD_YELLOW, NoteNotebookCover } from "./NoteNotebookCover";
 import { isDisplayOnlyAssignmentId } from "./classGroups";
 import { getString } from "../utils/locale";
 import { isOsFileDrag } from "../utils/nativeFileDrop";
@@ -636,12 +633,8 @@ export function SyllabusItemCard({
           : undefined
       }
       draggable={!isLocked}
-      onMouseEnter={
-        density === "row" ? () => setRowHovered(true) : undefined
-      }
-      onMouseLeave={
-        density === "row" ? () => setRowHovered(false) : undefined
-      }
+      onMouseEnter={density === "row" ? () => setRowHovered(true) : undefined}
+      onMouseLeave={density === "row" ? () => setRowHovered(false) : undefined}
       onClick={(e) => {
         if (customOnClick) {
           customOnClick(item, e);
@@ -728,10 +721,7 @@ export function SyllabusItemCard({
         >
           {density === "expanded" ? (
             isClassNote ? (
-              <NoteNotebookCover
-                item={item}
-                selected={isIdentifierSelected}
-              />
+              <NoteNotebookCover item={item} selected={isIdentifierSelected} />
             ) : (
               <GalleryCover item={item} selected={false} visible />
             )
@@ -1335,131 +1325,131 @@ export function SyllabusItemCard({
                     isClassNote &&
                     (classNumber === null || classNumber === undefined)
                   ) && (
-                  <div className="focus-states-target">
-                    <button
-                      className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        try {
-                          // Always pass identifier - handler will check if it's in selection
-                          if (onDelete) {
-                            const identifier = {
-                              assignmentId: assignment.id,
-                              itemId: undefined,
-                            };
-                            await onDelete(identifier);
+                    <div className="focus-states-target">
+                      <button
+                        className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            // Always pass identifier - handler will check if it's in selection
+                            if (onDelete) {
+                              const identifier = {
+                                assignmentId: assignment.id,
+                                itemId: undefined,
+                              };
+                              await onDelete(identifier);
+                            }
+                          } catch (err) {
+                            ztoolkit.log("Error deleting assignment:", err);
                           }
-                        } catch (err) {
-                          ztoolkit.log("Error deleting assignment:", err);
-                        }
-                      }}
-                      title={
-                        classNumber !== null && classNumber !== undefined
-                          ? getString("assignment-unassign-class")
-                          : getString("assignment-unassign-syllabus")
-                      }
-                      aria-label={
-                        classNumber !== null && classNumber !== undefined
-                          ? getString("assignment-unassign-class")
-                          : getString("assignment-unassign-syllabus")
-                      }
-                    >
-                      <span
-                        className="syllabus-action-icon"
-                        style={{
-                          fontSize: "18px",
-                          lineHeight: "1",
-                          fontWeight: "bold",
                         }}
+                        title={
+                          classNumber !== null && classNumber !== undefined
+                            ? getString("assignment-unassign-class")
+                            : getString("assignment-unassign-syllabus")
+                        }
+                        aria-label={
+                          classNumber !== null && classNumber !== undefined
+                            ? getString("assignment-unassign-class")
+                            : getString("assignment-unassign-syllabus")
+                        }
                       >
-                        ×
-                      </span>
-                      <span className="syllabus-action-label">
-                        {getString("assignment-unassign-label")}
-                      </span>
-                    </button>
-                  </div>
-                )}
+                        <span
+                          className="syllabus-action-icon"
+                          style={{
+                            fontSize: "18px",
+                            lineHeight: "1",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          ×
+                        </span>
+                        <span className="syllabus-action-label">
+                          {getString("assignment-unassign-label")}
+                        </span>
+                      </button>
+                    </div>
+                  )}
                 {!isClassNote && <>&middot;</>}
               </>
             )}
             {!isClassNote &&
               (() => {
-              const priorityOptions = syllabusMetadata.priorities || [];
-              return [
-                ...priorityOptions.map((priorityOption: Priority) => {
-                  return (
-                    <div
-                      key={priorityOption.id}
-                      className="focus-states-target"
-                    >
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          try {
-                            // Always pass identifier - handler will check if it's in selection
-                            if (onPriorityChange) {
-                              const identifier = {
-                                assignmentId: assignment?.id,
-                                itemId: assignment ? undefined : item.id,
-                              };
-                              await onPriorityChange(
-                                priorityOption.id,
-                                identifier,
-                              );
-                            }
-                          } catch (err) {
-                            ztoolkit.log("Error setting priority:", err);
-                          }
-                        }}
-                        title={getString("priority-set-to", {
-                          args: { name: priorityOption.name },
-                        })}
-                        aria-label={getString("priority-set-to", {
-                          args: { name: priorityOption.name },
-                        })}
+                const priorityOptions = syllabusMetadata.priorities || [];
+                return [
+                  ...priorityOptions.map((priorityOption: Priority) => {
+                    return (
+                      <div
+                        key={priorityOption.id}
+                        className="focus-states-target"
                       >
-                        <span
-                          className="syllabus-action-icon inline-block mt-1 -mb-1 w-3 h-3 rounded-full"
-                          style={{
-                            backgroundColor: priorityOption.color,
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              // Always pass identifier - handler will check if it's in selection
+                              if (onPriorityChange) {
+                                const identifier = {
+                                  assignmentId: assignment?.id,
+                                  itemId: assignment ? undefined : item.id,
+                                };
+                                await onPriorityChange(
+                                  priorityOption.id,
+                                  identifier,
+                                );
+                              }
+                            } catch (err) {
+                              ztoolkit.log("Error setting priority:", err);
+                            }
                           }}
-                        />
-                        {/* <span className="syllabus-action-label">
+                          title={getString("priority-set-to", {
+                            args: { name: priorityOption.name },
+                          })}
+                          aria-label={getString("priority-set-to", {
+                            args: { name: priorityOption.name },
+                          })}
+                        >
+                          <span
+                            className="syllabus-action-icon inline-block mt-1 -mb-1 w-3 h-3 rounded-full"
+                            style={{
+                              backgroundColor: priorityOption.color,
+                            }}
+                          />
+                          {/* <span className="syllabus-action-label">
                         {priorityOption.name}
                       </span> */}
-                      </button>
-                    </div>
-                  );
-                }),
-                <div key="none" className="focus-states-target">
-                  <button
-                    // className="syllabus-action-button row inline-lex flex-row items-center justify-center gap-2"
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      try {
-                        // Always pass identifier - handler will check if it's in selection
-                        if (onPriorityChange) {
-                          const identifier = {
-                            assignmentId: assignment?.id,
-                            itemId: assignment ? undefined : item.id,
-                          };
-                          await onPriorityChange(undefined, identifier);
+                        </button>
+                      </div>
+                    );
+                  }),
+                  <div key="none" className="focus-states-target">
+                    <button
+                      // className="syllabus-action-button row inline-lex flex-row items-center justify-center gap-2"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          // Always pass identifier - handler will check if it's in selection
+                          if (onPriorityChange) {
+                            const identifier = {
+                              assignmentId: assignment?.id,
+                              itemId: assignment ? undefined : item.id,
+                            };
+                            await onPriorityChange(undefined, identifier);
+                          }
+                        } catch (err) {
+                          ztoolkit.log("Error clearing priority:", err);
                         }
-                      } catch (err) {
-                        ztoolkit.log("Error clearing priority:", err);
-                      }
-                    }}
-                    title={getString("priority-clear")}
-                    aria-label={getString("priority-clear")}
-                  >
-                    <span className="syllabus-action-label">
-                      {getString("menu-none")}
-                    </span>
-                  </button>
-                </div>,
-              ];
-            })()}
+                      }}
+                      title={getString("priority-clear")}
+                      aria-label={getString("priority-clear")}
+                    >
+                      <span className="syllabus-action-label">
+                        {getString("menu-none")}
+                      </span>
+                    </button>
+                  </div>,
+                ];
+              })()}
           </div>
         </div>
       )}

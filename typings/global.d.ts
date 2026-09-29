@@ -15,7 +15,7 @@ declare const rootURI: string;
 
 declare const addon: import("../src/addon").default;
 
-declare const __env__: "production" | "development";
+declare const __env__: "production" | "development" | "test";
 
 // Firefox/XUL Components API for file picker and other system services
 declare const Components: {

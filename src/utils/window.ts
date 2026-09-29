@@ -1,3 +1,5 @@
+import { isTestEnv } from "./env";
+
 export function getCurrentTab(win?: _ZoteroTypes.MainWindow) {
   const mainWindow = win ? win : ztoolkit.getGlobal("Zotero").getMainWindow();
   return mainWindow.Zotero_Tabs.getState().find((tab) => tab.selected);
@@ -5,7 +7,7 @@ export function getCurrentTab(win?: _ZoteroTypes.MainWindow) {
 
 /** Blocking alert. No-ops in the test environment. */
 export function alertPrompt(title: string, text: string): void {
-  if ((__env__ as string) === "test") {
+  if (isTestEnv()) {
     return;
   }
   const win = Zotero.getMainWindow();
@@ -15,13 +17,17 @@ export function alertPrompt(title: string, text: string): void {
   try {
     Services.prompt.alert(win, title, text);
   } catch (error) {
-    ztoolkit.log("Error showing alert dialog:", error);
+    try {
+      ztoolkit.log("Error showing alert dialog:", error);
+    } catch {
+      // Tests (and early boot) may not have ztoolkit.
+    }
   }
 }
 
 /** OK/Cancel prompt. Auto-accepts in the test environment. */
 export function confirmPrompt(title: string, text: string): boolean {
-  if ((__env__ as string) === "test") {
+  if (isTestEnv()) {
     return true;
   }
   const win = Zotero.getMainWindow();
@@ -31,7 +37,11 @@ export function confirmPrompt(title: string, text: string): boolean {
   try {
     return Services.prompt.confirm(win, title, text);
   } catch (error) {
-    ztoolkit.log("Error showing confirm dialog:", error);
+    try {
+      ztoolkit.log("Error showing confirm dialog:", error);
+    } catch {
+      // Tests (and early boot) may not have ztoolkit.
+    }
     return false;
   }
 }
@@ -48,7 +58,7 @@ export function confirmExPrompt(
   button1: string,
   button2: string,
 ): number {
-  if ((__env__ as string) === "test") {
+  if (isTestEnv()) {
     return 0;
   }
   const win = Zotero.getMainWindow();
@@ -89,7 +99,11 @@ export function confirmExPrompt(
       { value: false },
     );
   } catch (error) {
-    ztoolkit.log("Error showing confirmEx dialog:", error);
+    try {
+      ztoolkit.log("Error showing confirmEx dialog:", error);
+    } catch {
+      // Tests (and early boot) may not have ztoolkit.
+    }
     return -1;
   }
 }

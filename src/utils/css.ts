@@ -1,35 +1,20 @@
 /**
- * Utility functions for CSS management and cache busting
+ * CSS URL helpers with cache-busting.
+ * Hash comes from the build (cssHash.generated.ts) — never sync-XHR chrome://
+ * at startup; that aborted onMainWindowLoad when the request threw.
  */
+
+import { CSS_HASH } from "./cssHash.generated";
 
 /**
- * Reads the CSS hash from the hash file
- * @returns The CSS hash string, or null if not found
+ * Cache-busting hash for Tailwind CSS, or null if the build omitted one.
  */
 export function getCSSHash(): string | null {
-  try {
-    const hashUrl = `chrome://${addon.data.config.addonRef}/content/tailwind-hash.json`;
-
-    // Use XMLHttpRequest to read the JSON file synchronously
-    const xhr = new XMLHttpRequest();
-    xhr.open("GET", hashUrl, false); // synchronous
-    xhr.overrideMimeType("text/plain;charset=utf-8");
-    xhr.send(null);
-
-    if (xhr.status === 200 || xhr.status === 0) {
-      const data = JSON.parse(xhr.responseText);
-      return data.hash || data.version || null;
-    }
-  } catch (e) {
-    ztoolkit.log("Error reading CSS hash:", e);
-  }
-
-  return null;
+  return CSS_HASH || null;
 }
 
 /**
  * Gets the CSS URL with cache-busting hash
- * @returns The CSS URL with query parameter hash
  */
 export function getCSSUrl(): string {
   const hash = getCSSHash();
@@ -39,7 +24,6 @@ export function getCSSUrl(): string {
     return `${baseUrl}?v=${hash}`;
   }
 
-  // Fallback: use timestamp if hash file not found (development edge case)
-  // In production, the hash file should always exist after build
+  // Fallback when the generated module is empty (should not happen after build)
   return `${baseUrl}?v=${Date.now()}`;
 }

@@ -545,40 +545,116 @@ export class SyllabusManager {
 
   static onMainWindowLoad(win: _ZoteroTypes.MainWindow) {
     ztoolkit.log("SyllabusManager.onMainWindowLoad", win);
-    this.registerContextualMenus();
-    this.setupUI();
-    this.setupSyllabusViewTabListener();
-    this.setupSyllabusViewReloadListener();
-    applyManagedCollectionTree(win);
-    this.syncReadingScheduleTabIcon(win);
-    this.syncMyAnnotationsTabIcon(win);
-    void whenSyllabusNotesReady().then(() => {
+
+    // Mount chrome first. Context menus / managed-tree work can throw
+    // UnloadedDataException while Zotero is still hydrating items on cold start.
+    try {
+      this.setupUI();
+    } catch (error) {
+      ztoolkit.log("Error in setupUI during window load:", error);
+    }
+
+    try {
+      this.setupSyllabusViewTabListener();
+      this.setupSyllabusViewReloadListener();
+    } catch (error) {
+      ztoolkit.log("Error setting up view listeners:", error);
+    }
+
+    // Cold start: items toolbar may not exist on the first setupUI() pass.
+    this.ensureItemsToolbarChrome(win);
+
+    try {
+      this.registerContextualMenus();
+    } catch (error) {
+      ztoolkit.log("Error registering contextual menus (will retry):", error);
+    }
+
+    try {
       applyManagedCollectionTree(win);
-      refreshManagedCollectionTrees();
       this.syncReadingScheduleTabIcon(win);
       this.syncMyAnnotationsTabIcon(win);
-      this.setupToggleButton();
+    } catch (error) {
+      ztoolkit.log("Error applying managed collection chrome:", error);
+    }
+
+    void whenSyllabusNotesReady().then(() => {
+      try {
+        applyManagedCollectionTree(win);
+        refreshManagedCollectionTrees();
+        this.syncReadingScheduleTabIcon(win);
+        this.syncMyAnnotationsTabIcon(win);
+        this.setupToggleButton();
+        this.registerContextualMenus();
+      } catch (error) {
+        ztoolkit.log("Error in whenSyllabusNotesReady chrome refresh:", error);
+      }
     });
 
     // Re-render reading list tab if it exists (for hot reload)
     // Use a small delay to ensure tabs are initialized
     Zotero.Promise.delay(100).then(() => {
-      applyManagedCollectionTree(win);
-      this.syncReadingScheduleTabIcon(win);
-      this.syncMyAnnotationsTabIcon(win);
-      if (this.readingScheduleTab) {
-        ztoolkit.log(
-          "SyllabusManager.onMainWindowLoad: bind reading schedule if selected",
-        );
-        this.readingScheduleTab.invalidateMount();
-        if (win.Zotero_Tabs?.selectedID === "syllabus-reading-list-tab") {
-          this.readingScheduleTab.ensureRendered(win);
+      try {
+        applyManagedCollectionTree(win);
+        this.syncReadingScheduleTabIcon(win);
+        this.syncMyAnnotationsTabIcon(win);
+        if (this.readingScheduleTab) {
+          ztoolkit.log(
+            "SyllabusManager.onMainWindowLoad: bind reading schedule if selected",
+          );
+          this.readingScheduleTab.invalidateMount();
+          if (win.Zotero_Tabs?.selectedID === "syllabus-reading-list-tab") {
+            this.readingScheduleTab.ensureRendered(win);
+          }
         }
+        ztoolkit.log(
+          "SyllabusManager.onMainWindowLoad: rerendering My Annotations tabs",
+        );
+        this.myAnnotationsTab.renderAllTabs(win);
+      } catch (error) {
+        ztoolkit.log("Error in delayed window-load chrome:", error);
       }
+    });
+  }
+
+  /** Retry toolbar chrome until `#zotero-items-toolbar` exists and radios mount. */
+  static ensureItemsToolbarChrome(
+    win: _ZoteroTypes.MainWindow,
+    attempt = 0,
+  ): void {
+    const maxAttempts = 40; // ~10s at 250ms
+    const doc = win.document;
+    const hasToolbar = !!doc.getElementById("zotero-items-toolbar");
+    const hasButtons =
+      doc.querySelectorAll(".syllabus-view-mode-button").length > 0 ||
+      !!doc.getElementById("syllabus-create-syllabus-button");
+
+    if (hasButtons) {
+      return;
+    }
+    if (hasToolbar) {
+      try {
+        this.setupToggleButton();
+        void this.setupPage();
+      } catch (error) {
+        ztoolkit.log("Error ensuring items toolbar chrome:", error);
+      }
+      if (
+        doc.querySelectorAll(".syllabus-view-mode-button").length > 0 ||
+        doc.getElementById("syllabus-create-syllabus-button")
+      ) {
+        return;
+      }
+    }
+    if (attempt >= maxAttempts) {
       ztoolkit.log(
-        "SyllabusManager.onMainWindowLoad: rerendering My Annotations tabs",
+        "Gave up waiting for zotero-items-toolbar syllabus chrome",
+        attempt,
       );
-      this.myAnnotationsTab.renderAllTabs(win);
+      return;
+    }
+    Zotero.Promise.delay(250).then(() => {
+      this.ensureItemsToolbarChrome(win, attempt + 1);
     });
   }
 
@@ -707,7 +783,11 @@ export class SyllabusManager {
     item: Zotero.Item,
     source: "page" | "item-pane" | "context-menu" | "background",
   ) {
-    ztoolkit.log("SyllabusManager.onItemUpdate", source, item.id);
+    try {
+      ztoolkit.log("SyllabusManager.onItemUpdate", source, item.id);
+    } catch {
+      // Tests run in a separate chrome window without the plugin sandbox globals.
+    }
     // No need to call setupPage() - React stores will trigger re-render automatically
     // if (source !== "item-pane") this.reloadItemPane();
     // Class numbers are stored in the items, so we need to update the context menu
@@ -718,14 +798,22 @@ export class SyllabusManager {
    * E.g. the class title or description has been updated
    */
   static onClassUpdate(classNumber: number, source: "page") {
-    ztoolkit.log("SyllabusManager.onClassUpdate", classNumber, source);
+    try {
+      ztoolkit.log("SyllabusManager.onClassUpdate", classNumber, source);
+    } catch {
+      // Tests (and early boot) may not have ztoolkit.
+    }
     // No need to call setupPage() - React stores will trigger re-render automatically
     this.onClassListUpdate();
   }
 
   static onClassListUpdate() {
-    ztoolkit.log("SyllabusManager.onClassListUpdate");
-    this.registerContextualMenus();
+    try {
+      ztoolkit.log("SyllabusManager.onClassListUpdate");
+      this.registerContextualMenus();
+    } catch {
+      // Menu registration needs the plugin sandbox; skip in the test runner window.
+    }
   }
 
   /**
@@ -764,6 +852,7 @@ export class SyllabusManager {
     unregisterOptionalFeaturesPrefObserver();
     unregisterCustomIconsPrefObserver();
     this.unregisterNotifier();
+    this.cleanupSyllabusViewTabListener();
     for (const mainWindow of Zotero.getMainWindows() as _ZoteroTypes.MainWindow[]) {
       this.removeReadingScheduleTabBarButton?.(mainWindow);
       this.unpatchReadingScheduleTabBar(mainWindow);
@@ -800,60 +889,135 @@ export class SyllabusManager {
   // Initial setup
   static syllabusViewTabListener: NodeJS.Timeout | null = null;
 
+  /** Invalidate every prior poller (including orphans from hot reload). */
+  static bumpViewTabListenerEpoch(
+    win?: _ZoteroTypes.MainWindow | null,
+  ): number {
+    const w = (win || Zotero.getMainWindow()) as
+      | (_ZoteroTypes.MainWindow & {
+          __syllabusViewTabEpoch?: number;
+        })
+      | null;
+    if (!w) {
+      return 0;
+    }
+    const next = (w.__syllabusViewTabEpoch || 0) + 1;
+    w.__syllabusViewTabEpoch = next;
+    return next;
+  }
+
+  static getViewTabListenerEpoch(win?: _ZoteroTypes.MainWindow | null): number {
+    const w = (win || Zotero.getMainWindow()) as
+      | (_ZoteroTypes.MainWindow & {
+          __syllabusViewTabEpoch?: number;
+        })
+      | null;
+    return w?.__syllabusViewTabEpoch || 0;
+  }
+
+  /** Shared across module reloads so early-return state cannot desync. */
+  static getLastSetupPageKey(): string | null {
+    const w = Zotero.getMainWindow() as
+      | (_ZoteroTypes.MainWindow & {
+          __syllabusLastSetupPageKey?: string | null;
+        })
+      | null;
+    if (!w) {
+      return this.lastSetupPageKey;
+    }
+    return w.__syllabusLastSetupPageKey ?? this.lastSetupPageKey;
+  }
+
+  static setLastSetupPageKey(key: string | null): void {
+    this.lastSetupPageKey = key;
+    const w = Zotero.getMainWindow() as
+      | (_ZoteroTypes.MainWindow & {
+          __syllabusLastSetupPageKey?: string | null;
+        })
+      | null;
+    if (w) {
+      w.__syllabusLastSetupPageKey = key;
+    }
+  }
+
   static setupSyllabusViewTabListener() {
     this.cleanupSyllabusViewTabListener();
     ztoolkit.log("SyllabusManager.setupSyllabusViewTabListener");
+    const win = Zotero.getMainWindow() as
+      | (_ZoteroTypes.MainWindow & {
+          __syllabusViewTabEpoch?: number;
+          __syllabusViewTabListener?: NodeJS.Timeout | null;
+        })
+      | null;
+    const epoch = this.bumpViewTabListenerEpoch(win);
     let selectedViewKey = getSelectedViewScope().viewKey;
-    let currentTabId = Zotero.getMainWindow()?.Zotero_Tabs?.selectedID || "";
+    let currentTabId = win?.Zotero_Tabs?.selectedID || "";
     let libraryItemsFiltered =
       viewScopeSupportsExplorer(getSelectedViewScope()) &&
       itemsViewIsFilteredForTreeViewID(selectedViewKey);
-    const interval = setInterval(async () => {
-      const scope = getSelectedViewScope();
-      const currentViewKey = scope.viewKey;
-      const newTabId = Zotero.getMainWindow()?.Zotero_Tabs?.selectedID || "";
-      const nextLibraryItemsFiltered =
-        viewScopeSupportsExplorer(scope) &&
-        itemsViewIsFilteredForTreeViewID(currentViewKey);
-
-      SyllabusManager.updateReadingScheduleTabBarButton();
-      SyllabusManager.updateMyAnnotationsTabBarButton();
-
-      const collectionChanged = currentViewKey !== selectedViewKey;
-      const tabChanged = newTabId !== currentTabId;
-      const libraryFilterChanged =
-        nextLibraryItemsFiltered !== libraryItemsFiltered;
-
-      if (collectionChanged) {
-        ztoolkit.log("Selected collection changed", currentViewKey || "none");
-        selectedViewKey = currentViewKey;
-        currentTabId = newTabId; // Update tab ID when collection changes
-        libraryItemsFiltered = nextLibraryItemsFiltered;
-        // setupUI() calls setupPage() which re-renders React component for new collection
-        // Once mounted, React stores handle all data updates automatically
-        SyllabusManager.setupUI();
-        // Update button visibility when collection changes
-        SyllabusManager.updateButtonVisibility();
-        // Reload context menus for the new collection
-        SyllabusManager.registerContextualMenus();
-      } else if (libraryFilterChanged) {
-        libraryItemsFiltered = nextLibraryItemsFiltered;
-        // Home → Table while searching; restore Home when the filter clears.
-        SyllabusManager.setupUI();
-        SyllabusManager.updateButtonVisibility();
-      } else if (tabChanged) {
-        ztoolkit.log("Tab changed", newTabId);
-        currentTabId = newTabId;
-        // Update button visibility when tab changes
-        SyllabusManager.updateButtonVisibility();
-        if (newTabId === "syllabus-reading-list-tab") {
-          SyllabusManager.readingScheduleTab?.ensureRendered(
-            Zotero.getMainWindow(),
-          );
+    const interval = setInterval(() => {
+      try {
+        if (SyllabusManager.getViewTabListenerEpoch(win) !== epoch) {
+          return;
         }
+        const scope = getSelectedViewScope();
+        const currentViewKey = scope.viewKey;
+        const newTabId = Zotero.getMainWindow()?.Zotero_Tabs?.selectedID || "";
+        const nextLibraryItemsFiltered =
+          viewScopeSupportsExplorer(scope) &&
+          itemsViewIsFilteredForTreeViewID(currentViewKey);
+
+        SyllabusManager.updateReadingScheduleTabBarButton();
+        SyllabusManager.updateMyAnnotationsTabBarButton();
+
+        const collectionChanged = currentViewKey !== selectedViewKey;
+        const tabChanged = newTabId !== currentTabId;
+        const libraryFilterChanged =
+          nextLibraryItemsFiltered !== libraryItemsFiltered;
+
+        if (collectionChanged) {
+          ztoolkit.log("Selected collection changed", currentViewKey || "none");
+          selectedViewKey = currentViewKey;
+          currentTabId = newTabId; // Update tab ID when collection changes
+          libraryItemsFiltered = nextLibraryItemsFiltered;
+          // setupUI() calls setupPage() which re-renders React component for new collection
+          // Once mounted, React stores handle all data updates automatically
+          SyllabusManager.setupUI();
+          // Update button visibility when collection changes
+          SyllabusManager.updateButtonVisibility();
+          // Reload context menus for the new collection
+          SyllabusManager.registerContextualMenus();
+        } else if (libraryFilterChanged) {
+          libraryItemsFiltered = nextLibraryItemsFiltered;
+          // Home → Table while searching; restore Home when the filter clears.
+          SyllabusManager.setupUI();
+          SyllabusManager.updateButtonVisibility();
+        } else if (tabChanged) {
+          ztoolkit.log("Tab changed", newTabId);
+          currentTabId = newTabId;
+          // Update button visibility when tab changes
+          SyllabusManager.updateButtonVisibility();
+          if (newTabId === "syllabus-reading-list-tab") {
+            SyllabusManager.readingScheduleTab?.ensureRendered(
+              Zotero.getMainWindow(),
+            );
+          }
+        }
+      } catch (error) {
+        ztoolkit.log("Error in syllabus view tab listener:", error);
       }
     }, 300);
     this.syllabusViewTabListener = interval;
+    if (win) {
+      // Clear any handle stored by a previous module instance, then publish ours.
+      if (
+        win.__syllabusViewTabListener &&
+        win.__syllabusViewTabListener !== interval
+      ) {
+        clearInterval(win.__syllabusViewTabListener);
+      }
+      win.__syllabusViewTabListener = interval;
+    }
   }
 
   static setupSyllabusViewReloadListener() {
@@ -871,6 +1035,20 @@ export class SyllabusManager {
   }
 
   static cleanupSyllabusViewTabListener() {
+    // Bump epoch first so orphan intervals from prior module loads no-op.
+    this.bumpViewTabListenerEpoch();
+    const win = Zotero.getMainWindow() as
+      | (_ZoteroTypes.MainWindow & {
+          __syllabusViewTabListener?: NodeJS.Timeout | null;
+        })
+      | null;
+    const stored = win?.__syllabusViewTabListener;
+    if (stored) {
+      clearInterval(stored);
+      if (win) {
+        win.__syllabusViewTabListener = null;
+      }
+    }
     if (this.syllabusViewTabListener) {
       clearInterval(this.syllabusViewTabListener);
       this.syllabusViewTabListener = null;
@@ -1630,7 +1808,8 @@ export class SyllabusManager {
       const setupKey = shouldShowCustomView
         ? `${resolvedViewMode}:${scope.viewKey}:${selectedCollection?.id ?? ""}`
         : `hidden:${scope.viewKey}`;
-      if (setupKey === this.lastSetupPageKey) {
+      const lastKey = SyllabusManager.getLastSetupPageKey();
+      if (setupKey === lastKey) {
         // Same target already showing — Preact stores keep the tree live.
         updateManagedCollectionBanner(w, {
           collectionId: selectedCollection?.id ?? null,
@@ -1638,6 +1817,11 @@ export class SyllabusManager {
         });
         return;
       }
+
+      // Claim the target before mutating DOM so concurrent setupPage calls
+      // early-return instead of racing, and aborted generations cannot leave
+      // a stale key that skips the next real navigation.
+      SyllabusManager.setLastSetupPageKey(setupKey);
 
       // Find or create custom syllabus view container
       let customView = doc.getElementById(
@@ -1709,9 +1893,10 @@ export class SyllabusManager {
       }
 
       if (generation !== this.setupPageGeneration) {
+        // Newer setupPage owns the outcome; it already claimed (or will claim)
+        // its own lastSetupPageKey.
         return;
       }
-      this.lastSetupPageKey = setupKey;
 
       updateManagedCollectionBanner(w, {
         collectionId: selectedCollection?.id ?? null,
@@ -1719,7 +1904,7 @@ export class SyllabusManager {
       });
     } catch (e) {
       ztoolkit.log("Error in setupPage:", e);
-      this.lastSetupPageKey = null;
+      SyllabusManager.setLastSetupPageKey(null);
       // Restore the items tree if we hid it before a failed custom-view render.
       try {
         const w = Zotero.getMainWindow();
@@ -2583,11 +2768,15 @@ export class SyllabusManager {
   ): Promise<void> {
     const collection = this.getCollectionFromIdentifier(collectionId);
     if (collection && !itemBelongsInCollection(item, collection)) {
-      ztoolkit.log(
-        "Skipping syllabus assignment; item and collection are in different libraries",
-        item.id,
-        collection.id,
-      );
+      try {
+        ztoolkit.log(
+          "Skipping syllabus assignment; item and collection are in different libraries",
+          item.id,
+          collection.id,
+        );
+      } catch {
+        // Tests (and early boot) may not have ztoolkit.
+      }
       return;
     }
     await setItemAssignmentsInDocument(collectionId, item.key, assignments);
@@ -2885,7 +3074,11 @@ export class SyllabusManager {
       ...metadata,
     });
     if (!newEntry.success) {
-      ztoolkit.log("Error adding new assignment:", newEntry.error);
+      try {
+        ztoolkit.log("Error adding new assignment:", newEntry.error);
+      } catch {
+        // Tests (and early boot) may not have ztoolkit.
+      }
       return undefined;
     }
     assignments.push(newEntry.data);

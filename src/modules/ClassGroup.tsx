@@ -239,10 +239,7 @@ export function ClassGroupComponent({
       return;
     }
     try {
-      const created = await createAndAssignClassNote(
-        collectionId,
-        classNumber,
-      );
+      const created = await createAndAssignClassNote(collectionId, classNumber);
       if (created && onIdentifierClick) {
         // Select in Syllabus UI (blue highlight); Zotero select already ran.
         onIdentifierClick(created.note, created.assignmentId);
@@ -605,9 +602,9 @@ export function ClassGroupComponent({
       <div
         className={twMerge(
           !isLocked ||
-          layout === "card" ||
-          layout === "annotations" ||
-          layout === "magazine"
+            layout === "card" ||
+            layout === "annotations" ||
+            layout === "magazine"
             ? "container-padded"
             : "w-full min-w-0 max-w-full",
         )}
@@ -670,9 +667,7 @@ export function ClassGroupComponent({
                 },
               })}
             </div>
-          ) : itemAssignments.length > 0 &&
-            isLocked &&
-            layout !== "card" ? (
+          ) : itemAssignments.length > 0 && isLocked && layout !== "card" ? (
             <ReadingItemsLayout
               layout={layout}
               density={density}

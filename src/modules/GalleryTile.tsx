@@ -5,7 +5,11 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
 import { PinOff } from "lucide-preact";
-import { getItemCreatorLine, getItemTitle, isClassNoteItem } from "../utils/items";
+import {
+  getItemCreatorLine,
+  getItemTitle,
+  isClassNoteItem,
+} from "../utils/items";
 import {
   faviconUrlForHostname,
   getItemHostname,

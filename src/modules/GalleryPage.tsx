@@ -37,7 +37,11 @@ import {
 } from "lucide-preact";
 import { renderComponent } from "../utils/react";
 import { isZotero8OrLater } from "../utils/zotero";
-import { isClassNoteItem, openItemBestAttachment, sortItems } from "../utils/items";
+import {
+  isClassNoteItem,
+  openItemBestAttachment,
+  sortItems,
+} from "../utils/items";
 import { AnnotationColorFilter } from "./AnnotationColorFilter";
 import {
   GalleryAnnotationsSection,

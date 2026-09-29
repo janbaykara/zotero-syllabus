@@ -1,6 +1,7 @@
 import { render, type ComponentChildren } from "preact";
 import type { DialogHelper } from "zotero-plugin-toolkit";
 import { getCSSUrl } from "./css";
+import { isTestEnv } from "./env";
 
 export type PreactDialogButton = {
   id: string;
@@ -83,7 +84,7 @@ function unmountPreact(root: HTMLElement | null): void {
 export function openPreactDialog(
   options: OpenPreactDialogOptions,
 ): PreactDialogHandle | null {
-  if ((__env__ as string) === "test") {
+  if (isTestEnv()) {
     return null;
   }
 
@@ -201,7 +202,7 @@ export function openPreactDialogAsync<T = string | undefined>(
     mapResult?: (lastButtonId: string | undefined) => T;
   },
 ): Promise<T> {
-  if ((__env__ as string) === "test") {
+  if (isTestEnv()) {
     const mapped = options.mapResult
       ? options.mapResult(options.buttons?.[0]?.id)
       : (options.buttons?.[0]?.id as T);
