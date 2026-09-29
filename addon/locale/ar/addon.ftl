@@ -60,6 +60,10 @@ managed-folder-banner-schedule =
     لا تُضف عناصر هنا ولا تُزلها. يُزامن مجلد جدول القراءات هذا مع مناهجك؛ وتُستبدل التعديلات اليدوية.
 menuHelp-openUserGuide = فتح دليل مستخدم Zotero Syllabus
 menuHelp-openDocumentation = وثائق Zotero Syllabus
+menuHelp-openDiscord = Discord
+menuHelp-openIssues = GitHub Issues
+menuHelp-openReddit = Reddit
+menuHelp-openForum = Zotero Forum
 userGuide-start-title = مرحبًا بك في Zotero Syllabus
 userGuide-start-desc =
     حوّل أي مجموعة في Zotero إلى قائمة قراءات للمقرر — نظّمها حسب المحاضرة، وحدّد الأولويات، وتابع ما ينبغي قراءته تاليًا.
@@ -125,6 +129,12 @@ userGuide-subcollections-desc =
 userGuide-finish-title = أنت جاهز
 userGuide-finish-desc =
     يمكنك إعادة فتح هذه الجولة في أي وقت من مساعدة ← فتح دليل مستخدم Zotero Syllabus. نتمنى لك التوفيق في الدراسة!
+userGuide-finish-community =
+    Questions, bugs, or ideas? Join the conversation:
+userGuide-link-discord = Discord
+userGuide-link-issues = GitHub Issues
+userGuide-link-forum = Zotero Forum
+userGuide-link-reddit = Reddit
 userGuide-finish-prefs-title = You’re set
 userGuide-finish-prefs-desc =
     Turn views on or off anytime in Preferences → Zotero Syllabus → Views. You can reopen this tour from Help.

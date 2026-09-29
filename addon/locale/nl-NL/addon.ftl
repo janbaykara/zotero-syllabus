@@ -60,6 +60,10 @@ managed-folder-banner-schedule =
     Voeg hier geen items toe en verwijder er geen. Deze leesschema-map wordt gesynchroniseerd met uw syllabi; handmatige wijzigingen worden overschreven.
 menuHelp-openUserGuide = Gebruikershandleiding van Zotero Syllabus openen
 menuHelp-openDocumentation = Zotero Syllabus-documentatie
+menuHelp-openDiscord = Discord
+menuHelp-openIssues = GitHub Issues
+menuHelp-openReddit = Reddit
+menuHelp-openForum = Zotero Forum
 userGuide-start-title = Welkom bij Zotero Syllabus
 userGuide-start-desc =
     Maak van elke Zotero-collectie een leeslijst voor de cursus — orden per bijeenkomst, stel prioriteiten in en houd bij wat u hierna moet lezen.
@@ -125,6 +129,12 @@ userGuide-subcollections-desc =
 userGuide-finish-title = U bent er klaar voor
 userGuide-finish-desc =
     Open deze rondleiding wanneer u wilt via Help → Gebruikershandleiding van Zotero Syllabus openen. Succes met studeren!
+userGuide-finish-community =
+    Questions, bugs, or ideas? Join the conversation:
+userGuide-link-discord = Discord
+userGuide-link-issues = GitHub Issues
+userGuide-link-forum = Zotero Forum
+userGuide-link-reddit = Reddit
 userGuide-finish-prefs-title = You’re set
 userGuide-finish-prefs-desc =
     Turn views on or off anytime in Preferences → Zotero Syllabus → Views. You can reopen this tour from Help.

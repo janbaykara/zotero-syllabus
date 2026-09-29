@@ -60,6 +60,10 @@ managed-folder-banner-schedule =
     Buraya öğe eklemeyin veya çıkarmayın. Bu okuma takvimi klasörü izlencelerinizle eşzamanlı tutulur; elle yapılan düzenlemelerin üzerine yazılır.
 menuHelp-openUserGuide = Zotero Syllabus Kullanıcı Kılavuzunu Aç
 menuHelp-openDocumentation = Zotero Syllabus Belgeleri
+menuHelp-openDiscord = Discord
+menuHelp-openIssues = GitHub Issues
+menuHelp-openReddit = Reddit
+menuHelp-openForum = Zotero Forum
 userGuide-start-title = Zotero Syllabus’a hoş geldiniz
 userGuide-start-desc =
     Herhangi bir Zotero koleksiyonunu ders okuma listesine dönüştürün — derslere göre düzenleyin, öncelikleri belirleyin ve sıradaki okumayı izleyin.
@@ -125,6 +129,12 @@ userGuide-subcollections-desc =
 userGuide-finish-title = Hazırsınız
 userGuide-finish-desc =
     Bu turu istediğiniz zaman Yardım → Zotero Syllabus Kullanıcı Kılavuzunu Aç menüsünden yeniden açabilirsiniz. İyi çalışmalar!
+userGuide-finish-community =
+    Questions, bugs, or ideas? Join the conversation:
+userGuide-link-discord = Discord
+userGuide-link-issues = GitHub Issues
+userGuide-link-forum = Zotero Forum
+userGuide-link-reddit = Reddit
 userGuide-finish-prefs-title = You’re set
 userGuide-finish-prefs-desc =
     Turn views on or off anytime in Preferences → Zotero Syllabus → Views. You can reopen this tour from Help.

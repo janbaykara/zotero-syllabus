@@ -58,6 +58,10 @@ managed-folder-banner-schedule =
     请勿在此添加或移除条目。此阅读日程文件夹会与各教学大纲同步，手动更改会被覆盖。
 menuHelp-openUserGuide = 打开 Zotero Syllabus 用户指南
 menuHelp-openDocumentation = Zotero Syllabus 文档
+menuHelp-openDiscord = Discord
+menuHelp-openIssues = GitHub Issues
+menuHelp-openReddit = Reddit
+menuHelp-openForum = Zotero Forum
 userGuide-start-title = 欢迎使用 Zotero Syllabus
 userGuide-start-desc =
     将任意 Zotero 分类变成课程阅读清单——按课堂组织、设置优先级，并跟踪接下来要读什么。
@@ -123,6 +127,12 @@ userGuide-subcollections-desc =
 userGuide-finish-title = 准备就绪
 userGuide-finish-desc =
     可随时通过「帮助 → 打开 Zotero Syllabus 用户指南」重新打开本教程。祝学习顺利！
+userGuide-finish-community =
+    Questions, bugs, or ideas? Join the conversation:
+userGuide-link-discord = Discord
+userGuide-link-issues = GitHub Issues
+userGuide-link-forum = Zotero Forum
+userGuide-link-reddit = Reddit
 userGuide-finish-prefs-title = You’re set
 userGuide-finish-prefs-desc =
     Turn views on or off anytime in Preferences → Zotero Syllabus → Views. You can reopen this tour from Help.

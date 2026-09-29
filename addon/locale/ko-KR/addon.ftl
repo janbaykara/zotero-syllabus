@@ -60,6 +60,10 @@ managed-folder-banner-schedule =
     여기에 항목을 추가하거나 제거하지 마세요. 이 읽기 일정 폴더는 강의계획서와 동기화되며, 수동 편집은 덮어쓰입니다.
 menuHelp-openUserGuide = Zotero Syllabus 사용자 가이드 열기
 menuHelp-openDocumentation = Zotero Syllabus 문서
+menuHelp-openDiscord = Discord
+menuHelp-openIssues = GitHub Issues
+menuHelp-openReddit = Reddit
+menuHelp-openForum = Zotero Forum
 userGuide-start-title = Zotero Syllabus에 오신 것을 환영합니다
 userGuide-start-desc =
     어떤 Zotero 컬렉션이든 강의 읽기 목록으로 바꿀 수 있습니다. 수업별로 정리하고, 우선순위를 정하고, 다음에 읽을 것을 추적하세요.
@@ -125,6 +129,12 @@ userGuide-subcollections-desc =
 userGuide-finish-title = 준비되었습니다
 userGuide-finish-desc =
     도움말 → Zotero Syllabus 사용자 가이드 열기에서 언제든 이 투어를 다시 열 수 있습니다. 공부 잘 하세요!
+userGuide-finish-community =
+    Questions, bugs, or ideas? Join the conversation:
+userGuide-link-discord = Discord
+userGuide-link-issues = GitHub Issues
+userGuide-link-forum = Zotero Forum
+userGuide-link-reddit = Reddit
 userGuide-finish-prefs-title = You’re set
 userGuide-finish-prefs-desc =
     Turn views on or off anytime in Preferences → Zotero Syllabus → Views. You can reopen this tour from Help.

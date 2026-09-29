@@ -60,6 +60,10 @@ managed-folder-banner-schedule =
     Đừng thêm hoặc gỡ mục tại đây. Thư mục lịch đọc này được đồng bộ với các đề cương của bạn; chỉnh sửa thủ công sẽ bị ghi đè.
 menuHelp-openUserGuide = Mở hướng dẫn sử dụng Zotero Syllabus
 menuHelp-openDocumentation = Tài liệu Zotero Syllabus
+menuHelp-openDiscord = Discord
+menuHelp-openIssues = GitHub Issues
+menuHelp-openReddit = Reddit
+menuHelp-openForum = Zotero Forum
 userGuide-start-title = Chào mừng đến với Zotero Syllabus
 userGuide-start-desc =
     Biến bất kỳ bộ sưu tập Zotero nào thành danh sách đọc học phần — sắp xếp theo buổi học, đặt mức ưu tiên và theo dõi bài cần đọc tiếp.
@@ -125,6 +129,12 @@ userGuide-subcollections-desc =
 userGuide-finish-title = Bạn đã sẵn sàng
 userGuide-finish-desc =
     Mở lại tour này bất cứ lúc nào từ Trợ giúp → Mở hướng dẫn sử dụng Zotero Syllabus. Chúc bạn học tốt!
+userGuide-finish-community =
+    Questions, bugs, or ideas? Join the conversation:
+userGuide-link-discord = Discord
+userGuide-link-issues = GitHub Issues
+userGuide-link-forum = Zotero Forum
+userGuide-link-reddit = Reddit
 userGuide-finish-prefs-title = You’re set
 userGuide-finish-prefs-desc =
     Turn views on or off anytime in Preferences → Zotero Syllabus → Views. You can reopen this tour from Help.

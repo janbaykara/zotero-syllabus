@@ -60,6 +60,10 @@ managed-folder-banner-schedule =
     Jangan menambah atau menghapus item di sini. Folder jadwal bacaan ini diselaraskan dengan silabus Anda; suntingan manual akan ditimpa.
 menuHelp-openUserGuide = Buka Panduan Pengguna Zotero Syllabus
 menuHelp-openDocumentation = Dokumentasi Zotero Syllabus
+menuHelp-openDiscord = Discord
+menuHelp-openIssues = GitHub Issues
+menuHelp-openReddit = Reddit
+menuHelp-openForum = Zotero Forum
 userGuide-start-title = Selamat datang di Zotero Syllabus
 userGuide-start-desc =
     Ubah koleksi Zotero mana pun menjadi daftar bacaan mata kuliah — susun menurut kelas, tetapkan prioritas, dan lacak bacaan berikutnya.
@@ -125,6 +129,12 @@ userGuide-subcollections-desc =
 userGuide-finish-title = Anda siap
 userGuide-finish-desc =
     Buka kembali tur ini kapan saja dari Bantuan → Buka Panduan Pengguna Zotero Syllabus. Selamat belajar!
+userGuide-finish-community =
+    Questions, bugs, or ideas? Join the conversation:
+userGuide-link-discord = Discord
+userGuide-link-issues = GitHub Issues
+userGuide-link-forum = Zotero Forum
+userGuide-link-reddit = Reddit
 userGuide-finish-prefs-title = You’re set
 userGuide-finish-prefs-desc =
     Turn views on or off anytime in Preferences → Zotero Syllabus → Views. You can reopen this tour from Help.

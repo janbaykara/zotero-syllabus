@@ -39,6 +39,23 @@ const TOUR_EVENT_CLOSE_SETTINGS = "syllabus-tour-close-settings";
 export const DOCUMENTATION_URL =
   "https://github.com/janbaykara/zotero-syllabus#readme";
 
+const ISSUES_URL = "https://github.com/janbaykara/zotero-syllabus/issues";
+const DISCORD_URL = "https://discord.gg/PtEY5DxCea";
+const FORUM_URL =
+  "https://forums.zotero.org/discussion/128688/zotero-syllabus-a-plugin-for-managing-your-uni-course-reading-lists";
+const REDDIT_URL =
+  "https://www.reddit.com/r/zotero/comments/1puxigg/zotero_syllabus_a_plugin_for_managing_your_uni/";
+
+const FINISH_COMMUNITY_LINKS: {
+  id: FluentMessageId;
+  url: string;
+}[] = [
+  { id: "userGuide-link-discord", url: DISCORD_URL },
+  { id: "userGuide-link-issues", url: ISSUES_URL },
+  { id: "userGuide-link-forum", url: FORUM_URL },
+  { id: "userGuide-link-reddit", url: REDDIT_URL },
+];
+
 /** Last MenuManager ID returned by registerMenu (CSS-escaped pluginID-menuID). */
 let registeredHelpMenuID: string | null = null;
 
@@ -71,6 +88,46 @@ function guideStepDescription(
 <html:span style="width: ${width}px; max-width: 100%; display: block; text-align: left;">
   ${text}
 </html:span>`;
+}
+
+function guideCommunityLinksHtml(width = 320): string {
+  const anchors = FINISH_COMMUNITY_LINKS.map(
+    ({ id, url }) =>
+      `<html:a href="${url}" data-syllabus-launch-url="${url}" style="color: var(--fill-link, LinkText); cursor: pointer; text-decoration: underline;">${getString(id)}</html:a>`,
+  ).join(" · ");
+  const box = `width: ${width}px; max-width: 100%; display: block; text-align: left;`;
+  return `<html:span style="${box} margin-top: 12px;">
+  ${getString("userGuide-finish-community")}
+</html:span>
+<html:span style="${box} margin-top: 6px;">
+  ${anchors}
+</html:span>`;
+}
+
+function guideFinishDescription(
+  messageId: FluentMessageId,
+  image?: GuideImage,
+): string {
+  const base = image
+    ? guideStepDescription(messageId, image, 320)
+    : `<html:span style="width: 320px; max-width: 100%; display: block; text-align: left;">${getString(messageId)}</html:span>`;
+  return `${base}
+${guideCommunityLinksHtml(320)}`;
+}
+
+function bindGuideLaunchLinks(panel: Element | undefined) {
+  panel?.querySelectorAll("[data-syllabus-launch-url]").forEach((el) => {
+    const url = (el as HTMLElement).dataset.syllabusLaunchUrl;
+    if (!url || (el as HTMLElement).dataset.syllabusBound) {
+      return;
+    }
+    (el as HTMLElement).dataset.syllabusBound = "1";
+    el.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      Zotero.launchURL(url);
+    });
+  });
 }
 
 function requestTourOpenSettings(win: Window = Zotero.getMainWindow()) {
@@ -470,6 +527,16 @@ function registerUserGuideHelpMenu() {
   };
   const helpIcon = `chrome://${config.addonRef}/content/icons/favicon.png`;
 
+  const communityItems: {
+    key: FluentMessageId;
+    url: string;
+  }[] = [
+    { key: "menuHelp-openDiscord", url: DISCORD_URL },
+    { key: "menuHelp-openIssues", url: ISSUES_URL },
+    { key: "menuHelp-openReddit", url: REDDIT_URL },
+    { key: "menuHelp-openForum", url: FORUM_URL },
+  ];
+
   if (typeof Zotero.MenuManager?.registerMenu === "function") {
     const menuID = `${config.addonRef}-menuHelp`;
     const idsToUnregister = new Set(
@@ -500,6 +567,22 @@ function registerUserGuideHelpMenu() {
             },
             onCommand: openDocumentation,
           },
+          ...communityItems.map(({ key, url }) => ({
+            menuType: "menuitem" as const,
+            l10nID: `${config.addonRef}-${key}`,
+            icon: helpIcon,
+            onShowing: (
+              _event: unknown,
+              context: { menuElem?: Element | null },
+            ) => {
+              if (!context.menuElem?.getAttribute("label")) {
+                context.menuElem?.setAttribute("label", getString(key));
+              }
+            },
+            onCommand: () => {
+              Zotero.launchURL(url);
+            },
+          })),
           {
             menuType: "menuitem",
             l10nID: `${config.addonRef}-menuHelp-openUserGuide`,
@@ -520,6 +603,9 @@ function registerUserGuideHelpMenu() {
   }
 
   ztoolkit.Menu.unregister(`${config.addonRef}-menuHelp-openDocumentation`);
+  for (const { key } of communityItems) {
+    ztoolkit.Menu.unregister(`${config.addonRef}-${key}`);
+  }
   ztoolkit.Menu.unregister(`${config.addonRef}-menuHelp-openUserGuide`);
   ztoolkit.Menu.register("menuHelp", {
     tag: "menuitem",
@@ -527,6 +613,16 @@ function registerUserGuideHelpMenu() {
     label: getString("menuHelp-openDocumentation"),
     commandListener: openDocumentation,
   });
+  for (const { key, url } of communityItems) {
+    ztoolkit.Menu.register("menuHelp", {
+      tag: "menuitem",
+      id: `${config.addonRef}-${key}`,
+      label: getString(key),
+      commandListener: () => {
+        Zotero.launchURL(url);
+      },
+    });
+  }
   ztoolkit.Menu.register("menuHelp", {
     tag: "menuitem",
     id: `${config.addonRef}-menuHelp-openUserGuide`,
@@ -1060,10 +1156,9 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
   if (hasHandsOn) {
     guide.addStep({
       title: getString("userGuide-finish-title"),
-      description: guideStepDescription(
+      description: guideFinishDescription(
         "userGuide-finish-desc",
         "module.png",
-        320,
       ),
       position: "center",
       showButtons: ["prev", "close"],
@@ -1072,14 +1167,20 @@ async function showUserGuide(win: _ZoteroTypes.MainWindow, force = false) {
         requestTourCloseSettings(win);
         await Zotero.Promise.delay(50);
       },
+      onRender: ({ state }) => {
+        bindGuideLaunchLinks(state.controller.panel);
+      },
     });
   } else {
     guide.addStep({
       title: getString("userGuide-finish-prefs-title"),
-      description: getString("userGuide-finish-prefs-desc"),
+      description: guideFinishDescription("userGuide-finish-prefs-desc"),
       position: "center",
       showButtons: ["close"],
       showProgress: true,
+      onRender: ({ state }) => {
+        bindGuideLaunchLinks(state.controller.panel);
+      },
     });
   }
 

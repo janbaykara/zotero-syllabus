@@ -60,6 +60,10 @@ managed-folder-banner-schedule =
     Не добавляйте и не удаляйте записи здесь. Эта папка графика чтения синхронизируется с вашими силлабусами; ручные правки будут перезаписаны.
 menuHelp-openUserGuide = Открыть руководство пользователя Zotero Syllabus
 menuHelp-openDocumentation = Документация Zotero Syllabus
+menuHelp-openDiscord = Discord
+menuHelp-openIssues = GitHub Issues
+menuHelp-openReddit = Reddit
+menuHelp-openForum = Zotero Forum
 userGuide-start-title = Добро пожаловать в Zotero Syllabus
 userGuide-start-desc =
     Превратите любую коллекцию Zotero в список литературы курса — организуйте по занятиям, задайте приоритеты и отслеживайте, что читать дальше.
@@ -125,6 +129,12 @@ userGuide-subcollections-desc =
 userGuide-finish-title = Всё готово
 userGuide-finish-desc =
     Эту экскурсию можно снова открыть в любой момент: Справка → Открыть руководство пользователя Zotero Syllabus. Успехов в учёбе!
+userGuide-finish-community =
+    Questions, bugs, or ideas? Join the conversation:
+userGuide-link-discord = Discord
+userGuide-link-issues = GitHub Issues
+userGuide-link-forum = Zotero Forum
+userGuide-link-reddit = Reddit
 userGuide-finish-prefs-title = You’re set
 userGuide-finish-prefs-desc =
     Turn views on or off anytime in Preferences → Zotero Syllabus → Views. You can reopen this tour from Help.
