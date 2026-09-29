@@ -537,7 +537,9 @@ export function PinnedSection({
           className={
             embedded
               ? undefined
-              : layout === "card" || layout === "annotations"
+              : layout === "card" ||
+                  layout === "annotations" ||
+                  layout === "magazine"
                 ? "container-padded"
                 : "w-full min-w-0 max-w-full"
           }

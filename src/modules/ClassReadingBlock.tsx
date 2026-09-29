@@ -270,8 +270,8 @@ export function ClassReadingBlock({
         <div
           className={twMerge(
             // Heading stays on the narrow padded column in every layout.
-            // Cover/Magazine used to be full-bleed, which stretched prose to
-            // the pane width and clipped the left checkbox under overflow-x-hidden.
+            // Cover stays full-bleed below; Preview (magazine) shares this
+            // padded column so covers/blurbs align with the class header.
             stickyHeading
               ? twMerge(readingContentWidthClass("card"), "relative")
               : undefined,
@@ -345,7 +345,10 @@ export function ClassReadingBlock({
       ) : null}
       <div
         className={
-          (layout === "card" || layout === "annotations") && !fullWidthItems
+          (layout === "card" ||
+            layout === "annotations" ||
+            layout === "magazine") &&
+          !fullWidthItems
             ? readingContentWidthClass("card")
             : "w-full min-w-0 max-w-full"
         }
