@@ -35,6 +35,7 @@ declare namespace _ZoteroTypes {
       "myAnnotationsOrder": string;
       "myAnnotationsSearchScope": string;
       "myAnnotationsColorFilter": string;
+      "myAnnotationsTagFilter": string;
       "annotationsQuoteOrder": string;
       "galleryShowItemsWithoutAnnotations": boolean;
       "syllabusShowClassNotes": boolean;

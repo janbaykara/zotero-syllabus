@@ -9,6 +9,7 @@ import { useSyncExternalStore } from "react-dom/src";
 import { getCachedItem } from "../utils/cache";
 import { isSyllabusMemberItem } from "../utils/items";
 import { collectAnnotationColors } from "../utils/annotationColors";
+import { readItemAnnotationTags } from "../utils/annotationTags";
 import {
   DEFAULT_HIGHLIGHT_COLOR,
   normalizeHighlightColor,
@@ -51,6 +52,8 @@ export type MyAnnotationStreamEntry = {
   quote: string;
   comment: string;
   color: string;
+  /** Annotation item tags (not parent-item tags). */
+  tags: string[];
   /** When the annotation was created. */
   dateAdded: string;
   dateModified: string;
@@ -627,6 +630,7 @@ function mapAnnotationStreamEntry(
     quote,
     comment,
     color,
+    tags: readItemAnnotationTags(item),
     dateAdded: String(item.dateAdded || item.dateModified || ""),
     dateModified: String(item.dateModified || ""),
     pageLabel: annotationLocationPageLabel(item),
@@ -711,6 +715,7 @@ async function collectFulltextStreamHits(
         quote: hit.text,
         comment: "",
         color: "",
+        tags: [],
         dateAdded: "",
         dateModified: "",
         pageLabel: hit.pageLabel || "",

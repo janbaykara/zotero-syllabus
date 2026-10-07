@@ -47,6 +47,7 @@ function streamRow(id: number): MyAnnotationStreamEntry {
     quote: `q${id}`,
     comment: "",
     color: "#ffd400",
+    tags: [],
     dateAdded: "",
     dateModified: "",
     pageLabel: "",

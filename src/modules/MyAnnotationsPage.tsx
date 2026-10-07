@@ -15,9 +15,11 @@ import { openZoteroItemContextMenu } from "../utils/itemContextMenu";
 import { renderComponent } from "../utils/react";
 import { useDebouncedEffect } from "../utils/react/useDebouncedEffect";
 import { annotationMatchesColorFilter } from "../utils/annotationColors";
+import { annotationMatchesTagFilter } from "../utils/annotationTags";
 import {
   ANNOTATION_COLOR_FILTER_FEED,
   useAnnotationColorFilter,
+  useAnnotationTagFilter,
   useAnnotationsQuoteOrder,
   useMyAnnotationsOrder,
   useMyAnnotationsSearchScope,
@@ -128,6 +130,7 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
   const [order, setOrder] = useMyAnnotationsOrder();
   const [quoteOrder] = useAnnotationsQuoteOrder();
   const [colorFilter] = useAnnotationColorFilter(ANNOTATION_COLOR_FILTER_FEED);
+  const [tagFilter] = useAnnotationTagFilter();
   const { selectedItemIds } = useItemIdentifierSelection();
   const pageRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -152,9 +155,10 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
       sortStreamRows(rows, order).filter(
         (row) =>
           isFulltextStreamEntry(row) ||
-          annotationMatchesColorFilter(row.color, colorFilter),
+          (annotationMatchesColorFilter(row.color, colorFilter) &&
+            annotationMatchesTagFilter(row.tags, tagFilter)),
       ),
-    [rows, order, colorFilter],
+    [rows, order, colorFilter, tagFilter],
   );
   const displayGroups = useMemo(
     () => groupAdjacentStreamEntries(displayRows),
@@ -321,6 +325,7 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
                 order={order}
                 onOrder={handleOrderChange}
                 colors={colors}
+                libraryID={libraryID}
               />
             </div>
           </div>
@@ -340,7 +345,11 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
                   ? "my-annotations-empty-search"
                   : rows.length === 0
                     ? "my-annotations-empty"
-                    : "my-annotations-empty-color-filter",
+                    : colorFilter.length > 0 && tagFilter.length > 0
+                      ? "my-annotations-empty-filters"
+                      : tagFilter.length > 0
+                        ? "my-annotations-empty-tag-filter"
+                        : "my-annotations-empty-color-filter",
               )}
             </p>
           ) : (

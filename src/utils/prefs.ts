@@ -56,6 +56,7 @@ export const PLUGIN_PREF_DEFAULTS: {
   myAnnotationsOrder: "newestLast",
   myAnnotationsSearchScope: "both",
   myAnnotationsColorFilter: "",
+  myAnnotationsTagFilter: "",
   annotationsQuoteOrder: "location",
   galleryShowItemsWithoutAnnotations: true,
   syllabusShowClassNotes: true,

@@ -15,6 +15,10 @@ import {
   serializeAnnotationColorFilter,
 } from "../utils/annotationColors";
 import {
+  parseAnnotationTagFilter,
+  serializeAnnotationTagFilter,
+} from "../utils/annotationTags";
+import {
   coerceAnnotationsQuoteOrder,
   coerceMyAnnotationsSearchScope,
   type AnnotationsQuoteOrder,
@@ -258,6 +262,41 @@ export function useMyAnnotationsSearchScope(): [
   }, []);
 
   return [mode, setScope];
+}
+
+export function getAnnotationTagFilter(): string[] {
+  return parseAnnotationTagFilter(getPref("myAnnotationsTagFilter"));
+}
+
+export function setAnnotationTagFilter(tags: readonly string[]): void {
+  setPref("myAnnotationsTagFilter", serializeAnnotationTagFilter(tags));
+  zoteroCache.invalidatePref(getPrefKey("myAnnotationsTagFilter"));
+}
+
+export function useAnnotationTagFilter(): [
+  string[],
+  (tags: readonly string[]) => void,
+] {
+  const [tags, setTags] = useState<string[]>(() => getAnnotationTagFilter());
+
+  useEffect(() => {
+    const refresh = () => setTags(getAnnotationTagFilter());
+    refresh();
+    const observerID = Zotero.Prefs.registerObserver(
+      getPrefKey("myAnnotationsTagFilter"),
+      refresh,
+      true,
+    );
+    return () => Zotero.Prefs.unregisterObserver(observerID);
+  }, []);
+
+  const setFilter = useCallback((next: readonly string[]) => {
+    const parsed = parseAnnotationTagFilter(serializeAnnotationTagFilter(next));
+    setTags(parsed);
+    setAnnotationTagFilter(parsed);
+  }, []);
+
+  return [tags, setFilter];
 }
 
 export const ANNOTATION_COLOR_FILTER_FEED = "feed";

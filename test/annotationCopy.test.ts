@@ -28,6 +28,7 @@ function entry(
     quote: "A quoted line",
     comment: "",
     color: "#ffd400",
+    tags: [],
     dateAdded: "",
     dateModified: "",
     pageLabel: "",

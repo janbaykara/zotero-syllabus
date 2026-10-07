@@ -26,6 +26,7 @@ pref("myAnnotationsGroupBy", "none");
 pref("myAnnotationsOrder", "newestLast");
 pref("myAnnotationsSearchScope", "both");
 pref("myAnnotationsColorFilter", "");
+pref("myAnnotationsTagFilter", "");
 pref("annotationsQuoteOrder", "location");
 pref("galleryShowItemsWithoutAnnotations", true);
 pref("syllabusShowClassNotes", true);

@@ -12,6 +12,7 @@ import { getString } from "../utils/locale";
 import { useBooleanPref } from "./react-zotero-sync/booleanPref";
 import type { AnnotationsQuoteOrder } from "./explorerQueries";
 import { AnnotationColorFilter } from "./AnnotationColorFilter";
+import { AnnotationTagFilter } from "./AnnotationTagFilter";
 import {
   ANNOTATION_COLOR_FILTER_FEED,
   useAnnotationsQuoteOrder,
@@ -69,10 +70,12 @@ export function MyAnnotationsMenu({
   order,
   onOrder,
   colors,
+  libraryID,
 }: {
   order: MyAnnotationsOrder;
   onOrder: (mode: MyAnnotationsOrder) => void;
   colors: string[];
+  libraryID: number;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -89,6 +92,15 @@ export function MyAnnotationsMenu({
     const onPointerDown = (event: MouseEvent) => {
       const root = rootRef.current;
       if (!root || !(event.target instanceof Node)) {
+        return;
+      }
+      // Keep the options menu open while using the native tags-box popup.
+      if (
+        event.target instanceof Element &&
+        event.target.closest(
+          ".syllabus-annotation-tag-filter-popup, .tags-popup",
+        )
+      ) {
         return;
       }
       if (!root.contains(event.target)) {
@@ -191,6 +203,7 @@ export function MyAnnotationsMenu({
               colors={colors}
               scope={ANNOTATION_COLOR_FILTER_FEED}
             />
+            <AnnotationTagFilter libraryID={libraryID} />
             <div className="syllabus-gallery-toolbar-cluster">
               <div className="syllabus-gallery-toolbar-heading">
                 <span className="syllabus-gallery-groupby-label">
