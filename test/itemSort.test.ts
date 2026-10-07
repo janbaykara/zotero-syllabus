@@ -45,6 +45,14 @@ describe("item sort", function () {
       assert.isAbove(compareLocale("Zebra", "Apple"), 0);
       assert.equal(compareLocale("Same", "Same"), 0);
     });
+
+    it("orders embedded numbers naturally", function () {
+      assert.isBelow(compareLocale("1", "2"), 0);
+      assert.isBelow(compareLocale("2", "10"), 0);
+      assert.isBelow(compareLocale("10", "21"), 0);
+      assert.isBelow(compareLocale("Chapter 2", "Chapter 10"), 0);
+      assert.isAbove(compareLocale("Chapter 10", "Chapter 2"), 0);
+    });
   });
 
   describe("item sort", function () {
@@ -77,6 +85,19 @@ describe("item sort", function () {
       assert.deepEqual(
         sortItems([zebra, apple], "title").map((item) => item.id),
         [apple.id, zebra.id],
+      );
+    });
+
+    it("sorts titles with numbers naturally", async function () {
+      const ten = await createBook("Chapter 10");
+      const two = await createBook("Chapter 2");
+      const twentyOne = await createBook("Chapter 21");
+      items.push(ten, two, twentyOne);
+
+      const sorted = sortItemsByTitle([ten, twentyOne, two]);
+      assert.deepEqual(
+        sorted.map((item) => item.getField("title")),
+        ["Chapter 2", "Chapter 10", "Chapter 21"],
       );
     });
 

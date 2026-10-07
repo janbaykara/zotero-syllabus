@@ -54,13 +54,17 @@ function getUiDir(): "rtl" | "ltr" {
   return isRtlLocale() ? "rtl" : "ltr";
 }
 
-/** Sort strings with Zotero’s UI locale instead of the runtime default. */
+/**
+ * Sort strings with Zotero’s UI locale instead of the runtime default.
+ * Uses natural (alphanumeric) order so embedded numbers compare by value
+ * ("1", "2", "10") rather than lexicographically ("1", "10", "2").
+ */
 function compareLocale(a: string, b: string): number {
   const locale = getAppLocale();
   try {
-    return a.localeCompare(b, locale);
+    return a.localeCompare(b, locale, { numeric: true });
   } catch {
-    return a.localeCompare(b);
+    return a.localeCompare(b, undefined, { numeric: true });
   }
 }
 
