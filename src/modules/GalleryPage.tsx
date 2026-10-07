@@ -68,7 +68,6 @@ import { SlimSyllabusItemCard, useItemIdentifierSelection } from "./browsePage";
 import { SyllabusItemCard } from "./SyllabusItemCard";
 import {
   sortClassAssignmentRows,
-  sortItemRows,
   useSyllabusClassGroups,
   visibleSyllabusClassGroups,
 } from "./classGroups";
@@ -122,6 +121,11 @@ import {
 import { GalleryViewportProvider } from "./galleryVisibility";
 import { useGallerySortBy, type GallerySortBy } from "./gallerySort";
 import { collectionHasSyllabusNote } from "./syllabusNote";
+import { PersonalOrderGallery } from "./PersonalOrderGallery";
+import { applyPersonalReadingOrder } from "./personalReadingOrder";
+import { usePersonalReadingOrderKeys } from "./react-zotero-sync/personalReadingOrder";
+import { useReaderMode } from "./react-zotero-sync/readerMode";
+import { isOptionalFeatureEnabled } from "./optionalFeatures";
 import { useCollectionCreatorGroups } from "./creatorGroups";
 import { useCollectionTagGroups } from "./tagGroups";
 import { useCollectionItemTypeGroups } from "./typeGroups";
@@ -215,6 +219,24 @@ export function GalleryPage({
     magazine: layout === "magazine",
   });
   const [sortBy, setSortBy, sortByGlobal] = useGallerySortBy(viewKey);
+  const personalOrderKeys = usePersonalReadingOrderKeys(
+    isCollectionScope ? collectionId : null,
+  );
+  const personalOrderAvailable = isOptionalFeatureEnabled("gallery");
+  const hasPersonalOrder =
+    personalOrderAvailable &&
+    isCollectionScope &&
+    collectionId != null &&
+    personalOrderKeys.length > 0;
+  /** Explicit Personal Reading Order sort: flat list + DnD chrome. */
+  const personalOrderMode = hasPersonalOrder && sortBy === "personalOrder";
+  /** Auto (and personalOrder) prefer a personal list when one exists. */
+  const preferPersonalSort =
+    hasPersonalOrder && (sortBy === "auto" || sortBy === "personalOrder");
+  const effectiveGroupBy: GalleryGroupBy = preferPersonalSort
+    ? "none"
+    : groupBy;
+  const [readerMode, setReaderMode, readerModeGlobal] = useReaderMode(viewKey);
   const [magazinePacking, setMagazinePacking, magazinePackingGlobal] =
     useMagazinePacking(viewKey);
   const [density] = useItemDensity(viewKey);
@@ -230,6 +252,31 @@ export function GalleryPage({
     syllabusMetadata,
     0,
   );
+  /** Syllabus class → further-reading key order for Auto when no personal list. */
+  const classOrderKeys = useMemo(() => {
+    if (!isSyllabus) {
+      return [] as string[];
+    }
+    const keys: string[] = [];
+    const seen = new Set<string>();
+    for (const group of classGroups) {
+      for (const { item } of group.itemAssignments) {
+        if (seen.has(item.key)) {
+          continue;
+        }
+        seen.add(item.key);
+        keys.push(item.key);
+      }
+    }
+    for (const { item } of furtherReadingItems) {
+      if (seen.has(item.key)) {
+        continue;
+      }
+      seen.add(item.key);
+      keys.push(item.key);
+    }
+    return keys;
+  }, [isSyllabus, classGroups, furtherReadingItems]);
   const { selectedIdentifiers, selectedItemIds, handleIdentifierClick } =
     useItemIdentifierSelection();
   const pageRef = useRef<HTMLDivElement>(null);
@@ -455,14 +502,17 @@ export function GalleryPage({
   }, [syllabusItems, hideEmptyAnnotationGroups, annotatedItemIds]);
 
   const navGroups = useMemo((): GalleryNavGroup[] => {
-    if (groupBy === "type") {
+    if (preferPersonalSort || effectiveGroupBy === "none") {
+      return [];
+    }
+    if (effectiveGroupBy === "type") {
       return visibleTypeGroups.map(({ itemType, label }) => ({
         id: `type-${itemType}`,
         label,
         icon: { kind: "item-type", itemType },
       }));
     }
-    if (groupBy === "creator") {
+    if (effectiveGroupBy === "creator") {
       const groups: GalleryNavGroup[] = visibleCreatorGroups.map(
         ({ label }, index) => ({
           id: `creator-${index}`,
@@ -479,7 +529,7 @@ export function GalleryPage({
       }
       return groups;
     }
-    if (groupBy === "tags") {
+    if (effectiveGroupBy === "tags") {
       const groups: GalleryNavGroup[] = visibleTagGroups.map(
         ({ tag }, index) => ({
           id: `tag-${index}`,
@@ -496,7 +546,7 @@ export function GalleryPage({
       }
       return groups;
     }
-    if (groupBy === "subcollections") {
+    if (effectiveGroupBy === "subcollections") {
       if (
         !visibleSubcollectionRoot ||
         !subtreeHasContent(visibleSubcollectionRoot)
@@ -508,7 +558,7 @@ export function GalleryPage({
         getString("gallery-in-this-collection"),
       );
     }
-    if (groupBy === "classes") {
+    if (effectiveGroupBy === "classes") {
       const groups: GalleryNavGroup[] = [];
       for (const group of visibleClassGroups) {
         const key = String(group.classNumber ?? "unnumbered");
@@ -534,7 +584,8 @@ export function GalleryPage({
     return [];
   }, [
     collectionIdOrZero,
-    groupBy,
+    effectiveGroupBy,
+    preferPersonalSort,
     syllabusMetadata,
     visibleClassGroups,
     visibleCreatorGroups,
@@ -800,45 +851,77 @@ export function GalleryPage({
     for (const el of els) {
       el.tabIndex = el === tabStop ? 0 : -1;
     }
-  }, [selectedItemIds, layout, groupBy, syllabusItems]);
+  }, [selectedItemIds, layout, effectiveGroupBy, syllabusItems]);
 
-  const renderCovers = (items: Zotero.Item[], keyPrefix: string) => (
-    <div className="syllabus-gallery-grid">
-      {sortItems(uniqueItems(items), sortBy).map((item) => (
-        <GalleryTile
-          key={`${keyPrefix}-${item.id}`}
-          item={item}
-          collectionId={collectionIdOrZero}
-          showGalleryNote={true}
-          selected={selectedItemIds?.includes(item.id) || false}
-          onClick={handleClick}
-          onDoubleClick={handleDoubleClick}
-          onContextMenu={handleContextMenu}
-        />
-      ))}
-    </div>
-  );
+  const readerChromeForItems = (
+    items: Zotero.Item[],
+  ): Map<number, ReadingTileChrome> | undefined => {
+    if (!readerMode || !collectionIdOrZero) {
+      return undefined;
+    }
+    return chromeByItemIdFromAssignments(
+      collectionIdOrZero,
+      items.map((item) => ({ item })),
+      { readerMode: true },
+    );
+  };
+
+  /** Auto: personal reading list → class order → caller/collection order. */
+  const orderGalleryItems = (items: Zotero.Item[]): Zotero.Item[] => {
+    const unique = uniqueItems(items);
+    if (preferPersonalSort) {
+      return applyPersonalReadingOrder(unique, personalOrderKeys);
+    }
+    if (sortBy === "auto" && classOrderKeys.length > 0) {
+      return applyPersonalReadingOrder(unique, classOrderKeys);
+    }
+    return sortItems(unique, sortBy);
+  };
+
+  const renderCovers = (items: Zotero.Item[], keyPrefix: string) => {
+    const chromeByItemId = readerChromeForItems(items);
+    return (
+      <div className="syllabus-gallery-grid">
+        {orderGalleryItems(items).map((item) => (
+          <GalleryTile
+            key={`${keyPrefix}-${item.id}`}
+            item={item}
+            collectionId={collectionIdOrZero}
+            showGalleryNote={true}
+            selected={selectedItemIds?.includes(item.id) || false}
+            chrome={chromeByItemId?.get(item.id)}
+            onClick={handleClick}
+            onDoubleClick={handleDoubleClick}
+            onContextMenu={handleContextMenu}
+          />
+        ))}
+      </div>
+    );
+  };
 
   const renderAnnotations = (
     items: Zotero.Item[],
     keyPrefix: string,
     chromeByItemId?: ReadonlyMap<number, ReadingTileChrome> | null,
-  ) => (
-    <GalleryAnnotationsSection
-      items={items}
-      keyPrefix={keyPrefix}
-      sortBy={sortBy}
-      collectionId={collectionIdOrZero}
-      selectedItemIds={selectedItemIds}
-      showItemsWithoutAnnotations={showItemsWithoutAnnotations}
-      showGalleryNote={true}
-      chromeByItemId={chromeByItemId}
-      colorFilterScope={viewKey}
-      onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
-      onContextMenu={handleContextMenu}
-    />
-  );
+  ) => {
+    const ordered = orderGalleryItems(items);
+    return (
+      <GalleryAnnotationsSection
+        items={ordered}
+        keyPrefix={keyPrefix}
+        sortBy="auto"
+        collectionId={collectionIdOrZero}
+        selectedItemIds={selectedItemIds}
+        showItemsWithoutAnnotations={showItemsWithoutAnnotations}
+        showGalleryNote={true}
+        chromeByItemId={chromeByItemId ?? readerChromeForItems(ordered)}
+        colorFilterScope={viewKey}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+        onContextMenu={handleContextMenu}
+      />
+    );
+  };
 
   const renderCards = (items: Zotero.Item[], keyPrefix: string) => (
     <div
@@ -847,13 +930,14 @@ export function GalleryPage({
         density !== "expanded" ? "gap-2" : "gap-4",
       )}
     >
-      {sortItems(uniqueItems(items), sortBy).map((item) => (
+      {orderGalleryItems(items).map((item) => (
         <SlimSyllabusItemCard
           key={`${keyPrefix}-${item.id}`}
           item={item}
           collectionId={collectionIdOrZero}
           keyPrefix={keyPrefix}
           density={density}
+          readerMode={readerMode}
           showGalleryNote={true}
           selectedIdentifiers={selectedIdentifiers}
           selectedItemIds={selectedItemIds}
@@ -868,21 +952,25 @@ export function GalleryPage({
     items: Zotero.Item[],
     keyPrefix: string,
     template = magazineSectionTemplate(0),
-  ) => (
-    <MagazineItems
-      items={items}
-      keyPrefix={keyPrefix}
-      sortBy={sortBy}
-      template={template}
-      packing={magazinePacking}
-      collectionId={collectionIdOrZero}
-      showGalleryNote={true}
-      selectedItemIds={selectedItemIds}
-      onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
-      onContextMenu={handleContextMenu}
-    />
-  );
+  ) => {
+    const ordered = orderGalleryItems(items);
+    return (
+      <MagazineItems
+        items={ordered}
+        keyPrefix={keyPrefix}
+        sortBy="auto"
+        template={template}
+        packing={magazinePacking}
+        collectionId={collectionIdOrZero}
+        showGalleryNote={true}
+        selectedItemIds={selectedItemIds}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+        onContextMenu={handleContextMenu}
+        chromeByItemId={readerChromeForItems(ordered)}
+      />
+    );
+  };
 
   let magazineSectionIndex = 0;
   const renderItems = (items: Zotero.Item[], keyPrefix: string) => {
@@ -902,6 +990,106 @@ export function GalleryPage({
     return renderCovers(items, keyPrefix);
   };
 
+  const renderPersonalOrderBody = () => {
+    if (!collectionId) {
+      return null;
+    }
+    if (!annotationGroupsReady) {
+      return null;
+    }
+    if (visibleFlatItems.length === 0) {
+      return <p className="text-secondary text-lg">{emptyMessage}</p>;
+    }
+    const listClass =
+      layout === "card"
+        ? twMerge(
+            "syllabus-gallery-cards flex flex-col",
+            density !== "expanded" ? "gap-2" : "gap-4",
+          )
+        : layout === "cover"
+          ? "syllabus-gallery-grid"
+          : undefined;
+    return (
+      <PersonalOrderGallery
+        items={visibleFlatItems}
+        orderKeys={personalOrderKeys}
+        collectionId={collectionId}
+        className={listClass}
+        renderItem={(item) => {
+          const chrome = readerChromeForItems([item])?.get(item.id);
+          if (layout === "card") {
+            return (
+              <SlimSyllabusItemCard
+                item={item}
+                collectionId={collectionIdOrZero}
+                keyPrefix="personal"
+                density={density}
+                readerMode={readerMode}
+                showGalleryNote={true}
+                selectedIdentifiers={selectedIdentifiers}
+                selectedItemIds={selectedItemIds}
+                onIdentifierClick={handleIdentifierClick}
+                onContextMenu={handleContextMenu}
+              />
+            );
+          }
+          if (layout === "magazine") {
+            return (
+              <MagazineItems
+                items={[item]}
+                keyPrefix={`personal-${item.id}`}
+                sortBy="personalOrder"
+                template={magazineSectionTemplate(0)}
+                packing={magazinePacking}
+                collectionId={collectionIdOrZero}
+                showGalleryNote={true}
+                selectedItemIds={selectedItemIds}
+                onClick={handleClick}
+                onDoubleClick={handleDoubleClick}
+                onContextMenu={handleContextMenu}
+                chromeByItemId={
+                  chrome ? new Map([[item.id, chrome]]) : undefined
+                }
+              />
+            );
+          }
+          if (layout === "annotations") {
+            return (
+              <GalleryAnnotationsSection
+                items={[item]}
+                keyPrefix={`personal-${item.id}`}
+                sortBy="personalOrder"
+                collectionId={collectionIdOrZero}
+                selectedItemIds={selectedItemIds}
+                showItemsWithoutAnnotations={showItemsWithoutAnnotations}
+                showGalleryNote={true}
+                chromeByItemId={
+                  chrome ? new Map([[item.id, chrome]]) : undefined
+                }
+                colorFilterScope={viewKey}
+                onClick={handleClick}
+                onDoubleClick={handleDoubleClick}
+                onContextMenu={handleContextMenu}
+              />
+            );
+          }
+          return (
+            <GalleryTile
+              item={item}
+              collectionId={collectionIdOrZero}
+              showGalleryNote={true}
+              selected={selectedItemIds?.includes(item.id) || false}
+              chrome={chrome}
+              onClick={handleClick}
+              onDoubleClick={handleDoubleClick}
+              onContextMenu={handleContextMenu}
+            />
+          );
+        }}
+      />
+    );
+  };
+
   const renderClassAssignments = (
     rows: Array<{ item: Zotero.Item; assignment: ItemSyllabusAssignment }>,
     classNumber: number | null,
@@ -913,13 +1101,15 @@ export function GalleryPage({
     const chromeByItemId = chromeByItemIdFromAssignments(
       collectionIdOrZero,
       rows,
+      { readerMode },
     );
     if (layout === "magazine") {
+      const ordered = orderGalleryItems(rows.map(({ item }) => item));
       return (
         <MagazineItems
-          items={rows.map(({ item }) => item)}
+          items={ordered}
           keyPrefix={keyPrefix}
-          sortBy={sortBy}
+          sortBy="auto"
           template={magazineSectionTemplate(magazineSectionIndex++)}
           packing={magazinePacking}
           collectionId={collectionIdOrZero}
@@ -942,25 +1132,36 @@ export function GalleryPage({
     if (layout !== "card") {
       return (
         <div className="syllabus-gallery-grid">
-          {sortItems(uniqueItems(rows.map(({ item }) => item)), sortBy).map(
-            (item) => (
-              <GalleryTile
-                key={`${keyPrefix}-${item.id}`}
-                item={item}
-                collectionId={collectionIdOrZero}
-                showGalleryNote={true}
-                selected={selectedItemIds?.includes(item.id) || false}
-                chrome={chromeByItemId.get(item.id)}
-                onClick={handleClick}
-                onDoubleClick={handleDoubleClick}
-                onContextMenu={handleContextMenu}
-              />
-            ),
-          )}
+          {orderGalleryItems(rows.map(({ item }) => item)).map((item) => (
+            <GalleryTile
+              key={`${keyPrefix}-${item.id}`}
+              item={item}
+              collectionId={collectionIdOrZero}
+              showGalleryNote={true}
+              selected={selectedItemIds?.includes(item.id) || false}
+              chrome={chromeByItemId.get(item.id)}
+              onClick={handleClick}
+              onDoubleClick={handleDoubleClick}
+              onContextMenu={handleContextMenu}
+            />
+          ))}
         </div>
       );
     }
-    const sorted = sortClassAssignmentRows(rows, sortBy);
+    const sorted =
+      preferPersonalSort || (sortBy === "auto" && classOrderKeys.length > 0)
+        ? (() => {
+            const order = new Map(
+              orderGalleryItems(rows.map(({ item }) => item)).map(
+                (item, index) => [item.id, index],
+              ),
+            );
+            return [...rows].sort(
+              (a, b) =>
+                (order.get(a.item.id) ?? 0) - (order.get(b.item.id) ?? 0),
+            );
+          })()
+        : sortClassAssignmentRows(rows, sortBy);
     return (
       <div
         className={twMerge(
@@ -981,7 +1182,7 @@ export function GalleryPage({
               assignment={assignment}
               slim={true}
               density={density}
-              readerMode={false}
+              readerMode={readerMode}
               isLocked={true}
               showGalleryNote={true}
               selectedIdentifiers={selectedIdentifiers}
@@ -1028,11 +1229,19 @@ export function GalleryPage({
           <div className="px-6">
             <GalleryPageHeader
               title={title || getString("untitled")}
-              groupBy={groupBy}
+              groupBy={effectiveGroupBy}
               onGroupBy={setGroupBy}
               groupByGlobal={groupByGlobal}
+              groupByLocked={preferPersonalSort}
               showClasses={isSyllabus}
               showSubcollections={isCollectionScope}
+              showPersonalOrderSort={
+                isCollectionScope && personalOrderAvailable
+              }
+              showCheckboxes={isCollectionScope}
+              readerMode={readerMode}
+              onReaderMode={setReaderMode}
+              readerModeGlobal={readerModeGlobal}
               sortBy={sortBy}
               onSortBy={setSortBy}
               sortByGlobal={sortByGlobal}
@@ -1048,7 +1257,7 @@ export function GalleryPage({
               annotationColors={annotationColors}
               colorFilterScope={viewKey}
               libraryID={libraryID}
-              navGroups={navGroups}
+              navGroups={preferPersonalSort ? [] : navGroups}
               activeGroupId={activeGroupId}
               onSelectGroup={handleSelectGroup}
               pillsRef={pillsRef}
@@ -1066,23 +1275,31 @@ export function GalleryPage({
                 : "px-6",
             )}
           >
-            {groupBy === "none" &&
+            {personalOrderMode
+              ? renderPersonalOrderBody()
+              : null}
+
+            {!personalOrderMode &&
+              effectiveGroupBy === "none" &&
               (!annotationGroupsReady ? null : visibleFlatItems.length === 0 ? (
                 <p className="text-secondary text-lg">{emptyMessage}</p>
               ) : (
                 renderItems(visibleFlatItems, "all")
               ))}
 
-            {groupBy === "auto" &&
+            {!personalOrderMode &&
+              effectiveGroupBy === "auto" &&
               (syllabusItems.length === 0 ? (
                 <p className="text-secondary text-lg">{emptyMessage}</p>
               ) : (
                 <MagazineHome
-                  items={syllabusItems.map(({ zoteroItem }) => zoteroItem)}
+                  items={orderGalleryItems(
+                    syllabusItems.map(({ zoteroItem }) => zoteroItem),
+                  )}
                   tagGroups={tagGroups}
                   classDesks={magazineClassDesks}
                   subcollectionRoot={subcollectionRoot}
-                  sortBy={sortBy}
+                  sortBy="auto"
                   packing={magazinePacking}
                   selectedItemIds={selectedItemIds}
                   onClick={handleClick}
@@ -1091,7 +1308,7 @@ export function GalleryPage({
                 />
               ))}
 
-            {groupBy === "type" &&
+            {!personalOrderMode && effectiveGroupBy === "type" &&
               (!annotationGroupsReady ? null : visibleTypeGroups.length ===
                 0 ? (
                 <p className="text-secondary text-lg">{emptyMessage}</p>
@@ -1110,7 +1327,7 @@ export function GalleryPage({
                 ))
               ))}
 
-            {groupBy === "creator" &&
+            {!personalOrderMode && effectiveGroupBy === "creator" &&
               (!annotationGroupsReady ? null : visibleCreatorGroups.length ===
                   0 && visibleUncreditedItems.length === 0 ? (
                 <p className="text-secondary text-lg">{emptyMessage}</p>
@@ -1145,7 +1362,7 @@ export function GalleryPage({
                 </>
               ))}
 
-            {groupBy === "tags" &&
+            {!personalOrderMode && effectiveGroupBy === "tags" &&
               (!annotationGroupsReady ? null : visibleTagGroups.length === 0 &&
                 visibleUntaggedItems.length === 0 ? (
                 <p className="text-secondary text-lg">{emptyMessage}</p>
@@ -1180,7 +1397,8 @@ export function GalleryPage({
                 </>
               ))}
 
-            {groupBy === "subcollections" &&
+            {!personalOrderMode &&
+              effectiveGroupBy === "subcollections" &&
               (!annotationGroupsReady ? null : !visibleSubcollectionRoot ||
                 !subtreeHasContent(visibleSubcollectionRoot) ? (
                 <p className="text-secondary text-lg">
@@ -1198,7 +1416,7 @@ export function GalleryPage({
                 />
               ))}
 
-            {groupBy === "classes" &&
+            {!personalOrderMode && effectiveGroupBy === "classes" &&
               (!annotationGroupsReady ? null : visibleClassGroups.length ===
                   0 && visibleFurtherReadingItems.length === 0 ? (
                 <p className="text-secondary text-lg">{emptyMessage}</p>
@@ -1237,8 +1455,10 @@ export function GalleryPage({
                         {getString("further-reading-empty-desc")}
                       </p>
                       {renderItems(
-                        sortItemRows(visibleFurtherReadingItems, sortBy).map(
-                          (entry) => entry.item,
+                        orderGalleryItems(
+                          visibleFurtherReadingItems.map(
+                            (entry) => entry.item,
+                          ),
                         ),
                         "further-reading",
                       )}
@@ -1540,14 +1760,26 @@ function GalleryClassHeading({
   );
 }
 
-function gallerySortOptions(): GallerySegmentOption<GallerySortBy>[] {
-  return [
+function gallerySortOptions(
+  includePersonalOrder: boolean,
+): GallerySegmentOption<GallerySortBy>[] {
+  const options: GallerySegmentOption<GallerySortBy>[] = [
     {
       mode: "auto",
       label: getString("gallery-sort-auto"),
       title: getString("gallery-sort-auto-title"),
       Icon: ListOrdered,
     },
+  ];
+  if (includePersonalOrder) {
+    options.push({
+      mode: "personalOrder",
+      label: getString("gallery-sort-personal-order"),
+      title: getString("gallery-sort-personal-order-title"),
+      Icon: ListOrdered,
+    });
+  }
+  options.push(
     {
       mode: "title",
       label: getString("gallery-sort-az"),
@@ -1566,7 +1798,8 @@ function gallerySortOptions(): GallerySegmentOption<GallerySortBy>[] {
       title: getString("gallery-sort-date-added-title"),
       Icon: CalendarPlus,
     },
-  ];
+  );
+  return options;
 }
 
 function galleryQuoteOrderOptions(): GallerySegmentOption<AnnotationsQuoteOrder>[] {
@@ -1689,8 +1922,14 @@ function GalleryPageHeader({
   groupBy,
   onGroupBy,
   groupByGlobal,
+  groupByLocked = false,
   showClasses,
   showSubcollections = true,
+  showPersonalOrderSort = false,
+  showCheckboxes = false,
+  readerMode = false,
+  onReaderMode,
+  readerModeGlobal,
   sortBy,
   onSortBy,
   sortByGlobal,
@@ -1715,8 +1954,14 @@ function GalleryPageHeader({
   groupBy: GalleryGroupBy;
   onGroupBy: (mode: GalleryGroupBy) => void;
   groupByGlobal: GalleryGlobalSetting<GalleryGroupBy>;
+  groupByLocked?: boolean;
   showClasses: boolean;
   showSubcollections?: boolean;
+  showPersonalOrderSort?: boolean;
+  showCheckboxes?: boolean;
+  readerMode?: boolean;
+  onReaderMode?: (enabled: boolean) => void;
+  readerModeGlobal?: GalleryGlobalSetting<boolean>;
   sortBy: GallerySortBy;
   onSortBy: (mode: GallerySortBy) => void;
   sortByGlobal: GalleryGlobalSetting<GallerySortBy>;
@@ -1802,7 +2047,7 @@ function GalleryPageHeader({
   }, [menuOpen, tourPinned]);
 
   const layoutOptions = galleryLayoutOptions();
-  const sortOptions = gallerySortOptions();
+  const sortOptions = gallerySortOptions(showPersonalOrderSort);
   const quoteOrderOptions = galleryQuoteOrderOptions();
   const [quoteOrder, setQuoteOrder, quoteOrderGlobal] =
     useViewQuoteOrder(colorFilterScope);
@@ -1810,6 +2055,9 @@ function GalleryPageHeader({
   const [density, setDensity, densityGlobal] = useItemDensity(colorFilterScope);
   const allGroupBy = galleryGroupByOptions();
   const groupByOptions = allGroupBy.filter((option) => {
+    if (groupByLocked && option.mode !== "none") {
+      return false;
+    }
     if (option.mode === "auto" && layout !== "magazine") {
       return false;
     }
@@ -1940,6 +2188,16 @@ function GalleryPageHeader({
                         />
                       </>
                     ) : null}
+                  </div>
+                ) : null}
+                {showCheckboxes && onReaderMode ? (
+                  <div className="syllabus-gallery-toolbar-section">
+                    <GalleryPrefCheckbox
+                      label={getString("page-view-checkboxes")}
+                      checked={readerMode}
+                      onChange={onReaderMode}
+                      globalSetting={readerModeGlobal}
+                    />
                   </div>
                 ) : null}
               </div>

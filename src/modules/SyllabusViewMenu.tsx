@@ -121,6 +121,7 @@ function confirmReadingScheduleCollectionToggle(enable: boolean): boolean {
 
 export function SyllabusViewMenu({
   viewKey,
+  readerModeViewKey,
   showLayout = false,
   layout = "card",
   onLayoutChange,
@@ -136,6 +137,11 @@ export function SyllabusViewMenu({
   libraryID,
 }: {
   viewKey: string;
+  /**
+   * Pref key for “Show checkboxes”. Defaults to `viewKey`. Collection
+   * syllabus pages pass the collection id so Gallery shares the same toggle.
+   */
+  readerModeViewKey?: string | number;
   /** Card / Cover / Annotations / Magazine — Reading Schedule and locked syllabus. */
   showLayout?: boolean;
   layout?: GalleryLayout;
@@ -157,7 +163,9 @@ export function SyllabusViewMenu({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const [density, setDensity, densityGlobal] = useItemDensity(viewKey);
-  const [readerMode, setReaderMode, readerModeGlobal] = useReaderMode(viewKey);
+  const [readerMode, setReaderMode, readerModeGlobal] = useReaderMode(
+    readerModeViewKey ?? viewKey,
+  );
   const [generateCollection, setGenerateCollection] =
     useReadingScheduleCollectionPref();
   const [applyToPinned, setApplyToPinned] = useBooleanPref(

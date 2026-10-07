@@ -170,14 +170,14 @@ toolbar-reading-schedule-review = 查看阅读日程
 toolbar-reading-schedule-open = 打开阅读日程
 
 # Context menus
-menu-set-priority = 设置优先级
+menu-set-priority = 设置作业优先级
 menu-none = （无）
 menu-assign-to-class = 分配到课堂
 menu-no-collection = （未选择分类）
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = 添加到新{ $nomenclature } { $number }
 menu-search-classes = 搜索课堂…
-menu-set-reading-status = 设置阅读状态
+menu-set-reading-status = 设置个人阅读状态
 status-done = 已完成
 status-not-done = 未完成
 
@@ -376,13 +376,17 @@ gallery-empty-subcollections = 此分类中没有子分类或条目。
 gallery-unnumbered = 未编号
 gallery-unnumbered-desc = 已分配但没有课堂编号。
 gallery-sort-auto = 自动
-gallery-sort-auto-title = 自动排序（分类或教学大纲）
+gallery-sort-auto-title = 自动排序（个人阅读列表，其次班级，再次分类）
 gallery-sort-az = A–Z
 gallery-sort-az-title = 按 A–Z 排序
 gallery-sort-date = 日期
 gallery-sort-date-title = 按日期排序（最新优先）
 gallery-sort-date-added = 添加
 gallery-sort-date-added-title = 按添加日期排序（最新优先）
+gallery-sort-personal-order = 阅读顺序
+gallery-sort-personal-order-title = 个人阅读顺序（拖拽重排）
+gallery-personal-order-unordered = 未排序
+personal-reading-order-menu-pin-top = 置顶到文集阅读列表
 gallery-sort-last-read = 最近阅读
 gallery-sort-last-read-title = 按最近阅读排序（最新优先）
 gallery-group-none = 无
@@ -420,10 +424,10 @@ gallery-packing-packed = 混排
 gallery-packing-packed-title = 混合尺寸的杂志布局
 
 # Gallery notes (collection-scoped child notes)
-gallery-note-add = Add Gallery Note
-gallery-note-edit = Edit Gallery Note
-gallery-note-remove = Remove Gallery Note
-gallery-note-label = Gallery note
+gallery-note-add = 添加个人笔记
+gallery-note-edit = 编辑个人笔记
+gallery-note-remove = 移除个人笔记
+gallery-note-label = 个人笔记
 magazine-shelf-watch = 观看
 magazine-shelf-watch-title = 最近添加的视频
 magazine-shelf-listen = 收听

@@ -39,6 +39,26 @@ The standalone note is primary. Trashing or deleting it disables the syllabus fo
 
 UI metadata is a projection of the document (`classesToNumberKeyed`): number-keyed classes **without** `subcollectionKey`. Merging UI edits back (`mergeNumberKeyedClasses`) keeps existing class IDs and folder keys.
 
+## Personal reading order
+
+Distinct from the Syllabus note: a hidden top-level collection note (title `Personal Reading Order`, tag `zotero-syllabus-personal-reading-order`) stores a flat list of item keys the user wants to read in. It is excluded from Syllabus/Gallery item lists (same pattern as the Syllabus document note). **UI surfaces** (Gallery sort + DnD, Explorer “Reading order” sort, context-menu pin-to-top, personal-order precedence on shelves/stacks) require the **Gallery** optional feature (`enableGallery`). Done-state storage still works for Syllabus checkboxes when Gallery is off.
+
+Envelope (human then machine), in [`src/modules/personalReadingOrder.ts`](../src/modules/personalReadingOrder.ts):
+
+1. Numbered list of current titles for keys in `order` (✅ when item-level done); optional Done section for done keys not in `order`.
+2. “Plugin data (do not edit)” + `<pre data-zotero-syllabus-personal-reading-order="1">` JSON `{ version: 1, order: string[], done: string[], assignmentDone: string[] }`.
+
+Unordered items are **not** stored in `order`; they follow the ordered keys at display time. Personal progress lives here, not on syllabus assignments:
+
+- **`done`** — item keys (Gallery / flat checkbox). Checking an item marks every syllabus assignment for that key done.
+- **`assignmentDone`** — assignment ids (Syllabus page). Checking one assignment leaves siblings unchecked until all are done (then promoted to `done`).
+
+The note is created lazily on first mutation. Startup migrates legacy `assignment.status === "done"` into these fields and strips status from the Syllabus note.
+
+**Show checkboxes** is a collection-scoped view pref (`readerModes.<collectionId>`), shared by Syllabus and Gallery. Gallery’s settings menu exposes the same toggle.
+
+**Precedence:** when `order` is non-empty after pruning missing keys, pinned stacks / next-up, Explorer collection shelves, and Gallery with sort **Auto** use personal order instead of syllabus class order (Gallery flattens grouping while that list exists). Gallery sort **Personal Reading Order** is the same precedence with DnD chrome (ordered, then an Unordered gap, then the rest). Auto without a personal list falls back to class/syllabus order when the collection is a syllabus. The Syllabus tab stays class-structured. Item merges remap keys via `dc:replaces` like the syllabus note.
+
 ## Item merges
 
 Assignments are keyed by Zotero `item.key`. When the user merges duplicates, Zotero **keeps the master’s key** and **trashes the others**. The Syllabus UI only shows live collection members and looks up `document.items[currentKey]`. If the note still stores class/priority data under the deleted key, the survivor looks unassigned and lands in **Further reading**.
@@ -172,7 +192,7 @@ That works in Preact TSX (render, `title`, `placeholder`, `aria-label`) and in p
 
 Prefs XHTML uses `data-l10n-id` against `preferences.ftl`. Keep `{ $vars }` and Fluent attributes (`.label`) unchanged when translating.
 
-Do **not** localize stored library identifiers: syllabus note title `Syllabus`, managed collection `Reading Schedule`, managed child folder `Pinned`, playground `Syllabus Tour`, tags `zotero-syllabus` / `pinned` / `zotero-syllabus-pinned-intention` / `zotero-syllabus-pinned-collection` / `zotero-syllabus-gallery:{collectionKey}`, or the “Plugin data (do not edit)” note heading. Display chrome for those concepts still goes through Fluent. The product name **Zotero Syllabus** is not translated.
+Do **not** localize stored library identifiers: syllabus note title `Syllabus`, personal reading-order note title `Personal Reading Order`, managed collection `Reading Schedule`, managed child folder `Pinned`, playground `Syllabus Tour`, tags `zotero-syllabus` / `zotero-syllabus-personal-reading-order` / `pinned` / `zotero-syllabus-pinned-intention` / `zotero-syllabus-pinned-collection` / `zotero-syllabus-gallery:{collectionKey}`, or the “Plugin data (do not edit)” note heading. Display chrome for those concepts still goes through Fluent. The product name **Zotero Syllabus** is not translated.
 
 ## Reading-list connectors
 

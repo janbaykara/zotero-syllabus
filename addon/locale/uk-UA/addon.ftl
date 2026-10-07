@@ -172,14 +172,14 @@ toolbar-reading-schedule-review = Переглянути графік читан
 toolbar-reading-schedule-open = Відкрити графік читання
 
 # Context menus
-menu-set-priority = Задати пріоритет
+menu-set-priority = Задати пріоритет завдання
 menu-none = (Немає)
 menu-assign-to-class = Призначити до заняття
 menu-no-collection = (Колекцію не вибрано)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = Додати до { $nomenclature } { $number }
 menu-search-classes = Шукати заняття…
-menu-set-reading-status = Задати стан читання
+menu-set-reading-status = Задати особистий стан читання
 status-done = Виконано
 status-not-done = Не виконано
 
@@ -378,13 +378,17 @@ gallery-empty-subcollections = У цій колекції немає підко�
 gallery-unnumbered = Без номера
 gallery-unnumbered-desc = Призначено без номера заняття.
 gallery-sort-auto = Авто
-gallery-sort-auto-title = Автоматичний порядок (колекція або силабус)
+gallery-sort-auto-title = Автоматичний порядок (особистий список читання, потім заняття, потім колекція)
 gallery-sort-az = А–Я
 gallery-sort-az-title = Сортувати А–Я
 gallery-sort-date = Дата
 gallery-sort-date-title = Сортувати за датою (спочатку нові)
 gallery-sort-date-added = Додано
 gallery-sort-date-added-title = Сортувати за датою додавання (спочатку нові)
+gallery-sort-personal-order = Порядок читання
+gallery-sort-personal-order-title = Особистий порядок читання (перетягніть, щоб змінити)
+gallery-personal-order-unordered = Без порядку
+personal-reading-order-menu-pin-top = Закріпити на початку списку читання колекції
 gallery-sort-last-read = Last Read
 gallery-sort-last-read-title = Sort by last read (most recent first)
 gallery-group-none = Немає
@@ -422,10 +426,10 @@ gallery-packing-packed = Packed
 gallery-packing-packed-title = Mixed-size magazine layout
 
 # Gallery notes (collection-scoped child notes)
-gallery-note-add = Add Gallery Note
-gallery-note-edit = Edit Gallery Note
-gallery-note-remove = Remove Gallery Note
-gallery-note-label = Gallery note
+gallery-note-add = Додати особисту нотатку
+gallery-note-edit = Редагувати особисту нотатку
+gallery-note-remove = Видалити особисту нотатку
+gallery-note-label = Особиста нотатка
 magazine-shelf-watch = Дивитися
 magazine-shelf-watch-title = Нещодавно додані відео
 magazine-shelf-listen = Слухати

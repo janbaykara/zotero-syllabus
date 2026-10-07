@@ -246,6 +246,9 @@
   .-my-2 {
     margin-block: calc(var(--spacing) * -2);
   }
+  .my-4 {
+    margin-block: calc(var(--spacing) * 4);
+  }
   .my-6 {
     margin-block: calc(var(--spacing) * 6);
   }
@@ -783,6 +786,10 @@
   .border-6 {
     border-style: var(--tw-border-style);
     border-width: 6px;
+  }
+  .border-t {
+    border-top-style: var(--tw-border-style);
+    border-top-width: 1px;
   }
   .border-t-0 {
     border-top-style: var(--tw-border-style);

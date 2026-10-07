@@ -172,14 +172,14 @@ toolbar-reading-schedule-review = Okuma Takviminizi gözden geçirin
 toolbar-reading-schedule-open = Okuma Takvimi’ni aç
 
 # Context menus
-menu-set-priority = Öncelik ayarla
+menu-set-priority = Ödev önceliğini ayarla
 menu-none = (Yok)
 menu-assign-to-class = Bir derse ata
 menu-no-collection = (Koleksiyon seçilmedi)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = Yeni { $nomenclature } { $number } öğesine ekle
 menu-search-classes = Ders ara…
-menu-set-reading-status = Okuma durumunu ayarla
+menu-set-reading-status = Kişisel okuma durumunu ayarla
 status-done = Tamamlandı
 status-not-done = Tamamlanmadı
 
@@ -378,13 +378,17 @@ gallery-empty-subcollections = Bu koleksiyonda alt koleksiyon veya öğe yok.
 gallery-unnumbered = Numarasız
 gallery-unnumbered-desc = Ders numarası olmadan atanmış.
 gallery-sort-auto = Otomatik
-gallery-sort-auto-title = Otomatik sıra (koleksiyon veya izlence)
+gallery-sort-auto-title = Otomatik sıra (kişisel okuma listesi, sonra ders, sonra koleksiyon)
 gallery-sort-az = A–Z
 gallery-sort-az-title = A–Z sırala
 gallery-sort-date = Tarih
 gallery-sort-date-title = Tarihe göre sırala (yeniden eskiye)
 gallery-sort-date-added = Eklendi
 gallery-sort-date-added-title = Eklenme tarihine göre sırala (yeniden eskiye)
+gallery-sort-personal-order = Okuma sırası
+gallery-sort-personal-order-title = Kişisel okuma sırası (yeniden düzenlemek için sürükleyin)
+gallery-personal-order-unordered = Sırasız
+personal-reading-order-menu-pin-top = Koleksiyon okuma listesinin en üstüne sabitle
 gallery-sort-last-read = Last Read
 gallery-sort-last-read-title = Sort by last read (most recent first)
 gallery-group-none = Yok
@@ -422,10 +426,10 @@ gallery-packing-packed = Packed
 gallery-packing-packed-title = Mixed-size magazine layout
 
 # Gallery notes (collection-scoped child notes)
-gallery-note-add = Add Gallery Note
-gallery-note-edit = Edit Gallery Note
-gallery-note-remove = Remove Gallery Note
-gallery-note-label = Gallery note
+gallery-note-add = Kişisel not ekle
+gallery-note-edit = Kişisel notu düzenle
+gallery-note-remove = Kişisel notu kaldır
+gallery-note-label = Kişisel not
 magazine-shelf-watch = İzle
 magazine-shelf-watch-title = Son eklenen videolar
 magazine-shelf-listen = Dinle

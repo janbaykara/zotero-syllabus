@@ -172,14 +172,14 @@ toolbar-reading-schedule-review = 읽기 일정 검토
 toolbar-reading-schedule-open = 읽기 일정 열기
 
 # Context menus
-menu-set-priority = 우선순위 설정
+menu-set-priority = 과제 우선순위 설정
 menu-none = (없음)
 menu-assign-to-class = 수업에 배정
 menu-no-collection = (선택한 컬렉션 없음)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = 새 { $nomenclature } { $number }에 추가
 menu-search-classes = 수업 검색…
-menu-set-reading-status = 읽기 상태 설정
+menu-set-reading-status = 개인 읽기 상태 설정
 status-done = 완료
 status-not-done = 미완료
 
@@ -378,13 +378,17 @@ gallery-empty-subcollections = 이 컬렉션에 하위 컬렉션이나 항목이
 gallery-unnumbered = 번호 없음
 gallery-unnumbered-desc = 수업 번호 없이 배정됨.
 gallery-sort-auto = 자동
-gallery-sort-auto-title = 자동 순서(컬렉션 또는 강의계획서)
+gallery-sort-auto-title = 자동 순서(개인 읽기 목록 → 수업 → 컬렉션)
 gallery-sort-az = A–Z
 gallery-sort-az-title = A–Z 정렬
 gallery-sort-date = 날짜
 gallery-sort-date-title = 날짜순 정렬(최신 우선)
 gallery-sort-date-added = 추가일
 gallery-sort-date-added-title = 추가일순 정렬(최신 우선)
+gallery-sort-personal-order = 읽기 순서
+gallery-sort-personal-order-title = 개인 읽기 순서(드래그로 재정렬)
+gallery-personal-order-unordered = 미정렬
+personal-reading-order-menu-pin-top = 컬렉션 읽기 목록 맨 위에 고정
 gallery-sort-last-read = Last Read
 gallery-sort-last-read-title = Sort by last read (most recent first)
 gallery-group-none = 없음
@@ -422,10 +426,10 @@ gallery-packing-packed = Packed
 gallery-packing-packed-title = Mixed-size magazine layout
 
 # Gallery notes (collection-scoped child notes)
-gallery-note-add = Add Gallery Note
-gallery-note-edit = Edit Gallery Note
-gallery-note-remove = Remove Gallery Note
-gallery-note-label = Gallery note
+gallery-note-add = 개인 노트 추가
+gallery-note-edit = 개인 노트 편집
+gallery-note-remove = 개인 노트 제거
+gallery-note-label = 개인 노트
 magazine-shelf-watch = 보기
 magazine-shelf-watch-title = 최근 추가된 동영상
 magazine-shelf-listen = 듣기

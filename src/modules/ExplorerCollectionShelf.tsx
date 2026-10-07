@@ -53,6 +53,9 @@ import {
   explorerShelfSortBy,
   type ExplorerCollectionShelf,
 } from "./explorerConfig";
+import { applyPersonalReadingOrder } from "./personalReadingOrder";
+import { usePersonalReadingOrderKeys } from "./react-zotero-sync/personalReadingOrder";
+import { isOptionalFeatureEnabled } from "./optionalFeatures";
 
 export type ExplorerShelfSegment = {
   key: string;
@@ -97,8 +100,18 @@ function uniqueClassItems(rows: ClassAssignmentRow[]): Zotero.Item[] {
 function sortSegmentItems(
   items: Zotero.Item[],
   sortBy: GallerySortBy,
+  personalKeys?: string[],
 ): Zotero.Item[] {
-  return sortItems(uniqueItems(items), sortBy);
+  const unique = uniqueItems(items);
+  if (
+    isOptionalFeatureEnabled("gallery") &&
+    personalKeys &&
+    personalKeys.length > 0 &&
+    (sortBy === "personalOrder" || sortBy === "auto")
+  ) {
+    return applyPersonalReadingOrder(unique, personalKeys);
+  }
+  return sortItems(unique, sortBy);
 }
 
 function collectSubtreeItemIds(node: SubcollectionNode): number[] {
@@ -545,11 +558,19 @@ export function ExplorerCollectionShelfBody({
     collectionId > 0 && collectionHasSyllabusNote(collectionId);
   const layout = shelf.layout;
   const sortBy = explorerShelfSortBy(shelf);
-  const groupBy = explorerShelfGroupBy(shelf, {
-    classes: isSyllabus,
-    subcollections: true,
-    magazine: layout === "magazine" || layout === "cover",
-  });
+  const personalKeys = usePersonalReadingOrderKeys(collectionId);
+  const galleryEnabled = isOptionalFeatureEnabled("gallery");
+  const preferPersonal =
+    galleryEnabled &&
+    personalKeys.length > 0 &&
+    (sortBy === "personalOrder" || sortBy === "auto");
+  const groupBy = preferPersonal
+    ? "none"
+    : explorerShelfGroupBy(shelf, {
+        classes: isSyllabus,
+        subcollections: true,
+        magazine: layout === "magazine" || layout === "cover",
+      });
   const collectionItems = useZoteroCollectionItems(collectionId, {
     recursive: "pref",
   });
@@ -563,10 +584,10 @@ export function ExplorerCollectionShelfBody({
   const flatItems = useMemo(() => {
     const fromSyllabus = syllabusItems.map(({ zoteroItem }) => zoteroItem);
     if (fromSyllabus.length > 0) {
-      return sortSegmentItems(fromSyllabus, sortBy);
+      return sortSegmentItems(fromSyllabus, sortBy, personalKeys);
     }
-    return sortSegmentItems(fallbackItems, sortBy);
-  }, [syllabusItems, fallbackItems, sortBy]);
+    return sortSegmentItems(fallbackItems, sortBy, personalKeys);
+  }, [syllabusItems, fallbackItems, sortBy, personalKeys]);
 
   const { typeGroups } = useCollectionItemTypeGroups(syllabusItems);
   const { creatorGroups, uncreditedItems } =
@@ -584,7 +605,7 @@ export function ExplorerCollectionShelfBody({
   }, [groupBy, syllabus, collectionId, sortBy]);
 
   const segments: ExplorerShelfSegment[] = useMemo(() => {
-    if (groupBy === "none" || groupBy === "auto") {
+    if (preferPersonal || groupBy === "none" || groupBy === "auto") {
       return [];
     }
     if (groupBy === "classes" && classBundle) {
@@ -652,6 +673,7 @@ export function ExplorerCollectionShelfBody({
     }
     return [];
   }, [
+    preferPersonal,
     groupBy,
     classBundle,
     typeGroups,
@@ -855,5 +877,10 @@ export function explorerCollectionGroupByModes(
 export function explorerCollectionSortByModes(): Array<
   Exclude<GallerySortBy, "lastRead">
 > {
-  return ["auto", "title", "date", "dateAdded"];
+  const modes: Array<Exclude<GallerySortBy, "lastRead">> = ["auto"];
+  if (isOptionalFeatureEnabled("gallery")) {
+    modes.push("personalOrder");
+  }
+  modes.push("title", "date", "dateAdded");
+  return modes;
 }

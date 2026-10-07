@@ -237,9 +237,18 @@ const SYLLABUS_DOCUMENT_NOTE_TAG = "zotero-syllabus";
 const PINNED_COLLECTION_NOTE_TAG = "zotero-syllabus-pinned-collection";
 
 /**
+ * Hidden personal reading-order note — not a class note.
+ * Keep in sync with `PERSONAL_READING_ORDER_NOTE_TAG` in
+ * `src/modules/personalReadingOrder.ts`.
+ */
+const PERSONAL_READING_ORDER_NOTE_TAG =
+  "zotero-syllabus-personal-reading-order";
+
+/**
  * Top-level standalone note that can be assigned to a class. Excludes the
  * collection Syllabus document (`zotero-syllabus` tag), pin-only collection
- * marker notes (`zotero-syllabus-pinned-collection`), and child notes.
+ * marker notes (`zotero-syllabus-pinned-collection`), personal reading-order
+ * notes, and child notes.
  */
 export function isClassNoteItem(
   item: Zotero.Item | false | null | undefined,
@@ -266,6 +275,9 @@ export function isClassNoteItem(
         return false;
       }
       if (item.hasTag(PINNED_COLLECTION_NOTE_TAG)) {
+        return false;
+      }
+      if (item.hasTag(PERSONAL_READING_ORDER_NOTE_TAG)) {
         return false;
       }
     }
@@ -516,7 +528,13 @@ export function sortItemsByDateAdded(items: Zotero.Item[]): Zotero.Item[] {
 }
 
 export type ItemSortMode =
-  "auto" | "lastRead" | "title" | "creator" | "date" | "dateAdded";
+  | "auto"
+  | "lastRead"
+  | "title"
+  | "creator"
+  | "date"
+  | "dateAdded"
+  | "personalOrder";
 
 export function sortItems(
   items: Zotero.Item[],
@@ -534,7 +552,7 @@ export function sortItems(
   if (mode === "title") {
     return sortItemsByTitle(items);
   }
-  // auto / lastRead: keep caller order (last-read order is applied upstream)
+  // auto / lastRead / personalOrder: keep caller order (applied upstream)
   return [...items];
 }
 

@@ -98,6 +98,7 @@ import {
   serializeSyllabusNoteFallback,
   withUnrecognizedDocumentFields,
 } from "./syllabusNoteHtml";
+import { isPersonalReadingOrderNote } from "./personalReadingOrder";
 
 export { absorbSyllabusExtraFromItems } from "./syllabusExtra";
 export {
@@ -1619,6 +1620,10 @@ function collectionNoteCandidates(
 function looksLikeSyllabusNote(item: Zotero.Item): boolean {
   try {
     if (!item.isNote()) {
+      return false;
+    }
+    // Personal reading-order notes also use the plugin-data heading.
+    if (isPersonalReadingOrderNote(item)) {
       return false;
     }
     const tagged = itemHasSyllabusTag(item);

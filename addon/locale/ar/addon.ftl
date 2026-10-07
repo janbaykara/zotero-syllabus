@@ -172,14 +172,14 @@ toolbar-reading-schedule-review = مراجعة جدول القراءات
 toolbar-reading-schedule-open = فتح جدول القراءات
 
 # Context menus
-menu-set-priority = تعيين الأولوية
+menu-set-priority = تعيين أولوية التعيين
 menu-none = (لا شيء)
 menu-assign-to-class = تعيين إلى محاضرة
 menu-no-collection = (لم يُحدد أي مجموعة)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = إضافة إلى { $nomenclature } { $number } جديد
 menu-search-classes = البحث في المحاضرات…
-menu-set-reading-status = تعيين حالة القراءة
+menu-set-reading-status = تعيين حالة القراءة الشخصية
 status-done = مكتمل
 status-not-done = غير مكتمل
 
@@ -378,13 +378,17 @@ gallery-empty-subcollections = لا توجد مجموعات فرعية ولا ع
 gallery-unnumbered = بلا رقم
 gallery-unnumbered-desc = معيَّن دون رقم محاضرة.
 gallery-sort-auto = تلقائي
-gallery-sort-auto-title = ترتيب تلقائي (المجموعة أو المنهاج)
+gallery-sort-auto-title = ترتيب تلقائي (قائمة القراءة الشخصية، ثم الصف، ثم المجموعة)
 gallery-sort-az = أ–ي
 gallery-sort-az-title = فرز أ–ي
 gallery-sort-date = التاريخ
 gallery-sort-date-title = الفرز حسب التاريخ (الأحدث أولًا)
 gallery-sort-date-added = الإضافة
 gallery-sort-date-added-title = الفرز حسب تاريخ الإضافة (الأحدث أولًا)
+gallery-sort-personal-order = ترتيب القراءة
+gallery-sort-personal-order-title = ترتيب القراءة الشخصي (اسحب لإعادة الترتيب)
+gallery-personal-order-unordered = غير مرتب
+personal-reading-order-menu-pin-top = تثبيت في أعلى قائمة قراءة المجموعة
 gallery-sort-last-read = Last Read
 gallery-sort-last-read-title = Sort by last read (most recent first)
 gallery-group-none = لا شيء
@@ -422,10 +426,10 @@ gallery-packing-packed = Packed
 gallery-packing-packed-title = Mixed-size magazine layout
 
 # Gallery notes (collection-scoped child notes)
-gallery-note-add = Add Gallery Note
-gallery-note-edit = Edit Gallery Note
-gallery-note-remove = Remove Gallery Note
-gallery-note-label = Gallery note
+gallery-note-add = إضافة ملاحظة شخصية
+gallery-note-edit = تحرير الملاحظة الشخصية
+gallery-note-remove = إزالة الملاحظة الشخصية
+gallery-note-label = ملاحظة شخصية
 magazine-shelf-watch = مشاهدة
 magazine-shelf-watch-title = فيديوهات أُضيفت مؤخرًا
 magazine-shelf-listen = استماع

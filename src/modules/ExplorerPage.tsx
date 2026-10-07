@@ -279,6 +279,7 @@ const SORT_LABEL_IDS: Record<
   FluentMessageId
 > = {
   auto: "gallery-sort-auto",
+  personalOrder: "gallery-sort-personal-order",
   title: "gallery-sort-az",
   date: "gallery-sort-date",
   dateAdded: "gallery-sort-date-added",
@@ -289,6 +290,7 @@ const SORT_TITLE_IDS: Record<
   FluentMessageId
 > = {
   auto: "gallery-sort-auto-title",
+  personalOrder: "gallery-sort-personal-order-title",
   title: "gallery-sort-az-title",
   date: "gallery-sort-date-title",
   dateAdded: "gallery-sort-date-added-title",
@@ -299,6 +301,7 @@ const SORT_ICONS: Record<
   typeof ListOrdered
 > = {
   auto: ListOrdered,
+  personalOrder: ListOrdered,
   title: ArrowDownAZ,
   date: Calendar,
   dateAdded: CalendarPlus,

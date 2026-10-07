@@ -5130,3 +5130,49 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   min-width: 2.2em;
   padding-inline-end: 4px;
 }
+
+/* Personal reading order Gallery DnD */
+.syllabus-personal-order-tile {
+  position: relative;
+}
+
+.syllabus-personal-order-tile.is-dragging {
+  opacity: 0.45;
+  cursor: grabbing;
+}
+
+.syllabus-personal-order-tile.is-drop-before::before,
+.syllabus-personal-order-tile.is-drop-after::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  right: 0;
+  height: 3px;
+  pointer-events: none;
+  background: var(--accent-blue, #2255e0);
+  border-radius: 2px;
+}
+
+.syllabus-personal-order-tile.is-drop-before::before {
+  top: -0.35rem;
+}
+
+.syllabus-personal-order-tile.is-drop-after::after {
+  bottom: -0.35rem;
+}
+
+.syllabus-gallery-grid > .syllabus-personal-order-tile.is-drop-before::before,
+.syllabus-gallery-grid > .syllabus-personal-order-tile.is-drop-after::after {
+  left: -0.35rem;
+  right: auto;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  height: auto;
+}
+
+.syllabus-gallery-grid > .syllabus-personal-order-tile.is-drop-after::after {
+  left: auto;
+  right: -0.35rem;
+}

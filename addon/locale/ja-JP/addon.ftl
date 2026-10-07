@@ -172,14 +172,14 @@ toolbar-reading-schedule-review = 読書スケジュールを確認
 toolbar-reading-schedule-open = 読書スケジュールを開く
 
 # Context menus
-menu-set-priority = 優先度を設定
+menu-set-priority = 課題の優先度を設定
 menu-none = （なし）
 menu-assign-to-class = 授業に割り当て
 menu-no-collection = （コレクションが選択されていません）
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = 新しい{ $nomenclature } { $number }に追加
 menu-search-classes = 授業を検索…
-menu-set-reading-status = 読書ステータスを設定
+menu-set-reading-status = 個人の読書ステータスを設定
 status-done = 完了
 status-not-done = 未完了
 
@@ -378,13 +378,17 @@ gallery-empty-subcollections = このコレクションにサブコレクショ�
 gallery-unnumbered = 番号なし
 gallery-unnumbered-desc = 授業番号なしで割り当てられています。
 gallery-sort-auto = 自動
-gallery-sort-auto-title = 自動順（コレクションまたはシラバス）
+gallery-sort-auto-title = 自動順（個人読書リスト → 授業 → コレクション）
 gallery-sort-az = A–Z
 gallery-sort-az-title = A–Z で並べ替え
 gallery-sort-date = 日付
 gallery-sort-date-title = 日付順（新しい順）
 gallery-sort-date-added = 追加日
 gallery-sort-date-added-title = 追加日順（新しい順）
+gallery-sort-personal-order = 読書順
+gallery-sort-personal-order-title = 個人の読書順（ドラッグで並び替え）
+gallery-personal-order-unordered = 未整理
+personal-reading-order-menu-pin-top = コレクション読書リストの先頭にピン留め
 gallery-sort-last-read = Last Read
 gallery-sort-last-read-title = Sort by last read (most recent first)
 gallery-group-none = なし
@@ -422,10 +426,10 @@ gallery-packing-packed = Packed
 gallery-packing-packed-title = Mixed-size magazine layout
 
 # Gallery notes (collection-scoped child notes)
-gallery-note-add = Add Gallery Note
-gallery-note-edit = Edit Gallery Note
-gallery-note-remove = Remove Gallery Note
-gallery-note-label = Gallery note
+gallery-note-add = 個人メモを追加
+gallery-note-edit = 個人メモを編集
+gallery-note-remove = 個人メモを削除
+gallery-note-label = 個人メモ
 magazine-shelf-watch = 見る
 magazine-shelf-watch-title = 最近追加した動画
 magazine-shelf-listen = 聴く

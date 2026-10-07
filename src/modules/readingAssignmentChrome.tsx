@@ -5,6 +5,8 @@ import { twMerge } from "tailwind-merge";
 import { getString } from "../utils/locale";
 import type { ItemSyllabusAssignment } from "../utils/schemas";
 import { SyllabusManager } from "./syllabus";
+import { usePersonalReadingOrderGeneration } from "./react-zotero-sync/personalReadingOrder";
+import { isItemReadingDone } from "./personalReadingOrder";
 
 export type ReadingTileChrome = {
   collectionId: number;
@@ -33,7 +35,11 @@ export function ReadingDoneCheckbox({
   onReaderCheck?: () => void | Promise<void>;
   className?: string;
 }) {
-  const done = !onReaderCheck && assignment?.status === "done";
+  const generation = usePersonalReadingOrderGeneration();
+  void generation;
+  // Gallery / tile chrome: always item-level (covers every assignment).
+  const done =
+    !onReaderCheck && isItemReadingDone(collectionId, item.key);
 
   const handleChange = async (e: JSX.TargetedEvent<HTMLInputElement>) => {
     e.stopPropagation();
@@ -51,7 +57,7 @@ export function ReadingDoneCheckbox({
       await SyllabusManager.setReadingStatus(
         item,
         collectionId,
-        assignment?.id,
+        undefined,
         done ? null : "done",
         "page",
       );

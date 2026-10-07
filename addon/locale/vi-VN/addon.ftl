@@ -172,14 +172,14 @@ toolbar-reading-schedule-review = Xem lại Lịch đọc
 toolbar-reading-schedule-open = Mở Lịch đọc
 
 # Context menus
-menu-set-priority = Đặt mức ưu tiên
+menu-set-priority = Đặt mức ưu tiên bài tập
 menu-none = (Không)
 menu-assign-to-class = Gán vào buổi học
 menu-no-collection = (Chưa chọn bộ sưu tập)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = Thêm vào { $nomenclature } { $number } mới
 menu-search-classes = Tìm buổi học…
-menu-set-reading-status = Đặt trạng thái đọc
+menu-set-reading-status = Đặt trạng thái đọc cá nhân
 status-done = Đã xong
 status-not-done = Chưa xong
 
@@ -378,13 +378,17 @@ gallery-empty-subcollections = Không có bộ sưu tập con hoặc mục trong
 gallery-unnumbered = Không số
 gallery-unnumbered-desc = Đã gán mà không có số buổi.
 gallery-sort-auto = Tự động
-gallery-sort-auto-title = Thứ tự tự động (bộ sưu tập hoặc đề cương)
+gallery-sort-auto-title = Thứ tự tự động (danh sách đọc cá nhân, rồi lớp, rồi bộ sưu tập)
 gallery-sort-az = A–Z
 gallery-sort-az-title = Sắp xếp A–Z
 gallery-sort-date = Ngày
 gallery-sort-date-title = Sắp xếp theo ngày (mới nhất trước)
 gallery-sort-date-added = Đã thêm
 gallery-sort-date-added-title = Sắp xếp theo ngày thêm (mới nhất trước)
+gallery-sort-personal-order = Thứ tự đọc
+gallery-sort-personal-order-title = Thứ tự đọc cá nhân (kéo để sắp xếp lại)
+gallery-personal-order-unordered = Chưa sắp xếp
+personal-reading-order-menu-pin-top = Ghim lên đầu danh sách đọc của bộ sưu tập
 gallery-sort-last-read = Last Read
 gallery-sort-last-read-title = Sort by last read (most recent first)
 gallery-group-none = Không
@@ -422,10 +426,10 @@ gallery-packing-packed = Packed
 gallery-packing-packed-title = Mixed-size magazine layout
 
 # Gallery notes (collection-scoped child notes)
-gallery-note-add = Add Gallery Note
-gallery-note-edit = Edit Gallery Note
-gallery-note-remove = Remove Gallery Note
-gallery-note-label = Gallery note
+gallery-note-add = Thêm ghi chú cá nhân
+gallery-note-edit = Sửa ghi chú cá nhân
+gallery-note-remove = Xóa ghi chú cá nhân
+gallery-note-label = Ghi chú cá nhân
 magazine-shelf-watch = Xem
 magazine-shelf-watch-title = Video mới thêm
 magazine-shelf-listen = Nghe

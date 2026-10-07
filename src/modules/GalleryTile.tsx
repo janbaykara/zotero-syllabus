@@ -42,6 +42,8 @@ import {
   readingChromeEqual,
   type ReadingTileChrome,
 } from "./readingAssignmentChrome";
+import { isItemReadingDone } from "./personalReadingOrder";
+import { usePersonalReadingOrderGeneration } from "./react-zotero-sync/personalReadingOrder";
 
 type GalleryTileProps = {
   item: Zotero.Item;
@@ -122,7 +124,11 @@ export const GalleryTile = memo(function GalleryTile({
   const instruction = chrome?.assignment?.classInstruction?.trim() || "";
   const priorityId =
     chrome?.showPriority === false ? "" : chrome?.assignment?.priority || "";
-  const done = chrome?.readerMode && chrome.assignment?.status === "done";
+  const personalOrderGeneration = usePersonalReadingOrderGeneration();
+  void personalOrderGeneration;
+  const done =
+    Boolean(chrome?.readerMode && chrome.collectionId) &&
+    isItemReadingDone(chrome!.collectionId, item.key);
 
   const printUrl = (() => {
     const raw = String(item.getField("url") || "").trim();

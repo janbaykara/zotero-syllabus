@@ -26,6 +26,7 @@ import {
 } from "../utils/cache";
 import { useZoteroClassMetadata } from "./react-zotero-sync/classMetadata";
 import { useSyllabusDocumentGeneration } from "./react-zotero-sync/collectionDocument";
+import { usePersonalReadingOrderGeneration } from "./react-zotero-sync/personalReadingOrder";
 import { formatReadingDate } from "../utils/dates";
 import { getString, getUiDir, compareLocale } from "../utils/locale";
 import { TextInput } from "./syllabusInputs";
@@ -384,16 +385,11 @@ function ItemPaneContent({
       collectionId: number,
       status: "done" | null,
     ) => {
-      if (!assignmentId) {
-        ztoolkit.log("Error: Assignment ID missing");
-        return;
-      }
-
-      await SyllabusManager.updateClassAssignment(
+      await SyllabusManager.setReadingStatus(
         itemVersion.item,
         collectionId,
         assignmentId,
-        { status },
+        status,
         "item-pane",
       );
       await handleSave();
@@ -557,6 +553,8 @@ function AssignmentEditor({
 }: AssignmentEditorProps) {
   const [cls, _, __] = useZoteroClassMetadata(collectionId);
   const selectedIdentifiers = useSelectedSyllabusIdentifiers();
+  const personalOrderGeneration = usePersonalReadingOrderGeneration();
+  void personalOrderGeneration;
   const assignmentClass = classByNumber(cls, assignment.classNumber);
 
   if (!assignment.id) {
@@ -596,8 +594,11 @@ function AssignmentEditor({
     });
   };
 
-  const assignmentStatus = assignment.status || null;
-  const isDone = assignmentStatus === "done";
+  const isDone = SyllabusManager.isAssignmentReadingDone(
+    collectionId,
+    item.key,
+    assignment.id,
+  );
 
   const handleNavigateToSyllabus = useCallback(
     (e: JSX.TargetedMouseEvent<HTMLElement>) => {

@@ -170,14 +170,14 @@ toolbar-reading-schedule-review = Review your Reading Schedule
 toolbar-reading-schedule-open = Open Reading Schedule
 
 # Context menus
-menu-set-priority = Set Priority
+menu-set-priority = Set assignment priority
 menu-none = (None)
 menu-assign-to-class = Assign to a class
 menu-no-collection = (No collection selected)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = Add to new { $nomenclature } { $number }
 menu-search-classes = Search classes…
-menu-set-reading-status = Set Reading Status
+menu-set-reading-status = Set personal reading status
 status-done = Done
 status-not-done = Not Done
 
@@ -376,13 +376,17 @@ gallery-empty-subcollections = No subcollections or items in this collection.
 gallery-unnumbered = Unnumbered
 gallery-unnumbered-desc = Assigned without a class number.
 gallery-sort-auto = Auto
-gallery-sort-auto-title = Automatic order (collection or syllabus)
+gallery-sort-auto-title = Automatic order (personal reading list, then class, then collection)
 gallery-sort-az = A–Z
 gallery-sort-az-title = Sort A–Z
 gallery-sort-date = Date
 gallery-sort-date-title = Sort by date (newest first)
 gallery-sort-date-added = Added
 gallery-sort-date-added-title = Sort by date added (newest first)
+gallery-sort-personal-order = Reading order
+gallery-sort-personal-order-title = Personal reading order (drag to rearrange)
+gallery-personal-order-unordered = Unordered
+personal-reading-order-menu-pin-top = Pin to top of collection reading list
 gallery-sort-last-read = Last Read
 gallery-sort-last-read-title = Sort by last read (most recent first)
 gallery-group-none = None
@@ -420,10 +424,10 @@ gallery-packing-packed = Packed
 gallery-packing-packed-title = Mixed-size magazine layout
 
 # Gallery notes (collection-scoped child notes)
-gallery-note-add = Add Gallery Note
-gallery-note-edit = Edit Gallery Note
-gallery-note-remove = Remove Gallery Note
-gallery-note-label = Gallery note
+gallery-note-add = Add personal note
+gallery-note-edit = Edit personal note
+gallery-note-remove = Remove personal note
+gallery-note-label = Personal note
 magazine-shelf-watch = Watch
 magazine-shelf-watch-title = Recently added videos
 magazine-shelf-listen = Listen

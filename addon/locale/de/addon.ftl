@@ -172,14 +172,14 @@ toolbar-reading-schedule-review = Lektüreplan prüfen
 toolbar-reading-schedule-open = Lektüreplan öffnen
 
 # Context menus
-menu-set-priority = Priorität festlegen
+menu-set-priority = Zuweisungspriorität festlegen
 menu-none = (Keine)
 menu-assign-to-class = Einer Sitzung zuweisen
 menu-no-collection = (Keine Sammlung ausgewählt)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = Zu neuer { $nomenclature } { $number } hinzufügen
 menu-search-classes = Sitzungen durchsuchen…
-menu-set-reading-status = Lesestatus festlegen
+menu-set-reading-status = Persönlichen Lesestatus festlegen
 status-done = Erledigt
 status-not-done = Nicht erledigt
 
@@ -378,13 +378,17 @@ gallery-empty-subcollections = Keine Untersammlungen oder Einträge in dieser Sa
 gallery-unnumbered = Unnummeriert
 gallery-unnumbered-desc = Zugewiesen ohne Sitzungsnummer.
 gallery-sort-auto = Auto
-gallery-sort-auto-title = Automatische Reihenfolge (Sammlung oder Lehrplan)
+gallery-sort-auto-title = Automatische Reihenfolge (persönliche Leseliste, dann Klasse, dann Sammlung)
 gallery-sort-az = A–Z
 gallery-sort-az-title = Nach A–Z sortieren
 gallery-sort-date = Datum
 gallery-sort-date-title = Nach Datum sortieren (neueste zuerst)
 gallery-sort-date-added = Hinzugefügt
 gallery-sort-date-added-title = Nach Hinzufügedatum sortieren (neueste zuerst)
+gallery-sort-personal-order = Lesereihenfolge
+gallery-sort-personal-order-title = Persönliche Lesereihenfolge (Ziehen zum Umsortieren)
+gallery-personal-order-unordered = Ungeordnet
+personal-reading-order-menu-pin-top = An den Anfang der Sammlung-Leseliste heften
 gallery-sort-last-read = Zuletzt gelesen
 gallery-sort-last-read-title = Nach zuletzt gelesen sortieren (neueste zuerst)
 gallery-group-none = Keine
@@ -422,10 +426,10 @@ gallery-packing-packed = Gepackt
 gallery-packing-packed-title = Magazinlayout mit gemischten Größen
 
 # Gallery notes (collection-scoped child notes)
-gallery-note-add = Add Gallery Note
-gallery-note-edit = Edit Gallery Note
-gallery-note-remove = Remove Gallery Note
-gallery-note-label = Gallery note
+gallery-note-add = Persönliche Notiz hinzufügen
+gallery-note-edit = Persönliche Notiz bearbeiten
+gallery-note-remove = Persönliche Notiz entfernen
+gallery-note-label = Persönliche Notiz
 magazine-shelf-watch = Ansehen
 magazine-shelf-watch-title = Zuletzt hinzugefügte Videos
 magazine-shelf-listen = Anhören

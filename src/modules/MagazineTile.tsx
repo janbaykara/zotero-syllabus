@@ -42,6 +42,8 @@ import {
   readingChromeEqual,
   type ReadingTileChrome,
 } from "./readingAssignmentChrome";
+import { isItemReadingDone } from "./personalReadingOrder";
+import { usePersonalReadingOrderGeneration } from "./react-zotero-sync/personalReadingOrder";
 import { NoteHtml } from "./NoteHtml";
 import {
   galleryNoteFingerprint,
@@ -177,7 +179,11 @@ export const MagazineTile = memo(function MagazineTile({
   const instruction = chrome?.assignment?.classInstruction?.trim() || "";
   const priorityId =
     chrome?.showPriority === false ? "" : chrome?.assignment?.priority || "";
-  const done = chrome?.readerMode && chrome.assignment?.status === "done";
+  const personalOrderGeneration = usePersonalReadingOrderGeneration();
+  void personalOrderGeneration;
+  const done =
+    Boolean(chrome?.readerMode && chrome.collectionId) &&
+    isItemReadingDone(chrome!.collectionId, item.key);
 
   const handleGalleryNoteClick = (e: JSX.TargetedMouseEvent<HTMLElement>) => {
     e.stopPropagation();

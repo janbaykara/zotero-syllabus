@@ -66,6 +66,18 @@ import {
   shutdownGalleryNotes,
 } from "./galleryNote";
 import {
+  initializePersonalReadingOrder,
+  isAssignmentReadingDone,
+  isItemReadingDone,
+  mergePersonalReadingDoneKeys,
+  pinItemToPersonalReadingOrder,
+  setAssignmentReadingDone,
+  setItemReadingDone,
+  shutdownPersonalReadingOrder,
+  whenPersonalReadingOrderReady,
+} from "./personalReadingOrder";
+import { migrateLegacyReaderModePrefs } from "./react-zotero-sync/readerMode";
+import {
   coerceEnabledViewMode,
   isOptionalFeatureEnabled,
   migrateOptionalFeatures,
@@ -188,6 +200,81 @@ function coerceCollectionViewMode(value: unknown): CollectionViewMode {
     return "gallery";
   }
   return parsed.data;
+}
+
+/**
+ * One-shot: copy assignment.status === "done" into the Personal Reading Order
+ * note, then strip status from syllabus assignments (personal progress out of
+ * the shared syllabus document).
+ */
+async function migrateAssignmentStatusToPersonalReadingDone(): Promise<void> {
+  await Promise.all([whenSyllabusNotesReady(), whenPersonalReadingOrderReady()]);
+  const { getAllCollections } = await import("../utils/zotero");
+  for (const collection of getAllCollections()) {
+    try {
+      const document = getCollectionDocument(collection);
+      const doneKeys: string[] = [];
+      const doneAssignmentIds: string[] = [];
+      let needsStrip = false;
+      for (const [itemKey, assignments] of Object.entries(document.items || {})) {
+        const list = assignments || [];
+        const doneInItem = list.filter((a) => a.status === "done");
+        if (doneInItem.length === 0) {
+          continue;
+        }
+        needsStrip = true;
+        for (const assignment of doneInItem) {
+          if (assignment.id) {
+            doneAssignmentIds.push(assignment.id);
+          }
+        }
+        // If every assignment on the item was done, store item-level done too.
+        if (doneInItem.length === list.length && list.length > 0) {
+          doneKeys.push(itemKey);
+        }
+      }
+      if (!needsStrip) {
+        continue;
+      }
+      await mergePersonalReadingDoneKeys(
+        collection,
+        doneKeys,
+        doneAssignmentIds,
+      );
+      await mutateCollectionDocument(collection, (doc) => {
+        const items: typeof doc.items = {};
+        for (const [itemKey, assignments] of Object.entries(doc.items || {})) {
+          const next = (assignments || [])
+            .map((assignment) => {
+              if (assignment.status == null) {
+                return assignment;
+              }
+              const { status: _status, ...rest } = assignment;
+              return rest;
+            })
+            .filter((assignment) => {
+              // Drop rows that only existed for personal done tracking.
+              return Boolean(
+                assignment.classId ||
+                  assignment.classNumber != null ||
+                  assignment.priority ||
+                  assignment.classInstruction,
+              );
+            });
+          if (next.length) {
+            items[itemKey] = next;
+          }
+        }
+        return { ...doc, items };
+      });
+    } catch (error) {
+      ztoolkit.log(
+        "Error migrating done status for collection",
+        collection.id,
+        error,
+      );
+    }
+  }
 }
 
 function migrateLegacyBrowseViewMode(
@@ -454,6 +541,18 @@ export class SyllabusManager {
     ztoolkit.log("SyllabusManager.onStartup");
     initializeSyllabusNotes();
     initializeGalleryNotes();
+    initializePersonalReadingOrder();
+    try {
+      migrateLegacyReaderModePrefs();
+    } catch (error) {
+      ztoolkit.log("Error migrating readerModes prefs:", error);
+    }
+    void migrateAssignmentStatusToPersonalReadingDone().catch((error) => {
+      ztoolkit.log(
+        "Error migrating assignment status to personal reading done:",
+        error,
+      );
+    });
     // Chrome refresh when the selected collection's syllabus note is removed.
     registerSyllabusNoteDetachedHandler((collectionRef) => {
       // Defer past the item save/notifier stack.
@@ -762,12 +861,76 @@ export class SyllabusManager {
   }
 
   static registerContextualMenus() {
+    // Syllabus → Personal reading list → Global pinned (separators between).
+    // Leading separator sets Syllabus off from Zotero’s native item actions.
+    this.setupContextMenuSectionSeparator(
+      "syllabus-menu-sep-before",
+      () => true,
+      () => this.contextMenuSyllabusSectionVisible(),
+    );
     this.setupContextMenuSetPriority();
     this.setupContextMenuSetClassNumber();
+    this.setupContextMenuSectionSeparator(
+      "syllabus-menu-sep-personal",
+      () => this.contextMenuSyllabusSectionVisible(),
+      () => this.contextMenuPersonalSectionVisible(),
+    );
     this.setupContextMenuSetStatus();
-    this.setupContextMenuPinned();
+    this.setupContextMenuPersonalReadingOrder();
     this.setupContextMenuGalleryNote();
+    this.setupContextMenuSectionSeparator(
+      "syllabus-menu-sep-pinned",
+      () => this.contextMenuPersonalSectionVisible(),
+      () => this.contextMenuPinnedSectionVisible(),
+    );
+    this.setupContextMenuPinned();
     this.setupContextMenuAddCollectionShelf();
+  }
+
+  /** Syllabus assignment chrome (priority / assign to class). */
+  static contextMenuSyllabusSectionVisible(): boolean {
+    return this.selectionHasRegularItem();
+  }
+
+  /** Personal reading list: status, reading-order pin, personal notes. */
+  static contextMenuPersonalSectionVisible(): boolean {
+    if (!this.selectionHasRegularItem()) {
+      return false;
+    }
+    // Reading status is always available for regular items.
+    return true;
+  }
+
+  /** Global pinned shelf (Explorer / Reading Schedule). */
+  static contextMenuPinnedSectionVisible(): boolean {
+    if (
+      !isOptionalFeatureEnabled("explorer") &&
+      !isOptionalFeatureEnabled("readingSchedule")
+    ) {
+      return false;
+    }
+    if (this.selectionHasRegularItem()) {
+      return true;
+    }
+    try {
+      const items = ztoolkit.getGlobal("ZoteroPane").getSelectedItems() || [];
+      return items.some((item) => isPinnedSyllabusNoteCandidate(item));
+    } catch {
+      return false;
+    }
+  }
+
+  static setupContextMenuSectionSeparator(
+    id: string,
+    sectionAboveVisible: () => boolean,
+    sectionBelowVisible: () => boolean,
+  ) {
+    ztoolkit.Menu.unregister(id);
+    ztoolkit.Menu.register("item", {
+      tag: "menuseparator",
+      id,
+      isHidden: () => !(sectionAboveVisible() && sectionBelowVisible()),
+    });
   }
 
   static onNotify(
@@ -862,6 +1025,7 @@ export class SyllabusManager {
     unpatchManagedCollectionTreePrototype();
     shutdownSyllabusNotes();
     shutdownGalleryNotes();
+    shutdownPersonalReadingOrder();
   }
 
   static registerNotifier() {
@@ -2017,10 +2181,20 @@ export class SyllabusManager {
     }
   }
 
+  /** Assignment ids for an item in a collection (for sibling checkbox logic). */
+  static assignmentIdsForItem(
+    item: Zotero.Item,
+    collectionId: number | GetByLibraryAndKeyArgs,
+  ): string[] {
+    return this.getItemSyllabusDataForCollection(item, collectionId)
+      .map((entry) => entry.id)
+      .filter((id): id is string => Boolean(id));
+  }
+
   /**
-   * Toggle or set reading done status. For further-reading items with no
-   * assignment yet, creates a classless status-only row. Clearing done on a
-   * bare classless row removes it so the note stays clean.
+   * Toggle or set reading done status on the Personal Reading Order note.
+   * With `assignmentId` (Syllabus page): per-assignment. Without (Gallery):
+   * item-level (covers all assignments for that item key).
    */
   static async setReadingStatus(
     item: Zotero.Item,
@@ -2029,54 +2203,72 @@ export class SyllabusManager {
     status: "done" | null,
     source: "page" | "item-pane" | "context-menu",
   ): Promise<void> {
-    if (assignmentId) {
-      const assignments = this.getItemSyllabusDataForCollection(
-        item,
-        collectionId,
-      );
-      const existing = assignments.find((entry) => entry.id === assignmentId);
-      if (!existing) {
-        ztoolkit.log("Warning: Assignment not found by ID:", assignmentId);
-        return;
-      }
-
-      const resolvedClassNumber =
-        this.getClassNumber(collectionId, existing.classId) ??
-        existing.classNumber;
-      const isBare =
-        !existing.priority &&
-        !existing.classInstruction &&
-        resolvedClassNumber === undefined;
-
-      if (status === null && isBare) {
-        await this.removeAssignmentById(
-          item,
-          collectionId,
-          assignmentId,
-          source,
-        );
-        return;
-      }
-
-      await this.updateClassAssignment(
-        item,
-        collectionId,
-        assignmentId,
-        { status },
-        source,
-      );
+    const collection =
+      typeof collectionId === "number"
+        ? getCachedCollectionById(collectionId) ||
+          Zotero.Collections.get(collectionId) ||
+          null
+        : Zotero.Collections.getByLibraryAndKey(collectionId[0], collectionId[1]) ||
+          null;
+    if (!collection) {
+      ztoolkit.log("setReadingStatus: collection not found", collectionId);
       return;
     }
-
-    if (status === "done") {
-      await this.addClassAssignment(
-        item,
-        collectionId,
-        undefined,
-        { status },
-        source,
+    const siblings = this.assignmentIdsForItem(item, collectionId);
+    if (assignmentId) {
+      await setAssignmentReadingDone(
+        collection,
+        item.key,
+        assignmentId,
+        status === "done",
+        siblings,
+      );
+    } else {
+      await setItemReadingDone(
+        collection,
+        item.key,
+        status === "done",
+        siblings,
       );
     }
+    this.onItemUpdate(item, source);
+  }
+
+  /** Item-level done (Gallery). */
+  static isItemReadingDone(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    itemKey: string,
+  ): boolean {
+    const collection =
+      typeof collectionId === "number"
+        ? getCachedCollectionById(collectionId) ||
+          Zotero.Collections.get(collectionId) ||
+          null
+        : Zotero.Collections.getByLibraryAndKey(collectionId[0], collectionId[1]) ||
+          null;
+    if (!collection) {
+      return false;
+    }
+    return isItemReadingDone(collection, itemKey);
+  }
+
+  /** Assignment-level done (Syllabus), including item-level covering all. */
+  static isAssignmentReadingDone(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    itemKey: string,
+    assignmentId: string | undefined,
+  ): boolean {
+    const collection =
+      typeof collectionId === "number"
+        ? getCachedCollectionById(collectionId) ||
+          Zotero.Collections.get(collectionId) ||
+          null
+        : Zotero.Collections.getByLibraryAndKey(collectionId[0], collectionId[1]) ||
+          null;
+    if (!collection) {
+      return false;
+    }
+    return isAssignmentReadingDone(collection, itemKey, assignmentId);
   }
 
   static setupContextMenuSetPriority() {
@@ -2287,9 +2479,14 @@ export class SyllabusManager {
       const items = zoteroPane.getSelectedItems();
       for (const item of items) {
         if (item.isRegularItem()) {
-          await this.applyToFirstAssignment(item, selectedCollection.id, {
-            status: status || undefined,
-          });
+          // Context menu: item-level (same as Gallery) so all assignments match.
+          await this.setReadingStatus(
+            item,
+            selectedCollection.id,
+            undefined,
+            status,
+            "context-menu",
+          );
           await item.saveTx();
         }
       }
@@ -2330,6 +2527,59 @@ export class SyllabusManager {
     } catch {
       return false;
     }
+  }
+
+  static setupContextMenuPersonalReadingOrder() {
+    ztoolkit.Menu.unregister("syllabus-personal-reading-order-menu");
+    // Personal reading order UI is part of Gallery.
+    if (!isOptionalFeatureEnabled("gallery")) {
+      return;
+    }
+
+    const selectedRegularItems = (): Zotero.Item[] => {
+      try {
+        const items = ztoolkit.getGlobal("ZoteroPane").getSelectedItems() || [];
+        return items.filter((item) => {
+          try {
+            return item.isRegularItem();
+          } catch {
+            return false;
+          }
+        });
+      } catch {
+        return [];
+      }
+    };
+
+    ztoolkit.Menu.register("item", {
+      tag: "menuitem",
+      id: "syllabus-personal-reading-order-menu",
+      label: getString("personal-reading-order-menu-pin-top"),
+      isHidden: () => {
+        if (!isOptionalFeatureEnabled("gallery")) {
+          return true;
+        }
+        if (selectedRegularItems().length === 0) {
+          return true;
+        }
+        const collection = getSelectedCollection();
+        return !collection;
+      },
+      commandListener: async () => {
+        if (!isOptionalFeatureEnabled("gallery")) {
+          return;
+        }
+        const collection = getSelectedCollection();
+        if (!collection) {
+          return;
+        }
+        const items = selectedRegularItems();
+        // Pin in reverse so the first selected ends up at the top.
+        for (let i = items.length - 1; i >= 0; i--) {
+          await pinItemToPersonalReadingOrder(collection, items[i].key);
+        }
+      },
+    });
   }
 
   static setupContextMenuPinned() {
@@ -2524,6 +2774,10 @@ export class SyllabusManager {
   static setupContextMenuGalleryNote() {
     ztoolkit.Menu.unregister("syllabus-gallery-note-edit-menu");
     ztoolkit.Menu.unregister("syllabus-gallery-note-remove-menu");
+    // Personal notes are part of Gallery.
+    if (!isOptionalFeatureEnabled("gallery")) {
+      return;
+    }
 
     const selectedRegularItems = (): Zotero.Item[] => {
       try {
@@ -2546,6 +2800,9 @@ export class SyllabusManager {
       label: getString("gallery-note-edit"),
       icon: "chrome://zotero/skin/16/universal/note.svg",
       isHidden: () => {
+        if (!isOptionalFeatureEnabled("gallery")) {
+          return true;
+        }
         const collection = getSelectedCollection();
         return !collection || selectedRegularItems().length === 0;
       },
@@ -2566,6 +2823,9 @@ export class SyllabusManager {
         );
       },
       commandListener: async () => {
+        if (!isOptionalFeatureEnabled("gallery")) {
+          return;
+        }
         const collection = getSelectedCollection();
         if (!collection) {
           return;
@@ -2583,6 +2843,9 @@ export class SyllabusManager {
       label: getString("gallery-note-remove"),
       icon: "chrome://zotero/skin/16/universal/trash.svg",
       isHidden: () => {
+        if (!isOptionalFeatureEnabled("gallery")) {
+          return true;
+        }
         const collection = getSelectedCollection();
         if (!collection) {
           return true;
@@ -2592,6 +2855,9 @@ export class SyllabusManager {
         );
       },
       commandListener: async () => {
+        if (!isOptionalFeatureEnabled("gallery")) {
+          return;
+        }
         const collection = getSelectedCollection();
         if (!collection) {
           return;

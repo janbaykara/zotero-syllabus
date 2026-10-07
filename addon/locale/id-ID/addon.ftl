@@ -172,14 +172,14 @@ toolbar-reading-schedule-review = Tinjau Jadwal Bacaan Anda
 toolbar-reading-schedule-open = Buka Jadwal Bacaan
 
 # Context menus
-menu-set-priority = Atur prioritas
+menu-set-priority = Atur prioritas tugas
 menu-none = (Tidak ada)
 menu-assign-to-class = Tetapkan ke kelas
 menu-no-collection = (Tidak ada koleksi yang dipilih)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = Tambahkan ke { $nomenclature } { $number } baru
 menu-search-classes = Cari kelas…
-menu-set-reading-status = Atur status bacaan
+menu-set-reading-status = Atur status bacaan pribadi
 status-done = Selesai
 status-not-done = Belum selesai
 
@@ -378,13 +378,17 @@ gallery-empty-subcollections = Tidak ada subkoleksi atau item dalam koleksi ini.
 gallery-unnumbered = Tanpa nomor
 gallery-unnumbered-desc = Ditetapkan tanpa nomor kelas.
 gallery-sort-auto = Otomatis
-gallery-sort-auto-title = Urutan otomatis (koleksi atau silabus)
+gallery-sort-auto-title = Urutan otomatis (daftar bacaan pribadi, lalu kelas, lalu koleksi)
 gallery-sort-az = A–Z
 gallery-sort-az-title = Urutkan A–Z
 gallery-sort-date = Tanggal
 gallery-sort-date-title = Urutkan menurut tanggal (terbaru dulu)
 gallery-sort-date-added = Ditambahkan
 gallery-sort-date-added-title = Urutkan menurut tanggal ditambahkan (terbaru dulu)
+gallery-sort-personal-order = Urutan baca
+gallery-sort-personal-order-title = Urutan baca pribadi (seret untuk menyusun ulang)
+gallery-personal-order-unordered = Belum diurutkan
+personal-reading-order-menu-pin-top = Sematkan ke atas daftar baca koleksi
 gallery-sort-last-read = Last Read
 gallery-sort-last-read-title = Sort by last read (most recent first)
 gallery-group-none = Tidak ada
@@ -422,10 +426,10 @@ gallery-packing-packed = Packed
 gallery-packing-packed-title = Mixed-size magazine layout
 
 # Gallery notes (collection-scoped child notes)
-gallery-note-add = Add Gallery Note
-gallery-note-edit = Edit Gallery Note
-gallery-note-remove = Remove Gallery Note
-gallery-note-label = Gallery note
+gallery-note-add = Tambah catatan pribadi
+gallery-note-edit = Edit catatan pribadi
+gallery-note-remove = Hapus catatan pribadi
+gallery-note-label = Catatan pribadi
 magazine-shelf-watch = Tonton
 magazine-shelf-watch-title = Video yang baru ditambahkan
 magazine-shelf-listen = Dengar

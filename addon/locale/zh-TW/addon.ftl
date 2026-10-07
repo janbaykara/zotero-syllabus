@@ -172,14 +172,14 @@ toolbar-reading-schedule-review = 查看閱讀日程
 toolbar-reading-schedule-open = 開啟閱讀日程
 
 # Context menus
-menu-set-priority = 設定優先順序
+menu-set-priority = 設定作業優先順序
 menu-none = （無）
 menu-assign-to-class = 指派到課堂
 menu-no-collection = （未選取分類）
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = 新增到新{ $nomenclature } { $number }
 menu-search-classes = 搜尋課堂…
-menu-set-reading-status = 設定閱讀狀態
+menu-set-reading-status = 設定個人閱讀狀態
 status-done = 已完成
 status-not-done = 未完成
 
@@ -378,13 +378,17 @@ gallery-empty-subcollections = 此分類中沒有子分類或條目。
 gallery-unnumbered = 未編號
 gallery-unnumbered-desc = 已指派但沒有課堂編號。
 gallery-sort-auto = 自動
-gallery-sort-auto-title = 自動排序（分類或教學大綱）
+gallery-sort-auto-title = 自動排序（個人閱讀清單，其次班級，再次分類）
 gallery-sort-az = A–Z
 gallery-sort-az-title = 按 A–Z 排序
 gallery-sort-date = 日期
 gallery-sort-date-title = 按日期排序（最新優先）
 gallery-sort-date-added = 新增
 gallery-sort-date-added-title = 按新增日期排序（最新優先）
+gallery-sort-personal-order = 閱讀順序
+gallery-sort-personal-order-title = 個人閱讀順序（拖曳重排）
+gallery-personal-order-unordered = 未排序
+personal-reading-order-menu-pin-top = 釘選到文集閱讀清單頂端
 gallery-sort-last-read = Last Read
 gallery-sort-last-read-title = Sort by last read (most recent first)
 gallery-group-none = 無
@@ -422,10 +426,10 @@ gallery-packing-packed = Packed
 gallery-packing-packed-title = Mixed-size magazine layout
 
 # Gallery notes (collection-scoped child notes)
-gallery-note-add = Add Gallery Note
-gallery-note-edit = Edit Gallery Note
-gallery-note-remove = Remove Gallery Note
-gallery-note-label = Gallery note
+gallery-note-add = 新增個人筆記
+gallery-note-edit = 編輯個人筆記
+gallery-note-remove = 移除個人筆記
+gallery-note-label = 個人筆記
 magazine-shelf-watch = 觀看
 magazine-shelf-watch-title = 最近新增的影片
 magazine-shelf-listen = 收聽

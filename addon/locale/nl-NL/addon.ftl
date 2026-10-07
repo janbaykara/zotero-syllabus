@@ -172,14 +172,14 @@ toolbar-reading-schedule-review = Leesschema bekijken
 toolbar-reading-schedule-open = Leesschema openen
 
 # Context menus
-menu-set-priority = Prioriteit instellen
+menu-set-priority = Opdrachtprioriteit instellen
 menu-none = (Geen)
 menu-assign-to-class = Toewijzen aan een bijeenkomst
 menu-no-collection = (Geen collectie geselecteerd)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = Toevoegen aan nieuwe { $nomenclature } { $number }
 menu-search-classes = Bijeenkomsten zoeken…
-menu-set-reading-status = Leesstatus instellen
+menu-set-reading-status = Persoonlijke leesstatus instellen
 status-done = Afgerond
 status-not-done = Niet afgerond
 
@@ -378,13 +378,17 @@ gallery-empty-subcollections = Geen subcollecties of items in deze collectie.
 gallery-unnumbered = Ongenummerd
 gallery-unnumbered-desc = Toegewezen zonder bijeenkomstnummer.
 gallery-sort-auto = Auto
-gallery-sort-auto-title = Automatische volgorde (collectie of syllabus)
+gallery-sort-auto-title = Automatische volgorde (persoonlijke leeslijst, dan klas, dan collectie)
 gallery-sort-az = A–Z
 gallery-sort-az-title = Sorteren A–Z
 gallery-sort-date = Datum
 gallery-sort-date-title = Sorteren op datum (nieuwste eerst)
 gallery-sort-date-added = Toegevoegd
 gallery-sort-date-added-title = Sorteren op toevoegdatum (nieuwste eerst)
+gallery-sort-personal-order = Leesvolgorde
+gallery-sort-personal-order-title = Persoonlijke leesvolgorde (slepen om te herschikken)
+gallery-personal-order-unordered = Ongesorteerd
+personal-reading-order-menu-pin-top = Vastzetten bovenaan de leeslijst van de collectie
 gallery-sort-last-read = Last Read
 gallery-sort-last-read-title = Sort by last read (most recent first)
 gallery-group-none = Geen
@@ -422,10 +426,10 @@ gallery-packing-packed = Packed
 gallery-packing-packed-title = Mixed-size magazine layout
 
 # Gallery notes (collection-scoped child notes)
-gallery-note-add = Add Gallery Note
-gallery-note-edit = Edit Gallery Note
-gallery-note-remove = Remove Gallery Note
-gallery-note-label = Gallery note
+gallery-note-add = Persoonlijke notitie toevoegen
+gallery-note-edit = Persoonlijke notitie bewerken
+gallery-note-remove = Persoonlijke notitie verwijderen
+gallery-note-label = Persoonlijke notitie
 magazine-shelf-watch = Kijken
 magazine-shelf-watch-title = Onlangs toegevoegde video’s
 magazine-shelf-listen = Luisteren

@@ -854,7 +854,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   const [itemOrderVersion, setItemOrderVersion] = useState(0);
 
   const [density] = useItemDensity(displayViewKey);
-  const [readerMode] = useReaderMode(displayViewKey);
+  // Collection-scoped so Gallery and Syllabus share the same checkbox toggle.
+  const [readerMode] = useReaderMode(collectionId);
   const [browseLayout, setBrowseLayout, browseLayoutGlobal] =
     useGalleryLayout(displayViewKey);
   const [magazinePacking, setMagazinePacking, magazinePackingGlobal] =
@@ -3104,6 +3105,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                 <div className="inline-flex items-center gap-2.5 shrink grow-0">
                   <SyllabusViewMenu
                     viewKey={displayViewKey}
+                    readerModeViewKey={collectionId}
                     showLayout={isLocked}
                     layout={browseLayout}
                     onLayoutChange={setBrowseLayout}

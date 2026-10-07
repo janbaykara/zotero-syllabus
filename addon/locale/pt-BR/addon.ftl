@@ -172,14 +172,14 @@ toolbar-reading-schedule-review = Revisar o Cronograma de leitura
 toolbar-reading-schedule-open = Abrir Cronograma de leitura
 
 # Context menus
-menu-set-priority = Definir prioridade
+menu-set-priority = Definir prioridade da atribuição
 menu-none = (Nenhuma)
 menu-assign-to-class = Atribuir a uma aula
 menu-no-collection = (Nenhuma coleção selecionada)
 menu-class-label = { $nomenclature } { $number }
 menu-add-to-new-class = Adicionar à nova { $nomenclature } { $number }
 menu-search-classes = Buscar aulas…
-menu-set-reading-status = Definir status de leitura
+menu-set-reading-status = Definir status de leitura pessoal
 status-done = Concluído
 status-not-done = Não concluído
 
@@ -378,13 +378,17 @@ gallery-empty-subcollections = Nenhuma subcoleção ou item nesta coleção.
 gallery-unnumbered = Sem número
 gallery-unnumbered-desc = Atribuído sem número de aula.
 gallery-sort-auto = Auto
-gallery-sort-auto-title = Ordem automática (coleção ou programa)
+gallery-sort-auto-title = Ordem automática (lista de leitura pessoal, depois aula, depois coleção)
 gallery-sort-az = A–Z
 gallery-sort-az-title = Ordenar A–Z
 gallery-sort-date = Data
 gallery-sort-date-title = Ordenar por data (mais recentes primeiro)
 gallery-sort-date-added = Adicionado
 gallery-sort-date-added-title = Ordenar por data de adição (mais recentes primeiro)
+gallery-sort-personal-order = Ordem de leitura
+gallery-sort-personal-order-title = Ordem de leitura pessoal (arraste para reordenar)
+gallery-personal-order-unordered = Sem ordem
+personal-reading-order-menu-pin-top = Fixar no topo da lista de leitura da coleção
 gallery-sort-last-read = Last Read
 gallery-sort-last-read-title = Sort by last read (most recent first)
 gallery-group-none = Nenhum
@@ -422,10 +426,10 @@ gallery-packing-packed = Compacto
 gallery-packing-packed-title = Layout de revista com tamanhos mistos
 
 # Gallery notes (collection-scoped child notes)
-gallery-note-add = Add Gallery Note
-gallery-note-edit = Edit Gallery Note
-gallery-note-remove = Remove Gallery Note
-gallery-note-label = Gallery note
+gallery-note-add = Adicionar nota pessoal
+gallery-note-edit = Editar nota pessoal
+gallery-note-remove = Remover nota pessoal
+gallery-note-label = Nota pessoal
 magazine-shelf-watch = Assistir
 magazine-shelf-watch-title = Vídeos adicionados recentemente
 magazine-shelf-listen = Ouvir

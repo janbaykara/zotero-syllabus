@@ -47,10 +47,21 @@ export async function registerSyllabusStatusColumn() {
           item,
           selectedCollection.id,
         );
+        if (
+          SyllabusManager.isItemReadingDone(selectedCollection.id, item.key)
+        ) {
+          return "done";
+        }
         if (!firstAssignment) {
           return "";
         }
-        if (firstAssignment.status === "done") {
+        if (
+          SyllabusManager.isAssignmentReadingDone(
+            selectedCollection.id,
+            item.key,
+            firstAssignment.id,
+          )
+        ) {
           return "done";
         }
         const classNumber =

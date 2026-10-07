@@ -35,6 +35,8 @@ import type { ItemDensity } from "./react-zotero-sync/itemDensity";
 import { openGalleryNoteByCollectionId } from "./galleryNote";
 import { useGalleryNoteText } from "./useGalleryNoteText";
 import { TextInput } from "./syllabusInputs";
+import { usePersonalReadingOrderGeneration } from "./react-zotero-sync/personalReadingOrder";
+import { isAssignmentReadingDone } from "./personalReadingOrder";
 
 /** Sticky-note yellow for the permanent Class Note priority chip. */
 const CLASS_NOTE_PRIORITY_COLOR = NOTE_PAD_YELLOW;
@@ -545,7 +547,15 @@ export function SyllabusItemCard({
     (p: Priority) => p.id === priority,
   ) || { color: "#AAA" };
 
-  const assignmentStatus = assignment?.status || null;
+  const personalOrderGeneration = usePersonalReadingOrderGeneration();
+  void personalOrderGeneration;
+  const assignmentStatus = isAssignmentReadingDone(
+    collectionId,
+    item.key,
+    assignment?.id,
+  )
+    ? "done"
+    : null;
 
   const colors = priority
     ? {

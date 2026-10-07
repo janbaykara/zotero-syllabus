@@ -17,6 +17,7 @@ export const GALLERY_SORT_MODES = [
   "title",
   "date",
   "dateAdded",
+  "personalOrder",
 ] as const;
 
 export type GallerySortBy = (typeof GALLERY_SORT_MODES)[number];

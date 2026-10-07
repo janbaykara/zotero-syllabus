@@ -33,6 +33,13 @@ import {
   getSyllabusNoteId,
   SYLLABUS_NOTE_TAG,
 } from "./syllabusNote";
+import {
+  applyPersonalReadingOrder,
+  getPersonalReadingOrderKeys,
+  isAssignmentReadingDone,
+  isItemReadingDone,
+} from "./personalReadingOrder";
+import { isOptionalFeatureEnabled } from "./optionalFeatures";
 
 const pinnedListeners = new Set<() => void>();
 
@@ -791,13 +798,18 @@ export function getSyllabusItemProgress(
           continue;
         }
         total += 1;
-        if (assignment.status === "done") {
+        if (
+          isAssignmentReadingDone(collection, itemKey, assignment.id)
+        ) {
           done += 1;
         }
         continue;
       }
       total += 1;
-      if (doneClassNumbers.has(classNumber) || assignment.status === "done") {
+      if (
+        doneClassNumbers.has(classNumber) ||
+        isAssignmentReadingDone(collection, itemKey, assignment.id)
+      ) {
         done += 1;
       }
     }
@@ -954,9 +966,10 @@ function collectFurtherReadingDisplayEntries(
 /**
  * Pinned-shelf reading for a syllabus. Always returned so a pin stays visible
  * when classes are done, empty, or every item sits in further reading.
- * Next-up prefers the first incomplete class assignment (class `itemOrder`),
- * then further reading (`furtherReadingOrder`). The cover stack follows that
- * same order; if nothing is unread, it shows the first items instead.
+ * Next-up prefers personal reading order when set; otherwise the first
+ * incomplete class assignment (class `itemOrder`), then further reading
+ * (`furtherReadingOrder`). The cover stack follows that same order; if
+ * nothing is unread, it shows the first items instead.
  */
 export function getNextUpAssignment(
   collection: Zotero.Collection,
@@ -964,6 +977,13 @@ export function getNextUpAssignment(
 ): NextUpReading {
   const doc = document || getCollectionDocument(collection);
   const libraryID = collection.libraryID;
+  const personalKeys =
+    isOptionalFeatureEnabled("gallery")
+      ? getPersonalReadingOrderKeys(collection)
+      : [];
+  if (personalKeys.length > 0) {
+    return getNextUpFromPersonalOrder(collection, doc, personalKeys);
+  }
   const classEntries = collectClassDisplayEntries(collection, doc);
   const furtherEntries = collectFurtherReadingDisplayEntries(collection, doc);
 
@@ -985,7 +1005,14 @@ export function getNextUpAssignment(
   };
 
   for (const entry of classEntries) {
-    if (entry.classDone || entry.assignment.status === "done") {
+    if (
+      entry.classDone ||
+      isAssignmentReadingDone(
+        collection,
+        entry.item.key,
+        entry.assignment.id,
+      )
+    ) {
       continue;
     }
     if (!next) {
@@ -1004,7 +1031,13 @@ export function getNextUpAssignment(
 
   if (unreadItems.length < 3) {
     for (const entry of furtherEntries) {
-      if (entry.assignment?.status === "done") {
+      if (
+        isAssignmentReadingDone(
+          collection,
+          entry.item.key,
+          entry.assignment?.id,
+        )
+      ) {
         continue;
       }
       if (!next) {
@@ -1052,11 +1085,145 @@ export function getNextUpAssignment(
   };
 }
 
+function assignmentDoneForItem(
+  collection: Zotero.Collection,
+  itemKey: string,
+  doc: CollectionSyllabusDocument,
+): {
+  done: boolean;
+  assignment: ItemSyllabusAssignment | null;
+  classNumber: number | null;
+  classTitle: string;
+} {
+  const itemDone = isItemReadingDone(collection, itemKey);
+  const assignments = doc.items?.[itemKey] || [];
+  if (assignments.length === 0) {
+    return {
+      done: itemDone,
+      assignment: null,
+      classNumber: null,
+      classTitle: "",
+    };
+  }
+  let first: ItemSyllabusAssignment | null = null;
+  let classNumber: number | null = null;
+  let classTitle = "";
+  let allDone = true;
+  for (const assignment of assignments) {
+    const num = assignmentClassNumber(
+      assignment,
+      doc.classes,
+      doc.classOrder,
+    );
+    const classId = assignment.classId;
+    const classDone = Boolean(
+      classId && doc.classes?.[classId]?.status === "done",
+    );
+    const isDone =
+      classDone ||
+      isAssignmentReadingDone(collection, itemKey, assignment.id);
+    if (!first || (!isDone && allDone)) {
+      first = assignment;
+      classNumber = num ?? null;
+      classTitle = (classId && doc.classes?.[classId]?.title) || "";
+    }
+    if (!isDone) {
+      allDone = false;
+    }
+  }
+  return {
+    done: allDone,
+    assignment: first,
+    classNumber,
+    classTitle,
+  };
+}
+
+function getNextUpFromPersonalOrder(
+  collection: Zotero.Collection,
+  doc: CollectionSyllabusDocument,
+  personalKeys: string[],
+): NextUpReading {
+  const libraryID = collection.libraryID;
+  const orderedItems = applyPersonalReadingOrder(
+    collectionRegularItems(collection),
+    personalKeys,
+  );
+
+  let next: {
+    classNumber: number | null;
+    classTitle: string;
+    item: Zotero.Item;
+    assignment: ItemSyllabusAssignment | null;
+  } | null = null;
+  const unreadItems: Zotero.Item[] = [];
+  const seenUnread = new Set<number>();
+
+  const pushCover = (item: Zotero.Item) => {
+    if (seenUnread.has(item.id) || unreadItems.length >= 3) {
+      return;
+    }
+    seenUnread.add(item.id);
+    unreadItems.push(item);
+  };
+
+  for (const item of orderedItems) {
+    const meta = assignmentDoneForItem(collection, item.key, doc);
+    if (meta.done) {
+      continue;
+    }
+    if (!next) {
+      next = {
+        classNumber: meta.classNumber,
+        classTitle: meta.classTitle,
+        item,
+        assignment: meta.assignment,
+      };
+    }
+    pushCover(item);
+    if (unreadItems.length >= 3) {
+      break;
+    }
+  }
+
+  if (unreadItems.length === 0) {
+    for (const item of orderedItems) {
+      pushCover(item);
+      if (unreadItems.length >= 3) {
+        break;
+      }
+    }
+  }
+
+  return {
+    collection,
+    libraryID,
+    isSyllabus: true,
+    classNumber: next?.classNumber ?? null,
+    classTitle: next?.classTitle ?? "",
+    item: next?.item ?? unreadItems[0] ?? null,
+    assignment: next?.assignment ?? null,
+    unreadItems,
+    progress: getSyllabusItemProgress(collection, doc),
+  };
+}
+
 /** Cover-stack reading for a pinned non-syllabus collection. */
 export function getPinnedCollectionReading(
   collection: Zotero.Collection,
 ): NextUpReading {
-  const unreadItems = collectionRegularItems(collection).slice(0, 3);
+  const personalKeys =
+    isOptionalFeatureEnabled("gallery")
+      ? getPersonalReadingOrderKeys(collection)
+      : [];
+  const items =
+    personalKeys.length > 0
+      ? applyPersonalReadingOrder(
+          collectionRegularItems(collection),
+          personalKeys,
+        )
+      : collectionRegularItems(collection);
+  const unreadItems = items.slice(0, 3);
   return {
     collection,
     libraryID: collection.libraryID,
