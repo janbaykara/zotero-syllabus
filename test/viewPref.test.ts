@@ -26,10 +26,14 @@ import {
 } from "../src/modules/showItemsWithoutAnnotations";
 import {
   getAnnotationColorFilter,
+  getAnnotationTagFilter,
   getDefaultAnnotationColorFilter,
+  getDefaultAnnotationTagFilter,
   getViewQuoteOrder,
   saveAnnotationColorFilterGlobally,
+  saveAnnotationTagFilterGlobally,
   setAnnotationColorFilter,
+  setAnnotationTagFilter,
   setViewQuoteOrder,
 } from "../src/modules/myAnnotationsPrefs";
 import {
@@ -55,6 +59,8 @@ const PREF_KEYS = [
   `${config.prefsPrefix}.annotationsQuoteOrder`,
   `${config.prefsPrefix}.annotationColorFilter`,
   `${config.prefsPrefix}.defaultAnnotationColorFilter`,
+  `${config.prefsPrefix}.annotationTagFilter`,
+  `${config.prefsPrefix}.defaultAnnotationTagFilter`,
   `${config.prefsPrefix}.furtherReadingSort`,
   `${config.prefsPrefix}.defaultFurtherReadingSort`,
 ];
@@ -157,6 +163,24 @@ describe("view-scoped display prefs", function () {
     saveAnnotationColorFilterGlobally("syllabus:12", ["#2ea8e5"]);
     assert.deepEqual(getDefaultAnnotationColorFilter(), ["#2ea8e5"]);
     assert.deepEqual(getAnnotationColorFilter("99"), ["#2ea8e5"]);
+  });
+
+  it("inherits the tag-filter default except on named explorer/feed scopes", function () {
+    setPref("defaultAnnotationTagFilter", '["Todo"]');
+    zoteroCache.invalidatePref(
+      `${config.prefsPrefix}.defaultAnnotationTagFilter`,
+    );
+    assert.deepEqual(getDefaultAnnotationTagFilter(), ["Todo"]);
+    assert.deepEqual(getAnnotationTagFilter("12"), ["Todo"]);
+    assert.deepEqual(getAnnotationTagFilter("syllabus:12"), ["Todo"]);
+    assert.deepEqual(getAnnotationTagFilter("feed"), []);
+    assert.deepEqual(getAnnotationTagFilter("explorer"), []);
+    setAnnotationTagFilter("12", []);
+    assert.deepEqual(getAnnotationTagFilter("12"), []);
+    assert.deepEqual(getAnnotationTagFilter("99"), ["Todo"]);
+    saveAnnotationTagFilterGlobally("syllabus:12", ["Important"]);
+    assert.deepEqual(getDefaultAnnotationTagFilter(), ["Important"]);
+    assert.deepEqual(getAnnotationTagFilter("99"), ["Important"]);
   });
 
   it("saves further-reading sort as the default", function () {

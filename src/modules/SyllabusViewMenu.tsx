@@ -27,6 +27,7 @@ import { densityLabel } from "./browsePage";
 import type { GalleryGlobalSetting, GalleryLayout } from "./galleryLayout";
 import type { MagazinePacking } from "./magazinePacking";
 import { AnnotationColorFilter } from "./AnnotationColorFilter";
+import { AnnotationTagFilter } from "./AnnotationTagFilter";
 import { useViewQuoteOrder } from "./myAnnotationsPrefs";
 import { useShowItemsWithoutAnnotations } from "./showItemsWithoutAnnotations";
 import { useShowClassNotes } from "./showClassNotes";
@@ -132,6 +133,7 @@ export function SyllabusViewMenu({
   showGlobal = true,
   annotationColors = [],
   colorFilterScope,
+  libraryID,
 }: {
   viewKey: string;
   /** Card / Cover / Annotations / Magazine — Reading Schedule and locked syllabus. */
@@ -150,6 +152,7 @@ export function SyllabusViewMenu({
   showGlobal?: boolean;
   annotationColors?: string[];
   colorFilterScope?: string;
+  libraryID?: number;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -371,6 +374,13 @@ export function SyllabusViewMenu({
                         showGlobe={showGlobal}
                       />
                     ) : null}
+                    {colorFilterScope && libraryID != null ? (
+                      <AnnotationTagFilter
+                        libraryID={libraryID}
+                        scope={colorFilterScope}
+                        showGlobe={showGlobal}
+                      />
+                    ) : null}
                     <GalleryPrefCheckbox
                       label={getString("gallery-annotations-show-empty")}
                       checked={showItemsWithoutAnnotations}
@@ -393,6 +403,12 @@ function pointInRect(x: number, y: number, rect: DOMRect): boolean {
 }
 
 function eventInMenu(event: MouseEvent, root: HTMLElement): boolean {
+  if (
+    event.target instanceof Element &&
+    event.target.closest(".syllabus-annotation-tag-filter-popup, .tags-popup")
+  ) {
+    return true;
+  }
   if (event.target instanceof Node && root.contains(event.target)) {
     return true;
   }

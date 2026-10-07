@@ -20,6 +20,7 @@ pref("defaultGallerySort", "auto");
 pref("defaultGalleryGroupBy", "auto");
 pref("defaultFurtherReadingSort", "title");
 pref("defaultAnnotationColorFilter", "");
+pref("defaultAnnotationTagFilter", "");
 pref("myAnnotationsLayout", "grid");
 pref("myAnnotationsSort", "lastRead");
 pref("myAnnotationsGroupBy", "none");

@@ -15,6 +15,7 @@ import { AnnotationColorFilter } from "./AnnotationColorFilter";
 import { AnnotationTagFilter } from "./AnnotationTagFilter";
 import {
   ANNOTATION_COLOR_FILTER_FEED,
+  ANNOTATION_TAG_FILTER_FEED,
   useAnnotationsQuoteOrder,
   type MyAnnotationsOrder,
 } from "./myAnnotationsPrefs";
@@ -203,7 +204,10 @@ export function MyAnnotationsMenu({
               colors={colors}
               scope={ANNOTATION_COLOR_FILTER_FEED}
             />
-            <AnnotationTagFilter libraryID={libraryID} />
+            <AnnotationTagFilter
+              libraryID={libraryID}
+              scope={ANNOTATION_TAG_FILTER_FEED}
+            />
             <div className="syllabus-gallery-toolbar-cluster">
               <div className="syllabus-gallery-toolbar-heading">
                 <span className="syllabus-gallery-groupby-label">

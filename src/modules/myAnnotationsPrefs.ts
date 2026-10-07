@@ -264,47 +264,18 @@ export function useMyAnnotationsSearchScope(): [
   return [mode, setScope];
 }
 
-export function getAnnotationTagFilter(): string[] {
-  return parseAnnotationTagFilter(getPref("myAnnotationsTagFilter"));
-}
-
-export function setAnnotationTagFilter(tags: readonly string[]): void {
-  setPref("myAnnotationsTagFilter", serializeAnnotationTagFilter(tags));
-  zoteroCache.invalidatePref(getPrefKey("myAnnotationsTagFilter"));
-}
-
-export function useAnnotationTagFilter(): [
-  string[],
-  (tags: readonly string[]) => void,
-] {
-  const [tags, setTags] = useState<string[]>(() => getAnnotationTagFilter());
-
-  useEffect(() => {
-    const refresh = () => setTags(getAnnotationTagFilter());
-    refresh();
-    const observerID = Zotero.Prefs.registerObserver(
-      getPrefKey("myAnnotationsTagFilter"),
-      refresh,
-      true,
-    );
-    return () => Zotero.Prefs.unregisterObserver(observerID);
-  }, []);
-
-  const setFilter = useCallback((next: readonly string[]) => {
-    const parsed = parseAnnotationTagFilter(serializeAnnotationTagFilter(next));
-    setTags(parsed);
-    setAnnotationTagFilter(parsed);
-  }, []);
-
-  return [tags, setFilter];
-}
-
 export const ANNOTATION_COLOR_FILTER_FEED = "feed";
 export const ANNOTATION_COLOR_FILTER_EXPLORER = "explorer";
 export const ANNOTATION_COLOR_FILTER_EXPLORER_PINNED = "explorer-pinned";
 
+export const ANNOTATION_TAG_FILTER_FEED = ANNOTATION_COLOR_FILTER_FEED;
+
 export function annotationColorFilterPrefKey(): string {
   return `${config.prefsPrefix}.annotationColorFilter`;
+}
+
+export function annotationTagFilterPrefKey(): string {
+  return `${config.prefsPrefix}.annotationTagFilter`;
 }
 
 export function colorFilterInheritsDefault(scope: string): boolean {
@@ -313,6 +284,10 @@ export function colorFilterInheritsDefault(scope: string): boolean {
     scope !== ANNOTATION_COLOR_FILTER_EXPLORER &&
     scope !== ANNOTATION_COLOR_FILTER_EXPLORER_PINNED
   );
+}
+
+export function tagFilterInheritsDefault(scope: string): boolean {
+  return colorFilterInheritsDefault(scope);
 }
 
 const colorFilterSpec: ViewPrefSpec<string[]> = {
@@ -388,6 +363,83 @@ export function useAnnotationColorFilter(
     [scope, setHexes],
   );
   return [hexes, setFilter, global];
+}
+
+const tagFilterSpec: ViewPrefSpec<string[]> = {
+  mapKey: `${config.prefsPrefix}.annotationTagFilter`,
+  defaultKey: "defaultAnnotationTagFilter",
+  coerce: parseAnnotationTagFilter,
+  serialize: serializeAnnotationTagFilter,
+  equal: (a, b) =>
+    serializeAnnotationTagFilter(a) === serializeAnnotationTagFilter(b),
+  inheritDefault: tagFilterInheritsDefault,
+};
+
+export function getDefaultAnnotationTagFilter(): string[] {
+  return getViewPrefDefault(tagFilterSpec);
+}
+
+export function getAnnotationTagFilter(scope: string): string[] {
+  if (
+    !tagFilterInheritsDefault(scope) &&
+    scope === ANNOTATION_TAG_FILTER_FEED
+  ) {
+    const map = getCachedPref(
+      annotationTagFilterPrefKey(),
+      z.record(z.string(), z.unknown()),
+    );
+    if (!map || !Object.prototype.hasOwnProperty.call(map, scope)) {
+      return parseAnnotationTagFilter(getPref("myAnnotationsTagFilter"));
+    }
+  }
+  return getViewPref(tagFilterSpec, scope);
+}
+
+export function setAnnotationTagFilter(
+  scope: string,
+  tags: readonly string[],
+): void {
+  const parsed = parseAnnotationTagFilter(serializeAnnotationTagFilter(tags));
+  setViewPref(tagFilterSpec, scope, parsed);
+  if (scope === ANNOTATION_TAG_FILTER_FEED) {
+    setPref("myAnnotationsTagFilter", "");
+    zoteroCache.invalidatePref(getPrefKey("myAnnotationsTagFilter"));
+  }
+}
+
+export function saveAnnotationTagFilterGlobally(
+  scope: string,
+  tags: readonly string[],
+): void {
+  saveViewPrefGlobally(
+    tagFilterSpec,
+    scope,
+    parseAnnotationTagFilter(serializeAnnotationTagFilter(tags)),
+  );
+}
+
+export function useAnnotationTagFilter(
+  scope: string,
+): [
+  string[],
+  (tags: readonly string[]) => void,
+  ViewPrefGlobalSetting<string[]>,
+] {
+  const [tags, setTags, global] = useViewPref(tagFilterSpec, scope);
+  const setFilter = useCallback(
+    (next: readonly string[]) => {
+      const parsed = parseAnnotationTagFilter(
+        serializeAnnotationTagFilter(next),
+      );
+      setTags(parsed);
+      if (scope === ANNOTATION_TAG_FILTER_FEED) {
+        setPref("myAnnotationsTagFilter", "");
+        zoteroCache.invalidatePref(getPrefKey("myAnnotationsTagFilter"));
+      }
+    },
+    [scope, setTags],
+  );
+  return [tags, setFilter, global];
 }
 
 const quoteOrderSpec: ViewPrefSpec<AnnotationsQuoteOrder> = {

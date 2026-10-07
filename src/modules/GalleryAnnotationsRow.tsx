@@ -6,6 +6,7 @@ import {
   annotationMatchesColorFilter,
   collectAnnotationColors,
 } from "../utils/annotationColors";
+import { annotationMatchesTagFilter } from "../utils/annotationTags";
 import { isClassNoteItem, sortItems } from "../utils/items";
 import {
   AnnotationActivityGap,
@@ -23,6 +24,7 @@ import type { MagazineTileClick } from "./MagazineTile";
 import { CoverStreamSection } from "./coverStream";
 import {
   useAnnotationColorFilter,
+  useAnnotationTagFilter,
   useViewQuoteOrder,
 } from "./myAnnotationsPrefs";
 import type { ReadingTileChrome } from "./readingAssignmentChrome";
@@ -233,6 +235,7 @@ export function GalleryAnnotationsSection({
 
   const [partition, setPartition] = useState<AnnotationPartition | null>(null);
   const [colorFilter] = useAnnotationColorFilter(colorFilterScope);
+  const [tagFilter] = useAnnotationTagFilter(colorFilterScope);
   const [quoteOrder] = useViewQuoteOrder(colorFilterScope);
 
   useEffect(() => {
@@ -289,24 +292,30 @@ export function GalleryAnnotationsSection({
       item,
       entries: isClassNoteItem(item)
         ? entries
-        : entries.filter((entry) =>
-            annotationMatchesColorFilter(entry.color, colorFilter),
+        : entries.filter(
+            (entry) =>
+              annotationMatchesColorFilter(entry.color, colorFilter) &&
+              annotationMatchesTagFilter(entry.tags, tagFilter),
           ),
     }))
     .filter((row) => isClassNoteItem(row.item) || row.entries.length > 0);
   const sortedEmpty = sortItems(emptyItems, sortBy);
-  const colorFilterEmpty =
+  const filterEmpty =
     sortedWith.length === 0 &&
     withAnnotations.length > 0 &&
-    colorFilter.length > 0;
+    (colorFilter.length > 0 || tagFilter.length > 0);
+  const emptyFilterMessage =
+    colorFilter.length > 0 && tagFilter.length > 0
+      ? "my-annotations-empty-filters"
+      : tagFilter.length > 0
+        ? "my-annotations-empty-tag-filter"
+        : "my-annotations-empty-color-filter";
 
   if (sortedWith.length === 0 && sortedEmpty.length === 0) {
     return (
       <p className="syllabus-gallery-annotations-empty text-secondary">
         {getString(
-          colorFilterEmpty
-            ? "my-annotations-empty-color-filter"
-            : "gallery-annotations-empty",
+          filterEmpty ? emptyFilterMessage : "gallery-annotations-empty",
         )}
       </p>
     );

@@ -43,6 +43,7 @@ import {
   sortItems,
 } from "../utils/items";
 import { AnnotationColorFilter } from "./AnnotationColorFilter";
+import { AnnotationTagFilter } from "./AnnotationTagFilter";
 import {
   GalleryAnnotationsSection,
   useExistingAnnotationColors,
@@ -165,6 +166,15 @@ export function GalleryPage({
   const isCollectionScope = collectionId != null;
   const resolvedTreeViewID = treeViewID ?? (isCollectionScope ? "" : viewKey);
   const collectionIdOrZero = collectionId ?? 0;
+  const libraryID = useMemo(() => {
+    if (collectionId != null) {
+      return (
+        getCachedCollectionById(collectionId)?.libraryID ??
+        Zotero.Libraries.userLibraryID
+      );
+    }
+    return Zotero.Libraries.userLibraryID;
+  }, [collectionId]);
   const [collectionTitle] = useZoteroCollectionTitle(collectionIdOrZero);
   const treeRowTitle = useZoteroTreeRowTitle(resolvedTreeViewID);
   const title = isCollectionScope ? collectionTitle : treeRowTitle;
@@ -1037,6 +1047,7 @@ export function GalleryPage({
               showEmptyGlobal={showEmptyGlobal}
               annotationColors={annotationColors}
               colorFilterScope={viewKey}
+              libraryID={libraryID}
               navGroups={navGroups}
               activeGroupId={activeGroupId}
               onSelectGroup={handleSelectGroup}
@@ -1694,6 +1705,7 @@ function GalleryPageHeader({
   showEmptyGlobal,
   annotationColors,
   colorFilterScope,
+  libraryID,
   navGroups,
   activeGroupId,
   onSelectGroup,
@@ -1719,6 +1731,7 @@ function GalleryPageHeader({
   showEmptyGlobal: GalleryGlobalSetting<boolean>;
   annotationColors: string[];
   colorFilterScope: string;
+  libraryID: number;
   navGroups: GalleryNavGroup[];
   activeGroupId: string | null;
   onSelectGroup: (id: string) => void;
@@ -1760,6 +1773,14 @@ function GalleryPageHeader({
       }
       const root = rootRef.current;
       if (!root || !(event.target instanceof Node)) {
+        return;
+      }
+      if (
+        event.target instanceof Element &&
+        event.target.closest(
+          ".syllabus-annotation-tag-filter-popup, .tags-popup",
+        )
+      ) {
         return;
       }
       if (!root.contains(event.target)) {
@@ -1905,6 +1926,10 @@ function GalleryPageHeader({
                         />
                         <AnnotationColorFilter
                           colors={annotationColors}
+                          scope={colorFilterScope}
+                        />
+                        <AnnotationTagFilter
+                          libraryID={libraryID}
                           scope={colorFilterScope}
                         />
                         <GalleryPrefCheckbox

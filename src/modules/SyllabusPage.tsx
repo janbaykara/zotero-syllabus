@@ -3107,6 +3107,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                     magazinePackingGlobal={magazinePackingGlobal}
                     annotationColors={annotationColors}
                     colorFilterScope={displayViewKey}
+                    libraryID={
+                      collection?.libraryID ?? Zotero.Libraries.userLibraryID
+                    }
                   />
                   <div
                     className="grow-0 shrink-0 flex items-center in-[.print]:hidden cursor-pointer"

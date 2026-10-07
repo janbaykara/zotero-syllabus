@@ -136,6 +136,7 @@ export function ReadingSchedule({ libraryID }: { libraryID?: number }) {
               showScheduleCollection
               showGlobal={false}
               colorFilterScope={READING_SCHEDULE_LAYOUT_KEY}
+              libraryID={libraryID ?? Zotero.Libraries.userLibraryID}
             />
           </div>
         </div>

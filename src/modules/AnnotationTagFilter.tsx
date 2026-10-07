@@ -6,12 +6,24 @@ import { getString } from "../utils/locale";
 import { openAnnotationTagFilterPopup } from "../utils/annotationTagFilterPopup";
 import {
   setAnnotationTagFilter,
+  tagFilterInheritsDefault,
   useAnnotationTagFilter,
 } from "./myAnnotationsPrefs";
+import { GallerySaveGlobalButton } from "./GallerySegmentedControl";
 
 /** Opens Zotero's native annotation tags-box to pick one or more filter tags. */
-export function AnnotationTagFilter({ libraryID }: { libraryID: number }) {
-  const [tagFilter, setTagFilter] = useAnnotationTagFilter();
+export function AnnotationTagFilter({
+  libraryID,
+  scope,
+  showGlobe: showGlobeProp,
+}: {
+  libraryID: number;
+  scope: string;
+  showGlobe?: boolean;
+}) {
+  const [tagFilter, setTagFilter, tagFilterGlobal] =
+    useAnnotationTagFilter(scope);
+  const showGlobe = (showGlobeProp ?? true) && tagFilterInheritsDefault(scope);
   const addButtonRef = useRef<HTMLButtonElement>(null);
 
   const openPicker = () => {
@@ -24,7 +36,7 @@ export function AnnotationTagFilter({ libraryID }: { libraryID: number }) {
       selected: tagFilter,
       anchor,
       // Pref write so filtering updates even if the options menu closes.
-      onChange: setAnnotationTagFilter,
+      onChange: (tags) => setAnnotationTagFilter(scope, tags),
     });
   };
 
@@ -53,6 +65,9 @@ export function AnnotationTagFilter({ libraryID }: { libraryID: number }) {
           >
             <X size={14} strokeWidth={2} aria-hidden="true" />
           </button>
+          {showGlobe ? (
+            <GallerySaveGlobalButton globalSetting={tagFilterGlobal} />
+          ) : null}
         </div>
       </div>
       <div

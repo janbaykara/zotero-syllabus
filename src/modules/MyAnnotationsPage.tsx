@@ -18,6 +18,7 @@ import { annotationMatchesColorFilter } from "../utils/annotationColors";
 import { annotationMatchesTagFilter } from "../utils/annotationTags";
 import {
   ANNOTATION_COLOR_FILTER_FEED,
+  ANNOTATION_TAG_FILTER_FEED,
   useAnnotationColorFilter,
   useAnnotationTagFilter,
   useAnnotationsQuoteOrder,
@@ -130,7 +131,7 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
   const [order, setOrder] = useMyAnnotationsOrder();
   const [quoteOrder] = useAnnotationsQuoteOrder();
   const [colorFilter] = useAnnotationColorFilter(ANNOTATION_COLOR_FILTER_FEED);
-  const [tagFilter] = useAnnotationTagFilter();
+  const [tagFilter] = useAnnotationTagFilter(ANNOTATION_TAG_FILTER_FEED);
   const { selectedItemIds } = useItemIdentifierSelection();
   const pageRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);

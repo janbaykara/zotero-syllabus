@@ -50,6 +50,7 @@ export const PLUGIN_PREF_DEFAULTS: {
   defaultGalleryGroupBy: "auto",
   defaultFurtherReadingSort: "title",
   defaultAnnotationColorFilter: "",
+  defaultAnnotationTagFilter: "",
   myAnnotationsLayout: "grid",
   myAnnotationsSort: "lastRead",
   myAnnotationsGroupBy: "none",

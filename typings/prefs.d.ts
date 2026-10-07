@@ -29,6 +29,7 @@ declare namespace _ZoteroTypes {
       "defaultGalleryGroupBy": string;
       "defaultFurtherReadingSort": string;
       "defaultAnnotationColorFilter": string;
+      "defaultAnnotationTagFilter": string;
       "myAnnotationsLayout": string;
       "myAnnotationsSort": string;
       "myAnnotationsGroupBy": string;
