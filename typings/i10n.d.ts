@@ -299,6 +299,7 @@ export type FluentMessageId =
   | 'my-annotations-order-newest-last'
   | 'my-annotations-order-newest-last-title'
   | 'my-annotations-page'
+  | 'my-annotations-related'
   | 'my-annotations-search-aria'
   | 'my-annotations-search-clear'
   | 'my-annotations-search-placeholder'

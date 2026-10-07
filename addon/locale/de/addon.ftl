@@ -741,6 +741,11 @@ my-annotations-copy-blockquote = Prefix with Markdown blockquotes (>)
 my-annotations-copy-cite-key = Append Pandoc cite keys ({"[@…]"})
 my-annotations-page = p. { $page }
 my-annotations-stream-tags-aria = Tags
+my-annotations-related =
+    { $count ->
+        [one] { $count } Verknüpft
+       *[other] { $count } Verknüpft
+    }
 my-annotations-layout-vertical = Vertikal
 my-annotations-layout-vertical-title = Gestapelte Cover mit untereinander stehenden Zitaten
 my-annotations-layout-grid = Raster

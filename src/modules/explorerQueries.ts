@@ -10,6 +10,7 @@ import { getCachedItem } from "../utils/cache";
 import { isSyllabusMemberItem } from "../utils/items";
 import { collectAnnotationColors } from "../utils/annotationColors";
 import { readItemAnnotationTags } from "../utils/annotationTags";
+import { getItemTitle } from "../utils/items";
 import {
   DEFAULT_HIGHLIGHT_COLOR,
   normalizeHighlightColor,
@@ -44,6 +45,16 @@ export type ExplorerAnnotation = {
 
 export type MyAnnotationStreamKind = "annotation" | "fulltext";
 
+/** Related item shown under an annotation comment (`dc:relation`). */
+export type MyAnnotationRelatedItem = {
+  id: number;
+  title: string;
+  /** Regular item type, or `"annotation"` for linked annotations. */
+  itemType: string;
+  /** Highlight colour when `itemType === "annotation"`. */
+  color?: string;
+};
+
 /** Flat stream row for My Annotations timeline (quote + comment kept separate). */
 export type MyAnnotationStreamEntry = {
   id: number;
@@ -54,6 +65,8 @@ export type MyAnnotationStreamEntry = {
   color: string;
   /** Annotation item tags (not parent-item tags). */
   tags: string[];
+  /** Zotero related items (`dc:relation`) on this annotation. */
+  related: MyAnnotationRelatedItem[];
   /** When the annotation was created. */
   dateAdded: string;
   dateModified: string;
@@ -70,6 +83,88 @@ export type MyAnnotationStreamEntry = {
   /** 0-based PDF page for full-text hits when form-feeds allow placement. */
   pageIndex?: number;
 };
+
+/** Resolve `item.relatedItems` keys to display rows (skips missing / trashed). */
+export function readAnnotationRelatedItems(item: {
+  libraryID?: number;
+  relatedItems?: string[];
+}): MyAnnotationRelatedItem[] {
+  let keys: string[] = [];
+  try {
+    keys = Array.isArray(item.relatedItems) ? item.relatedItems : [];
+  } catch {
+    return [];
+  }
+  if (!keys.length) {
+    return [];
+  }
+  const libraryID =
+    typeof item.libraryID === "number"
+      ? item.libraryID
+      : Zotero.Libraries.userLibraryID;
+  const out: MyAnnotationRelatedItem[] = [];
+  const seen = new Set<number>();
+  for (const key of keys) {
+    const related = Zotero.Items.getByLibraryAndKey(libraryID, String(key));
+    if (!related) {
+      continue;
+    }
+    try {
+      if (related.deleted) {
+        continue;
+      }
+    } catch {
+      continue;
+    }
+    if (seen.has(related.id)) {
+      continue;
+    }
+    seen.add(related.id);
+    let isAnnotation = false;
+    try {
+      isAnnotation = !!related.isAnnotation?.();
+    } catch {
+      isAnnotation = false;
+    }
+    if (isAnnotation) {
+      let quote = "";
+      let comment = "";
+      let color = DEFAULT_HIGHLIGHT_COLOR;
+      try {
+        quote = String(related.annotationText || "").trim();
+      } catch {
+        // Keep empty.
+      }
+      try {
+        comment = String(related.annotationComment || "").trim();
+      } catch {
+        // Keep empty.
+      }
+      try {
+        color = normalizeHighlightColor(String(related.annotationColor || ""));
+      } catch {
+        // Keep default.
+      }
+      const title = getItemTitle(related) || quote || comment || related.key;
+      out.push({
+        id: related.id,
+        title,
+        itemType: "annotation",
+        color,
+      });
+      continue;
+    }
+    const title = getItemTitle(related) || related.key;
+    let itemType = "document";
+    try {
+      itemType = String(related.itemType || "document");
+    } catch {
+      itemType = "document";
+    }
+    out.push({ id: related.id, title, itemType });
+  }
+  return out;
+}
 
 export function isFulltextStreamEntry(entry: MyAnnotationStreamEntry): boolean {
   return entry.kind === "fulltext";
@@ -631,6 +726,7 @@ function mapAnnotationStreamEntry(
     comment,
     color,
     tags: readItemAnnotationTags(item),
+    related: readAnnotationRelatedItems(item),
     dateAdded: String(item.dateAdded || item.dateModified || ""),
     dateModified: String(item.dateModified || ""),
     pageLabel: annotationLocationPageLabel(item),
@@ -716,6 +812,7 @@ async function collectFulltextStreamHits(
         comment: "",
         color: "",
         tags: [],
+        related: [],
         dateAdded: "",
         dateModified: "",
         pageLabel: hit.pageLabel || "",

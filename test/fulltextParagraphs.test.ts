@@ -98,6 +98,7 @@ describe("fulltext paragraph search", function () {
         comment: "",
         color: "#ffd400",
         tags: [],
+        related: [],
         dateAdded: "",
         dateModified: "",
         pageLabel: "",

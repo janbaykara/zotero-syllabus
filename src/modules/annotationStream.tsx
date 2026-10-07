@@ -10,7 +10,7 @@ import {
 } from "preact/hooks";
 import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
-import { Check, Copy } from "lucide-preact";
+import { Check, Copy, Link2 } from "lucide-preact";
 import {
   isClassNoteItem,
   openAnnotationIdInReader,
@@ -25,6 +25,7 @@ import {
   annotationCommentToPlainText,
 } from "../utils/annotationComment";
 import { annotationMatchesColorFilter } from "../utils/annotationColors";
+import { DEFAULT_HIGHLIGHT_COLOR } from "../utils/itemHighlights";
 import { copyStringToClipboard } from "../utils/clipboard";
 import { getItemCitationKey } from "../utils/citeKey";
 import { getString } from "../utils/locale";
@@ -556,7 +557,113 @@ export function AnnotationStreamBody({
             dangerouslySetInnerHTML={{ __html: commentDisplayHtml }}
           />
         ) : null}
+        {!isFulltext && entry.related.length > 0 ? (
+          <AnnotationRelatedItems related={entry.related} />
+        ) : null}
       </div>
+    </div>
+  );
+}
+
+function openAnnotationRelatedItem(relatedId: number): void {
+  const item = getCachedItem(relatedId) || Zotero.Items.get(relatedId);
+  if (!item) {
+    return;
+  }
+  try {
+    if (item.deleted) {
+      return;
+    }
+  } catch {
+    return;
+  }
+  try {
+    if (item.isAnnotation?.()) {
+      openAnnotationIdInReader(item.id);
+      return;
+    }
+    if (item.isNote?.()) {
+      openNoteItem(item);
+      return;
+    }
+  } catch {
+    // Fall through to library selection / attachment open.
+  }
+  try {
+    if (item.isRegularItem?.()) {
+      openItemBestAttachment(item);
+      return;
+    }
+  } catch {
+    // Fall through to selectItem.
+  }
+  try {
+    const pane = ztoolkit.getGlobal("ZoteroPane");
+    if (pane && typeof pane.selectItem === "function") {
+      void pane.selectItem(item.id);
+    }
+  } catch {
+    // Best-effort open.
+  }
+}
+
+function AnnotationRelatedItems({
+  related,
+}: {
+  related: MyAnnotationStreamEntry["related"];
+}) {
+  const heading = getString("my-annotations-related", {
+    args: { count: related.length },
+  });
+  return (
+    <div className="syllabus-my-annotations-stream-related">
+      <div className="syllabus-my-annotations-stream-related-heading">
+        <Link2 size={12} strokeWidth={2} aria-hidden="true" />
+        <span>{heading}</span>
+      </div>
+      <ul className="syllabus-my-annotations-stream-related-list">
+        {related.map((item) => {
+          const isAnnotation = item.itemType === "annotation";
+          return (
+            <li key={item.id}>
+              <button
+                type="button"
+                className="syllabus-my-annotations-stream-related-item"
+                title={item.title}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  openAnnotationRelatedItem(item.id);
+                }}
+              >
+                {isAnnotation ? (
+                  <span
+                    className="syllabus-my-annotations-stream-related-ann-icon"
+                    style={
+                      {
+                        "--highlight-color":
+                          item.color || DEFAULT_HIGHLIGHT_COLOR,
+                      } as JSX.CSSProperties
+                    }
+                    aria-hidden="true"
+                  >
+                    A
+                  </span>
+                ) : (
+                  <span
+                    className="icon icon-css icon-item-type syllabus-my-annotations-stream-related-type-icon"
+                    data-item-type={item.itemType}
+                    aria-hidden="true"
+                  />
+                )}
+                <span className="syllabus-my-annotations-stream-related-label">
+                  {item.title}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

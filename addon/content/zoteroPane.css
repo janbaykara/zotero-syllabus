@@ -4568,6 +4568,96 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   line-height: 1.35;
 }
 
+.syllabus-my-annotations-stream-related {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+  max-width: 100%;
+}
+
+.syllabus-my-annotations-stream-related-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--fill-secondary, #888);
+}
+
+.syllabus-my-annotations-stream-related-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.syllabus-my-annotations-stream-related-item {
+  appearance: none;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0.1rem 0;
+  border: 0;
+  background: transparent;
+  color: var(--fill-primary, inherit);
+  font: inherit;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  text-align: start;
+  cursor: pointer;
+}
+
+.syllabus-my-annotations-stream-related-item:hover
+  .syllabus-my-annotations-stream-related-label {
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+.syllabus-my-annotations-stream-related-item:focus-visible {
+  outline: 2px solid #7b4ddb;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.syllabus-my-annotations-stream-related-type-icon {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  display: block;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+.syllabus-my-annotations-stream-related-ann-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--highlight-color, #ffd400);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+.syllabus-my-annotations-stream-related-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .syllabus-my-annotations-load-previous-wrap {
   display: flex;
   justify-content: center;

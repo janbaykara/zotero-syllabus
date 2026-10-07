@@ -29,6 +29,7 @@ function entry(
     comment: "",
     color: "#ffd400",
     tags: [],
+    related: [],
     dateAdded: "",
     dateModified: "",
     pageLabel: "",
