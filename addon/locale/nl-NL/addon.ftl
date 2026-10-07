@@ -271,6 +271,7 @@ assignment-unassign-syllabus = Uit syllabus verwijderen
 assignment-unassign-label = Toewijzing opheffen
 priority-set-to = Prioriteit instellen op { $name }
 priority-clear = Prioriteit wissen
+priority-none = Geen prioriteit
 youtube-play = { $title } afspelen op YouTube
 
 # Item pane

@@ -271,6 +271,7 @@ assignment-unassign-syllabus = 從教學大綱中移除
 assignment-unassign-label = 取消指派
 priority-set-to = 將優先順序設為 { $name }
 priority-clear = 清除優先順序
+priority-none = 無優先順序
 youtube-play = 在 YouTube 上播放 { $title }
 
 # Item pane

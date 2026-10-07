@@ -1453,83 +1453,82 @@ export function SyllabusItemCard({
                 {!isClassNote && <>&middot;</>}
               </>
             )}
-            {!isClassNote &&
-              (() => {
-                const priorityOptions = syllabusMetadata.priorities || [];
-                return [
-                  ...priorityOptions.map((priorityOption: Priority) => {
+            {!isClassNote && (
+              <div
+                role="radiogroup"
+                aria-label={getString("field-priority")}
+                className="syllabus-gallery-groupby syllabus-priority-groupby shrink-0"
+              >
+                {(syllabusMetadata.priorities || []).map(
+                  (priorityOption: Priority) => {
+                    const isSelected = priority === priorityOption.id;
                     return (
-                      <div
+                      <button
                         key={priorityOption.id}
-                        className="focus-states-target"
-                      >
-                        <button
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            try {
-                              // Always pass identifier - handler will check if it's in selection
-                              if (onPriorityChange) {
-                                const identifier = {
-                                  assignmentId: assignment?.id,
-                                  itemId: assignment ? undefined : item.id,
-                                };
-                                await onPriorityChange(
-                                  priorityOption.id,
-                                  identifier,
-                                );
-                              }
-                            } catch (err) {
-                              ztoolkit.log("Error setting priority:", err);
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        className="syllabus-gallery-groupby-btn"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            if (onPriorityChange) {
+                              const identifier = {
+                                assignmentId: assignment?.id,
+                                itemId: assignment ? undefined : item.id,
+                              };
+                              await onPriorityChange(
+                                priorityOption.id,
+                                identifier,
+                              );
                             }
-                          }}
-                          title={getString("priority-set-to", {
-                            args: { name: priorityOption.name },
-                          })}
-                          aria-label={getString("priority-set-to", {
-                            args: { name: priorityOption.name },
-                          })}
-                        >
-                          <span
-                            className="syllabus-action-icon inline-block mt-1 -mb-1 w-3 h-3 rounded-full"
-                            style={{
-                              backgroundColor: priorityOption.color,
-                            }}
-                          />
-                          {/* <span className="syllabus-action-label">
-                        {priorityOption.name}
-                      </span> */}
-                        </button>
-                      </div>
-                    );
-                  }),
-                  <div key="none" className="focus-states-target">
-                    <button
-                      // className="syllabus-action-button row inline-lex flex-row items-center justify-center gap-2"
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        try {
-                          // Always pass identifier - handler will check if it's in selection
-                          if (onPriorityChange) {
-                            const identifier = {
-                              assignmentId: assignment?.id,
-                              itemId: assignment ? undefined : item.id,
-                            };
-                            await onPriorityChange(undefined, identifier);
+                          } catch (err) {
+                            ztoolkit.log("Error setting priority:", err);
                           }
-                        } catch (err) {
-                          ztoolkit.log("Error clearing priority:", err);
-                        }
-                      }}
-                      title={getString("priority-clear")}
-                      aria-label={getString("priority-clear")}
-                    >
-                      <span className="syllabus-action-label">
-                        {getString("menu-none")}
-                      </span>
-                    </button>
-                  </div>,
-                ];
-              })()}
+                        }}
+                        title={getString("priority-set-to", {
+                          args: { name: priorityOption.name },
+                        })}
+                        aria-label={getString("priority-set-to", {
+                          args: { name: priorityOption.name },
+                        })}
+                      >
+                        <span
+                          className="inline-block w-3 h-3 rounded-full"
+                          style={{
+                            backgroundColor: priorityOption.color,
+                          }}
+                        />
+                      </button>
+                    );
+                  },
+                )}
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={!priority}
+                  className="syllabus-gallery-groupby-btn"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      if (onPriorityChange) {
+                        const identifier = {
+                          assignmentId: assignment?.id,
+                          itemId: assignment ? undefined : item.id,
+                        };
+                        await onPriorityChange(undefined, identifier);
+                      }
+                    } catch (err) {
+                      ztoolkit.log("Error clearing priority:", err);
+                    }
+                  }}
+                  title={getString("priority-none")}
+                  aria-label={getString("priority-none")}
+                >
+                  {getString("priority-none")}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

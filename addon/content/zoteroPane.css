@@ -545,7 +545,20 @@
   font: inherit;
   font-size: 11px;
   line-height: 1.2;
+  white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
+}
+
+/* Solid fill for priority picker in the assignment action bar */
+.syllabus-priority-groupby .syllabus-gallery-groupby-btn {
+  background: var(--material-background, var(--color-background, #fff));
+}
+
+.syllabus-priority-groupby .syllabus-gallery-groupby-btn[aria-checked="true"] {
+  background-color: #7b4ddb;
+  color: #fff;
+  border-color: #7b4ddb;
 }
 
 .syllabus-gallery-groupby-btn svg {

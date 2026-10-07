@@ -271,6 +271,7 @@ assignment-unassign-syllabus = Прибрати із силабуса
 assignment-unassign-label = Скасувати призначення
 priority-set-to = Задати пріоритет: { $name }
 priority-clear = Зняти пріоритет
+priority-none = Без пріоритету
 youtube-play = Відтворити { $title } на YouTube
 
 # Item pane

@@ -271,6 +271,7 @@ assignment-unassign-syllabus = Aus Lehrplan entfernen
 assignment-unassign-label = Zuweisung aufheben
 priority-set-to = Priorität auf { $name } setzen
 priority-clear = Priorität löschen
+priority-none = Keine Priorität
 youtube-play = { $title } auf YouTube abspielen
 
 # Item pane

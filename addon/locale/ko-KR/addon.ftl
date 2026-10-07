@@ -271,6 +271,7 @@ assignment-unassign-syllabus = 강의계획서에서 제거
 assignment-unassign-label = 배정 해제
 priority-set-to = 우선순위를 { $name }(으)로 설정
 priority-clear = 우선순위 지우기
+priority-none = 우선순위 없음
 youtube-play = YouTube에서 { $title } 재생
 
 # Item pane

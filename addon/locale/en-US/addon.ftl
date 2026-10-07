@@ -269,6 +269,7 @@ assignment-unassign-syllabus = Remove from syllabus
 assignment-unassign-label = Unassign
 priority-set-to = Set priority to { $name }
 priority-clear = Clear priority
+priority-none = No priority
 youtube-play = Play { $title } on YouTube
 
 # Item pane

@@ -271,6 +271,7 @@ assignment-unassign-syllabus = İzlenceden çıkar
 assignment-unassign-label = Atamayı kaldır
 priority-set-to = Önceliği { $name } olarak ayarla
 priority-clear = Önceliği temizle
+priority-none = Öncelik yok
 youtube-play = { $title } başlığını YouTube’da oynat
 
 # Item pane

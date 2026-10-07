@@ -271,6 +271,7 @@ assignment-unassign-syllabus = Gỡ khỏi đề cương
 assignment-unassign-label = Bỏ gán
 priority-set-to = Đặt mức ưu tiên thành { $name }
 priority-clear = Xóa mức ưu tiên
+priority-none = Không ưu tiên
 youtube-play = Phát { $title } trên YouTube
 
 # Item pane

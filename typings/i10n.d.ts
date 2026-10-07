@@ -463,6 +463,7 @@ export type FluentMessageId =
   | 'priority-default-essential'
   | 'priority-default-optional'
   | 'priority-default-recommended'
+  | 'priority-none'
   | 'priority-set-to'
   | 'progress-import-bad-file'
   | 'progress-import-error-title'

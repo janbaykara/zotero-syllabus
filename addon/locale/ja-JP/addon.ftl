@@ -271,6 +271,7 @@ assignment-unassign-syllabus = シラバスから外す
 assignment-unassign-label = 割り当て解除
 priority-set-to = 優先度を{ $name }に設定
 priority-clear = 優先度をクリア
+priority-none = 優先度なし
 youtube-play = YouTube で { $title } を再生
 
 # Item pane

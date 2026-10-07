@@ -271,6 +271,7 @@ assignment-unassign-syllabus = Hapus dari silabus
 assignment-unassign-label = Batalkan penetapan
 priority-set-to = Atur prioritas ke { $name }
 priority-clear = Hapus prioritas
+priority-none = Tanpa prioritas
 youtube-play = Putar { $title } di YouTube
 
 # Item pane

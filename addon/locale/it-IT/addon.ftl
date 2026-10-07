@@ -271,6 +271,7 @@ assignment-unassign-syllabus = Rimuovi dal programma
 assignment-unassign-label = Annulla assegnazione
 priority-set-to = Imposta priorità su { $name }
 priority-clear = Cancella priorità
+priority-none = Nessuna priorità
 youtube-play = Riproduci { $title } su YouTube
 
 # Item pane
