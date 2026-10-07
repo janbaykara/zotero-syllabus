@@ -1000,7 +1000,13 @@ export function isPrintableItemHref(href: string): boolean {
     return true;
   }
   // Relative publish paths only (no scheme, no ..)
-  return /^files\/[A-Za-z0-9._-]+\.[A-Za-z0-9]+$/.test(value);
+  if (/^files\/[A-Za-z0-9._-]+\.[A-Za-z0-9]+$/.test(value)) {
+    return true;
+  }
+  // Absolute same-origin shared item file paths
+  return /^\/u\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\/item\/[A-Za-z0-9._-]+\/files\/[A-Za-z0-9._-]+\.[A-Za-z0-9]+$/.test(
+    value,
+  );
 }
 
 /**
@@ -1698,8 +1704,13 @@ function buildPublishShareMetaHtml(opts: {
   return lines.join("\n  ");
 }
 
-/** Small credit line for hosted HTML (product names stay untranslated). */
-function buildPublishCreditHtml(): string {
+/**
+ * Small credit line for hosted HTML (product names stay untranslated).
+ * Links “Zotero Syllabus” → plugin repo and “Zotero” → zotero.org.
+ */
+export function buildPublishCreditHtml(options?: {
+  className?: string;
+}): string {
   const syllabusMarker = "\uE000";
   const zoteroMarker = "\uE001";
   const label = getString("publish-html-credit", {
@@ -1710,7 +1721,8 @@ function buildPublishCreditHtml(): string {
   const body = escapeHtml(label)
     .replace(syllabusMarker, syllabusLink)
     .replace(zoteroMarker, zoteroLink);
-  return `<footer class="syllabus-publish-credit">${body}</footer>`;
+  const className = options?.className || "syllabus-publish-credit";
+  return `<footer class="${escapeHtml(className)}">${body}</footer>`;
 }
 
 function cc(contract: string): {

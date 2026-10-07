@@ -2,6 +2,10 @@ item-section-syllabus-head-text =
     .label = Задания по чтению
 item-section-syllabus-sidenav-tooltip =
     .tooltiptext = Параметры силлабуса для этой записи
+item-section-share-head-text =
+    .label = Share online
+item-section-share-sidenav-tooltip =
+    .tooltiptext = Share this item via a public URL
 
 panel-demo-header =
     .label = Демонстрация панели

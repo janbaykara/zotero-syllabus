@@ -7,6 +7,7 @@ import { getLocaleID, getString, compareLocale } from "../utils/locale";
 import { renderSyllabusPage } from "./SyllabusPage";
 import { renderGalleryPage } from "./GalleryPage";
 import { renderExplorerPage } from "./ExplorerPage";
+import { ItemSharePane } from "./ItemSharePane";
 import { setGalleryGroupBy } from "./galleryGroupBy";
 import {
   getLibraryViewMode,
@@ -29,6 +30,12 @@ import {
 } from "../utils/viewScope";
 import { itemsViewIsFilteredForTreeViewID } from "./react-zotero-sync/itemsViewItems";
 import { getCurrentTab, confirmPrompt } from "../utils/window";
+import {
+  canShareItemViaUrl,
+  itemHasPublishedUrl,
+  shareItemViaUrl,
+  unpublishItemViaUrl,
+} from "../utils/shareItemViaUrl";
 import { renderComponent, unmountComponent } from "../utils/react";
 import { ItemPane } from "./ItemPane";
 import { openAddToClassDialog } from "./openAddToClassDialog";
@@ -438,6 +445,7 @@ const myAnnotationsTabManager = new TabManager<{ libraryID: number }>({
 export class SyllabusManager {
   static notifierID: string | null = null;
   static syllabusItemPaneSection: false | string | null = null;
+  static itemSharePaneSection: false | string | null = null;
   static readingsTabPanelID: string | null = null;
 
   static readingScheduleTab = tabManager;
@@ -590,6 +598,7 @@ export class SyllabusManager {
     this.registerSyllabusStatusColumn();
     this.registerReadingTimeColumn();
     this.registerSyllabusItemPaneSection();
+    this.registerItemSharePaneSection();
 
     Zotero.Promise.delay(10000).then(() => {
       installReadingListTranslators(rootURI);
@@ -884,6 +893,7 @@ export class SyllabusManager {
       () => this.contextMenuPinnedSectionVisible(),
     );
     this.setupContextMenuPinned();
+    this.setupContextMenuShareItem();
     this.setupContextMenuAddCollectionShelf();
   }
 
@@ -2106,10 +2116,12 @@ export class SyllabusManager {
 
   static reloadItemPane() {
     ztoolkit.log("SyllabusManager.reloadItemPane");
-    if (this.syllabusItemPaneSection) {
-      return;
+    if (!this.syllabusItemPaneSection) {
+      this.registerSyllabusItemPaneSection();
     }
-    this.registerSyllabusItemPaneSection();
+    if (!this.itemSharePaneSection) {
+      this.registerItemSharePaneSection();
+    }
   }
 
   static destroyItemPaneSection() {
@@ -2122,12 +2134,27 @@ export class SyllabusManager {
       }
       this.syllabusItemPaneSection = null;
     }
+    if (this.itemSharePaneSection) {
+      try {
+        Zotero.ItemPaneManager.unregisterSection(this.itemSharePaneSection);
+      } catch (e) {
+        ztoolkit.log("Error unregistering item share pane section:", e);
+      }
+      this.itemSharePaneSection = null;
+    }
   }
 
   static registerSyllabusItemPaneSection() {
     ztoolkit.log("SyllabusManager.registerSyllabusItemPaneSection");
     // Always unregister first to avoid duplicate registration errors
-    this.destroyItemPaneSection();
+    if (this.syllabusItemPaneSection) {
+      try {
+        Zotero.ItemPaneManager.unregisterSection(this.syllabusItemPaneSection);
+      } catch (e) {
+        ztoolkit.log("Error unregistering item pane section:", e);
+      }
+      this.syllabusItemPaneSection = null;
+    }
 
     this.syllabusItemPaneSection = Zotero.ItemPaneManager.registerSection({
       paneID: "syllabus",
@@ -2148,6 +2175,52 @@ export class SyllabusManager {
           body,
           h(ItemPane, { editable }),
           "syllabus-item-pane",
+        );
+      },
+    });
+  }
+
+  static registerItemSharePaneSection() {
+    ztoolkit.log("SyllabusManager.registerItemSharePaneSection");
+    if (this.itemSharePaneSection) {
+      try {
+        Zotero.ItemPaneManager.unregisterSection(this.itemSharePaneSection);
+      } catch (e) {
+        ztoolkit.log("Error unregistering item share pane section:", e);
+      }
+      this.itemSharePaneSection = null;
+    }
+
+    this.itemSharePaneSection = Zotero.ItemPaneManager.registerSection({
+      paneID: "syllabus-item-share",
+      pluginID: addon.data.config.addonID,
+      header: {
+        l10nID: getLocaleID("item-section-share-head-text"),
+        icon: "chrome://zotero/skin/16/universal/link.svg",
+      },
+      sidenav: {
+        l10nID: getLocaleID("item-section-share-sidenav-tooltip"),
+        icon: "chrome://zotero/skin/16/universal/link.svg",
+      },
+      onItemChange: ({ item, setEnabled }) => {
+        try {
+          if (!item || item.deleted || item.isFeedItem || item.isNote?.()) {
+            setEnabled(false);
+            return;
+          }
+          setEnabled(Boolean(item.isRegularItem?.() || item.isAttachment?.()));
+        } catch {
+          setEnabled(false);
+        }
+      },
+      onRender: ({ body, editable }) => {
+        const win = Zotero.getMainWindow();
+        body.textContent = "";
+        renderComponent(
+          win,
+          body,
+          h(ItemSharePane, { editable }),
+          "syllabus-item-share-pane",
         );
       },
     });
@@ -2767,6 +2840,52 @@ export class SyllabusManager {
           return;
         }
         enqueuePinnedReadingScheduleSync();
+      },
+    });
+  }
+
+  static setupContextMenuShareItem() {
+    ztoolkit.Menu.unregister("syllabus-item-share-via-url-menu");
+    ztoolkit.Menu.unregister("syllabus-item-unpublish-menu");
+
+    const selectedShareable = (): Zotero.Item | null => {
+      try {
+        const items = ztoolkit.getGlobal("ZoteroPane").getSelectedItems() || [];
+        if (items.length !== 1) return null;
+        const item = items[0];
+        if (canShareItemViaUrl(item)) return item;
+        return null;
+      } catch {
+        return null;
+      }
+    };
+
+    ztoolkit.Menu.register("item", {
+      tag: "menuitem",
+      id: "syllabus-item-share-via-url-menu",
+      label: getString("item-share-via-url"),
+      isHidden: () => !selectedShareable(),
+      commandListener: () => {
+        const item = selectedShareable();
+        if (item) {
+          void shareItemViaUrl(item);
+        }
+      },
+    });
+
+    ztoolkit.Menu.register("item", {
+      tag: "menuitem",
+      id: "syllabus-item-unpublish-menu",
+      label: getString("item-unpublish"),
+      isHidden: () => {
+        const item = selectedShareable();
+        return !item || !itemHasPublishedUrl(item);
+      },
+      commandListener: () => {
+        const item = selectedShareable();
+        if (item) {
+          void unpublishItemViaUrl(item);
+        }
       },
     });
   }

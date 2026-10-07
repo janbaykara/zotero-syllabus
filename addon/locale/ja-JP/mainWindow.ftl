@@ -2,6 +2,10 @@ item-section-syllabus-head-text =
     .label = 課題の割り当て
 item-section-syllabus-sidenav-tooltip =
     .tooltiptext = このアイテムのシラバス設定
+item-section-share-head-text =
+    .label = Share online
+item-section-share-sidenav-tooltip =
+    .tooltiptext = Share this item via a public URL
 
 panel-demo-header =
     .label = パネルデモ

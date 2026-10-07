@@ -2,6 +2,10 @@ item-section-syllabus-head-text =
     .label = 읽기 과제
 item-section-syllabus-sidenav-tooltip =
     .tooltiptext = 이 항목의 강의계획서 설정
+item-section-share-head-text =
+    .label = Share online
+item-section-share-sidenav-tooltip =
+    .tooltiptext = Share this item via a public URL
 
 panel-demo-header =
     .label = 패널 데모

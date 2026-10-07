@@ -2,6 +2,10 @@ item-section-syllabus-head-text =
     .label = Tugas bacaan
 item-section-syllabus-sidenav-tooltip =
     .tooltiptext = Pengaturan silabus untuk item ini
+item-section-share-head-text =
+    .label = Share online
+item-section-share-sidenav-tooltip =
+    .tooltiptext = Share this item via a public URL
 
 panel-demo-header =
     .label = Demo panel

@@ -2,6 +2,10 @@ item-section-syllabus-head-text =
     .label = 閱讀作業
 item-section-syllabus-sidenav-tooltip =
     .tooltiptext = 此條目的教學大綱設定
+item-section-share-head-text =
+    .label = Share online
+item-section-share-sidenav-tooltip =
+    .tooltiptext = Share this item via a public URL
 
 panel-demo-header =
     .label = 面板示範

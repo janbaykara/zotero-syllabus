@@ -1,4 +1,5 @@
 import { getPref, setPref, clearPref } from "./prefs";
+import { publishTargetHeaders, type PublishTarget } from "./publishTarget";
 
 const DEFAULT_BASE = "https://read.zotero-syllabus.workers.dev";
 
@@ -186,23 +187,48 @@ export async function signInWithZoteroForPublish(opts?: {
   throw new Error("publish_auth_timeout");
 }
 
+export type PublishObjectMeta = {
+  size: number;
+  fingerprint: string | null;
+  etag: string | null;
+};
+
+function normalizeObjectsMap(
+  raw: Record<
+    string,
+    { size?: number; fingerprint?: string | null; etag?: string | null }
+  >,
+): Record<string, PublishObjectMeta> {
+  const objects: Record<string, PublishObjectMeta> = {};
+  for (const [relPath, meta] of Object.entries(raw || {})) {
+    objects[relPath] = {
+      size: Number(meta?.size || 0),
+      fingerprint:
+        typeof meta?.fingerprint === "string" && meta.fingerprint
+          ? meta.fingerprint
+          : null,
+      etag: typeof meta?.etag === "string" ? meta.etag : null,
+    };
+  }
+  return objects;
+}
+
 export async function listPublishObjects(opts: {
   token: string;
-  libraryId: string;
-  collectionKey: string;
+  target: PublishTarget;
 }): Promise<{
   publicUrl: string;
-  objects: Record<
-    string,
-    { size: number; fingerprint: string | null; etag: string | null }
-  >;
+  objects: Record<string, PublishObjectMeta>;
+  /** Present when listing a syllabus that has itemKeys.json. */
+  itemKeys?: string[];
 }> {
   const base = getPublishApiBaseUrl();
-  const xhr = await Zotero.HTTP.request("GET", `${base}/v1/syllabus/objects`, {
+  const path =
+    opts.target.kind === "item" ? "/v1/item/objects" : "/v1/syllabus/objects";
+  const xhr = await Zotero.HTTP.request("GET", `${base}${path}`, {
     headers: {
       Authorization: `Bearer ${opts.token}`,
-      "X-Syllabus-Library-Id": opts.libraryId,
-      "X-Syllabus-Collection-Key": opts.collectionKey,
+      ...publishTargetHeaders(opts.target),
       Accept: "application/json",
     },
     responseType: "text",
@@ -217,6 +243,7 @@ export async function listPublishObjects(opts: {
       string,
       { size?: number; fingerprint?: string | null; etag?: string | null }
     >;
+    itemKeys?: string[];
     error?: string;
   };
   try {
@@ -233,31 +260,44 @@ export async function listPublishObjects(opts: {
     err.data = data;
     throw err;
   }
-  const objects: Record<
-    string,
-    { size: number; fingerprint: string | null; etag: string | null }
-  > = {};
-  for (const [relPath, meta] of Object.entries(data.objects || {})) {
-    objects[relPath] = {
-      size: Number(meta?.size || 0),
-      fingerprint:
-        typeof meta?.fingerprint === "string" && meta.fingerprint
-          ? meta.fingerprint
-          : null,
-      etag: typeof meta?.etag === "string" ? meta.etag : null,
-    };
-  }
   return {
     publicUrl: String(data.publicUrl || ""),
-    objects,
+    objects: normalizeObjectsMap(data.objects || {}),
+    itemKeys: Array.isArray(data.itemKeys)
+      ? data.itemKeys.filter((k): k is string => typeof k === "string" && !!k)
+      : undefined,
   };
+}
+
+/** @deprecated Prefer listPublishObjects({ target }) */
+export async function listPublishSyllabusObjects(opts: {
+  token: string;
+  libraryId: string;
+  collectionKey: string;
+}): Promise<{
+  publicUrl: string;
+  objects: Record<string, PublishObjectMeta>;
+}> {
+  return listPublishObjects({
+    token: opts.token,
+    target: {
+      kind: "syllabus",
+      libraryId: opts.libraryId,
+      collectionKey: opts.collectionKey,
+    },
+  });
 }
 
 export async function deletePublishSyllabus(opts: {
   token: string;
   libraryId: string;
   collectionKey: string;
-}): Promise<{ ok: boolean; deleted: number; usageBytes: number }> {
+}): Promise<{
+  ok: boolean;
+  deleted: number;
+  usageBytes: number;
+  gcDeleted: number;
+}> {
   const base = getPublishApiBaseUrl();
   const qs = new URLSearchParams({
     libraryId: opts.libraryId,
@@ -282,6 +322,7 @@ export async function deletePublishSyllabus(opts: {
     ok?: boolean;
     deleted?: number;
     usageBytes?: number;
+    gcDeleted?: number;
     error?: string;
   };
   try {
@@ -302,13 +343,135 @@ export async function deletePublishSyllabus(opts: {
     ok: Boolean(data.ok),
     deleted: Number(data.deleted || 0),
     usageBytes: Number(data.usageBytes || 0),
+    gcDeleted: Number(data.gcDeleted || 0),
+  };
+}
+
+export async function deletePublishItem(opts: {
+  token: string;
+  libraryId: string;
+  itemKey: string;
+}): Promise<{
+  ok: boolean;
+  deleted: number;
+  usageBytes: number;
+  gcDeleted: number;
+}> {
+  const base = getPublishApiBaseUrl();
+  const qs = new URLSearchParams({
+    libraryId: opts.libraryId,
+    itemKey: opts.itemKey,
+  });
+  const xhr = await Zotero.HTTP.request(
+    "DELETE",
+    `${base}/v1/item?${qs.toString()}`,
+    {
+      headers: {
+        Authorization: `Bearer ${opts.token}`,
+        Accept: "application/json",
+      },
+      responseType: "text",
+      timeout: 120000,
+      successCodes: false,
+    },
+  );
+  const status = xhr.status || 0;
+  const text = String(xhr.responseText || "");
+  let data: {
+    ok?: boolean;
+    deleted?: number;
+    usageBytes?: number;
+    gcDeleted?: number;
+    error?: string;
+  };
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = {};
+  }
+  if (status < 200 || status >= 300) {
+    const err = new Error(data.error || `publish_http_${status}`) as Error & {
+      status: number;
+      data: unknown;
+    };
+    err.status = status;
+    err.data = data;
+    throw err;
+  }
+  return {
+    ok: Boolean(data.ok),
+    deleted: Number(data.deleted || 0),
+    usageBytes: Number(data.usageBytes || 0),
+    gcDeleted: Number(data.gcDeleted || 0),
+  };
+}
+
+export async function patchPublishItemRefs(opts: {
+  token: string;
+  libraryId: string;
+  itemKey: string;
+  addSyllabus?: string;
+  removeSyllabus?: string;
+  setPage?: boolean;
+}): Promise<{
+  refs: { syllabi: string[]; page: boolean };
+  gcDeleted: number;
+}> {
+  const base = getPublishApiBaseUrl();
+  const body: Record<string, unknown> = {
+    libraryId: opts.libraryId,
+    itemKey: opts.itemKey,
+  };
+  if (opts.addSyllabus) body.addSyllabus = opts.addSyllabus;
+  if (opts.removeSyllabus) body.removeSyllabus = opts.removeSyllabus;
+  if (typeof opts.setPage === "boolean") body.setPage = opts.setPage;
+
+  const xhr = await Zotero.HTTP.request("POST", `${base}/v1/item-refs`, {
+    headers: {
+      Authorization: `Bearer ${opts.token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(body),
+    responseType: "text",
+    timeout: 60000,
+    successCodes: false,
+  });
+  const status = xhr.status || 0;
+  const text = String(xhr.responseText || "");
+  let data: {
+    refs?: { syllabi?: string[]; page?: boolean };
+    gcDeleted?: number;
+    error?: string;
+  };
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = {};
+  }
+  if (status < 200 || status >= 300) {
+    const err = new Error(data.error || `publish_http_${status}`) as Error & {
+      status: number;
+      data: unknown;
+    };
+    err.status = status;
+    err.data = data;
+    throw err;
+  }
+  return {
+    refs: {
+      syllabi: Array.isArray(data.refs?.syllabi)
+        ? data.refs!.syllabi!.filter((k): k is string => typeof k === "string")
+        : [],
+      page: data.refs?.page === true,
+    },
+    gcDeleted: Number(data.gcDeleted || 0),
   };
 }
 
 export async function putPublishObject(opts: {
   token: string;
-  libraryId: string;
-  collectionKey: string;
+  target: PublishTarget;
   relPath: string;
   bytes: Uint8Array;
   fingerprint?: string | null;
@@ -323,8 +486,7 @@ export async function putPublishObject(opts: {
   const headers: Record<string, string> = {
     Authorization: `Bearer ${opts.token}`,
     "Content-Type": "application/octet-stream",
-    "X-Syllabus-Library-Id": opts.libraryId,
-    "X-Syllabus-Collection-Key": opts.collectionKey,
+    ...publishTargetHeaders(opts.target),
     "X-Object-Path": opts.relPath,
     Accept: "application/json",
   };
@@ -373,6 +535,43 @@ export async function putPublishObject(opts: {
     usageBytes: Number(data.usageBytes || 0),
     quotaBytes: Number(data.quotaBytes || 0),
   };
+}
+
+export async function deletePublishObject(opts: {
+  token: string;
+  target: PublishTarget;
+  relPath: string;
+}): Promise<{ deleted: boolean }> {
+  const base = getPublishApiBaseUrl();
+  const xhr = await Zotero.HTTP.request("DELETE", `${base}/v1/objects`, {
+    headers: {
+      Authorization: `Bearer ${opts.token}`,
+      ...publishTargetHeaders(opts.target),
+      "X-Object-Path": opts.relPath,
+      Accept: "application/json",
+    },
+    responseType: "text",
+    timeout: 60000,
+    successCodes: false,
+  });
+  const status = xhr.status || 0;
+  const text = String(xhr.responseText || "");
+  let data: { deleted?: boolean; error?: string };
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = {};
+  }
+  if (status < 200 || status >= 300) {
+    const err = new Error(data.error || `publish_http_${status}`) as Error & {
+      status: number;
+      data: unknown;
+    };
+    err.status = status;
+    err.data = data;
+    throw err;
+  }
+  return { deleted: Boolean(data.deleted) };
 }
 
 /** Percent-encode for ASCII-safe HTTP headers (Worker decodes). */

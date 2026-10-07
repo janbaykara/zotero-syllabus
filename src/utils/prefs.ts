@@ -76,6 +76,7 @@ export const PLUGIN_PREF_DEFAULTS: {
   publishJwt: "",
   publishUserId: "",
   publishJwtExpiresAt: 0,
+  publishItemUrls: "",
   defaultPriorities: "",
 };
 

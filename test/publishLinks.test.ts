@@ -8,11 +8,14 @@ import {
 import { remoteMatchesLocal } from "../src/utils/publishFileFingerprints";
 
 describe("publish link hrefs", function () {
-  it("accepts http(s) and relative files/ paths", function () {
+  it("accepts http(s), relative files/, and absolute item file paths", function () {
     assert.isTrue(isPrintableItemHref("https://example.edu/a"));
     assert.isTrue(isPrintableItemHref("http://example.edu/a"));
     assert.isTrue(isPrintableItemHref("files/ABCD1234.pdf"));
     assert.isTrue(isPrintableItemHref("files/KEY.epub"));
+    assert.isTrue(
+      isPrintableItemHref("/u/42/1/item/ITEMKEY1/files/ABCD1234.pdf"),
+    );
     assert.isFalse(isPrintableItemHref(""));
     assert.isFalse(isPrintableItemHref("files/../etc/passwd"));
     assert.isFalse(isPrintableItemHref("file:///tmp/x.pdf"));
@@ -22,6 +25,10 @@ describe("publish link hrefs", function () {
   it("maps uploaded files/ paths to PDF/EPUB icon kinds", function () {
     assert.equal(publishFileIconKind("files/ABCD1234.pdf"), "pdf");
     assert.equal(publishFileIconKind("files/KEY.epub"), "epub");
+    assert.equal(
+      publishFileIconKind("/u/42/1/item/ITEM/files/ABCD1234.pdf"),
+      "pdf",
+    );
     assert.isNull(publishFileIconKind("files/KEY.png"));
     assert.isNull(publishFileIconKind("https://example.edu/a.pdf"));
     assert.isNull(publishFileIconKind("files/../x.pdf"));

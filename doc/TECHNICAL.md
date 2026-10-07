@@ -237,27 +237,39 @@ Operator setup detail (commands, secrets, smoke tests) lives in [`cloud/README.m
 **Object layout** (deterministic; overwrite on republish; no syllabus database):
 
 ```text
+# Syllabus page artifacts
 users/{zoteroUserId}/syllabi/{libraryID}/{collectionKey}/index.html
-users/{zoteroUserId}/syllabi/{libraryID}/{collectionKey}/files/{attachmentKey}.{ext}
+users/{zoteroUserId}/syllabi/{libraryID}/{collectionKey}/itemKeys.json
+users/{zoteroUserId}/syllabi/{libraryID}/{collectionKey}/bibliography.{ris,bib,rdf}
+users/{zoteroUserId}/syllabi/{libraryID}/{collectionKey}/og-image.jpg
+
+# Shared per-item file store (+ optional individual cover page)
+users/{zoteroUserId}/items/{libraryID}/{itemKey}/files/{attachmentKey}.{ext}
+users/{zoteroUserId}/items/{libraryID}/{itemKey}/refs.json
+users/{zoteroUserId}/items/{libraryID}/{itemKey}/index.html   # Share via URL only
 ```
 
-The Worker ignores any client-supplied owner and forces `users/{jwt.sub}/…`. Path traversal and keys outside that prefix are rejected.
+The Worker ignores any client-supplied owner and forces `users/{jwt.sub}/…`. Path traversal and keys outside that prefix are rejected. `refs.json` tracks which published syllabi (`syllabi: collectionKey[]`) and whether an item cover page (`page`) still need the shared files; it is not served publicly.
 
-**Publish pipeline (plugin).** Build printable HTML from the live syllabus DOM ([`serializeSyllabusForPublish`](../src/utils/printSyllabus.ts) / [`buildPrintableHtml`](../src/utils/printSyllabus.ts)), pick best attachments (PDF → EPUB → other), rewrite title links to relative `files/…` paths when a file was uploaded (else keep existing `http(s)` item URLs), upload `bibliography.ris` / `bibliography.bib` / `bibliography.rdf` (RDF includes the syllabus note for re-import) plus files then `index.html` last via [`publishSyllabus.ts`](../src/utils/publishSyllabus.ts). Hosted HTML keeps the active density layout (row / standard / expanded) including item-type icons and covers; for **standard** and **expanded**, author/date metadata is replaced with a per-item bibliographic citation. Share cards use the syllabus description (Open Graph / Twitter meta) plus an optional `og-image.jpg` collage of up to four reading covers. Skip-unchanged uses one `GET /v1/syllabus/objects` list (size + `fingerprint` metadata) rather than per-file probes. Share URL:
+**Publish pipeline (plugin).** Build printable HTML from the live syllabus DOM ([`serializeSyllabusForPublish`](../src/utils/printSyllabus.ts) / [`buildPrintableHtml`](../src/utils/printSyllabus.ts)), pick best attachments (PDF → EPUB → other), upload them into the **shared item prefix**, rewrite title links to absolute `/u/{userId}/{libraryId}/item/{itemKey}/files/…` paths, upload `itemKeys.json` + bibliography + og-image + `index.html` under the syllabus prefix via [`publishSyllabus.ts`](../src/utils/publishSyllabus.ts). Hosted HTML keeps the active density layout (row / standard / expanded) including item-type icons and covers; for **standard** and **expanded**, author/date metadata is replaced with a per-item bibliographic citation. Share cards use the syllabus description (Open Graph / Twitter meta) plus an optional `og-image.jpg` collage of up to four reading covers. Skip-unchanged lists syllabus objects and each item prefix. Share URL:
 
 ```text
 https://<worker>/u/{zoteroUserId}/{libraryID}/{collectionKey}/
 ```
 
-Relative links resolve against that page URL. No paid domain is required (`*.workers.dev` is enough).
+**Item share.** Right-click → **Share via URL** ([`shareItemViaUrl.ts`](../src/utils/shareItemViaUrl.ts) / [`publishItem.ts`](../src/utils/publishItem.ts)) uploads all local file attachments into the same item prefix (fingerprint skip if a syllabus already published the PDF), sets `refs.page`, and writes a cover page at:
 
-**Unpublish.** The publish banner offers **Unpublish** next to Sync. After confirm (and OAuth if needed), the plugin calls `DELETE /v1/syllabus?libraryId=&collectionKey=`, which deletes every R2 object under that syllabus prefix and reconciles KV usage. The local `publishUrls` entry is cleared; subsequent public GETs return 404. Non-HTML attachments may remain cached at the edge for up to about five minutes (`Cache-Control: max-age=300`); `index.html` is already `no-cache`.
+```text
+https://<worker>/u/{zoteroUserId}/{libraryID}/item/{itemKey}/
+```
+
+**Unpublish.** Syllabus banner **Unpublish** calls `DELETE /v1/syllabus`, which wipes the syllabus prefix, removes that collection from each listed item’s `refs.json`, and **deletes the item prefix** when no item URL remains (`page: false`) and no other syllabus refs it. **Unpublish shared URL** on the item menu clears the cover page and deletes files only when no syllabus still references the item. Local prefs: `publishUrls`, `publishItemUrls`.
 
 **Quota.** R2 has no per-prefix caps. The Worker tracks `usage:{userId}` in KV, measures actual upload bytes, and rejects when projected usage exceeds `USER_QUOTA_BYTES` (default 200 MB). Set a Cloudflare **billing alert / spend limit** on the account as a backstop; that does not replace per-user quotas in the product.
 
 **Admin dashboard.** Optional secret-gated HTML at `GET /admin?key=<ADMIN_DASHBOARD_SECRET>` (Worker secret). Scans R2 for published syllabi and shows title / course code / institution (from `index.html` customMetadata via per-object `head` after a cheap key list), public URLs, per-syllabus storage size, and `files/` attachment counts. Each row can **Delete** via `DELETE /admin/syllabus?key=&userId=&libraryId=&collectionKey=` (same R2 wipe as plugin Unpublish, then reconciles that user’s usage). Successful public `GET`s of `index.html`, `files/*`, and `bibliography.{ris,bib,rdf}` are written to Workers Analytics Engine (`syllabus_views`); with `CF_ACCOUNT_ID` + `CF_ANALYTICS_API_TOKEN` (Account Analytics Read) the dashboard also shows last-30-day page views, file downloads, citation exports, and a daily chart (hover a bar for that day’s total visits and the top 3 syllabi by course code / title). Unset or wrong admin key → 404.
 
-**UI entry.** Printer / save menu on [`SyllabusPage.tsx`](../src/modules/SyllabusPage.tsx): export formats plus **Publish online…**. Copyright confirm, then OAuth if needed, then upload. When a syllabus is already published, the status banner shows the public link plus **Sync changes** and **Unpublish**. Prefs: `publishApiBaseUrl`, `publishJwt`, `publishUserId`, `publishJwtExpiresAt`, `publishUrls` (see [`addon/prefs.js`](../addon/prefs.js)).
+**UI entry.** Printer / save menu on [`SyllabusPage.tsx`](../src/modules/SyllabusPage.tsx): export formats plus **Publish online…**. Copyright confirm, then OAuth if needed, then upload. When a syllabus is already published, the status banner shows the public link plus **Sync changes** and **Unpublish**. Item context menu and item pane **Share online** section ([`ItemSharePane.tsx`](../src/modules/ItemSharePane.tsx)): **Share via URL** / copy / open / **Sync changes** / **Unpublish**. The public URL is stored on the item Extra field `Zotero Syllabus URL` (syncs with the library) and cached in prefs `publishItemUrls`. Prefs: `publishApiBaseUrl`, `publishJwt`, `publishUserId`, `publishJwtExpiresAt`, `publishUrls`, `publishItemUrls` (see [`addon/prefs.js`](../addon/prefs.js)).
 
 ### First-time cloud setup
 

@@ -2,6 +2,10 @@ item-section-syllabus-head-text =
     .label = Bài tập đọc
 item-section-syllabus-sidenav-tooltip =
     .tooltiptext = Cài đặt đề cương cho mục này
+item-section-share-head-text =
+    .label = Share online
+item-section-share-sidenav-tooltip =
+    .tooltiptext = Share this item via a public URL
 
 panel-demo-header =
     .label = Bản demo bảng

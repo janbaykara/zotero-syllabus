@@ -9,10 +9,25 @@ import {
   oauthSignedRequest,
 } from "./oauth";
 import {
+  applyItemRefsPatch,
+  parseItemKeysJson,
+  readSyllabusItemKeys,
+  removeSyllabusFromItems,
+  unpublishItemPage,
+} from "./itemRefs";
+import {
   PathError,
+  assertItemRelPath,
+  assertSyllabusRelPath,
   contentTypeForPath,
+  isPrivateRelPath,
+  itemObjectKey,
   objectKey,
   parsePublicPath,
+  publicUrlForItem,
+  publicUrlForSyllabus,
+  r2KeyForPublicPath,
+  userItemPrefix,
   userSyllabusPrefix,
 } from "./paths";
 import {
@@ -36,10 +51,131 @@ const CORS_ALLOW_HEADERS = [
   "content-type",
   "x-syllabus-library-id",
   "x-syllabus-collection-key",
+  "x-syllabus-item-key",
   "x-object-path",
   "x-object-fingerprint",
   ...SYLLABUS_META_HEADER_NAMES,
 ].join(", ");
+
+type PublishTarget =
+  | {
+      kind: "syllabus";
+      libraryId: string;
+      collectionKey: string;
+      prefix: string;
+      publicUrl: string;
+      objectKeyFor: (relPath: string) => string;
+      assertRel: (relPath: string) => string;
+    }
+  | {
+      kind: "item";
+      libraryId: string;
+      itemKey: string;
+      prefix: string;
+      publicUrl: string;
+      objectKeyFor: (relPath: string) => string;
+      assertRel: (relPath: string) => string;
+    };
+
+function resolvePublishTarget(
+  userId: string,
+  base: string,
+  headers: Headers,
+  url: URL,
+): PublishTarget {
+  const libraryId =
+    headers.get("x-syllabus-library-id") ||
+    url.searchParams.get("libraryId") ||
+    "";
+  const collectionKey =
+    headers.get("x-syllabus-collection-key") ||
+    url.searchParams.get("collectionKey") ||
+    "";
+  const itemKey =
+    headers.get("x-syllabus-item-key") || url.searchParams.get("itemKey") || "";
+
+  if (collectionKey && itemKey) {
+    throw new PathError("Specify collection or item key, not both");
+  }
+  if (collectionKey) {
+    const prefix = userSyllabusPrefix(userId, libraryId, collectionKey);
+    return {
+      kind: "syllabus",
+      libraryId,
+      collectionKey,
+      prefix,
+      publicUrl: publicUrlForSyllabus(base, userId, libraryId, collectionKey),
+      objectKeyFor: (relPath) =>
+        objectKey(userId, libraryId, collectionKey, relPath),
+      assertRel: assertSyllabusRelPath,
+    };
+  }
+  if (itemKey) {
+    const prefix = userItemPrefix(userId, libraryId, itemKey);
+    return {
+      kind: "item",
+      libraryId,
+      itemKey,
+      prefix,
+      publicUrl: publicUrlForItem(base, userId, libraryId, itemKey),
+      objectKeyFor: (relPath) =>
+        itemObjectKey(userId, libraryId, itemKey, relPath),
+      assertRel: assertItemRelPath,
+    };
+  }
+  throw new PathError("Missing collection or item key");
+}
+
+async function listPrefixObjects(
+  env: Env,
+  prefix: string,
+): Promise<
+  Record<
+    string,
+    { size: number; fingerprint: string | null; etag: string | null }
+  >
+> {
+  const objects: Record<
+    string,
+    { size: number; fingerprint: string | null; etag: string | null }
+  > = {};
+  let cursor: string | undefined;
+  let pages = 0;
+  do {
+    const listed = await env.BUCKET.list({
+      prefix,
+      cursor,
+      limit: 1000,
+    });
+    for (const obj of listed.objects) {
+      if (!obj.key.startsWith(prefix)) continue;
+      const relPath = obj.key.slice(prefix.length);
+      if (!relPath || relPath.includes("..") || relPath === "refs.json") {
+        continue;
+      }
+      objects[relPath] = {
+        size: obj.size,
+        fingerprint: null,
+        etag: obj.etag || null,
+      };
+    }
+    cursor = listed.truncated ? listed.cursor : undefined;
+    pages += 1;
+  } while (cursor && pages < 20);
+  return objects;
+}
+
+async function deletePrefixObjects(env: Env, prefix: string): Promise<number> {
+  let cursor: string | undefined;
+  let deleted = 0;
+  do {
+    const listed = await env.BUCKET.list({ prefix, cursor, limit: 1000 });
+    await Promise.all(listed.objects.map((obj) => env.BUCKET.delete(obj.key)));
+    deleted += listed.objects.length;
+    cursor = listed.truncated ? listed.cursor : undefined;
+  } while (cursor);
+  return deleted;
+}
 
 /** Strongly consistent handshake object (KV is eventually consistent). */
 function oauthReadyR2Key(state: string): string {
@@ -171,13 +307,26 @@ export default {
       if (path === "/v1/objects" && request.method === "PUT") {
         return handlePutObject(request, env);
       }
+      if (path === "/v1/objects" && request.method === "DELETE") {
+        return handleDeleteObject(request, env);
+      }
 
       if (path === "/v1/syllabus/objects" && request.method === "GET") {
-        return handleListSyllabusObjects(request, env);
+        return handleListObjects(request, env);
+      }
+      if (path === "/v1/item/objects" && request.method === "GET") {
+        return handleListObjects(request, env);
+      }
+
+      if (path === "/v1/item-refs" && request.method === "POST") {
+        return handleItemRefs(request, env);
       }
 
       if (path === "/v1/syllabus" && request.method === "DELETE") {
         return handleDeleteSyllabus(request, env);
+      }
+      if (path === "/v1/item" && request.method === "DELETE") {
+        return handleDeleteItem(request, env);
       }
 
       if (path.startsWith("/u/") && request.method === "GET") {
@@ -417,7 +566,7 @@ async function handleMe(request: Request, env: Env): Promise<Response> {
   });
 }
 
-async function handleListSyllabusObjects(
+async function handleListObjects(
   request: Request,
   env: Env,
 ): Promise<Response> {
@@ -425,18 +574,10 @@ async function handleListSyllabusObjects(
   if (auth instanceof Response) return auth;
 
   const url = new URL(request.url);
-  const libraryId =
-    request.headers.get("x-syllabus-library-id") ||
-    url.searchParams.get("libraryId") ||
-    "";
-  const collectionKey =
-    request.headers.get("x-syllabus-collection-key") ||
-    url.searchParams.get("collectionKey") ||
-    "";
-
-  let prefix: string;
+  const base = publicBase(env, request);
+  let target: PublishTarget;
   try {
-    prefix = userSyllabusPrefix(auth.userId, libraryId, collectionKey);
+    target = resolvePublishTarget(auth.userId, base, request.headers, url);
   } catch (e) {
     if (e instanceof PathError) {
       return json({ error: "bad_path", message: e.message }, 400);
@@ -444,43 +585,26 @@ async function handleListSyllabusObjects(
     throw e;
   }
 
-  const objects: Record<
-    string,
-    { size: number; fingerprint: string | null; etag: string | null }
-  > = {};
-  let cursor: string | undefined;
-  // Plain list (size/etag only). Including customMetadata forces per-object
-  // metadata fetches and is far too slow for publish skip checks.
-  let pages = 0;
-  do {
-    const listed = await env.BUCKET.list({
-      prefix,
-      cursor,
-      limit: 1000,
-    });
-    for (const obj of listed.objects) {
-      if (!obj.key.startsWith(prefix)) continue;
-      const relPath = obj.key.slice(prefix.length);
-      if (!relPath || relPath.includes("..")) {
-        continue;
-      }
-      objects[relPath] = {
-        size: obj.size,
-        fingerprint: null,
-        etag: obj.etag || null,
-      };
-    }
-    cursor = listed.truncated ? listed.cursor : undefined;
-    pages += 1;
-  } while (cursor && pages < 20);
+  const objects = await listPrefixObjects(env, target.prefix);
 
-  const base = publicBase(env, request);
-  const publicUrl = `${base}/u/${auth.userId}/${libraryId}/${collectionKey}/`;
+  // Include itemKeys.json body for syllabus republish diffs (GC dropped items).
+  let itemKeys: string[] | undefined;
+  if (target.kind === "syllabus" && objects["itemKeys.json"]) {
+    try {
+      const obj = await env.BUCKET.get(`${target.prefix}itemKeys.json`);
+      if (obj) {
+        itemKeys = parseItemKeysJson(await obj.json());
+      }
+    } catch {
+      itemKeys = [];
+    }
+  }
 
   return json({
     ok: true,
-    publicUrl,
+    publicUrl: target.publicUrl,
     objects,
+    ...(itemKeys ? { itemKeys } : {}),
   });
 }
 
@@ -488,13 +612,16 @@ async function handleHeadObject(request: Request, env: Env): Promise<Response> {
   const auth = await requireUser(request, env);
   if (auth instanceof Response) return auth;
 
-  const libraryId = request.headers.get("x-syllabus-library-id") || "";
-  const collectionKey = request.headers.get("x-syllabus-collection-key") || "";
+  const url = new URL(request.url);
+  const base = publicBase(env, request);
   const relPath = request.headers.get("x-object-path") || "";
 
+  let target: PublishTarget;
   let key: string;
   try {
-    key = objectKey(auth.userId, libraryId, collectionKey, relPath);
+    target = resolvePublishTarget(auth.userId, base, request.headers, url);
+    target.assertRel(relPath);
+    key = target.objectKeyFor(relPath);
   } catch (e) {
     if (e instanceof PathError) {
       return json({ error: "bad_path", message: e.message }, 400);
@@ -503,8 +630,6 @@ async function handleHeadObject(request: Request, env: Env): Promise<Response> {
   }
 
   const obj = await env.BUCKET.head(key);
-  const base = publicBase(env, request);
-  const publicUrl = `${base}/u/${auth.userId}/${libraryId}/${collectionKey}/`;
 
   if (!obj) {
     return json({
@@ -512,7 +637,7 @@ async function handleHeadObject(request: Request, env: Env): Promise<Response> {
       size: 0,
       etag: null,
       fingerprint: null,
-      publicUrl,
+      publicUrl: target.publicUrl,
     });
   }
 
@@ -523,7 +648,7 @@ async function handleHeadObject(request: Request, env: Env): Promise<Response> {
     etag: obj.etag || null,
     fingerprint,
     uploaded: obj.uploaded?.toISOString?.() || null,
-    publicUrl,
+    publicUrl: target.publicUrl,
   });
 }
 
@@ -531,16 +656,19 @@ async function handlePutObject(request: Request, env: Env): Promise<Response> {
   const auth = await requireUser(request, env);
   if (auth instanceof Response) return auth;
 
-  const libraryId = request.headers.get("x-syllabus-library-id") || "";
-  const collectionKey = request.headers.get("x-syllabus-collection-key") || "";
+  const url = new URL(request.url);
+  const base = publicBase(env, request);
   const relPath = request.headers.get("x-object-path") || "";
   const fingerprint = sanitizeFingerprint(
     request.headers.get("x-object-fingerprint") || "",
   );
 
+  let target: PublishTarget;
   let key: string;
   try {
-    key = objectKey(auth.userId, libraryId, collectionKey, relPath);
+    target = resolvePublishTarget(auth.userId, base, request.headers, url);
+    target.assertRel(relPath);
+    key = target.objectKeyFor(relPath);
   } catch (e) {
     if (e instanceof PathError) {
       return json({ error: "bad_path", message: e.message }, 400);
@@ -564,7 +692,6 @@ async function handlePutObject(request: Request, env: Env): Promise<Response> {
   let usage = await getUsageBytes(env, auth.userId);
   const projected = usage - oldSize + newSize;
   if (projected > quota) {
-    // Try reconcile once in case KV drifted
     usage = await reconcileUsage(env, auth.userId);
     const projected2 = usage - oldSize + newSize;
     if (projected2 > quota) {
@@ -584,7 +711,6 @@ async function handlePutObject(request: Request, env: Env): Promise<Response> {
   if (fingerprint) {
     customMetadata.fingerprint = fingerprint;
   }
-  // Display fields for the admin dashboard — only on the published HTML page.
   if (relPath === "index.html") {
     const syllabusMeta = syllabusMetaFromHeaders(request.headers);
     if (syllabusMeta) {
@@ -604,9 +730,6 @@ async function handlePutObject(request: Request, env: Env): Promise<Response> {
   const nextUsage = (await getUsageBytes(env, auth.userId)) - oldSize + newSize;
   await setUsageBytes(env, auth.userId, nextUsage);
 
-  const base = publicBase(env, request);
-  const publicUrl = `${base}/u/${auth.userId}/${libraryId}/${collectionKey}/`;
-
   return json({
     ok: true,
     key,
@@ -614,7 +737,7 @@ async function handlePutObject(request: Request, env: Env): Promise<Response> {
     fingerprint: fingerprint || null,
     usageBytes: nextUsage,
     quotaBytes: quota,
-    publicUrl,
+    publicUrl: target.publicUrl,
   });
 }
 
@@ -623,6 +746,110 @@ function sanitizeFingerprint(raw: string): string {
   const v = raw.trim();
   if (!v || v.length > 64) return "";
   return /^\d+:\d+$/.test(v) ? v : "";
+}
+
+async function handleDeleteObject(
+  request: Request,
+  env: Env,
+): Promise<Response> {
+  const auth = await requireUser(request, env);
+  if (auth instanceof Response) return auth;
+
+  const url = new URL(request.url);
+  const base = publicBase(env, request);
+  const relPath = request.headers.get("x-object-path") || "";
+
+  let target: PublishTarget;
+  let key: string;
+  try {
+    target = resolvePublishTarget(auth.userId, base, request.headers, url);
+    target.assertRel(relPath);
+    key = target.objectKeyFor(relPath);
+  } catch (e) {
+    if (e instanceof PathError) {
+      return json({ error: "bad_path", message: e.message }, 400);
+    }
+    throw e;
+  }
+
+  const oldSize = await headSize(env, key);
+  if (oldSize > 0) {
+    await env.BUCKET.delete(key);
+    const usage = await getUsageBytes(env, auth.userId);
+    const next = Math.max(0, usage - oldSize);
+    await setUsageBytes(env, auth.userId, next);
+    return json({
+      ok: true,
+      deleted: true,
+      usageBytes: next,
+      publicUrl: target.publicUrl,
+    });
+  }
+  return json({
+    ok: true,
+    deleted: false,
+    publicUrl: target.publicUrl,
+  });
+}
+
+async function handleItemRefs(request: Request, env: Env): Promise<Response> {
+  const auth = await requireUser(request, env);
+  if (auth instanceof Response) return auth;
+
+  let body: {
+    libraryId?: string;
+    itemKey?: string;
+    addSyllabus?: string;
+    removeSyllabus?: string;
+    setPage?: boolean;
+  };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return json({ error: "invalid_json" }, 400);
+  }
+
+  const libraryId = String(body.libraryId || "");
+  const itemKey = String(body.itemKey || "");
+  if (!libraryId || !itemKey) {
+    return json(
+      { error: "bad_path", message: "Missing libraryId or itemKey" },
+      400,
+    );
+  }
+
+  try {
+    const result = await applyItemRefsPatch(
+      env,
+      auth.userId,
+      libraryId,
+      itemKey,
+      {
+        addSyllabus: body.addSyllabus,
+        removeSyllabus: body.removeSyllabus,
+        setPage: body.setPage,
+      },
+    );
+    if (result.gcDeleted > 0) {
+      const usageBytes = await reconcileUsage(env, auth.userId);
+      return json({
+        ok: true,
+        refs: result.refs,
+        gcDeleted: result.gcDeleted,
+        usageBytes,
+      });
+    }
+    return json({
+      ok: true,
+      refs: result.refs,
+      gcDeleted: 0,
+    });
+  } catch (e) {
+    if (e instanceof PathError) {
+      return json({ error: "bad_path", message: e.message }, 400);
+    }
+    throw e;
+  }
 }
 
 async function handleDeleteSyllabus(
@@ -646,17 +873,64 @@ async function handleDeleteSyllabus(
     throw e;
   }
 
-  let cursor: string | undefined;
-  let deleted = 0;
-  do {
-    const listed = await env.BUCKET.list({ prefix, cursor, limit: 1000 });
-    await Promise.all(listed.objects.map((obj) => env.BUCKET.delete(obj.key)));
-    deleted += listed.objects.length;
-    cursor = listed.truncated ? listed.cursor : undefined;
-  } while (cursor);
+  // Read item keys before wiping so shared files can be GC'd.
+  const itemKeys = await readSyllabusItemKeys(
+    env,
+    auth.userId,
+    libraryId,
+    collectionKey,
+    prefix,
+  );
+
+  const deleted = await deletePrefixObjects(env, prefix);
+
+  const gc = await removeSyllabusFromItems(
+    env,
+    auth.userId,
+    libraryId,
+    collectionKey,
+    itemKeys,
+  );
 
   const usage = await reconcileUsage(env, auth.userId);
-  return json({ ok: true, deleted, usageBytes: usage });
+  return json({
+    ok: true,
+    deleted: deleted + gc.gcDeleted,
+    gcDeleted: gc.gcDeleted,
+    itemsTouched: gc.itemsTouched,
+    usageBytes: usage,
+  });
+}
+
+async function handleDeleteItem(request: Request, env: Env): Promise<Response> {
+  const auth = await requireUser(request, env);
+  if (auth instanceof Response) return auth;
+
+  const url = new URL(request.url);
+  const libraryId = url.searchParams.get("libraryId") || "";
+  const itemKey = url.searchParams.get("itemKey") || "";
+
+  try {
+    const result = await unpublishItemPage(
+      env,
+      auth.userId,
+      libraryId,
+      itemKey,
+    );
+    const usage = await reconcileUsage(env, auth.userId);
+    return json({
+      ok: true,
+      deleted: result.deleted,
+      gcDeleted: result.gcDeleted,
+      refs: result.refs,
+      usageBytes: usage,
+    });
+  } catch (e) {
+    if (e instanceof PathError) {
+      return json({ error: "bad_path", message: e.message }, 400);
+    }
+    throw e;
+  }
 }
 
 async function handlePublicGet(request: Request, env: Env): Promise<Response> {
@@ -665,23 +939,29 @@ async function handlePublicGet(request: Request, env: Env): Promise<Response> {
   if (!parsed) {
     return text("Not found", 404);
   }
-  const key = objectKey(
-    parsed.userId,
-    parsed.libraryId,
-    parsed.collectionKey,
-    parsed.relPath,
-  );
+  if (isPrivateRelPath(parsed.relPath)) {
+    return text("Not found", 404);
+  }
+  const key = r2KeyForPublicPath(parsed);
   const obj = await env.BUCKET.get(key);
   if (!obj) {
     return text("Not found", 404);
   }
-  recordPublicHit(env, parsed);
+  // Analytics: use collectionKey or item/{itemKey} as the 4th blob.
+  recordPublicHit(env, {
+    userId: parsed.userId,
+    libraryId: parsed.libraryId,
+    collectionKey:
+      parsed.kind === "syllabus"
+        ? parsed.collectionKey
+        : `item/${parsed.itemKey}`,
+    relPath: parsed.relPath,
+  });
   const headers = new Headers();
   headers.set(
     "content-type",
     obj.httpMetadata?.contentType || contentTypeForPath(parsed.relPath),
   );
-  // index.html changes on every sync — don't serve a stale layout for minutes.
   if (parsed.relPath === "index.html" || parsed.relPath === "") {
     headers.set("cache-control", "no-cache, max-age=0, must-revalidate");
   } else {

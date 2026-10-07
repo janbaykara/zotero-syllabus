@@ -2,9 +2,11 @@ import { getCachedItem } from "./cache";
 import {
   listPublishObjects,
   putPublishObject,
+  deletePublishObject,
   deletePublishSyllabus,
   getPublishSession,
   getPublishApiBaseUrl,
+  patchPublishItemRefs,
 } from "./publishAuth";
 import { clearPublishedSyllabusUrl } from "./publishUrls";
 import {
@@ -33,11 +35,16 @@ import {
 } from "./publishOgImage";
 import { getRDFStringForCollection } from "./rdf";
 import { buildSyllabusExportPayload } from "../modules/syllabusNote";
+import { absoluteItemFileHref } from "./publishTarget";
+import type { PublishTarget } from "./publishTarget";
+
+export const PUBLISH_ITEM_KEYS_JSON = "itemKeys.json";
 
 export type PublishAttachmentPick = {
   itemId: number;
   itemKey: string;
   attachment: Zotero.Item;
+  /** Relative path under the item prefix: files/{key}.{ext} */
   relPath: string;
   ext: string;
 };
@@ -75,8 +82,6 @@ export function pickBestPublishAttachment(
 
   const score = (att: Zotero.Item): number => {
     const linkMode = att.attachmentLinkMode;
-    // 1 = linked file may still be readable; 2 = imported URL; 3 = snapshot
-    // Prefer imported file (0) and PDF/EPUB.
     const type = (att.attachmentContentType || "").toLowerCase();
     const path = (att.attachmentPath || "").toLowerCase();
     let s = 0;
@@ -131,13 +136,18 @@ export function collectPublishAttachments(
   return picks;
 }
 
-/** Map parent item id → relative publish path for title links. */
+/** Map parent item id → absolute public path for title links. */
 export function publishLinkMap(
   picks: PublishAttachmentPick[],
+  userId: string,
+  libraryId: string,
 ): Map<number, string> {
   const map = new Map<number, string>();
   for (const pick of picks) {
-    map.set(pick.itemId, pick.relPath);
+    map.set(
+      pick.itemId,
+      absoluteItemFileHref(userId, libraryId, pick.itemKey, pick.relPath),
+    );
   }
   return map;
 }
@@ -185,26 +195,44 @@ export async function publishSyllabusToCloud(opts: {
   }
   const libraryId = String(collection.libraryID);
   const collectionKey = collection.key;
+  const syllabusTarget: PublishTarget = {
+    kind: "syllabus",
+    libraryId,
+    collectionKey,
+  };
 
   opts.onProgress?.("attachments");
   const picks = collectPublishAttachments(opts.items);
-  const linkMap = publishLinkMap(picks);
+  const linkMap = publishLinkMap(picks, session.userId, libraryId);
+  const newItemKeys = [...new Set(picks.map((p) => p.itemKey))];
 
-  // Overlap remote inventory, citation export, HTML, and bibliography.
   const prepareStarted = Date.now();
   const remoteListPromise = listPublishObjects({
     token: session.token,
-    libraryId,
-    collectionKey,
+    target: syllabusTarget,
   }).catch((err) => {
     ztoolkit.log("listPublishObjects failed; will upload all files", err);
     return null;
   });
 
+  // Per-item inventories for fingerprint skip (shared file store).
+  const itemListPromises = Promise.all(
+    newItemKeys.map(async (itemKey) => {
+      try {
+        const listed = await listPublishObjects({
+          token: session.token,
+          target: { kind: "item", libraryId, itemKey },
+        });
+        return [itemKey, listed.objects] as const;
+      } catch (err) {
+        ztoolkit.log("list item objects failed", itemKey, err);
+        return [itemKey, {}] as const;
+      }
+    }),
+  );
+
   opts.onProgress?.("citations");
   const citationItems = itemsWithSyllabusNote(opts.collectionId, opts.items);
-  // Fresh itemIndex + exportIds in note HTML only — do not rewrite the live note
-  // (that flashes the Syllabus page during publish).
   const exportPayloadPromise = buildSyllabusExportPayload(collection).catch(
     (err) => {
       ztoolkit.log("buildSyllabusExportPayload failed:", err);
@@ -264,13 +292,18 @@ export async function publishSyllabusToCloud(opts: {
     listed,
     bibliographyHtml,
     ogImageBytes,
+    itemObjectLists,
   ] = await Promise.all([
     citationsPromise,
     htmlPromise,
     remoteListPromise,
     bibliographyPromise,
     ogImagePromise,
+    itemListPromises,
   ]);
+
+  const itemObjectsByKey = new Map(itemObjectLists);
+
   ztoolkit.log(
     `publish prepare finished in ${Date.now() - prepareStarted}ms ` +
       `(attachments=${picks.length}, ris=${risText.length}, bib=${bibText.length}, ` +
@@ -291,20 +324,26 @@ export async function publishSyllabusToCloud(opts: {
     publicUrl = `${publicUrl}/`;
   }
 
+  const previousItemKeys = listed?.itemKeys || [];
+
   const citationUploads = [
     ...(hasRis ? [{ relPath: PUBLISH_BIBLIOGRAPHY_RIS, text: risText }] : []),
     ...(hasBib ? [{ relPath: PUBLISH_BIBLIOGRAPHY_BIB, text: bibText }] : []),
     ...(hasRdf ? [{ relPath: PUBLISH_BIBLIOGRAPHY_RDF, text: rdfText }] : []),
   ];
+  const itemKeysJson = JSON.stringify({ itemKeys: newItemKeys });
   const total =
-    picks.length + citationUploads.length + (ogImageBytes ? 1 : 0) + 1;
+    picks.length +
+    citationUploads.length +
+    (ogImageBytes ? 1 : 0) +
+    1 + // itemKeys.json
+    1; // index.html
   let done = 0;
 
   const remoteObjects = listed?.objects || {};
   let ogImageReady = false;
   const uploadedCitationPaths = new Set<string>();
 
-  // Citation exports are small; skip when byte length matches remote.
   for (const citation of citationUploads) {
     opts.onProgress?.("upload", done + 1, total);
     const bytes = new TextEncoder().encode(citation.text);
@@ -317,15 +356,13 @@ export async function publishSyllabusToCloud(opts: {
     try {
       const result = await putPublishObject({
         token: session.token,
-        libraryId,
-        collectionKey,
+        target: syllabusTarget,
         relPath: citation.relPath,
         bytes,
       });
       publicUrl = result.publicUrl || publicUrl;
       uploadedCitationPaths.add(citation.relPath);
     } catch (err) {
-      // RDF may 400 until the worker allowlist is deployed; don't abort publish.
       ztoolkit.log(
         `Citation upload failed for ${citation.relPath} (continuing):`,
         err,
@@ -334,6 +371,7 @@ export async function publishSyllabusToCloud(opts: {
     done += 1;
   }
 
+  // Shared item file store
   for (const pick of picks) {
     opts.onProgress?.("upload", done + 1, total);
     const path = await pick.attachment.getFilePathAsync?.();
@@ -344,7 +382,8 @@ export async function publishSyllabusToCloud(opts: {
     }
 
     const fingerprint = await localFileFingerprint(path);
-    const remote = remoteObjects[pick.relPath];
+    const itemObjects = itemObjectsByKey.get(pick.itemKey) || {};
+    const remote = itemObjects[pick.relPath];
     if (
       remote &&
       remoteMatchesLocal({
@@ -364,16 +403,70 @@ export async function publishSyllabusToCloud(opts: {
       done += 1;
       continue;
     }
-    const result = await putPublishObject({
+    await putPublishObject({
       token: session.token,
-      libraryId,
-      collectionKey,
+      target: { kind: "item", libraryId, itemKey: pick.itemKey },
       relPath: pick.relPath,
       bytes,
       fingerprint,
     });
-    publicUrl = result.publicUrl || publicUrl;
     done += 1;
+  }
+
+  // Register syllabus refs on each linked item; remove dropped items.
+  const previousSet = new Set(previousItemKeys);
+  const newSet = new Set(newItemKeys);
+  for (const itemKey of newItemKeys) {
+    try {
+      await patchPublishItemRefs({
+        token: session.token,
+        libraryId,
+        itemKey,
+        addSyllabus: collectionKey,
+      });
+    } catch (err) {
+      ztoolkit.log("addSyllabus ref failed", itemKey, err);
+    }
+  }
+  for (const itemKey of previousSet) {
+    if (newSet.has(itemKey)) continue;
+    try {
+      await patchPublishItemRefs({
+        token: session.token,
+        libraryId,
+        itemKey,
+        removeSyllabus: collectionKey,
+      });
+    } catch (err) {
+      ztoolkit.log("removeSyllabus ref failed", itemKey, err);
+    }
+  }
+
+  // itemKeys.json for unpublish GC
+  opts.onProgress?.("upload", done + 1, total);
+  {
+    const bytes = new TextEncoder().encode(itemKeysJson);
+    await putPublishObject({
+      token: session.token,
+      target: syllabusTarget,
+      relPath: PUBLISH_ITEM_KEYS_JSON,
+      bytes,
+    });
+  }
+  done += 1;
+
+  // Delete legacy syllabus-scoped files/* (migrated to item store).
+  for (const relPath of Object.keys(remoteObjects)) {
+    if (!relPath.startsWith("files/")) continue;
+    try {
+      await deletePublishObject({
+        token: session.token,
+        target: syllabusTarget,
+        relPath,
+      });
+    } catch (err) {
+      ztoolkit.log("legacy file delete failed", relPath, err);
+    }
   }
 
   if (ogImageBytes && ogImageBytes.byteLength) {
@@ -394,8 +487,7 @@ export async function publishSyllabusToCloud(opts: {
       } else {
         const result = await putPublishObject({
           token: session.token,
-          libraryId,
-          collectionKey,
+          target: syllabusTarget,
           relPath: PUBLISH_OG_IMAGE,
           bytes: ogImageBytes,
           fingerprint,
@@ -404,7 +496,6 @@ export async function publishSyllabusToCloud(opts: {
         ogImageReady = true;
       }
     } catch (err) {
-      // Worker may not allow og-image.jpg yet, or upload failed — still publish HTML.
       ztoolkit.log("OG image upload failed (continuing without it):", err);
     }
     done += 1;
@@ -445,8 +536,7 @@ export async function publishSyllabusToCloud(opts: {
   const htmlBytes = new TextEncoder().encode(htmlContent);
   const result = await putPublishObject({
     token: session.token,
-    libraryId,
-    collectionKey,
+    target: syllabusTarget,
     relPath: "index.html",
     bytes: htmlBytes,
     syllabusMeta: {

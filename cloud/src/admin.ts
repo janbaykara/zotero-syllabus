@@ -1,5 +1,6 @@
 import type { Env } from "./types";
 import { queryViewStats, syllabusStatsKey, type ViewStats } from "./analytics";
+import { readSyllabusItemKeys, removeSyllabusFromItems } from "./itemRefs";
 import { PathError, objectKey, userSyllabusPrefix } from "./paths";
 import { reconcileUsage } from "./quota";
 import { syllabusMetaFromCustomMetadata } from "./syllabusMeta";
@@ -722,6 +723,14 @@ export async function handleAdminDeleteSyllabus(
     throw e;
   }
 
+  const itemKeys = await readSyllabusItemKeys(
+    env,
+    userId,
+    libraryId,
+    collectionKey,
+    prefix,
+  );
+
   let cursor: string | undefined;
   let deleted = 0;
   do {
@@ -731,6 +740,19 @@ export async function handleAdminDeleteSyllabus(
     cursor = listed.truncated ? listed.cursor : undefined;
   } while (cursor);
 
+  const gc = await removeSyllabusFromItems(
+    env,
+    userId,
+    libraryId,
+    collectionKey,
+    itemKeys,
+  );
+
   const usageBytes = await reconcileUsage(env, userId);
-  return adminJson({ ok: true, deleted, usageBytes });
+  return adminJson({
+    ok: true,
+    deleted: deleted + gc.gcDeleted,
+    gcDeleted: gc.gcDeleted,
+    usageBytes,
+  });
 }

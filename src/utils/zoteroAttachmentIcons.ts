@@ -20,11 +20,19 @@ export function publishHrefIconKind(href: string): PublishHrefIconKind | null {
     return "link";
   }
   const lower = value.toLowerCase();
-  if (!/^files\/[a-z0-9._-]+\.[a-z0-9]+$/.test(lower)) {
+  const fileName = lower.includes("/files/")
+    ? lower.slice(lower.lastIndexOf("/files/") + "/files/".length)
+    : lower.startsWith("files/")
+      ? lower.slice("files/".length)
+      : "";
+  if (!fileName || fileName.includes("/") || fileName.includes("..")) {
     return null;
   }
-  if (lower.endsWith(".pdf")) return "pdf";
-  if (lower.endsWith(".epub")) return "epub";
+  if (!/^[a-z0-9._-]+\.[a-z0-9]+$/.test(fileName)) {
+    return null;
+  }
+  if (fileName.endsWith(".pdf")) return "pdf";
+  if (fileName.endsWith(".epub")) return "epub";
   return null;
 }
 

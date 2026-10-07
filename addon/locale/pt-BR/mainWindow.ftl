@@ -2,6 +2,10 @@ item-section-syllabus-head-text =
     .label = Tarefas de leitura
 item-section-syllabus-sidenav-tooltip =
     .tooltiptext = Configurações do programa para este item
+item-section-share-head-text =
+    .label = Share online
+item-section-share-sidenav-tooltip =
+    .tooltiptext = Share this item via a public URL
 
 panel-demo-header =
     .label = Demonstração do painel
