@@ -164,34 +164,64 @@ async function restoreItemSelection(
   }
 }
 
+function nextMacrotask(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+/**
+ * Wait until `#zotero-itemmenu` has closed (or give up if it never opened).
+ * Returns whether we observed a real hide — callers defer afterward so XUL
+ * menuitem `command` handlers still see the temporary selection.
+ */
+async function waitForItemMenuHidden(
+  menu: ItemMenuElement | null | undefined,
+): Promise<boolean> {
+  if (!menu || typeof menu.addEventListener !== "function") {
+    return false;
+  }
+  // onItemsContextMenuOpen can return before state flips to open/showing.
+  if (!isItemMenuOpen(menu)) {
+    await nextMacrotask();
+  }
+  if (!isItemMenuOpen(menu)) {
+    return false;
+  }
+  await new Promise<void>((resolve) => {
+    menu.addEventListener("popuphidden", () => resolve(), { once: true });
+  });
+  return true;
+}
+
 /**
  * Restore the prior library selection once `#zotero-itemmenu` closes so a
  * right-click does not leave the clicked item selected (left-click selects).
  * Resolves after restore. When the menu is open, waits for `popuphidden` first.
+ *
+ * XUL delivers menuitem `command` after `popuphidden`, so we defer one
+ * macrotask after hide. Skip restore if a command already moved selection
+ * (e.g. Add personal note → `selectItem(note)`).
  */
 async function restoreSelectionAfterItemMenu(
   pane: ItemContextMenuPane,
   previousIds: number[],
+  temporaryItemId: number,
 ): Promise<void> {
+  let waitedForHidden = false;
   try {
     const win = Zotero.getMainWindow();
     const menu = win?.document?.getElementById(
       ITEM_MENU_ID,
     ) as ItemMenuElement | null;
-
-    // After onItemsContextMenuOpen, the popup is already open (or it failed).
-    // Wait for close so menu commands still see the temporary selection.
-    if (
-      menu &&
-      typeof menu.addEventListener === "function" &&
-      isItemMenuOpen(menu)
-    ) {
-      await new Promise<void>((resolve) => {
-        menu.addEventListener("popuphidden", () => resolve(), { once: true });
-      });
-    }
+    waitedForHidden = await waitForItemMenuHidden(menu);
   } catch {
     // Fall through to restore even if the menu lookup fails.
+  }
+  if (waitedForHidden) {
+    await nextMacrotask();
+  }
+  const currentIds = selectedItemIds(pane);
+  if (currentIds.length !== 1 || currentIds[0] !== temporaryItemId) {
+    return;
   }
   await restoreItemSelection(pane, previousIds);
 }
@@ -243,7 +273,11 @@ export async function openZoteroItemContextMenu(
     const { x, y } = itemContextMenuScreenPoint(event, fallbackElement);
     await pane.onItemsContextMenuOpen(event, x, y);
     if (restoreIds) {
-      const restorePromise = restoreSelectionAfterItemMenu(pane, restoreIds);
+      const restorePromise = restoreSelectionAfterItemMenu(
+        pane,
+        restoreIds,
+        item.id,
+      );
       // Callers fire-and-forget; don't block on popuphidden (that hangs until
       // the user dismisses the menu). Await only when restoring immediately.
       if (!itemMenuIsOpen()) {

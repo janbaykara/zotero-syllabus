@@ -218,5 +218,37 @@ describe("itemContextMenu", function () {
       assert.deepEqual(selectItemsCalls, []);
       assert.deepEqual(openCalls, [{ x: 11, y: 22 }]);
     });
+
+    it("does not restore when a menu command already changed selection", async function () {
+      let selected = [7];
+      const selectItemsCalls: number[][] = [];
+      const pane: ItemContextMenuPaneLike = {
+        getSelectedItems: (asIDs?: boolean) => {
+          assert.isTrue(asIDs);
+          return selected;
+        },
+        selectItem: async (id: number) => {
+          selected = [id];
+          return true;
+        },
+        selectItems: async (ids: number[]) => {
+          selectItemsCalls.push([...ids]);
+          selected = [...ids];
+          return true;
+        },
+        onItemsContextMenuOpen: async () => {
+          // e.g. Add personal note → selectItem(note) before restore runs.
+          selected = [99];
+        },
+      };
+      await openZoteroItemContextMenu(
+        fakeItem(42),
+        mouseEvent(11, 22),
+        null,
+        pane,
+      );
+      assert.deepEqual(selectItemsCalls, []);
+      assert.deepEqual(selected, [99]);
+    });
   });
 });
