@@ -25,6 +25,11 @@ import {
   setShowItemsWithoutAnnotations,
 } from "../src/modules/showItemsWithoutAnnotations";
 import {
+  getIncludeAutomaticTags,
+  saveIncludeAutomaticTagsGlobally,
+  setIncludeAutomaticTags,
+} from "../src/modules/includeAutomaticTags";
+import {
   getAnnotationColorFilter,
   getAnnotationTagFilter,
   getDefaultAnnotationColorFilter,
@@ -55,6 +60,8 @@ const PREF_KEYS = [
   `${config.prefsPrefix}.readerMode`,
   `${config.prefsPrefix}.showItemsWithoutAnnotations`,
   `${config.prefsPrefix}.galleryShowItemsWithoutAnnotations`,
+  `${config.prefsPrefix}.includeAutomaticTags`,
+  `${config.prefsPrefix}.galleryIncludeAutomaticTags`,
   `${config.prefsPrefix}.annotationsQuoteOrderByView`,
   `${config.prefsPrefix}.annotationsQuoteOrder`,
   `${config.prefsPrefix}.annotationColorFilter`,
@@ -138,6 +145,15 @@ describe("view-scoped display prefs", function () {
     assert.isTrue(getShowItemsWithoutAnnotations("syllabus:12"));
     saveShowItemsWithoutAnnotationsGlobally("12", false);
     assert.isFalse(getShowItemsWithoutAnnotations("missing"));
+  });
+
+  it("stores include-automatic-tags per view and defaults to off", function () {
+    assert.isFalse(getIncludeAutomaticTags("missing"));
+    setIncludeAutomaticTags("12", true);
+    assert.isTrue(getIncludeAutomaticTags("12"));
+    assert.isFalse(getIncludeAutomaticTags("99"));
+    saveIncludeAutomaticTagsGlobally("12", true);
+    assert.isTrue(getIncludeAutomaticTags("missing"));
   });
 
   it("stores quote order per view and falls back to the default", function () {

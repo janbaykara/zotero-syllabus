@@ -76,7 +76,11 @@ import type { GallerySortBy } from "./gallerySort";
 import { GalleryTile } from "./GalleryPage";
 import { AnnotationColorFilter } from "./AnnotationColorFilter";
 import { ANNOTATION_COLOR_FILTER_EXPLORER } from "./myAnnotationsPrefs";
-import { GallerySegmentedControl } from "./GallerySegmentedControl";
+import {
+  GalleryPrefCheckbox,
+  GallerySegmentedControl,
+} from "./GallerySegmentedControl";
+import { useIncludeAutomaticTags } from "./includeAutomaticTags";
 import { type MagazineTileClick } from "./MagazineTile";
 import { ExplorerMagazineRail } from "./ExplorerMagazineRail";
 import {
@@ -663,6 +667,11 @@ function ExplorerShelfSettingsMenu({
   const showColorFilter = shelf.type === "recent-annotations";
   const hasSettings =
     showLayout || isCollection || showDensity || showColorFilter;
+  const [
+    includeAutomaticTags,
+    setIncludeAutomaticTags,
+    includeAutomaticTagsGlobal,
+  ] = useIncludeAutomaticTags(collection?.id ?? 0);
 
   const patchCollection = (
     patch: Partial<{
@@ -755,6 +764,15 @@ function ExplorerShelfSettingsMenu({
                     Icon: GROUP_ICONS[mode],
                   }))}
                 />
+                {collectionGroupBy === "tags" && collection ? (
+                  <GalleryPrefCheckbox
+                    label={getString("gallery-include-automatic-tags")}
+                    title={getString("gallery-include-automatic-tags-title")}
+                    checked={includeAutomaticTags}
+                    onChange={setIncludeAutomaticTags}
+                    globalSetting={includeAutomaticTagsGlobal}
+                  />
+                ) : null}
               </>
             ) : null}
             {showDensity ? (

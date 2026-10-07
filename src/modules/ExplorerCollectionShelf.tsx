@@ -18,6 +18,7 @@ import {
   type SyllabusClassGroup,
 } from "./classGroups";
 import { useCollectionCreatorGroups } from "./creatorGroups";
+import { useIncludeAutomaticTags } from "./includeAutomaticTags";
 import { useCollectionTagGroups } from "./tagGroups";
 import { useCollectionItemTypeGroups } from "./typeGroups";
 import {
@@ -592,7 +593,11 @@ export function ExplorerCollectionShelfBody({
   const { typeGroups } = useCollectionItemTypeGroups(syllabusItems);
   const { creatorGroups, uncreditedItems } =
     useCollectionCreatorGroups(syllabusItems);
-  const { tagGroups, untaggedItems } = useCollectionTagGroups(syllabusItems);
+  const [includeAutomaticTags] = useIncludeAutomaticTags(collectionId);
+  const { tagGroups, untaggedItems } = useCollectionTagGroups(
+    syllabusItems,
+    includeAutomaticTags,
+  );
   const { root: subcollectionRoot } = useSubcollectionTree(collectionId);
 
   const openCollection = (id: number) => selectCollectionInLibrary(id);

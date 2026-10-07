@@ -63,6 +63,7 @@ export const PLUGIN_PREF_DEFAULTS: {
   myAnnotationsTagFilter: "",
   annotationsQuoteOrder: "location",
   galleryShowItemsWithoutAnnotations: true,
+  galleryIncludeAutomaticTags: false,
   syllabusShowClassNotes: true,
   magazineTypeSize: "small",
   magazinePacking: "packed",

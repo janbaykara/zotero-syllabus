@@ -33,6 +33,10 @@ describe("collectionPrefs", function () {
     );
     assert.include(
       COLLECTION_ID_PREF_KEYS as readonly string[],
+      `${config.prefsPrefix}.includeAutomaticTags`,
+    );
+    assert.include(
+      COLLECTION_ID_PREF_KEYS as readonly string[],
       `${config.prefsPrefix}.annotationsQuoteOrderByView`,
     );
   });

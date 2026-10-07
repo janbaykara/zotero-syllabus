@@ -100,6 +100,7 @@ import {
 import { useMagazinePacking, type MagazinePacking } from "./magazinePacking";
 import { useViewQuoteOrder } from "./myAnnotationsPrefs";
 import { useShowItemsWithoutAnnotations } from "./showItemsWithoutAnnotations";
+import { useIncludeAutomaticTags } from "./includeAutomaticTags";
 import type { AnnotationsQuoteOrder } from "./explorerQueries";
 import {
   GALLERY_TOUR_EVENT_CLOSE_SETTINGS,
@@ -245,6 +246,11 @@ export function GalleryPage({
     setShowItemsWithoutAnnotations,
     showEmptyGlobal,
   ] = useShowItemsWithoutAnnotations(viewKey);
+  const [
+    includeAutomaticTags,
+    setIncludeAutomaticTags,
+    includeAutomaticTagsGlobal,
+  ] = useIncludeAutomaticTags(viewKey);
   const [syllabusMetadata] = useZoteroSyllabusMetadata(collectionIdOrZero);
   const { classGroups, furtherReadingItems } = useSyllabusClassGroups(
     collectionIdOrZero,
@@ -302,7 +308,10 @@ export function GalleryPage({
     }, 500);
     return () => win.clearTimeout(timer);
   }, [viewKey]);
-  const { tagGroups, untaggedItems } = useCollectionTagGroups(syllabusItems);
+  const { tagGroups, untaggedItems } = useCollectionTagGroups(
+    syllabusItems,
+    includeAutomaticTags,
+  );
   const { typeGroups } = useCollectionItemTypeGroups(syllabusItems);
   const { creatorGroups, uncreditedItems } =
     useCollectionCreatorGroups(syllabusItems);
@@ -1254,6 +1263,9 @@ export function GalleryPage({
               showItemsWithoutAnnotations={showItemsWithoutAnnotations}
               onShowItemsWithoutAnnotations={setShowItemsWithoutAnnotations}
               showEmptyGlobal={showEmptyGlobal}
+              includeAutomaticTags={includeAutomaticTags}
+              onIncludeAutomaticTags={setIncludeAutomaticTags}
+              includeAutomaticTagsGlobal={includeAutomaticTagsGlobal}
               annotationColors={annotationColors}
               colorFilterScope={viewKey}
               libraryID={libraryID}
@@ -1275,9 +1287,7 @@ export function GalleryPage({
                 : "px-6",
             )}
           >
-            {personalOrderMode
-              ? renderPersonalOrderBody()
-              : null}
+            {personalOrderMode ? renderPersonalOrderBody() : null}
 
             {!personalOrderMode &&
               effectiveGroupBy === "none" &&
@@ -1308,7 +1318,8 @@ export function GalleryPage({
                 />
               ))}
 
-            {!personalOrderMode && effectiveGroupBy === "type" &&
+            {!personalOrderMode &&
+              effectiveGroupBy === "type" &&
               (!annotationGroupsReady ? null : visibleTypeGroups.length ===
                 0 ? (
                 <p className="text-secondary text-lg">{emptyMessage}</p>
@@ -1327,7 +1338,8 @@ export function GalleryPage({
                 ))
               ))}
 
-            {!personalOrderMode && effectiveGroupBy === "creator" &&
+            {!personalOrderMode &&
+              effectiveGroupBy === "creator" &&
               (!annotationGroupsReady ? null : visibleCreatorGroups.length ===
                   0 && visibleUncreditedItems.length === 0 ? (
                 <p className="text-secondary text-lg">{emptyMessage}</p>
@@ -1362,7 +1374,8 @@ export function GalleryPage({
                 </>
               ))}
 
-            {!personalOrderMode && effectiveGroupBy === "tags" &&
+            {!personalOrderMode &&
+              effectiveGroupBy === "tags" &&
               (!annotationGroupsReady ? null : visibleTagGroups.length === 0 &&
                 visibleUntaggedItems.length === 0 ? (
                 <p className="text-secondary text-lg">{emptyMessage}</p>
@@ -1416,7 +1429,8 @@ export function GalleryPage({
                 />
               ))}
 
-            {!personalOrderMode && effectiveGroupBy === "classes" &&
+            {!personalOrderMode &&
+              effectiveGroupBy === "classes" &&
               (!annotationGroupsReady ? null : visibleClassGroups.length ===
                   0 && visibleFurtherReadingItems.length === 0 ? (
                 <p className="text-secondary text-lg">{emptyMessage}</p>
@@ -1456,9 +1470,7 @@ export function GalleryPage({
                       </p>
                       {renderItems(
                         orderGalleryItems(
-                          visibleFurtherReadingItems.map(
-                            (entry) => entry.item,
-                          ),
+                          visibleFurtherReadingItems.map((entry) => entry.item),
                         ),
                         "further-reading",
                       )}
@@ -1942,6 +1954,9 @@ function GalleryPageHeader({
   showItemsWithoutAnnotations,
   onShowItemsWithoutAnnotations,
   showEmptyGlobal,
+  includeAutomaticTags,
+  onIncludeAutomaticTags,
+  includeAutomaticTagsGlobal,
   annotationColors,
   colorFilterScope,
   libraryID,
@@ -1974,6 +1989,9 @@ function GalleryPageHeader({
   showItemsWithoutAnnotations: boolean;
   onShowItemsWithoutAnnotations: (show: boolean) => void;
   showEmptyGlobal: GalleryGlobalSetting<boolean>;
+  includeAutomaticTags: boolean;
+  onIncludeAutomaticTags: (include: boolean) => void;
+  includeAutomaticTagsGlobal: GalleryGlobalSetting<boolean>;
   annotationColors: string[];
   colorFilterScope: string;
   libraryID: number;
@@ -2149,6 +2167,15 @@ function GalleryPageHeader({
                     tourPrefix="gallery-group"
                     globalSetting={groupByGlobal}
                   />
+                  {groupBy === "tags" || groupBy === "auto" ? (
+                    <GalleryPrefCheckbox
+                      label={getString("gallery-include-automatic-tags")}
+                      title={getString("gallery-include-automatic-tags-title")}
+                      checked={includeAutomaticTags}
+                      onChange={onIncludeAutomaticTags}
+                      globalSetting={includeAutomaticTagsGlobal}
+                    />
+                  ) : null}
                 </div>
                 {layout === "card" || layout === "annotations" ? (
                   <div className="syllabus-gallery-toolbar-section">

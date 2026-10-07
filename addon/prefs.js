@@ -30,6 +30,7 @@ pref("myAnnotationsColorFilter", "");
 pref("myAnnotationsTagFilter", "");
 pref("annotationsQuoteOrder", "location");
 pref("galleryShowItemsWithoutAnnotations", true);
+pref("galleryIncludeAutomaticTags", false);
 pref("syllabusShowClassNotes", true);
 pref("magazineTypeSize", "small");
 pref("magazinePacking", "packed");

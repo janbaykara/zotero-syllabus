@@ -150,6 +150,8 @@ export type FluentMessageId =
   | 'gallery-group-type-title'
   | 'gallery-groups-nav-aria'
   | 'gallery-in-this-collection'
+  | 'gallery-include-automatic-tags'
+  | 'gallery-include-automatic-tags-title'
   | 'gallery-layout-annotations'
   | 'gallery-layout-annotations-title'
   | 'gallery-layout-card'
