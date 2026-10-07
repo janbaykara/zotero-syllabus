@@ -222,6 +222,7 @@ sort-by-creator = Creator
 sort-by-date = Date
 further-reading-empty-desc = Items in this section have not been assigned to any class.
 unnumbered-add-readings-aria = Add readings to the unnumbered section
+unnumbered-add-note-aria = Add a note to the unnumbered section
 toc-empty = No classes available
 placeholder-url = https://
 links-delete = Delete link

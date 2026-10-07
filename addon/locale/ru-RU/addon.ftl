@@ -224,6 +224,7 @@ sort-by-creator = Автор
 sort-by-date = Дата
 further-reading-empty-desc = Записи в этом разделе не назначены ни одному занятию.
 unnumbered-add-readings-aria = Добавить чтения в ненумерованный раздел
+unnumbered-add-note-aria = Добавить заметку в ненумерованный раздел
 toc-empty = Нет доступных занятий
 placeholder-url = https://
 links-delete = Удалить ссылку

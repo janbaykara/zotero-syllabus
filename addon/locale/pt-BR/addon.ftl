@@ -224,6 +224,7 @@ sort-by-creator = Criador
 sort-by-date = Data
 further-reading-empty-desc = Os itens nesta seção ainda não foram atribuídos a nenhuma aula.
 unnumbered-add-readings-aria = Adicionar leituras à seção sem número
+unnumbered-add-note-aria = Adicionar uma nota à seção sem número
 toc-empty = Nenhuma aula disponível
 placeholder-url = https://
 links-delete = Excluir link

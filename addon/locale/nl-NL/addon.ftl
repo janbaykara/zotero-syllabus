@@ -224,6 +224,7 @@ sort-by-creator = Auteur
 sort-by-date = Datum
 further-reading-empty-desc = Items in dit gedeelte zijn aan geen enkele bijeenkomst toegewezen.
 unnumbered-add-readings-aria = Lectuur toevoegen aan het ongenummerde gedeelte
+unnumbered-add-note-aria = Notitie toevoegen aan het ongenummerde gedeelte
 toc-empty = Geen bijeenkomsten beschikbaar
 placeholder-url = https://
 links-delete = Koppeling verwijderen

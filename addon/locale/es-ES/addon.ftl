@@ -224,6 +224,7 @@ sort-by-creator = Creador
 sort-by-date = Fecha
 further-reading-empty-desc = Los elementos de esta sección no se han asignado a ninguna clase.
 unnumbered-add-readings-aria = Añadir lecturas a la sección sin número
+unnumbered-add-note-aria = Añadir una nota a la sección sin número
 toc-empty = No hay clases disponibles
 placeholder-url = https://
 links-delete = Eliminar enlace

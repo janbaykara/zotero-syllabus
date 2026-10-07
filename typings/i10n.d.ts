@@ -596,6 +596,7 @@ export type FluentMessageId =
   | 'tree-tooltip-auto-managed'
   | 'tree-tooltip-reading-schedule'
   | 'tree-tooltip-syllabus'
+  | 'unnumbered-add-note-aria'
   | 'unnumbered-add-readings-aria'
   | 'untitled'
   | 'userGuide-addClass-desc'

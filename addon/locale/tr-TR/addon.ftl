@@ -224,6 +224,7 @@ sort-by-creator = Oluşturan
 sort-by-date = Tarih
 further-reading-empty-desc = Bu bölümdeki öğeler hiçbir derse atanmamıştır.
 unnumbered-add-readings-aria = Numarasız bölüme okuma ekle
+unnumbered-add-note-aria = Numarasız bölüme not ekle
 toc-empty = Kullanılabilir ders yok
 placeholder-url = https://
 links-delete = Bağlantıyı sil

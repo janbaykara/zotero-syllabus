@@ -224,6 +224,7 @@ sort-by-creator = 建立者
 sort-by-date = 日期
 further-reading-empty-desc = 此部分中的條目尚未指派到任何課堂。
 unnumbered-add-readings-aria = 新增閱讀到無編號區段
+unnumbered-add-note-aria = 新增筆記到無編號區段
 toc-empty = 暫無課堂
 placeholder-url = https://
 links-delete = 刪除連結

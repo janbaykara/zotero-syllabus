@@ -224,6 +224,7 @@ sort-by-creator = Twórca
 sort-by-date = Data
 further-reading-empty-desc = Pozycje w tej sekcji nie zostały przypisane do żadnych zajęć.
 unnumbered-add-readings-aria = Dodaj lektury do sekcji nienumerowanej
+unnumbered-add-note-aria = Dodaj notatkę do sekcji nienumerowanej
 toc-empty = Brak dostępnych zajęć
 placeholder-url = https://
 links-delete = Usuń odnośnik

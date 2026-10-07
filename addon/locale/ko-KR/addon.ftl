@@ -224,6 +224,7 @@ sort-by-creator = 저자
 sort-by-date = 날짜
 further-reading-empty-desc = 이 섹션의 항목은 어떤 수업에도 배정되지 않았습니다.
 unnumbered-add-readings-aria = 번호 없는 섹션에 읽기 자료 추가
+unnumbered-add-note-aria = 번호 없는 섹션에 노트 추가
 toc-empty = 수업이 없습니다
 placeholder-url = https://
 links-delete = 링크 삭제

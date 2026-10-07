@@ -224,6 +224,7 @@ sort-by-creator = Pencipta
 sort-by-date = Tanggal
 further-reading-empty-desc = Item di bagian ini belum ditetapkan ke kelas mana pun.
 unnumbered-add-readings-aria = Tambah bacaan ke bagian tanpa nomor
+unnumbered-add-note-aria = Tambah catatan ke bagian tanpa nomor
 toc-empty = Tidak ada kelas tersedia
 placeholder-url = https://
 links-delete = Hapus tautan

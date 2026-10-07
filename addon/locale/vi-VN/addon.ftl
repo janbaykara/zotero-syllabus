@@ -224,6 +224,7 @@ sort-by-creator = Tác giả
 sort-by-date = Ngày
 further-reading-empty-desc = Các mục trong phần này chưa được gán vào buổi học nào.
 unnumbered-add-readings-aria = Thêm bài đọc vào phần không đánh số
+unnumbered-add-note-aria = Thêm ghi chú vào phần không đánh số
 toc-empty = Không có buổi học
 placeholder-url = https://
 links-delete = Xóa liên kết

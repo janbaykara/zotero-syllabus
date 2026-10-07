@@ -224,6 +224,7 @@ sort-by-creator = المؤلف
 sort-by-date = التاريخ
 further-reading-empty-desc = لم تُعيَّن عناصر هذا القسم إلى أي محاضرة.
 unnumbered-add-readings-aria = إضافة قراءات إلى القسم غير المرقّم
+unnumbered-add-note-aria = إضافة ملاحظة إلى القسم غير المرقّم
 toc-empty = لا توجد محاضرات متاحة
 placeholder-url = https://
 links-delete = حذف الرابط

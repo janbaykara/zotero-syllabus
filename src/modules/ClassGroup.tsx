@@ -27,7 +27,10 @@ import {
   pickAndAddItemsToClass,
   pickAndAddItemsToUnnumbered,
 } from "./addItemsToClass";
-import { createAndAssignClassNote } from "./classNote";
+import {
+  createAndAssignClassNote,
+  createStandaloneClassNote,
+} from "./classNote";
 
 export type ItemDropIndicator = {
   classNumber: number | null;
@@ -136,7 +139,7 @@ export function ClassGroupComponent({
   const libraryEditable = collectionLibraryIsEditable(
     getCachedCollectionById(collectionId),
   );
-  const canAddNote = !isLocked && libraryEditable && classNumber != null;
+  const canAddNote = !isLocked && libraryEditable;
 
   // Get nomenclature for this collection
   const { singular, singularCapitalized } =
@@ -239,11 +242,14 @@ export function ClassGroupComponent({
   };
 
   const handleAddNote = async () => {
-    if (classNumber == null || !canAddNote) {
+    if (!canAddNote) {
       return;
     }
     try {
-      const created = await createAndAssignClassNote(collectionId, classNumber);
+      const created =
+        classNumber == null
+          ? await createStandaloneClassNote(collectionId)
+          : await createAndAssignClassNote(collectionId, classNumber);
       if (created && onIdentifierClick) {
         // Select in Syllabus UI (blue highlight); Zotero select already ran.
         onIdentifierClick(created.note, created.assignmentId);
@@ -795,8 +801,16 @@ export function ClassGroupComponent({
                     onClick={() => {
                       void handleAddNote();
                     }}
-                    title={getString("class-add-note")}
-                    aria-label={getString("class-add-note")}
+                    title={
+                      classNumber != null
+                        ? getString("class-add-note")
+                        : getString("unnumbered-add-note-aria")
+                    }
+                    aria-label={
+                      classNumber != null
+                        ? getString("class-add-note")
+                        : getString("unnumbered-add-note-aria")
+                    }
                   >
                     <span
                       className="syllabus-class-add-icon syllabus-class-add-icon-note"

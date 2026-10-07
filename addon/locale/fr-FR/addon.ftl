@@ -224,6 +224,7 @@ sort-by-creator = Créateur
 sort-by-date = Date
 further-reading-empty-desc = Les documents de cette section n’ont été attribués à aucune séance.
 unnumbered-add-readings-aria = Ajouter des lectures à la section non numérotée
+unnumbered-add-note-aria = Ajouter une note à la section non numérotée
 toc-empty = Aucune séance disponible
 placeholder-url = https://
 links-delete = Supprimer le lien

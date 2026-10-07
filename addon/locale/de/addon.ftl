@@ -224,6 +224,7 @@ sort-by-creator = Verfasser
 sort-by-date = Datum
 further-reading-empty-desc = Einträge in diesem Abschnitt sind keiner Sitzung zugewiesen.
 unnumbered-add-readings-aria = Lektüre zum unnummerierten Abschnitt hinzufügen
+unnumbered-add-note-aria = Notiz zum unnummerierten Abschnitt hinzufügen
 toc-empty = Keine Sitzungen vorhanden
 placeholder-url = https://
 links-delete = Link löschen

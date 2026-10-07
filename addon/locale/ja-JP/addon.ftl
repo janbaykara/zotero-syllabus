@@ -224,6 +224,7 @@ sort-by-creator = 作成者
 sort-by-date = 日付
 further-reading-empty-desc = このセクションのアイテムはどの授業にも割り当てられていません。
 unnumbered-add-readings-aria = 番号なしセクションに文献を追加
+unnumbered-add-note-aria = 番号なしセクションにノートを追加
 toc-empty = 授業がありません
 placeholder-url = https://
 links-delete = リンクを削除

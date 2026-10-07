@@ -1,6 +1,6 @@
 /**
- * Create a standalone note in a syllabus collection, assign it to a class,
- * and select it so the native note editor opens.
+ * Create a standalone note in a syllabus collection (optionally assigned to a
+ * class) and select it so the native note editor opens.
  */
 
 import { getCachedCollectionById } from "../utils/cache";
@@ -10,6 +10,7 @@ import {
   selectZoteroCollection,
 } from "../utils/zotero";
 import { selectItemInCollection } from "./ClassReadingBlock";
+import { displayAssignmentIdForNote } from "./classGroups";
 import { SyllabusManager } from "./syllabus";
 
 function classNoteStarterHtml(
@@ -22,6 +23,61 @@ function classNoteStarterHtml(
 }
 
 /**
+ * Create a top-level note in the collection and add it as a member.
+ * Does not assign a class. Returns null on failure / non-editable library.
+ */
+async function createCollectionNoteItem(
+  collectionId: number,
+  starterHtml: string,
+  logLabel: string,
+): Promise<Zotero.Item | null> {
+  const collection = getCachedCollectionById(collectionId);
+  if (!collection || !collectionLibraryIsEditable(collection)) {
+    return null;
+  }
+
+  const note = new Zotero.Item("note");
+  note.libraryID = collection.libraryID;
+  // Zotero 8: save before setNote / addToCollection.
+  await note.saveTx({ skipSelect: true });
+  try {
+    note.setNote(starterHtml);
+  } catch (error) {
+    ztoolkit.log(`${logLabel}: setNote failed:`, error);
+  }
+  try {
+    note.addToCollection(collection.id);
+  } catch (error) {
+    ztoolkit.log(
+      `${logLabel}: addToCollection failed, trying collection.addItem:`,
+      error,
+    );
+    if (note.id) {
+      try {
+        await collection.addItem(note.id);
+      } catch (error2) {
+        ztoolkit.log(`${logLabel}: collection.addItem failed:`, error2);
+      }
+    }
+  }
+  await note.saveTx({ skipSelect: true });
+  return note;
+}
+
+async function selectCreatedNote(
+  note: Zotero.Item,
+  collectionId: number,
+): Promise<void> {
+  try {
+    selectZoteroCollection(collectionId);
+  } catch {
+    // Collection focus is best-effort before selectItem.
+  }
+  // Await selection so the item pane / note editor opens on the new note.
+  await selectItemInCollection(note, collectionId);
+}
+
+/**
  * Create a top-level note in the parent syllabus collection, assign it to
  * `classNumber`, and select it for editing. Returns the note and assignment
  * id, or null on failure / non-editable library.
@@ -30,40 +86,15 @@ export async function createAndAssignClassNote(
   collectionId: number,
   classNumber: number,
 ): Promise<{ note: Zotero.Item; assignmentId: string } | null> {
-  const collection = getCachedCollectionById(collectionId);
-  if (!collection || !collectionLibraryIsEditable(collection)) {
-    return null;
-  }
-
   try {
-    const note = new Zotero.Item("note");
-    note.libraryID = collection.libraryID;
-    // Zotero 8: save before setNote / addToCollection.
-    await note.saveTx({ skipSelect: true });
-    try {
-      note.setNote(classNoteStarterHtml(collectionId, classNumber));
-    } catch (error) {
-      ztoolkit.log("createAndAssignClassNote: setNote failed:", error);
+    const note = await createCollectionNoteItem(
+      collectionId,
+      classNoteStarterHtml(collectionId, classNumber),
+      "createAndAssignClassNote",
+    );
+    if (!note) {
+      return null;
     }
-    try {
-      note.addToCollection(collection.id);
-    } catch (error) {
-      ztoolkit.log(
-        "createAndAssignClassNote: addToCollection failed, trying collection.addItem:",
-        error,
-      );
-      if (note.id) {
-        try {
-          await collection.addItem(note.id);
-        } catch (error2) {
-          ztoolkit.log(
-            "createAndAssignClassNote: collection.addItem failed:",
-            error2,
-          );
-        }
-      }
-    }
-    await note.saveTx({ skipSelect: true });
 
     const assignmentId = await SyllabusManager.addClassAssignment(
       note,
@@ -77,16 +108,35 @@ export async function createAndAssignClassNote(
       return null;
     }
 
-    try {
-      selectZoteroCollection(collectionId);
-    } catch {
-      // Collection focus is best-effort before selectItem.
-    }
-    // Await selection so the item pane / note editor opens on the new note.
-    await selectItemInCollection(note, collectionId);
+    await selectCreatedNote(note, collectionId);
     return { note, assignmentId };
   } catch (error) {
     ztoolkit.log("createAndAssignClassNote failed:", error);
+    return null;
+  }
+}
+
+/**
+ * Create a top-level note in the syllabus collection with no class assignment
+ * (shows in the unnumbered section) and select it for editing.
+ */
+export async function createStandaloneClassNote(
+  collectionId: number,
+): Promise<{ note: Zotero.Item; assignmentId: string } | null> {
+  try {
+    const note = await createCollectionNoteItem(
+      collectionId,
+      "<p></p>",
+      "createStandaloneClassNote",
+    );
+    if (!note) {
+      return null;
+    }
+
+    await selectCreatedNote(note, collectionId);
+    return { note, assignmentId: displayAssignmentIdForNote(note) };
+  } catch (error) {
+    ztoolkit.log("createStandaloneClassNote failed:", error);
     return null;
   }
 }

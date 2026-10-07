@@ -222,6 +222,7 @@ sort-by-creator = 创建者
 sort-by-date = 日期
 further-reading-empty-desc = 此部分中的条目尚未分配到任何课堂。
 unnumbered-add-readings-aria = 添加阅读到无编号部分
+unnumbered-add-note-aria = 添加笔记到无编号部分
 toc-empty = 暂无课堂
 placeholder-url = https://
 links-delete = 删除链接
