@@ -73,6 +73,20 @@ export function annotationHasCopyText(entry: MyAnnotationStreamEntry): boolean {
   return !!(entry.quote || entry.comment);
 }
 
+/** Pandoc parenthetical cite, with page locator when the annotation has one. */
+export function formatPandocCiteRef(
+  key: string,
+  pageLabel?: string | null,
+): string {
+  const page = String(pageLabel || "").trim();
+  if (!page) {
+    return `[@${key}]`;
+  }
+  // Pandoc expects English locator labels; ranges use pp.
+  const locator = /[-–,…]/.test(page) ? "pp." : "p.";
+  return `[@${key}, ${locator} ${page}]`;
+}
+
 /** Plain text for clipboard: quote and/or comment, optional blockquote + cite key. */
 export function formatAnnotationCopyText(
   entry: MyAnnotationStreamEntry,
@@ -85,7 +99,7 @@ export function formatAnnotationCopyText(
     if (citeKey) {
       const key = getItemCitationKey(entry.parent);
       if (key) {
-        quote = `${quote} [@${key}]`;
+        quote = `${quote} ${formatPandocCiteRef(key, entry.pageLabel)}`;
       }
     }
     parts.push(blockquote ? toMarkdownBlockquote(quote) : quote);

@@ -84,12 +84,30 @@ describe("annotation copy formatting", function () {
     );
   });
 
+  it("includes the page locator in the Pandoc cite when available", function () {
+    setPref("myAnnotationsCopyCiteKey", true);
+    assert.equal(
+      formatAnnotationCopyText(
+        entry({ parent: fakeParent("smith2020"), pageLabel: "42" }),
+      ),
+      "A quoted line [@smith2020, p. 42]",
+    );
+    assert.equal(
+      formatAnnotationCopyText(
+        entry({ parent: fakeParent("smith2020"), pageLabel: "42-44" }),
+      ),
+      "A quoted line [@smith2020, pp. 42-44]",
+    );
+  });
+
   it("applies both options together", function () {
     setPref("myAnnotationsCopyBlockquote", true);
     setPref("myAnnotationsCopyCiteKey", true);
     assert.equal(
-      formatAnnotationCopyText(entry({ parent: fakeParent("smith2020") })),
-      "> A quoted line [@smith2020]",
+      formatAnnotationCopyText(
+        entry({ parent: fakeParent("smith2020"), pageLabel: "12" }),
+      ),
+      "> A quoted line [@smith2020, p. 12]",
     );
   });
 
