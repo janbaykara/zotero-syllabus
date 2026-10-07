@@ -231,8 +231,15 @@ export function isAssignedStandaloneAttachment(
 const SYLLABUS_DOCUMENT_NOTE_TAG = "zotero-syllabus";
 
 /**
+ * Marker note used only to pin a non-syllabus collection — not a class note.
+ * Keep in sync with `PINNED_COLLECTION_TAG` in `src/modules/pinned.ts`.
+ */
+const PINNED_COLLECTION_NOTE_TAG = "zotero-syllabus-pinned-collection";
+
+/**
  * Top-level standalone note that can be assigned to a class. Excludes the
- * collection Syllabus document (`zotero-syllabus` tag) and child notes.
+ * collection Syllabus document (`zotero-syllabus` tag), pin-only collection
+ * marker notes (`zotero-syllabus-pinned-collection`), and child notes.
  */
 export function isClassNoteItem(
   item: Zotero.Item | false | null | undefined,
@@ -254,11 +261,13 @@ export function isClassNoteItem(
     if (!topLevel) {
       return false;
     }
-    if (
-      typeof item.hasTag === "function" &&
-      item.hasTag(SYLLABUS_DOCUMENT_NOTE_TAG)
-    ) {
-      return false;
+    if (typeof item.hasTag === "function") {
+      if (item.hasTag(SYLLABUS_DOCUMENT_NOTE_TAG)) {
+        return false;
+      }
+      if (item.hasTag(PINNED_COLLECTION_NOTE_TAG)) {
+        return false;
+      }
     }
     return true;
   } catch {

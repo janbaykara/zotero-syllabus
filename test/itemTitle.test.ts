@@ -192,7 +192,7 @@ describe("item fields", function () {
       assert.isFalse(isAssignedClassNote(note, new Set(["OTHER"])));
     });
 
-    it("excludes the syllabus document and child notes", function () {
+    it("excludes the syllabus document, pin markers, and child notes", function () {
       const syllabusDoc = {
         key: "SYL",
         deleted: false,
@@ -200,6 +200,15 @@ describe("item fields", function () {
         isTopLevelItem: () => true,
         parentItemID: false,
         hasTag: (tag: string) => tag === "zotero-syllabus",
+      } as unknown as Zotero.Item;
+      const pinMarker = {
+        key: "PIN",
+        deleted: false,
+        isNote: () => true,
+        isTopLevelItem: () => true,
+        parentItemID: false,
+        hasTag: (tag: string) =>
+          tag === "zotero-syllabus-pinned-collection" || tag === "pinned",
       } as unknown as Zotero.Item;
       const child = {
         key: "CHILD",
@@ -211,6 +220,8 @@ describe("item fields", function () {
       } as unknown as Zotero.Item;
       assert.isFalse(isClassNoteItem(syllabusDoc));
       assert.isFalse(isSyllabusAssignableItem(syllabusDoc));
+      assert.isFalse(isClassNoteItem(pinMarker));
+      assert.isFalse(isSyllabusAssignableItem(pinMarker));
       assert.isFalse(isClassNoteItem(child));
       assert.isNull(resolveAssignableItem(child));
     });
