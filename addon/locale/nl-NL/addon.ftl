@@ -294,6 +294,7 @@ assignment-delete = Opdracht verwijderen
 item-pane-select-collection = Selecteer een collectie om syllabustoewijzingen te zien
 item-pane-add-to-class = Toevoegen aan een bijeenkomst…
 item-pane-create-assignment = Opdracht maken
+item-pane-show-in-syllabus = Show in syllabus
 add-to-class-window-title = Toevoegen aan een bijeenkomst
 add-to-class-search = Syllabi en bijeenkomsten zoeken
 add-to-class-empty = Geen overeenkomende bijeenkomsten

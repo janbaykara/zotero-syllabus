@@ -227,6 +227,7 @@ export type FluentMessageId =
   | 'item-pane-not-found'
   | 'item-pane-reference-material'
   | 'item-pane-select-collection'
+  | 'item-pane-show-in-syllabus'
   | 'item-section-syllabus-head-text'
   | 'item-section-syllabus-sidenav-tooltip'
   | 'links-add'

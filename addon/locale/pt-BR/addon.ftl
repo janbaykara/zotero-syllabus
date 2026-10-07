@@ -294,6 +294,7 @@ assignment-delete = Excluir tarefa
 item-pane-select-collection = Selecione uma coleção para ver as tarefas do programa
 item-pane-add-to-class = Adicionar a uma aula…
 item-pane-create-assignment = Criar atribuição
+item-pane-show-in-syllabus = Show in syllabus
 add-to-class-window-title = Adicionar a uma aula
 add-to-class-search = Buscar ementas e aulas
 add-to-class-empty = Nenhuma aula correspondente

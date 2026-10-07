@@ -12,7 +12,10 @@ import { syllabusViewKey } from "../utils/viewScope";
 import { useZoteroCollectionTitle } from "./react-zotero-sync/collectionTitle";
 import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata";
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
-import { useSyllabusClassGroups } from "./classGroups";
+import {
+  syllabusScrollTargetForAssignment,
+  useSyllabusClassGroups,
+} from "./classGroups";
 import { formatReadingDate } from "../utils/dates";
 import {
   isZotero8OrLater,
@@ -115,6 +118,8 @@ export type PendingClassScroll = {
   elementId: string;
   /** When set, syllabus page selects/scrolls this item so it flashes in view. */
   itemId?: number;
+  /** `assignment:${assignmentId}` — select and scroll to this card when mounted. */
+  syllabusIdentifier?: string;
 };
 
 let pendingClassScroll: PendingClassScroll | null = null;
@@ -139,6 +144,30 @@ export function openCollectionSyllabusAtClass(
     collectionId,
     elementId: syllabusClassScrollId(classNumber),
     itemId: itemId && itemId > 0 ? itemId : undefined,
+  };
+  notifyPendingClassScroll();
+  openCollectionSyllabusPage(collectionId);
+}
+
+/** Open the syllabus view, scroll to the assignment’s class, and select its card. */
+export function openSyllabusAssignmentInCollection(
+  collectionId: number,
+  itemId: number,
+  assignment: ItemSyllabusAssignment,
+): void {
+  if (!assignment.id) {
+    openCollectionSyllabusPage(collectionId);
+    return;
+  }
+  const classTarget = syllabusScrollTargetForAssignment(
+    collectionId,
+    assignment,
+  );
+  pendingClassScroll = {
+    collectionId,
+    elementId: syllabusClassScrollId(classTarget),
+    itemId: itemId > 0 ? itemId : undefined,
+    syllabusIdentifier: `assignment:${assignment.id}`,
   };
   notifyPendingClassScroll();
   openCollectionSyllabusPage(collectionId);

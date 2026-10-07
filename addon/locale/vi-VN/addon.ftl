@@ -294,6 +294,7 @@ assignment-delete = Xóa bài tập
 item-pane-select-collection = Chọn một bộ sưu tập để xem bài tập đề cương
 item-pane-add-to-class = Thêm vào buổi học…
 item-pane-create-assignment = Tạo phân công
+item-pane-show-in-syllabus = Show in syllabus
 add-to-class-window-title = Thêm vào buổi học
 add-to-class-search = Tìm đề cương và buổi học
 add-to-class-empty = Không có buổi học phù hợp

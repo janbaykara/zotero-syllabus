@@ -292,6 +292,7 @@ assignment-delete = 删除作业
 item-pane-select-collection = 选择一个分类以查看教学大纲作业
 item-pane-add-to-class = 添加到课堂…
 item-pane-create-assignment = 创建作业
+item-pane-show-in-syllabus = Show in syllabus
 add-to-class-window-title = 添加到课堂
 add-to-class-search = 搜索教学大纲和课堂
 add-to-class-empty = 没有匹配的课堂

@@ -294,6 +294,7 @@ assignment-delete = 刪除作業
 item-pane-select-collection = 選取一個分類以檢視教學大綱作業
 item-pane-add-to-class = 新增到課堂…
 item-pane-create-assignment = 建立作業
+item-pane-show-in-syllabus = Show in syllabus
 add-to-class-window-title = 新增到課堂
 add-to-class-search = 搜尋課程大綱和課堂
 add-to-class-empty = 沒有符合的課堂

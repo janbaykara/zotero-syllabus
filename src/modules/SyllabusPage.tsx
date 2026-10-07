@@ -1630,8 +1630,27 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       "[syllabus-view-title-container]",
     );
     const itemId = pending.itemId;
+    const syllabusIdentifier = pending.syllabusIdentifier;
+    if (syllabusIdentifier) {
+      const assignmentCard = container.querySelector<HTMLElement>(
+        `[data-syllabus-identifier="${CSS.escape(syllabusIdentifier)}"]`,
+      );
+      if (assignmentCard) {
+        takePendingClassScroll(collectionId);
+        setSelectedIdentifiers(new Set([syllabusIdentifier]));
+        if (itemId != null) {
+          try {
+            ztoolkit.getGlobal("ZoteroPane").selectItem(itemId);
+          } catch (error) {
+            ztoolkit.log("Error selecting deep-linked syllabus item:", error);
+          }
+        }
+        scrollElementBelowSticky(container, assignmentCard, sticky, 16);
+        return;
+      }
+    }
     const itemCard =
-      itemId != null
+      itemId != null && !syllabusIdentifier
         ? container.querySelector<HTMLElement>(`[data-item-id="${itemId}"]`)
         : null;
     if (itemCard && itemId != null) {
@@ -1648,6 +1667,10 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       `#${CSS.escape(pending.elementId)}`,
     );
     if (!target) {
+      return;
+    }
+    if (syllabusIdentifier) {
+      scrollElementBelowSticky(container, target, sticky, 16);
       return;
     }
     takePendingClassScroll(collectionId);

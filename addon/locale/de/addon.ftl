@@ -294,6 +294,7 @@ assignment-delete = Aufgabe löschen
 item-pane-select-collection = Wählen Sie eine Sammlung, um Lehrplan-Aufgaben anzuzeigen
 item-pane-add-to-class = Zu einer Sitzung hinzufügen…
 item-pane-create-assignment = Aufgabe erstellen
+item-pane-show-in-syllabus = Show in syllabus
 add-to-class-window-title = Zu einer Sitzung hinzufügen
 add-to-class-search = Lehrpläne und Sitzungen durchsuchen
 add-to-class-empty = Keine passenden Sitzungen

@@ -294,6 +294,7 @@ assignment-delete = Вилучити завдання
 item-pane-select-collection = Виберіть колекцію, щоб переглянути завдання силабуса
 item-pane-add-to-class = Додати до заняття…
 item-pane-create-assignment = Створити призначення
+item-pane-show-in-syllabus = Show in syllabus
 add-to-class-window-title = Додати до заняття
 add-to-class-search = Шукати навчальні плани й заняття
 add-to-class-empty = Немає відповідних занять

@@ -292,6 +292,7 @@ assignment-delete = Delete assignment
 item-pane-select-collection = Select a collection to view syllabus assignments
 item-pane-add-to-class = Add to class…
 item-pane-create-assignment = Create assignment
+item-pane-show-in-syllabus = Show in syllabus
 add-to-class-window-title = Add to a class
 add-to-class-search = Search syllabi and classes
 add-to-class-empty = No matching classes

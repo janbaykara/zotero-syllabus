@@ -294,6 +294,7 @@ assignment-delete = حذف التكليف
 item-pane-select-collection = حدد مجموعة لعرض تكليفات المنهاج
 item-pane-add-to-class = إضافة إلى محاضرة…
 item-pane-create-assignment = إنشاء تعيين
+item-pane-show-in-syllabus = Show in syllabus
 add-to-class-window-title = إضافة إلى محاضرة
 add-to-class-search = البحث في المقررات والمحاضرات
 add-to-class-empty = لا توجد محاضرات مطابقة

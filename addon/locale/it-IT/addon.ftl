@@ -294,6 +294,7 @@ assignment-delete = Elimina compito
 item-pane-select-collection = Seleziona una raccolta per vedere le assegnazioni del programma
 item-pane-add-to-class = Aggiungi a una lezione…
 item-pane-create-assignment = Crea assegnazione
+item-pane-show-in-syllabus = Show in syllabus
 add-to-class-window-title = Aggiungi a una lezione
 add-to-class-search = Cerca syllabus e lezioni
 add-to-class-empty = Nessuna lezione corrispondente

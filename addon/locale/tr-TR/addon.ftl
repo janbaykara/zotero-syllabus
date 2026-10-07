@@ -294,6 +294,7 @@ assignment-delete = Ödevi sil
 item-pane-select-collection = İzlence ödevlerini görmek için bir koleksiyon seçin
 item-pane-add-to-class = Bir derse ekle…
 item-pane-create-assignment = Atama oluştur
+item-pane-show-in-syllabus = Show in syllabus
 add-to-class-window-title = Bir derse ekle
 add-to-class-search = Müfredat ve ders ara
 add-to-class-empty = Eşleşen ders yok

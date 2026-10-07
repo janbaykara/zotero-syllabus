@@ -91,6 +91,20 @@ export function isClasslessAssignment(
   );
 }
 
+/** Syllabus scroll target for an assignment (class section or further reading). */
+export function syllabusScrollTargetForAssignment(
+  collectionId: number,
+  assignment: ItemSyllabusAssignment,
+): number | null | "further-reading" {
+  if (isClasslessAssignment(assignment, collectionId)) {
+    return "further-reading";
+  }
+  const resolvedClassNumber =
+    SyllabusManager.getClassNumber(collectionId, assignment.classId) ??
+    assignment.classNumber;
+  return resolvedClassNumber === undefined ? null : resolvedClassNumber;
+}
+
 export function pickFurtherReadingAssignment(
   assignments: ItemSyllabusAssignment[],
   collectionId: number,

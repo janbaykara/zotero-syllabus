@@ -294,6 +294,7 @@ assignment-delete = 課題を削除
 item-pane-select-collection = コレクションを選択してシラバスの課題を表示
 item-pane-add-to-class = 授業に追加…
 item-pane-create-assignment = 課題を作成
+item-pane-show-in-syllabus = Show in syllabus
 add-to-class-window-title = 授業に追加
 add-to-class-search = シラバスと授業を検索
 add-to-class-empty = 一致する授業がありません

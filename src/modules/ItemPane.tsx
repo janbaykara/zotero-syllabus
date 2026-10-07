@@ -1,5 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
+import type { JSX } from "preact";
 import { useState, useCallback, useMemo } from "preact/hooks";
 import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
 import {
@@ -39,6 +40,7 @@ import { isOptionalFeatureEnabled } from "./optionalFeatures";
 import { openAddToClassDialog } from "./openAddToClassDialog";
 import { isClassNoteItem } from "../utils/items";
 import { isAutoManagedCollection } from "./autoManagedCollection";
+import { openSyllabusAssignmentInCollection } from "./ClassReadingBlock";
 import { resolveSyllabusRoot } from "./syllabusNote";
 
 interface ItemPaneProps {
@@ -46,6 +48,7 @@ interface ItemPaneProps {
 }
 
 interface AssignmentEditorProps {
+  item: Zotero.Item;
   assignment: ItemSyllabusAssignment;
   collectionId: number;
   assignmentIndex: number;
@@ -487,6 +490,7 @@ function ItemPaneContent({
               return (
                 <AssignmentEditor
                   key={assignment.id}
+                  item={itemVersion.item}
                   assignment={assignment}
                   assignmentIndex={index}
                   collectionId={group.collectionId}
@@ -536,6 +540,7 @@ function ItemPaneContent({
 }
 
 function AssignmentEditor({
+  item,
   assignment,
   assignmentIndex,
   collectionId,
@@ -594,10 +599,27 @@ function AssignmentEditor({
   const assignmentStatus = assignment.status || null;
   const isDone = assignmentStatus === "done";
 
+  const handleNavigateToSyllabus = useCallback(
+    (e: JSX.TargetedMouseEvent<HTMLElement>) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.closest(
+          "button, input, select, textarea, a, label, [role='button']",
+        )
+      ) {
+        return;
+      }
+      openSyllabusAssignmentInCollection(collectionId, item.id, assignment);
+    },
+    [assignment, collectionId, item.id],
+  );
+
   return (
     <div
+      title={getString("item-pane-show-in-syllabus")}
+      onClick={handleNavigateToSyllabus}
       className={twMerge(
-        "border border-quinary rounded-md m-0 flex flex-col opacity-100 transition-opacity duration-200 bg-background divide-y divide-quarternary space-y-2.5 *:not-last:pb-2.5 p-2.5 z-10",
+        "border border-quinary rounded-md m-0 flex flex-col opacity-100 transition-opacity duration-200 bg-background divide-y divide-quarternary space-y-2.5 *:not-last:pb-2.5 p-2.5 z-10 cursor-pointer",
         isSelected && "outline-2 outline-accent-blue",
       )}
     >

@@ -294,6 +294,7 @@ assignment-delete = Supprimer le travail
 item-pane-select-collection = Sélectionnez une collection pour voir les attributions du syllabus
 item-pane-add-to-class = Ajouter à une séance…
 item-pane-create-assignment = Créer une assignation
+item-pane-show-in-syllabus = Show in syllabus
 add-to-class-window-title = Ajouter à une séance
 add-to-class-search = Rechercher des syllabus et des séances
 add-to-class-empty = Aucune séance correspondante

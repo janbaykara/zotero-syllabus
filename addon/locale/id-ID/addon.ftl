@@ -294,6 +294,7 @@ assignment-delete = Hapus tugas
 item-pane-select-collection = Pilih koleksi untuk melihat tugas silabus
 item-pane-add-to-class = Tambahkan ke kelas…
 item-pane-create-assignment = Buat penugasan
+item-pane-show-in-syllabus = Show in syllabus
 add-to-class-window-title = Tambahkan ke kelas
 add-to-class-search = Cari silabus dan kelas
 add-to-class-empty = Tidak ada kelas yang cocok

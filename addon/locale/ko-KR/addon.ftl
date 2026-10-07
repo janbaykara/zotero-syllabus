@@ -294,6 +294,7 @@ assignment-delete = 과제 삭제
 item-pane-select-collection = 컬렉션을 선택하여 강의계획서 과제 보기
 item-pane-add-to-class = 수업에 추가…
 item-pane-create-assignment = 과제 만들기
+item-pane-show-in-syllabus = Show in syllabus
 add-to-class-window-title = 수업에 추가
 add-to-class-search = 강의계획서와 수업 검색
 add-to-class-empty = 일치하는 수업이 없습니다

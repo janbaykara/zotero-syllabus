@@ -294,6 +294,7 @@ assignment-delete = Usuń zadanie
 item-pane-select-collection = Wybierz kolekcję, aby zobaczyć zadania sylabusa
 item-pane-add-to-class = Dodaj do zajęć…
 item-pane-create-assignment = Utwórz przypisanie
+item-pane-show-in-syllabus = Show in syllabus
 add-to-class-window-title = Dodaj do zajęć
 add-to-class-search = Szukaj sylabusów i zajęć
 add-to-class-empty = Brak pasujących zajęć
