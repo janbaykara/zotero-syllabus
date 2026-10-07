@@ -3,6 +3,7 @@ import { h, Fragment } from "preact";
 import { useState, useMemo, useEffect, useCallback } from "preact/hooks";
 import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
+import { Pencil } from "lucide-preact";
 import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
 import type { Priority } from "../utils/schemas";
 import { getCachedItem } from "../utils/cache";
@@ -33,6 +34,7 @@ import { isOsFileDrag } from "../utils/nativeFileDrop";
 import type { ItemDensity } from "./react-zotero-sync/itemDensity";
 import { openGalleryNoteByCollectionId } from "./galleryNote";
 import { useGalleryNoteText } from "./useGalleryNoteText";
+import { TextInput } from "./syllabusInputs";
 
 /** Sticky-note yellow for the permanent Class Note priority chip. */
 const CLASS_NOTE_PRIORITY_COLOR = NOTE_PAD_YELLOW;
@@ -153,6 +155,51 @@ export function SyllabusItemCard({
   );
   const title = getItemTitle(item) || getString("untitled");
   const isClassNote = isClassNoteItem(item);
+  const canEditInstruction =
+    !isLocked &&
+    !isClassNote &&
+    !!assignment?.id &&
+    !isDisplayOnlyAssignmentId(assignment.id);
+  const [forceShowInstructionEditor, setForceShowInstructionEditor] =
+    useState(false);
+  const [instructionEditNonce, setInstructionEditNonce] = useState(0);
+  const showInstructionEditor =
+    canEditInstruction &&
+    (forceShowInstructionEditor || Boolean(classInstruction));
+
+  const handleEditInstructionClick = useCallback(
+    (e: JSX.TargetedMouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      e.preventDefault();
+      setForceShowInstructionEditor(true);
+      setInstructionEditNonce((n) => n + 1);
+    },
+    [],
+  );
+
+  const handleInstructionSave = useCallback(
+    async (instruction: string) => {
+      if (!assignment?.id) {
+        return;
+      }
+      try {
+        await SyllabusManager.updateClassAssignment(
+          item,
+          collectionId,
+          assignment.id,
+          { classInstruction: instruction },
+          "page",
+        );
+        await item.saveTx();
+        if (!instruction.trim()) {
+          setForceShowInstructionEditor(false);
+        }
+      } catch (err) {
+        ztoolkit.log("Error saving reading instructions:", err);
+      }
+    },
+    [assignment?.id, collectionId, item],
+  );
   const itemTypeLabel = (() => {
     try {
       return Zotero.ItemTypes.getLocalizedString(item.itemType);
@@ -576,6 +623,34 @@ export function SyllabusItemCard({
     }
   };
 
+  const instructionClassName =
+    density === "row"
+      ? "syllabus-item-description text-secondary text-[12px] leading-snug"
+      : "syllabus-item-description";
+  const instructionBlock = showInstructionEditor ? (
+    <div
+      className={instructionClassName}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <TextInput
+        key={`instruction-${assignment?.id}-${instructionEditNonce}`}
+        elementType="textarea"
+        initialValue={classInstruction}
+        initialEditing={instructionEditNonce > 0}
+        onSave={handleInstructionSave}
+        placeholder={getString("placeholder-instructions")}
+        emptyBehavior="delete"
+        fieldSizing="content"
+        className="w-full text-secondary"
+      />
+    </div>
+  ) : classInstruction ? (
+    <div className={instructionClassName}>
+      <ProseText text={classInstruction} />
+    </div>
+  ) : null;
+
   return (
     <div
       style={
@@ -947,11 +1022,7 @@ export function SyllabusItemCard({
                 <NoteHtml html={galleryNote} />
               </div>
             ) : null}
-            {classInstruction && (
-              <div className="syllabus-item-description text-secondary text-[12px] leading-snug">
-                <ProseText text={classInstruction} />
-              </div>
-            )}
+            {instructionBlock}
           </div>
         ) : (
           <div
@@ -1027,11 +1098,7 @@ export function SyllabusItemCard({
                     <NoteHtml html={galleryNote} />
                   </div>
                 ) : null}
-                {classInstruction && (
-                  <div className="syllabus-item-description">
-                    <ProseText text={classInstruction} />
-                  </div>
-                )}
+                {instructionBlock}
               </>
             ) : (
               <>
@@ -1105,11 +1172,7 @@ export function SyllabusItemCard({
                     <NoteHtml html={galleryNote} />
                   </div>
                 ) : null}
-                {classInstruction && (
-                  <div className="syllabus-item-description">
-                    <ProseText text={classInstruction} />
-                  </div>
-                )}
+                {instructionBlock}
               </>
             )}
           </div>
@@ -1370,6 +1433,23 @@ export function SyllabusItemCard({
                       </button>
                     </div>
                   )}
+                {canEditInstruction && (
+                  <div className="focus-states-target">
+                    <button
+                      className="syllabus-action-button row flex flex-row items-center justify-center gap-2"
+                      onClick={handleEditInstructionClick}
+                      title={getString("assignment-edit-instructions")}
+                      aria-label={getString("assignment-edit-instructions")}
+                    >
+                      <span className="syllabus-action-icon inline-flex items-center justify-center">
+                        <Pencil size={14} />
+                      </span>
+                      <span className="syllabus-action-label">
+                        {getString("assignment-edit-instructions-label")}
+                      </span>
+                    </button>
+                  </div>
+                )}
                 {!isClassNote && <>&middot;</>}
               </>
             )}

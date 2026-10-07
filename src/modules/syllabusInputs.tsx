@@ -229,6 +229,7 @@ export function TextInput({
   containerClassName,
   fieldSizing = "content",
   readOnly = false,
+  initialEditing = false,
   ...elementProps
 }: {
   initialValue: string;
@@ -240,9 +241,11 @@ export function TextInput({
   fieldSizing?: "content" | "fixed" | "auto";
   readOnly?: boolean;
   containerClassName?: string;
+  /** When true, textarea starts in edit mode (e.g. action-bar “edit”). */
+  initialEditing?: boolean;
 } & JSX.HTMLAttributes<HTMLInputElement | HTMLTextAreaElement>) {
   const [value, setValue] = useState(initialValue);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(initialEditing && !readOnly);
   const focusedRef = useRef(false);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const valueRef = useRef(value);

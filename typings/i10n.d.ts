@@ -20,6 +20,8 @@ export type FluentMessageId =
   | 'assignment-delete'
   | 'assignment-duplicate'
   | 'assignment-duplicate-label'
+  | 'assignment-edit-instructions'
+  | 'assignment-edit-instructions-label'
   | 'assignment-unassign-class'
   | 'assignment-unassign-label'
   | 'assignment-unassign-syllabus'
