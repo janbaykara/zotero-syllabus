@@ -218,10 +218,12 @@ page-drop-import-file = Letakkan berkas untuk menambahkannya ke koleksi ini
 further-reading-heading = Bacaan lanjutan
 sort-label = Urutkan
 further-reading-sort-aria = Urutkan bacaan lanjutan
+further-reading-add-readings-aria = Tambah bacaan ke bacaan lanjutan
 sort-by-title = Judul
 sort-by-creator = Pencipta
 sort-by-date = Tanggal
 further-reading-empty-desc = Item di bagian ini belum ditetapkan ke kelas mana pun.
+unnumbered-add-readings-aria = Tambah bacaan ke bagian tanpa nomor
 toc-empty = Tidak ada kelas tersedia
 placeholder-url = https://
 links-delete = Hapus tautan
@@ -360,6 +362,7 @@ priority-default-recommended = Dianjurkan
 priority-default-optional = Opsional
 
 # Gallery
+gallery-add-readings-aria = Tambah bacaan ke koleksi ini
 gallery-empty-filtered = Tidak ada item yang cocok.
 gallery-empty = Tidak ada item dalam koleksi ini.
 gallery-untagged = Tanpa tag

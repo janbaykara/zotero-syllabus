@@ -218,10 +218,12 @@ page-drop-import-file = 파일을 놓아 이 컬렉션에 추가
 further-reading-heading = 추가 읽기
 sort-label = 정렬
 further-reading-sort-aria = 추가 읽기 정렬
+further-reading-add-readings-aria = 추가 읽기에 읽기 자료 추가
 sort-by-title = 제목
 sort-by-creator = 저자
 sort-by-date = 날짜
 further-reading-empty-desc = 이 섹션의 항목은 어떤 수업에도 배정되지 않았습니다.
+unnumbered-add-readings-aria = 번호 없는 섹션에 읽기 자료 추가
 toc-empty = 수업이 없습니다
 placeholder-url = https://
 links-delete = 링크 삭제
@@ -360,6 +362,7 @@ priority-default-recommended = 권장
 priority-default-optional = 선택
 
 # Gallery
+gallery-add-readings-aria = 이 컬렉션에 읽기 자료 추가
 gallery-empty-filtered = 일치하는 항목이 없습니다.
 gallery-empty = 이 컬렉션에 항목이 없습니다.
 gallery-untagged = 태그 없음

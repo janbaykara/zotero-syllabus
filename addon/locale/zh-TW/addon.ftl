@@ -218,10 +218,12 @@ page-drop-import-file = 拖放檔案以加入此收藏集
 further-reading-heading = 延伸閱讀
 sort-label = 排序
 further-reading-sort-aria = 排序延伸閱讀
+further-reading-add-readings-aria = 新增閱讀到延伸閱讀
 sort-by-title = 標題
 sort-by-creator = 建立者
 sort-by-date = 日期
 further-reading-empty-desc = 此部分中的條目尚未指派到任何課堂。
+unnumbered-add-readings-aria = 新增閱讀到無編號區段
 toc-empty = 暫無課堂
 placeholder-url = https://
 links-delete = 刪除連結
@@ -360,6 +362,7 @@ priority-default-recommended = 推薦
 priority-default-optional = 選讀
 
 # Gallery
+gallery-add-readings-aria = 新增閱讀到此收藏集
 gallery-empty-filtered = 沒有相符的條目。
 gallery-empty = 此分類中沒有條目。
 gallery-untagged = 無標籤

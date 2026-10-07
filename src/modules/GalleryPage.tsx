@@ -130,7 +130,7 @@ import {
   classByNumber,
   type ItemSyllabusAssignment,
 } from "./syllabus";
-import { getCachedItem } from "../utils/cache";
+import { getCachedCollectionById, getCachedItem } from "../utils/cache";
 import { formatReadingDate } from "../utils/dates";
 import { getString, getUiDir } from "../utils/locale";
 import {
@@ -143,6 +143,9 @@ import {
   chromeByItemIdFromAssignments,
   type ReadingTileChrome,
 } from "./readingAssignmentChrome";
+import { AddReadingButton } from "./AddReadingButton";
+import { pickAndAddItemsToCollection } from "./addItemsToClass";
+import { collectionLibraryIsEditable } from "../utils/zotero";
 
 export type GalleryPageProps = {
   viewKey: string;
@@ -189,6 +192,12 @@ export function GalleryPage({
   }, [allItems, matchingIds]);
   const isSyllabus =
     collectionId != null && collectionHasSyllabusNote(collectionId);
+  const canAddReading = useMemo(() => {
+    if (!isCollectionScope || collectionId == null) {
+      return false;
+    }
+    return collectionLibraryIsEditable(getCachedCollectionById(collectionId));
+  }, [isCollectionScope, collectionId]);
   const [layout, setLayout, layoutGlobal] = useGalleryLayout(viewKey);
   const [groupBy, setGroupBy, groupByGlobal] = useGalleryGroupBy(viewKey, {
     classes: isSyllabus,
@@ -1226,6 +1235,21 @@ export function GalleryPage({
                   )}
                 </>
               ))}
+
+            {canAddReading && (
+              <AddReadingButton
+                className="mt-6"
+                title={getString("gallery-add-readings-aria")}
+                ariaLabel={getString("gallery-add-readings-aria")}
+                onClick={() => {
+                  void pickAndAddItemsToCollection(collectionIdOrZero).catch(
+                    (err) => {
+                      ztoolkit.log("Error adding readings to collection:", err);
+                    },
+                  );
+                }}
+              />
+            )}
           </div>
         </GalleryViewportProvider>
       </div>

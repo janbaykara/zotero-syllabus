@@ -218,10 +218,12 @@ page-drop-import-file = Bu koleksiyona eklemek için dosyaları bırakın
 further-reading-heading = Ek okumalar
 sort-label = Sırala
 further-reading-sort-aria = Ek okumaları sırala
+further-reading-add-readings-aria = İlave okumaya okuma ekle
 sort-by-title = Başlık
 sort-by-creator = Oluşturan
 sort-by-date = Tarih
 further-reading-empty-desc = Bu bölümdeki öğeler hiçbir derse atanmamıştır.
+unnumbered-add-readings-aria = Numarasız bölüme okuma ekle
 toc-empty = Kullanılabilir ders yok
 placeholder-url = https://
 links-delete = Bağlantıyı sil
@@ -360,6 +362,7 @@ priority-default-recommended = Önerilen
 priority-default-optional = İsteğe bağlı
 
 # Gallery
+gallery-add-readings-aria = Bu koleksiyona okuma ekle
 gallery-empty-filtered = Eşleşen öğe yok.
 gallery-empty = Bu koleksiyonda öğe yok.
 gallery-untagged = Etiketsiz

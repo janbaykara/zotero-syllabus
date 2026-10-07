@@ -218,10 +218,12 @@ page-drop-import-file = أفلت الملفات لإضافتها إلى هذه �
 further-reading-heading = قراءات إضافية
 sort-label = فرز
 further-reading-sort-aria = فرز القراءات الإضافية
+further-reading-add-readings-aria = إضافة قراءات إلى القراءات الإضافية
 sort-by-title = العنوان
 sort-by-creator = المؤلف
 sort-by-date = التاريخ
 further-reading-empty-desc = لم تُعيَّن عناصر هذا القسم إلى أي محاضرة.
+unnumbered-add-readings-aria = إضافة قراءات إلى القسم غير المرقّم
 toc-empty = لا توجد محاضرات متاحة
 placeholder-url = https://
 links-delete = حذف الرابط
@@ -360,6 +362,7 @@ priority-default-recommended = مستحسن
 priority-default-optional = اختياري
 
 # Gallery
+gallery-add-readings-aria = إضافة قراءات إلى هذه المجموعة
 gallery-empty-filtered = لا توجد عناصر مطابقة.
 gallery-empty = لا توجد عناصر في هذه المجموعة.
 gallery-untagged = بلا وسوم

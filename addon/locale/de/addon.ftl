@@ -218,10 +218,12 @@ page-drop-import-file = Dateien ablegen, um sie dieser Sammlung hinzuzufügen
 further-reading-heading = Weiterführende Literatur
 sort-label = Sortieren
 further-reading-sort-aria = Weiterführende Literatur sortieren
+further-reading-add-readings-aria = Lektüre zur weiterführenden Literatur hinzufügen
 sort-by-title = Titel
 sort-by-creator = Verfasser
 sort-by-date = Datum
 further-reading-empty-desc = Einträge in diesem Abschnitt sind keiner Sitzung zugewiesen.
+unnumbered-add-readings-aria = Lektüre zum unnummerierten Abschnitt hinzufügen
 toc-empty = Keine Sitzungen vorhanden
 placeholder-url = https://
 links-delete = Link löschen
@@ -360,6 +362,7 @@ priority-default-recommended = Empfohlen
 priority-default-optional = Optional
 
 # Gallery
+gallery-add-readings-aria = Lektüre zu dieser Sammlung hinzufügen
 gallery-empty-filtered = Keine passenden Einträge.
 gallery-empty = Keine Einträge in dieser Sammlung.
 gallery-untagged = Ohne Schlagwörter

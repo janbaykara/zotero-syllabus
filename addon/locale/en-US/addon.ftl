@@ -216,10 +216,12 @@ page-drop-import-file = Drop files to add them to this collection
 further-reading-heading = Further reading
 sort-label = Sort
 further-reading-sort-aria = Sort further reading
+further-reading-add-readings-aria = Add readings to further reading
 sort-by-title = Title
 sort-by-creator = Creator
 sort-by-date = Date
 further-reading-empty-desc = Items in this section have not been assigned to any class.
+unnumbered-add-readings-aria = Add readings to the unnumbered section
 toc-empty = No classes available
 placeholder-url = https://
 links-delete = Delete link
@@ -359,6 +361,7 @@ priority-default-optional = Optional
 
 # Gallery
 gallery-empty-filtered = No matching items.
+gallery-add-readings-aria = Add readings to this collection
 gallery-empty = No items in this collection.
 gallery-untagged = Untagged
 gallery-untagged-desc = Items in this section have no tags.

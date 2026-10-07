@@ -218,10 +218,12 @@ page-drop-import-file = Déposez des fichiers pour les ajouter à cette collecti
 further-reading-heading = Lectures complémentaires
 sort-label = Trier
 further-reading-sort-aria = Trier les lectures complémentaires
+further-reading-add-readings-aria = Ajouter des lectures aux lectures complémentaires
 sort-by-title = Titre
 sort-by-creator = Créateur
 sort-by-date = Date
 further-reading-empty-desc = Les documents de cette section n’ont été attribués à aucune séance.
+unnumbered-add-readings-aria = Ajouter des lectures à la section non numérotée
 toc-empty = Aucune séance disponible
 placeholder-url = https://
 links-delete = Supprimer le lien
@@ -360,6 +362,7 @@ priority-default-recommended = Recommandé
 priority-default-optional = Facultatif
 
 # Gallery
+gallery-add-readings-aria = Ajouter des lectures à cette collection
 gallery-empty-filtered = Aucun document correspondant.
 gallery-empty = Aucun document dans cette collection.
 gallery-untagged = Sans marqueurs

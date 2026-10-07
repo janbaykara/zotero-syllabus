@@ -142,6 +142,8 @@ import { bibliographyToHtml } from "./Bibliography";
 import { LinksSection } from "./LinksSection";
 import { ClassGroupComponent } from "./ClassGroup";
 import type { ItemDropIndicator } from "./ClassGroup";
+import { AddReadingButton } from "./AddReadingButton";
+import { pickAndAddItemsToFurtherReading } from "./addItemsToClass";
 import { shouldCaptureCustomViewKeyboard } from "./galleryKeyboardNav";
 import {
   isItemContextMenuKey,
@@ -1417,30 +1419,48 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   );
 
   const visibleClassGroups = useMemo(() => {
-    const groups = visibleSyllabusClassGroups(classGroups, {
+    let groups = visibleSyllabusClassGroups(classGroups, {
       hideEmpty: isLocked,
       requireItems: isFiltered,
     });
-    if (!hideEmptyAnnotationGroups) {
-      return groups;
+    if (hideEmptyAnnotationGroups) {
+      if (!annotatedItemIds) {
+        groups = [];
+      } else {
+        groups = groups
+          .map((group) => ({
+            ...group,
+            itemAssignments: group.itemAssignments.filter(
+              ({ item }) =>
+                isClassNoteItem(item) || annotatedItemIds.has(item.id),
+            ),
+          }))
+          .filter((group) => group.itemAssignments.length > 0);
+      }
     }
-    if (!annotatedItemIds) {
-      return [];
+    // Unlocked: always keep the unnumbered top section so “Add readings” is available.
+    if (
+      !isLocked &&
+      !isFiltered &&
+      !groups.some((group) => group.classNumber == null)
+    ) {
+      groups = [
+        {
+          classNumber: null,
+          syllabusMetadata: classByNumber(syllabusMetadata, null),
+          itemAssignments: [],
+        },
+        ...groups,
+      ];
     }
-    return groups
-      .map((group) => ({
-        ...group,
-        itemAssignments: group.itemAssignments.filter(
-          ({ item }) => isClassNoteItem(item) || annotatedItemIds.has(item.id),
-        ),
-      }))
-      .filter((group) => group.itemAssignments.length > 0);
+    return groups;
   }, [
     classGroups,
     isLocked,
     isFiltered,
     hideEmptyAnnotationGroups,
     annotatedItemIds,
+    syllabusMetadata,
   ]);
 
   const furtherReadingItems = useMemo(() => {
@@ -3407,10 +3427,13 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
               })()}
             </div>
 
-            {furtherReadingItems.length > 0 && (
+            {(furtherReadingItems.length > 0 || !isLocked) && (
               <div
                 id="toc-further-reading"
-                className="syllabus-class-group in-[.print]:scheme-light"
+                className={twMerge(
+                  "syllabus-class-group group/class in-[.print]:scheme-light",
+                  furtherReadingItems.length === 0 && "in-[.print]:hidden",
+                )}
                 data-tour="syllabus-further-reading"
                 data-syllabus-file-drop={
                   isLocked ? undefined : "further-reading"
@@ -3727,6 +3750,25 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                           />
                         );
                       })
+                    )}
+                    {!isLocked && (
+                      <AddReadingButton
+                        hoverReveal
+                        title={getString("further-reading-add-readings-aria")}
+                        ariaLabel={getString(
+                          "further-reading-add-readings-aria",
+                        )}
+                        onClick={() => {
+                          void pickAndAddItemsToFurtherReading(
+                            collectionId,
+                          ).catch((err) => {
+                            ztoolkit.log(
+                              "Error adding readings to further reading:",
+                              err,
+                            );
+                          });
+                        }}
+                      />
                     )}
                   </div>
                 </div>

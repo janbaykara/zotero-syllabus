@@ -23,7 +23,10 @@ import type { GalleryLayout } from "./galleryLayout";
 import type { MagazinePacking } from "./magazinePacking";
 import { ReadingItemsLayout } from "./readingItemsLayout";
 import { selectItemInCollection } from "./ClassReadingBlock";
-import { pickAndAddItemsToClass } from "./addItemsToClass";
+import {
+  pickAndAddItemsToClass,
+  pickAndAddItemsToUnnumbered,
+} from "./addItemsToClass";
 import { createAndAssignClassNote } from "./classNote";
 
 export type ItemDropIndicator = {
@@ -224,13 +227,14 @@ export function ClassGroupComponent({
   };
 
   const handleAddReadings = async () => {
-    if (classNumber == null) {
-      return;
-    }
     try {
-      await pickAndAddItemsToClass(collectionId, classNumber);
+      if (classNumber == null) {
+        await pickAndAddItemsToUnnumbered(collectionId);
+      } else {
+        await pickAndAddItemsToClass(collectionId, classNumber);
+      }
     } catch (err) {
-      ztoolkit.log("Error adding readings to class:", err);
+      ztoolkit.log("Error adding readings:", err);
     }
   };
 
@@ -401,6 +405,9 @@ export function ClassGroupComponent({
       className={twMerge(
         "syllabus-class-group group/class in-[.print]:scheme-light",
         readerMode && classIsDone ? "opacity-40" : "",
+        classNumber == null &&
+          itemAssignments.length === 0 &&
+          "in-[.print]:hidden",
       )}
     >
       {classNumber ? (
@@ -739,7 +746,7 @@ export function ClassGroupComponent({
               );
             })
           ) : null}
-          {!isLocked && classNumber != null && (
+          {!isLocked && (
             <div className="flex items-center justify-center gap-2 w-full opacity-0 group-hover/class:opacity-100 focus-within:opacity-100 focus-visible:opacity-100 transition-opacity in-[.print]:hidden p-2">
               <button
                 type="button"
@@ -747,18 +754,26 @@ export function ClassGroupComponent({
                 onClick={() => {
                   void handleAddReadings();
                 }}
-                title={getString("class-add-readings-aria", {
-                  args: {
-                    nomenclature: singularCapitalized,
-                    number: classNumber,
-                  },
-                })}
-                aria-label={getString("class-add-readings-aria", {
-                  args: {
-                    nomenclature: singularCapitalized,
-                    number: classNumber,
-                  },
-                })}
+                title={
+                  classNumber != null
+                    ? getString("class-add-readings-aria", {
+                        args: {
+                          nomenclature: singularCapitalized,
+                          number: classNumber,
+                        },
+                      })
+                    : getString("unnumbered-add-readings-aria")
+                }
+                aria-label={
+                  classNumber != null
+                    ? getString("class-add-readings-aria", {
+                        args: {
+                          nomenclature: singularCapitalized,
+                          number: classNumber,
+                        },
+                      })
+                    : getString("unnumbered-add-readings-aria")
+                }
               >
                 <span
                   className="syllabus-class-add-icon syllabus-class-add-icon-item"

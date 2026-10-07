@@ -218,10 +218,12 @@ page-drop-import-file = Перетягніть файли, щоб додати �
 further-reading-heading = Додаткова література
 sort-label = Сортування
 further-reading-sort-aria = Сортувати додаткову літературу
+further-reading-add-readings-aria = Додати читання до додаткового читання
 sort-by-title = Назва
 sort-by-creator = Автор
 sort-by-date = Дата
 further-reading-empty-desc = Записи в цьому розділі не призначені жодному заняттю.
+unnumbered-add-readings-aria = Додати читання до ненумерованого розділу
 toc-empty = Немає доступних занять
 placeholder-url = https://
 links-delete = Вилучити посилання
@@ -360,6 +362,7 @@ priority-default-recommended = Рекомендоване
 priority-default-optional = Факультативне
 
 # Gallery
+gallery-add-readings-aria = Додати читання до цієї колекції
 gallery-empty-filtered = Немає відповідних записів.
 gallery-empty = У цій колекції немає записів.
 gallery-untagged = Без міток

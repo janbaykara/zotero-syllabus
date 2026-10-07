@@ -218,10 +218,12 @@ page-drop-import-file = Zet bestanden neer om ze aan deze collectie toe te voege
 further-reading-heading = Verdere literatuur
 sort-label = Sorteren
 further-reading-sort-aria = Verdere literatuur sorteren
+further-reading-add-readings-aria = Lectuur toevoegen aan verdere literatuur
 sort-by-title = Titel
 sort-by-creator = Auteur
 sort-by-date = Datum
 further-reading-empty-desc = Items in dit gedeelte zijn aan geen enkele bijeenkomst toegewezen.
+unnumbered-add-readings-aria = Lectuur toevoegen aan het ongenummerde gedeelte
 toc-empty = Geen bijeenkomsten beschikbaar
 placeholder-url = https://
 links-delete = Koppeling verwijderen
@@ -360,6 +362,7 @@ priority-default-recommended = Aanbevolen
 priority-default-optional = Optioneel
 
 # Gallery
+gallery-add-readings-aria = Lectuur toevoegen aan deze collectie
 gallery-empty-filtered = Geen overeenkomende items.
 gallery-empty = Geen items in deze collectie.
 gallery-untagged = Zonder tags

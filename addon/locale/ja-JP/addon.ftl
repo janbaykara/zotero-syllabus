@@ -218,10 +218,12 @@ page-drop-import-file = ファイルをドロップしてこのコレクショ�
 further-reading-heading = 発展学習
 sort-label = 並べ替え
 further-reading-sort-aria = 発展学習を並べ替え
+further-reading-add-readings-aria = 発展学習に文献を追加
 sort-by-title = タイトル
 sort-by-creator = 作成者
 sort-by-date = 日付
 further-reading-empty-desc = このセクションのアイテムはどの授業にも割り当てられていません。
+unnumbered-add-readings-aria = 番号なしセクションに文献を追加
 toc-empty = 授業がありません
 placeholder-url = https://
 links-delete = リンクを削除
@@ -360,6 +362,7 @@ priority-default-recommended = 推奨
 priority-default-optional = 任意
 
 # Gallery
+gallery-add-readings-aria = このコレクションに文献を追加
 gallery-empty-filtered = 該当するアイテムはありません。
 gallery-empty = このコレクションにアイテムはありません。
 gallery-untagged = タグなし

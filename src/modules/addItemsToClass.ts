@@ -1,6 +1,7 @@
 import { getCachedCollectionById } from "../utils/cache";
 import { pickLibraryItems } from "../utils/itemPicker";
 import { resolveItemsForClassAssignment } from "../utils/items";
+import { collectionLibraryIsEditable } from "../utils/zotero";
 import { SyllabusManager } from "./syllabus";
 
 function itemIsAlreadyInClass(
@@ -19,6 +20,24 @@ function itemIsAlreadyInClass(
   );
 }
 
+function itemIsAlreadyUnnumbered(
+  item: Zotero.Item,
+  collectionId: number,
+): boolean {
+  return SyllabusManager.getItemSyllabusDataForCollection(
+    item,
+    collectionId,
+  ).some((assignment) => {
+    const resolved =
+      SyllabusManager.getClassNumber(collectionId, assignment.classId) ??
+      assignment.classNumber;
+    return (
+      resolved === undefined &&
+      Boolean(assignment.priority || assignment.classInstruction)
+    );
+  });
+}
+
 async function ensureItemInCollection(
   item: Zotero.Item,
   collection: Zotero.Collection,
@@ -35,6 +54,32 @@ async function ensureItemInCollection(
     await item.saveTx({ skipSelect: true });
   } catch (error) {
     ztoolkit.log("Error adding item to collection:", error);
+  }
+}
+
+async function appendAssignmentIdsToClassOrder(
+  collectionId: number,
+  classNumber: number | null,
+  addedAssignmentIds: string[],
+): Promise<void> {
+  if (addedAssignmentIds.length === 0) {
+    return;
+  }
+  const order = SyllabusManager.getClassItemOrder(collectionId, classNumber);
+  if (order.length === 0) {
+    return;
+  }
+  const next = [
+    ...order,
+    ...addedAssignmentIds.filter((id) => !order.includes(id)),
+  ];
+  if (next.length !== order.length) {
+    await SyllabusManager.setClassItemOrder(
+      collectionId,
+      classNumber,
+      next,
+      "page",
+    );
   }
 }
 
@@ -86,40 +131,136 @@ export async function addItemsToClass(
     }
   }
 
-  if (addedAssignmentIds.length === 0) {
+  await appendAssignmentIdsToClassOrder(
+    collectionId,
+    classNumber,
+    addedAssignmentIds,
+  );
+}
+
+/**
+ * Add items to the unnumbered (Course Information) top section.
+ * Uses the collection’s first priority so readings stay out of Further reading.
+ */
+export async function addItemsToUnnumbered(
+  items: readonly Zotero.Item[],
+  collectionId: number,
+): Promise<void> {
+  const collection = getCachedCollectionById(collectionId);
+  if (!collection || items.length === 0) {
     return;
   }
 
-  const order = SyllabusManager.getClassItemOrder(collectionId, classNumber);
-  if (order.length === 0) {
+  const priorities = SyllabusManager.getPrioritiesForCollection(collectionId);
+  const priority = priorities[0]?.id;
+  if (!priority) {
     return;
   }
-  const next = [
-    ...order,
-    ...addedAssignmentIds.filter((id) => !order.includes(id)),
-  ];
-  if (next.length !== order.length) {
-    await SyllabusManager.setClassItemOrder(
+
+  const toAdd = resolveItemsForClassAssignment(items, collection);
+  const addedAssignmentIds: string[] = [];
+
+  for (const item of toAdd) {
+    if (itemIsAlreadyUnnumbered(item, collectionId)) {
+      continue;
+    }
+
+    await ensureItemInCollection(item, collection);
+
+    const beforeIds = new Set(
+      SyllabusManager.getItemSyllabusDataForCollection(item, collectionId)
+        .map((assignment) => assignment.id)
+        .filter((id): id is string => Boolean(id)),
+    );
+
+    await SyllabusManager.addClassAssignment(
+      item,
       collectionId,
-      classNumber,
-      next,
+      null,
+      { priority },
       "page",
     );
+
+    const added = SyllabusManager.getItemSyllabusDataForCollection(
+      item,
+      collectionId,
+    ).find((assignment) => assignment.id && !beforeIds.has(assignment.id));
+    if (added?.id) {
+      addedAssignmentIds.push(added.id);
+    }
+  }
+
+  await appendAssignmentIdsToClassOrder(collectionId, null, addedAssignmentIds);
+}
+
+/**
+ * Add items as further reading: collection membership + append to manual order.
+ * Does not create a class assignment (items without a class land here).
+ */
+export async function addItemsToFurtherReading(
+  items: readonly Zotero.Item[],
+  collectionId: number,
+): Promise<void> {
+  const collection = getCachedCollectionById(collectionId);
+  if (!collection || items.length === 0) {
+    return;
+  }
+
+  const toAdd = resolveItemsForClassAssignment(items, collection);
+  const addedKeys: string[] = [];
+
+  for (const item of toAdd) {
+    await ensureItemInCollection(item, collection);
+    if (item.key) {
+      addedKeys.push(item.key);
+    }
+  }
+
+  if (addedKeys.length === 0) {
+    return;
+  }
+
+  const current = SyllabusManager.getFurtherReadingOrder(collectionId);
+  const unique = addedKeys.filter(
+    (key, index) => addedKeys.indexOf(key) === index,
+  );
+  await SyllabusManager.setFurtherReadingOrder(
+    collectionId,
+    [...current.filter((key) => !unique.includes(key)), ...unique],
+    "page",
+  );
+}
+
+/** Add library items to a collection (no syllabus assignment). */
+export async function addItemsToCollection(
+  items: readonly Zotero.Item[],
+  collectionId: number,
+): Promise<void> {
+  const collection = getCachedCollectionById(collectionId);
+  if (!collection || items.length === 0) {
+    return;
+  }
+  if (!collectionLibraryIsEditable(collection)) {
+    return;
+  }
+
+  const toAdd = resolveItemsForClassAssignment(items, collection);
+  for (const item of toAdd) {
+    await ensureItemInCollection(item, collection);
   }
 }
 
-const pickingForClass = new Set<string>();
+const pickingKeys = new Set<string>();
 
-/** Open the library item picker and assign the confirmed selection. */
-export async function pickAndAddItemsToClass(
+async function pickAndRun(
+  key: string,
   collectionId: number,
-  classNumber: number,
+  run: (items: Zotero.Item[]) => Promise<void>,
 ): Promise<void> {
-  const key = `${collectionId}:${classNumber}`;
-  if (pickingForClass.has(key)) {
+  if (pickingKeys.has(key)) {
     return;
   }
-  pickingForClass.add(key);
+  pickingKeys.add(key);
   try {
     const collection = getCachedCollectionById(collectionId);
     const items = await pickLibraryItems({
@@ -128,8 +269,44 @@ export async function pickAndAddItemsToClass(
     if (items.length === 0) {
       return;
     }
-    await addItemsToClass(items, collectionId, classNumber);
+    await run(items);
   } finally {
-    pickingForClass.delete(key);
+    pickingKeys.delete(key);
   }
+}
+
+/** Open the library item picker and assign the confirmed selection. */
+export async function pickAndAddItemsToClass(
+  collectionId: number,
+  classNumber: number,
+): Promise<void> {
+  await pickAndRun(
+    `${collectionId}:class:${classNumber}`,
+    collectionId,
+    (items) => addItemsToClass(items, collectionId, classNumber),
+  );
+}
+
+export async function pickAndAddItemsToUnnumbered(
+  collectionId: number,
+): Promise<void> {
+  await pickAndRun(`${collectionId}:unnumbered`, collectionId, (items) =>
+    addItemsToUnnumbered(items, collectionId),
+  );
+}
+
+export async function pickAndAddItemsToFurtherReading(
+  collectionId: number,
+): Promise<void> {
+  await pickAndRun(`${collectionId}:further-reading`, collectionId, (items) =>
+    addItemsToFurtherReading(items, collectionId),
+  );
+}
+
+export async function pickAndAddItemsToCollection(
+  collectionId: number,
+): Promise<void> {
+  await pickAndRun(`${collectionId}:collection`, collectionId, (items) =>
+    addItemsToCollection(items, collectionId),
+  );
 }

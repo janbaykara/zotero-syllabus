@@ -218,10 +218,12 @@ page-drop-import-file = Thả tệp để thêm vào bộ sưu tập này
 further-reading-heading = Đọc thêm
 sort-label = Sắp xếp
 further-reading-sort-aria = Sắp xếp phần đọc thêm
+further-reading-add-readings-aria = Thêm bài đọc vào phần đọc thêm
 sort-by-title = Tiêu đề
 sort-by-creator = Tác giả
 sort-by-date = Ngày
 further-reading-empty-desc = Các mục trong phần này chưa được gán vào buổi học nào.
+unnumbered-add-readings-aria = Thêm bài đọc vào phần không đánh số
 toc-empty = Không có buổi học
 placeholder-url = https://
 links-delete = Xóa liên kết
@@ -360,6 +362,7 @@ priority-default-recommended = Khuyến nghị
 priority-default-optional = Tùy chọn
 
 # Gallery
+gallery-add-readings-aria = Thêm bài đọc vào bộ sưu tập này
 gallery-empty-filtered = Không có mục khớp.
 gallery-empty = Không có mục trong bộ sưu tập này.
 gallery-untagged = Không thẻ

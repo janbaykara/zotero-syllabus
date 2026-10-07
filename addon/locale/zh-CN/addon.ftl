@@ -216,10 +216,12 @@ page-drop-import-file = 拖放文件以添加到此文献集
 further-reading-heading = 扩展阅读
 sort-label = 排序
 further-reading-sort-aria = 排序扩展阅读
+further-reading-add-readings-aria = 添加阅读到扩展阅读
 sort-by-title = 标题
 sort-by-creator = 创建者
 sort-by-date = 日期
 further-reading-empty-desc = 此部分中的条目尚未分配到任何课堂。
+unnumbered-add-readings-aria = 添加阅读到无编号部分
 toc-empty = 暂无课堂
 placeholder-url = https://
 links-delete = 删除链接
@@ -358,6 +360,7 @@ priority-default-recommended = 推荐
 priority-default-optional = 选读
 
 # Gallery
+gallery-add-readings-aria = 添加阅读到此文集
 gallery-empty-filtered = 没有匹配的条目。
 gallery-empty = 此分类中没有条目。
 gallery-untagged = 无标签
