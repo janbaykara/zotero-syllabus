@@ -1,5 +1,8 @@
 import { config } from "../../package.json";
 import { getCachedPref, zoteroCache } from "./cache";
+import { subscribePref } from "./prefSubscribe";
+
+export { subscribePref, subscribePrefs } from "./prefSubscribe";
 
 type PluginPrefsMap = _ZoteroTypes.Prefs["PluginPrefsMap"];
 
@@ -176,4 +179,14 @@ export function resetAllPluginPrefs(): string[] {
  */
 export function getPrefKey<K extends keyof PluginPrefsMap>(key: K): string {
   return `${PREFS_PREFIX}.${key}`;
+}
+
+/**
+ * Observe a plugin pref (`extensions.zotero.syllabus.<key>`).
+ */
+export function subscribePluginPref<K extends keyof PluginPrefsMap>(
+  key: K,
+  onChange: () => void,
+): () => void {
+  return subscribePref(getPrefKey(key), onChange);
 }

@@ -1,7 +1,7 @@
-import { useCallback, useMemo } from "preact/hooks";
-import { useSyncExternalStore } from "react-dom/src";
+import { useCallback } from "preact/hooks";
+import { useAtomValue } from "jotai";
 import { config } from "../../../package.json";
-import { getPrefKey, getPrefValue } from "../../utils/prefs";
+import { getPrefValue, subscribePluginPref } from "../../utils/prefs";
 import {
   getViewPref,
   getViewPrefDefault,
@@ -12,6 +12,7 @@ import {
   type ViewPrefGlobalSetting,
   type ViewPrefSpec,
 } from "../../utils/viewPref";
+import { atomFromExternal } from "./jotaiExternal";
 
 export const ITEM_DENSITIES = ["row", "standard", "expanded"] as const;
 
@@ -134,33 +135,14 @@ export function migrateCompactModeToItemDensity(): void {
   }
 }
 
-function createItemDensityStore() {
-  const prefKey = getPrefKey("defaultItemDensity");
-
-  function getSnapshot() {
-    return getItemDensity();
-  }
-
-  function subscribe(onStoreChange: () => void) {
-    const observerID = Zotero.Prefs.registerObserver(
-      prefKey,
-      () => {
-        onStoreChange();
-      },
-      true,
-    );
-
-    return () => {
-      Zotero.Prefs.unregisterObserver(observerID);
-    };
-  }
-
-  return { getSnapshot, subscribe };
-}
+export const defaultItemDensityAtom = atomFromExternal({
+  getSnapshot: () => getItemDensity(),
+  subscribe: (onStoreChange) =>
+    subscribePluginPref("defaultItemDensity", onStoreChange),
+});
 
 export function useZoteroItemDensity() {
-  const store = useMemo(() => createItemDensityStore(), []);
-  const density = useSyncExternalStore(store.subscribe, store.getSnapshot);
+  const density = useAtomValue(defaultItemDensityAtom);
 
   const setDensity = useCallback((next: ItemDensity) => {
     setItemDensity(next);

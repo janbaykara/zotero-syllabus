@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from "preact/hooks";
+import { useCallback } from "preact/hooks";
+import { useAtomValue } from "jotai";
 import * as z from "zod";
 import { getCachedPref, zoteroCache } from "./cache";
-import { getPref, getPrefKey, setPref } from "./prefs";
+import { getPref, getPrefKey, setPref, subscribePrefs } from "./prefs";
+import { atomFamilyFromExternal } from "../modules/react-zotero-sync/jotaiExternal";
 
 type PluginPrefsMap = _ZoteroTypes.Prefs["PluginPrefsMap"];
 
@@ -96,37 +98,118 @@ export function saveViewPrefGlobally<T>(
   setViewPref(spec, viewKey, value);
 }
 
+/** Specs registered by useViewPref so shared atoms can coerce without closing over hooks. */
+const registeredSpecs = new Map<string, ViewPrefSpec<unknown>>();
+
+function specRegistryId(spec: ViewPrefSpec<unknown>): string {
+  return `${spec.mapKey}\0${String(spec.defaultKey)}`;
+}
+
+type ViewPrefAtomParam = {
+  registryId: string;
+  viewKey: string;
+  /** JSON of unsetDefault, or empty if undefined */
+  unsetJson: string;
+};
+
+type DefaultPrefAtomParam = {
+  registryId: string;
+};
+
+function subscribeViewPrefKeys(
+  mapKey: string,
+  defaultKey: keyof PluginPrefsMap,
+  onStoreChange: () => void,
+): () => void {
+  return subscribePrefs([mapKey, getPrefKey(defaultKey)], onStoreChange);
+}
+
+const viewPrefValueAtomFamily = atomFamilyFromExternal(
+  (param: ViewPrefAtomParam) => {
+    const spec = registeredSpecs.get(param.registryId);
+    return {
+      getSnapshot: () => {
+        const live = registeredSpecs.get(param.registryId) || spec;
+        if (!live) {
+          return null;
+        }
+        const unsetDefault =
+          param.unsetJson === ""
+            ? undefined
+            : (JSON.parse(param.unsetJson) as unknown);
+        return getViewPref(live, param.viewKey, unsetDefault);
+      },
+      subscribe: (onStoreChange) => {
+        const live = registeredSpecs.get(param.registryId) || spec;
+        if (!live) {
+          return () => {};
+        }
+        return subscribeViewPrefKeys(
+          live.mapKey,
+          live.defaultKey,
+          onStoreChange,
+        );
+      },
+    };
+  },
+  (a, b) =>
+    a.registryId === b.registryId &&
+    a.viewKey === b.viewKey &&
+    a.unsetJson === b.unsetJson,
+);
+
+const viewPrefDefaultAtomFamily = atomFamilyFromExternal(
+  (param: DefaultPrefAtomParam) => {
+    const spec = registeredSpecs.get(param.registryId);
+    return {
+      getSnapshot: () => {
+        const live = registeredSpecs.get(param.registryId) || spec;
+        if (!live) {
+          return null;
+        }
+        return getViewPrefDefault(live);
+      },
+      subscribe: (onStoreChange) => {
+        const live = registeredSpecs.get(param.registryId) || spec;
+        if (!live) {
+          return () => {};
+        }
+        return subscribeViewPrefKeys(
+          live.mapKey,
+          live.defaultKey,
+          onStoreChange,
+        );
+      },
+    };
+  },
+  (a, b) => a.registryId === b.registryId,
+);
+
 export function useViewPref<T>(
   spec: ViewPrefSpec<T>,
   viewKey: string | number,
   unsetDefault?: T,
 ): [T, (next: T) => void, ViewPrefGlobalSetting<T>] {
-  const [value, setValue] = useState<T>(() =>
-    getViewPref(spec, viewKey, unsetDefault),
-  );
-  const [globalValue, setGlobalValue] = useState<T>(() =>
-    getViewPrefDefault(spec),
-  );
+  const registryId = specRegistryId(spec as ViewPrefSpec<unknown>);
+  registeredSpecs.set(registryId, spec as ViewPrefSpec<unknown>);
 
-  useEffect(() => {
-    const refresh = () => {
-      setValue(getViewPref(spec, viewKey, unsetDefault));
-      setGlobalValue(getViewPrefDefault(spec));
-    };
-    const observerIDs = [
-      Zotero.Prefs.registerObserver(spec.mapKey, refresh, true),
-      Zotero.Prefs.registerObserver(getPrefKey(spec.defaultKey), refresh, true),
-    ];
-    return () => {
-      for (const observerID of observerIDs) {
-        Zotero.Prefs.unregisterObserver(observerID);
-      }
-    };
-  }, [spec.mapKey, spec.defaultKey, viewKey, unsetDefault]);
+  const unsetJson =
+    unsetDefault === undefined ? "" : JSON.stringify(unsetDefault);
+
+  const value = useAtomValue(
+    viewPrefValueAtomFamily({
+      registryId,
+      viewKey: String(viewKey),
+      unsetJson,
+    }),
+  ) as T;
+
+  const globalValue = useAtomValue(
+    viewPrefDefaultAtomFamily({ registryId }),
+  ) as T;
 
   const setPrefValue = useCallback(
     (next: T) => {
-      setValue(next);
       setViewPref(spec, viewKey, next);
     },
     [spec, viewKey],
@@ -134,7 +217,6 @@ export function useViewPref<T>(
 
   const saveGlobally = useCallback(() => {
     saveViewPrefGlobally(spec, viewKey, value);
-    setGlobalValue(value);
   }, [spec, viewKey, value]);
 
   return [

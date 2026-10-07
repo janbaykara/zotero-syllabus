@@ -69,6 +69,13 @@ export default defineConfig({
         jsx: "transform",
         jsxFactory: "h",
         jsxFragment: "Fragment",
+        // Jotai (and any React-shaped imports) resolve through Preact compat.
+        // Do not wrap renderComponent roots in jotai Provider — default store
+        // is shared across Syllabus / ItemPane / Gallery / Explorer.
+        alias: {
+          react: "preact/compat",
+          "react-dom": "preact/compat",
+        },
       },
     ],
   },

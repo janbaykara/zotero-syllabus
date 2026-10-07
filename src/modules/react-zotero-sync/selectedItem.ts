@@ -1,48 +1,37 @@
-import { useMemo } from "preact/hooks";
-import { useSyncExternalStore } from "react-dom/src";
-import { SyllabusManager } from "../syllabus";
+import { useAtomValue } from "jotai";
 import { isItemRemovalEvent } from "../../utils/cache";
 import { isSyllabusMemberItem } from "../../utils/items";
+import { atomFromExternal } from "./jotaiExternal";
 
-export function useZoteroSelectedItemIds(): number[] | null {
-  // Create the store once
-  const store = useMemo(() => createSelectedItemStore(), []);
-
-  const itemIds = useSyncExternalStore(store.subscribe, store.getSnapshot);
-
-  // Return the first item ID for backwards compatibility
-  return !!itemIds && itemIds.length > 0 ? itemIds : null;
+function arraysEqual(a: number[], b: number[]): boolean {
+  return a.length === b.length && a.every((id, i) => id === b[i]);
 }
 
-export function createSelectedItemStore() {
-  let selectedItemIds: number[] = [];
-  const listeners = new Set<() => void>();
-  let notifierID: string | null = null;
-  let intervalID: NodeJS.Timeout | null = null;
+function readSelectedItemIdsFromPane(): number[] {
+  const pane = ztoolkit.getGlobal("ZoteroPane");
+  const selectedItems = pane?.getSelectedItems() || [];
+  return selectedItems
+    .filter((item) => isSyllabusMemberItem(item))
+    .map((item) => item.id);
+}
 
-  function getSnapshot() {
-    return selectedItemIds;
+/** Module cache so delete events can filter before the pane catches up. */
+let selectedItemIds: number[] = [];
+
+function syncFromPane(): boolean {
+  const next = readSelectedItemIdsFromPane();
+  if (arraysEqual(selectedItemIds, next)) {
+    return false;
   }
+  selectedItemIds = next;
+  return true;
+}
 
-  function updateSelectedItems() {
-    const pane = ztoolkit.getGlobal("ZoteroPane");
-    const selectedItems = pane?.getSelectedItems() || [];
-    const newSelectedItemIds = selectedItems
-      .filter((item) => isSyllabusMemberItem(item))
-      .map((item) => item.id);
-
-    // Check if items actually changed
-    if (
-      newSelectedItemIds.length !== selectedItemIds.length ||
-      !newSelectedItemIds.every((id, idx) => id === selectedItemIds[idx])
-    ) {
-      selectedItemIds = newSelectedItemIds;
-      listeners.forEach((l) => l());
-    }
-  }
-
-  function subscribe(onStoreChange: () => void) {
-    listeners.add(onStoreChange);
+export const selectedItemIdsAtom = atomFromExternal({
+  // Object.is so modify events can force refresh via selectedItemIds.slice().
+  getSnapshot: () => selectedItemIds,
+  subscribe: (onStoreChange) => {
+    syncFromPane();
 
     const notifierCallback = {
       notify: async (
@@ -52,7 +41,6 @@ export function createSelectedItemStore() {
         _extraData: { [key: string]: any },
       ) => {
         if (type === "item") {
-          // Check if this is a modify/delete event for any currently selected item
           const itemIdsArray = ids as number[];
           const hasSelectedItem = selectedItemIds.some((id) =>
             itemIdsArray.includes(id),
@@ -63,50 +51,45 @@ export function createSelectedItemStore() {
             (event === "modify" || isItemRemovalEvent(event))
           ) {
             if (event === "modify") {
-              listeners.forEach((l) => l());
+              // Same ids, but force subscribers that key off this atom to refresh.
+              selectedItemIds = selectedItemIds.slice();
+              onStoreChange();
             } else {
               selectedItemIds = selectedItemIds.filter(
                 (id) => !itemIdsArray.includes(id),
               );
-              listeners.forEach((l) => l());
+              onStoreChange();
             }
-          } else {
-            // Selection change or other item event - update selected items
-            updateSelectedItems();
+          } else if (syncFromPane()) {
+            onStoreChange();
           }
         } else if (type === "tab") {
-          // Tab change - update selected items
-          updateSelectedItems();
+          if (syncFromPane()) {
+            onStoreChange();
+          }
         }
       },
     };
 
-    notifierID = Zotero.Notifier.registerObserver(notifierCallback, [
+    const notifierID = Zotero.Notifier.registerObserver(notifierCallback, [
       "item",
       "tab",
     ]);
 
-    // Also poll for changes as a fallback (Zotero doesn't always fire selection events reliably)
-    intervalID = setInterval(() => {
-      updateSelectedItems();
+    const intervalID = setInterval(() => {
+      if (syncFromPane()) {
+        onStoreChange();
+      }
     }, 200);
 
-    // Initial load
-    updateSelectedItems();
-
-    // Return an unsubscribe fn
     return () => {
-      listeners.delete(onStoreChange);
-      if (intervalID) {
-        clearInterval(intervalID);
-        intervalID = null;
-      }
-      if (listeners.size === 0 && notifierID) {
-        Zotero.Notifier.unregisterObserver(notifierID);
-        notifierID = null;
-      }
+      clearInterval(intervalID);
+      Zotero.Notifier.unregisterObserver(notifierID);
     };
-  }
+  },
+});
 
-  return { getSnapshot, subscribe };
+export function useZoteroSelectedItemIds(): number[] | null {
+  const itemIds = useAtomValue(selectedItemIdsAtom) ?? [];
+  return itemIds.length > 0 ? itemIds : null;
 }

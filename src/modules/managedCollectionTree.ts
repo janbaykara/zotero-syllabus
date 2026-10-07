@@ -1,4 +1,4 @@
-import { getPrefKey, getPrefValue } from "../utils/prefs";
+import { getPrefValue, subscribePluginPref } from "../utils/prefs";
 import { getString } from "../utils/locale";
 import {
   getCollectionTreeKind,
@@ -57,7 +57,7 @@ let prototypePatched = false;
 let patchedPrototype: CollectionsView | null = null;
 let originalGetIconName:
   ((this: CollectionsView, index: number) => string | null) | null = null;
-let prefObserverID: symbol | null = null;
+let unsubscribeCustomIconsPref: (() => void) | null = null;
 
 export function areCustomIconsEnabled(): boolean {
   return Boolean(getPrefValue("customIcons"));
@@ -210,25 +210,18 @@ export function applyManagedCollectionTrees(): void {
 }
 
 export function registerCustomIconsPrefObserver(onChange?: () => void): void {
-  if (prefObserverID) {
+  if (unsubscribeCustomIconsPref) {
     return;
   }
-  prefObserverID = Zotero.Prefs.registerObserver(
-    getPrefKey("customIcons"),
-    () => {
-      applyManagedCollectionTrees();
-      onChange?.();
-    },
-    true,
-  );
+  unsubscribeCustomIconsPref = subscribePluginPref("customIcons", () => {
+    applyManagedCollectionTrees();
+    onChange?.();
+  });
 }
 
 export function unregisterCustomIconsPrefObserver(): void {
-  if (!prefObserverID) {
-    return;
-  }
-  Zotero.Prefs.unregisterObserver(prefObserverID);
-  prefObserverID = null;
+  unsubscribeCustomIconsPref?.();
+  unsubscribeCustomIconsPref = null;
 }
 
 export function unpatchManagedCollectionTree(

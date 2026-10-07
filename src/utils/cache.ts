@@ -6,6 +6,7 @@
 import type { z } from "zod";
 import type { VersionedEntity } from "verzod";
 import { LRUCache } from "lru-cache";
+import { subscribePref } from "./prefSubscribe";
 
 type GetByLibraryAndKeyArgs = Parameters<
   typeof Zotero.Collections.getByLibraryAndKey
@@ -48,8 +49,8 @@ class ZoteroCache {
   // Global Zotero Notifier observer ID
   private notifierID: string | null = null;
 
-  // Per-key preference observer IDs
-  private prefObserverIDs = new Map<string, symbol>();
+  // Per-key preference unsubscribe fns
+  private prefUnsubscribers = new Map<string, () => void>();
 
   private initialized = false;
 
@@ -105,10 +106,10 @@ class ZoteroCache {
       this.notifierID = null;
     }
 
-    for (const observerID of this.prefObserverIDs.values()) {
-      Zotero.Prefs.unregisterObserver(observerID);
+    for (const unsub of this.prefUnsubscribers.values()) {
+      unsub();
     }
-    this.prefObserverIDs.clear();
+    this.prefUnsubscribers.clear();
 
     this.clear();
     this.initialized = false;
@@ -218,16 +219,15 @@ class ZoteroCache {
    * Register a preference observer for a given key to invalidate cache on changes
    */
   private registerPrefObserver(key: string): void {
-    if (!this.prefObserverIDs.has(key)) {
-      const observerID = Zotero.Prefs.registerObserver(
-        key,
-        () => {
-          this.invalidatePref(key);
-        },
-        true,
-      );
-      this.prefObserverIDs.set(key, observerID);
+    if (this.prefUnsubscribers.has(key)) {
+      return;
     }
+    this.prefUnsubscribers.set(
+      key,
+      subscribePref(key, () => {
+        this.invalidatePref(key);
+      }),
+    );
   }
 
   /**

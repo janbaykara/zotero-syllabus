@@ -18,7 +18,7 @@ import {
   parseReadingDate,
   toLocalDateKey,
 } from "../utils/dates";
-import { getPrefKey, getPrefValue, setPref } from "../utils/prefs";
+import { getPrefValue, setPref, subscribePluginPref } from "../utils/prefs";
 import { itemBelongsInCollection, libraryIsEditable } from "../utils/zotero";
 
 export const READING_SCHEDULE_COLLECTION_NAME = "Reading Schedule";
@@ -52,7 +52,7 @@ let syncChain: Promise<void> = Promise.resolve();
 let syncHoldDepth = 0;
 /** Stays true after depth hits 0 long enough to cover deferred Zotero notifiers. */
 let syncHoldLatched = false;
-let prefObserverID: symbol | null = null;
+let unsubscribeGeneratePref: (() => void) | null = null;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingGetDesired: (() => ReadingScheduleDesiredByLibrary) | null = null;
 /** Last successful desired getter so pin toggles can re-sync without a new note write. */
@@ -1225,11 +1225,11 @@ export function restoreReadingScheduleCollectionItems(
 export function registerReadingSchedulePrefObserver(
   getDesired: () => ReadingScheduleDesiredByLibrary,
 ): void {
-  if (prefObserverID) {
+  if (unsubscribeGeneratePref) {
     return;
   }
-  prefObserverID = Zotero.Prefs.registerObserver(
-    getPrefKey("generateReadingScheduleCollection"),
+  unsubscribeGeneratePref = subscribePluginPref(
+    "generateReadingScheduleCollection",
     () => {
       enqueueReadingScheduleCollectionSync(getDesired, {
         immediate: true,
@@ -1240,14 +1240,10 @@ export function registerReadingSchedulePrefObserver(
         );
       });
     },
-    true,
   );
 }
 
 export function unregisterReadingSchedulePrefObserver(): void {
-  if (!prefObserverID) {
-    return;
-  }
-  Zotero.Prefs.unregisterObserver(prefObserverID);
-  prefObserverID = null;
+  unsubscribeGeneratePref?.();
+  unsubscribeGeneratePref = null;
 }

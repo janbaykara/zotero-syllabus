@@ -1,5 +1,5 @@
 import { useMemo } from "preact/hooks";
-import { useSyncExternalStore } from "react-dom/src";
+import { useAtomValue } from "jotai";
 import SuperJSON from "superjson";
 import {
   SyllabusManager,
@@ -16,12 +16,14 @@ import {
   isItemRemovalEvent,
   isObjectLifecycleEvent,
 } from "../../utils/cache";
+import { subscribePref } from "../../utils/prefSubscribe";
 import {
   getCollectionDocument,
   getDocumentGeneration,
   getHydratedItemAssignments,
   subscribeToSyllabusDocumentChanges,
 } from "../syllabusNote";
+import { atomFamilyFromExternal } from "./jotaiExternal";
 
 export type ItemID = {
   [field in _ZoteroTypes.Item.ItemField]: string | unknown;
@@ -130,25 +132,42 @@ function collectRegularItems(
   return items;
 }
 
+type CollectionItemsFamilyKey = {
+  collectionId: number | GetByLibraryAndKeyArgs;
+  recursive: CollectionItemsOptions["recursive"];
+  includeAssignedClassNotes: boolean;
+};
+
+function collectionItemsFamilyKeyToString(key: CollectionItemsFamilyKey): string {
+  const id =
+    typeof key.collectionId === "number"
+      ? String(key.collectionId)
+      : `${key.collectionId[0]}:${key.collectionId[1]}`;
+  return `${id}:${String(key.recursive)}:${key.includeAssignedClassNotes ? 1 : 0}`;
+}
+
+const collectionItemsAtomFamily = atomFamilyFromExternal(
+  (key: CollectionItemsFamilyKey) =>
+    createCollectionItemsStore(key.collectionId, {
+      recursive: key.recursive,
+      includeAssignedClassNotes: key.includeAssignedClassNotes,
+    }),
+  (a, b) =>
+    collectionItemsFamilyKeyToString(a) === collectionItemsFamilyKeyToString(b),
+);
+
 export function useZoteroCollectionItems(
   collectionId: number | GetByLibraryAndKeyArgs,
   options?: CollectionItemsOptions,
 ) {
   const recursive = options?.recursive ?? false;
   const includeAssignedClassNotes = options?.includeAssignedClassNotes ?? false;
-  // Create the store once per ID + recursive mode + note inclusion
-  const store = useMemo(
-    () =>
-      createCollectionItemsStore(collectionId, {
-        recursive,
-        includeAssignedClassNotes,
-      }),
-    [collectionId, recursive, includeAssignedClassNotes],
-  );
-
-  const __itemsFromZotero = useSyncExternalStore(
-    store.subscribe,
-    store.getSnapshot,
+  const __itemsFromZotero = useAtomValue(
+    collectionItemsAtomFamily({
+      collectionId,
+      recursive,
+      includeAssignedClassNotes,
+    }),
   );
 
   const parsedItems = useMemo(() => {
@@ -297,25 +316,15 @@ export function createCollectionItemsStore(
     const unsubscribeDocuments =
       subscribeToSyllabusDocumentChanges(onStoreChange);
 
-    let prefObserverID: ReturnType<
-      typeof Zotero.Prefs.registerObserver
-    > | null = null;
-    if (recursiveMode === "pref") {
-      prefObserverID = Zotero.Prefs.registerObserver(
-        "recursiveCollections",
-        () => {
-          onStoreChange();
-        },
-        true,
-      );
-    }
+    const unsubscribeRecursivePref =
+      recursiveMode === "pref"
+        ? subscribePref("recursiveCollections", onStoreChange)
+        : null;
 
     return () => {
       unsubscribeDocuments();
       Zotero.Notifier.unregisterObserver(notifierId);
-      if (prefObserverID != null) {
-        Zotero.Prefs.unregisterObserver(prefObserverID);
-      }
+      unsubscribeRecursivePref?.();
     };
   }
 

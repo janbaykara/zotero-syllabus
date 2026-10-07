@@ -11,23 +11,23 @@ import {
 import { twMerge } from "tailwind-merge";
 import { BookOpen, Pin, PinOff } from "lucide-preact";
 import {
-  listNextUpReadings,
-  listPinnedItems,
   openIntentionNote,
   readIntentionText,
   setPinnedSyllabus,
-  subscribePinnedChanges,
   confirmUnpinPinnedItem,
   confirmUnpinPinnedSyllabus,
   unpinItemWithNotePrompt,
   applyPinnedShelfOrder,
-  getPinnedShelfOrder,
   movePinnedShelfEntry,
   pinnedShelfEntryKey,
   resolvePinnedOrderLibraryID,
   setPinnedShelfOrder,
+  getPinnedShelfOrder,
   type NextUpReading,
 } from "./pinned";
+import { usePinnedScheduleData } from "./react-zotero-sync/pinned";
+
+export { usePinnedScheduleData };
 import { SyllabusItemCard } from "./SyllabusItemCard";
 import {
   openCollectionSyllabusAtClass,
@@ -154,70 +154,6 @@ function openPinnedCollection(reading: NextUpReading): void {
   } catch (error) {
     ztoolkit.log("Error opening pinned collection:", error);
   }
-}
-
-export function usePinnedScheduleData(libraryID?: number) {
-  const [pinnedItems, setPinnedItems] = useState<Zotero.Item[]>([]);
-  const [nextUp, setNextUp] = useState<NextUpReading[]>([]);
-  const [tick, setTick] = useState(0);
-
-  const reload = useCallback(() => {
-    void (async () => {
-      const [items, readings] = await Promise.all([
-        listPinnedItems(libraryID),
-        listNextUpReadings(libraryID),
-      ]);
-      const orderLibraryID = resolvePinnedOrderLibraryID(
-        libraryID,
-        items,
-        readings,
-      );
-      const order =
-        orderLibraryID != null ? getPinnedShelfOrder(orderLibraryID) : [];
-      setPinnedItems(
-        applyPinnedShelfOrder(
-          items,
-          (item) => pinnedShelfEntryKey("item", item.key),
-          order,
-        ),
-      );
-      setNextUp(
-        applyPinnedShelfOrder(
-          readings,
-          (reading) =>
-            pinnedShelfEntryKey("collection", reading.collection.key),
-          order,
-        ),
-      );
-    })();
-  }, [libraryID]);
-
-  useEffect(() => {
-    reload();
-  }, [reload, tick]);
-
-  useEffect(() => {
-    return subscribePinnedChanges(() => setTick((n) => n + 1));
-  }, []);
-
-  useEffect(() => {
-    const id = Zotero.Notifier.registerObserver(
-      {
-        notify(event: string, type: string) {
-          if (type === "item" && (event === "modify" || event === "add")) {
-            setTick((n) => n + 1);
-          }
-        },
-      },
-      ["item"],
-      "syllabus-pinned-schedule",
-    );
-    return () => {
-      Zotero.Notifier.unregisterObserver(id);
-    };
-  }, []);
-
-  return { pinnedItems, nextUp, reload };
 }
 
 export function PinnedSection({

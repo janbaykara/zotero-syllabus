@@ -1,11 +1,12 @@
 import { useMemo } from "preact/hooks";
-import { useSyncExternalStore } from "react-dom/src";
+import { useAtomValue } from "jotai";
 import { getCachedItem } from "../../utils/cache";
 import { isSyllabusMemberItem } from "../../utils/items";
 import {
   treeViewIDFromRow,
   type CollectionTreeRowLike,
 } from "../../utils/viewScope";
+import { atomFamilyFromExternal } from "./jotaiExternal";
 
 /**
  * Sentinel snapshot: the items tree is not applying a search/tag/advanced
@@ -277,17 +278,13 @@ export function subscribeToItemsViewChanges(
   };
 }
 
-export function createItemsViewItemsStore(collectionId: number) {
-  function getSnapshot() {
-    return readSnapshot(collectionId);
-  }
-
-  function subscribe(onStoreChange: () => void) {
-    return subscribeToItemsViewChanges(onStoreChange);
-  }
-
-  return { getSnapshot, subscribe };
-}
+const itemsViewItemsAtomFamily = atomFamilyFromExternal(
+  (collectionId: number) => ({
+    getSnapshot: () => readSnapshot(collectionId),
+    subscribe: (onStoreChange: () => void) =>
+      subscribeToItemsViewChanges(onStoreChange),
+  }),
+);
 
 /**
  * Regular-item IDs currently shown in Zotero's items tree for this collection,
@@ -299,11 +296,7 @@ export function createItemsViewItemsStore(collectionId: number) {
 export function useZoteroItemsViewRegularItemIds(
   collectionId: number,
 ): Set<number> | null {
-  const store = useMemo(
-    () => createItemsViewItemsStore(collectionId),
-    [collectionId],
-  );
-  const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
+  const snapshot = useAtomValue(itemsViewItemsAtomFamily(collectionId));
 
   return useMemo(() => {
     if (snapshot === UNFILTERED) {

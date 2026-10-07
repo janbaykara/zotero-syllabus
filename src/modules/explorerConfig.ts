@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useState } from "preact/hooks";
+import { useCallback } from "preact/hooks";
+import { useAtomValue } from "jotai";
 import * as z from "zod";
 import { config } from "../../package.json";
 import { getCachedPref, zoteroCache } from "../utils/cache";
+import { subscribePref } from "../utils/prefSubscribe";
+import { atomFromExternal } from "./react-zotero-sync/jotaiExternal";
 import {
   GALLERY_LAYOUT_MODES,
   coerceGalleryLayout,
@@ -768,30 +771,19 @@ export function mergeExplorerCatalog(
   return next;
 }
 
+const explorerShelvesAtom = atomFromExternal({
+  getSnapshot: getExplorerShelves,
+  subscribe: (onStoreChange) => subscribePref(shelvesPrefKey(), onStoreChange),
+});
+
 export function useExplorerShelves(): [
   ExplorerShelf[],
   (shelves: ExplorerShelf[]) => void,
 ] {
-  const [shelves, setShelvesState] = useState(getExplorerShelves);
-
-  useEffect(() => {
-    const refresh = () => setShelvesState(getExplorerShelves());
-    refresh();
-    const observerID = Zotero.Prefs.registerObserver(
-      shelvesPrefKey(),
-      refresh,
-      true,
-    );
-    return () => {
-      Zotero.Prefs.unregisterObserver(observerID);
-    };
-  }, []);
-
+  const shelves = useAtomValue(explorerShelvesAtom) ?? getExplorerShelves();
   const setShelves = useCallback((next: ExplorerShelf[]) => {
-    setShelvesState(next);
     setExplorerShelves(next);
   }, []);
-
   return [shelves, setShelves];
 }
 

@@ -1,19 +1,16 @@
 import { useCallback, useMemo } from "preact/hooks";
-import { useSyncExternalStore } from "react-dom/src";
+import { useAtomValue } from "jotai";
 import { SyllabusManager, GetByLibraryAndKeyArgs } from "../syllabus";
 import { Priority } from "../../utils/schemas";
-import { createCollectionDocumentStore } from "./collectionDocument";
+import { collectionDocumentSnapshotAtomFamily } from "./collectionDocument";
 import { getCollectionDocument, metadataFromDocument } from "../syllabusNote";
 
 export function useZoteroSyllabusMetadata(
   collectionId: number | GetByLibraryAndKeyArgs,
 ) {
-  const store = useMemo(
-    () => createCollectionDocumentStore(collectionId),
-    [collectionId],
+  const snapshot = useAtomValue(
+    collectionDocumentSnapshotAtomFamily(collectionId),
   );
-
-  const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
 
   const syllabusMetadata = useMemo(() => {
     void snapshot;
@@ -126,8 +123,3 @@ export function useZoteroSyllabusMetadata(
   ] as const;
 }
 
-export function createSyllabusMetadataStore(
-  collectionId: number | GetByLibraryAndKeyArgs,
-) {
-  return createCollectionDocumentStore(collectionId);
-}

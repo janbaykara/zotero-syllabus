@@ -1,9 +1,9 @@
 import { useMemo } from "preact/hooks";
-import { useSyncExternalStore } from "react-dom/src";
+import { atom, useAtomValue } from "jotai";
 import { ItemSyllabusAssignment } from "../syllabus";
 import { getCachedItem } from "../../utils/cache";
 import { isSyllabusAssignableItem } from "../../utils/items";
-import { createCollectionDocumentStore } from "./collectionDocument";
+import { collectionDocumentSnapshotAtomFamily } from "./collectionDocument";
 import {
   getCollectionDocument,
   getHydratedItemAssignments,
@@ -13,21 +13,17 @@ export type ItemAssignmentsSnapshot = {
   assignments: ItemSyllabusAssignment[];
 };
 
+const emptyDocumentSnapshotAtom = atom("0:");
+
 export function useZoteroItemAssignments(
   itemId: number | null,
   collectionId: number | null,
 ): ItemSyllabusAssignment[] {
-  const store = useMemo(() => {
-    if (!collectionId) {
-      return {
-        getSnapshot: () => "0:",
-        subscribe: () => () => {},
-      };
-    }
-    return createCollectionDocumentStore(collectionId);
-  }, [collectionId]);
-
-  const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
+  const snapshot = useAtomValue(
+    collectionId
+      ? collectionDocumentSnapshotAtomFamily(collectionId)
+      : emptyDocumentSnapshotAtom,
+  );
 
   return useMemo(() => {
     void snapshot;

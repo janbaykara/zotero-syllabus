@@ -1,4 +1,9 @@
-import { getPrefKey, getPrefValue, setPref } from "../utils/prefs";
+import {
+  getPrefKey,
+  getPrefValue,
+  setPref,
+  subscribePluginPref,
+} from "../utils/prefs";
 import { zoteroCache } from "../utils/cache";
 import { FEATURE_FLAG } from "./featureFlags";
 
@@ -31,7 +36,7 @@ const ENABLE_PREF_KEYS = [
 ] as const;
 
 let chromeRefresh: (() => void) | null = null;
-let prefObserverIDs: symbol[] = [];
+let unsubscribePrefs: (() => void) | null = null;
 
 export function registerOptionalFeaturesChromeRefresh(fn: () => void): void {
   chromeRefresh = fn;
@@ -110,27 +115,25 @@ export function refreshOptionalFeatureChrome(): void {
 }
 
 export function registerOptionalFeaturesPrefObserver(): void {
-  if (prefObserverIDs.length) {
+  if (unsubscribePrefs) {
     return;
   }
-  for (const key of ENABLE_PREF_KEYS) {
-    const id = Zotero.Prefs.registerObserver(
-      getPrefKey(key),
-      () => {
-        zoteroCache.invalidatePref(getPrefKey(key));
-        chromeRefresh?.();
-      },
-      true,
-    );
-    prefObserverIDs.push(id);
-  }
+  const unsubs = ENABLE_PREF_KEYS.map((key) =>
+    subscribePluginPref(key, () => {
+      zoteroCache.invalidatePref(getPrefKey(key));
+      chromeRefresh?.();
+    }),
+  );
+  unsubscribePrefs = () => {
+    for (const unsub of unsubs) {
+      unsub();
+    }
+  };
 }
 
 export function unregisterOptionalFeaturesPrefObserver(): void {
-  for (const id of prefObserverIDs) {
-    Zotero.Prefs.unregisterObserver(id);
-  }
-  prefObserverIDs = [];
+  unsubscribePrefs?.();
+  unsubscribePrefs = null;
 }
 
 /** Whether any items-toolbar view radio besides native Table should appear. */

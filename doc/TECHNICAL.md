@@ -145,6 +145,18 @@ Collection-scoped notes on regular items for Gallery / card views. Each note is 
 - Do not absorb Extra, or create a syllabus note, on a class folder. Reading-list import (Talis, Leganto, KeyLinks, eReserve Plus, BLUEcloud) creates a new top-level collection instead.
 - When remapping item merges, never write the syllabus note on the merge/notifier call stack; queue like Extra absorb. Do not treat item `trash` as a merge unless `dc:replaces` names a live survivor.
 
+## Shared data layer (Jotai)
+
+Preact roots (Syllabus, ItemPane, Gallery, Explorer, tabs) share one Jotai **default store**. Do not wrap `renderComponent` trees in `<Provider>` — that isolates roots.
+
+- **External truth** (Zotero selection, prefs, syllabus notes, explorer queries, pinned shelf, subcollection trees) → [`atomFromExternal` / `atomFamilyFromExternal`](../src/modules/react-zotero-sync/jotaiExternal.ts) with `onMount` subscribe (`atomFamily` from [`jotai-family`](https://github.com/jotaijs/jotai-family), not `jotai/utils`). Coerced string prefs use [`createCoercedPrefHooks`](../src/modules/react-zotero-sync/coercedPref.ts).
+- **Plugin UI truth** (syllabus assignment identifiers, …) → plain `atom`; set via hooks / `getDefaultStore()`.
+- Do **not** add new `useSyncExternalStore` / `useState`+Notifier mirrors in components — wrap Notifier/Prefs in the helpers above.
+- Pref observers: [`subscribePref` / `subscribePrefs`](../src/utils/prefSubscribe.ts) or [`subscribePluginPref`](../src/utils/prefs.ts) — do not call `Zotero.Prefs.registerObserver` directly.
+- Public hooks stay the call-site API; Notifier/`subscribe*` wiring lives inside atom `subscribe` callbacks (or domain buses like `syllabusNote` / `pinned` that those callbacks attach to).
+
+Esbuild aliases `react` / `react-dom` to `preact/compat` so Jotai bundles against Preact.
+
 ## Localization
 
 User-visible UI copy lives in Mozilla Fluent files under [`addon/locale/`](../addon/locale/). Zotero picks the folder that matches the app language (`de`, `pt-BR`, `es-ES`, `fr-FR`, `ar`, …). Missing strings fall back to `en-US`.

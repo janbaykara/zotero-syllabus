@@ -1,5 +1,5 @@
 import { useMemo } from "preact/hooks";
-import { useSyncExternalStore } from "react-dom/src";
+import { useAtomValue } from "jotai";
 import SuperJSON from "superjson";
 import {
   SyllabusManager,
@@ -16,6 +16,7 @@ import {
   getSyllabusCollectionDictionary,
   subscribeToSyllabusDocumentChanges,
 } from "../syllabusNote";
+import { atomFromExternal } from "./jotaiExternal";
 
 export type SyllabusData = {
   collection: Zotero.Collection;
@@ -36,15 +37,77 @@ export type SyllabiSnapshot = {
   version?: number;
 };
 
+function getSyllabiSnapshotJson(): string {
+  const allCollections = getAllCollections();
+  const allData = getSyllabusCollectionDictionary();
+
+  const syllabi: SyllabiSnapshot["syllabi"] = [];
+
+  for (const collection of allCollections) {
+    const collectionKeyStr = SyllabusManager.getCollectionReferenceString(
+      collection.libraryID,
+      collection.key,
+    );
+    const collectionData = allData[collectionKeyStr];
+    if (!collectionData) {
+      continue;
+    }
+
+    const itemIds = collection
+      .getChildItems()
+      .filter((item) => isSyllabusMemberItem(item))
+      .map((item) => item.id);
+
+    syllabi.push({
+      collectionId: collection.id,
+      collectionName: collection.name,
+      metadata: collectionData,
+      itemIds,
+    });
+  }
+
+  return SuperJSON.stringify({ syllabi, version: getDocumentGeneration() });
+}
+
+export const syllabiSnapshotAtom = atomFromExternal({
+  getSnapshot: getSyllabiSnapshotJson,
+  subscribe: (onStoreChange) => {
+    const observer = {
+      notify(
+        event: string,
+        type: string,
+        _ids: (number | string)[],
+        _extraData: unknown,
+      ) {
+        if (
+          type === "item" ||
+          type === "collection-item" ||
+          (type === "collection" && (event === "modify" || event === "refresh"))
+        ) {
+          onStoreChange();
+        }
+      },
+    };
+
+    const notifierId = Zotero.Notifier.registerObserver(observer, [
+      "item",
+      "collection-item",
+      "collection",
+    ]);
+    const unsubscribeDocuments =
+      subscribeToSyllabusDocumentChanges(onStoreChange);
+
+    return () => {
+      unsubscribeDocuments();
+      Zotero.Notifier.unregisterObserver(notifierId);
+    };
+  },
+});
+
 export function useSyllabi(): SyllabusData[] {
-  const store = useMemo(() => createSyllabiStore(), []);
+  const __syllabiSnapshot = useAtomValue(syllabiSnapshotAtom);
 
-  const __syllabiSnapshot = useSyncExternalStore(
-    store.subscribe,
-    store.getSnapshot,
-  );
-
-  const syllabi = useMemo(() => {
+  return useMemo(() => {
     const snapshot = SuperJSON.parse(__syllabiSnapshot) as SyllabiSnapshot;
 
     return snapshot.syllabi
@@ -79,74 +142,4 @@ export function useSyllabi(): SyllabusData[] {
       })
       .filter(Boolean) as SyllabusData[];
   }, [__syllabiSnapshot]);
-
-  return syllabi;
-}
-
-function createSyllabiStore() {
-  function getSnapshot() {
-    const allCollections = getAllCollections();
-    const allData = getSyllabusCollectionDictionary();
-
-    const syllabi: SyllabiSnapshot["syllabi"] = [];
-
-    for (const collection of allCollections) {
-      const collectionKeyStr = SyllabusManager.getCollectionReferenceString(
-        collection.libraryID,
-        collection.key,
-      );
-      const collectionData = allData[collectionKeyStr];
-      if (!collectionData) {
-        continue;
-      }
-
-      const itemIds = collection
-        .getChildItems()
-        .filter((item) => isSyllabusMemberItem(item))
-        .map((item) => item.id);
-
-      syllabi.push({
-        collectionId: collection.id,
-        collectionName: collection.name,
-        metadata: collectionData,
-        itemIds,
-      });
-    }
-
-    return SuperJSON.stringify({ syllabi, version: getDocumentGeneration() });
-  }
-
-  function subscribe(onStoreChange: () => void) {
-    const observer = {
-      notify(
-        event: string,
-        type: string,
-        _ids: (number | string)[],
-        _extraData: unknown,
-      ) {
-        if (
-          type === "item" ||
-          type === "collection-item" ||
-          (type === "collection" && (event === "modify" || event === "refresh"))
-        ) {
-          onStoreChange();
-        }
-      },
-    };
-
-    const notifierId = Zotero.Notifier.registerObserver(observer, [
-      "item",
-      "collection-item",
-      "collection",
-    ]);
-    const unsubscribeDocuments =
-      subscribeToSyllabusDocumentChanges(onStoreChange);
-
-    return () => {
-      unsubscribeDocuments();
-      Zotero.Notifier.unregisterObserver(notifierId);
-    };
-  }
-
-  return { getSnapshot, subscribe };
 }

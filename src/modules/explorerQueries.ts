@@ -1,11 +1,5 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "preact/hooks";
-import { useSyncExternalStore } from "react-dom/src";
+import { useCallback, useMemo } from "preact/hooks";
+import { useAtomValue } from "jotai";
 import { getCachedItem } from "../utils/cache";
 import { isSyllabusMemberItem } from "../utils/items";
 import { collectAnnotationColors } from "../utils/annotationColors";
@@ -23,6 +17,8 @@ import {
   syntheticFulltextStreamId,
 } from "../utils/fulltextParagraphs";
 import { savedSearchShelfKey, type ExplorerShelf } from "./explorerConfig";
+import { createDebouncedReload } from "../utils/debounceReload";
+import { atomFamilyFromExternal } from "./react-zotero-sync/jotaiExternal";
 
 export const EXPLORER_MEDIA_LIMIT = 10;
 export const EXPLORER_RECENTLY_ADDED_LIMIT = 20;
@@ -1266,170 +1262,159 @@ async function loadExplorerSnapshot(
   };
 }
 
-function createExplorerQueryStore(libraryID: number, shelvesKey: string) {
-  let snapshot = emptySnapshot();
-  let serialized = JSON.stringify({ n: 0 });
-  let generation = 0;
-  const listeners = new Set<() => void>();
-  let notifierID: string | null = null;
-  let debounce: ReturnType<typeof setTimeout> | null = null;
-  let loadToken = 0;
-  const shelves: ExplorerShelf[] = JSON.parse(shelvesKey);
+type ExplorerQueryKey = { libraryID: number; shelvesKey: string };
 
-  function emit() {
-    generation += 1;
-    serialized = JSON.stringify({ n: generation });
-    listeners.forEach((listener) => listener());
-  }
+type ExplorerQueryCache = {
+  data: ExplorerQuerySnapshot;
+  generation: number;
+};
 
-  async function reload() {
-    const token = ++loadToken;
-    const next = await loadExplorerSnapshot(libraryID, shelves);
-    if (token !== loadToken) {
-      return;
+const explorerQueryCache = new Map<string, ExplorerQueryCache>();
+
+function explorerQueryCacheKey(key: ExplorerQueryKey): string {
+  return `${key.libraryID}:${key.shelvesKey}`;
+}
+
+const explorerQueryAtomFamily = atomFamilyFromExternal(
+  (key: ExplorerQueryKey) => {
+    const cacheKey = explorerQueryCacheKey(key);
+    if (!explorerQueryCache.has(cacheKey)) {
+      explorerQueryCache.set(cacheKey, {
+        data: emptySnapshot(),
+        generation: 0,
+      });
     }
-    snapshot = next;
-    emit();
-  }
+    const shelves: ExplorerShelf[] = JSON.parse(key.shelvesKey);
+    let loadToken = 0;
 
-  function scheduleReload() {
-    if (debounce) {
-      clearTimeout(debounce);
-    }
-    debounce = setTimeout(() => {
-      debounce = null;
-      void reload();
-    }, 250);
-  }
+    return {
+      getSnapshot: () => explorerQueryCache.get(cacheKey)!.generation,
+      initial: 0,
+      subscribe: (onStoreChange: () => void) => {
+        const bump = (data?: ExplorerQuerySnapshot) => {
+          const cache = explorerQueryCache.get(cacheKey)!;
+          if (data) {
+            cache.data = data;
+          }
+          cache.generation += 1;
+          onStoreChange();
+        };
 
-  return {
-    getSnapshot: () => serialized,
-    getData: () => snapshot,
-    subscribe(onStoreChange: () => void) {
-      listeners.add(onStoreChange);
-      if (!notifierID) {
-        notifierID = Zotero.Notifier.registerObserver(
-          {
-            notify: () => {
-              scheduleReload();
-            },
-          },
+        const reload = async () => {
+          const token = ++loadToken;
+          const next = await loadExplorerSnapshot(key.libraryID, shelves);
+          if (token !== loadToken) {
+            return;
+          }
+          bump(next);
+        };
+
+        const debounced = createDebouncedReload(reload);
+        const notifierID = Zotero.Notifier.registerObserver(
+          { notify: () => debounced.schedule() },
           ["item", "collection", "feed", "collection-item", "search"],
         );
         void reload();
-      }
-      return () => {
-        listeners.delete(onStoreChange);
-        if (listeners.size === 0 && notifierID) {
+
+        return () => {
           Zotero.Notifier.unregisterObserver(notifierID);
-          notifierID = null;
-        }
-        if (listeners.size === 0 && debounce) {
-          clearTimeout(debounce);
-          debounce = null;
-        }
-      };
-    },
-  };
-}
+          debounced.cancel();
+          loadToken += 1;
+        };
+      },
+    };
+  },
+  (a, b) => a.libraryID === b.libraryID && a.shelvesKey === b.shelvesKey,
+);
 
 export function useExplorerQueryData(
   libraryID: number,
   shelves: ExplorerShelf[],
 ): ExplorerQuerySnapshot {
-  const shelvesKey = JSON.stringify(
-    shelves.map((shelf) => ({
-      type: shelf.type,
-      days: "days" in shelf ? shelf.days : 0,
-      limit: "limit" in shelf ? shelf.limit : 0,
-      libraryID: "libraryID" in shelf ? shelf.libraryID : 0,
-      collectionKey: "collectionKey" in shelf ? shelf.collectionKey : "",
-      searchKey: "searchKey" in shelf ? shelf.searchKey : "",
-    })),
+  const shelvesKey = useMemo(
+    () =>
+      JSON.stringify(
+        shelves.map((shelf) => ({
+          type: shelf.type,
+          days: "days" in shelf ? shelf.days : 0,
+          limit: "limit" in shelf ? shelf.limit : 0,
+          libraryID: "libraryID" in shelf ? shelf.libraryID : 0,
+          collectionKey: "collectionKey" in shelf ? shelf.collectionKey : "",
+          searchKey: "searchKey" in shelf ? shelf.searchKey : "",
+        })),
+      ),
+    [shelves],
   );
-  const store = useMemo(
-    () => createExplorerQueryStore(libraryID, shelvesKey),
+  const key = useMemo(
+    () => ({ libraryID, shelvesKey }),
     [libraryID, shelvesKey],
   );
-  useSyncExternalStore(store.subscribe, store.getSnapshot);
-  return store.getData();
+  useAtomValue(explorerQueryAtomFamily(key));
+  return (
+    explorerQueryCache.get(explorerQueryCacheKey(key))?.data ?? emptySnapshot()
+  );
 }
 
-function createMyAnnotationsQueryStore(libraryID: number) {
-  let snapshot: ExplorerAnnotationGroup[] = [];
-  let serialized = JSON.stringify({ n: 0 });
-  let generation = 0;
-  const listeners = new Set<() => void>();
-  let notifierID: string | null = null;
-  let debounce: ReturnType<typeof setTimeout> | null = null;
-  let loadToken = 0;
+const myAnnotatedRecentlyReadCache = new Map<
+  number,
+  { data: ExplorerAnnotationGroup[]; generation: number }
+>();
 
-  function emit() {
-    generation += 1;
-    serialized = JSON.stringify({ n: generation });
-    listeners.forEach((listener) => listener());
-  }
-
-  async function reload() {
-    const token = ++loadToken;
-    const next = await searchMyAnnotatedRecentlyRead(libraryID);
-    if (token !== loadToken) {
-      return;
+const myAnnotatedRecentlyReadAtomFamily = atomFamilyFromExternal(
+  (libraryID: number) => {
+    if (!myAnnotatedRecentlyReadCache.has(libraryID)) {
+      myAnnotatedRecentlyReadCache.set(libraryID, {
+        data: [],
+        generation: 0,
+      });
     }
-    snapshot = next;
-    emit();
-  }
+    let loadToken = 0;
 
-  function scheduleReload() {
-    if (debounce) {
-      clearTimeout(debounce);
-    }
-    debounce = setTimeout(() => {
-      debounce = null;
-      void reload();
-    }, 250);
-  }
+    return {
+      getSnapshot: () =>
+        myAnnotatedRecentlyReadCache.get(libraryID)!.generation,
+      initial: 0,
+      subscribe: (onStoreChange: () => void) => {
+        const bump = (data?: ExplorerAnnotationGroup[]) => {
+          const cache = myAnnotatedRecentlyReadCache.get(libraryID)!;
+          if (data) {
+            cache.data = data;
+          }
+          cache.generation += 1;
+          onStoreChange();
+        };
 
-  return {
-    getSnapshot: () => serialized,
-    getData: () => snapshot,
-    subscribe(onStoreChange: () => void) {
-      listeners.add(onStoreChange);
-      if (!notifierID) {
-        notifierID = Zotero.Notifier.registerObserver(
-          {
-            notify: () => {
-              scheduleReload();
-            },
-          },
+        const reload = async () => {
+          const token = ++loadToken;
+          const next = await searchMyAnnotatedRecentlyRead(libraryID);
+          if (token !== loadToken) {
+            return;
+          }
+          bump(next);
+        };
+
+        const debounced = createDebouncedReload(reload);
+        const notifierID = Zotero.Notifier.registerObserver(
+          { notify: () => debounced.schedule() },
           ["item"],
         );
         void reload();
-      }
-      return () => {
-        listeners.delete(onStoreChange);
-        if (listeners.size === 0 && notifierID) {
+
+        return () => {
           Zotero.Notifier.unregisterObserver(notifierID);
-          notifierID = null;
-        }
-        if (listeners.size === 0 && debounce) {
-          clearTimeout(debounce);
-          debounce = null;
-        }
-      };
-    },
-  };
-}
+          debounced.cancel();
+          loadToken += 1;
+        };
+      },
+    };
+  },
+);
 
 export function useMyAnnotatedRecentlyRead(
   libraryID: number,
 ): ExplorerAnnotationGroup[] {
-  const store = useMemo(
-    () => createMyAnnotationsQueryStore(libraryID),
-    [libraryID],
-  );
-  useSyncExternalStore(store.subscribe, store.getSnapshot);
-  return store.getData();
+  useAtomValue(myAnnotatedRecentlyReadAtomFamily(libraryID));
+  return myAnnotatedRecentlyReadCache.get(libraryID)?.data ?? [];
 }
 
 export type MyAnnotationsStreamState = {
@@ -1441,99 +1426,177 @@ export type MyAnnotationsStreamState = {
   loadPrevious: () => Promise<void>;
 };
 
+type MyAnnotationsStreamKey = {
+  libraryID: number;
+  query: string;
+  scope: MyAnnotationsSearchScope;
+};
+
+type MyAnnotationsStreamCache = {
+  rows: MyAnnotationStreamEntry[];
+  colors: string[];
+  hasMore: boolean;
+  loading: boolean;
+  loadingMore: boolean;
+  loadedLimit: number;
+  generation: number;
+  loadPrevious: () => Promise<void>;
+};
+
+const myAnnotationsStreamCache = new Map<string, MyAnnotationsStreamCache>();
+
+function myAnnotationsStreamCacheKey(key: MyAnnotationsStreamKey): string {
+  return `${key.libraryID}:${key.scope}:${key.query}`;
+}
+
+function emptyStreamCache(): Omit<MyAnnotationsStreamCache, "loadPrevious"> {
+  return {
+    rows: [],
+    colors: [],
+    hasMore: false,
+    loading: true,
+    loadingMore: false,
+    loadedLimit: MY_ANNOTATIONS_STREAM_PAGE_SIZE,
+    generation: 0,
+  };
+}
+
+const myAnnotationsStreamAtomFamily = atomFamilyFromExternal(
+  (key: MyAnnotationsStreamKey) => {
+    const cacheKey = myAnnotationsStreamCacheKey(key);
+    let loadToken = 0;
+    let notify: (() => void) | null = null;
+
+    const ensureCache = (): MyAnnotationsStreamCache => {
+      let cache = myAnnotationsStreamCache.get(cacheKey);
+      if (!cache) {
+        const base = emptyStreamCache();
+        cache = {
+          ...base,
+          loadPrevious: async () => {
+            /* replaced below */
+          },
+        };
+        myAnnotationsStreamCache.set(cacheKey, cache);
+      }
+      return cache;
+    };
+
+    const bump = (patch?: Partial<MyAnnotationsStreamCache>) => {
+      const cache = ensureCache();
+      if (patch) {
+        Object.assign(cache, patch);
+      }
+      cache.generation += 1;
+      notify?.();
+    };
+
+    const reload = async (mode: "initial" | "refresh" | "more") => {
+      const cache = ensureCache();
+      const token = ++loadToken;
+      if (mode === "more") {
+        bump({ loadingMore: true });
+      } else if (mode === "initial") {
+        bump({
+          loading: true,
+          rows: [],
+          colors: [],
+          hasMore: false,
+          loadedLimit: MY_ANNOTATIONS_STREAM_PAGE_SIZE,
+        });
+      }
+      try {
+        const limit =
+          mode === "more"
+            ? cache.loadedLimit + MY_ANNOTATIONS_STREAM_PAGE_SIZE
+            : Math.max(MY_ANNOTATIONS_STREAM_PAGE_SIZE, cache.loadedLimit);
+        const next = await searchMyAnnotationsStream(key.libraryID, {
+          limit,
+          query: key.query,
+          scope: key.scope,
+        });
+        if (token !== loadToken) {
+          return;
+        }
+        bump({
+          rows: next.rows,
+          colors: next.colors,
+          hasMore: next.hasMore,
+          loadedLimit: limit,
+          loading: false,
+          loadingMore: false,
+        });
+      } catch {
+        if (token === loadToken) {
+          bump({ loading: false, loadingMore: false });
+        }
+      }
+    };
+
+    ensureCache().loadPrevious = async () => {
+      const cache = ensureCache();
+      if (!cache.hasMore || cache.loadingMore || cache.loading) {
+        return;
+      }
+      await reload("more");
+    };
+
+    return {
+      getSnapshot: () => ensureCache().generation,
+      initial: 0,
+      subscribe: (onStoreChange: () => void) => {
+        notify = onStoreChange;
+        const debounced = createDebouncedReload(() => reload("refresh"));
+        const notifierID = Zotero.Notifier.registerObserver(
+          { notify: () => debounced.schedule() },
+          ["item"],
+        );
+        void reload("initial");
+        return () => {
+          notify = null;
+          Zotero.Notifier.unregisterObserver(notifierID);
+          debounced.cancel();
+          loadToken += 1;
+        };
+      },
+    };
+  },
+  (a, b) =>
+    a.libraryID === b.libraryID && a.query === b.query && a.scope === b.scope,
+);
+
 export function useMyAnnotationsStream(
   libraryID: number,
   query = "",
   scope: MyAnnotationsSearchScope = "both",
 ): MyAnnotationsStreamState {
-  const [rows, setRows] = useState<MyAnnotationStreamEntry[]>([]);
-  const [colors, setColors] = useState<string[]>([]);
-  const [hasMore, setHasMore] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const loadedLimitRef = useRef(MY_ANNOTATIONS_STREAM_PAGE_SIZE);
-  const loadTokenRef = useRef(0);
-  const normalizedQuery = normalizeMyAnnotationsSearchQuery(query);
-  const searchScope = coerceMyAnnotationsSearchScope(scope);
-
-  const reload = useCallback(
-    async (mode: "initial" | "refresh" | "more") => {
-      const token = ++loadTokenRef.current;
-      if (mode === "more") {
-        setLoadingMore(true);
-      } else if (mode === "initial") {
-        setLoading(true);
-        setRows([]);
-        setColors([]);
-        setHasMore(false);
-      }
-      try {
-        const limit =
-          mode === "more"
-            ? loadedLimitRef.current + MY_ANNOTATIONS_STREAM_PAGE_SIZE
-            : Math.max(MY_ANNOTATIONS_STREAM_PAGE_SIZE, loadedLimitRef.current);
-        const next = await searchMyAnnotationsStream(libraryID, {
-          limit,
-          query: normalizedQuery,
-          scope: searchScope,
-        });
-        if (token !== loadTokenRef.current) {
-          return;
-        }
-        loadedLimitRef.current = limit;
-        setRows(next.rows);
-        setColors(next.colors);
-        setHasMore(next.hasMore);
-      } finally {
-        if (token === loadTokenRef.current) {
-          setLoading(false);
-          setLoadingMore(false);
-        }
-      }
-    },
-    [libraryID, normalizedQuery, searchScope],
+  const key = useMemo(
+    (): MyAnnotationsStreamKey => ({
+      libraryID,
+      query: normalizeMyAnnotationsSearchQuery(query),
+      scope: coerceMyAnnotationsSearchScope(scope),
+    }),
+    [libraryID, query, scope],
   );
-
-  useEffect(() => {
-    loadedLimitRef.current = MY_ANNOTATIONS_STREAM_PAGE_SIZE;
-    void reload("initial");
-    let debounce: ReturnType<typeof setTimeout> | null = null;
-    const notifierID = Zotero.Notifier.registerObserver(
-      {
-        notify: () => {
-          if (debounce) {
-            clearTimeout(debounce);
-          }
-          debounce = setTimeout(() => {
-            debounce = null;
-            void reload("refresh");
-          }, 250);
-        },
-      },
-      ["item"],
-    );
-    return () => {
-      Zotero.Notifier.unregisterObserver(notifierID);
-      if (debounce) {
-        clearTimeout(debounce);
-      }
-      loadTokenRef.current += 1;
-    };
-  }, [libraryID, normalizedQuery, searchScope, reload]);
+  useAtomValue(myAnnotationsStreamAtomFamily(key));
+  const cacheKey = myAnnotationsStreamCacheKey(key);
+  const cache =
+    myAnnotationsStreamCache.get(cacheKey) ??
+    ({
+      ...emptyStreamCache(),
+      loadPrevious: async () => {},
+    } satisfies MyAnnotationsStreamCache);
 
   const loadPrevious = useCallback(async () => {
-    if (!hasMore || loadingMore || loading) {
-      return;
-    }
-    await reload("more");
-  }, [hasMore, loadingMore, loading, reload]);
+    await myAnnotationsStreamCache.get(cacheKey)?.loadPrevious();
+  }, [cacheKey]);
 
   return {
-    rows,
-    colors,
-    hasMore,
-    loading,
-    loadingMore,
+    rows: cache.rows,
+    colors: cache.colors,
+    hasMore: cache.hasMore,
+    loading: cache.loading,
+    loadingMore: cache.loadingMore,
     loadPrevious,
   };
 }

@@ -1,20 +1,60 @@
-import { useCallback, useMemo } from "preact/hooks";
-import { useSyncExternalStore } from "react-dom/src";
+import { useCallback } from "preact/hooks";
+import { useAtomValue } from "jotai";
 import { SyllabusManager, GetByLibraryAndKeyArgs } from "../syllabus";
+import { atomFamilyFromExternal } from "./jotaiExternal";
+
+function collectionTitleKey(
+  collectionId: number | GetByLibraryAndKeyArgs,
+): string {
+  if (typeof collectionId === "number") {
+    return String(collectionId);
+  }
+  return `${collectionId[0]}:${collectionId[1]}`;
+}
+
+export const collectionTitleAtomFamily = atomFamilyFromExternal(
+  (collectionId: number | GetByLibraryAndKeyArgs) => ({
+    getSnapshot: () => {
+      const collection =
+        SyllabusManager.getCollectionFromIdentifier(collectionId);
+      return collection ? collection.name : "";
+    },
+    subscribe: (onStoreChange: () => void) => {
+      const observer = {
+        notify(
+          event: string,
+          type: string,
+          ids: (number | string)[],
+          _extraData: any,
+        ) {
+          const collection =
+            SyllabusManager.getCollectionFromIdentifier(collectionId);
+          if (
+            collection &&
+            type === "collection" &&
+            ids.includes(collection.id) &&
+            (event === "modify" || event === "refresh")
+          ) {
+            onStoreChange();
+          }
+        },
+      };
+
+      const notifierId = Zotero.Notifier.registerObserver(observer, [
+        "collection",
+      ]);
+      return () => {
+        Zotero.Notifier.unregisterObserver(notifierId);
+      };
+    },
+  }),
+  (a, b) => collectionTitleKey(a) === collectionTitleKey(b),
+);
 
 export function useZoteroCollectionTitle(
   collectionId: number | GetByLibraryAndKeyArgs,
 ) {
-  // Create the store once per ID
-  const store = useMemo(
-    () => createCollectionTitleStore(collectionId),
-    [collectionId],
-  );
-
-  const titleFromZotero = useSyncExternalStore(
-    store.subscribe,
-    store.getSnapshot,
-  );
+  const titleFromZotero = useAtomValue(collectionTitleAtomFamily(collectionId));
 
   const setTitle = useCallback(
     (title: string) => {
@@ -28,49 +68,4 @@ export function useZoteroCollectionTitle(
   );
 
   return [titleFromZotero, setTitle] as const;
-}
-
-export function createCollectionTitleStore(
-  collectionId: number | GetByLibraryAndKeyArgs,
-) {
-  function getSnapshot() {
-    // Read directly from Zotero
-    const collection =
-      SyllabusManager.getCollectionFromIdentifier(collectionId);
-    return collection ? collection.name : "";
-  }
-
-  function subscribe(onStoreChange: () => void) {
-    const observer = {
-      notify(
-        event: string,
-        type: string,
-        ids: (number | string)[],
-        extraData: any,
-      ) {
-        // Only care about this collection, and events that can change the title
-        const collection =
-          SyllabusManager.getCollectionFromIdentifier(collectionId);
-        if (
-          collection &&
-          type === "collection" &&
-          ids.includes(collection.id) &&
-          (event === "modify" || event === "refresh")
-        ) {
-          onStoreChange();
-        }
-      },
-    };
-
-    const notifierId = Zotero.Notifier.registerObserver(observer, [
-      "collection",
-    ]);
-
-    // Return an unsubscribe fn
-    return () => {
-      Zotero.Notifier.unregisterObserver(notifierId);
-    };
-  }
-
-  return { getSnapshot, subscribe };
 }

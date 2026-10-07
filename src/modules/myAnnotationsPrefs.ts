@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "preact/hooks";
+import { useCallback } from "preact/hooks";
 import * as z from "zod";
 import { config } from "../../package.json";
 import {
@@ -34,6 +34,7 @@ import {
   type ViewPrefGlobalSetting,
   type ViewPrefSpec,
 } from "../utils/viewPref";
+import { createCoercedPrefHooks } from "./react-zotero-sync/coercedPref";
 
 export type { MyAnnotationsSearchScope };
 
@@ -76,59 +77,23 @@ export function setMyAnnotationsGroupBy(mode: GalleryGroupBy): void {
   zoteroCache.invalidatePref(getPrefKey("myAnnotationsGroupBy"));
 }
 
-export function useMyAnnotationsLayout(): [
-  MyAnnotationsLayout,
-  (mode: MyAnnotationsLayout) => void,
-] {
-  const [mode, setMode] = useState<MyAnnotationsLayout>(() =>
-    getMyAnnotationsLayout(),
-  );
+export const useMyAnnotationsLayout = createCoercedPrefHooks(
+  "myAnnotationsLayout",
+  getMyAnnotationsLayout,
+  setMyAnnotationsLayout,
+);
 
-  useEffect(() => {
-    const refresh = () => setMode(getMyAnnotationsLayout());
-    refresh();
-    const observerID = Zotero.Prefs.registerObserver(
-      getPrefKey("myAnnotationsLayout"),
-      refresh,
-      true,
-    );
-    return () => Zotero.Prefs.unregisterObserver(observerID);
-  }, []);
+export const useMyAnnotationsSortBy = createCoercedPrefHooks(
+  "myAnnotationsSort",
+  getMyAnnotationsSortBy,
+  setMyAnnotationsSortBy,
+);
 
-  const setLayout = useCallback((next: MyAnnotationsLayout) => {
-    setMode(next);
-    setMyAnnotationsLayout(next);
-  }, []);
-
-  return [mode, setLayout];
-}
-
-export function useMyAnnotationsSortBy(): [
-  GallerySortBy,
-  (mode: GallerySortBy) => void,
-] {
-  const [mode, setMode] = useState<GallerySortBy>(() =>
-    getMyAnnotationsSortBy(),
-  );
-
-  useEffect(() => {
-    const refresh = () => setMode(getMyAnnotationsSortBy());
-    refresh();
-    const observerID = Zotero.Prefs.registerObserver(
-      getPrefKey("myAnnotationsSort"),
-      refresh,
-      true,
-    );
-    return () => Zotero.Prefs.unregisterObserver(observerID);
-  }, []);
-
-  const setSortBy = useCallback((next: GallerySortBy) => {
-    setMode(next);
-    setMyAnnotationsSortBy(next);
-  }, []);
-
-  return [mode, setSortBy];
-}
+const useMyAnnotationsGroupByRaw = createCoercedPrefHooks(
+  "myAnnotationsGroupBy",
+  getMyAnnotationsGroupBy,
+  setMyAnnotationsGroupBy,
+);
 
 export function useMyAnnotationsGroupBy(
   allow: GalleryGroupByAllow = {},
@@ -136,20 +101,7 @@ export function useMyAnnotationsGroupBy(
   const allowClasses = !!allow.classes;
   const allowSubcollections = allow.subcollections !== false;
   const allowMagazine = !!allow.magazine;
-  const [mode, setMode] = useState<GalleryGroupBy>(() =>
-    getMyAnnotationsGroupBy(),
-  );
-
-  useEffect(() => {
-    const refresh = () => setMode(getMyAnnotationsGroupBy());
-    refresh();
-    const observerID = Zotero.Prefs.registerObserver(
-      getPrefKey("myAnnotationsGroupBy"),
-      refresh,
-      true,
-    );
-    return () => Zotero.Prefs.unregisterObserver(observerID);
-  }, []);
+  const [mode, setMode] = useMyAnnotationsGroupByRaw();
 
   const allowOpts = {
     classes: allowClasses,
@@ -160,15 +112,15 @@ export function useMyAnnotationsGroupBy(
 
   const setGroupBy = useCallback(
     (next: GalleryGroupBy) => {
-      const allowed = resolveGalleryGroupBy(next, {
-        classes: allowClasses,
-        subcollections: allowSubcollections,
-        magazine: allowMagazine,
-      });
-      setMode(allowed);
-      setMyAnnotationsGroupBy(allowed);
+      setMode(
+        resolveGalleryGroupBy(next, {
+          classes: allowClasses,
+          subcollections: allowSubcollections,
+          magazine: allowMagazine,
+        }),
+      );
     },
-    [allowClasses, allowMagazine, allowSubcollections],
+    [allowClasses, allowMagazine, allowSubcollections, setMode],
   );
 
   return [resolved, setGroupBy];
@@ -193,32 +145,11 @@ export function setMyAnnotationsOrder(mode: MyAnnotationsOrder): void {
   zoteroCache.invalidatePref(getPrefKey("myAnnotationsOrder"));
 }
 
-export function useMyAnnotationsOrder(): [
-  MyAnnotationsOrder,
-  (mode: MyAnnotationsOrder) => void,
-] {
-  const [mode, setMode] = useState<MyAnnotationsOrder>(() =>
-    getMyAnnotationsOrder(),
-  );
-
-  useEffect(() => {
-    const refresh = () => setMode(getMyAnnotationsOrder());
-    refresh();
-    const observerID = Zotero.Prefs.registerObserver(
-      getPrefKey("myAnnotationsOrder"),
-      refresh,
-      true,
-    );
-    return () => Zotero.Prefs.unregisterObserver(observerID);
-  }, []);
-
-  const setOrder = useCallback((next: MyAnnotationsOrder) => {
-    setMode(next);
-    setMyAnnotationsOrder(next);
-  }, []);
-
-  return [mode, setOrder];
-}
+export const useMyAnnotationsOrder = createCoercedPrefHooks(
+  "myAnnotationsOrder",
+  getMyAnnotationsOrder,
+  setMyAnnotationsOrder,
+);
 
 export const MY_ANNOTATIONS_SEARCH_SCOPES = [
   "both",
@@ -237,32 +168,11 @@ export function setMyAnnotationsSearchScope(
   zoteroCache.invalidatePref(getPrefKey("myAnnotationsSearchScope"));
 }
 
-export function useMyAnnotationsSearchScope(): [
-  MyAnnotationsSearchScope,
-  (mode: MyAnnotationsSearchScope) => void,
-] {
-  const [mode, setMode] = useState<MyAnnotationsSearchScope>(() =>
-    getMyAnnotationsSearchScope(),
-  );
-
-  useEffect(() => {
-    const refresh = () => setMode(getMyAnnotationsSearchScope());
-    refresh();
-    const observerID = Zotero.Prefs.registerObserver(
-      getPrefKey("myAnnotationsSearchScope"),
-      refresh,
-      true,
-    );
-    return () => Zotero.Prefs.unregisterObserver(observerID);
-  }, []);
-
-  const setScope = useCallback((next: MyAnnotationsSearchScope) => {
-    setMode(next);
-    setMyAnnotationsSearchScope(next);
-  }, []);
-
-  return [mode, setScope];
-}
+export const useMyAnnotationsSearchScope = createCoercedPrefHooks(
+  "myAnnotationsSearchScope",
+  getMyAnnotationsSearchScope,
+  setMyAnnotationsSearchScope,
+);
 
 export const ANNOTATION_COLOR_FILTER_FEED = "feed";
 export const ANNOTATION_COLOR_FILTER_EXPLORER = "explorer";
@@ -479,29 +389,8 @@ export function useViewQuoteOrder(
   return useViewPref(quoteOrderSpec, viewKey);
 }
 
-export function useAnnotationsQuoteOrder(): [
-  AnnotationsQuoteOrder,
-  (mode: AnnotationsQuoteOrder) => void,
-] {
-  const [mode, setMode] = useState<AnnotationsQuoteOrder>(() =>
-    getAnnotationsQuoteOrder(),
-  );
-
-  useEffect(() => {
-    const refresh = () => setMode(getAnnotationsQuoteOrder());
-    refresh();
-    const observerID = Zotero.Prefs.registerObserver(
-      getPrefKey("annotationsQuoteOrder"),
-      refresh,
-      true,
-    );
-    return () => Zotero.Prefs.unregisterObserver(observerID);
-  }, []);
-
-  const setOrder = useCallback((next: AnnotationsQuoteOrder) => {
-    setMode(next);
-    setAnnotationsQuoteOrder(next);
-  }, []);
-
-  return [mode, setOrder];
-}
+export const useAnnotationsQuoteOrder = createCoercedPrefHooks(
+  "annotationsQuoteOrder",
+  getAnnotationsQuoteOrder,
+  setAnnotationsQuoteOrder,
+);

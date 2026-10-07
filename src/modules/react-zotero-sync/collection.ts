@@ -1,83 +1,39 @@
-import { useMemo } from "preact/hooks";
-import { useSyncExternalStore } from "react-dom/src";
+import { useAtomValue } from "jotai";
 import { getSelectedCollection } from "../../utils/zotero";
+import { atomFromExternal } from "./jotaiExternal";
 
-export function useSelectedCollectionId(): number | null {
-  // Create the store once
-  const store = useMemo(() => createSelectedCollectionStore(), []);
-
-  const collectionId = useSyncExternalStore(store.subscribe, store.getSnapshot);
-
-  return collectionId;
-}
-
-export function createSelectedCollectionStore() {
-  let selectedCollectionId: number | null = null;
-  const listeners = new Set<() => void>();
-  let notifierID: string | null = null;
-  let intervalID: NodeJS.Timeout | null = null;
-
-  function getSnapshot() {
-    return selectedCollectionId;
-  }
-
-  function updateSelectedCollection() {
-    const collection = getSelectedCollection();
-    const newCollectionId = collection?.id || null;
-
-    // Check if collection actually changed
-    if (newCollectionId !== selectedCollectionId) {
-      selectedCollectionId = newCollectionId;
-      listeners.forEach((l) => l());
-    }
-  }
-
-  function subscribe(onStoreChange: () => void) {
-    listeners.add(onStoreChange);
-
+export const selectedCollectionIdAtom = atomFromExternal({
+  getSnapshot: () => getSelectedCollection()?.id || null,
+  subscribe: (onStoreChange) => {
     const notifierCallback = {
       notify: async (
-        event: string,
+        _event: string,
         type: string,
-        ids: number[] | string[],
+        _ids: number[] | string[],
         _extraData: { [key: string]: any },
       ) => {
-        if (type === "collection") {
-          // Collection selection changed
-          updateSelectedCollection();
-        } else if (type === "tab") {
-          // Tab change - update selected collection
-          updateSelectedCollection();
+        if (type === "collection" || type === "tab") {
+          onStoreChange();
         }
       },
     };
 
-    notifierID = Zotero.Notifier.registerObserver(notifierCallback, [
+    const notifierID = Zotero.Notifier.registerObserver(notifierCallback, [
       "collection",
       "tab",
     ]);
 
-    // Also poll for changes as a fallback (Zotero doesn't always fire selection events reliably)
-    intervalID = setInterval(() => {
-      updateSelectedCollection();
+    const intervalID = setInterval(() => {
+      onStoreChange();
     }, 200);
 
-    // Initial load
-    updateSelectedCollection();
-
-    // Return an unsubscribe fn
     return () => {
-      listeners.delete(onStoreChange);
-      if (intervalID) {
-        clearInterval(intervalID);
-        intervalID = null;
-      }
-      if (listeners.size === 0 && notifierID) {
-        Zotero.Notifier.unregisterObserver(notifierID);
-        notifierID = null;
-      }
+      clearInterval(intervalID);
+      Zotero.Notifier.unregisterObserver(notifierID);
     };
-  }
+  },
+});
 
-  return { getSnapshot, subscribe };
+export function useSelectedCollectionId(): number | null {
+  return useAtomValue(selectedCollectionIdAtom);
 }

@@ -1,5 +1,6 @@
 import { useMemo } from "preact/hooks";
-import { useSyncExternalStore } from "react-dom/src";
+import { useAtomValue } from "jotai";
+import { atomFamilyFromExternal } from "./jotaiExternal";
 import { getCachedItem } from "../../utils/cache";
 import { isSyllabusMemberItem } from "../../utils/items";
 import {
@@ -163,20 +164,29 @@ function readTreeRowItemIds(
   return readTreeRowFallbackIds(treeViewID, options);
 }
 
-export function createTreeRowItemsStore(
-  treeViewID: string,
-  options?: { includeDeleted?: boolean; includeFeedItems?: boolean },
-) {
-  function getSnapshot() {
-    return fingerprintItems(readTreeRowItemIds(treeViewID, options));
-  }
+type TreeRowItemsKey = {
+  treeViewID: string;
+  includeDeleted: boolean;
+  includeFeedItems: boolean;
+};
 
-  function subscribe(onStoreChange: () => void) {
-    return subscribeToItemsViewChanges(onStoreChange);
-  }
-
-  return { getSnapshot, subscribe };
-}
+const treeRowItemsAtomFamily = atomFamilyFromExternal(
+  (key: TreeRowItemsKey) => ({
+    getSnapshot: () =>
+      fingerprintItems(
+        readTreeRowItemIds(key.treeViewID, {
+          includeDeleted: key.includeDeleted,
+          includeFeedItems: key.includeFeedItems,
+        }),
+      ),
+    subscribe: (onStoreChange: () => void) =>
+      subscribeToItemsViewChanges(onStoreChange),
+  }),
+  (a, b) =>
+    a.treeViewID === b.treeViewID &&
+    a.includeDeleted === b.includeDeleted &&
+    a.includeFeedItems === b.includeFeedItems,
+);
 
 function itemsFromSnapshot(
   snapshot: string,
@@ -209,12 +219,13 @@ export function useZoteroTreeRowItems(
 ): TreeRowGalleryItem[] {
   const includeDeleted = !!options?.includeDeleted;
   const includeFeedItems = !!options?.includeFeedItems;
-  const store = useMemo(
-    () =>
-      createTreeRowItemsStore(treeViewID, { includeDeleted, includeFeedItems }),
-    [treeViewID, includeDeleted, includeFeedItems],
+  const snapshot = useAtomValue(
+    treeRowItemsAtomFamily({
+      treeViewID,
+      includeDeleted,
+      includeFeedItems,
+    }),
   );
-  const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
   return useMemo(
     () => itemsFromSnapshot(snapshot, { includeDeleted, includeFeedItems }),
     [snapshot, includeDeleted, includeFeedItems],
@@ -231,33 +242,27 @@ function titleFromRow(
   return collectionTreeRowTitle(row);
 }
 
-export function createTreeRowTitleStore(treeViewID: string) {
-  function getSnapshot() {
-    return titleFromRow(getSelectedCollectionTreeRow(), treeViewID);
-  }
-
-  function subscribe(onStoreChange: () => void) {
-    const observer = {
-      notify() {
-        onStoreChange();
-      },
-    };
-    const notifierId = Zotero.Notifier.registerObserver(observer, [
-      "search",
-      "feed",
-    ]);
-    return () => {
-      Zotero.Notifier.unregisterObserver(notifierId);
-    };
-  }
-
-  return { getSnapshot, subscribe };
-}
+const treeRowTitleAtomFamily = atomFamilyFromExternal(
+  (treeViewID: string) => ({
+    getSnapshot: () =>
+      titleFromRow(getSelectedCollectionTreeRow(), treeViewID),
+    subscribe: (onStoreChange: () => void) => {
+      const observer = {
+        notify() {
+          onStoreChange();
+        },
+      };
+      const notifierId = Zotero.Notifier.registerObserver(observer, [
+        "search",
+        "feed",
+      ]);
+      return () => {
+        Zotero.Notifier.unregisterObserver(notifierId);
+      };
+    },
+  }),
+);
 
 export function useZoteroTreeRowTitle(treeViewID: string): string {
-  const store = useMemo(
-    () => createTreeRowTitleStore(treeViewID),
-    [treeViewID],
-  );
-  return useSyncExternalStore(store.subscribe, store.getSnapshot);
+  return useAtomValue(treeRowTitleAtomFamily(treeViewID));
 }

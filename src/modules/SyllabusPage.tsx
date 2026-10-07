@@ -30,10 +30,7 @@ import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata"
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
 import { useZoteroItemsViewRegularItemIds } from "./react-zotero-sync/itemsViewItems";
 import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
-import {
-  setSelectedSyllabusIdentifiers,
-  toCrossRootIdentifiers,
-} from "./react-zotero-sync/selectedIdentifier";
+import { useSyllabusPageSelection } from "./react-zotero-sync/selectedIdentifier";
 import { useItemDensity } from "./react-zotero-sync/itemDensity";
 import { useReaderMode } from "./react-zotero-sync/readerMode";
 import { isZotero8OrLater } from "../utils/zotero";
@@ -78,11 +75,8 @@ import {
   buildPrintableHtml,
   serializeSyllabusForPrint,
 } from "../utils/printSyllabus";
-import {
-  isPinnedSyllabus,
-  setPinnedSyllabus,
-  subscribePinnedChanges,
-} from "./pinned";
+import { setPinnedSyllabus } from "./pinned";
+import { useIsPinnedSyllabus } from "./react-zotero-sync/pinned";
 import {
   saveSyllabusExport,
   saveSyllabusPdf,
@@ -869,19 +863,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   const [showItemsWithoutAnnotations] =
     useShowItemsWithoutAnnotations(displayViewKey);
 
-  const [isPinned, setIsPinned] = useState(() => {
-    const collection = getCachedCollectionById(collectionId);
-    return collection ? isPinnedSyllabus(collection) : false;
-  });
-
-  useEffect(() => {
-    const refresh = () => {
-      const collection = getCachedCollectionById(collectionId);
-      setIsPinned(collection ? isPinnedSyllabus(collection) : false);
-    };
-    refresh();
-    return subscribePinnedChanges(refresh);
-  }, [collectionId]);
+  const isPinned = useIsPinnedSyllabus(collectionId);
 
   const handleTogglePin = async () => {
     const collection =
@@ -893,7 +875,6 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     const next = !isPinned;
     const ok = await setPinnedSyllabus(collection, next);
     if (ok) {
-      setIsPinned(next);
       enqueuePinnedReadingScheduleSync();
     } else if (next) {
       ztoolkit.log("Could not pin collection");
@@ -919,21 +900,13 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   // Table of Contents state
   const [showTOC, setShowTOC] = useState(false);
 
-  // Selection state (separate from Zotero selection)
-  // Uses format: "assignment:${assignmentId}" or "item:${itemId}"
-  const [selectedIdentifiers, setSelectedIdentifiers] = useState<Set<string>>(
-    new Set(),
-  );
-  const selectedIdentifiersRef = useRef(selectedIdentifiers);
-  selectedIdentifiersRef.current = selectedIdentifiers;
-
-  // Publish to ItemPane (separate Preact root), keyed by collection + assignment.
-  useEffect(() => {
-    setSelectedSyllabusIdentifiers(
-      toCrossRootIdentifiers(selectedIdentifiers, collectionId),
-    );
-    return () => setSelectedSyllabusIdentifiers(new Set());
-  }, [selectedIdentifiers, collectionId]);
+  // Selection (separate from Zotero): page-local ids, Jotai default store for ItemPane.
+  // Format: "assignment:${assignmentId}" or "item:${itemId}"
+  const {
+    selectedIdentifiers,
+    setSelectedIdentifiers,
+    selectedIdentifiersRef,
+  } = useSyllabusPageSelection(collectionId);
   const syllabusPageRef = useRef<HTMLDivElement>(null);
   const pendingNavScrollRef = useRef<{
     identifier: string;
@@ -3034,9 +3007,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         }
       }
 
-      // The store should update automatically via the Zotero notifier
-      // when the preference changes. The useSyncExternalStore hook will
-      // re-render when the store's getSnapshot returns new data.
+      // Collection document atoms refresh via Notifier / note subscribers.
     } catch (err) {
       ztoolkit.log("Error creating additional class:", err);
     }

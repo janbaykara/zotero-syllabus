@@ -47,9 +47,9 @@ import {
   galleryNoteFingerprint,
   openGalleryNoteByCollectionId,
   readGalleryNoteText,
-  subscribeGalleryNoteChanges,
 } from "./galleryNote";
 import { useGalleryNoteText } from "./useGalleryNoteText";
+import { useGalleryNoteGeneration } from "./react-zotero-sync/galleryNote";
 
 export type MagazineTileClick = (
   item: Zotero.Item,
@@ -462,14 +462,7 @@ export function MagazineGrid({
   className?: string;
   style?: JSX.CSSProperties;
 }) {
-  const [noteTick, setNoteTick] = useState(0);
-  useEffect(
-    () =>
-      showGalleryNote
-        ? subscribeGalleryNoteChanges(() => setNoteTick((n) => n + 1))
-        : () => {},
-    [showGalleryNote],
-  );
+  const noteGeneration = useGalleryNoteGeneration();
   const sorted = sortItems(uniqueItems(items), sortBy);
   const equalGrid = packing === "grid";
   const roles: MagazineTileRole[] = equalGrid
@@ -478,7 +471,7 @@ export function MagazineGrid({
         sorted.map((item) => {
           const chrome = chromeByItemId?.get(item.id);
           const noteCollectionId = chrome?.collectionId ?? collectionId;
-          void noteTick;
+          void noteGeneration;
           const noteLen =
             showGalleryNote && noteCollectionId
               ? readGalleryNoteText(item, noteCollectionId).length

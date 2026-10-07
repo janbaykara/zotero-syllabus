@@ -30,11 +30,11 @@ import { formatReadingDate } from "../utils/dates";
 import { getString, getUiDir, compareLocale } from "../utils/locale";
 import { TextInput } from "./syllabusInputs";
 import {
-  isPinnedItem,
   openIntentionNote,
   setPinnedItem,
   unpinItemWithNotePrompt,
 } from "./pinned";
+import { useIsPinnedItem } from "./react-zotero-sync/pinned";
 import { enqueuePinnedReadingScheduleSync } from "./readingScheduleCollection";
 import { isOptionalFeatureEnabled } from "./optionalFeatures";
 import { openAddToClassDialog } from "./openAddToClassDialog";
@@ -892,7 +892,7 @@ function AddToClassButton() {
 }
 
 function PinnedItemPaneControls({ item }: { item: Zotero.Item }) {
-  const [pinned, setPinned] = useState(() => isPinnedItem(item));
+  const pinned = useIsPinnedItem(item.id);
   const [busy, setBusy] = useState(false);
 
   // Pinning only surfaces on Home and Reading Schedule.
@@ -915,13 +915,9 @@ function PinnedItemPaneControls({ item }: { item: Zotero.Item }) {
     setBusy(true);
     try {
       if (pinned) {
-        const ok = await unpinItemWithNotePrompt(item);
-        if (ok) {
-          setPinned(false);
-        }
+        await unpinItemWithNotePrompt(item);
       } else {
         await setPinnedItem(item, true);
-        setPinned(true);
       }
       enqueuePinnedReadingScheduleSync();
     } finally {
