@@ -710,6 +710,7 @@ my-annotations-menu-copy-desc = Applied when copying annotations from this feed.
 my-annotations-copy-blockquote = Prefix with Markdown blockquotes (>)
 my-annotations-copy-cite-key = Append Pandoc cite keys ({"[@…]"})
 my-annotations-page = p. { $page }
+my-annotations-stream-tags-aria = 标签
 my-annotations-layout-vertical = 纵向
 my-annotations-layout-vertical-title = 封面与摘录纵向排列
 my-annotations-layout-grid = 网格

@@ -4544,6 +4544,30 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   color: inherit;
 }
 
+.syllabus-my-annotations-stream-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.syllabus-my-annotations-stream-tag {
+  display: inline-block;
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0.05rem 0.45rem;
+  border: 1px solid
+    color-mix(in srgb, var(--fill-secondary, #888) 40%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  line-height: 1.35;
+}
+
 .syllabus-my-annotations-load-previous-wrap {
   display: flex;
   justify-content: center;

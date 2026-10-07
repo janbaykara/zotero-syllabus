@@ -306,6 +306,7 @@ export type FluentMessageId =
   | 'my-annotations-search-scope-aria'
   | 'my-annotations-search-scope-both'
   | 'my-annotations-search-scope-fulltext'
+  | 'my-annotations-stream-tags-aria'
   | 'nav-back'
   | 'nav-next'
   | 'nav-previous'

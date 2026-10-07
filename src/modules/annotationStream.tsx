@@ -378,6 +378,7 @@ export function AnnotationStreamBody({
   const pageText = entry.pageLabel
     ? formatAnnotationPageLabel(entry.pageLabel)
     : "";
+  const tags = isFulltext ? [] : entry.tags || [];
   const hasCopy = annotationHasCopyText(entry);
   const [copied, flashCopied] = useCopyFlash();
   const openInReader = () => {
@@ -390,7 +391,7 @@ export function AnnotationStreamBody({
       openInReader();
     }
   };
-  const showMeta = !!(pageText || stamp || hasCopy);
+  const showMeta = !!(pageText || stamp || tags.length > 0 || hasCopy);
   const copyLabel = copied
     ? getString("my-annotations-copied")
     : getString("my-annotations-copy");
@@ -472,9 +473,37 @@ export function AnnotationStreamBody({
                 {stamp.relative}
               </time>
             ) : null}
-            {hasCopy ? (
+            {tags.length > 0 ? (
               <>
                 {pageText || stamp ? (
+                  <span
+                    className="syllabus-my-annotations-stream-meta-sep"
+                    aria-hidden="true"
+                  >
+                    ·
+                  </span>
+                ) : null}
+                <span
+                  className="syllabus-my-annotations-stream-tags"
+                  role="list"
+                  aria-label={getString("my-annotations-stream-tags-aria")}
+                >
+                  {tags.map((tag) => (
+                    <span
+                      key={tag.toLowerCase()}
+                      role="listitem"
+                      className="syllabus-my-annotations-stream-tag"
+                      title={tag}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </span>
+              </>
+            ) : null}
+            {hasCopy ? (
+              <>
+                {pageText || stamp || tags.length > 0 ? (
                   <span
                     className="syllabus-my-annotations-stream-meta-sep syllabus-my-annotations-stream-copy-sep"
                     aria-hidden="true"
