@@ -1,6 +1,6 @@
 import { useAtomValue } from "jotai";
 import { isItemRemovalEvent } from "../../utils/cache";
-import { isSyllabusMemberItem } from "../../utils/items";
+import { isSyllabusAssignableItem } from "../../utils/items";
 import { atomFromExternal } from "./jotaiExternal";
 
 function arraysEqual(a: number[], b: number[]): boolean {
@@ -11,7 +11,7 @@ function readSelectedItemIdsFromPane(): number[] {
   const pane = ztoolkit.getGlobal("ZoteroPane");
   const selectedItems = pane?.getSelectedItems() || [];
   return selectedItems
-    .filter((item) => isSyllabusMemberItem(item))
+    .filter((item) => isSyllabusAssignableItem(item))
     .map((item) => item.id);
 }
 
