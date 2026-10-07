@@ -30,6 +30,10 @@ import { useZoteroSyllabusMetadata } from "./react-zotero-sync/syllabusMetadata"
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
 import { useZoteroItemsViewRegularItemIds } from "./react-zotero-sync/itemsViewItems";
 import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
+import {
+  setSelectedSyllabusIdentifiers,
+  toCrossRootIdentifiers,
+} from "./react-zotero-sync/selectedIdentifier";
 import { useItemDensity } from "./react-zotero-sync/itemDensity";
 import { useReaderMode } from "./react-zotero-sync/readerMode";
 import { isZotero8OrLater } from "../utils/zotero";
@@ -922,6 +926,14 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   );
   const selectedIdentifiersRef = useRef(selectedIdentifiers);
   selectedIdentifiersRef.current = selectedIdentifiers;
+
+  // Publish to ItemPane (separate Preact root), keyed by collection + assignment.
+  useEffect(() => {
+    setSelectedSyllabusIdentifiers(
+      toCrossRootIdentifiers(selectedIdentifiers, collectionId),
+    );
+    return () => setSelectedSyllabusIdentifiers(new Set());
+  }, [selectedIdentifiers, collectionId]);
   const syllabusPageRef = useRef<HTMLDivElement>(null);
   const pendingNavScrollRef = useRef<{
     identifier: string;

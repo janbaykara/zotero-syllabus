@@ -13,6 +13,10 @@ import {
 import { twMerge } from "tailwind-merge";
 import { useZoteroItem } from "./react-zotero-sync/item";
 import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
+import {
+  syllabusAssignmentSelectionKey,
+  useSelectedSyllabusIdentifiers,
+} from "./react-zotero-sync/selectedIdentifier";
 import { useSelectedCollectionId } from "./react-zotero-sync/collection";
 import { classByNumber } from "../utils/schemas";
 import {
@@ -34,6 +38,8 @@ import { enqueuePinnedReadingScheduleSync } from "./readingScheduleCollection";
 import { isOptionalFeatureEnabled } from "./optionalFeatures";
 import { openAddToClassDialog } from "./openAddToClassDialog";
 import { isClassNoteItem } from "../utils/items";
+import { isAutoManagedCollection } from "./autoManagedCollection";
+import { resolveSyllabusRoot } from "./syllabusNote";
 
 interface ItemPaneProps {
   editable: boolean;
@@ -143,8 +149,22 @@ function ItemPaneContent({
   currentCollectionId?: number | null;
   editable: boolean;
 }) {
-  const currentCollectionId = useSelectedCollectionId();
+  const selectedCollectionId = useSelectedCollectionId();
   const documentGeneration = useSyllabusDocumentGeneration();
+  const currentCollectionId = useMemo(() => {
+    if (!selectedCollectionId) {
+      return null;
+    }
+    const selectedCollection = getCachedCollectionById(selectedCollectionId);
+    if (!selectedCollection) {
+      return null;
+    }
+    const root = resolveSyllabusRoot(selectedCollection);
+    if (isAutoManagedCollection(root.id)) {
+      return null;
+    }
+    return root.id;
+  }, [selectedCollectionId]);
 
   // Get all assignments across all collections
   const allAssignmentsByCollection = useMemo(() => {
@@ -186,6 +206,11 @@ function ItemPaneContent({
         // Get collection from libraryID and key
         const collection = getCachedCollectionByKey(libraryID, collectionKey);
         if (!collection) {
+          continue;
+        }
+
+        // Auto-managed folders (class, Reading Schedule, Pinned, dates) mirror real syllabi.
+        if (isAutoManagedCollection(collection.id)) {
           continue;
         }
 
@@ -526,12 +551,16 @@ function AssignmentEditor({
   onDuplicate,
 }: AssignmentEditorProps) {
   const [cls, _, __] = useZoteroClassMetadata(collectionId);
+  const selectedIdentifiers = useSelectedSyllabusIdentifiers();
   const assignmentClass = classByNumber(cls, assignment.classNumber);
 
   if (!assignment.id) {
     return null;
   }
 
+  const isSelected = selectedIdentifiers.has(
+    syllabusAssignmentSelectionKey(collectionId, assignment.id),
+  );
   const classTitle = assignmentClass?.title || "";
 
   const { singularCapitalized } =
@@ -566,7 +595,12 @@ function AssignmentEditor({
   const isDone = assignmentStatus === "done";
 
   return (
-    <div className="border border-quinary rounded-md m-0 flex flex-col opacity-100 transition-opacity duration-200 bg-background divide-y divide-quarternary space-y-2.5 *:not-last:pb-2.5 p-2.5 z-10">
+    <div
+      className={twMerge(
+        "border border-quinary rounded-md m-0 flex flex-col opacity-100 transition-opacity duration-200 bg-background divide-y divide-quarternary space-y-2.5 *:not-last:pb-2.5 p-2.5 z-10",
+        isSelected && "outline-2 outline-accent-blue",
+      )}
+    >
       {/* Header with class info and status */}
       <header className="flex items-end justify-between gap-3">
         <div className="flex-1 min-w-0 font-medium self-baseline">
