@@ -308,10 +308,11 @@ export function serializePersonalReadingOrderNote(
   const order = document.order || [];
   const doneSet = new Set(document.done || []);
   const lis = order
-    .map((key, index) => {
+    .map((key) => {
       const title = escapeHtml(titleForKey(collection, key));
       const mark = doneSet.has(key) ? "✅ " : "";
-      return `<li><p>${index + 1}. ${mark}${title}</p></li>`;
+      // `<ol>` supplies the number — don't prefix "1. " in the text.
+      return `<li><p>${mark}${title}</p></li>`;
     })
     .join("");
   const list = lis ? `<ol>${lis}</ol>` : "<p><em>(empty)</em></p>";

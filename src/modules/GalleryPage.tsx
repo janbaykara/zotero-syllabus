@@ -124,7 +124,11 @@ import {
 import { GalleryViewportProvider } from "./galleryVisibility";
 import { useGallerySortBy, type GallerySortBy } from "./gallerySort";
 import { collectionHasSyllabusNote } from "./syllabusNote";
+import { RestrictToVerticalAxis } from "../zotero-dnd";
 import { PersonalOrderGallery } from "./PersonalOrderGallery";
+
+/** Stable identity — a fresh `[RestrictToVerticalAxis]` each render remounts DnD. */
+const PERSONAL_ORDER_CARD_MODIFIERS = [RestrictToVerticalAxis];
 import { applyPersonalReadingOrder } from "./personalReadingOrder";
 import { usePersonalReadingOrderKeys } from "./react-zotero-sync/personalReadingOrder";
 import { pinnedGenerationAtom } from "./react-zotero-sync/pinned";
@@ -1069,6 +1073,9 @@ export function GalleryPage({
         orderKeys={personalOrderKeys}
         collectionId={collectionId}
         className={listClass}
+        modifiers={
+          layout === "card" ? PERSONAL_ORDER_CARD_MODIFIERS : undefined
+        }
         onReorder={isPinnedFolder ? handlePersonalOrderReorder : undefined}
         renderItem={(item) => {
           const chrome = readerChromeForItems([item])?.get(item.id);

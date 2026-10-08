@@ -76,6 +76,33 @@ export default defineConfig({
           react: "preact/compat",
           "react-dom": "preact/compat",
         },
+        banner: {
+          // @dnd-kit/abstract needs bare AbortController + queueMicrotask;
+          // chrome bootstrap sandboxes often lack both (and may lack `window`).
+          js: `
+(function () {
+  var g = typeof globalThis !== "undefined" ? globalThis : null;
+  var w = null;
+  try {
+    w = typeof window !== "undefined" ? window
+      : Components.classes["@mozilla.org/appshell/appShellService;1"]
+          .getService(Components.interfaces.nsIAppShellService).hiddenDOMWindow;
+  } catch (e) {}
+  if (g && typeof g.AbortController !== "function" && w && w.AbortController) {
+    g.AbortController = w.AbortController;
+    if (w.AbortSignal) g.AbortSignal = w.AbortSignal;
+  }
+  if (g && typeof g.queueMicrotask !== "function") {
+    g.queueMicrotask = (w && typeof w.queueMicrotask === "function")
+      ? w.queueMicrotask.bind(w)
+      : function (cb) { Promise.resolve().then(cb); };
+  }
+})();
+var AbortController = globalThis.AbortController;
+var AbortSignal = globalThis.AbortSignal;
+var queueMicrotask = globalThis.queueMicrotask;
+`.replace(/\n/g, " "),
+        },
       },
     ],
   },

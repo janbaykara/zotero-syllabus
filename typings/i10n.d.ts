@@ -182,6 +182,8 @@ export type FluentMessageId =
   | 'gallery-packing-vertical'
   | 'gallery-packing-vertical-title'
   | 'gallery-page-of'
+  | 'gallery-personal-order-landing-empty'
+  | 'gallery-personal-order-landing-label'
   | 'gallery-personal-order-unordered'
   | 'gallery-pinned-header'
   | 'gallery-prefs-summary'
