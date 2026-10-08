@@ -48,12 +48,12 @@ function List() {
 
 Pick one per surface. They solve the same problem differently.
 
-| | **Blue-line** (`dropIndicator`) | **FLIP** (`sortableTransition`) |
-| --- | --- | --- |
+|             | **Blue-line** (`dropIndicator`)          | **FLIP** (`sortableTransition`)              |
+| ----------- | ---------------------------------------- | -------------------------------------------- |
 | During drag | Lists stay put; a line shows insert edge | Lists update live via `move()` on `dragover` |
-| On drop | Apply order once from the indicator | Order already applied; persist if needed |
-| Feel | Stable layout, explicit target | Items shuffle under the pointer |
-| Gallery | ✅ used | available if you want it |
+| On drop     | Apply order once from the indicator      | Order already applied; persist if needed     |
+| Feel        | Stable layout, explicit target           | Items shuffle under the pointer              |
+| Gallery     | ✅ used                                  | available if you want it                     |
 
 ### Blue-line (recommended for gallery-like UIs)
 
@@ -132,15 +132,15 @@ Constants: `DROP_INDICATOR_BEFORE_CLASS`, `DROP_INDICATOR_AFTER_CLASS`.
 
 **Helpers**
 
-| Export | Use |
-| --- | --- |
-| `getDropIndicator(manager)` | `{ targetId, edge }` from the last drag (valid through `dragend`) |
-| `applyDropIndicatorMove(containers, sourceId, targetId, edge)` | Single-item multi-list reorder |
-| `applyMultiDropIndicatorMove(containers, movingIds, targetId, edge)` | Move a block (selection) as one unit |
-| `moveToContainerEnd` / `moveMultipleToContainerEnd` | Into an empty / zone droppable id |
-| `resolveDragIds(containers, sourceId, selectedIds)` | Selection → ordered id list for the drag |
-| `idsInContainerOrder(containers, candidates)` | Stable relative order across lists |
-| `dropEdgeForPointer(pointer, rect, axis)` | Edge math if you roll your own |
+| Export                                                               | Use                                                               |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `getDropIndicator(manager)`                                          | `{ targetId, edge }` from the last drag (valid through `dragend`) |
+| `applyDropIndicatorMove(containers, sourceId, targetId, edge)`       | Single-item multi-list reorder                                    |
+| `applyMultiDropIndicatorMove(containers, movingIds, targetId, edge)` | Move a block (selection) as one unit                              |
+| `moveToContainerEnd` / `moveMultipleToContainerEnd`                  | Into an empty / zone droppable id                                 |
+| `resolveDragIds(containers, sourceId, selectedIds)`                  | Selection → ordered id list for the drag                          |
+| `idsInContainerOrder(containers, candidates)`                        | Stable relative order across lists                                |
+| `dropEdgeForPointer(pointer, rect, axis)`                            | Edge math if you roll your own                                    |
 
 **Multi-select:** when the dragged id is in `selectedIds` and that set has 2+, `resolveDragIds` returns every selected id in container order; commit with the `*Multi*` helpers so the block keeps its internal order.
 
@@ -172,11 +172,11 @@ Sibling tiles animate via `captureRect` / `animate` on sortables. Use this when 
 
 These register with every `createZoteroDndManager` / `DndProvider` manager:
 
-| Plugin | What you get |
-| --- | --- |
-| **ChromeFeedbackPlugin** | Dragged item follows the pointer (`translate` + dim). Honors `modifiers`. |
+| Plugin                    | What you get                                                                      |
+| ------------------------- | --------------------------------------------------------------------------------- |
+| **ChromeFeedbackPlugin**  | Dragged item follows the pointer (`translate` + dim). Honors `modifiers`.         |
 | **ChromeDragAbortPlugin** | Force-stops a stuck drag if pointer listeners were lost (status returns to idle). |
-| **ChromePointerSensor** | Pointer/mouse activation (default sensor). |
+| **ChromePointerSensor**   | Pointer/mouse activation (default sensor).                                        |
 
 You normally never configure these.
 
@@ -184,11 +184,11 @@ You normally never configure these.
 
 ## Opt-in / advanced plugins
 
-| Plugin | Enable | When to use |
-| --- | --- | --- |
-| **DropIndicatorPlugin** | `dropIndicator` on provider/manager | Blue-line UIs (see above) |
-| **SortableTransitionPlugin** | `sortableTransition` | Live `move()` + FLIP |
-| **OptimisticSortingPlugin** | `plugins={[OptimisticSortingPlugin]}` | Uncontrolled DOM reorder (rare). Gallery does **not** use this — React state is the source of truth. |
+| Plugin                       | Enable                                | When to use                                                                                          |
+| ---------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **DropIndicatorPlugin**      | `dropIndicator` on provider/manager   | Blue-line UIs (see above)                                                                            |
+| **SortableTransitionPlugin** | `sortableTransition`                  | Live `move()` + FLIP                                                                                 |
+| **OptimisticSortingPlugin**  | `plugins={[OptimisticSortingPlugin]}` | Uncontrolled DOM reorder (rare). Gallery does **not** use this — React state is the source of truth. |
 
 Extra plugins:
 

@@ -1,5 +1,8 @@
 import { useAtomValue } from "jotai";
-import { readGalleryNoteHtml, subscribeGalleryNoteChanges } from "./galleryNote";
+import {
+  readGalleryNoteHtml,
+  subscribeGalleryNoteChanges,
+} from "./galleryNote";
 import { atomFamilyFromExternal } from "./react-zotero-sync/jotaiExternal";
 
 type GalleryNoteKey = { itemId: number; collectionId: number };

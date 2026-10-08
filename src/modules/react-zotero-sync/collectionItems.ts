@@ -138,7 +138,9 @@ type CollectionItemsFamilyKey = {
   includeAssignedClassNotes: boolean;
 };
 
-function collectionItemsFamilyKeyToString(key: CollectionItemsFamilyKey): string {
+function collectionItemsFamilyKeyToString(
+  key: CollectionItemsFamilyKey,
+): string {
   const id =
     typeof key.collectionId === "number"
       ? String(key.collectionId)
@@ -177,10 +179,7 @@ export function useZoteroCollectionItems(
         __itemsFromZotero ?? EMPTY_COLLECTION_ITEMS_SNAPSHOT,
       ) as CollectionItemsSnapshot;
     } catch (error) {
-      ztoolkit.log(
-        "useZoteroCollectionItems: failed to parse snapshot",
-        error,
-      );
+      ztoolkit.log("useZoteroCollectionItems: failed to parse snapshot", error);
       return [];
     }
     return snapshot.items

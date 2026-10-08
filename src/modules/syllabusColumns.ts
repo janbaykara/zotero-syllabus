@@ -216,10 +216,7 @@ export async function registerPersonalReadingOrderColumn() {
           void itemsView?.refresh?.();
         }
       } catch (error) {
-        ztoolkit.log(
-          "Error refreshing personal reading order column:",
-          error,
-        );
+        ztoolkit.log("Error refreshing personal reading order column:", error);
       }
     });
   }

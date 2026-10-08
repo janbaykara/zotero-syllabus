@@ -61,7 +61,10 @@ describe("item share HTML", function () {
     assert.include(html, '<iframe src="files/ATT.pdf"');
     assert.include(html, "bibliography.ris");
     assert.include(html, "<details");
-    assert.include(html, 'href="https://github.com/janbaykara/zotero-syllabus"');
+    assert.include(
+      html,
+      'href="https://github.com/janbaykara/zotero-syllabus"',
+    );
     assert.include(html, 'href="https://www.zotero.org/"');
     assert.include(html, "Zotero Syllabus");
   });

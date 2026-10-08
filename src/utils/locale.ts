@@ -69,6 +69,21 @@ function compareLocale(a: string, b: string): number {
 }
 
 /**
+ * Resolve the plugin instance. Bare `addon` works in the plugin bundle; the
+ * scaffold test bundle may not see that binding, so fall back to Zotero.Syllabus.
+ */
+function getAddonInstance(): typeof addon | undefined {
+  if (typeof addon !== "undefined") {
+    return addon;
+  }
+  try {
+    return Zotero[config.addonInstance] as typeof addon | undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Initialize locale data
  */
 function initLocale() {
@@ -77,7 +92,11 @@ function initLocale() {
       ? ztoolkit.getGlobal("Localization")
       : Localization
   )([`${config.addonRef}-addon.ftl`], true);
-  addon.data.locale = {
+  const instance = getAddonInstance();
+  if (!instance) {
+    return;
+  }
+  instance.data.locale = {
     current: l10n,
   };
 }
@@ -139,7 +158,11 @@ function _getString(
 ): string {
   const localStringWithPrefix = `${config.addonRef}-${localeString}`;
   const { branch, args } = options;
-  const pattern = addon.data.locale?.current.formatMessagesSync([
+  const locale = getAddonInstance()?.data?.locale?.current;
+  if (!locale?.formatMessagesSync) {
+    return localStringWithPrefix;
+  }
+  const pattern = locale.formatMessagesSync([
     { id: localStringWithPrefix, args },
   ])[0] as Pattern;
 

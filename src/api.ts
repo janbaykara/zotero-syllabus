@@ -64,14 +64,14 @@ import type {
 export type CollectionId = number | GetByLibraryAndKeyArgs;
 
 /**
- * Syllabus-level settings (priorities, nomenclature, lock, CSL, links, …).
- * Interface wrapper so docs link by name instead of inlining the Zod schema.
+ * Thin `interface extends` wrappers so TypeDoc links by name instead of
+ * inlining Zod-inferred shapes (see AGENTS.md).
  */
+/* eslint-disable @typescript-eslint/no-empty-object-type -- TypeDoc named aliases */
+/** Syllabus-level settings (priorities, nomenclature, lock, CSL, links, …). */
 export interface SyllabusMetadata extends SettingsSyllabusMetadata {}
 
-/**
- * Full in-memory syllabus document (classes, items, orders, item index).
- */
+/** Full in-memory syllabus document (classes, items, orders, item index). */
 export interface SyllabusDocument extends CollectionSyllabusDocument {}
 
 /**
@@ -80,9 +80,7 @@ export interface SyllabusDocument extends CollectionSyllabusDocument {}
  */
 export interface SyllabusDictionary extends SettingsCollectionDictionaryData {}
 
-/**
- * Per-class settings (title, description, reading date, status, …).
- */
+/** Per-class settings (title, description, reading date, status, …). */
 export interface ClassMetadata extends SettingsClassMetadata {}
 
 /**
@@ -94,13 +92,12 @@ export interface StoredClass extends StoredClassMetadata {}
 /** One item ↔ class assignment (class, priority, instruction, done status). */
 export interface Assignment extends ItemSyllabusAssignment {}
 
-/**
- * All syllabus assignments on an item, keyed by collection id / key.
- */
+/** All syllabus assignments on an item, keyed by collection id / key. */
 export interface ItemAssignments extends ItemSyllabusData {}
 
 /** A priority definition (Essential / Recommended / …). */
 export interface SyllabusPriority extends Priority {}
+/* eslint-enable @typescript-eslint/no-empty-object-type */
 
 const API_SOURCE = "background" as const;
 const API_UI_SOURCE = "context-menu" as const;
@@ -642,12 +639,7 @@ const personal = {
     done: boolean,
     siblingAssignmentIds: string[] = [],
   ): Promise<void> =>
-    setPersonalItemReadingDone(
-      collection,
-      itemKey,
-      done,
-      siblingAssignmentIds,
-    ),
+    setPersonalItemReadingDone(collection, itemKey, done, siblingAssignmentIds),
   /** Whether a specific assignment is marked done in personal reading order. */
   isAssignmentDone: (
     collection: Zotero.Collection | number,

@@ -50,11 +50,11 @@ const FINISH_COMMUNITY_LINKS: {
   id: FluentMessageId;
   url: string;
 }[] = [
-    { id: "userGuide-link-discord", url: DISCORD_URL },
-    { id: "userGuide-link-issues", url: ISSUES_URL },
-    { id: "userGuide-link-forum", url: FORUM_URL },
-    { id: "userGuide-link-reddit", url: REDDIT_URL },
-  ];
+  { id: "userGuide-link-discord", url: DISCORD_URL },
+  { id: "userGuide-link-issues", url: ISSUES_URL },
+  { id: "userGuide-link-forum", url: FORUM_URL },
+  { id: "userGuide-link-reddit", url: REDDIT_URL },
+];
 
 /** Last MenuManager ID returned by registerMenu (CSS-escaped pluginID-menuID). */
 let registeredHelpMenuID: string | null = null;
@@ -531,11 +531,11 @@ function registerUserGuideHelpMenu() {
     key: FluentMessageId;
     url: string;
   }[] = [
-      { key: "menuHelp-openDiscord", url: DISCORD_URL },
-      { key: "menuHelp-openIssues", url: ISSUES_URL },
-      { key: "menuHelp-openReddit", url: REDDIT_URL },
-      { key: "menuHelp-openForum", url: FORUM_URL },
-    ];
+    { key: "menuHelp-openDiscord", url: DISCORD_URL },
+    { key: "menuHelp-openIssues", url: ISSUES_URL },
+    { key: "menuHelp-openReddit", url: REDDIT_URL },
+    { key: "menuHelp-openForum", url: FORUM_URL },
+  ];
 
   if (typeof Zotero.MenuManager?.registerMenu === "function") {
     const menuID = `${config.addonRef}-menuHelp`;

@@ -119,10 +119,7 @@ import { GalleryViewportProvider } from "./galleryVisibility";
 import { useGallerySortBy, type GallerySortBy } from "./gallerySort";
 import { collectionHasSyllabusNote } from "./syllabusNote";
 import { RestrictToVerticalAxis } from "../zotero-dnd";
-import {
-  PersonalOrderCapture,
-  PersonalOrderCaptureItem,
-} from "./PersonalOrderCapture";
+import { PersonalOrderCapture } from "./PersonalOrderCapture";
 import { PersonalOrderGallery } from "./PersonalOrderGallery";
 import {
   applyPersonalReadingOrder,

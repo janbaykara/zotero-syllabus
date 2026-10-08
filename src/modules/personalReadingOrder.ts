@@ -13,10 +13,7 @@ import { getCachedCollectionById, getCachedItem } from "../utils/cache";
 import { getItemTitle, readItemNote } from "../utils/items";
 import { createReentrantSerialQueue } from "../utils/serialQueue";
 import { getAllCollections } from "../utils/zotero";
-import {
-  PLUGIN_JSON_HEADING,
-  PLUGIN_REPO_URL,
-} from "./syllabusNoteHtml";
+import { PLUGIN_JSON_HEADING, PLUGIN_REPO_URL } from "./syllabusNoteHtml";
 
 /** Stored identifier — do not localize. */
 export const PERSONAL_READING_ORDER_NOTE_TITLE = "Personal Reading Order";
@@ -419,10 +416,9 @@ export function prunePersonalReadingOrderKeys(
 /**
  * Ordered items first (intersection with `orderKeys`), then leftovers in prior order.
  */
-export function applyPersonalReadingOrder<T extends { key: string } | Zotero.Item>(
-  items: T[],
-  orderKeys: string[],
-): T[] {
+export function applyPersonalReadingOrder<
+  T extends { key: string } | Zotero.Item,
+>(items: T[], orderKeys: string[]): T[] {
   if (!orderKeys.length || items.length === 0) {
     return items;
   }
@@ -450,10 +446,9 @@ export function applyPersonalReadingOrder<T extends { key: string } | Zotero.Ite
   return ordered;
 }
 
-export function splitPersonalReadingOrder<T extends { key: string } | Zotero.Item>(
-  items: T[],
-  orderKeys: string[],
-): { ordered: T[]; unordered: T[] } {
+export function splitPersonalReadingOrder<
+  T extends { key: string } | Zotero.Item,
+>(items: T[], orderKeys: string[]): { ordered: T[]; unordered: T[] } {
   if (!orderKeys.length) {
     return { ordered: [], unordered: [...items] };
   }
@@ -635,10 +630,7 @@ async function persistNote(
       try {
         await collection.addItem(note.id);
       } catch (error) {
-        ztoolkit.log(
-          "addItem failed for personal reading order note:",
-          error,
-        );
+        ztoolkit.log("addItem failed for personal reading order note:", error);
       }
     }
   }

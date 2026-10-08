@@ -94,8 +94,6 @@ export class ChromePointerSensor extends Sensor<
   #controller: ActivationController<PointerEvent> | null = null;
   #initial: { x: number; y: number } | null = null;
   #latest: { event?: Event; coordinates?: { x: number; y: number } } = {};
-  /** Source currently driving an active drag (document-level listeners). */
-  #activeSource: Draggable | null = null;
 
   bind(
     source: Draggable,
@@ -223,7 +221,6 @@ export class ChromePointerSensor extends Sensor<
       return;
     }
 
-    this.#activeSource = source;
     // Intentionally no setPointerCapture — document listeners are enough, and
     // capture on a remounted tile fires pointercancel at the group boundary.
 
@@ -313,6 +310,5 @@ export class ChromePointerSensor extends Sensor<
     this.#controller = null;
     this.#initial = null;
     this.#latest = {};
-    this.#activeSource = null;
   }
 }

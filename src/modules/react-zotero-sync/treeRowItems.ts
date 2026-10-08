@@ -242,26 +242,23 @@ function titleFromRow(
   return collectionTreeRowTitle(row);
 }
 
-const treeRowTitleAtomFamily = atomFamilyFromExternal(
-  (treeViewID: string) => ({
-    getSnapshot: () =>
-      titleFromRow(getSelectedCollectionTreeRow(), treeViewID),
-    subscribe: (onStoreChange: () => void) => {
-      const observer = {
-        notify() {
-          onStoreChange();
-        },
-      };
-      const notifierId = Zotero.Notifier.registerObserver(observer, [
-        "search",
-        "feed",
-      ]);
-      return () => {
-        Zotero.Notifier.unregisterObserver(notifierId);
-      };
-    },
-  }),
-);
+const treeRowTitleAtomFamily = atomFamilyFromExternal((treeViewID: string) => ({
+  getSnapshot: () => titleFromRow(getSelectedCollectionTreeRow(), treeViewID),
+  subscribe: (onStoreChange: () => void) => {
+    const observer = {
+      notify() {
+        onStoreChange();
+      },
+    };
+    const notifierId = Zotero.Notifier.registerObserver(observer, [
+      "search",
+      "feed",
+    ]);
+    return () => {
+      Zotero.Notifier.unregisterObserver(notifierId);
+    };
+  },
+}));
 
 export function useZoteroTreeRowTitle(treeViewID: string): string {
   return useAtomValue(treeRowTitleAtomFamily(treeViewID));

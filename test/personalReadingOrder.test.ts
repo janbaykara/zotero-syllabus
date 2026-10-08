@@ -24,11 +24,12 @@ describe("personal reading order", function () {
     assert.include(html, PERSONAL_READING_ORDER_NOTE_TITLE);
     assert.include(html, PLUGIN_JSON_HEADING);
     assert.include(html, PERSONAL_READING_ORDER_PRE_ATTR);
-    assert.include(html, '"aaa"');
-    assert.include(html, '"bbb"');
+    // JSON in <pre> is HTML-escaped (quotes → &quot;).
+    assert.include(html, "&quot;aaa&quot;");
+    assert.include(html, "&quot;bbb&quot;");
     assert.include(html, "✅");
-    assert.include(html, '"done"');
-    assert.include(html, '"assignmentDone"');
+    assert.include(html, "&quot;done&quot;");
+    assert.include(html, "&quot;assignmentDone&quot;");
   });
 
   it("parses the JSON payload from the note envelope", function () {
@@ -47,9 +48,10 @@ describe("personal reading order", function () {
   });
 
   it("defaults missing done fields to empty on parse", function () {
-    const html = `<pre ${PERSONAL_READING_ORDER_PRE_ATTR}="1">${JSON.stringify(
-      { version: 1, order: ["a"] },
-    )}</pre>`;
+    const html = `<pre ${PERSONAL_READING_ORDER_PRE_ATTR}="1">${JSON.stringify({
+      version: 1,
+      order: ["a"],
+    })}</pre>`;
     const parsed = parsePersonalReadingOrderNote(html);
     assert.isNotNull(parsed);
     assert.deepEqual(parsed!.done, []);

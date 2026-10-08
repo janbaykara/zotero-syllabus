@@ -85,7 +85,7 @@ export function readAnnotationRelatedItems(item: {
   libraryID?: number;
   relatedItems?: string[];
 }): MyAnnotationRelatedItem[] {
-  let keys: string[] = [];
+  let keys: string[];
   try {
     keys = Array.isArray(item.relatedItems) ? item.relatedItems : [];
   } catch {
@@ -116,7 +116,7 @@ export function readAnnotationRelatedItems(item: {
       continue;
     }
     seen.add(related.id);
-    let isAnnotation = false;
+    let isAnnotation: boolean;
     try {
       isAnnotation = !!related.isAnnotation?.();
     } catch {
@@ -151,7 +151,7 @@ export function readAnnotationRelatedItems(item: {
       continue;
     }
     const title = getItemTitle(related) || related.key;
-    let itemType = "document";
+    let itemType: string;
     try {
       itemType = String(related.itemType || "document");
     } catch {

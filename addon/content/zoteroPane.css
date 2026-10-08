@@ -190,9 +190,9 @@
     color 0.2s ease;
 }
 
-.syllabus-dnd-zone.is-empty-zone.is-drop-highlight:not(:has(.syllabus-class-dropzone-hint)):not(
-    :has(.syllabus-add-class-dropzone-placeholder)
-  ) {
+.syllabus-dnd-zone.is-empty-zone.is-drop-highlight:not(
+    :has(.syllabus-class-dropzone-hint)
+  ):not(:has(.syllabus-add-class-dropzone-placeholder)) {
   outline: 2px dashed var(--accent-blue, #2255e0);
   background: color-mix(in srgb, var(--accent-blue, #2255e0) 15%, transparent);
   color: var(--accent-blue, #2255e0);

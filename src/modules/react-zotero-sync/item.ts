@@ -38,9 +38,7 @@ export const itemVersionAtomFamily = atomFamilyFromExternal(
 
 export function useZoteroItem(itemId: number | null) {
   const version = useAtomValue(
-    itemId && itemId > 0
-      ? itemVersionAtomFamily(itemId)
-      : emptyItemVersionAtom,
+    itemId && itemId > 0 ? itemVersionAtomFamily(itemId) : emptyItemVersionAtom,
   );
 
   const item = useMemo(() => {

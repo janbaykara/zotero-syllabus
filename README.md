@@ -42,29 +42,25 @@ A message from Jan, the software developer:
 >
 > — Jan :)
 
-
-
 ## Discussion
 
 - For **bug reports** and **feature requests**, please use the [GitHub Issues](https://github.com/janbaykara/zotero-syllabus/issues) page.
 - For **general discussion**, join the [Discord](https://discord.gg/PtEY5DxCea), or use the [Zotero Forum Thread](https://forums.zotero.org/discussion/128688/zotero-syllabus-a-plugin-for-managing-your-uni-course-reading-lists) or [Reddit Thread](https://www.reddit.com/r/zotero/comments/1w3eu97/zotero_syllabus_a_plugin_for_students_to_organise/).
-
-
 
 ## Show your thanks by donating 🙏🇵🇸🕊️
 
 If this project is useful to you, [Buy Me a Coffee](https://buymeacoffee.com/janbaykara) and I will regularly donate proceeds to third party funds, including those that help keep **Gaza's universities, students, and academic life alive** during reconstruction, following the genocide of the Palestinian people by the Israeli-American occupation:
 
 - **ISNAD — Emergency Fund for Gaza’s Universities (via Taawon / Welfare Association)**  
-Primary Palestinian-led programme supporting scholarships, staff, and core university operations.  
-[https://taawon.org/en/isnad](https://taawon.org/en/isnad)
+  Primary Palestinian-led programme supporting scholarships, staff, and core university operations.  
+  [https://taawon.org/en/isnad](https://taawon.org/en/isnad)
 - **Friends of Palestinian Universities (FoPU / Fobzu)**  
-Long-standing UK charity supporting Palestinian universities, including emergency work for Gaza.  
-[https://fobzu.org](https://fobzu.org)
+  Long-standing UK charity supporting Palestinian universities, including emergency work for Gaza.  
+  [https://fobzu.org](https://fobzu.org)
 
 Supporting these funds helps sustain students, staff, research, and educational infrastructure — the foundations for rebuilding Gaza’s higher-education system.
 
-*Thank you for contributing in solidarity.*
+_Thank you for contributing in solidarity._
 
 Same page on the docs site: [Supporting Gaza’s academic reconstruction](https://janbaykara.github.io/zotero-syllabus/support-gaza/).
 
@@ -127,9 +123,8 @@ Thanks to the following:
 
 - The authors of all syllabi everywhere — [Teacher As Author](https://rl.talis.com/3/ucl/lists/38afa403-9ebf-4dbe-86b0-a80e564f9777.html) — including the project author's own lecturers (Community Education faculty at UWS; the Politics department at SOAS), and those who teach outside formal academic institutions.
 - Academic institutions for sharing their syllabi, and platforms such as [Talis](https://www.talis.com), [Ex Libris Leganto](https://exlibrisgroup.com/products/leganto-reading-list-management-system/), [KeyLinks](https://kortext.com/keylinks/), [eReserve Plus](https://www.ereserve.com.au/), and [BLUEcloud Course Lists](https://www.sirsidynix.com/bluecloud-course-lists/) that make it possible to download this data easily.
-- The [RIS](https://en.wikipedia.org/wiki/RIS_(file_format)) (Research Information Systems) format, which makes bibliographic records portable between tools.
+- The [RIS](<https://en.wikipedia.org/wiki/RIS_(file_format)>) (Research Information Systems) format, which makes bibliographic records portable between tools.
 - [Zotero](https://www.zotero.org)'s developers, for building an open platform, and for recent developments that have opened plugin development to contemporary web technologies.
 - The Zotero plugin toolkit community, including [zotero-plugin-template](https://github.com/windingwind/zotero-plugin-template) and [zotero-plugin-toolkit](https://github.com/windingwind/zotero-plugin-toolkit).
 - The authors of the open-source libraries this plugin relies on, among them [Preact](https://preactjs.com), [React](https://react.dev), [Zod](https://zod.dev), [Tailwind CSS](https://tailwindcss.com), and [esbuild](https://esbuild.github.io).
 - Early users, for a steer and encouraging words.
-

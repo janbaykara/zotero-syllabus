@@ -62,10 +62,11 @@ describe("annotationBatch", function () {
   });
 
   it("recolours annotations and skips unchanged colours", async function () {
-    const a = makeAnn(1, { annotationColor: "#ffd400" });
-    const b = makeAnn(2, { annotationColor: "#ff6666" });
-    items.set(1, a);
-    items.set(2, b);
+    // Distinct ids per test so getCachedItem cannot reuse another case's fakes.
+    const a = makeAnn(91001, { annotationColor: "#ffd400" });
+    const b = makeAnn(91002, { annotationColor: "#ff6666" });
+    items.set(91001, a);
+    items.set(91002, b);
     const saved: number[] = [];
     a.saveTx = async () => {
       saved.push(a.id);
@@ -74,38 +75,42 @@ describe("annotationBatch", function () {
       saved.push(b.id);
     };
 
-    const count = await recolorAnnotations([1, 2], "#2ea8e5");
+    const count = await recolorAnnotations([91001, 91002], "#2ea8e5");
     assert.equal(count, 2);
     assert.equal(a.annotationColor, "#2ea8e5");
     assert.equal(b.annotationColor, "#2ea8e5");
-    assert.deepEqual(saved, [1, 2]);
+    assert.deepEqual(saved, [91001, 91002]);
 
-    const again = await recolorAnnotations([1], "#2ea8e5");
+    const again = await recolorAnnotations([91001], "#2ea8e5");
     assert.equal(again, 0);
   });
 
   it("tags and untags annotations", async function () {
-    const a = makeAnn(1, { tags: ["Todo"] });
-    const b = makeAnn(2, { tags: [] });
-    items.set(1, a);
-    items.set(2, b);
+    const a = makeAnn(92001, { tags: ["Todo"] });
+    const b = makeAnn(92002, { tags: [] });
+    items.set(92001, a);
+    items.set(92002, b);
 
-    assert.equal(await tagAnnotations([1, 2], "Important"), 1);
-    assert.deepEqual(collectTagsForAnnotations([1, 2]), ["Important", "Todo"]);
+    // Neither annotation has "Important" yet — both should be updated.
+    assert.equal(await tagAnnotations([92001, 92002], "Important"), 2);
+    assert.deepEqual(collectTagsForAnnotations([92001, 92002]), [
+      "Important",
+      "Todo",
+    ]);
 
-    assert.equal(await tagAnnotations([1], "todo"), 0);
-    assert.equal(await untagAnnotations([1, 2], "Todo"), 1);
-    assert.deepEqual(collectTagsForAnnotations([1, 2]), ["Important"]);
+    assert.equal(await tagAnnotations([92001], "todo"), 0);
+    assert.equal(await untagAnnotations([92001, 92002], "Todo"), 1);
+    assert.deepEqual(collectTagsForAnnotations([92001, 92002]), ["Important"]);
   });
 
   it("ignores missing and non-annotation items", async function () {
-    items.set(3, {
-      ...makeAnn(3),
+    items.set(93003, {
+      ...makeAnn(93003),
       itemType: "journalArticle",
       isAnnotation: () => false,
     });
-    assert.equal(await recolorAnnotations([3, 99], "#ff6666"), 0);
-    assert.equal(await tagAnnotations([3, 99], "x"), 0);
-    assert.deepEqual(collectTagsForAnnotations([3, 99]), []);
+    assert.equal(await recolorAnnotations([93003, 93099], "#ff6666"), 0);
+    assert.equal(await tagAnnotations([93003, 93099], "x"), 0);
+    assert.deepEqual(collectTagsForAnnotations([93003, 93099]), []);
   });
 });

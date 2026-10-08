@@ -123,7 +123,7 @@ function projectSortables(
       return null;
     }
     const shape = target.droppable.shape;
-    let to = targetIndex;
+    let to: number;
     if (shape && pointerY > shape.center.y) {
       to = sourceIndex < targetIndex ? targetIndex : targetIndex + 1;
     } else {
@@ -253,11 +253,7 @@ export class OptimisticSortingPlugin extends Plugin {
             const targetIndex = projected.targetGroup.indexOf(target.sortable);
             manager2.collisionObserver.disable();
             reorder(sourceElement, sourceIndex, targetElement, targetIndex);
-            applyProjectedIndices(
-              projected,
-              sameGroup,
-              target.sortable.group,
-            );
+            applyProjectedIndices(projected, sameGroup, target.sortable.group);
             for (const sortable of affected) {
               sortable.animate();
             }

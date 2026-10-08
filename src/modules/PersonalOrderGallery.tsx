@@ -425,7 +425,7 @@ export function PersonalOrderGallery({
         }
 
         const prev = previousContainers.current;
-        let next: Record<Zone, string[]> = prev;
+        let next: Record<Zone, string[]>;
 
         if (target.id === "ordered" || target.id === "rest") {
           // Zone container: only for cross-group drops. If every moving id is

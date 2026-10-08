@@ -122,4 +122,3 @@ export function useZoteroSyllabusMetadata(
     setCreateSubcollections,
   ] as const;
 }
-

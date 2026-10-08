@@ -1,5 +1,6 @@
 import { assert } from "chai";
-import { createItemStore } from "../src/modules/react-zotero-sync/item";
+import { getDefaultStore } from "jotai";
+import { itemVersionAtomFamily } from "../src/modules/react-zotero-sync/item";
 import { isItemRemovalEvent, isObjectLifecycleEvent } from "../src/utils/cache";
 
 describe("cacheLifecycle", function () {
@@ -17,7 +18,7 @@ describe("cacheLifecycle", function () {
     });
   });
 
-  describe("createItemStore", function () {
+  describe("itemVersionAtomFamily", function () {
     this.timeout(30_000);
 
     const items: Zotero.Item[] = [];
@@ -41,12 +42,16 @@ describe("cacheLifecycle", function () {
       await item.saveTx();
       items.push(item);
 
-      const store = createItemStore(item.id);
+      const store = getDefaultStore();
+      const versionAtom = itemVersionAtomFamily(item.id);
       let notifications = 0;
-      const unsubscribe = store.subscribe(() => {
+      const unsubscribe = store.sub(versionAtom, () => {
         notifications += 1;
       });
       try {
+        // Mount the atom so onMount registers the Zotero notifier.
+        store.get(versionAtom);
+
         item.deleted = true;
         await item.saveTx();
         const started = Date.now();
@@ -56,7 +61,7 @@ describe("cacheLifecycle", function () {
         assert.isAtLeast(
           notifications,
           1,
-          "item store should refresh on trash, not only delete",
+          "item version atom should refresh on trash, not only delete",
         );
       } finally {
         unsubscribe();

@@ -77,7 +77,7 @@ export function DndProvider({
       sortableTransition,
     };
     return createZoteroDndManager(opts);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- indicator/transition create-time
+    // Intentionally omit `modifiers`: updated via effect without remounting.
   }, [managerProp, sensors, plugins, dropIndicator, sortableTransition]);
 
   const manager = managerProp ?? owned!;

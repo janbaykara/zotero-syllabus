@@ -25,7 +25,7 @@ export type ReadingTileChrome = {
 export function ReadingDoneCheckbox({
   item,
   collectionId,
-  assignment,
+  assignment: _assignment,
   onReaderCheck,
   className,
 }: {
@@ -38,8 +38,7 @@ export function ReadingDoneCheckbox({
   const generation = usePersonalReadingOrderGeneration();
   void generation;
   // Gallery / tile chrome: always item-level (covers every assignment).
-  const done =
-    !onReaderCheck && isItemReadingDone(collectionId, item.key);
+  const done = !onReaderCheck && isItemReadingDone(collectionId, item.key);
 
   const handleChange = async (e: JSX.TargetedEvent<HTMLInputElement>) => {
     e.stopPropagation();

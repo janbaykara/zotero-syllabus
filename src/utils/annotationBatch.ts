@@ -8,7 +8,9 @@ import { getCachedItem } from "./cache";
 
 function resolveAnnotationItem(id: number): Zotero.Item | null {
   try {
-    const item = getCachedItem(id) || Zotero.Items.get(id);
+    // Prefer live Items.get so tests (and post-mutation reads) aren't stuck on
+    // a stale getCachedItem entry for the same id.
+    const item = Zotero.Items.get(id) || getCachedItem(id);
     if (!item || item.deleted) {
       return null;
     }

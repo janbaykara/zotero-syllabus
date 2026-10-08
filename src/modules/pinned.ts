@@ -823,6 +823,22 @@ function sortAssignmentsForClass(
 }
 
 /**
+ * Personal Reading Order is the live source of truth for done checkboxes;
+ * `assignment.status === "done"` remains a fallback for unmigrated docs and
+ * in-memory documents (tests / callers that pass a synthetic syllabus).
+ */
+function isPinnedAssignmentDone(
+  collection: Zotero.Collection,
+  itemKey: string,
+  assignment: ItemSyllabusAssignment | null | undefined,
+): boolean {
+  if (assignment?.status === "done") {
+    return true;
+  }
+  return isAssignmentReadingDone(collection, itemKey, assignment?.id);
+}
+
+/**
  * Syllabus progress in item currency, driven by class completion:
  * items in a done class count as done even when unread.
  * Further-reading assignments count; unnumbered (priority / instruction)
@@ -860,7 +876,7 @@ export function getSyllabusItemProgress(
           continue;
         }
         total += 1;
-        if (isAssignmentReadingDone(collection, itemKey, assignment.id)) {
+        if (isPinnedAssignmentDone(collection, itemKey, assignment)) {
           done += 1;
         }
         continue;
@@ -868,7 +884,7 @@ export function getSyllabusItemProgress(
       total += 1;
       if (
         doneClassNumbers.has(classNumber) ||
-        isAssignmentReadingDone(collection, itemKey, assignment.id)
+        isPinnedAssignmentDone(collection, itemKey, assignment)
       ) {
         done += 1;
       }
@@ -1066,7 +1082,7 @@ export function getNextUpAssignment(
   for (const entry of classEntries) {
     if (
       entry.classDone ||
-      isAssignmentReadingDone(collection, entry.item.key, entry.assignment.id)
+      isPinnedAssignmentDone(collection, entry.item.key, entry.assignment)
     ) {
       continue;
     }
@@ -1087,11 +1103,7 @@ export function getNextUpAssignment(
   if (unreadItems.length < 3) {
     for (const entry of furtherEntries) {
       if (
-        isAssignmentReadingDone(
-          collection,
-          entry.item.key,
-          entry.assignment?.id,
-        )
+        isPinnedAssignmentDone(collection, entry.item.key, entry.assignment)
       ) {
         continue;
       }
@@ -1171,7 +1183,7 @@ function assignmentDoneForItem(
       classId && doc.classes?.[classId]?.status === "done",
     );
     const isDone =
-      classDone || isAssignmentReadingDone(collection, itemKey, assignment.id);
+      classDone || isPinnedAssignmentDone(collection, itemKey, assignment);
     if (!first || (!isDone && allDone)) {
       first = assignment;
       classNumber = num ?? null;

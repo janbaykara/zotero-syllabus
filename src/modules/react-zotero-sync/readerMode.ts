@@ -25,8 +25,7 @@ const ViewPrefMapSchema = z.record(z.string(), z.unknown());
  * Syllabus and Gallery share one “Show checkboxes” setting per collection.
  */
 export function migrateLegacyReaderModePrefs(): void {
-  const map =
-    getCachedPref(readerModeSpec.mapKey, ViewPrefMapSchema) || {};
+  const map = getCachedPref(readerModeSpec.mapKey, ViewPrefMapSchema) || {};
   let changed = false;
   const next: Record<string, unknown> = { ...map };
   for (const [key, value] of Object.entries(map)) {
