@@ -211,13 +211,17 @@ export class ChromeFeedbackPlugin extends CorePlugin {
 
     const stopEnd = manager.monitor.addEventListener("dragend", () => {
       end();
-      const root = document.querySelector(".syllabus-personal-order-dnd");
-      const nodes = root?.querySelectorAll<HTMLElement>(
-        ".syllabus-personal-order-tile, [data-zotero-dnd-dragging]",
-      );
-      nodes?.forEach((el) => {
-        clearFeedback(el);
-      });
+      for (const root of [
+        document.querySelector(".syllabus-personal-order-dnd"),
+        document.querySelector(".syllabus-page-dnd"),
+      ]) {
+        const nodes = root?.querySelectorAll<HTMLElement>(
+          ".syllabus-personal-order-tile, .syllabus-dnd-sortable, [data-zotero-dnd-dragging]",
+        );
+        nodes?.forEach((el) => {
+          clearFeedback(el);
+        });
+      }
     });
 
     const { destroy } = this;

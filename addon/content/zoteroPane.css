@@ -146,6 +146,8 @@
   opacity: 1;
 }
 
+/* HTML5-only card indicators (locked path / legacy). Chrome DnD uses the
+ * gallery tile host — see .syllabus-personal-order-tile below. */
 .syllabus-item-card.is-drop-before::before,
 .syllabus-item-card.is-drop-after::after {
   content: "";
@@ -165,6 +167,35 @@
 
 .syllabus-item-card.is-drop-after::after {
   bottom: -1px;
+}
+
+/* Never double-paint: card lines stay off inside a chrome DnD host. */
+.syllabus-personal-order-tile .syllabus-item-card.is-drop-before::before,
+.syllabus-personal-order-tile .syllabus-item-card.is-drop-after::after {
+  content: none;
+}
+
+/*
+ * Chrome DnD paints .is-drop-highlight on the empty zone (sortables own
+ * filled lists). Tint the dashed landing UI — not the zone chrome alone.
+ */
+.syllabus-dnd-zone.is-drop-highlight .syllabus-class-dropzone-hint,
+.syllabus-dnd-zone.is-drop-highlight .syllabus-add-class-dropzone-placeholder {
+  border-color: var(--accent-blue, #2255e0);
+  background: color-mix(in srgb, var(--accent-blue, #2255e0) 15%, transparent);
+  color: var(--accent-blue, #2255e0);
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.syllabus-dnd-zone.is-empty-zone.is-drop-highlight:not(:has(.syllabus-class-dropzone-hint)):not(
+    :has(.syllabus-add-class-dropzone-placeholder)
+  ) {
+  outline: 2px dashed var(--accent-blue, #2255e0);
+  background: color-mix(in srgb, var(--accent-blue, #2255e0) 15%, transparent);
+  color: var(--accent-blue, #2255e0);
 }
 
 .syllabus-class-items {
@@ -5552,6 +5583,62 @@ button.syllabus-explorer-class-segment-header:focus-visible {
 
 .syllabus-personal-order-tile {
   position: relative;
+}
+
+/*
+ * Syllabus page only (do NOT style .syllabus-personal-order-section globally —
+ * that gapped the Gallery personal-order list). Gap M with line at ±M/2 so
+ * “after previous” and “before next” paint on the same Y.
+ */
+.syllabus-page-dnd
+  .syllabus-class-items.syllabus-dnd-item-list
+  > .syllabus-personal-order-section
+  > .syllabus-personal-order-tile {
+  margin-bottom: 1rem;
+}
+
+.syllabus-page-dnd
+  .syllabus-class-items.syllabus-dnd-item-list[data-density="compact"]
+  > .syllabus-personal-order-section
+  > .syllabus-personal-order-tile {
+  margin-bottom: 0.5rem;
+}
+
+/*
+ * Center the 3px line in the margin gap: offset = gap/2 + 1.5px.
+ * (gap/2 alone lines up the far edge of the rule, so after(N)+before(N+1)
+ * would sit a full line-height apart.)
+ */
+.syllabus-page-dnd
+  .syllabus-class-items.syllabus-dnd-item-list
+  > .syllabus-personal-order-section
+  > .syllabus-personal-order-tile.is-drop-before::before {
+  top: calc(-0.5rem - 1.5px);
+  left: 0.25rem;
+  right: 0.25rem;
+}
+
+.syllabus-page-dnd
+  .syllabus-class-items.syllabus-dnd-item-list
+  > .syllabus-personal-order-section
+  > .syllabus-personal-order-tile.is-drop-after::after {
+  bottom: calc(-0.5rem - 1.5px);
+  left: 0.25rem;
+  right: 0.25rem;
+}
+
+.syllabus-page-dnd
+  .syllabus-class-items.syllabus-dnd-item-list[data-density="compact"]
+  > .syllabus-personal-order-section
+  > .syllabus-personal-order-tile.is-drop-before::before {
+  top: calc(-0.25rem - 1.5px);
+}
+
+.syllabus-page-dnd
+  .syllabus-class-items.syllabus-dnd-item-list[data-density="compact"]
+  > .syllabus-personal-order-section
+  > .syllabus-personal-order-tile.is-drop-after::after {
+  bottom: calc(-0.25rem - 1.5px);
 }
 
 /*

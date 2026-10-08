@@ -2025,6 +2025,80 @@ export function getCollectionDocument(
   return loadDocumentForCollection(collection).document;
 }
 
+/**
+ * Synchronously update the in-memory document cache and notify listeners.
+ * Use before a slow `mutateCollectionDocument` so the UI can paint the new
+ * order/metadata immediately while the note write continues in the background.
+ */
+export function patchCollectionDocumentOptimistic(
+  collectionId: CollectionIdentifier | Zotero.Collection,
+  mutator: (document: CollectionSyllabusDocument) => CollectionSyllabusDocument,
+): void {
+  const collection = resolveSyllabusCollection(collectionId);
+  if (!collection) {
+    return;
+  }
+  if (!collectionLibraryIsEditable(collection)) {
+    return;
+  }
+  const ref = collectionRefFromCollection(collection);
+  const entry = loadDocumentForCollection(collection);
+  const next = persistDocument(mutator(cloneDocument(entry.document)));
+  setCacheEntry(ref, entry.noteId, entry.noteVersion, next);
+}
+
+/** Optimistic cache update for class / unnumbered item order. */
+export function applyClassItemOrderOptimistic(
+  collectionId: CollectionIdentifier | Zotero.Collection,
+  classNumber: number | null,
+  itemIds: string[],
+): void {
+  patchCollectionDocumentOptimistic(collectionId, (document) => {
+    if (classNumber === null) {
+      return {
+        ...document,
+        unnumberedOrder: itemIds.length > 0 ? itemIds : undefined,
+      };
+    }
+    return {
+      ...document,
+      classes: mergeNumberKeyedClasses(
+        document.classes,
+        { [String(classNumber)]: { itemOrder: itemIds } },
+        document.classOrder,
+      ),
+    };
+  });
+}
+
+/** Optimistic cache update for further-reading item.key order. */
+export function applyFurtherReadingOrderOptimistic(
+  collectionId: CollectionIdentifier | Zotero.Collection,
+  itemKeys: string[],
+): void {
+  patchCollectionDocumentOptimistic(collectionId, (document) => ({
+    ...document,
+    furtherReadingOrder: itemKeys.length > 0 ? itemKeys : undefined,
+  }));
+}
+
+/** Optimistic cache update for one item's syllabus assignments. */
+export function applyItemAssignmentsOptimistic(
+  collectionId: CollectionIdentifier | Zotero.Collection,
+  itemKey: string,
+  assignments: ItemSyllabusAssignment[],
+): void {
+  patchCollectionDocumentOptimistic(collectionId, (document) => {
+    const items = { ...document.items };
+    if (!assignments.length) {
+      delete items[itemKey];
+    } else {
+      items[itemKey] = assignments;
+    }
+    return { ...document, items };
+  });
+}
+
 /** How many assignments currently use this priority id. */
 export function countAssignmentsWithPriority(
   document: CollectionSyllabusDocument,
@@ -2597,7 +2671,13 @@ export async function mutateCollectionDocument(
           ztoolkit.log("Error reading existing syllabus note:", error);
         }
       }
-      const current = documentForWrite(fromNote, cached?.document);
+      // Prefer non-empty cache so optimistic patches (and earlier writes still
+      // in the serialize queue) are not wiped by re-parsing lagging note HTML.
+      // `documentForWrite` still applies when the cache is empty / missing.
+      const current =
+        cached && !isEmptyCollectionDocument(cached.document)
+          ? cloneDocument(cached.document)
+          : documentForWrite(fromNote, cached?.document);
       const mutated = persistDocument(mutator(cloneDocument(current)));
       const nextResult = CollectionSyllabusDocumentSchema.safeParse({
         ...mutated,

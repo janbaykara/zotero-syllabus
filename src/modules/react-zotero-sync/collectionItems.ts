@@ -25,16 +25,16 @@ import {
 } from "../syllabusNote";
 import { atomFamilyFromExternal } from "./jotaiExternal";
 
-export type ItemID = {
-  [field in _ZoteroTypes.Item.ItemField]: string | unknown;
-} & {
-  id: number;
-};
-
+/** Snapshot only needs ids — live `Zotero.Item`s are resolved from the cache. */
 export type CollectionItemsSnapshot = {
-  items: ItemID[];
+  items: Array<{ id: number }>;
   documentGeneration: number;
 };
+
+const EMPTY_COLLECTION_ITEMS_SNAPSHOT = SuperJSON.stringify({
+  items: [],
+  documentGeneration: 0,
+} satisfies CollectionItemsSnapshot);
 
 export type CollectionItemsOptions = {
   /**
@@ -171,9 +171,18 @@ export function useZoteroCollectionItems(
   );
 
   const parsedItems = useMemo(() => {
-    const snapshot = SuperJSON.parse(
-      __itemsFromZotero,
-    ) as CollectionItemsSnapshot;
+    let snapshot: CollectionItemsSnapshot;
+    try {
+      snapshot = SuperJSON.parse(
+        __itemsFromZotero ?? EMPTY_COLLECTION_ITEMS_SNAPSHOT,
+      ) as CollectionItemsSnapshot;
+    } catch (error) {
+      ztoolkit.log(
+        "useZoteroCollectionItems: failed to parse snapshot",
+        error,
+      );
+      return [];
+    }
     return snapshot.items
       .map((itemJSON) => {
         const zoteroItem = getCachedItem(itemJSON.id);
@@ -208,27 +217,28 @@ export function createCollectionItemsStore(
   const includeAssignedClassNotes = options?.includeAssignedClassNotes ?? false;
 
   function getSnapshot() {
-    // Read directly from Zotero
-    const collection =
-      SyllabusManager.getCollectionFromIdentifier(collectionId);
-    if (!collection) {
-      return SuperJSON.stringify({ items: [] });
+    try {
+      const collection =
+        SyllabusManager.getCollectionFromIdentifier(collectionId);
+      if (!collection) {
+        return EMPTY_COLLECTION_ITEMS_SNAPSHOT;
+      }
+      const recursive = shouldIncludeSubcollections(recursiveMode);
+      // Ids only — full `toJSON()` was unused and could blow SuperJSON.parse
+      // when the jotai atom fell back to `undefined` after a snapshot throw.
+      const items = collectRegularItems(
+        collection,
+        recursive,
+        includeAssignedClassNotes,
+      ).map((item) => ({ id: item.id }));
+      return SuperJSON.stringify({
+        items,
+        documentGeneration: getDocumentGeneration(),
+      } satisfies CollectionItemsSnapshot);
+    } catch (error) {
+      ztoolkit.log("collectionItems getSnapshot failed", error);
+      return EMPTY_COLLECTION_ITEMS_SNAPSHOT;
     }
-    const recursive = shouldIncludeSubcollections(recursiveMode);
-    const items: ItemID[] = collectRegularItems(
-      collection,
-      recursive,
-      includeAssignedClassNotes,
-    ).map((item) => {
-      return {
-        id: item.id,
-        ...item.toJSON(),
-      };
-    });
-    return SuperJSON.stringify({
-      items,
-      documentGeneration: getDocumentGeneration(),
-    });
   }
 
   function subscribe(onStoreChange: () => void) {
@@ -328,7 +338,11 @@ export function createCollectionItemsStore(
     };
   }
 
-  return { getSnapshot, subscribe };
+  return {
+    getSnapshot,
+    subscribe,
+    initial: EMPTY_COLLECTION_ITEMS_SNAPSHOT,
+  };
 }
 
 function itemInCollectionTree(

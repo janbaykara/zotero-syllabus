@@ -44,7 +44,13 @@ export function atomFromExternal<T>(
 
   anAtom.onMount = (setAtom) => {
     const sync = () => {
-      const next = source.getSnapshot();
+      let next: T;
+      try {
+        next = source.getSnapshot();
+      } catch {
+        // Keep the last good value (or `initial`) rather than crashing render.
+        return;
+      }
       setAtom((prev: T) => (equal(prev, next) ? prev : next));
     };
     // Subscribe first so sources can prime module caches before the first sync.

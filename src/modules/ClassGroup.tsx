@@ -18,6 +18,10 @@ import { getCachedCollectionById } from "../utils/cache";
 import { collectionLibraryIsEditable, isZotero8OrLater } from "../utils/zotero";
 import { TextInput, ReadingDateInput } from "./syllabusInputs";
 import { SyllabusItemCard } from "./SyllabusItemCard";
+import { SyllabusDndSortable } from "./SyllabusDndSortable";
+import { SyllabusDndZone } from "./SyllabusDndZone";
+import { syllabusDndGroup } from "./syllabusDnd";
+import { useSyllabusPageDnd } from "./SyllabusPageDnd";
 import { isOsFileDrag } from "../utils/nativeFileDrop";
 import type { GalleryLayout } from "./galleryLayout";
 import type { MagazinePacking } from "./magazinePacking";
@@ -138,6 +142,7 @@ export function ClassGroupComponent({
   onDelete,
   onDuplicate,
 }: ClassGroupComponentProps) {
+  const chromeDnd = useSyllabusPageDnd()?.enabled ?? false;
   const selectedItemIds = useZoteroSelectedItemIds();
   const libraryEditable = collectionLibraryIsEditable(
     getCachedCollectionById(collectionId),
@@ -329,13 +334,18 @@ export function ClassGroupComponent({
     if (isOsFileDrag(e.dataTransfer)) {
       return;
     }
-    updateDropIndicatorFromY(e.clientY, e.currentTarget);
+    if (!chromeDnd) {
+      updateDropIndicatorFromY(e.clientY, e.currentTarget);
+    }
   };
 
   const handleItemDragOver = (e: JSX.TargetedDragEvent<HTMLElement>) => {
     // Keep dropzone effectAllowed / preventDefault behavior from the page.
     onDragOver(e);
     if (isOsFileDrag(e.dataTransfer)) {
+      return;
+    }
+    if (chromeDnd) {
       return;
     }
     // Use the list scanner so each gap has a single line (before next /
@@ -625,18 +635,34 @@ export function ClassGroupComponent({
             : "w-full min-w-0 max-w-full",
         )}
       >
-        <div
+        <SyllabusDndZone
+          group={syllabusDndGroup(classNumber)}
+          empty={itemAssignments.length === 0}
           className={twMerge(
             "syllabus-class-items box-border! rounded-lg group/class-items",
             // Horizontal-only negative margin so dropzone outline can bleed;
             // keep real top margin as a breather after the class description.
-            density !== "expanded"
-              ? "space-y-2 px-1 pb-1 -mx-1"
-              : "mt-2 space-y-4 px-2 pb-2 -mx-2",
+            // Chrome DnD: gap is margin on .syllabus-personal-order-tile (gallery
+            // pattern) — no space-y, or you get two blue lines in the gap.
+            chromeDnd
+              ? twMerge(
+                  "syllabus-dnd-item-list",
+                  density !== "expanded"
+                    ? "px-1 pb-1 -mx-1"
+                    : "mt-2 px-2 pb-2 -mx-2",
+                )
+              : density !== "expanded"
+                ? "space-y-2 px-1 pb-1 -mx-1"
+                : "mt-2 space-y-4 px-2 pb-2 -mx-2",
+            // Filled lists: outline the list. Empty classes tint the dashed
+            // hint via group-data-[dropzone-active] (chrome DnD sets the attr).
             itemAssignments.length > 0 &&
               "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:outline-accent-blue! data-[dropzone-active='true']:text-accent-blue! transition-all duration-200 outline-transparent outline-2! outline-dashed!",
-            !isZotero8OrLater() && "compat-space-y",
+            !chromeDnd && !isZotero8OrLater() && "compat-space-y",
           )}
+          data-density={
+            chromeDnd && density !== "expanded" ? "compact" : undefined
+          }
           onDrop={
             isLocked
               ? undefined
@@ -671,7 +697,7 @@ export function ClassGroupComponent({
           {!isLocked && itemAssignments.length === 0 && classNumber !== null ? (
             <div
               className={twMerge(
-                "text-center bg-quinary/50 rounded-md p-8 text-secondary border-2 border-dashed border-tertiary/50 in-[.print]:hidden transition-colors duration-200",
+                "syllabus-class-dropzone-hint text-center bg-quinary/50 rounded-md p-8 text-secondary border-2 border-dashed border-tertiary/50 in-[.print]:hidden transition-colors duration-200",
                 "group-data-[dropzone-active=true]/class-items:bg-accent-blue/15 group-data-[dropzone-active=true]/class-items:border-accent-blue group-data-[dropzone-active=true]/class-items:text-accent-blue",
                 density !== "expanded" ? "p-4" : "p-8",
               )}
@@ -706,55 +732,72 @@ export function ClassGroupComponent({
               onItemClick={(item) => selectItemInCollection(item, collectionId)}
             />
           ) : itemAssignments.length > 0 ? (
-            itemAssignments.map(({ item, assignment }) => {
-              // Require assignment ID - if missing, skip this assignment
-              if (!assignment.id) {
-                ztoolkit.log(
-                  "Warning: Assignment missing ID, skipping render",
-                  assignment,
-                );
-                return null;
+            <div
+              className={
+                chromeDnd ? "syllabus-personal-order-section" : undefined
               }
+            >
+              {itemAssignments.map(({ item, assignment }, index) => {
+                // Require assignment ID - if missing, skip this assignment
+                if (!assignment.id) {
+                  ztoolkit.log(
+                    "Warning: Assignment missing ID, skipping render",
+                    assignment,
+                  );
+                  return null;
+                }
 
-              // Use assignment priority directly
-              // Generate unique key using assignment ID - REQUIRED
-              const uniqueKey = `${item.id}-assignment-${assignment.id}`;
+                // Use assignment priority directly
+                // Generate unique key using assignment ID - REQUIRED
+                const uniqueKey = `${item.id}-assignment-${assignment.id}`;
+                const cardIdentifier = `assignment:${assignment.id}`;
 
-              return (
-                <SyllabusItemCard
-                  key={uniqueKey}
-                  item={item}
-                  collectionId={collectionId}
-                  classNumber={classNumber ?? undefined}
-                  assignment={assignment}
-                  slim={true}
-                  density={density}
-                  readerMode={readerMode}
-                  isLocked={isLocked}
-                  selectedIdentifiers={selectedIdentifiers}
-                  onIdentifierClick={onIdentifierClick}
-                  onContextMenu={onContextMenu}
-                  selectedForDrag={selectedForDrag}
-                  onPriorityChange={onPriorityChange}
-                  onDelete={onDelete}
-                  onDuplicate={onDuplicate}
-                  onDrop={(e, insertBefore) =>
-                    onDrop(e, classNumber ?? null, item.id, insertBefore)
-                  }
-                  onDragOver={handleItemDragOver}
-                  dropEdge={
-                    visibleDropIndicator?.identifier ===
-                    `assignment:${assignment.id}`
-                      ? visibleDropIndicator.edge
-                      : null
-                  }
-                  isZoteroSelected={selectedItemIds?.includes(item.id) || false}
-                  isIdentifierSelected={selectedIdentifiers.has(
-                    `assignment:${assignment.id}`,
-                  )}
-                />
-              );
-            })
+                return (
+                  <SyllabusDndSortable
+                    key={uniqueKey}
+                    identifier={cardIdentifier}
+                    index={index}
+                    group={syllabusDndGroup(classNumber)}
+                    draggingIdentifiers={draggingIdentifiers}
+                  >
+                    <SyllabusItemCard
+                      item={item}
+                      collectionId={collectionId}
+                      classNumber={classNumber ?? undefined}
+                      assignment={assignment}
+                      slim={true}
+                      density={density}
+                      readerMode={readerMode}
+                      isLocked={isLocked}
+                      selectedIdentifiers={selectedIdentifiers}
+                      onIdentifierClick={onIdentifierClick}
+                      onContextMenu={onContextMenu}
+                      selectedForDrag={selectedForDrag}
+                      onPriorityChange={onPriorityChange}
+                      onDelete={onDelete}
+                      onDuplicate={onDuplicate}
+                      onDrop={(e, insertBefore) =>
+                        onDrop(e, classNumber ?? null, item.id, insertBefore)
+                      }
+                      onDragOver={handleItemDragOver}
+                      dropEdge={
+                        chromeDnd
+                          ? null
+                          : visibleDropIndicator?.identifier === cardIdentifier
+                            ? visibleDropIndicator.edge
+                            : null
+                      }
+                      isZoteroSelected={
+                        selectedItemIds?.includes(item.id) || false
+                      }
+                      isIdentifierSelected={selectedIdentifiers.has(
+                        cardIdentifier,
+                      )}
+                    />
+                  </SyllabusDndSortable>
+                );
+              })}
+            </div>
           ) : null}
           {!isLocked && (
             <div className="flex items-center justify-center gap-2 w-full opacity-0 group-hover/class:opacity-100 focus-within:opacity-100 focus-visible:opacity-100 transition-opacity in-[.print]:hidden p-2">
@@ -826,7 +869,7 @@ export function ClassGroupComponent({
               ) : null}
             </div>
           )}
-        </div>
+        </SyllabusDndZone>
       </div>
     </div>
   );

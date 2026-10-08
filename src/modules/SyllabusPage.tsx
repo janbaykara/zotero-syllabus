@@ -136,6 +136,18 @@ import {
 import { ReadingItemsLayout } from "./readingItemsLayout";
 import { TextInput } from "./syllabusInputs";
 import { SyllabusItemCard } from "./SyllabusItemCard";
+import { SyllabusPageDnd, type SyllabusDropTarget } from "./SyllabusPageDnd";
+import {
+  buildSyllabusIdentifierContainers,
+  syllabusDndGroup,
+} from "./syllabusDnd";
+import { SyllabusDndSortable } from "./SyllabusDndSortable";
+import { SyllabusDndZone } from "./SyllabusDndZone";
+import {
+  filteredSourceAssignmentId,
+  syllabusPayloadFromDataTransfer,
+  type SyllabusDragPayload,
+} from "./syllabusDragPayload";
 import { bibliographyToHtml } from "./Bibliography";
 import { LinksSection } from "./LinksSection";
 import { ClassGroupComponent } from "./ClassGroup";
@@ -143,7 +155,10 @@ import type { ItemDropIndicator } from "./ClassGroup";
 import { AnnotationSelectionProvider } from "./annotationSelection";
 import { AnnotationBatchBar } from "./AnnotationBatchBar";
 import { AddReadingButton } from "./AddReadingButton";
-import { pickAndAddItemsToFurtherReading } from "./addItemsToClass";
+import {
+  pickAndAddItemsToFurtherReading,
+  priorityPatchForUnnumbered,
+} from "./addItemsToClass";
 import { shouldCaptureCustomViewKeyboard } from "./galleryKeyboardNav";
 import {
   isItemContextMenuKey,
@@ -1491,6 +1506,17 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   const furtherReadingHasManualOrder =
     SyllabusManager.getFurtherReadingOrder(collectionId).length > 0;
 
+  const syllabusIdentifierContainers = useMemo(
+    () =>
+      buildSyllabusIdentifierContainers(
+        visibleClassGroups,
+        furtherReadingItems,
+      ),
+    [visibleClassGroups, furtherReadingItems],
+  );
+
+  const syllabusChromeDnd = !isLocked;
+
   const navigableEntries = useMemo(
     () => getNavigableSyllabusEntries(visibleClassGroups, furtherReadingItems),
     [visibleClassGroups, furtherReadingItems],
@@ -1792,9 +1818,32 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     e.currentTarget.dataset.dropzoneActive = "false";
     setDropIndicator(null);
 
-    if (!e.dataTransfer) return;
-    const itemIdStr = e.dataTransfer.getData("text/plain");
-    if (!itemIdStr) return;
+    const payload = syllabusPayloadFromDataTransfer(e.dataTransfer);
+    if (!payload) {
+      return;
+    }
+    await runSyllabusDrop(payload, {
+      targetClassNumber,
+      targetItemId,
+      insertBefore,
+      zone,
+    });
+  };
+
+  const runSyllabusDrop = async (
+    payload: SyllabusDragPayload,
+    {
+      targetClassNumber,
+      targetItemId,
+      targetAssignmentId: dropTargetAssignmentId,
+      insertBefore,
+      zone,
+    }: SyllabusDropTarget,
+  ) => {
+    const itemIdStr = payload.itemIdStr;
+    if (!itemIdStr) {
+      return;
+    }
 
     const targetClassNumberValue =
       targetClassNumber === null ? undefined : targetClassNumber;
@@ -1802,13 +1851,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       targetClassNumber === null && zone !== "further-reading";
     const toFurtherReading = zone === "further-reading";
 
-    const fromFurtherReading =
-      e.dataTransfer.getData(
-        "application/x-syllabus-source-further-reading",
-      ) === "1";
-    const fromUnnumbered =
-      e.dataTransfer.getData("application/x-syllabus-source-unnumbered") ===
-      "1";
+    const fromFurtherReading = payload.fromFurtherReading;
+    const fromUnnumbered = payload.fromUnnumbered;
 
     const assignmentMatchesTargetClass = (
       assignment: ItemSyllabusAssignment,
@@ -1838,13 +1882,77 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       return currentOrder;
     };
 
+    /**
+     * Blue-line assignment id for insert position. Prefer the sortable host id
+     * — one Zotero item can have several assignments in the same class, so
+     * looking up by item id alone returns the wrong (often: the dragged) row.
+     */
+    const resolveDropTargetAssignmentId = (
+      classNumber: number | null,
+      excludeAssignmentIds: string[] = [],
+    ): string | undefined => {
+      if (
+        dropTargetAssignmentId &&
+        !excludeAssignmentIds.includes(dropTargetAssignmentId)
+      ) {
+        return dropTargetAssignmentId;
+      }
+      if (targetItemId === undefined) {
+        return undefined;
+      }
+      const targetItem = syllabusItems.find(
+        (item) => item.zoteroItem.id === targetItemId,
+      );
+      return targetItem?.assignments.find(
+        (a) =>
+          Boolean(a.id) &&
+          assignmentMatchesTargetClass(a, classNumber) &&
+          !excludeAssignmentIds.includes(a.id!),
+      )?.id;
+    };
+
+    /** Insert at the blue-line position (or append) in a class / unnumbered order. */
+    const insertAssignmentsAtDropLine = async (
+      classNumber: number | null,
+      assignmentIds: string[],
+    ) => {
+      if (assignmentIds.length === 0) {
+        return;
+      }
+      const newOrder = currentOrderForClass(classNumber).filter(
+        (id) => !assignmentIds.includes(id),
+      );
+      const targetAssignmentId = resolveDropTargetAssignmentId(
+        classNumber,
+        assignmentIds,
+      );
+      const targetIndex = targetAssignmentId
+        ? newOrder.findIndex((id) => id === targetAssignmentId)
+        : -1;
+      if (targetIndex !== -1) {
+        if (insertBefore) {
+          newOrder.splice(targetIndex, 0, ...assignmentIds);
+        } else {
+          newOrder.splice(targetIndex + 1, 0, ...assignmentIds);
+        }
+      } else {
+        newOrder.push(...assignmentIds);
+      }
+      void SyllabusManager.setClassItemOrder(
+        collectionId,
+        classNumber,
+        newOrder,
+        "page",
+      );
+    };
+
     // Reorder within Further reading (no assignment mutation)
     if (fromFurtherReading && toFurtherReading && targetItemId !== undefined) {
       const itemIds = itemIdStr
         .split(",")
         .map((id) => parseInt(id, 10))
         .filter((id) => !isNaN(id));
-      await persistFurtherReadingOrder(itemIds, {
+      void persistFurtherReadingOrder(itemIds, {
         targetItemId,
         insertBefore,
       });
@@ -1852,66 +1960,26 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       return;
     }
 
-    // Reorder within unnumbered / Course Information (assignment IDs)
-    if (fromUnnumbered && toUnnumbered && targetItemId !== undefined) {
-      const sourceAssignmentId = e.dataTransfer.getData(
-        "application/x-syllabus-assignment-id",
-      );
-      const multipleAssignmentIdsStr = e.dataTransfer.getData(
-        "application/x-syllabus-assignment-ids",
-      );
-      const draggedAssignmentIds = (
-        multipleAssignmentIdsStr
-          ? multipleAssignmentIdsStr.split(",").filter(Boolean)
-          : sourceAssignmentId
-            ? [sourceAssignmentId]
-            : []
-      ).filter((id) => !isDisplayOnlyAssignmentId(id));
+    // Reorder within unnumbered / Course Information (assignment IDs).
+    // Include display-only class-note ids (`note:…`) — they live in this list.
+    if (fromUnnumbered && toUnnumbered) {
+      const multipleAssignmentIdsStr = payload.multipleAssignmentIdsStr;
+      const draggedAssignmentIds = multipleAssignmentIdsStr
+        ? multipleAssignmentIdsStr.split(",").filter(Boolean)
+        : payload.sourceAssignmentIdRaw
+          ? [payload.sourceAssignmentIdRaw]
+          : [];
       if (draggedAssignmentIds.length === 0) {
         return;
       }
 
-      const newOrder = currentOrderForClass(null).filter(
-        (id) => !draggedAssignmentIds.includes(id),
-      );
-
-      let targetAssignmentId: string | undefined;
-      const targetItem = syllabusItems.find(
-        (item) => item.zoteroItem.id === targetItemId,
-      );
-      if (targetItem) {
-        targetAssignmentId = targetItem.assignments.find((a) =>
-          assignmentMatchesTargetClass(a, null),
-        )?.id;
-      }
-
-      const targetIndex = targetAssignmentId
-        ? newOrder.findIndex((id) => id === targetAssignmentId)
-        : -1;
-      if (targetIndex !== -1) {
-        if (insertBefore) {
-          newOrder.splice(targetIndex, 0, ...draggedAssignmentIds);
-        } else {
-          newOrder.splice(targetIndex + 1, 0, ...draggedAssignmentIds);
-        }
-      } else {
-        newOrder.push(...draggedAssignmentIds);
-      }
-
-      await SyllabusManager.setClassItemOrder(
-        collectionId,
-        null,
-        newOrder,
-        "page",
-      );
+      void insertAssignmentsAtDropLine(null, draggedAssignmentIds);
       setItemOrderVersion((v) => v + 1);
       return;
     }
 
     // Check for multiple assignment IDs (multi-select drag)
-    const multipleAssignmentIdsStr = e.dataTransfer.getData(
-      "application/x-syllabus-assignment-ids",
-    );
+    const multipleAssignmentIdsStr = payload.multipleAssignmentIdsStr;
 
     // Check if we have multiple items (could be assignments or unassigned items)
     const hasMultipleItems = itemIdStr.includes(",");
@@ -1930,9 +1998,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
       try {
         // Get source class number for reordering
-        const sourceClassNumberStr = e.dataTransfer.getData(
-          "application/x-syllabus-source-class",
-        );
+        const sourceClassNumberStr = payload.sourceClassNumberStr;
         const sourceClassNumber =
           sourceClassNumberStr !== ""
             ? parseInt(sourceClassNumberStr, 10)
@@ -1945,13 +2011,71 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           sourceClassNumber === targetClassNumberValue &&
           targetItemId !== undefined;
 
+        // Same-class multi reorder: only touch itemOrder (no per-item note writes).
+        if (isReorder && targetClassNumberValue !== undefined) {
+          let currentOrder = SyllabusManager.getClassItemOrder(
+            collectionId,
+            targetClassNumberValue,
+          );
+          if (currentOrder.length === 0) {
+            classAssignments.sort((a, b) => {
+              const diff = SyllabusManager.compareAssignments(a, b);
+              if (diff !== 0) return diff;
+              const assignmentA = syllabusItems.find((item) =>
+                item.assignments.find((assignment) => assignment.id === a.id),
+              );
+              const assignmentB = syllabusItems.find((item) =>
+                item.assignments.find((assignment) => assignment.id === b.id),
+              );
+              if (assignmentA && assignmentB) {
+                return compareLocale(
+                  getItemTitle(assignmentA.zoteroItem),
+                  getItemTitle(assignmentB.zoteroItem),
+                );
+              }
+              return 0;
+            });
+            currentOrder = classAssignments
+              .map((assignment) => assignment.id!)
+              .filter(Boolean);
+          }
+          const newOrder = currentOrder.filter(
+            (id) => !assignmentIds.includes(id),
+          );
+          const targetAssignmentId = resolveDropTargetAssignmentId(
+            targetClassNumberValue,
+            assignmentIds,
+          );
+          const targetIndex = targetAssignmentId
+            ? newOrder.findIndex((id) => id === targetAssignmentId)
+            : -1;
+          if (targetIndex !== -1) {
+            if (insertBefore) {
+              newOrder.splice(targetIndex, 0, ...assignmentIds);
+            } else {
+              newOrder.splice(targetIndex + 1, 0, ...assignmentIds);
+            }
+          } else {
+            newOrder.push(...assignmentIds);
+          }
+          void SyllabusManager.setClassItemOrder(
+            collectionId,
+            targetClassNumberValue,
+            newOrder,
+            "page",
+          );
+          setItemOrderVersion((v) => v + 1);
+          return;
+        }
+
         // Process each assignment
         const processedAssignmentIds: string[] = [];
         for (const assignmentId of assignmentIds) {
           // Find the assignment and its item
           let draggedItem: Zotero.Item | null = null;
+          let matchingAssignment: ItemSyllabusAssignment | undefined;
           for (const syllabusItem of syllabusItems) {
-            const matchingAssignment = syllabusItem.assignments.find(
+            matchingAssignment = syllabusItem.assignments.find(
               (a) => a.id === assignmentId,
             );
             if (matchingAssignment) {
@@ -1962,12 +2086,17 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
           if (!draggedItem || !isSyllabusAssignableItem(draggedItem)) continue;
 
-          // Update assignment to target class
-          await SyllabusManager.updateClassAssignment(
+          // Update assignment to target class (unnumbered needs a priority)
+          void SyllabusManager.updateClassAssignment(
             draggedItem,
             collectionId,
             assignmentId,
-            { classNumber: targetClassNumberValue },
+            {
+              classNumber: targetClassNumberValue,
+              ...(toUnnumbered
+                ? priorityPatchForUnnumbered(collectionId, matchingAssignment)
+                : {}),
+            },
             "page",
           );
           processedAssignmentIds.push(assignmentId);
@@ -2014,13 +2143,16 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                 syllabusData?.[collectionKeyStr] || [];
 
               // If item has no assignments at all, it's an unassigned item
-              if (existingAssignments.length === 0) {
-                // Add assignment to target class for unassigned items
+              if (
+                existingAssignments.length === 0 &&
+                (targetClassNumberValue !== undefined || toUnnumbered)
+              ) {
+                // Add assignment to target class / unnumbered for unassigned items
                 await SyllabusManager.addClassAssignment(
                   item,
                   collectionId,
-                  targetClassNumberValue,
-                  {},
+                  toUnnumbered ? null : targetClassNumberValue,
+                  toUnnumbered ? priorityPatchForUnnumbered(collectionId) : {},
                   "page",
                 );
                 processedItemIds.push(itemId);
@@ -2030,9 +2162,15 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   SyllabusManager.getItemSyllabusData(item);
                 const updatedAssignments =
                   updatedSyllabusData?.[collectionKeyStr] || [];
-                const newAssignment = updatedAssignments.find(
-                  (a) => a.classNumber === targetClassNumberValue && a.id,
-                );
+                const newAssignment = updatedAssignments.find((a) => {
+                  if (!a.id) {
+                    return false;
+                  }
+                  if (toUnnumbered) {
+                    return Boolean(a.priority || a.classInstruction);
+                  }
+                  return a.classNumber === targetClassNumberValue;
+                });
                 if (newAssignment?.id) {
                   newlyCreatedAssignmentIds.push(newAssignment.id);
                 }
@@ -2043,130 +2181,36 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           }
         }
 
-        // Handle manual ordering for multiple selections if reordering within same class
-        if (isReorder && targetClassNumberValue !== undefined) {
-          // Combine all assignment IDs (existing and newly created)
-          const allDraggedAssignmentIds = [
-            ...processedAssignmentIds,
-            ...newlyCreatedAssignmentIds,
-          ];
-
-          let currentOrder = SyllabusManager.getClassItemOrder(
-            collectionId,
-            targetClassNumberValue,
-          );
-
-          // If no manual order exists, initialize it
-          if (currentOrder.length === 0) {
-            classAssignments.sort((a, b) => {
-              const diff = SyllabusManager.compareAssignments(a, b);
-              if (diff !== 0) return diff;
-              const assignmentA = syllabusItems.find((item) =>
-                item.assignments.find((assignment) => assignment.id === a.id),
-              );
-              const assignmentB = syllabusItems.find((item) =>
-                item.assignments.find((assignment) => assignment.id === b.id),
-              );
-              if (assignmentA && assignmentB) {
-                const itemA = assignmentA.zoteroItem;
-                const itemB = assignmentB.zoteroItem;
-                return compareLocale(getItemTitle(itemA), getItemTitle(itemB));
-              }
-              return 0;
-            });
-            currentOrder = classAssignments
-              .map((assignment) => assignment.id!)
-              .filter(Boolean);
-          }
-
-          // Remove all dragged assignments from current order (including newly created ones)
-          const newOrder = currentOrder.filter(
-            (id) => !allDraggedAssignmentIds.includes(id),
-          );
-
-          // Find target assignment ID
-          let targetAssignmentId: string | undefined;
-          try {
-            const targetItem = syllabusItems.find(
-              (item) => item.zoteroItem.id === targetItemId,
-            );
-            if (targetItem) {
-              targetAssignmentId = targetItem.assignments.find(
-                (a) => a.classNumber === targetClassNumberValue && a.id,
-              )?.id;
-            }
-          } catch (err) {
-            ztoolkit.log("Error finding target assignment:", err);
-          }
-
-          // Find target position
-          const targetIndex = targetAssignmentId
-            ? newOrder.findIndex((id) => id === targetAssignmentId)
-            : -1;
-
-          // Insert all dragged assignments at target position (maintaining relative order)
-          if (targetIndex !== -1) {
-            if (insertBefore) {
-              newOrder.splice(targetIndex, 0, ...allDraggedAssignmentIds);
-            } else {
-              newOrder.splice(targetIndex + 1, 0, ...allDraggedAssignmentIds);
-            }
-          } else {
-            // Target not found, append to end
-            newOrder.push(...allDraggedAssignmentIds);
-          }
-
-          // Update manual order
-          await SyllabusManager.setClassItemOrder(
-            collectionId,
-            targetClassNumberValue,
-            newOrder,
-            "page",
-          );
-        }
-
-        if (fromFurtherReading && targetClassNumberValue !== undefined) {
-          await persistFurtherReadingOrder(itemIds, { removeOnly: true });
+        if (
+          fromFurtherReading &&
+          (targetClassNumberValue !== undefined || toUnnumbered)
+        ) {
+          void persistFurtherReadingOrder(itemIds, { removeOnly: true });
         } else if (toFurtherReading) {
-          await persistFurtherReadingOrder(itemIds, {
+          void persistFurtherReadingOrder(itemIds, {
             targetItemId,
             insertBefore,
           });
-        } else if (toUnnumbered && processedAssignmentIds.length > 0) {
-          const allDraggedAssignmentIds = [
+        } else if (
+          toUnnumbered &&
+          (processedAssignmentIds.length > 0 ||
+            newlyCreatedAssignmentIds.length > 0)
+        ) {
+          void insertAssignmentsAtDropLine(null, [
             ...processedAssignmentIds,
             ...newlyCreatedAssignmentIds,
-          ];
-          const newOrder = currentOrderForClass(null).filter(
-            (id) => !allDraggedAssignmentIds.includes(id),
-          );
-          let targetAssignmentId: string | undefined;
-          if (targetItemId !== undefined) {
-            const targetItem = syllabusItems.find(
-              (item) => item.zoteroItem.id === targetItemId,
-            );
-            targetAssignmentId = targetItem?.assignments.find((a) =>
-              assignmentMatchesTargetClass(a, null),
-            )?.id;
-          }
-          const targetIndex = targetAssignmentId
-            ? newOrder.findIndex((id) => id === targetAssignmentId)
-            : -1;
-          if (targetIndex !== -1) {
-            if (insertBefore) {
-              newOrder.splice(targetIndex, 0, ...allDraggedAssignmentIds);
-            } else {
-              newOrder.splice(targetIndex + 1, 0, ...allDraggedAssignmentIds);
-            }
-          } else {
-            newOrder.push(...allDraggedAssignmentIds);
-          }
-          await SyllabusManager.setClassItemOrder(
-            collectionId,
-            null,
-            newOrder,
-            "page",
-          );
+          ]);
+        } else if (
+          targetClassNumberValue !== undefined &&
+          (fromUnnumbered || fromFurtherReading) &&
+          (processedAssignmentIds.length > 0 ||
+            newlyCreatedAssignmentIds.length > 0)
+        ) {
+          // Unnumbered / further reading → class: honour the blue line.
+          void insertAssignmentsAtDropLine(targetClassNumberValue, [
+            ...processedAssignmentIds,
+            ...newlyCreatedAssignmentIds,
+          ]);
         }
 
         setItemOrderVersion((v) => v + 1);
@@ -2185,17 +2229,12 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     if (!draggedItem || !isSyllabusAssignableItem(draggedItem)) return;
 
     // Get source assignment ID from drag data (if dragging from a class)
-    const sourceAssignmentIdRaw = e.dataTransfer.getData(
-      "application/x-syllabus-assignment-id",
+    const sourceAssignmentId = filteredSourceAssignmentId(
+      payload.sourceAssignmentIdRaw,
     );
-    const sourceAssignmentId = isDisplayOnlyAssignmentId(sourceAssignmentIdRaw)
-      ? ""
-      : sourceAssignmentIdRaw;
 
     // Get source class number for reordering
-    const sourceClassNumberStr = e.dataTransfer.getData(
-      "application/x-syllabus-source-class",
-    );
+    const sourceClassNumberStr = payload.sourceClassNumberStr;
     const sourceClassNumber =
       sourceClassNumberStr !== ""
         ? parseInt(sourceClassNumberStr, 10)
@@ -2244,20 +2283,11 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       // Remove dragged assignment from current order
       const newOrder = currentOrder.filter((id) => id !== sourceAssignmentId);
 
-      // Find target assignment ID - need to get it from the target item
-      let targetAssignmentId: string | undefined;
-      try {
-        const targetItem = syllabusItems.find(
-          (item) => item.zoteroItem.id === targetItemId,
-        );
-        if (targetItem) {
-          targetAssignmentId = targetItem.assignments.find(
-            (a) => a.classNumber === targetClassNumberValue && a.id,
-          )?.id;
-        }
-      } catch (err) {
-        ztoolkit.log("Error finding target assignment:", err);
-      }
+      // Prefer blue-line assignment id — same item can have several class rows.
+      const targetAssignmentId = resolveDropTargetAssignmentId(
+        targetClassNumberValue,
+        [sourceAssignmentId],
+      );
 
       // Find target position
       const targetIndex = targetAssignmentId
@@ -2276,8 +2306,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         newOrder.push(sourceAssignmentId);
       }
 
-      // Update manual order
-      await SyllabusManager.setClassItemOrder(
+      // Update manual order (optimistic cache + background note save)
+      void SyllabusManager.setClassItemOrder(
         collectionId,
         targetClassNumberValue,
         newOrder,
@@ -2288,7 +2318,6 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         targetClassNumberValue,
         newOrder,
       );
-      // Force immediate re-render by updating state
       setItemOrderVersion((v) => v + 1);
       return; // Early return - no need to update assignment
     }
@@ -2308,80 +2337,35 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         );
       }
 
-      // If moving to a different class, update manual order for target class
+      // Cross-list move into this class: insert at the blue line.
+      // Includes numbered→numbered, unnumbered→class, further-reading→class.
       if (
-        sourceClassNumber !== undefined &&
-        sourceClassNumber !== targetClassNumberValue &&
-        sourceAssignmentId
+        sourceAssignmentId &&
+        ((sourceClassNumber !== undefined &&
+          sourceClassNumber !== targetClassNumberValue) ||
+          fromUnnumbered ||
+          fromFurtherReading)
       ) {
-        // Remove from source class order (using assignment ID)
-        const sourceOrder = SyllabusManager.getClassItemOrder(
-          collectionId,
-          sourceClassNumber,
-        );
-        const updatedSourceOrder = sourceOrder.filter(
-          (id) => id !== sourceAssignmentId,
-        );
-        await SyllabusManager.setClassItemOrder(
-          collectionId,
-          sourceClassNumber,
-          updatedSourceOrder,
-          "page",
-        );
-
-        // Add to target class order at the drop line (or end if no target item)
-        if (sourceAssignmentId) {
-          let targetOrder = SyllabusManager.getClassItemOrder(
+        if (sourceClassNumber !== undefined) {
+          const sourceOrder = SyllabusManager.getClassItemOrder(
             collectionId,
-            targetClassNumberValue,
+            sourceClassNumber,
           );
-          if (targetOrder.length === 0) {
-            const group = classGroups.find(
-              (g) => g.classNumber === targetClassNumberValue,
-            );
-            targetOrder =
-              group?.itemAssignments
-                .map(({ assignment }) => assignment.id)
-                .filter((id): id is string => Boolean(id)) ?? [];
-          }
-          targetOrder = targetOrder.filter((id) => id !== sourceAssignmentId);
-
-          let inserted = false;
-          if (targetItemId !== undefined) {
-            const targetItem = syllabusItems.find(
-              (item) => item.zoteroItem.id === targetItemId,
-            );
-            const targetAssignmentId = targetItem?.assignments.find(
-              (a) => a.classNumber === targetClassNumberValue && a.id,
-            )?.id;
-            const targetIndex = targetAssignmentId
-              ? targetOrder.findIndex((id) => id === targetAssignmentId)
-              : -1;
-            if (targetIndex !== -1) {
-              if (insertBefore) {
-                targetOrder.splice(targetIndex, 0, sourceAssignmentId);
-              } else {
-                targetOrder.splice(targetIndex + 1, 0, sourceAssignmentId);
-              }
-              inserted = true;
-            }
-          }
-          if (!inserted) {
-            targetOrder.push(sourceAssignmentId);
-          }
-          await SyllabusManager.setClassItemOrder(
+          const updatedSourceOrder = sourceOrder.filter(
+            (id) => id !== sourceAssignmentId,
+          );
+          void SyllabusManager.setClassItemOrder(
             collectionId,
-            targetClassNumberValue,
-            targetOrder,
+            sourceClassNumber,
+            updatedSourceOrder,
             "page",
           );
         }
-        // Force immediate re-render
+
+        void insertAssignmentsAtDropLine(targetClassNumberValue, [
+          sourceAssignmentId,
+        ]);
         setItemOrderVersion((v) => v + 1);
-      } else if (sourceClassNumber === undefined) {
-        // New item to class - add to end of manual order if it exists
-        // We need to wait for the assignment to be created first, so this will be handled
-        // after the assignment is created below
       }
     }
 
@@ -2408,7 +2392,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           const updatedSourceOrder = sourceOrder.filter(
             (id) => id !== sourceAssignmentId,
           );
-          await SyllabusManager.setClassItemOrder(
+          void SyllabusManager.setClassItemOrder(
             collectionId,
             sourceClassNumber,
             updatedSourceOrder,
@@ -2426,7 +2410,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
             !targetOrder.includes(sourceAssignmentId)
           ) {
             const updatedTargetOrder = [...targetOrder, sourceAssignmentId];
-            await SyllabusManager.setClassItemOrder(
+            void SyllabusManager.setClassItemOrder(
               collectionId,
               targetClassNumberValue,
               updatedTargetOrder,
@@ -2443,7 +2427,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           null,
         );
         if (sourceOrder.includes(sourceAssignmentId)) {
-          await SyllabusManager.setClassItemOrder(
+          void SyllabusManager.setClassItemOrder(
             collectionId,
             null,
             sourceOrder.filter((id) => id !== sourceAssignmentId),
@@ -2452,21 +2436,38 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         }
       }
 
-      await SyllabusManager.updateClassAssignment(
+      const existingAssignment =
+        SyllabusManager.getItemSyllabusDataForCollection(
+          draggedItem,
+          collectionId,
+        ).find((a) => a.id === sourceAssignmentId);
+
+      // Optimistic assignment patch; note save continues in background.
+      void SyllabusManager.updateClassAssignment(
         draggedItem,
         collectionId,
         sourceAssignmentId,
-        { classNumber: targetClassNumberValue },
+        {
+          classNumber: targetClassNumberValue,
+          ...(toUnnumbered
+            ? priorityPatchForUnnumbered(collectionId, existingAssignment)
+            : {}),
+        },
         "page",
       );
 
       if (fromFurtherReading && targetClassNumberValue !== undefined) {
-        await persistFurtherReadingOrder([draggedItem.id], {
+        void persistFurtherReadingOrder([draggedItem.id], {
+          removeOnly: true,
+        });
+        setItemOrderVersion((v) => v + 1);
+      } else if (fromFurtherReading && toUnnumbered) {
+        void persistFurtherReadingOrder([draggedItem.id], {
           removeOnly: true,
         });
         setItemOrderVersion((v) => v + 1);
       } else if (toFurtherReading) {
-        await persistFurtherReadingOrder([draggedItem.id], {
+        void persistFurtherReadingOrder([draggedItem.id], {
           targetItemId,
           insertBefore,
         });
@@ -2475,15 +2476,9 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         const newOrder = currentOrderForClass(null).filter(
           (id) => id !== sourceAssignmentId,
         );
-        let targetAssignmentId: string | undefined;
-        if (targetItemId !== undefined) {
-          const targetItem = syllabusItems.find(
-            (item) => item.zoteroItem.id === targetItemId,
-          );
-          targetAssignmentId = targetItem?.assignments.find((a) =>
-            assignmentMatchesTargetClass(a, null),
-          )?.id;
-        }
+        const targetAssignmentId = resolveDropTargetAssignmentId(null, [
+          sourceAssignmentId,
+        ]);
         const targetIndex = targetAssignmentId
           ? newOrder.findIndex((id) => id === targetAssignmentId)
           : -1;
@@ -2496,7 +2491,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         } else {
           newOrder.push(sourceAssignmentId);
         }
-        await SyllabusManager.setClassItemOrder(
+        void SyllabusManager.setClassItemOrder(
           collectionId,
           null,
           newOrder,
@@ -2549,7 +2544,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           ) {
             // Add to end of manual order
             const updatedTargetOrder = [...targetOrder, newAssignment.id];
-            await SyllabusManager.setClassItemOrder(
+            void SyllabusManager.setClassItemOrder(
               collectionId,
               targetClassNumberValue,
               updatedTargetOrder,
@@ -2560,16 +2555,57 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         }
 
         if (fromFurtherReading) {
-          await persistFurtherReadingOrder([draggedItem.id], {
+          void persistFurtherReadingOrder([draggedItem.id], {
             removeOnly: true,
           });
           setItemOrderVersion((v) => v + 1);
         }
 
         ztoolkit.log("Assignment created successfully");
+      } else if (toUnnumbered) {
+        // Further reading / unassigned → Course Information: need a priority.
+        const newAssignmentId = await SyllabusManager.addClassAssignment(
+          draggedItem,
+          collectionId,
+          null,
+          priorityPatchForUnnumbered(collectionId),
+          "page",
+        );
+        if (newAssignmentId) {
+          const newOrder = currentOrderForClass(null).filter(
+            (id) => id !== newAssignmentId,
+          );
+          const targetAssignmentId = resolveDropTargetAssignmentId(null, [
+            newAssignmentId,
+          ]);
+          const targetIndex = targetAssignmentId
+            ? newOrder.findIndex((id) => id === targetAssignmentId)
+            : -1;
+          if (targetIndex !== -1) {
+            if (insertBefore) {
+              newOrder.splice(targetIndex, 0, newAssignmentId);
+            } else {
+              newOrder.splice(targetIndex + 1, 0, newAssignmentId);
+            }
+          } else {
+            newOrder.push(newAssignmentId);
+          }
+          void SyllabusManager.setClassItemOrder(
+            collectionId,
+            null,
+            newOrder,
+            "page",
+          );
+        }
+        if (fromFurtherReading) {
+          void persistFurtherReadingOrder([draggedItem.id], {
+            removeOnly: true,
+          });
+        }
+        setItemOrderVersion((v) => v + 1);
       } else if (toFurtherReading) {
         // Dropping to "further reading" with no assignment - reorder/append only
-        await persistFurtherReadingOrder([draggedItem.id], {
+        void persistFurtherReadingOrder([draggedItem.id], {
           targetItemId,
           insertBefore,
         });
@@ -3026,9 +3062,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       className={twMerge(
         "syllabus-page h-full flex flex-col min-h-0 overflow-hidden in-[.print]:scheme-light relative focus:outline-none",
         `density-${density}`,
-        isLocked &&
-          effectiveLayout === "magazine" &&
-          "syllabus-magazine-page",
+        isLocked && effectiveLayout === "magazine" && "syllabus-magazine-page",
         isAnnotationsLayout && "syllabus-gallery-annotations-page",
         fileDrop.isDraggingFile &&
           osFileDropTarget.kind === "collection" &&
@@ -3293,84 +3327,168 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           />
 
           <GalleryViewportProvider rootRef={syllabusPageRef}>
-            <div
-              className={twMerge(
-                "syllabus-class-groups flex flex-col mb-12",
-                density !== "expanded" ? "gap-10 mt-4" : "gap-12 mt-6",
-              )}
+            <SyllabusPageDnd
+              enabled={syllabusChromeDnd}
+              identifierContainers={syllabusIdentifierContainers}
+              selectedIdentifiers={selectedIdentifiers}
+              syllabusItems={syllabusItems}
+              nextClassNumber={nextClassNumber}
+              onDragActivity={(dragging) => {
+                setIsDragging(dragging);
+                if (!dragging) {
+                  setDropIndicator(null);
+                  setDraggingIdentifiers(new Set());
+                  setDraggingSourceClass(null);
+                }
+              }}
+              onDragStartMeta={({ identifiers, sourceClass }) => {
+                setDraggingIdentifiers(identifiers);
+                setDraggingSourceClass(sourceClass);
+              }}
+              onDropPayload={(payload, target) =>
+                runSyllabusDrop(payload, target)
+              }
             >
-              {isFiltered &&
-                visibleClassGroups.length === 0 &&
-                furtherReadingItems.length === 0 && (
-                  <p className="container-padded text-secondary text-lg">
-                    {getString("gallery-empty-filtered")}
-                  </p>
+              <div
+                className={twMerge(
+                  "syllabus-class-groups flex flex-col mb-12",
+                  density !== "expanded" ? "gap-10 mt-4" : "gap-12 mt-6",
                 )}
+              >
+                {isFiltered &&
+                  visibleClassGroups.length === 0 &&
+                  furtherReadingItems.length === 0 && (
+                    <p className="container-padded text-secondary text-lg">
+                      {getString("gallery-empty-filtered")}
+                    </p>
+                  )}
 
-              {visibleClassGroups.map((group, index) => (
-                <ClassGroupComponent
-                  key={group.classNumber ?? "null"}
-                  classNumber={group.classNumber}
-                  itemAssignments={group.itemAssignments}
-                  collectionId={collectionId}
-                  syllabusMetadata={syllabusMetadata}
-                  onClassTitleSave={setClassTitle}
-                  onClassDescriptionSave={setClassDescription}
-                  onClassReadingDateSave={handleClassReadingDateSave}
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  dropIndicator={dropIndicator}
-                  onDropIndicatorChange={handleDropIndicatorChange}
-                  draggingIdentifiers={draggingIdentifiers}
-                  draggingSourceClass={draggingSourceClass}
-                  density={density}
-                  readerMode={readerMode}
-                  isLocked={isLocked}
-                  layout={effectiveLayout}
-                  magazinePacking={magazinePacking}
-                  colorFilterScope={displayViewKey}
-                  showItemsWithoutAnnotations={showItemsWithoutAnnotations}
-                  annotationStreamOrder={index}
-                  onResetSortOrder={() => setItemOrderVersion((v) => v + 1)}
-                  selectedIdentifiers={selectedIdentifiers}
-                  onIdentifierClick={handleIdentifierClick}
-                  onContextMenu={handleContextMenu}
-                  selectedForDrag={selectedForDrag}
-                  onPriorityChange={handlePriorityChange}
-                  onDelete={handleDelete}
-                  onDuplicate={handleDuplicate}
-                />
-              ))}
-            </div>
+                {visibleClassGroups.map((group, index) => (
+                  <ClassGroupComponent
+                    key={group.classNumber ?? "null"}
+                    classNumber={group.classNumber}
+                    itemAssignments={group.itemAssignments}
+                    collectionId={collectionId}
+                    syllabusMetadata={syllabusMetadata}
+                    onClassTitleSave={setClassTitle}
+                    onClassDescriptionSave={setClassDescription}
+                    onClassReadingDateSave={handleClassReadingDateSave}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    dropIndicator={dropIndicator}
+                    onDropIndicatorChange={handleDropIndicatorChange}
+                    draggingIdentifiers={draggingIdentifiers}
+                    draggingSourceClass={draggingSourceClass}
+                    density={density}
+                    readerMode={readerMode}
+                    isLocked={isLocked}
+                    layout={effectiveLayout}
+                    magazinePacking={magazinePacking}
+                    colorFilterScope={displayViewKey}
+                    showItemsWithoutAnnotations={showItemsWithoutAnnotations}
+                    annotationStreamOrder={index}
+                    onResetSortOrder={() => setItemOrderVersion((v) => v + 1)}
+                    selectedIdentifiers={selectedIdentifiers}
+                    onIdentifierClick={handleIdentifierClick}
+                    onContextMenu={handleContextMenu}
+                    selectedForDrag={selectedForDrag}
+                    onPriorityChange={handlePriorityChange}
+                    onDelete={handleDelete}
+                    onDuplicate={handleDuplicate}
+                  />
+                ))}
+              </div>
 
-            <div className="container-padded">
-              {(() => {
-                const { singularCapitalized } =
-                  SyllabusManager.getNomenclatureFormatted(collectionId);
-                const hasNoClasses = classGroups.length === 0;
+              <div className="container-padded">
+                {(() => {
+                  const { singularCapitalized } =
+                    SyllabusManager.getNomenclatureFormatted(collectionId);
+                  const hasNoClasses = classGroups.length === 0;
 
-                const addClassLabel = getString("page-add-class", {
-                  args: {
-                    nomenclature: singularCapitalized,
-                    number: nextClassNumber,
-                  },
-                });
+                  const addClassLabel = getString("page-add-class", {
+                    args: {
+                      nomenclature: singularCapitalized,
+                      number: nextClassNumber,
+                    },
+                  });
 
-                return (
-                  <>
-                    {!isLocked && hasNoClasses && (
-                      <div
-                        className="in-[.print]:hidden mb-6 rounded-lg border border-quinary bg-quinary/40 p-6 space-y-3"
-                        data-tour="syllabus-empty-state"
-                      >
-                        <div className="text-xl font-semibold text-primary">
-                          {getString("userGuide-empty-title")}
+                  return (
+                    <>
+                      {!isLocked && hasNoClasses && (
+                        <div
+                          className="in-[.print]:hidden mb-6 rounded-lg border border-quinary bg-quinary/40 p-6 space-y-3"
+                          data-tour="syllabus-empty-state"
+                        >
+                          <div className="text-xl font-semibold text-primary">
+                            {getString("userGuide-empty-title")}
+                          </div>
+                          <p className="text-secondary text-base m-0">
+                            {getString("userGuide-empty-desc")}
+                          </p>
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            <button
+                              className="syllabus-create-class-button"
+                              data-tour="syllabus-add-class"
+                              onClick={addClass}
+                              title={addClassLabel}
+                            >
+                              {addClassLabel}
+                            </button>
+                            <button
+                              type="button"
+                              className="px-3 py-1.5 rounded-md border border-quinary bg-background text-primary cursor-pointer hover:bg-quinary"
+                              onClick={() => {
+                                const win = Zotero.getMainWindow();
+                                if (win) {
+                                  void showUserGuide(win, true);
+                                }
+                              }}
+                            >
+                              {getString("userGuide-empty-tour")}
+                            </button>
+                          </div>
                         </div>
-                        <p className="text-secondary text-base m-0">
-                          {getString("userGuide-empty-desc")}
-                        </p>
-                        <div className="flex flex-wrap gap-2 pt-1">
+                      )}
+
+                      {!isLocked &&
+                        (isDragging || fileDrop.isDraggingFile) &&
+                        density === "expanded" && (
+                          <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
+                            <div className="syllabus-class-header-container">
+                              <div className="syllabus-class-header">
+                                {getString("page-add-to-class", {
+                                  args: {
+                                    nomenclature: singularCapitalized,
+                                    number: nextClassNumber,
+                                  },
+                                })}
+                              </div>
+                            </div>
+                            <SyllabusDndZone
+                              group={syllabusDndGroup(nextClassNumber)}
+                              empty
+                              className="syllabus-class-items syllabus-add-class-dropzone-items"
+                              data-syllabus-file-drop="class"
+                              data-syllabus-class-number={nextClassNumber}
+                              onDrop={(e) => handleDrop(e, nextClassNumber)}
+                              onDragOver={handleDragOver}
+                              onDragLeave={handleDragLeave}
+                            >
+                              <div className="syllabus-add-class-dropzone-placeholder bg-quinary rounded-md p-16 text-secondary border-2 border-dashed border-secondary">
+                                {getString("page-drop-create-class", {
+                                  args: {
+                                    nomenclature: singularCapitalized,
+                                    number: nextClassNumber,
+                                  },
+                                })}
+                              </div>
+                            </SyllabusDndZone>
+                          </div>
+                        )}
+
+                      {!isLocked && !hasNoClasses && (
+                        <div className="syllabus-create-class-control in-[.print]:hidden">
                           <button
                             className="syllabus-create-class-button"
                             data-tour="syllabus-add-class"
@@ -3379,358 +3497,188 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                           >
                             {addClassLabel}
                           </button>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+
+              {(furtherReadingItems.length > 0 || !isLocked) && (
+                <div
+                  id="toc-further-reading"
+                  className={twMerge(
+                    "syllabus-class-group group/class in-[.print]:scheme-light",
+                    furtherReadingItems.length === 0 && "in-[.print]:hidden",
+                  )}
+                  data-tour="syllabus-further-reading"
+                  data-syllabus-file-drop={
+                    isLocked ? undefined : "further-reading"
+                  }
+                >
+                  <div
+                    className={twMerge(
+                      "container-padded flex flex-row items-baseline gap-2 font-semibold",
+                      density !== "expanded"
+                        ? "text-xl mt-8 mb-2"
+                        : "text-2xl mt-12 mb-4",
+                    )}
+                  >
+                    {getString("further-reading-heading")}
+                    {!isLocked && (
+                      <div className="ml-auto shrink-0 inline-flex items-center gap-1.5 in-[.print]:hidden font-normal text-sm text-secondary">
+                        {furtherReadingHasManualOrder && (
                           <button
                             type="button"
-                            className="px-3 py-1.5 rounded-md border border-quinary bg-background text-primary cursor-pointer hover:bg-quinary"
-                            onClick={() => {
-                              const win = Zotero.getMainWindow();
-                              if (win) {
-                                void showUserGuide(win, true);
-                              }
-                            }}
-                          >
-                            {getString("userGuide-empty-tour")}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {!isLocked &&
-                      (isDragging || fileDrop.isDraggingFile) &&
-                      density === "expanded" && (
-                        <div className="syllabus-class-group syllabus-add-class-dropzone in-[.print]:hidden">
-                          <div className="syllabus-class-header-container">
-                            <div className="syllabus-class-header">
-                              {getString("page-add-to-class", {
-                                args: {
-                                  nomenclature: singularCapitalized,
-                                  number: nextClassNumber,
-                                },
-                              })}
-                            </div>
-                          </div>
-                          <div
-                            className="syllabus-class-items syllabus-add-class-dropzone-items"
-                            data-syllabus-file-drop="class"
-                            data-syllabus-class-number={nextClassNumber}
-                            onDrop={(e) => handleDrop(e, nextClassNumber)}
-                            onDragOver={handleDragOver}
-                            onDragLeave={handleDragLeave}
-                          >
-                            <div className="syllabus-add-class-dropzone-placeholder bg-quinary rounded-md p-16 text-secondary border-2 border-dashed border-secondary">
-                              {getString("page-drop-create-class", {
-                                args: {
-                                  nomenclature: singularCapitalized,
-                                  number: nextClassNumber,
-                                },
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                    {!isLocked && !hasNoClasses && (
-                      <div className="syllabus-create-class-control in-[.print]:hidden">
-                        <button
-                          className="syllabus-create-class-button"
-                          data-tour="syllabus-add-class"
-                          onClick={addClass}
-                          title={addClassLabel}
-                        >
-                          {addClassLabel}
-                        </button>
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
-
-            {(furtherReadingItems.length > 0 || !isLocked) && (
-              <div
-                id="toc-further-reading"
-                className={twMerge(
-                  "syllabus-class-group group/class in-[.print]:scheme-light",
-                  furtherReadingItems.length === 0 && "in-[.print]:hidden",
-                )}
-                data-tour="syllabus-further-reading"
-                data-syllabus-file-drop={
-                  isLocked ? undefined : "further-reading"
-                }
-              >
-                <div
-                  className={twMerge(
-                    "container-padded flex flex-row items-baseline gap-2 font-semibold",
-                    density !== "expanded"
-                      ? "text-xl mt-8 mb-2"
-                      : "text-2xl mt-12 mb-4",
-                  )}
-                >
-                  {getString("further-reading-heading")}
-                  {!isLocked && (
-                    <div className="ml-auto shrink-0 inline-flex items-center gap-1.5 in-[.print]:hidden font-normal text-sm text-secondary">
-                      {furtherReadingHasManualOrder && (
-                        <button
-                          type="button"
-                          className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
-                          onClick={async () => {
-                            await SyllabusManager.setFurtherReadingOrder(
-                              collectionId,
-                              [],
-                              "page",
-                            );
-                            setItemOrderVersion((v) => v + 1);
-                          }}
-                          title={getString("class-reset-sort")}
-                          aria-label={getString("class-reset-sort")}
-                        >
-                          <div className="text-lg text-center">⇅</div>
-                        </button>
-                      )}
-                      <label className="inline-flex items-center gap-1.5">
-                        <ArrowUpDown
-                          size={12}
-                          strokeWidth={2}
-                          aria-hidden="true"
-                        />
-                        <span>{getString("sort-label")}</span>
-                        <GallerySaveGlobalButton
-                          globalSetting={furtherReadingSortGlobal}
-                        />
-                        <select
-                          value={furtherReadingSortBy}
-                          onChange={async (e) => {
-                            const next = e.currentTarget
-                              .value as FurtherReadingSortBy;
-                            if (furtherReadingHasManualOrder) {
+                            className="bg-transparent border-none rounded transition-all duration-200 cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex flex-row items-center justify-center w-8 h-8"
+                            onClick={async () => {
                               await SyllabusManager.setFurtherReadingOrder(
                                 collectionId,
                                 [],
                                 "page",
                               );
                               setItemOrderVersion((v) => v + 1);
-                            }
-                            setFurtherReadingSortBy(next);
-                          }}
-                          aria-label={getString("further-reading-sort-aria")}
-                          className="text-sm text-primary bg-background border border-quinary rounded px-1.5 py-0.5 cursor-pointer"
-                        >
-                          <option value="title">
-                            {getString("sort-by-title")}
-                          </option>
-                          <option value="creator">
-                            {getString("sort-by-creator")}
-                          </option>
-                          <option value="date">
-                            {getString("sort-by-date")}
-                          </option>
-                        </select>
-                      </label>
-                    </div>
-                  )}
-                </div>
-                {density === "expanded" && (
-                  <p className="container-padded text-secondary text-lg">
-                    {getString("further-reading-empty-desc")}
-                  </p>
-                )}
-                <div
-                  className={
-                    isLocked &&
-                    effectiveLayout !== "card" &&
-                    effectiveLayout !== "annotations" &&
-                    effectiveLayout !== "magazine"
-                      ? "w-full min-w-0 max-w-full"
-                      : "container-padded"
-                  }
-                >
-                  <div
-                    className={twMerge(
-                      "syllabus-class-items box-border! rounded-lg",
-                      density !== "expanded"
-                        ? "space-y-2 p-1 -m-1"
-                        : "space-y-4 p-2 -m-2",
-                      "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:outline-accent-blue! data-[dropzone-active='true']:text-accent-blue! transition-all duration-200 outline-transparent outline-2! outline-dashed!",
-                    )}
-                    onDrop={
-                      isLocked
-                        ? undefined
-                        : (e) => {
-                            if (
-                              dropIndicator?.zone === "further-reading" &&
-                              dropIndicator.identifier
-                            ) {
-                              const targetById = furtherReadingItems.find(
-                                ({ item, assignment }) => {
-                                  const id = assignment?.id
-                                    ? `assignment:${assignment.id}`
-                                    : `item:${item.id}`;
-                                  return id === dropIndicator.identifier;
-                                },
-                              );
-                              if (targetById) {
-                                void handleDrop(
-                                  e,
-                                  null,
-                                  targetById.item.id,
-                                  dropIndicator.edge === "before",
-                                  "further-reading",
+                            }}
+                            title={getString("class-reset-sort")}
+                            aria-label={getString("class-reset-sort")}
+                          >
+                            <div className="text-lg text-center">⇅</div>
+                          </button>
+                        )}
+                        <label className="inline-flex items-center gap-1.5">
+                          <ArrowUpDown
+                            size={12}
+                            strokeWidth={2}
+                            aria-hidden="true"
+                          />
+                          <span>{getString("sort-label")}</span>
+                          <GallerySaveGlobalButton
+                            globalSetting={furtherReadingSortGlobal}
+                          />
+                          <select
+                            value={furtherReadingSortBy}
+                            onChange={async (e) => {
+                              const next = e.currentTarget
+                                .value as FurtherReadingSortBy;
+                              if (furtherReadingHasManualOrder) {
+                                await SyllabusManager.setFurtherReadingOrder(
+                                  collectionId,
+                                  [],
+                                  "page",
                                 );
-                                return;
+                                setItemOrderVersion((v) => v + 1);
                               }
-                            }
-                            void handleDrop(
-                              e,
-                              null,
-                              undefined,
-                              undefined,
-                              "further-reading",
-                            );
-                          }
-                    }
-                    onDragOver={
-                      isLocked
-                        ? undefined
-                        : (e) => {
-                            handleDragOver(e);
-                            if (isOsFileDrag(e.dataTransfer)) {
-                              return;
-                            }
-                            const cardsRoot = e.currentTarget;
-                            const cards = Array.from(
-                              cardsRoot.querySelectorAll(
-                                ":scope > .syllabus-item-card",
-                              ),
-                            ) as HTMLElement[];
-                            if (cards.length === 0) {
-                              handleDropIndicatorChange(null);
-                              return;
-                            }
-                            for (const card of cards) {
-                              const identifier =
-                                card.dataset.syllabusIdentifier;
-                              if (!identifier) {
-                                continue;
-                              }
-                              const rect = card.getBoundingClientRect();
-                              if (e.clientY < rect.top + rect.height / 2) {
-                                handleDropIndicatorChange({
-                                  classNumber: null,
-                                  zone: "further-reading",
-                                  identifier,
-                                  edge: "before",
-                                });
-                                return;
-                              }
-                            }
-                            const last = cards[cards.length - 1];
-                            const identifier = last.dataset.syllabusIdentifier;
-                            if (identifier) {
-                              handleDropIndicatorChange({
-                                classNumber: null,
-                                zone: "further-reading",
-                                identifier,
-                                edge: "after",
-                              });
-                            }
-                          }
-                    }
-                    onDragLeave={
-                      isLocked
-                        ? undefined
-                        : (e) => {
-                            handleDragLeave(e);
-                            const rect =
-                              e.currentTarget.getBoundingClientRect();
-                            const { clientX: x, clientY: y } = e;
-                            if (
-                              x < rect.left ||
-                              x > rect.right ||
-                              y < rect.top ||
-                              y > rect.bottom
-                            ) {
-                              handleDropIndicatorChange(null);
-                            }
-                          }
+                              setFurtherReadingSortBy(next);
+                            }}
+                            aria-label={getString("further-reading-sort-aria")}
+                            className="text-sm text-primary bg-background border border-quinary rounded px-1.5 py-0.5 cursor-pointer"
+                          >
+                            <option value="title">
+                              {getString("sort-by-title")}
+                            </option>
+                            <option value="creator">
+                              {getString("sort-by-creator")}
+                            </option>
+                            <option value="date">
+                              {getString("sort-by-date")}
+                            </option>
+                          </select>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                  {density === "expanded" && (
+                    <p className="container-padded text-secondary text-lg">
+                      {getString("further-reading-empty-desc")}
+                    </p>
+                  )}
+                  <div
+                    className={
+                      isLocked &&
+                      effectiveLayout !== "card" &&
+                      effectiveLayout !== "annotations" &&
+                      effectiveLayout !== "magazine"
+                        ? "w-full min-w-0 max-w-full"
+                        : "container-padded"
                     }
                   >
-                    {isLocked && effectiveLayout !== "card" ? (
-                      <ReadingItemsLayout
-                        layout={effectiveLayout}
-                        density={density}
-                        readerMode={readerMode}
+                    <SyllabusDndZone
+                      group={syllabusDndGroup(null, "further-reading")}
+                      empty={furtherReadingItems.length === 0}
+                      className={twMerge(
+                        "syllabus-class-items box-border! rounded-lg",
+                        syllabusChromeDnd
+                          ? twMerge(
+                              "syllabus-dnd-item-list",
+                              density !== "expanded" ? "p-1 -m-1" : "p-2 -m-2",
+                            )
+                          : density !== "expanded"
+                            ? "space-y-2 p-1 -m-1"
+                            : "space-y-4 p-2 -m-2",
+                        "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:outline-accent-blue! data-[dropzone-active='true']:text-accent-blue! transition-all duration-200 outline-transparent outline-2! outline-dashed!",
+                      )}
+                      data-density={
+                        syllabusChromeDnd && density !== "expanded"
+                          ? "compact"
+                          : undefined
+                      }
+                      onDrop={
                         isLocked
-                        template="strip"
-                        magazinePacking={magazinePacking}
-                        colorFilterScope={displayViewKey}
-                        showItemsWithoutAnnotations={
-                          showItemsWithoutAnnotations
-                        }
-                        annotationStreamOrder={visibleClassGroups.length}
-                        rows={furtherReadingItems.map(
-                          ({ item, assignment }) => ({
-                            key: `further-${item.id}-${assignment?.id || "item"}`,
-                            item,
-                            collectionId,
-                            assignment: assignment || {
-                              id: `further-${item.id}`,
-                            },
-                            slim: true,
-                          }),
-                        )}
-                      />
-                    ) : (
-                      furtherReadingItems.map(({ item, assignment }) => {
-                        const cardIdentifier = assignment?.id
-                          ? `assignment:${assignment.id}`
-                          : `item:${item.id}`;
-                        const visibleEdge =
-                          dropIndicator?.zone === "further-reading" &&
-                          dropIndicator.identifier === cardIdentifier
-                            ? dropIndicator.edge
-                            : null;
-                        return (
-                          <SyllabusItemCard
-                            key={item.id}
-                            item={item}
-                            collectionId={collectionId}
-                            classNumber={undefined}
-                            assignment={assignment}
-                            slim={true}
-                            density={density}
-                            readerMode={readerMode}
-                            isLocked={isLocked}
-                            isFurtherReading={true}
-                            selectedIdentifiers={selectedIdentifiers}
-                            onIdentifierClick={handleIdentifierClick}
-                            onContextMenu={handleContextMenu}
-                            selectedForDrag={selectedForDrag}
-                            onPriorityChange={handlePriorityChange}
-                            onDelete={handleDelete}
-                            onDuplicate={handleDuplicate}
-                            onDrop={(e, insertBefore) =>
-                              handleDrop(
+                          ? undefined
+                          : (e) => {
+                              if (
+                                dropIndicator?.zone === "further-reading" &&
+                                dropIndicator.identifier
+                              ) {
+                                const targetById = furtherReadingItems.find(
+                                  ({ item, assignment }) => {
+                                    const id = assignment?.id
+                                      ? `assignment:${assignment.id}`
+                                      : `item:${item.id}`;
+                                    return id === dropIndicator.identifier;
+                                  },
+                                );
+                                if (targetById) {
+                                  void handleDrop(
+                                    e,
+                                    null,
+                                    targetById.item.id,
+                                    dropIndicator.edge === "before",
+                                    "further-reading",
+                                  );
+                                  return;
+                                }
+                              }
+                              void handleDrop(
                                 e,
                                 null,
-                                item.id,
-                                insertBefore,
+                                undefined,
+                                undefined,
                                 "further-reading",
-                              )
+                              );
                             }
-                            onDragOver={(e) => {
+                      }
+                      onDragOver={
+                        isLocked
+                          ? undefined
+                          : (e) => {
                               handleDragOver(e);
-                              if (isOsFileDrag(e.dataTransfer)) {
+                              if (
+                                syllabusChromeDnd ||
+                                isOsFileDrag(e.dataTransfer)
+                              ) {
                                 return;
                               }
-                              const root = e.currentTarget.parentElement;
-                              if (!(root instanceof HTMLElement)) {
-                                return;
-                              }
+                              const cardsRoot = e.currentTarget;
                               const cards = Array.from(
-                                root.querySelectorAll(
-                                  ":scope > .syllabus-item-card",
+                                cardsRoot.querySelectorAll(
+                                  ":scope > .syllabus-dnd-sortable > .syllabus-item-card, :scope > .syllabus-item-card",
                                 ),
                               ) as HTMLElement[];
+                              if (cards.length === 0) {
+                                handleDropIndicatorChange(null);
+                                return;
+                              }
                               for (const card of cards) {
                                 const identifier =
                                   card.dataset.syllabusIdentifier;
@@ -3750,7 +3698,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                               }
                               const last = cards[cards.length - 1];
                               const identifier =
-                                last?.dataset.syllabusIdentifier;
+                                last.dataset.syllabusIdentifier;
                               if (identifier) {
                                 handleDropIndicatorChange({
                                   classNumber: null,
@@ -3759,56 +3707,214 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                                   edge: "after",
                                 });
                               }
-                            }}
-                            dropEdge={visibleEdge}
-                            isZoteroSelected={
-                              selectedItemIds?.includes(item.id) || false
                             }
-                            isIdentifierSelected={selectedIdentifiers.has(
-                              cardIdentifier,
-                            )}
-                          />
-                        );
-                      })
-                    )}
-                    {!isLocked && (
-                      <AddReadingButton
-                        hoverReveal
-                        title={getString("further-reading-add-readings-aria")}
-                        ariaLabel={getString(
-                          "further-reading-add-readings-aria",
-                        )}
-                        onClick={() => {
-                          void pickAndAddItemsToFurtherReading(
-                            collectionId,
-                          ).catch((err) => {
-                            ztoolkit.log(
-                              "Error adding readings to further reading:",
-                              err,
-                            );
-                          });
-                        }}
-                      />
-                    )}
+                      }
+                      onDragLeave={
+                        isLocked
+                          ? undefined
+                          : (e) => {
+                              handleDragLeave(e);
+                              const rect =
+                                e.currentTarget.getBoundingClientRect();
+                              const { clientX: x, clientY: y } = e;
+                              if (
+                                x < rect.left ||
+                                x > rect.right ||
+                                y < rect.top ||
+                                y > rect.bottom
+                              ) {
+                                handleDropIndicatorChange(null);
+                              }
+                            }
+                      }
+                    >
+                      {isLocked && effectiveLayout !== "card" ? (
+                        <ReadingItemsLayout
+                          layout={effectiveLayout}
+                          density={density}
+                          readerMode={readerMode}
+                          isLocked
+                          template="strip"
+                          magazinePacking={magazinePacking}
+                          colorFilterScope={displayViewKey}
+                          showItemsWithoutAnnotations={
+                            showItemsWithoutAnnotations
+                          }
+                          annotationStreamOrder={visibleClassGroups.length}
+                          rows={furtherReadingItems.map(
+                            ({ item, assignment }) => ({
+                              key: `further-${item.id}-${assignment?.id || "item"}`,
+                              item,
+                              collectionId,
+                              assignment: assignment || {
+                                id: `further-${item.id}`,
+                              },
+                              slim: true,
+                            }),
+                          )}
+                        />
+                      ) : (
+                        <div
+                          className={
+                            syllabusChromeDnd
+                              ? "syllabus-personal-order-section"
+                              : undefined
+                          }
+                        >
+                          {furtherReadingItems.map(
+                            ({ item, assignment }, index) => {
+                              const cardIdentifier = assignment?.id
+                                ? `assignment:${assignment.id}`
+                                : `item:${item.id}`;
+                              const visibleEdge = syllabusChromeDnd
+                                ? null
+                                : dropIndicator?.zone === "further-reading" &&
+                                    dropIndicator.identifier === cardIdentifier
+                                  ? dropIndicator.edge
+                                  : null;
+                              return (
+                                <SyllabusDndSortable
+                                  key={`${item.id}-${assignment?.id ?? "item"}`}
+                                  identifier={cardIdentifier}
+                                  index={index}
+                                  group={syllabusDndGroup(
+                                    null,
+                                    "further-reading",
+                                  )}
+                                  draggingIdentifiers={draggingIdentifiers}
+                                >
+                                  <SyllabusItemCard
+                                    item={item}
+                                    collectionId={collectionId}
+                                    classNumber={undefined}
+                                    assignment={assignment}
+                                    slim={true}
+                                    density={density}
+                                    readerMode={readerMode}
+                                    isLocked={isLocked}
+                                    isFurtherReading={true}
+                                    selectedIdentifiers={selectedIdentifiers}
+                                    onIdentifierClick={handleIdentifierClick}
+                                    onContextMenu={handleContextMenu}
+                                    selectedForDrag={selectedForDrag}
+                                    onPriorityChange={handlePriorityChange}
+                                    onDelete={handleDelete}
+                                    onDuplicate={handleDuplicate}
+                                    onDrop={(e, insertBefore) =>
+                                      handleDrop(
+                                        e,
+                                        null,
+                                        item.id,
+                                        insertBefore,
+                                        "further-reading",
+                                      )
+                                    }
+                                    onDragOver={(e) => {
+                                      handleDragOver(e);
+                                      if (
+                                        syllabusChromeDnd ||
+                                        isOsFileDrag(e.dataTransfer)
+                                      ) {
+                                        return;
+                                      }
+                                      const root =
+                                        e.currentTarget.parentElement
+                                          ?.parentElement;
+                                      if (!(root instanceof HTMLElement)) {
+                                        return;
+                                      }
+                                      const cards = Array.from(
+                                        root.querySelectorAll(
+                                          ":scope > .syllabus-personal-order-tile > .syllabus-item-card, :scope > .syllabus-item-card",
+                                        ),
+                                      ) as HTMLElement[];
+                                      for (const card of cards) {
+                                        const identifier =
+                                          card.dataset.syllabusIdentifier;
+                                        if (!identifier) {
+                                          continue;
+                                        }
+                                        const rect =
+                                          card.getBoundingClientRect();
+                                        if (
+                                          e.clientY <
+                                          rect.top + rect.height / 2
+                                        ) {
+                                          handleDropIndicatorChange({
+                                            classNumber: null,
+                                            zone: "further-reading",
+                                            identifier,
+                                            edge: "before",
+                                          });
+                                          return;
+                                        }
+                                      }
+                                      const last = cards[cards.length - 1];
+                                      const identifier =
+                                        last?.dataset.syllabusIdentifier;
+                                      if (identifier) {
+                                        handleDropIndicatorChange({
+                                          classNumber: null,
+                                          zone: "further-reading",
+                                          identifier,
+                                          edge: "after",
+                                        });
+                                      }
+                                    }}
+                                    dropEdge={visibleEdge}
+                                    isZoteroSelected={
+                                      selectedItemIds?.includes(item.id) ||
+                                      false
+                                    }
+                                    isIdentifierSelected={selectedIdentifiers.has(
+                                      cardIdentifier,
+                                    )}
+                                  />
+                                </SyllabusDndSortable>
+                              );
+                            },
+                          )}
+                        </div>
+                      )}
+                      {!isLocked && (
+                        <AddReadingButton
+                          hoverReveal
+                          title={getString("further-reading-add-readings-aria")}
+                          ariaLabel={getString(
+                            "further-reading-add-readings-aria",
+                          )}
+                          onClick={() => {
+                            void pickAndAddItemsToFurtherReading(
+                              collectionId,
+                            ).catch((err) => {
+                              ztoolkit.log(
+                                "Error adding readings to further reading:",
+                                err,
+                              );
+                            });
+                          }}
+                        />
+                      )}
+                    </SyllabusDndZone>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {getPref("debugMode") && (
-              <div className="container-padded text-secondary text-sm">
-                <h3>Debug info</h3>
-                <pre>
-                  {JSON.stringify(
-                    {
-                      syllabusMetadata,
-                    },
-                    null,
-                    2,
-                  )}
-                </pre>
-              </div>
-            )}
+              {getPref("debugMode") && (
+                <div className="container-padded text-secondary text-sm">
+                  <h3>Debug info</h3>
+                  <pre>
+                    {JSON.stringify(
+                      {
+                        syllabusMetadata,
+                      },
+                      null,
+                      2,
+                    )}
+                  </pre>
+                </div>
+              )}
+            </SyllabusPageDnd>
           </GalleryViewportProvider>
         </div>
       </div>

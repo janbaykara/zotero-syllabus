@@ -8,8 +8,8 @@
  * `DndProvider dropIndicator={...}`.
  */
 
-import { CorePlugin } from "@dnd-kit/abstract";
-import { isChromeSortable } from "./entities";
+import { CorePlugin, type UniqueIdentifier } from "@dnd-kit/abstract";
+import { isChromeSortable, type ChromeSortable } from "./entities";
 import { rectOf } from "./dom";
 import type { ZoteroDndManager } from "./context";
 import {
@@ -33,6 +33,45 @@ function resolveAxis(
   return axis ?? "vertical";
 }
 
+function elementOfSortable(sortable: ChromeSortable): Element | undefined {
+  return (
+    sortable.element ??
+    (sortable.droppable as { element?: Element }).element ??
+    (sortable.droppable.data as { element?: Element } | undefined)?.element
+  );
+}
+
+/**
+ * Next sortable in the same group by index (for collapsing “after N” →
+ * “before N+1” so a gap never shows two blue lines).
+ */
+function nextSortableInGroup(
+  manager: ZoteroDndManager,
+  target: { id: UniqueIdentifier; sortable: ChromeSortable },
+): ChromeSortable | null {
+  const group = target.sortable.group;
+  const index = target.sortable.index;
+  let best: ChromeSortable | null = null;
+  let bestIndex = Number.POSITIVE_INFINITY;
+  for (const droppable of manager.registry.droppables) {
+    if (!isChromeSortable(droppable)) {
+      continue;
+    }
+    if (droppable.id === target.id) {
+      continue;
+    }
+    const { sortable } = droppable;
+    if (sortable.group !== group) {
+      continue;
+    }
+    if (sortable.index > index && sortable.index < bestIndex) {
+      bestIndex = sortable.index;
+      best = sortable;
+    }
+  }
+  return best;
+}
+
 export class DropIndicatorPlugin extends CorePlugin<
   ZoteroDndManager,
   DropIndicatorOptions
@@ -53,6 +92,15 @@ export class DropIndicatorPlugin extends CorePlugin<
     this.#afterClass = options.afterClass ?? DROP_INDICATOR_AFTER_CLASS;
 
     const clearPaint = () => {
+      for (const root of document.querySelectorAll(
+        ".syllabus-personal-order-dnd, .syllabus-page-dnd",
+      )) {
+        for (const node of root.querySelectorAll(
+          `.${this.#beforeClass}, .${this.#afterClass}`,
+        )) {
+          node.classList.remove(this.#beforeClass, this.#afterClass);
+        }
+      }
       if (this.#painted) {
         this.#painted.classList.remove(this.#beforeClass, this.#afterClass);
         this.#painted = null;
@@ -65,7 +113,20 @@ export class DropIndicatorPlugin extends CorePlugin<
     };
 
     const paint = (el: Element, edge: "before" | "after") => {
-      if (this.#painted && this.#painted !== el) {
+      // Remounts mid-drag can orphan the previous #painted node with its
+      // classes still set — clear every indicator in the nearest DnD root.
+      const root =
+        el.closest(".syllabus-personal-order-dnd, .syllabus-page-dnd") ??
+        el.parentElement;
+      if (root) {
+        for (const node of root.querySelectorAll(
+          `.${this.#beforeClass}, .${this.#afterClass}`,
+        )) {
+          if (node !== el) {
+            node.classList.remove(this.#beforeClass, this.#afterClass);
+          }
+        }
+      } else if (this.#painted && this.#painted !== el) {
         this.#painted.classList.remove(this.#beforeClass, this.#afterClass);
       }
       el.classList.toggle(this.#beforeClass, edge === "before");
@@ -92,10 +153,7 @@ export class DropIndicatorPlugin extends CorePlugin<
         return;
       }
       const sortable = target.sortable;
-      const el =
-        sortable.element ??
-        (target as { element?: Element }).element ??
-        (target as { data?: { element?: Element } }).data?.element;
+      const el = elementOfSortable(sortable);
       if (!el) {
         clearPaint();
         this.indicator = null;
@@ -103,9 +161,25 @@ export class DropIndicatorPlugin extends CorePlugin<
       }
       const axis = resolveAxis(options.axis, el);
       const rect = rectOf(el);
-      const edge = dropEdgeForPointer(position.current, rect, axis);
-      this.indicator = { targetId: target.id, edge };
-      paint(el, edge);
+      let edge = dropEdgeForPointer(position.current, rect, axis);
+      let paintEl = el;
+      let targetId = target.id;
+      // “After this” and “before next” are the same gap. Always paint on the
+      // later host as `before` so CSS half-gap math can’t draw two lines.
+      if (edge === "after") {
+        const next = nextSortableInGroup(manager, {
+          id: target.id,
+          sortable,
+        });
+        const nextEl = next ? elementOfSortable(next) : undefined;
+        if (next && nextEl) {
+          edge = "before";
+          paintEl = nextEl;
+          targetId = next.id;
+        }
+      }
+      this.indicator = { targetId, edge };
+      paint(paintEl, edge);
     };
 
     const stopOver = manager.monitor.addEventListener("dragover", sync);

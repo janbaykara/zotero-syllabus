@@ -139,6 +139,23 @@ export async function addItemsToClass(
 }
 
 /**
+ * Metadata so a drop into the unnumbered (Course Information) section does not
+ * become classless Further reading. Keeps an existing priority/instruction;
+ * otherwise uses the collection’s first priority (same as addItemsToUnnumbered).
+ */
+export function priorityPatchForUnnumbered(
+  collectionId: number,
+  existing?: { priority?: string; classInstruction?: string },
+): { priority?: string } {
+  if (existing?.priority || existing?.classInstruction) {
+    return {};
+  }
+  const priority =
+    SyllabusManager.getPrioritiesForCollection(collectionId)[0]?.id;
+  return priority ? { priority } : {};
+}
+
+/**
  * Add items to the unnumbered (Course Information) top section.
  * Uses the collection’s first priority so readings stay out of Further reading.
  */
@@ -151,8 +168,7 @@ export async function addItemsToUnnumbered(
     return;
   }
 
-  const priorities = SyllabusManager.getPrioritiesForCollection(collectionId);
-  const priority = priorities[0]?.id;
+  const { priority } = priorityPatchForUnnumbered(collectionId);
   if (!priority) {
     return;
   }

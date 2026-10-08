@@ -143,6 +143,9 @@ import {
   countAssignmentsWithPriority,
   deletePriorityAndRemapAssignments,
   replacePrioritiesAndRemapAssignments,
+  applyClassItemOrderOptimistic,
+  applyFurtherReadingOrderOptimistic,
+  applyItemAssignmentsOptimistic,
   SYLLABUS_NOTE_TAG,
 } from "./syllabusNote";
 import { getItemTitle, readItemNote } from "../utils/items";
@@ -3213,6 +3216,8 @@ export class SyllabusManager {
       }
       return;
     }
+    // Paint assignment moves immediately; note serialize/save can take ~1s.
+    applyItemAssignmentsOptimistic(collectionId, item.key, assignments);
     await setItemAssignmentsInDocument(collectionId, item.key, assignments);
     this.onItemUpdate(item, source);
   }
@@ -3635,6 +3640,8 @@ export class SyllabusManager {
     itemIds: string[],
     source: "page" | "item-pane" = "page",
   ): Promise<void> {
+    // Paint the new order immediately; note serialize/save can take ~1s.
+    applyClassItemOrderOptimistic(collectionId, classNumber, itemIds);
     if (classNumber === null) {
       await mutateCollectionDocument(
         collectionId,
@@ -3676,6 +3683,7 @@ export class SyllabusManager {
     itemKeys: string[],
     source: "page" | "item-pane" = "page",
   ): Promise<void> {
+    applyFurtherReadingOrderOptimistic(collectionId, itemKeys);
     await mutateCollectionDocument(
       collectionId,
       (document) => ({

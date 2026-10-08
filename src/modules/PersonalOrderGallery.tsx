@@ -33,7 +33,6 @@ import {
   resolveDragIds,
   setCoDragElements,
   useDroppable,
-  useSortable,
   type DropIndicatorOptions,
   type DndProviderProps,
 } from "../zotero-dnd";
@@ -43,6 +42,7 @@ import {
   setPersonalReadingOrder,
   splitPersonalReadingOrder,
 } from "./personalReadingOrder";
+import { SortableDndTile } from "./SortableDndTile";
 
 type Zone = "ordered" | "rest";
 
@@ -115,33 +115,25 @@ function SortablePersonalTile({
   isMultiDragging?: boolean;
 }) {
   const itemKey = item.key;
-  const { ref, isDragSource, isDragging } = useSortable({
-    id: itemKey,
-    index,
-    group: zone,
-    type: ITEM_TYPE,
-    accept: ITEM_TYPE,
-    // Unordered tiles drag out only — the rest zone is the sole drop target.
-    droppableDisabled: zone === "rest",
-  });
-
-  const showDragStyle = isDragSource || isMultiDragging;
-
   return (
-    <div
-      ref={ref}
-      className={twMerge(
-        "syllabus-personal-order-tile cursor-grab",
-        showDragStyle && "is-dragging opacity-40 cursor-grabbing",
-        (isDragging || isMultiDragging) && "z-20",
-      )}
+    <SortableDndTile
+      id={itemKey}
+      index={index}
+      group={zone}
+      type={ITEM_TYPE}
+      accept={ITEM_TYPE}
+      // Unordered tiles drag out only — the rest zone is the sole drop target.
+      droppableDisabled={zone === "rest"}
+      isMultiDragging={isMultiDragging}
       title={getString("explorer-configure-reorder")}
-      data-item-id={item.id}
-      data-personal-order-key={itemKey}
-      data-personal-order-zone={zone}
+      dataAttributes={{
+        "data-item-id": item.id,
+        "data-personal-order-key": itemKey,
+        "data-personal-order-zone": zone,
+      }}
     >
       {renderItem(item, index)}
-    </div>
+    </SortableDndTile>
   );
 }
 

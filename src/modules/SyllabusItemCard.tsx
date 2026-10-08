@@ -37,6 +37,7 @@ import { useGalleryNoteText } from "./useGalleryNoteText";
 import { TextInput } from "./syllabusInputs";
 import { usePersonalReadingOrderGeneration } from "./react-zotero-sync/personalReadingOrder";
 import { isAssignmentReadingDone } from "./personalReadingOrder";
+import { useSyllabusPageDnd } from "./SyllabusPageDnd";
 
 /** Sticky-note yellow for the permanent Class Note priority chip. */
 const CLASS_NOTE_PRIORITY_COLOR = NOTE_PAD_YELLOW;
@@ -130,6 +131,8 @@ export function SyllabusItemCard({
     itemId?: number;
   }) => Promise<void>;
 }) {
+  const chromeDnd = useSyllabusPageDnd()?.enabled ?? false;
+
   // Get the currently selected item ID (Zotero selection)
   // const selectedItemIds = useZoteroSelectedItemIds();
   // const isZoteroSelected = selectedItemIds?.includes(item.id) || false;
@@ -717,7 +720,7 @@ export function SyllabusItemCard({
           ? String(url).trim()
           : undefined
       }
-      draggable={!isLocked}
+      draggable={!isLocked && !chromeDnd}
       onMouseEnter={density === "row" ? () => setRowHovered(true) : undefined}
       onMouseLeave={density === "row" ? () => setRowHovered(false) : undefined}
       onClick={(e) => {
@@ -733,10 +736,10 @@ export function SyllabusItemCard({
         customOnContextMenu ? (e) => customOnContextMenu(item, e) : undefined
       }
       onDblClick={(e) => onDoubleClick(item, e)}
-      onDragStart={isLocked ? undefined : handleDragStart}
-      onDragEnd={isLocked ? undefined : handleDragEnd}
-      onDragOver={isLocked ? undefined : handleItemDragOver}
-      onDrop={isLocked ? undefined : handleItemDrop}
+      onDragStart={isLocked || chromeDnd ? undefined : handleDragStart}
+      onDragEnd={isLocked || chromeDnd ? undefined : handleDragEnd}
+      onDragOver={isLocked || chromeDnd ? undefined : handleItemDragOver}
+      onDrop={isLocked || chromeDnd ? undefined : handleItemDrop}
     >
       {readerMode && !isClassNote && (
         <input
