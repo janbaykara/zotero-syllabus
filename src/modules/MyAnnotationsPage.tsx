@@ -39,9 +39,15 @@ import {
   type AnnotationStreamParentGroup,
 } from "./annotationStream";
 import {
+  AnnotationSelectionProvider,
+  orderedAnnotationIdsFromEntries,
+} from "./annotationSelection";
+import { AnnotationBatchBar } from "./AnnotationBatchBar";
+import {
   isFulltextStreamEntry,
   isMyAnnotationsSearchActive,
   normalizeMyAnnotationsSearchQuery,
+  sortAnnotationsByQuoteOrder,
   useMyAnnotationsStream,
   type MyAnnotationStreamEntry,
 } from "./explorerQueries";
@@ -164,6 +170,15 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
   const displayGroups = useMemo(
     () => groupAdjacentStreamEntries(displayRows),
     [displayRows],
+  );
+  const orderedAnnotationIds = useMemo(
+    () =>
+      displayGroups.flatMap((group) =>
+        orderedAnnotationIdsFromEntries(
+          sortAnnotationsByQuoteOrder(group.entries, quoteOrder),
+        ),
+      ),
+    [displayGroups, quoteOrder],
   );
 
   const handleContextMenu = useCallback<MagazineTileClick>((item, e) => {
@@ -292,104 +307,115 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
     ) : null;
 
   return (
-    <div
-      className="syllabus-page syllabus-my-annotations-page overflow-y-auto overflow-x-hidden h-full bg-background"
-      dir={getUiDir()}
-      ref={pageRef}
-    >
+    <AnnotationSelectionProvider orderedIds={orderedAnnotationIds}>
       <div
-        ref={headerRef}
-        className={twMerge(
-          "sticky top-0 z-20 w-full bg-background py-1",
-          isZotero8OrLater() ? "pt-4 md:pt-8" : "pt-8",
-        )}
+        className="syllabus-page syllabus-my-annotations-page h-full bg-background flex flex-col min-h-0"
+        dir={getUiDir()}
       >
-        <div className="container-padded bg-background">
-          <div className="flex flex-row items-center gap-2 justify-between">
-            <div className="min-w-0 shrink">
-              <div className="font-semibold text-3xl">
-                {getString("view-tab-my-annotations")}
+        <div
+          className="syllabus-my-annotations-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
+          ref={pageRef}
+        >
+          <div
+            ref={headerRef}
+            className={twMerge(
+              "sticky top-0 z-20 w-full bg-background py-1",
+              isZotero8OrLater() ? "pt-4 md:pt-8" : "pt-8",
+            )}
+          >
+            <div className="container-padded bg-background">
+              <div className="flex flex-row items-center gap-2 justify-between">
+                <div className="min-w-0 shrink">
+                  <div className="font-semibold text-3xl">
+                    {getString("view-tab-my-annotations")}
+                  </div>
+                  <p className="text-secondary text-base mt-1">
+                    {getString("my-annotations-desc")}
+                  </p>
+                </div>
+                <div className="inline-flex items-center gap-2.5 shrink grow-0">
+                  <MyAnnotationsSearchMenu
+                    searchInput={searchInput}
+                    onSearchInput={applySearchInput}
+                    searchScope={searchScope}
+                    onSearchScope={setSearchScope}
+                    searchActive={searchActive}
+                  />
+                  <MyAnnotationsMenu
+                    order={order}
+                    onOrder={handleOrderChange}
+                    colors={colors}
+                    libraryID={libraryID}
+                  />
+                </div>
               </div>
-              <p className="text-secondary text-base mt-1">
-                {getString("my-annotations-desc")}
-              </p>
             </div>
-            <div className="inline-flex items-center gap-2.5 shrink grow-0">
-              <MyAnnotationsSearchMenu
-                searchInput={searchInput}
-                onSearchInput={applySearchInput}
-                searchScope={searchScope}
-                onSearchScope={setSearchScope}
-                searchActive={searchActive}
-              />
-              <MyAnnotationsMenu
-                order={order}
-                onOrder={handleOrderChange}
-                colors={colors}
-                libraryID={libraryID}
-              />
+          </div>
+          <GalleryViewportProvider rootRef={pageRef}>
+            <div className="syllabus-my-annotations-body syllabus-my-annotations-stream container-padded pt-6 pb-10 flex flex-col gap-6 min-w-0">
+              {order === "newestLast" ? loadPreviousControl : null}
+              {loading && rows.length === 0 ? (
+                <p className="text-secondary text-base">
+                  {getString("my-annotations-load-previous-loading")}
+                </p>
+              ) : displayRows.length === 0 ? (
+                <p className="text-secondary text-base">
+                  {getString(
+                    searchActive
+                      ? "my-annotations-empty-search"
+                      : rows.length === 0
+                        ? "my-annotations-empty"
+                        : colorFilter.length > 0 && tagFilter.length > 0
+                          ? "my-annotations-empty-filters"
+                          : tagFilter.length > 0
+                            ? "my-annotations-empty-tag-filter"
+                            : "my-annotations-empty-color-filter",
+                  )}
+                </p>
+              ) : (
+                displayGroups.map((group, i) => {
+                  const prev = i > 0 ? displayGroups[i - 1] : null;
+                  return (
+                    <Fragment key={group.key}>
+                      {quoteOrder === "dateAdded" && prev ? (
+                        <AnnotationActivityGap
+                          from={streamGroupEdgeAdded(prev, "end")}
+                          to={streamGroupEdgeAdded(group, "start")}
+                        />
+                      ) : null}
+                      <AnnotationStreamGroup
+                        group={group}
+                        selected={
+                          !!group.parent &&
+                          (selectedItemIds?.includes(group.parent.id) || false)
+                        }
+                        searchQuery={debouncedQuery}
+                        richText
+                        onClick={(_item, e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          openAnnotationGroupInReader(group);
+                        }}
+                        onDoubleClick={() => {
+                          openAnnotationGroupInReader(group);
+                        }}
+                        onContextMenu={handleContextMenu}
+                      />
+                    </Fragment>
+                  );
+                })
+              )}
+              {order === "newestFirst" ? loadPreviousControl : null}
             </div>
+          </GalleryViewportProvider>
+        </div>
+        <div className="syllabus-annotation-batch-dock shrink-0">
+          <div className="container-padded">
+            <AnnotationBatchBar libraryID={libraryID} />
           </div>
         </div>
       </div>
-      <GalleryViewportProvider rootRef={pageRef}>
-        <div className="syllabus-my-annotations-body syllabus-my-annotations-stream container-padded pt-6 pb-10 flex flex-col gap-6 min-w-0">
-          {order === "newestLast" ? loadPreviousControl : null}
-          {loading && rows.length === 0 ? (
-            <p className="text-secondary text-base">
-              {getString("my-annotations-load-previous-loading")}
-            </p>
-          ) : displayRows.length === 0 ? (
-            <p className="text-secondary text-base">
-              {getString(
-                searchActive
-                  ? "my-annotations-empty-search"
-                  : rows.length === 0
-                    ? "my-annotations-empty"
-                    : colorFilter.length > 0 && tagFilter.length > 0
-                      ? "my-annotations-empty-filters"
-                      : tagFilter.length > 0
-                        ? "my-annotations-empty-tag-filter"
-                        : "my-annotations-empty-color-filter",
-              )}
-            </p>
-          ) : (
-            displayGroups.map((group, i) => {
-              const prev = i > 0 ? displayGroups[i - 1] : null;
-              return (
-                <Fragment key={group.key}>
-                  {quoteOrder === "dateAdded" && prev ? (
-                    <AnnotationActivityGap
-                      from={streamGroupEdgeAdded(prev, "end")}
-                      to={streamGroupEdgeAdded(group, "start")}
-                    />
-                  ) : null}
-                  <AnnotationStreamGroup
-                    group={group}
-                    selected={
-                      !!group.parent &&
-                      (selectedItemIds?.includes(group.parent.id) || false)
-                    }
-                    searchQuery={debouncedQuery}
-                    richText
-                    onClick={(_item, e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      openAnnotationGroupInReader(group);
-                    }}
-                    onDoubleClick={() => {
-                      openAnnotationGroupInReader(group);
-                    }}
-                    onContextMenu={handleContextMenu}
-                  />
-                </Fragment>
-              );
-            })
-          )}
-          {order === "newestFirst" ? loadPreviousControl : null}
-        </div>
-      </GalleryViewportProvider>
-    </div>
+    </AnnotationSelectionProvider>
   );
 }
 

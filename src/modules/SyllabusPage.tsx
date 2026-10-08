@@ -140,6 +140,8 @@ import { bibliographyToHtml } from "./Bibliography";
 import { LinksSection } from "./LinksSection";
 import { ClassGroupComponent } from "./ClassGroup";
 import type { ItemDropIndicator } from "./ClassGroup";
+import { AnnotationSelectionProvider } from "./annotationSelection";
+import { AnnotationBatchBar } from "./AnnotationBatchBar";
 import { AddReadingButton } from "./AddReadingButton";
 import { pickAndAddItemsToFurtherReading } from "./addItemsToClass";
 import { shouldCaptureCustomViewKeyboard } from "./galleryKeyboardNav";
@@ -862,8 +864,12 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   const [magazinePacking, setMagazinePacking, magazinePackingGlobal] =
     useMagazinePacking(displayViewKey);
   const effectiveLayout = isLocked ? browseLayout : "card";
+  const isAnnotationsLayout = isLocked && effectiveLayout === "annotations";
   const [showItemsWithoutAnnotations] =
     useShowItemsWithoutAnnotations(displayViewKey);
+  const libraryID =
+    getCachedCollectionById(collectionId)?.libraryID ??
+    Zotero.Libraries.userLibraryID;
 
   const isPinned = useIsPinnedSyllabus(collectionId);
 
@@ -3015,31 +3021,31 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     }
   };
 
-  return (
-    <>
+  const page = (
+    <div
+      className={twMerge(
+        "syllabus-page h-full flex flex-col min-h-0 overflow-hidden in-[.print]:scheme-light relative focus:outline-none",
+        `density-${density}`,
+        isLocked &&
+          effectiveLayout === "magazine" &&
+          "syllabus-magazine-page",
+        isAnnotationsLayout && "syllabus-gallery-annotations-page",
+        fileDrop.isDraggingFile &&
+          osFileDropTarget.kind === "collection" &&
+          "file-drag-over",
+      )}
+      data-item-density={density}
+      dir={getUiDir()}
+      onDragEnter={fileDrop.onDragEnter}
+      onDragOver={fileDrop.onDragOver}
+      onDragLeave={fileDrop.onDragLeave}
+      onDrop={fileDrop.onDrop}
+    >
       <div
         ref={syllabusPageRef}
         tabIndex={-1}
-        className={twMerge(
-          "syllabus-page overflow-y-auto overflow-x-hidden h-full in-[.print]:scheme-light relative focus:outline-none",
-          `density-${density}`,
-          isLocked &&
-            effectiveLayout === "magazine" &&
-            "syllabus-magazine-page",
-          isLocked &&
-            effectiveLayout === "annotations" &&
-            "syllabus-gallery-annotations-page",
-          fileDrop.isDraggingFile &&
-            osFileDropTarget.kind === "collection" &&
-            "file-drag-over",
-        )}
-        data-item-density={density}
-        dir={getUiDir()}
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden focus:outline-none"
         onKeyDown={handleSyllabusKeyDown}
-        onDragEnter={fileDrop.onDragEnter}
-        onDragOver={fileDrop.onDragOver}
-        onDragLeave={fileDrop.onDragLeave}
-        onDrop={fileDrop.onDrop}
       >
         <OsFileDropOverlay
           visible={
@@ -3301,7 +3307,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   </p>
                 )}
 
-              {visibleClassGroups.map((group) => (
+              {visibleClassGroups.map((group, index) => (
                 <ClassGroupComponent
                   key={group.classNumber ?? "null"}
                   classNumber={group.classNumber}
@@ -3325,6 +3331,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                   magazinePacking={magazinePacking}
                   colorFilterScope={displayViewKey}
                   showItemsWithoutAnnotations={showItemsWithoutAnnotations}
+                  annotationStreamOrder={index}
                   onResetSortOrder={() => setItemOrderVersion((v) => v + 1)}
                   selectedIdentifiers={selectedIdentifiers}
                   onIdentifierClick={handleIdentifierClick}
@@ -3659,6 +3666,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                         showItemsWithoutAnnotations={
                           showItemsWithoutAnnotations
                         }
+                        annotationStreamOrder={visibleClassGroups.length}
                         rows={furtherReadingItems.map(
                           ({ item, assignment }) => ({
                             key: `further-${item.id}-${assignment?.id || "item"}`,
@@ -3804,7 +3812,18 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           </GalleryViewportProvider>
         </div>
       </div>
-    </>
+      {isAnnotationsLayout ? (
+        <div className="syllabus-annotation-batch-dock shrink-0">
+          <AnnotationBatchBar libraryID={libraryID} />
+        </div>
+      ) : null}
+    </div>
+  );
+
+  return isAnnotationsLayout ? (
+    <AnnotationSelectionProvider>{page}</AnnotationSelectionProvider>
+  ) : (
+    page
   );
 }
 

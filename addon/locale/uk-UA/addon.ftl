@@ -802,6 +802,23 @@ my-annotations-copy-blockquote = Prefix with Markdown blockquotes (>)
 my-annotations-copy-cite-key = Append Pandoc cite keys ({"[@…]"})
 my-annotations-page = p. { $page }
 my-annotations-stream-tags-aria = Мітки
+my-annotations-batch-aria = Пакетні дії з анотаціями
+my-annotations-batch-selected =
+    { $count ->
+        [one] { $count } вибрано
+        [few] { $count } вибрано
+       *[many] { $count } вибрано
+    }
+my-annotations-batch-select = Вибрати анотацію
+my-annotations-batch-tag = Позначити
+my-annotations-batch-tag-placeholder = Назва мітки
+my-annotations-batch-tag-apply = Застосувати
+my-annotations-batch-untag = Зняти мітку
+my-annotations-batch-untag-empty = У вибраних анотацій немає міток
+my-annotations-batch-untag-tag = Видалити мітку «{ $tag }»
+my-annotations-batch-recolour = Перефарбувати
+my-annotations-batch-recolour-swatch = Перефарбувати на { $color }
+my-annotations-batch-clear = Зняти весь вибір
 my-annotations-related =
     { $count ->
         [one] Пов’язані: { $count }

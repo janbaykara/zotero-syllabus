@@ -20,6 +20,13 @@ type OpenAnnotationTagFilterPopupOptions = {
   selected: readonly string[];
   anchor: Element;
   onChange: (tags: string[]) => void;
+  /**
+   * When false, `onChange` runs only when the popup closes (batch tag).
+   * Default true matches the filter UI (update as tags are edited).
+   */
+  live?: boolean;
+  /** Popup anchor position (default `after_end`). Use `before_start` above a bottom bar. */
+  position?: string;
 };
 
 function ensurePopupSet(doc: Document): Element {
@@ -45,6 +52,7 @@ function createFilterItem(
   libraryID: number,
   selected: readonly string[],
   onChange: (tags: string[]) => void,
+  live: boolean,
 ): TagFilterItem {
   let tags = normalizeAnnotationTagFilter(selected).map((tag) => ({ tag }));
   const emit = () => {
@@ -85,7 +93,9 @@ function createFilterItem(
       ).map((tag) => ({ tag }));
     },
     async saveTx() {
-      emit();
+      if (live) {
+        emit();
+      }
     },
   };
 }
@@ -141,10 +151,12 @@ export function openAnnotationTagFilterPopup(
   tagsbox.setAttribute("flex", "1");
   popupset.appendChild(tagsPopup);
 
+  const live = options.live !== false;
   const item = createFilterItem(
     options.libraryID,
     options.selected,
     options.onChange,
+    live,
   );
   tagsbox.editable = true;
   tagsbox.item = item;
@@ -188,5 +200,11 @@ export function openAnnotationTagFilterPopup(
     tagsPopup.remove();
   });
 
-  tagsPopup.openPopup?.(options.anchor, "after_end", 0, 0, false);
+  tagsPopup.openPopup?.(
+    options.anchor,
+    options.position || "after_end",
+    0,
+    0,
+    false,
+  );
 }

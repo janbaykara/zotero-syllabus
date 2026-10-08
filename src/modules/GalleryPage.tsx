@@ -49,6 +49,8 @@ import {
   useExistingAnnotationColors,
   useItemIdsWithAnnotations,
 } from "./GalleryAnnotationsRow";
+import { AnnotationSelectionProvider } from "./annotationSelection";
+import { AnnotationBatchBar } from "./AnnotationBatchBar";
 import { useZoteroCollectionItems } from "./react-zotero-sync/collectionItems";
 import { useZoteroItemsViewRegularItemIds } from "./react-zotero-sync/itemsViewItems";
 import {
@@ -947,6 +949,7 @@ export function GalleryPage({
     items: Zotero.Item[],
     keyPrefix: string,
     chromeByItemId?: ReadonlyMap<number, ReadingTileChrome> | null,
+    streamOrder = 0,
   ) => {
     const ordered = orderGalleryItems(items);
     return (
@@ -960,6 +963,7 @@ export function GalleryPage({
         showGalleryNote={true}
         chromeByItemId={chromeByItemId ?? readerChromeForItems(ordered)}
         colorFilterScope={viewKey}
+        streamOrder={streamOrder}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
@@ -1017,6 +1021,7 @@ export function GalleryPage({
   };
 
   let magazineSectionIndex = 0;
+  let annotationStreamIndex = 0;
   const renderItems = (items: Zotero.Item[], keyPrefix: string) => {
     if (layout === "card") {
       return renderCards(items, keyPrefix);
@@ -1029,7 +1034,12 @@ export function GalleryPage({
       );
     }
     if (layout === "annotations") {
-      return renderAnnotations(items, keyPrefix);
+      return renderAnnotations(
+        items,
+        keyPrefix,
+        undefined,
+        annotationStreamIndex++,
+      );
     }
     return renderCovers(items, keyPrefix);
   };
@@ -1244,14 +1254,14 @@ export function GalleryPage({
     );
   };
 
-  return (
+  const isAnnotationsLayout = layout === "annotations";
+
+  const page = (
     <div
-      ref={pageRef}
-      tabIndex={-1}
       className={twMerge(
-        "syllabus-page overflow-y-auto overflow-x-hidden h-full bg-background focus:outline-none relative",
+        "syllabus-page h-full flex flex-col min-h-0 overflow-hidden bg-background focus:outline-none relative",
         layout === "magazine" && "syllabus-magazine-page",
-        layout === "annotations" && "syllabus-gallery-annotations-page",
+        isAnnotationsLayout && "syllabus-gallery-annotations-page",
         density !== "expanded" && `density-${density}`,
         fileDrop.isDraggingFile && "file-drag-over",
       )}
@@ -1262,6 +1272,11 @@ export function GalleryPage({
       onDragLeave={fileDrop.onDragLeave}
       onDrop={fileDrop.onDrop}
     >
+      <div
+        ref={pageRef}
+        tabIndex={-1}
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden focus:outline-none"
+      >
       <OsFileDropOverlay visible={fileDrop.isDraggingFile} />
       <div className="pb-10">
         <div
@@ -1317,6 +1332,8 @@ export function GalleryPage({
           <div
             className={twMerge(
               "pt-4",
+              // Feed stays in the content measure; the page-level batch bar
+              // is full-width outside this wrapper.
               layout === "card" ||
                 layout === "annotations" ||
                 layout === "magazine"
@@ -1533,7 +1550,19 @@ export function GalleryPage({
           </div>
         </GalleryViewportProvider>
       </div>
+      </div>
+      {isAnnotationsLayout ? (
+        <div className="syllabus-annotation-batch-dock shrink-0">
+          <AnnotationBatchBar libraryID={libraryID} />
+        </div>
+      ) : null}
     </div>
+  );
+
+  return isAnnotationsLayout ? (
+    <AnnotationSelectionProvider>{page}</AnnotationSelectionProvider>
+  ) : (
+    page
   );
 }
 

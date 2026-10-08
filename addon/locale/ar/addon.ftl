@@ -796,6 +796,25 @@ my-annotations-copy-blockquote = Prefix with Markdown blockquotes (>)
 my-annotations-copy-cite-key = Append Pandoc cite keys ({"[@…]"})
 my-annotations-page = p. { $page }
 my-annotations-stream-tags-aria = الوسوم
+my-annotations-batch-aria = إجراءات دفعية للتعليقات
+my-annotations-batch-selected =
+    { $count ->
+        [zero] لا شيء محدد
+        [one] محدد { $count }
+        [two] محددان
+        [few] محدد { $count }
+       *[other] محدد { $count }
+    }
+my-annotations-batch-select = تحديد التعليق
+my-annotations-batch-tag = وسم
+my-annotations-batch-tag-placeholder = اسم الوسم
+my-annotations-batch-tag-apply = تطبيق
+my-annotations-batch-untag = إزالة الوسم
+my-annotations-batch-untag-empty = لا توجد وسوم على التعليقات المحددة
+my-annotations-batch-untag-tag = إزالة الوسم «{ $tag }»
+my-annotations-batch-recolour = إعادة التلوين
+my-annotations-batch-recolour-swatch = إعادة التلوين إلى { $color }
+my-annotations-batch-clear = إلغاء تحديد الكل
 my-annotations-related =
     { $count ->
         [one] { $count } ذي صلة

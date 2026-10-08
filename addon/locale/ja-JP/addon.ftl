@@ -764,6 +764,21 @@ my-annotations-copy-blockquote = Prefix with Markdown blockquotes (>)
 my-annotations-copy-cite-key = Append Pandoc cite keys ({"[@…]"})
 my-annotations-page = p. { $page }
 my-annotations-stream-tags-aria = タグ
+my-annotations-batch-aria = 注釈の一括操作
+my-annotations-batch-selected =
+    { $count ->
+       *[other] { $count } 件選択中
+    }
+my-annotations-batch-select = 注釈を選択
+my-annotations-batch-tag = タグを付ける
+my-annotations-batch-tag-placeholder = タグ名
+my-annotations-batch-tag-apply = 適用
+my-annotations-batch-untag = タグを外す
+my-annotations-batch-untag-empty = 選択した注釈にタグがありません
+my-annotations-batch-untag-tag = タグ「{ $tag }」を削除
+my-annotations-batch-recolour = 色を変更
+my-annotations-batch-recolour-swatch = { $color } に変更
+my-annotations-batch-clear = すべて選択解除
 my-annotations-related =
     { $count ->
         [one] 関連 { $count }

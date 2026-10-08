@@ -788,6 +788,22 @@ my-annotations-copy-blockquote = Prefix with Markdown blockquotes (>)
 my-annotations-copy-cite-key = Append Pandoc cite keys ({"[@…]"})
 my-annotations-page = p. { $page }
 my-annotations-stream-tags-aria = Étiquettes
+my-annotations-batch-aria = Actions groupées sur les annotations
+my-annotations-batch-selected =
+    { $count ->
+        [one] { $count } sélectionnée
+       *[other] { $count } sélectionnées
+    }
+my-annotations-batch-select = Sélectionner l’annotation
+my-annotations-batch-tag = Étiqueter
+my-annotations-batch-tag-placeholder = Nom de l’étiquette
+my-annotations-batch-tag-apply = Appliquer
+my-annotations-batch-untag = Retirer l’étiquette
+my-annotations-batch-untag-empty = Aucune étiquette sur les annotations sélectionnées
+my-annotations-batch-untag-tag = Retirer l’étiquette « { $tag } »
+my-annotations-batch-recolour = Recolorier
+my-annotations-batch-recolour-swatch = Recolorier en { $color }
+my-annotations-batch-clear = Tout désélectionner
 my-annotations-related =
     { $count ->
         [one] { $count } Associé(s)

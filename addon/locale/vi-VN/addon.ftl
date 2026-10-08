@@ -788,6 +788,22 @@ my-annotations-copy-blockquote = Prefix with Markdown blockquotes (>)
 my-annotations-copy-cite-key = Append Pandoc cite keys ({"[@…]"})
 my-annotations-page = p. { $page }
 my-annotations-stream-tags-aria = Thẻ
+my-annotations-batch-aria = Hành động hàng loạt cho chú thích
+my-annotations-batch-selected =
+    { $count ->
+        [one] Đã chọn { $count }
+       *[other] Đã chọn { $count }
+    }
+my-annotations-batch-select = Chọn chú thích
+my-annotations-batch-tag = Gắn thẻ
+my-annotations-batch-tag-placeholder = Tên thẻ
+my-annotations-batch-tag-apply = Áp dụng
+my-annotations-batch-untag = Bỏ thẻ
+my-annotations-batch-untag-empty = Không có thẻ trên các chú thích đã chọn
+my-annotations-batch-untag-tag = Xóa thẻ “{ $tag }”
+my-annotations-batch-recolour = Đổi màu
+my-annotations-batch-recolour-swatch = Đổi màu thành { $color }
+my-annotations-batch-clear = Bỏ chọn tất cả
 my-annotations-related =
     { $count ->
         [one] { $count } Liên quan

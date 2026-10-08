@@ -75,6 +75,8 @@ export interface ClassGroupComponentProps {
   magazinePacking?: MagazinePacking;
   colorFilterScope?: string;
   showItemsWithoutAnnotations?: boolean;
+  /** Order among Syllabus annotation streams for shared cross-class selection. */
+  annotationStreamOrder?: number;
   onResetSortOrder?: () => void;
   selectedIdentifiers?: Set<string>;
   onIdentifierClick?: (
@@ -126,6 +128,7 @@ export function ClassGroupComponent({
   magazinePacking = "vertical",
   colorFilterScope,
   showItemsWithoutAnnotations,
+  annotationStreamOrder = 0,
   onResetSortOrder,
   selectedIdentifiers = new Set(),
   onIdentifierClick,
@@ -690,6 +693,7 @@ export function ClassGroupComponent({
               magazinePacking={magazinePacking}
               colorFilterScope={colorFilterScope || String(collectionId)}
               showItemsWithoutAnnotations={showItemsWithoutAnnotations}
+              annotationStreamOrder={annotationStreamOrder}
               rows={itemAssignments
                 .filter(({ assignment }) => !!assignment.id)
                 .map(({ item, assignment }) => ({

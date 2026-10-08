@@ -57,7 +57,7 @@ import {
   useAnnotationColorFilter,
   useAnnotationsQuoteOrder,
 } from "./myAnnotationsPrefs";
-
+import { useAnnotationSelection } from "./annotationSelection";
 /** Prefix each line for a Markdown blockquote (blank lines become `>`). */
 function toMarkdownBlockquote(text: string): string {
   return text
@@ -118,6 +118,59 @@ export function formatGroupCopyText(
     .map((entry) => formatAnnotationCopyText(entry))
     .filter(Boolean)
     .join("\n\n");
+}
+
+/** Clipboard text for selected annotation ids (same prefs as Copy all). */
+export function formatAnnotationIdsCopyText(ids: readonly number[]): string {
+  const entries: MyAnnotationStreamEntry[] = [];
+  const seen = new Set<number>();
+  for (const rawId of ids) {
+    const id = Number(rawId);
+    if (!Number.isFinite(id) || seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    try {
+      const item = Zotero.Items.get(id);
+      if (!item || item.deleted) {
+        continue;
+      }
+      if (typeof item.isAnnotation === "function" && !item.isAnnotation()) {
+        continue;
+      }
+      const quote = String(item.annotationText || "").trim();
+      const comment = String(item.annotationComment || "").trim();
+      if (!quote && !comment) {
+        continue;
+      }
+      let parent: Zotero.Item | null = null;
+      try {
+        const attachment = item.parentItem;
+        parent = attachment?.parentItem || attachment || null;
+        if (parent && !parent.isRegularItem?.()) {
+          parent = parent.parentItem || parent;
+        }
+      } catch {
+        parent = null;
+      }
+      entries.push({
+        id: item.id,
+        quote,
+        comment,
+        color: "",
+        tags: [],
+        related: [],
+        dateAdded: "",
+        dateModified: "",
+        pageLabel: String(item.annotationPageLabel || "").trim(),
+        sortIndex: "",
+        parent,
+      });
+    } catch {
+      // Skip unreadable items.
+    }
+  }
+  return formatGroupCopyText(entries);
 }
 
 const COPY_FLASH_MS = 900;
@@ -373,6 +426,45 @@ export function AnnotationStreamBody({
   richText?: boolean;
 }) {
   const isFulltext = isFulltextStreamEntry(entry);
+  const { enabled, isSelected, select, selectionActive } =
+    useAnnotationSelection();
+  const canSelect = enabled && !isFulltext;
+  const selected = canSelect && isSelected(entry.id);
+  const selectRef = useRef(select);
+  selectRef.current = select;
+  const contextMenuCleanupRef = useRef<(() => void) | null>(null);
+
+  // Callback ref so the listener attaches when the node mounts. Zotero chrome
+  // can swallow Preact's synthetic contextmenu. Right-click toggles selection
+  // (same as the checkbox), including shift-range when shift is held.
+  const bodyWrapRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      contextMenuCleanupRef.current?.();
+      contextMenuCleanupRef.current = null;
+      if (!el || isFulltext || !enabled) {
+        return;
+      }
+      const onContextMenu = (event: MouseEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        selectRef.current(entry.id, event.shiftKey);
+      };
+      el.addEventListener("contextmenu", onContextMenu, true);
+      contextMenuCleanupRef.current = () => {
+        el.removeEventListener("contextmenu", onContextMenu, true);
+      };
+    },
+    [entry.id, isFulltext, enabled],
+  );
+
+  useEffect(() => {
+    return () => {
+      contextMenuCleanupRef.current?.();
+      contextMenuCleanupRef.current = null;
+    };
+  }, []);
+
   const stamp = isFulltext
     ? null
     : formatRelativeTimestamp(entry.dateAdded || entry.dateModified);
@@ -396,6 +488,7 @@ export function AnnotationStreamBody({
   const copyLabel = copied
     ? getString("my-annotations-copied")
     : getString("my-annotations-copy");
+  const selectLabel = getString("my-annotations-batch-select");
   const query = String(searchQuery || "").trim();
   const commentHtml = entry.comment
     ? annotationCommentToDisplayHtml(entry.comment)
@@ -407,13 +500,50 @@ export function AnnotationStreamBody({
 
   return (
     <div
+      ref={bodyWrapRef}
       className={twMerge(
         "syllabus-my-annotations-stream-body-wrap min-w-0",
         richText && "is-rich-text",
+        canSelect && "is-annotation-selectable",
+        selected && "is-annotation-selected",
+        selectionActive && "has-annotation-selection",
       )}
       data-annotation-id={entry.id}
       data-stream-kind={isFulltext ? "fulltext" : "annotation"}
     >
+      {canSelect ? (
+        <button
+          type="button"
+          className={twMerge(
+            "syllabus-my-annotations-stream-select",
+            selected && "is-checked",
+          )}
+          role="checkbox"
+          aria-checked={selected}
+          aria-label={selectLabel}
+          title={selectLabel}
+          onMouseDown={(e) => {
+            // Keep shift-click from triggering text selection.
+            if (e.shiftKey) {
+              e.preventDefault();
+            }
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            select(entry.id, e.shiftKey);
+          }}
+        >
+          <span
+            className="syllabus-my-annotations-stream-select-box"
+            aria-hidden="true"
+          >
+            {selected ? (
+              <Check size={11} strokeWidth={2.5} aria-hidden="true" />
+            ) : null}
+          </span>
+        </button>
+      ) : null}
       <div className="syllabus-my-annotations-stream-body min-w-0">
         {entry.quote ? (
           <div

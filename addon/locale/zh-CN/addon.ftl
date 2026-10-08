@@ -758,6 +758,21 @@ my-annotations-copy-blockquote = Prefix with Markdown blockquotes (>)
 my-annotations-copy-cite-key = Append Pandoc cite keys ({"[@…]"})
 my-annotations-page = p. { $page }
 my-annotations-stream-tags-aria = 标签
+my-annotations-batch-aria = 批注批量操作
+my-annotations-batch-selected =
+    { $count ->
+       *[other] 已选择 { $count } 项
+    }
+my-annotations-batch-select = 选择批注
+my-annotations-batch-tag = 添加标签
+my-annotations-batch-tag-placeholder = 标签名称
+my-annotations-batch-tag-apply = 应用
+my-annotations-batch-untag = 移除标签
+my-annotations-batch-untag-empty = 所选批注没有标签
+my-annotations-batch-untag-tag = 移除标签“{ $tag }”
+my-annotations-batch-recolour = 重新着色
+my-annotations-batch-recolour-swatch = 重新着色为 { $color }
+my-annotations-batch-clear = 取消全部选择
 my-annotations-related =
     { $count ->
         [one] { $count } 个相关条目

@@ -148,6 +148,7 @@ export function ReadingItemsLayout({
   magazinePacking: _magazinePacking = "packed" as MagazinePacking,
   colorFilterScope,
   showItemsWithoutAnnotations: showEmptyProp,
+  annotationStreamOrder = 0,
   className,
   onItemClick,
 }: {
@@ -164,6 +165,8 @@ export function ReadingItemsLayout({
   magazinePacking?: MagazinePacking;
   colorFilterScope?: string;
   showItemsWithoutAnnotations?: boolean;
+  /** Order among Syllabus/Gallery annotation streams for shared selection. */
+  annotationStreamOrder?: number;
   className?: string;
   onItemClick?: (item: Zotero.Item, collectionId: number) => void;
 }) {
@@ -279,6 +282,7 @@ export function ReadingItemsLayout({
           colorFilterScope={
             colorFilterScope || String(rows[0]?.collectionId ?? "")
           }
+          streamOrder={annotationStreamOrder}
           onClick={handleClick}
           onDoubleClick={handleDoubleClick}
           onContextMenu={handleContextMenu}

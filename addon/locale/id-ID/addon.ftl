@@ -788,6 +788,22 @@ my-annotations-copy-blockquote = Prefix with Markdown blockquotes (>)
 my-annotations-copy-cite-key = Append Pandoc cite keys ({"[@…]"})
 my-annotations-page = p. { $page }
 my-annotations-stream-tags-aria = Tag
+my-annotations-batch-aria = Tindakan batch anotasi
+my-annotations-batch-selected =
+    { $count ->
+        [one] { $count } dipilih
+       *[other] { $count } dipilih
+    }
+my-annotations-batch-select = Pilih anotasi
+my-annotations-batch-tag = Tandai
+my-annotations-batch-tag-placeholder = Nama tag
+my-annotations-batch-tag-apply = Terapkan
+my-annotations-batch-untag = Hapus tag
+my-annotations-batch-untag-empty = Tidak ada tag pada anotasi yang dipilih
+my-annotations-batch-untag-tag = Hapus tag “{ $tag }”
+my-annotations-batch-recolour = Ubah warna
+my-annotations-batch-recolour-swatch = Ubah warna menjadi { $color }
+my-annotations-batch-clear = Batalkan semua pilihan
 my-annotations-related =
     { $count ->
         [one] { $count } Terkait

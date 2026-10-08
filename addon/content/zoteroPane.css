@@ -4427,14 +4427,293 @@ button.syllabus-explorer-class-segment-header:focus-visible {
 }
 
 .syllabus-my-annotations-stream-body-wrap {
+  position: relative;
   min-width: 0;
   padding: 0.35rem 0.45rem;
   margin: -0.35rem -0.45rem;
   border-radius: 0.35rem;
 }
 
+.syllabus-my-annotations-stream-body-wrap.is-annotation-selectable {
+  padding-inline-start: 1.7rem;
+}
+
 .syllabus-my-annotations-stream-body-wrap:hover {
   background: color-mix(in srgb, var(--fill-secondary, #888) 10%, transparent);
+}
+
+.syllabus-my-annotations-stream-body-wrap.is-annotation-selected {
+  background: color-mix(in srgb, var(--accent-blue, #1d4ed8) 12%, transparent);
+}
+
+.syllabus-my-annotations-stream-body-wrap.is-annotation-selected:hover {
+  background: color-mix(in srgb, var(--accent-blue, #1d4ed8) 16%, transparent);
+}
+
+.syllabus-my-annotations-stream-select {
+  appearance: none;
+  position: absolute;
+  inset-inline-start: 0.1rem;
+  top: 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.syllabus-my-annotations-stream-body-wrap:hover
+  .syllabus-my-annotations-stream-select,
+.syllabus-my-annotations-stream-body-wrap:focus-within
+  .syllabus-my-annotations-stream-select,
+.syllabus-my-annotations-stream-body-wrap.is-annotation-selected
+  .syllabus-my-annotations-stream-select,
+.syllabus-my-annotations-stream-body-wrap.has-annotation-selection
+  .syllabus-my-annotations-stream-select {
+  opacity: 1;
+}
+
+.syllabus-my-annotations-stream-select-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.95rem;
+  height: 0.95rem;
+  border: 1.5px solid var(--fill-secondary, #8c8c8c);
+  border-radius: 0.2rem;
+  background: var(--material-background, var(--color-background, #fff));
+  box-sizing: border-box;
+}
+
+.syllabus-my-annotations-stream-select.is-checked
+  .syllabus-my-annotations-stream-select-box {
+  border-color: var(--accent-blue, #1d4ed8);
+  background: var(--accent-blue, #1d4ed8);
+  color: #fff;
+}
+
+.syllabus-my-annotations-stream-select:focus-visible
+  .syllabus-my-annotations-stream-select-box {
+  outline: 2px solid var(--accent-blue, #1d4ed8);
+  outline-offset: 1px;
+}
+
+.syllabus-annotation-batch-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 40;
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+  box-sizing: border-box;
+  padding-block: 0.55rem;
+  background: var(--material-background, var(--color-background, #fff));
+  border-block-start: 0.5px solid var(--fill-quinary, rgba(0, 0, 0, 0.12));
+  box-shadow: 0 -6px 16px
+    color-mix(in srgb, var(--fill-primary, #000) 8%, transparent);
+}
+
+.syllabus-annotation-batch-dock:not(:has(.syllabus-annotation-batch-bar)) {
+  display: none;
+  padding-block: 0;
+  border-block-start: 0;
+  box-shadow: none;
+}
+
+.syllabus-annotation-batch-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem 0.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.syllabus-annotation-batch-bar.is-busy {
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.syllabus-annotation-batch-count {
+  flex: 0 0 auto;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--fill-primary, inherit);
+}
+
+.syllabus-annotation-batch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.55rem;
+  min-width: 0;
+}
+
+.syllabus-annotation-batch-action {
+  position: relative;
+  display: inline-flex;
+}
+
+.syllabus-annotation-batch-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0.25rem 0.55rem;
+  border: 0.5px solid var(--fill-quinary, rgba(0, 0, 0, 0.16));
+  border-radius: 0.35rem;
+  background: var(--material-background, var(--color-background, #fff));
+  color: var(--fill-primary, inherit);
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.syllabus-annotation-batch-btn:hover,
+.syllabus-annotation-batch-btn.is-open {
+  background: var(--fill-quinary, rgba(0, 0, 0, 0.06));
+}
+
+.syllabus-annotation-batch-btn.is-primary {
+  background: var(--accent-blue, #1d4ed8);
+  border-color: var(--accent-blue, #1d4ed8);
+  color: #fff;
+}
+
+.syllabus-annotation-batch-btn.is-primary:hover {
+  filter: brightness(1.05);
+}
+
+.syllabus-annotation-batch-btn.is-copied {
+  color: var(--accent-green, #15803d);
+  background: color-mix(in srgb, var(--accent-green, #15803d) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent-green, #15803d) 35%, transparent);
+}
+
+.syllabus-annotation-batch-btn.is-clear {
+  border-color: transparent;
+  background: transparent;
+  color: var(--fill-secondary, #8c8c8c);
+}
+
+.syllabus-annotation-batch-btn.is-clear:hover {
+  color: var(--fill-primary, inherit);
+  background: var(--fill-quinary, rgba(0, 0, 0, 0.06));
+}
+
+.syllabus-annotation-batch-btn:focus-visible {
+  outline: 2px solid var(--accent-blue, #1d4ed8);
+  outline-offset: 1px;
+}
+
+.syllabus-annotation-batch-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.syllabus-annotation-batch-popover {
+  position: absolute;
+  bottom: calc(100% + 0.3rem);
+  top: auto;
+  inset-inline-start: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 12rem;
+  max-width: 16rem;
+  max-height: 14rem;
+  overflow: auto;
+  padding: 0.45rem;
+  border: 0.5px solid var(--fill-quinary, rgba(0, 0, 0, 0.16));
+  border-radius: 0.4rem;
+  background: var(--material-background, var(--color-background, #fff));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+.syllabus-annotation-batch-tag-input {
+  width: 100%;
+  margin: 0;
+  padding: 0.3rem 0.45rem;
+  border: 0.5px solid var(--fill-quinary, rgba(0, 0, 0, 0.2));
+  border-radius: 0.3rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  box-sizing: border-box;
+}
+
+.syllabus-annotation-batch-tag-input:focus {
+  outline: 2px solid var(--accent-blue, #1d4ed8);
+  outline-offset: 0;
+}
+
+.syllabus-annotation-batch-untag-option {
+  appearance: none;
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0.3rem 0.45rem;
+  border: 0;
+  border-radius: 0.3rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: start;
+  cursor: pointer;
+}
+
+.syllabus-annotation-batch-untag-option:hover {
+  background: var(--fill-quinary, rgba(0, 0, 0, 0.06));
+}
+
+.syllabus-annotation-batch-untag-option:focus-visible {
+  outline: 2px solid var(--accent-blue, #1d4ed8);
+  outline-offset: 1px;
+}
+
+.syllabus-annotation-batch-empty {
+  margin: 0;
+  padding: 0.25rem 0.35rem;
+  color: var(--fill-secondary, #8c8c8c);
+  font-size: 0.8rem;
+}
+
+.syllabus-annotation-batch-swatches {
+  padding-inline: 0.1rem;
+}
+
+.syllabus-gallery-annotations-batch-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.syllabus-gallery-annotations-batch-dock.syllabus-annotation-batch-dock {
+  margin-block-start: 0.25rem;
+  /* Bleed through the gallery body px-6 so the dock is edge-to-edge. */
+  margin-inline: -1.5rem;
+  padding-inline: 1.5rem;
+  width: auto;
+  max-width: none;
+  box-sizing: border-box;
 }
 
 .syllabus-my-annotations-stream-body {

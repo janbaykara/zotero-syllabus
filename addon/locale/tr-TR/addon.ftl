@@ -788,6 +788,22 @@ my-annotations-copy-blockquote = Prefix with Markdown blockquotes (>)
 my-annotations-copy-cite-key = Append Pandoc cite keys ({"[@…]"})
 my-annotations-page = p. { $page }
 my-annotations-stream-tags-aria = Etiketler
+my-annotations-batch-aria = Toplu ek açıklama eylemleri
+my-annotations-batch-selected =
+    { $count ->
+        [one] { $count } seçildi
+       *[other] { $count } seçildi
+    }
+my-annotations-batch-select = Ek açıklamayı seç
+my-annotations-batch-tag = Etiketle
+my-annotations-batch-tag-placeholder = Etiket adı
+my-annotations-batch-tag-apply = Uygula
+my-annotations-batch-untag = Etiketi kaldır
+my-annotations-batch-untag-empty = Seçili ek açıklamalarda etiket yok
+my-annotations-batch-untag-tag = “{ $tag }” etiketini kaldır
+my-annotations-batch-recolour = Yeniden renklendir
+my-annotations-batch-recolour-swatch = { $color } olarak renklendir
+my-annotations-batch-clear = Tüm seçimi kaldır
 my-annotations-related =
     { $count ->
         [one] { $count } İlişkili

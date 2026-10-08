@@ -764,6 +764,21 @@ my-annotations-copy-blockquote = Prefix with Markdown blockquotes (>)
 my-annotations-copy-cite-key = Append Pandoc cite keys ({"[@…]"})
 my-annotations-page = p. { $page }
 my-annotations-stream-tags-aria = 태그
+my-annotations-batch-aria = 주석 일괄 작업
+my-annotations-batch-selected =
+    { $count ->
+       *[other] { $count }개 선택됨
+    }
+my-annotations-batch-select = 주석 선택
+my-annotations-batch-tag = 태그
+my-annotations-batch-tag-placeholder = 태그 이름
+my-annotations-batch-tag-apply = 적용
+my-annotations-batch-untag = 태그 제거
+my-annotations-batch-untag-empty = 선택한 주석에 태그가 없습니다
+my-annotations-batch-untag-tag = “{ $tag }” 태그 제거
+my-annotations-batch-recolour = 색 변경
+my-annotations-batch-recolour-swatch = { $color }(으)로 색 변경
+my-annotations-batch-clear = 모두 선택 해제
 my-annotations-related =
     { $count ->
         [one] 관련 { $count }
