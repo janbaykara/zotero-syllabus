@@ -58,6 +58,8 @@ managed-folder-banner-class =
     Đừng thêm hoặc gỡ mục tại đây. Thư mục buổi học này được đồng bộ với đề cương; chỉnh sửa thủ công sẽ bị ghi đè.
 managed-folder-banner-schedule =
     Đừng thêm hoặc gỡ mục tại đây. Thư mục lịch đọc này được đồng bộ với các đề cương của bạn; chỉnh sửa thủ công sẽ bị ghi đè.
+managed-folder-banner-pinned =
+    Don’t add or remove items here. This folder mirrors items you’ve pinned; pin or unpin elsewhere to change membership.
 menuHelp-openUserGuide = Mở hướng dẫn sử dụng Zotero Syllabus
 menuHelp-openDocumentation = Tài liệu Zotero Syllabus
 menuHelp-openDiscord = Discord
@@ -367,6 +369,8 @@ priority-default-recommended = Khuyến nghị
 priority-default-optional = Tùy chọn
 
 # Gallery
+gallery-pinned-header =
+    Items you’ve pinned for quick access. Pin or unpin from an item’s context menu or the Reading Schedule. Collections you pin stay on Home and Reading Schedule, not in this folder.
 gallery-add-readings-aria = Thêm bài đọc vào bộ sưu tập này
 gallery-empty-filtered = Không có mục khớp.
 gallery-empty = Không có mục trong bộ sưu tập này.

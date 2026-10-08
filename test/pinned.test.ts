@@ -3,6 +3,8 @@ import {
   applyPinnedShelfOrder,
   getNextUpAssignment,
   getPinnedCollectionReading,
+  getPinnedItemOrderKeys,
+  getPinnedShelfOrder,
   getSyllabusItemProgress,
   isPinnedCollectionMarkerNote,
   isPinnedItem,
@@ -14,11 +16,14 @@ import {
   pinnedShelfEntryKey,
   resolvePinnedOrderLibraryID,
   setPinnedItem,
+  setPinnedItemOrderKeys,
+  setPinnedShelfOrder,
   setPinnedSyllabus,
 } from "../src/modules/pinned";
 import { PINNED_FOLDER_NAME } from "../src/modules/readingScheduleCollection";
 import { CollectionSyllabusDocumentSchema } from "../src/utils/schemas";
 import { dateKeyFromFolderName } from "../src/modules/readingScheduleCollection";
+import { PLUGIN_PREF_DEFAULTS } from "../src/utils/prefs";
 
 describe("pinned", function () {
   this.timeout(30_000);
@@ -40,6 +45,35 @@ describe("pinned", function () {
   it("uses a stable untranslated folder name", function () {
     assert.equal(PINNED_FOLDER_NAME, "Pinned");
     assert.isNull(dateKeyFromFolderName(PINNED_FOLDER_NAME));
+  });
+
+  it("defaults generatePinnedCollection to off", function () {
+    assert.isFalse(PLUGIN_PREF_DEFAULTS.generatePinnedCollection);
+  });
+
+  it("maps pinned shelf order to bare item keys for Gallery Reading order", function () {
+    const libraryID = Zotero.Libraries.userLibraryID;
+    setPinnedShelfOrder(libraryID, [
+      pinnedShelfEntryKey("collection", "col1"),
+      pinnedShelfEntryKey("item", "b"),
+      pinnedShelfEntryKey("item", "a"),
+    ]);
+    assert.deepEqual(
+      getPinnedItemOrderKeys(libraryID, [
+        { key: "a" },
+        { key: "b" },
+        { key: "c" },
+      ]),
+      ["b", "a", "c"],
+    );
+
+    setPinnedItemOrderKeys(libraryID, ["c", "b", "a"]);
+    assert.deepEqual(getPinnedShelfOrder(libraryID), [
+      pinnedShelfEntryKey("collection", "col1"),
+      pinnedShelfEntryKey("item", "c"),
+      pinnedShelfEntryKey("item", "b"),
+      pinnedShelfEntryKey("item", "a"),
+    ]);
   });
 
   it("orders pinned shelf entries by saved keys then remainder", function () {

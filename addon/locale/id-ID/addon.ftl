@@ -58,6 +58,8 @@ managed-folder-banner-class =
     Jangan menambah atau menghapus item di sini. Folder kelas ini diselaraskan dengan silabus; suntingan manual akan ditimpa.
 managed-folder-banner-schedule =
     Jangan menambah atau menghapus item di sini. Folder jadwal bacaan ini diselaraskan dengan silabus Anda; suntingan manual akan ditimpa.
+managed-folder-banner-pinned =
+    Don’t add or remove items here. This folder mirrors items you’ve pinned; pin or unpin elsewhere to change membership.
 menuHelp-openUserGuide = Buka Panduan Pengguna Zotero Syllabus
 menuHelp-openDocumentation = Dokumentasi Zotero Syllabus
 menuHelp-openDiscord = Discord
@@ -367,6 +369,8 @@ priority-default-recommended = Dianjurkan
 priority-default-optional = Opsional
 
 # Gallery
+gallery-pinned-header =
+    Items you’ve pinned for quick access. Pin or unpin from an item’s context menu or the Reading Schedule. Collections you pin stay on Home and Reading Schedule, not in this folder.
 gallery-add-readings-aria = Tambah bacaan ke koleksi ini
 gallery-empty-filtered = Tidak ada item yang cocok.
 gallery-empty = Tidak ada item dalam koleksi ini.

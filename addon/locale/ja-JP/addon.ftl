@@ -58,6 +58,8 @@ managed-folder-banner-class =
     ここにはアイテムを追加・削除しないでください。この授業フォルダはシラバスと同期され、手動の編集は上書きされます。
 managed-folder-banner-schedule =
     ここにはアイテムを追加・削除しないでください。この読書スケジュールフォルダは各シラバスと同期され、手動の編集は上書きされます。
+managed-folder-banner-pinned =
+    Don’t add or remove items here. This folder mirrors items you’ve pinned; pin or unpin elsewhere to change membership.
 menuHelp-openUserGuide = Zotero Syllabus ユーザーガイドを開く
 menuHelp-openDocumentation = Zotero Syllabus ドキュメント
 menuHelp-openDiscord = Discord
@@ -367,6 +369,8 @@ priority-default-recommended = 推奨
 priority-default-optional = 任意
 
 # Gallery
+gallery-pinned-header =
+    Items you’ve pinned for quick access. Pin or unpin from an item’s context menu or the Reading Schedule. Collections you pin stay on Home and Reading Schedule, not in this folder.
 gallery-add-readings-aria = このコレクションに文献を追加
 gallery-empty-filtered = 該当するアイテムはありません。
 gallery-empty = このコレクションにアイテムはありません。

@@ -184,7 +184,7 @@ Enable it in **Preferences → Zotero Syllabus → Views**, then open the **Read
 3. The same Card / Cover / Magazine / Annotations layouts as [Gallery](#gallery) are available from the header menu.
 4. A **[Pinned](#pinning)** section sits above the calendar.
 
-Optional: **Preferences → Zotero Syllabus → Generate a “Reading Schedule” collection** creates an auto-managed folder tree for upcoming dates (and a `Pinned` child folder). Do not add or remove items there by hand; turn the pref off to delete that collection. Syllabus items stay in place.
+Optional: **Preferences → Zotero Syllabus → Generate a “Reading Schedule” collection** creates an auto-managed folder tree for upcoming dates. Separately, **Other settings → Auto-manage a collection for Pinned items** (off by default) creates a top-level `Pinned` folder mirroring pinned items. Do not add or remove items in those folders by hand; turn the pref off to delete the managed collection. Syllabus items stay in place.
 
 ### Gallery
 
@@ -291,7 +291,7 @@ On a pinned item, **Edit intention** opens a child note for why you pinned it. U
 
 - **Home → Pinned** (on by default; uncheck it in Home **Configure**, or use **Remove shelf**).
 - **Reading Schedule → Pinned** at the top of the calendar.
-- If the generated Reading Schedule collection is on, pinned _items_ are also mirrored in a `Pinned` folder. That folder is auto-managed.
+- If **Auto-manage a collection for Pinned items** is on, pinned _items_ are mirrored in a top-level `Pinned` folder (Table / Gallery). That folder is auto-managed.
 
 Drag to reorder on the Pinned shelf. The order is remembered per library.
 

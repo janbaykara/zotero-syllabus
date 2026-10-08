@@ -24,9 +24,10 @@ function moveKeyInOrder(
 
 /**
  * Flat personal-reading-order gallery: ordered items, Unordered gap, then the
- * rest. Drag/drop updates the collection note (unordered → ordered on drop
- * into the ordered region; reorder within ordered; drop into unordered removes
- * from the stored list).
+ * rest. Drag/drop updates the collection note by default (unordered → ordered
+ * on drop into the ordered region; reorder within ordered; drop into unordered
+ * removes from the stored list). Pass `onReorder` to persist elsewhere (e.g.
+ * pinned shelf order).
  */
 export function PersonalOrderGallery({
   items,
@@ -34,12 +35,15 @@ export function PersonalOrderGallery({
   collectionId,
   className,
   renderItem,
+  onReorder,
 }: {
   items: Zotero.Item[];
   orderKeys: string[];
   collectionId: number;
   className?: string;
   renderItem: (item: Zotero.Item, index: number) => ComponentChildren;
+  /** When set, called instead of writing the Personal Reading Order note. */
+  onReorder?: (keys: string[]) => void;
 }) {
   const { ordered, unordered } = splitPersonalReadingOrder(items, orderKeys);
   const [draggingKey, setDraggingKey] = useState<string | null>(null);
@@ -60,30 +64,44 @@ export function PersonalOrderGallery({
     setDropZone(null);
   }, []);
 
-  const commitDrop = useCallback(
-    (fromKey: string, zone: "ordered" | "unordered", toIndex: number) => {
-      if (!collectionId || !fromKey) {
-        return;
-      }
-      if (zone === "unordered") {
-        const next = orderKeys.filter((key) => key !== fromKey);
-        if (next.join("\0") === orderKeys.join("\0")) {
-          return;
-        }
-        void setPersonalReadingOrder(collectionId, next);
-        return;
-      }
-      const next = moveKeyInOrder(
-        orderKeys.includes(fromKey) ? orderKeys : [...orderKeys, fromKey],
-        fromKey,
-        toIndex,
-      );
+  const commitOrder = useCallback(
+    (next: string[]) => {
       if (next.join("\0") === orderKeys.join("\0")) {
+        return;
+      }
+      if (onReorder) {
+        onReorder(next);
+        return;
+      }
+      if (!collectionId) {
         return;
       }
       void setPersonalReadingOrder(collectionId, next);
     },
-    [collectionId, orderKeys],
+    [collectionId, onReorder, orderKeys],
+  );
+
+  const commitDrop = useCallback(
+    (fromKey: string, zone: "ordered" | "unordered", toIndex: number) => {
+      if (!fromKey) {
+        return;
+      }
+      if (!onReorder && !collectionId) {
+        return;
+      }
+      if (zone === "unordered") {
+        commitOrder(orderKeys.filter((key) => key !== fromKey));
+        return;
+      }
+      commitOrder(
+        moveKeyInOrder(
+          orderKeys.includes(fromKey) ? orderKeys : [...orderKeys, fromKey],
+          fromKey,
+          toIndex,
+        ),
+      );
+    },
+    [collectionId, commitOrder, onReorder, orderKeys],
   );
 
   const dropIndexForTile = (
@@ -235,9 +253,7 @@ export function PersonalOrderGallery({
             onDragOver={(event) =>
               onZoneDragOver(event, "unordered", unordered.length)
             }
-            onDrop={(event) =>
-              onZoneDrop(event, "unordered", unordered.length)
-            }
+            onDrop={(event) => onZoneDrop(event, "unordered", unordered.length)}
           >
             {unordered.map((item, index) =>
               renderDraggable(item, index, "unordered", unordered.length),

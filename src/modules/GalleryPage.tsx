@@ -125,8 +125,12 @@ import { collectionHasSyllabusNote } from "./syllabusNote";
 import { PersonalOrderGallery } from "./PersonalOrderGallery";
 import { applyPersonalReadingOrder } from "./personalReadingOrder";
 import { usePersonalReadingOrderKeys } from "./react-zotero-sync/personalReadingOrder";
+import { pinnedGenerationAtom } from "./react-zotero-sync/pinned";
 import { useReaderMode } from "./react-zotero-sync/readerMode";
 import { isOptionalFeatureEnabled } from "./optionalFeatures";
+import { getPinnedItemOrderKeys, setPinnedItemOrderKeys } from "./pinned";
+import { isManagedPinnedCollection } from "./readingScheduleCollection";
+import { useAtomValue } from "jotai";
 import { useCollectionCreatorGroups } from "./creatorGroups";
 import { useCollectionTagGroups } from "./tagGroups";
 import { useCollectionItemTypeGroups } from "./typeGroups";
@@ -159,6 +163,8 @@ export type GalleryPageProps = {
   treeViewID?: string;
   includeDeleted?: boolean;
   includeFeedItems?: boolean;
+  /** Optional intro under the title bar for special galleries. */
+  header?: ComponentChildren;
 };
 
 export function GalleryPage({
@@ -167,6 +173,7 @@ export function GalleryPage({
   treeViewID,
   includeDeleted = false,
   includeFeedItems = false,
+  header,
 }: GalleryPageProps) {
   const isCollectionScope = collectionId != null;
   const resolvedTreeViewID = treeViewID ?? (isCollectionScope ? "" : viewKey);
@@ -220,15 +227,34 @@ export function GalleryPage({
     magazine: layout === "magazine",
   });
   const [sortBy, setSortBy, sortByGlobal] = useGallerySortBy(viewKey);
-  const personalOrderKeys = usePersonalReadingOrderKeys(
-    isCollectionScope ? collectionId : null,
+  const isPinnedFolder =
+    collectionId != null && isManagedPinnedCollection(collectionId);
+  const pinnedGeneration = useAtomValue(pinnedGenerationAtom);
+  const notePersonalOrderKeys = usePersonalReadingOrderKeys(
+    isCollectionScope && !isPinnedFolder ? collectionId : null,
   );
+  const personalOrderKeys = useMemo(() => {
+    if (!isPinnedFolder) {
+      return notePersonalOrderKeys;
+    }
+    void pinnedGeneration;
+    return getPinnedItemOrderKeys(
+      libraryID,
+      syllabusItems.map(({ zoteroItem }) => zoteroItem),
+    );
+  }, [
+    isPinnedFolder,
+    libraryID,
+    notePersonalOrderKeys,
+    pinnedGeneration,
+    syllabusItems,
+  ]);
   const personalOrderAvailable = isOptionalFeatureEnabled("gallery");
   const hasPersonalOrder =
     personalOrderAvailable &&
     isCollectionScope &&
     collectionId != null &&
-    personalOrderKeys.length > 0;
+    (isPinnedFolder ? syllabusItems.length > 0 : personalOrderKeys.length > 0);
   /** Explicit Personal Reading Order sort: flat list + DnD chrome. */
   const personalOrderMode = hasPersonalOrder && sortBy === "personalOrder";
   /** Auto (and personalOrder) prefer a personal list when one exists. */
@@ -237,6 +263,15 @@ export function GalleryPage({
   const effectiveGroupBy: GalleryGroupBy = preferPersonalSort
     ? "none"
     : groupBy;
+  const handlePersonalOrderReorder = useCallback(
+    (keys: string[]) => {
+      if (isPinnedFolder) {
+        setPinnedItemOrderKeys(libraryID, keys);
+        return;
+      }
+    },
+    [isPinnedFolder, libraryID],
+  );
   const [readerMode, setReaderMode, readerModeGlobal] = useReaderMode(viewKey);
   const [magazinePacking, setMagazinePacking, magazinePackingGlobal] =
     useMagazinePacking(viewKey);
@@ -1024,6 +1059,7 @@ export function GalleryPage({
         orderKeys={personalOrderKeys}
         collectionId={collectionId}
         className={listClass}
+        onReorder={isPinnedFolder ? handlePersonalOrderReorder : undefined}
         renderItem={(item) => {
           const chrome = readerChromeForItems([item])?.get(item.id);
           if (layout === "card") {
@@ -1238,6 +1274,7 @@ export function GalleryPage({
           <div className="px-6">
             <GalleryPageHeader
               title={title || getString("untitled")}
+              header={header}
               groupBy={effectiveGroupBy}
               onGroupBy={setGroupBy}
               groupByGlobal={groupByGlobal}
@@ -1931,6 +1968,7 @@ function currentGalleryOption<T extends string>(
 
 function GalleryPageHeader({
   title,
+  header,
   groupBy,
   onGroupBy,
   groupByGlobal,
@@ -1966,6 +2004,7 @@ function GalleryPageHeader({
   pillsRef,
 }: {
   title: string;
+  header?: ComponentChildren;
   groupBy: GalleryGroupBy;
   onGroupBy: (mode: GalleryGroupBy) => void;
   groupByGlobal: GalleryGlobalSetting<GalleryGroupBy>;
@@ -2232,6 +2271,9 @@ function GalleryPageHeader({
           ) : null}
         </div>
       </div>
+      {header ? (
+        <div className="syllabus-gallery-header-extra">{header}</div>
+      ) : null}
       {navGroups.length > 0 ? (
         <nav
           className="syllabus-gallery-groups-nav"

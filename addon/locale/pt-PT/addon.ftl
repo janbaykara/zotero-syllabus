@@ -58,6 +58,8 @@ managed-folder-banner-class =
     Não adicione nem remova itens aqui. Esta pasta de aula é mantida em sincronia com o programa de curso; as edições manuais são sobrescritas.
 managed-folder-banner-schedule =
     Não adicione nem remova itens aqui. Esta pasta do calendário de leituras é mantida em sincronia com os seus programas de curso; as edições manuais são sobrescritas.
+managed-folder-banner-pinned =
+    Don’t add or remove items here. This folder mirrors items you’ve pinned; pin or unpin elsewhere to change membership.
 menuHelp-openUserGuide = Abrir o guia do utilizador do Zotero Syllabus
 menuHelp-openDocumentation = Documentação do Zotero Syllabus
 menuHelp-openDiscord = Discord
@@ -367,6 +369,8 @@ priority-default-recommended = Recomendado
 priority-default-optional = Opcional
 
 # Gallery
+gallery-pinned-header =
+    Items you’ve pinned for quick access. Pin or unpin from an item’s context menu or the Reading Schedule. Collections you pin stay on Home and Reading Schedule, not in this folder.
 gallery-add-readings-aria = Adicionar leituras a esta coleção
 gallery-empty-filtered = Nenhum item correspondente.
 gallery-empty = Não há itens nesta coleção.

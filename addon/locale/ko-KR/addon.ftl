@@ -58,6 +58,8 @@ managed-folder-banner-class =
     여기에 항목을 추가하거나 제거하지 마세요. 이 수업 폴더는 강의계획서와 동기화되며, 수동 편집은 덮어쓰입니다.
 managed-folder-banner-schedule =
     여기에 항목을 추가하거나 제거하지 마세요. 이 읽기 일정 폴더는 강의계획서와 동기화되며, 수동 편집은 덮어쓰입니다.
+managed-folder-banner-pinned =
+    Don’t add or remove items here. This folder mirrors items you’ve pinned; pin or unpin elsewhere to change membership.
 menuHelp-openUserGuide = Zotero Syllabus 사용자 가이드 열기
 menuHelp-openDocumentation = Zotero Syllabus 문서
 menuHelp-openDiscord = Discord
@@ -367,6 +369,8 @@ priority-default-recommended = 권장
 priority-default-optional = 선택
 
 # Gallery
+gallery-pinned-header =
+    Items you’ve pinned for quick access. Pin or unpin from an item’s context menu or the Reading Schedule. Collections you pin stay on Home and Reading Schedule, not in this folder.
 gallery-add-readings-aria = 이 컬렉션에 읽기 자료 추가
 gallery-empty-filtered = 일치하는 항목이 없습니다.
 gallery-empty = 이 컬렉션에 항목이 없습니다.

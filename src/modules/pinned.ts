@@ -76,6 +76,68 @@ export function setPinnedShelfOrder(libraryID: number, order: string[]): void {
   zoteroCache.invalidatePref(key);
 }
 
+/**
+ * Bare item keys in pinned-shelf order (for Gallery Reading order on the
+ * managed Pinned folder). Items missing from the pref follow in input order.
+ */
+export function getPinnedItemOrderKeys(
+  libraryID: number,
+  items: Array<{ key: string }>,
+): string[] {
+  const order = getPinnedShelfOrder(libraryID);
+  const itemKeySet = new Set(items.map((item) => item.key));
+  const keys: string[] = [];
+  const used = new Set<string>();
+  for (const entry of order) {
+    if (!entry.startsWith("i:")) {
+      continue;
+    }
+    const itemKey = entry.slice(2);
+    if (!itemKeySet.has(itemKey) || used.has(itemKey)) {
+      continue;
+    }
+    keys.push(itemKey);
+    used.add(itemKey);
+  }
+  for (const item of items) {
+    if (!used.has(item.key)) {
+      keys.push(item.key);
+      used.add(item.key);
+    }
+  }
+  return keys;
+}
+
+/**
+ * Persist Gallery Reading-order drag on the Pinned folder into the shared
+ * shelf order pref (keeps collection pin keys; replaces matching item keys).
+ */
+export function setPinnedItemOrderKeys(
+  libraryID: number,
+  itemKeys: string[],
+): void {
+  const prev = getPinnedShelfOrder(libraryID);
+  const itemShelfKeys = itemKeys.map((key) => pinnedShelfEntryKey("item", key));
+  const itemKeySet = new Set(itemKeys);
+  let inserted = false;
+  const next: string[] = [];
+  for (const key of prev) {
+    if (key.startsWith("i:") && itemKeySet.has(key.slice(2))) {
+      if (!inserted) {
+        next.push(...itemShelfKeys);
+        inserted = true;
+      }
+      continue;
+    }
+    next.push(key);
+  }
+  if (!inserted) {
+    next.push(...itemShelfKeys);
+  }
+  setPinnedShelfOrder(libraryID, next);
+  notifyPinnedChanges();
+}
+
 /** Stable reorder: known keys first (saved order), then remaining in input order. */
 export function applyPinnedShelfOrder<T>(
   entries: T[],
@@ -184,7 +246,7 @@ export const INTENTION_NOTE_TAG = "zotero-syllabus-pinned-intention";
  */
 export const PINNED_COLLECTION_TAG = "zotero-syllabus-pinned-collection";
 
-/** Stored Reading Schedule child folder name. Do not localize. */
+/** Stored top-level Pinned folder name. Do not localize. */
 export const PINNED_FOLDER_NAME = "Pinned";
 
 /** Item counts for a pinned syllabus: done classes count all their items. */
@@ -798,9 +860,7 @@ export function getSyllabusItemProgress(
           continue;
         }
         total += 1;
-        if (
-          isAssignmentReadingDone(collection, itemKey, assignment.id)
-        ) {
+        if (isAssignmentReadingDone(collection, itemKey, assignment.id)) {
           done += 1;
         }
         continue;
@@ -977,10 +1037,9 @@ export function getNextUpAssignment(
 ): NextUpReading {
   const doc = document || getCollectionDocument(collection);
   const libraryID = collection.libraryID;
-  const personalKeys =
-    isOptionalFeatureEnabled("gallery")
-      ? getPersonalReadingOrderKeys(collection)
-      : [];
+  const personalKeys = isOptionalFeatureEnabled("gallery")
+    ? getPersonalReadingOrderKeys(collection)
+    : [];
   if (personalKeys.length > 0) {
     return getNextUpFromPersonalOrder(collection, doc, personalKeys);
   }
@@ -1007,11 +1066,7 @@ export function getNextUpAssignment(
   for (const entry of classEntries) {
     if (
       entry.classDone ||
-      isAssignmentReadingDone(
-        collection,
-        entry.item.key,
-        entry.assignment.id,
-      )
+      isAssignmentReadingDone(collection, entry.item.key, entry.assignment.id)
     ) {
       continue;
     }
@@ -1110,18 +1165,13 @@ function assignmentDoneForItem(
   let classTitle = "";
   let allDone = true;
   for (const assignment of assignments) {
-    const num = assignmentClassNumber(
-      assignment,
-      doc.classes,
-      doc.classOrder,
-    );
+    const num = assignmentClassNumber(assignment, doc.classes, doc.classOrder);
     const classId = assignment.classId;
     const classDone = Boolean(
       classId && doc.classes?.[classId]?.status === "done",
     );
     const isDone =
-      classDone ||
-      isAssignmentReadingDone(collection, itemKey, assignment.id);
+      classDone || isAssignmentReadingDone(collection, itemKey, assignment.id);
     if (!first || (!isDone && allDone)) {
       first = assignment;
       classNumber = num ?? null;
@@ -1212,10 +1262,9 @@ function getNextUpFromPersonalOrder(
 export function getPinnedCollectionReading(
   collection: Zotero.Collection,
 ): NextUpReading {
-  const personalKeys =
-    isOptionalFeatureEnabled("gallery")
-      ? getPersonalReadingOrderKeys(collection)
-      : [];
+  const personalKeys = isOptionalFeatureEnabled("gallery")
+    ? getPersonalReadingOrderKeys(collection)
+    : [];
   const items =
     personalKeys.length > 0
       ? applyPersonalReadingOrder(

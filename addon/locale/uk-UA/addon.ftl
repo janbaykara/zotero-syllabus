@@ -58,6 +58,8 @@ managed-folder-banner-class =
     Не додавайте й не вилучайте записи тут. Ця тека заняття синхронізується із силабусом; ручні зміни буде перезаписано.
 managed-folder-banner-schedule =
     Не додавайте й не вилучайте записи тут. Ця тека графіка читання синхронізується з вашими силабусами; ручні зміни буде перезаписано.
+managed-folder-banner-pinned =
+    Don’t add or remove items here. This folder mirrors items you’ve pinned; pin or unpin elsewhere to change membership.
 menuHelp-openUserGuide = Відкрити посібник користувача Zotero Syllabus
 menuHelp-openDocumentation = Документація Zotero Syllabus
 menuHelp-openDiscord = Discord
@@ -367,6 +369,8 @@ priority-default-recommended = Рекомендоване
 priority-default-optional = Факультативне
 
 # Gallery
+gallery-pinned-header =
+    Items you’ve pinned for quick access. Pin or unpin from an item’s context menu or the Reading Schedule. Collections you pin stay on Home and Reading Schedule, not in this folder.
 gallery-add-readings-aria = Додати читання до цієї колекції
 gallery-empty-filtered = Немає відповідних записів.
 gallery-empty = У цій колекції немає записів.

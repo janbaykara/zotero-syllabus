@@ -58,6 +58,8 @@ managed-folder-banner-class =
     لا تُضف عناصر هنا ولا تُزلها. يُزامن مجلد المحاضرة هذا مع المنهاج؛ وتُستبدل التعديلات اليدوية.
 managed-folder-banner-schedule =
     لا تُضف عناصر هنا ولا تُزلها. يُزامن مجلد جدول القراءات هذا مع مناهجك؛ وتُستبدل التعديلات اليدوية.
+managed-folder-banner-pinned =
+    Don’t add or remove items here. This folder mirrors items you’ve pinned; pin or unpin elsewhere to change membership.
 menuHelp-openUserGuide = فتح دليل مستخدم Zotero Syllabus
 menuHelp-openDocumentation = وثائق Zotero Syllabus
 menuHelp-openDiscord = Discord
@@ -367,6 +369,8 @@ priority-default-recommended = مستحسن
 priority-default-optional = اختياري
 
 # Gallery
+gallery-pinned-header =
+    Items you’ve pinned for quick access. Pin or unpin from an item’s context menu or the Reading Schedule. Collections you pin stay on Home and Reading Schedule, not in this folder.
 gallery-add-readings-aria = إضافة قراءات إلى هذه المجموعة
 gallery-empty-filtered = لا توجد عناصر مطابقة.
 gallery-empty = لا توجد عناصر في هذه المجموعة.

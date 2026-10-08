@@ -236,6 +236,18 @@
   color: var(--fill-primary);
 }
 
+.syllabus-gallery-header-extra {
+  margin: 0;
+  max-width: 42rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--fill-secondary);
+}
+
+.syllabus-gallery-header-extra p {
+  margin: 0;
+}
+
 .syllabus-gallery-groups-nav {
   min-width: 0;
   overflow-x: auto;

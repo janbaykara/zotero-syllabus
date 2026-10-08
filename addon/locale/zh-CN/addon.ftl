@@ -56,6 +56,8 @@ managed-folder-banner-class =
     请勿在此添加或移除条目。此课堂文件夹会与教学大纲同步，手动更改会被覆盖。
 managed-folder-banner-schedule =
     请勿在此添加或移除条目。此阅读日程文件夹会与各教学大纲同步，手动更改会被覆盖。
+managed-folder-banner-pinned =
+    Don’t add or remove items here. This folder mirrors items you’ve pinned; pin or unpin elsewhere to change membership.
 menuHelp-openUserGuide = 打开 Zotero Syllabus 用户指南
 menuHelp-openDocumentation = Zotero Syllabus 文档
 menuHelp-openDiscord = Discord
@@ -365,6 +367,8 @@ priority-default-recommended = 推荐
 priority-default-optional = 选读
 
 # Gallery
+gallery-pinned-header =
+    Items you’ve pinned for quick access. Pin or unpin from an item’s context menu or the Reading Schedule. Collections you pin stay on Home and Reading Schedule, not in this folder.
 gallery-add-readings-aria = 添加阅读到此文集
 gallery-empty-filtered = 没有匹配的条目。
 gallery-empty = 此分类中没有条目。

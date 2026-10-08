@@ -177,7 +177,8 @@ export function SyllabusPage({ collectionId }: SyllabusPageProps) {
     return <ReadingSchedule libraryID={readingSchedule.root.libraryID} />;
   }
   if (readingSchedule?.kind === "pinned") {
-    return <ReadingSchedule libraryID={readingSchedule.root.libraryID} />;
+    // Pinned is Table/Gallery only; should not reach syllabus mode.
+    return null;
   }
   if (readingSchedule) {
     return <ReadingScheduleDayPage collectionId={collectionId} />;

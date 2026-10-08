@@ -58,6 +58,8 @@ managed-folder-banner-class =
     Voeg hier geen items toe en verwijder er geen. Deze bijeenkomstmap wordt gesynchroniseerd met de syllabus; handmatige wijzigingen worden overschreven.
 managed-folder-banner-schedule =
     Voeg hier geen items toe en verwijder er geen. Deze leesschema-map wordt gesynchroniseerd met uw syllabi; handmatige wijzigingen worden overschreven.
+managed-folder-banner-pinned =
+    Don’t add or remove items here. This folder mirrors items you’ve pinned; pin or unpin elsewhere to change membership.
 menuHelp-openUserGuide = Gebruikershandleiding van Zotero Syllabus openen
 menuHelp-openDocumentation = Zotero Syllabus-documentatie
 menuHelp-openDiscord = Discord
@@ -367,6 +369,8 @@ priority-default-recommended = Aanbevolen
 priority-default-optional = Optioneel
 
 # Gallery
+gallery-pinned-header =
+    Items you’ve pinned for quick access. Pin or unpin from an item’s context menu or the Reading Schedule. Collections you pin stay on Home and Reading Schedule, not in this folder.
 gallery-add-readings-aria = Lectuur toevoegen aan deze collectie
 gallery-empty-filtered = Geen overeenkomende items.
 gallery-empty = Geen items in deze collectie.

@@ -22,7 +22,7 @@ import { getPrefValue, setPref, subscribePluginPref } from "../utils/prefs";
 import { itemBelongsInCollection, libraryIsEditable } from "../utils/zotero";
 
 export const READING_SCHEDULE_COLLECTION_NAME = "Reading Schedule";
-/** Stored child folder for pinned items. Do not localize. */
+/** Stored top-level folder for pinned items. Do not localize. */
 export const PINNED_FOLDER_NAME = "Pinned";
 const LEGACY_READING_SCHEDULE_COLLECTION_NAME = "Reading schedule";
 
@@ -53,10 +53,13 @@ let syncHoldDepth = 0;
 /** Stays true after depth hits 0 long enough to cover deferred Zotero notifiers. */
 let syncHoldLatched = false;
 let unsubscribeGeneratePref: (() => void) | null = null;
+let unsubscribePinnedPref: (() => void) | null = null;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingGetDesired: (() => ReadingScheduleDesiredByLibrary) | null = null;
 /** Last successful desired getter so pin toggles can re-sync without a new note write. */
 let lastGetDesired: (() => ReadingScheduleDesiredByLibrary) | null = null;
+/** When true, flush also runs pinned-folder sync (or erase). */
+let pendingPinnedSync = false;
 let debounceWaiters: Array<() => void> = [];
 
 export type ReadingScheduleDesiredItems = Map<string, number[]>;
@@ -115,9 +118,9 @@ export type ReadingScheduleCollectionContext = {
 };
 
 /**
- * Identify the managed Reading schedule root or one of its date folders.
- * Prefers the stored collection key, then in-memory maps, then the
- * conventional top-level “Reading Schedule” name in that library.
+ * Identify the managed Reading schedule root, a date folder, or the
+ * top-level Pinned folder. Prefers stored collection keys, then in-memory
+ * maps, then conventional names.
  */
 export function getReadingScheduleCollectionContext(
   collectionId: number,
@@ -128,6 +131,19 @@ export function getReadingScheduleCollectionContext(
     null;
   if (!collection || collection.deleted) {
     return null;
+  }
+
+  if (matchesManagedPinned(collection)) {
+    rememberPinnedFolder(collection);
+    const scheduleRoot =
+      storedRoot(collection.libraryID) ||
+      pickCanonicalRoot(collection.libraryID);
+    return {
+      kind: "pinned",
+      root: scheduleRoot || collection,
+      dateKey: null,
+      collection,
+    };
   }
 
   const root = findReadingScheduleRoot(collection);
@@ -146,6 +162,7 @@ export function getReadingScheduleCollectionContext(
   }
 
   if (collection.parentID === root.id) {
+    // Legacy nested Pinned under Reading Schedule (pre–top-level).
     if (collection.name === PINNED_FOLDER_NAME) {
       rememberRoot(root);
       rememberPinnedFolder(collection);
@@ -169,21 +186,6 @@ export function getReadingScheduleCollectionContext(
     }
   }
 
-  const managedPinnedId = managedPinnedByLibrary.get(root.libraryID);
-  if (
-    managedPinnedId === collection.id &&
-    managedRootByLibrary.get(root.libraryID) === root.id
-  ) {
-    rememberRoot(root);
-    rememberPinnedFolder(collection);
-    return {
-      kind: "pinned",
-      root,
-      dateKey: null,
-      collection,
-    };
-  }
-
   const managed = managedDateFolders.get(collectionId);
   if (managed && managedRootByLibrary.get(root.libraryID) === root.id) {
     rememberRoot(root);
@@ -197,6 +199,30 @@ export function getReadingScheduleCollectionContext(
   }
 
   return null;
+}
+
+/** True when this collection is the auto-managed top-level (or legacy) Pinned folder. */
+export function isManagedPinnedCollection(collectionId: number): boolean {
+  return getReadingScheduleCollectionContext(collectionId)?.kind === "pinned";
+}
+
+function isManagedPinnedId(collectionId: number): boolean {
+  for (const pinnedId of managedPinnedByLibrary.values()) {
+    if (pinnedId === collectionId) {
+      return true;
+    }
+  }
+  for (const [libraryID, key] of Object.entries(readPinnedKeyMap())) {
+    const id = Number(libraryID);
+    if (!Number.isInteger(id) || !key) {
+      continue;
+    }
+    const collection = Zotero.Collections.getByLibraryAndKey(id, key);
+    if (collection && collection.id === collectionId) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -505,6 +531,70 @@ function storedRoot(libraryID: number): Zotero.Collection | null {
   return collection;
 }
 
+function readPinnedKeyMap(): Record<string, string> {
+  return parseReadingScheduleRootKeys(
+    getPrefValue("pinnedCollectionKey"),
+    Zotero.Libraries.userLibraryID,
+  );
+}
+
+function writePinnedKeyMap(map: Record<string, string>): void {
+  const cleaned: Record<string, string> = {};
+  for (const [id, key] of Object.entries(map)) {
+    const trimmed = trimKey(key);
+    if (trimmed) {
+      cleaned[id] = trimmed;
+    }
+  }
+  setPref(
+    "pinnedCollectionKey",
+    Object.keys(cleaned).length ? JSON.stringify(cleaned) : "",
+  );
+}
+
+function pinnedKeyForLibrary(libraryID: number): string | undefined {
+  return trimKey(readPinnedKeyMap()[String(libraryID)]);
+}
+
+function setPinnedKey(libraryID: number, key: string): void {
+  if (pinnedKeyForLibrary(libraryID) === key) {
+    return;
+  }
+  const map = readPinnedKeyMap();
+  map[String(libraryID)] = key;
+  writePinnedKeyMap(map);
+}
+
+function clearPinnedKey(libraryID: number): void {
+  const map = readPinnedKeyMap();
+  delete map[String(libraryID)];
+  writePinnedKeyMap(map);
+}
+
+function storedPinned(libraryID: number): Zotero.Collection | null {
+  const key = pinnedKeyForLibrary(libraryID);
+  if (!key) {
+    return null;
+  }
+  const collection = Zotero.Collections.getByLibraryAndKey(libraryID, key);
+  if (!collection || collection.deleted) {
+    return null;
+  }
+  return collection;
+}
+
+function matchesManagedPinned(collection: Zotero.Collection): boolean {
+  const stored = storedPinned(collection.libraryID);
+  if (stored && stored.id === collection.id) {
+    return true;
+  }
+  const managedId = managedPinnedByLibrary.get(collection.libraryID);
+  if (managedId === collection.id) {
+    return true;
+  }
+  return false;
+}
+
 function rememberRoot(collection: Zotero.Collection): void {
   managedRootByLibrary.set(collection.libraryID, collection.id);
 }
@@ -524,6 +614,7 @@ function rememberDateFolder(child: Zotero.Collection, dateKey: string): void {
 
 function rememberPinnedFolder(child: Zotero.Collection): void {
   managedPinnedByLibrary.set(child.libraryID, child.id);
+  setPinnedKey(child.libraryID, child.key);
 }
 
 function forgetCollection(collectionId: number): void {
@@ -532,7 +623,6 @@ function forgetCollection(collectionId: number): void {
       continue;
     }
     managedRootByLibrary.delete(libraryID);
-    managedPinnedByLibrary.delete(libraryID);
     for (const [id] of [...managedDateFolders]) {
       const child =
         getCachedCollectionById(id) || Zotero.Collections.get(id) || null;
@@ -545,6 +635,7 @@ function forgetCollection(collectionId: number): void {
   for (const [libraryID, pinnedId] of managedPinnedByLibrary) {
     if (pinnedId === collectionId) {
       managedPinnedByLibrary.delete(libraryID);
+      clearPinnedKey(libraryID);
       return;
     }
   }
@@ -563,6 +654,7 @@ export function clearManagedReadingScheduleCollection(): void {
     debounceTimer = null;
   }
   pendingGetDesired = null;
+  pendingPinnedSync = false;
   const waiters = debounceWaiters;
   debounceWaiters = [];
   for (const resolve of waiters) {
@@ -846,7 +938,41 @@ async function eraseStoredTree(): Promise<void> {
       }
     }
     writeRootKeyMap({});
-    forgetManagedMaps();
+    managedDateFolders.clear();
+    managedRootByLibrary.clear();
+  } finally {
+    releaseSync();
+  }
+}
+
+async function eraseAllPinnedFolders(): Promise<void> {
+  const libraryIDs = new Set<number>([
+    ...Object.keys(readPinnedKeyMap()).map(Number),
+    ...managedPinnedByLibrary.keys(),
+  ]);
+  for (const library of Zotero.Libraries.getAll()) {
+    const libraryID = library.libraryID;
+    if (typeof libraryID === "number") {
+      libraryIDs.add(libraryID);
+    }
+  }
+  holdSync();
+  try {
+    for (const libraryID of libraryIDs) {
+      if (!Number.isInteger(libraryID)) {
+        continue;
+      }
+      const existing = findExistingPinnedFolder(libraryID);
+      if (!existing) {
+        clearPinnedKey(libraryID);
+        managedPinnedByLibrary.delete(libraryID);
+        continue;
+      }
+      forgetCollection(existing.id);
+      await eraseCollection(existing);
+    }
+    writePinnedKeyMap({});
+    managedPinnedByLibrary.clear();
   } finally {
     releaseSync();
   }
@@ -857,58 +983,57 @@ async function ensureReadingScheduleCollection(
 ): Promise<void> {
   if (!getPrefValue("generateReadingScheduleCollection")) {
     await eraseStoredTree();
-    return;
-  }
-
-  const desiredByLibrary = getDesired();
-  const libraryIDs = new Set<number>([
-    Zotero.Libraries.userLibraryID,
-    ...desiredByLibrary.keys(),
-    ...Object.keys(readRootKeyMap()).map(Number),
-  ]);
-  for (const library of Zotero.Libraries.getAll()) {
-    const libraryID = library.libraryID;
-    if (typeof libraryID !== "number" || !libraryIsEditable(libraryID)) {
-      continue;
-    }
-    if (namedReadingScheduleCollections(libraryID).length) {
-      libraryIDs.add(libraryID);
-    }
-    const pinned = await pinnedItemIdsForLibrary(libraryID);
-    if (pinned.length) {
-      libraryIDs.add(libraryID);
-    }
-  }
-
-  holdSync();
-  try {
-    for (const libraryID of libraryIDs) {
-      if (!Number.isInteger(libraryID) || !libraryIsEditable(libraryID)) {
+  } else {
+    const desiredByLibrary = getDesired();
+    const libraryIDs = new Set<number>([
+      Zotero.Libraries.userLibraryID,
+      ...desiredByLibrary.keys(),
+      ...Object.keys(readRootKeyMap()).map(Number),
+    ]);
+    for (const library of Zotero.Libraries.getAll()) {
+      const libraryID = library.libraryID;
+      if (typeof libraryID !== "number" || !libraryIsEditable(libraryID)) {
         continue;
       }
-      const desired = desiredByLibrary.get(libraryID) || new Map();
-      const isUserLibrary = libraryID === Zotero.Libraries.userLibraryID;
-      const hasPinned = (await pinnedItemIdsForLibrary(libraryID)).length > 0;
-      if (
-        !isUserLibrary &&
-        desired.size === 0 &&
-        !hasPinned &&
-        !storedRoot(libraryID) &&
-        namedReadingScheduleCollections(libraryID).length === 0
-      ) {
-        continue;
+      if (namedReadingScheduleCollections(libraryID).length) {
+        libraryIDs.add(libraryID);
       }
-      await syncLibraryReadingSchedule(libraryID, desired);
     }
-  } finally {
-    releaseSync();
+
+    holdSync();
+    try {
+      for (const libraryID of libraryIDs) {
+        if (!Number.isInteger(libraryID) || !libraryIsEditable(libraryID)) {
+          continue;
+        }
+        const desired = desiredByLibrary.get(libraryID) || new Map();
+        const isUserLibrary = libraryID === Zotero.Libraries.userLibraryID;
+        if (
+          !isUserLibrary &&
+          desired.size === 0 &&
+          !storedRoot(libraryID) &&
+          namedReadingScheduleCollections(libraryID).length === 0
+        ) {
+          continue;
+        }
+        await syncLibraryReadingSchedule(libraryID, desired);
+      }
+    } finally {
+      releaseSync();
+    }
   }
+
+  await ensurePinnedCollections();
 }
 
-function findPinnedChild(
-  parent: Zotero.Collection,
+function findLegacyPinnedChild(
+  libraryID: number,
 ): Zotero.Collection | undefined {
-  for (const child of parent.getChildCollections()) {
+  const root = storedRoot(libraryID) || pickCanonicalRoot(libraryID);
+  if (!root) {
+    return undefined;
+  }
+  for (const child of root.getChildCollections()) {
     if (child.deleted) {
       continue;
     }
@@ -919,19 +1044,36 @@ function findPinnedChild(
   return undefined;
 }
 
-async function ensurePinnedChild(
-  parent: Zotero.Collection,
+function findExistingPinnedFolder(
+  libraryID: number,
+): Zotero.Collection | undefined {
+  const stored = storedPinned(libraryID);
+  if (stored) {
+    return stored;
+  }
+  const managedId = managedPinnedByLibrary.get(libraryID);
+  if (managedId != null) {
+    const live =
+      getCachedCollectionById(managedId) || Zotero.Collections.get(managedId);
+    if (live && !live.deleted && live.libraryID === libraryID) {
+      return live;
+    }
+  }
+  return findLegacyPinnedChild(libraryID);
+}
+
+async function ensurePinnedFolder(
+  libraryID: number,
   existing: Zotero.Collection | undefined,
-): Promise<{ child: Zotero.Collection; mutated: boolean }> {
+): Promise<{ folder: Zotero.Collection; mutated: boolean }> {
   if (!existing) {
-    const child = new Zotero.Collection({
+    const folder = new Zotero.Collection({
       name: PINNED_FOLDER_NAME,
-      libraryID: parent.libraryID,
-      parentID: parent.id,
+      libraryID,
     });
-    await saveCollection(child);
-    rememberPinnedFolder(child);
-    return { child, mutated: true };
+    await saveCollection(folder);
+    rememberPinnedFolder(folder);
+    return { folder, mutated: true };
   }
 
   let dirty = false;
@@ -939,15 +1081,75 @@ async function ensurePinnedChild(
     existing.name = PINNED_FOLDER_NAME;
     dirty = true;
   }
-  if (existing.parentID !== parent.id) {
-    existing.parentID = parent.id;
+  if (existing.parentID) {
+    (existing as Zotero.DataObject).parentID = false;
     dirty = true;
   }
   if (dirty) {
     await saveCollection(existing);
   }
   rememberPinnedFolder(existing);
-  return { child: existing, mutated: dirty };
+  return { folder: existing, mutated: dirty };
+}
+
+async function ensurePinnedCollections(): Promise<void> {
+  if (!getPrefValue("generatePinnedCollection")) {
+    await eraseAllPinnedFolders();
+    return;
+  }
+
+  const libraryIDs = new Set<number>([
+    Zotero.Libraries.userLibraryID,
+    ...Object.keys(readPinnedKeyMap()).map(Number),
+    ...managedPinnedByLibrary.keys(),
+  ]);
+  for (const library of Zotero.Libraries.getAll()) {
+    const libraryID = library.libraryID;
+    if (typeof libraryID !== "number" || !libraryIsEditable(libraryID)) {
+      continue;
+    }
+    const pinned = await pinnedItemIdsForLibrary(libraryID);
+    if (pinned.length || findExistingPinnedFolder(libraryID)) {
+      libraryIDs.add(libraryID);
+    }
+  }
+
+  holdSync();
+  try {
+    for (const libraryID of libraryIDs) {
+      if (!Number.isInteger(libraryID) || !libraryIsEditable(libraryID)) {
+        continue;
+      }
+      await syncLibraryPinnedFolder(libraryID);
+    }
+  } finally {
+    releaseSync();
+  }
+}
+
+async function syncLibraryPinnedFolder(libraryID: number): Promise<void> {
+  const pinnedIds = await pinnedItemIdsForLibrary(libraryID);
+  const wantPinned = pinnedIds.length > 0;
+  let existing = findExistingPinnedFolder(libraryID);
+
+  if (!wantPinned) {
+    if (existing) {
+      forgetCollection(existing.id);
+      await eraseCollection(existing);
+    } else {
+      clearPinnedKey(libraryID);
+      managedPinnedByLibrary.delete(libraryID);
+    }
+    return;
+  }
+
+  try {
+    const { folder } = await ensurePinnedFolder(libraryID, existing);
+    existing = folder;
+    await syncCollectionItems(folder, pinnedIds);
+  } catch (error) {
+    ztoolkit.log("Error syncing pinned collection:", libraryID, error);
+  }
 }
 
 async function syncLibraryReadingSchedule(
@@ -955,46 +1157,29 @@ async function syncLibraryReadingSchedule(
   desired: ReadingScheduleDesiredItems,
 ): Promise<boolean> {
   const root = await ensureRootCollection(libraryID);
-  const pinnedIds = await pinnedItemIdsForLibrary(libraryID);
   const { byDate, duplicates } = indexDateChildren(root);
-  const existingPinned = findPinnedChild(root);
   const plan = planDateFolderReconcile(byDate.keys(), desired.keys());
-  const wantPinned = pinnedIds.length > 0;
   const foldersNeedWork =
-    duplicates.length > 0 ||
-    plan.create.length > 0 ||
-    plan.erase.length > 0 ||
-    (wantPinned && !existingPinned) ||
-    (!wantPinned && !!existingPinned);
-  const namesNeedWork =
-    plan.keep.some((dateKey) => {
-      const child = byDate.get(dateKey);
-      return (
-        !child ||
-        child.name !== readingScheduleDateFolderName(dateKey) ||
-        child.parentID !== root.id
-      );
-    }) ||
-    (!!existingPinned &&
-      (existingPinned.name !== PINNED_FOLDER_NAME ||
-        existingPinned.parentID !== root.id));
+    duplicates.length > 0 || plan.create.length > 0 || plan.erase.length > 0;
+  const namesNeedWork = plan.keep.some((dateKey) => {
+    const child = byDate.get(dateKey);
+    return (
+      !child ||
+      child.name !== readingScheduleDateFolderName(dateKey) ||
+      child.parentID !== root.id
+    );
+  });
   const itemsNeedWork =
     !itemIdsMatch(regularItemIds(root), []) ||
     Array.from(desired.entries()).some(([dateKey, itemIds]) => {
       const child = byDate.get(dateKey);
       return !child || !itemIdsMatch(regularItemIds(child), itemIds);
-    }) ||
-    (wantPinned &&
-      existingPinned &&
-      !itemIdsMatch(regularItemIds(existingPinned), pinnedIds));
+    });
 
   if (!foldersNeedWork && !namesNeedWork && !itemsNeedWork) {
     rememberRoot(root);
     for (const [dateKey, child] of byDate) {
       rememberDateFolder(child, dateKey);
-    }
-    if (existingPinned) {
-      rememberPinnedFolder(existingPinned);
     }
     return false;
   }
@@ -1055,24 +1240,6 @@ async function syncLibraryReadingSchedule(
     }
   }
 
-  let pinnedFolder = existingPinned;
-  if (wantPinned) {
-    try {
-      const { child, mutated } = await ensurePinnedChild(root, pinnedFolder);
-      pinnedFolder = child;
-      if (mutated) {
-        foldersMutated = true;
-      }
-    } catch (error) {
-      ztoolkit.log("Error ensuring pinned reading schedule folder:", error);
-    }
-  } else if (pinnedFolder) {
-    forgetCollection(pinnedFolder.id);
-    await eraseCollection(pinnedFolder);
-    pinnedFolder = undefined;
-    foldersMutated = true;
-  }
-
   try {
     await syncCollectionItems(root, []);
   } catch (error) {
@@ -1091,14 +1258,6 @@ async function syncLibraryReadingSchedule(
     }
   }
 
-  if (pinnedFolder && wantPinned) {
-    try {
-      await syncCollectionItems(pinnedFolder, pinnedIds);
-    } catch (error) {
-      ztoolkit.log("Error syncing pinned reading schedule items:", error);
-    }
-  }
-
   return foldersMutated;
 }
 
@@ -1108,6 +1267,7 @@ export function enqueueReadingScheduleCollectionSync(
 ): Promise<void> {
   pendingGetDesired = getDesired;
   lastGetDesired = getDesired;
+  pendingPinnedSync = true;
   if (options.immediate) {
     return flushReadingScheduleCollectionSync();
   }
@@ -1123,12 +1283,30 @@ export function enqueueReadingScheduleCollectionSync(
   });
 }
 
-/** Re-sync after pin/unpin using the last known syllabus desired-set getter. */
-export function enqueuePinnedReadingScheduleSync(): Promise<void> {
-  if (!lastGetDesired) {
-    return Promise.resolve();
+/**
+ * Re-sync the top-level Pinned folder after pin/unpin. Runs even when
+ * Reading Schedule collection generation is off.
+ */
+export function enqueuePinnedReadingScheduleSync(
+  options: { immediate?: boolean } = {},
+): Promise<void> {
+  pendingPinnedSync = true;
+  if (lastGetDesired) {
+    return enqueueReadingScheduleCollectionSync(lastGetDesired, options);
   }
-  return enqueueReadingScheduleCollectionSync(lastGetDesired);
+  if (options.immediate) {
+    return flushReadingScheduleCollectionSync();
+  }
+  return new Promise((resolve) => {
+    debounceWaiters.push(resolve);
+    if (debounceTimer != null) {
+      clearTimeout(debounceTimer);
+    }
+    debounceTimer = setTimeout(() => {
+      debounceTimer = null;
+      flushReadingScheduleCollectionSync();
+    }, SYNC_DEBOUNCE_MS);
+  });
 }
 
 function flushReadingScheduleCollectionSync(): Promise<void> {
@@ -1137,10 +1315,12 @@ function flushReadingScheduleCollectionSync(): Promise<void> {
     debounceTimer = null;
   }
   const getDesired = pendingGetDesired;
+  const runPinned = pendingPinnedSync;
   const waiters = debounceWaiters;
   debounceWaiters = [];
   pendingGetDesired = null;
-  if (!getDesired) {
+  pendingPinnedSync = false;
+  if (!getDesired && !runPinned) {
     for (const resolve of waiters) {
       resolve();
     }
@@ -1148,7 +1328,13 @@ function flushReadingScheduleCollectionSync(): Promise<void> {
   }
   const next = syncChain
     .catch(() => undefined)
-    .then(() => ensureReadingScheduleCollection(getDesired))
+    .then(async () => {
+      if (getDesired) {
+        await ensureReadingScheduleCollection(getDesired);
+      } else if (runPinned) {
+        await ensurePinnedCollections();
+      }
+    })
     .catch((error) => {
       ztoolkit.log("Error syncing reading schedule collection:", error);
     })
@@ -1166,27 +1352,38 @@ export function handleReadingScheduleCollectionChange(
   ids: (number | string)[],
   getDesired: () => ReadingScheduleDesiredByLibrary,
 ): void {
-  let shouldSync = false;
+  let shouldSyncSchedule = false;
+  let shouldSyncPinned = false;
   for (const id of ids) {
     const collectionId = typeof id === "number" ? id : parseInt(String(id), 10);
     if (Number.isNaN(collectionId)) {
       continue;
     }
     if (event === "delete" || event === "trash") {
-      if (!isManagedReadingScheduleCollection(collectionId)) {
-        continue;
-      }
       const collection =
         getCachedCollectionById(collectionId) ||
         Zotero.Collections.get(collectionId) ||
         null;
       const wasRoot = isManagedRootId(collectionId);
+      const wasPinned = isManagedPinnedId(collectionId);
+      const wasManaged =
+        wasRoot ||
+        wasPinned ||
+        managedDateFolders.has(collectionId) ||
+        isManagedReadingScheduleCollection(collectionId);
+      if (!wasManaged) {
+        continue;
+      }
       const libraryID = collection?.libraryID;
       forgetCollection(collectionId);
       if (wasRoot && libraryID != null) {
         clearRootKey(libraryID);
+        shouldSyncSchedule = true;
+      } else if (wasPinned) {
+        shouldSyncPinned = true;
+      } else {
+        shouldSyncSchedule = true;
       }
-      shouldSync = true;
       continue;
     }
     if (event !== "modify") {
@@ -1195,15 +1392,20 @@ export function handleReadingScheduleCollectionChange(
     if (!isManagedReadingScheduleCollection(collectionId)) {
       continue;
     }
-    shouldSync = true;
+    if (isManagedPinnedCollection(collectionId)) {
+      shouldSyncPinned = true;
+    } else {
+      shouldSyncSchedule = true;
+    }
   }
-  if (!shouldSync || isReadingScheduleSyncHeld()) {
+  if (isReadingScheduleSyncHeld()) {
     return;
   }
-  if (!getPrefValue("generateReadingScheduleCollection")) {
-    return;
+  if (shouldSyncSchedule && getPrefValue("generateReadingScheduleCollection")) {
+    enqueueReadingScheduleCollectionSync(getDesired);
+  } else if (shouldSyncPinned && getPrefValue("generatePinnedCollection")) {
+    enqueuePinnedReadingScheduleSync();
   }
-  enqueueReadingScheduleCollectionSync(getDesired);
 }
 
 export function restoreReadingScheduleCollectionItems(
@@ -1216,6 +1418,12 @@ export function restoreReadingScheduleCollectionItems(
   if (isReadingScheduleSyncHeld()) {
     return;
   }
+  if (isManagedPinnedCollection(collectionId)) {
+    if (getPrefValue("generatePinnedCollection")) {
+      enqueuePinnedReadingScheduleSync();
+    }
+    return;
+  }
   if (!getPrefValue("generateReadingScheduleCollection")) {
     return;
   }
@@ -1225,25 +1433,39 @@ export function restoreReadingScheduleCollectionItems(
 export function registerReadingSchedulePrefObserver(
   getDesired: () => ReadingScheduleDesiredByLibrary,
 ): void {
-  if (unsubscribeGeneratePref) {
-    return;
+  if (!unsubscribeGeneratePref) {
+    unsubscribeGeneratePref = subscribePluginPref(
+      "generateReadingScheduleCollection",
+      () => {
+        enqueueReadingScheduleCollectionSync(getDesired, {
+          immediate: true,
+        }).catch((error) => {
+          ztoolkit.log(
+            "Error syncing reading schedule collection after pref change:",
+            error,
+          );
+        });
+      },
+    );
   }
-  unsubscribeGeneratePref = subscribePluginPref(
-    "generateReadingScheduleCollection",
-    () => {
-      enqueueReadingScheduleCollectionSync(getDesired, {
-        immediate: true,
-      }).catch((error) => {
-        ztoolkit.log(
-          "Error syncing reading schedule collection after pref change:",
-          error,
-        );
-      });
-    },
-  );
+  if (!unsubscribePinnedPref) {
+    unsubscribePinnedPref = subscribePluginPref(
+      "generatePinnedCollection",
+      () => {
+        enqueuePinnedReadingScheduleSync({ immediate: true }).catch((error) => {
+          ztoolkit.log(
+            "Error syncing pinned collection after pref change:",
+            error,
+          );
+        });
+      },
+    );
+  }
 }
 
 export function unregisterReadingSchedulePrefObserver(): void {
   unsubscribeGeneratePref?.();
   unsubscribeGeneratePref = null;
+  unsubscribePinnedPref?.();
+  unsubscribePinnedPref = null;
 }

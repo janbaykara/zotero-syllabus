@@ -149,6 +149,7 @@ import { getItemTitle, readItemNote } from "../utils/items";
 import { migrateLegacyCollectionMetadataPrefs } from "./migratePrefsToNotes";
 import {
   getReadingScheduleCollectionContext,
+  isManagedPinnedCollection,
   isManagedReadingScheduleCollection,
   enqueuePinnedReadingScheduleSync,
 } from "./readingScheduleCollection";
@@ -215,7 +216,10 @@ function coerceCollectionViewMode(value: unknown): CollectionViewMode {
  * the shared syllabus document).
  */
 async function migrateAssignmentStatusToPersonalReadingDone(): Promise<void> {
-  await Promise.all([whenSyllabusNotesReady(), whenPersonalReadingOrderReady()]);
+  await Promise.all([
+    whenSyllabusNotesReady(),
+    whenPersonalReadingOrderReady(),
+  ]);
   const { getAllCollections } = await import("../utils/zotero");
   for (const collection of getAllCollections()) {
     try {
@@ -223,7 +227,9 @@ async function migrateAssignmentStatusToPersonalReadingDone(): Promise<void> {
       const doneKeys: string[] = [];
       const doneAssignmentIds: string[] = [];
       let needsStrip = false;
-      for (const [itemKey, assignments] of Object.entries(document.items || {})) {
+      for (const [itemKey, assignments] of Object.entries(
+        document.items || {},
+      )) {
         const list = assignments || [];
         const doneInItem = list.filter((a) => a.status === "done");
         if (doneInItem.length === 0) {
@@ -263,9 +269,9 @@ async function migrateAssignmentStatusToPersonalReadingDone(): Promise<void> {
               // Drop rows that only existed for personal done tracking.
               return Boolean(
                 assignment.classId ||
-                  assignment.classNumber != null ||
-                  assignment.priority ||
-                  assignment.classInstruction,
+                assignment.classNumber != null ||
+                assignment.priority ||
+                assignment.classInstruction,
               );
             });
           if (next.length) {
@@ -314,6 +320,9 @@ function isPinnedSyllabusNoteCandidate(item: Zotero.Item): boolean {
 function syllabusViewModeChrome(): { label: string; tooltip: string } | null {
   const collection = getSelectedCollection();
   if (!collection) {
+    return null;
+  }
+  if (isManagedPinnedCollection(collection.id)) {
     return null;
   }
   if (isAutoManagedCollection(collection.id)) {
@@ -1261,7 +1270,10 @@ export class SyllabusManager {
 
     if (scope.kind === "collection") {
       const selectedCollection = scope.collection;
-      if (getReadingScheduleCollectionContext(selectedCollection.id)) {
+      const scheduleContext = getReadingScheduleCollectionContext(
+        selectedCollection.id,
+      );
+      if (scheduleContext && scheduleContext.kind !== "pinned") {
         return isOptionalFeatureEnabled("syllabus") ? "syllabus" : "collection";
       }
 
@@ -1280,10 +1292,17 @@ export class SyllabusManager {
         return isOptionalFeatureEnabled("gallery") ? "gallery" : "collection";
       }
       if (stored !== undefined && stored !== null) {
-        return SyllabusManager.coerceViewModeForCollection(
+        const coerced = SyllabusManager.coerceViewModeForCollection(
           selectedCollection,
           stored,
         );
+        if (
+          isManagedPinnedCollection(selectedCollection.id) &&
+          coerced === "syllabus"
+        ) {
+          return isOptionalFeatureEnabled("gallery") ? "gallery" : "collection";
+        }
+        return coerced;
       }
       const classContext = getClassSubcollectionContext(selectedCollection);
       if (classContext) {
@@ -1294,6 +1313,9 @@ export class SyllabusManager {
             parentStored,
           );
         }
+      }
+      if (isManagedPinnedCollection(selectedCollection.id)) {
+        return isOptionalFeatureEnabled("gallery") ? "gallery" : "collection";
       }
       if (isAutoManagedCollection(selectedCollection.id)) {
         return isOptionalFeatureEnabled("syllabus") ? "syllabus" : "collection";
@@ -1861,11 +1883,18 @@ export class SyllabusManager {
     const readingScheduleContext = selectedCollection
       ? getReadingScheduleCollectionContext(selectedCollection.id)
       : null;
-    const hideAll = !!(hideViewModesInLibrary || readingScheduleContext);
+    const hideAll = !!(
+      hideViewModesInLibrary ||
+      (readingScheduleContext && readingScheduleContext.kind !== "pinned")
+    );
     const syllabusEnabled = isOptionalFeatureEnabled("syllabus");
     const syllabusChrome = syllabusEnabled ? syllabusViewModeChrome() : null;
     const showCreate =
-      !hideAll && syllabusEnabled && !!selectedCollection && !syllabusChrome;
+      !hideAll &&
+      syllabusEnabled &&
+      !!selectedCollection &&
+      !syllabusChrome &&
+      !isManagedPinnedCollection(selectedCollection.id);
     const isLibraryRoot = viewScopeSupportsExplorer(scope);
     const explorerEnabled = isOptionalFeatureEnabled("explorer");
 
@@ -1960,13 +1989,17 @@ export class SyllabusManager {
       if (
         viewMode === "syllabus" &&
         selectedCollection &&
-        !isManagedReadingScheduleCollection(selectedCollection.id) &&
-        !isAutoManagedCollection(selectedCollection.id) &&
-        !collectionHasSyllabusNote(selectedCollection)
+        (isManagedPinnedCollection(selectedCollection.id) ||
+          (!isManagedReadingScheduleCollection(selectedCollection.id) &&
+            !isAutoManagedCollection(selectedCollection.id) &&
+            !collectionHasSyllabusNote(selectedCollection)))
       ) {
         SyllabusManager.writeCollectionViewMode(
           selectedCollection,
-          "collection",
+          isManagedPinnedCollection(selectedCollection.id) &&
+            isOptionalFeatureEnabled("gallery")
+            ? "gallery"
+            : "collection",
         );
         SyllabusManager.updateViewModeButtons();
       }
@@ -2049,9 +2082,15 @@ export class SyllabusManager {
           renderExplorerPage(w, customView, libraryID);
         } else if (customView && resolvedViewMode === "gallery") {
           if (scope.kind === "collection") {
+            const pinnedGallery = isManagedPinnedCollection(
+              scope.collection.id,
+            );
             renderGalleryPage(w, customView, {
               viewKey: scope.viewKey,
               collectionId: scope.collection.id,
+              header: pinnedGallery
+                ? h("p", null, getString("gallery-pinned-header"))
+                : undefined,
             });
           } else if (scope.kind === "special") {
             renderGalleryPage(w, customView, {
@@ -2281,8 +2320,10 @@ export class SyllabusManager {
         ? getCachedCollectionById(collectionId) ||
           Zotero.Collections.get(collectionId) ||
           null
-        : Zotero.Collections.getByLibraryAndKey(collectionId[0], collectionId[1]) ||
-          null;
+        : Zotero.Collections.getByLibraryAndKey(
+            collectionId[0],
+            collectionId[1],
+          ) || null;
     if (!collection) {
       ztoolkit.log("setReadingStatus: collection not found", collectionId);
       return;
@@ -2317,8 +2358,10 @@ export class SyllabusManager {
         ? getCachedCollectionById(collectionId) ||
           Zotero.Collections.get(collectionId) ||
           null
-        : Zotero.Collections.getByLibraryAndKey(collectionId[0], collectionId[1]) ||
-          null;
+        : Zotero.Collections.getByLibraryAndKey(
+            collectionId[0],
+            collectionId[1],
+          ) || null;
     if (!collection) {
       return false;
     }
@@ -2336,8 +2379,10 @@ export class SyllabusManager {
         ? getCachedCollectionById(collectionId) ||
           Zotero.Collections.get(collectionId) ||
           null
-        : Zotero.Collections.getByLibraryAndKey(collectionId[0], collectionId[1]) ||
-          null;
+        : Zotero.Collections.getByLibraryAndKey(
+            collectionId[0],
+            collectionId[1],
+          ) || null;
     if (!collection) {
       return false;
     }

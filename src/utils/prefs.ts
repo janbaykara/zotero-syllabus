@@ -20,6 +20,7 @@ export const PREFS_KEYS: (keyof PluginPrefsMap)[] = [
   "enableAnnotations",
   "optionalFeaturesPromptDone",
   "generateReadingScheduleCollection",
+  "generatePinnedCollection",
   "customIcons",
 ];
 
@@ -68,9 +69,11 @@ export const PLUGIN_PREF_DEFAULTS: {
   magazineTypeSize: "small",
   magazinePacking: "packed",
   generateReadingScheduleCollection: false,
+  generatePinnedCollection: false,
   applyReadingScheduleLayoutToPinned: false,
   showReadingSchedulePinned: true,
   readingScheduleCollectionKey: "",
+  pinnedCollectionKey: "",
   customIcons: true,
   publishApiBaseUrl: "https://read.zotero-syllabus.workers.dev",
   publishJwt: "",

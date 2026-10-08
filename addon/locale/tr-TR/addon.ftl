@@ -58,6 +58,8 @@ managed-folder-banner-class =
     Buraya öğe eklemeyin veya çıkarmayın. Bu ders klasörü izlenceyle eşzamanlı tutulur; elle yapılan düzenlemelerin üzerine yazılır.
 managed-folder-banner-schedule =
     Buraya öğe eklemeyin veya çıkarmayın. Bu okuma takvimi klasörü izlencelerinizle eşzamanlı tutulur; elle yapılan düzenlemelerin üzerine yazılır.
+managed-folder-banner-pinned =
+    Don’t add or remove items here. This folder mirrors items you’ve pinned; pin or unpin elsewhere to change membership.
 menuHelp-openUserGuide = Zotero Syllabus Kullanıcı Kılavuzunu Aç
 menuHelp-openDocumentation = Zotero Syllabus Belgeleri
 menuHelp-openDiscord = Discord
@@ -367,6 +369,8 @@ priority-default-recommended = Önerilen
 priority-default-optional = İsteğe bağlı
 
 # Gallery
+gallery-pinned-header =
+    Items you’ve pinned for quick access. Pin or unpin from an item’s context menu or the Reading Schedule. Collections you pin stay on Home and Reading Schedule, not in this folder.
 gallery-add-readings-aria = Bu koleksiyona okuma ekle
 gallery-empty-filtered = Eşleşen öğe yok.
 gallery-empty = Bu koleksiyonda öğe yok.

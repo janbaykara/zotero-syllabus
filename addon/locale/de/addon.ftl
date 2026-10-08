@@ -58,6 +58,8 @@ managed-folder-banner-class =
     Fügen Sie hier keine Einträge hinzu und entfernen Sie keine. Dieser Sitzungsordner wird mit dem Lehrplan synchron gehalten; manuelle Änderungen werden überschrieben.
 managed-folder-banner-schedule =
     Fügen Sie hier keine Einträge hinzu und entfernen Sie keine. Dieser Lektüreplan-Ordner wird mit Ihren Lehrplänen synchron gehalten; manuelle Änderungen werden überschrieben.
+managed-folder-banner-pinned =
+    Don’t add or remove items here. This folder mirrors items you’ve pinned; pin or unpin elsewhere to change membership.
 menuHelp-openUserGuide = Benutzerhandbuch von Zotero Syllabus öffnen
 menuHelp-openDocumentation = Zotero Syllabus-Dokumentation
 menuHelp-openDiscord = Discord
@@ -367,6 +369,8 @@ priority-default-recommended = Empfohlen
 priority-default-optional = Optional
 
 # Gallery
+gallery-pinned-header =
+    Items you’ve pinned for quick access. Pin or unpin from an item’s context menu or the Reading Schedule. Collections you pin stay on Home and Reading Schedule, not in this folder.
 gallery-add-readings-aria = Lektüre zu dieser Sammlung hinzufügen
 gallery-empty-filtered = Keine passenden Einträge.
 gallery-empty = Keine Einträge in dieser Sammlung.
