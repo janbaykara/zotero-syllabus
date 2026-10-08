@@ -1,8 +1,8 @@
 import { config } from "../package.json";
 import { ColumnOptions, DialogHelper } from "zotero-plugin-toolkit";
 import hooks from "./hooks";
+import api from "./api";
 import { createZToolkit } from "./utils/ztoolkit";
-import { SyllabusManager } from "./modules/syllabus";
 
 class Addon {
   public data: {
@@ -24,8 +24,8 @@ class Addon {
   };
   // Lifecycle hooks
   public hooks: typeof hooks;
-  // APIs
-  // public api: {};
+  // Public API for other plugins (`Zotero.Syllabus.api`)
+  public api: typeof api;
 
   constructor() {
     this.data = {
@@ -36,6 +36,7 @@ class Addon {
       ztoolkit: createZToolkit(),
     };
     this.hooks = hooks;
+    this.api = api;
   }
 }
 

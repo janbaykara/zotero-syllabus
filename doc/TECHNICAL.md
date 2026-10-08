@@ -2,7 +2,7 @@
 
 This document is for people changing the plugin. End-user behaviour is in [README.md](../README.md).
 
-Contents: [collection note](#collection-note) · [item merges](#item-merges) · [preferences](#preferences) · [Extra absorb](#item-extra-legacy-absorb) · [class folders](#class-subcollections) · [practical rules](#practical-rules) · [localization](#localization) · [reading-list connectors](#reading-list-connectors) · [Highlight Descriptions](#highlight-descriptions) · [cloud publish](#cloud-publish) · [local development](#local-development) · [project structure](#project-structure) · [references](#references) · [display prefs](DISPLAY-PREFS.md)
+Contents: [collection note](#collection-note) · [item merges](#item-merges) · [preferences](#preferences) · [Extra absorb](#item-extra-legacy-absorb) · [class folders](#class-subcollections) · [practical rules](#practical-rules) · [localization](#localization) · [reading-list connectors](#reading-list-connectors) · [Highlight Descriptions](#highlight-descriptions) · [cloud publish](#cloud-publish) · [public JS API](#public-js-api) · [local development](#local-development) · [project structure](#project-structure) · [references](#references) · [display prefs](DISPLAY-PREFS.md)
 
 A **syllabus is one Zotero collection** that you have turned into a syllabus (or that had a legacy `collectionMetadata` preference). Items in that collection are the membership. Everything else — classes, assignments, course metadata — is stored in a **collection note** so it syncs with the library. Plugin **prefs** hold UI chrome only (and leftover legacy data). **Class subcollections** are a derived, one-way view of the note.
 
@@ -311,6 +311,10 @@ Do this once before Publish works in a build you ship (or for local staging).
 
 Full command list and API table: [`cloud/README.md`](../cloud/README.md).
 
+## Public JS API
+
+Other plugins access Syllabus through **`Zotero.Syllabus.api`** (same pattern as Better Notes). The facade lives in [`src/api.ts`](../src/api.ts) and is attached on the Addon instance in [`src/addon.ts`](../src/addon.ts). Callers should `await Zotero.Syllabus.api.whenReady()` before reading or writing. End-user-facing summary: [README § API](../README.md#api).
+
 ## Local development
 
 Requires Zotero 7+ (8–10 recommended), Node.js LTS, Git, and pnpm. Built on the [Zotero Plugin Template](https://github.com/windingwind/zotero-plugin-template).
@@ -338,6 +342,7 @@ Use **pnpm** only (`packageManager` + `pnpm-lock.yaml`). After pulling dependenc
 ```
 src/
 ├── addon.ts
+├── api.ts                       # Public Zotero.Syllabus.api facade
 ├── hooks.ts
 ├── index.ts
 ├── modules/

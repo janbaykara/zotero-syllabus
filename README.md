@@ -328,6 +328,31 @@ Example lists were last checked in August 2026 — institutions can unpublish th
 | **[eReserve Plus](https://www.ereserve.com.au/)**                                                           | [MHC6100 Blueprint (Edith Cowan)](https://ereserve.ecu.edu.au/app/public_lists#/unit/4955/list/15619)                                                     | `ereserve` hosts, `/app/public_lists`, or an LMS LTI launch. Full import (including files) is most reliable from the **signed-in** student / LMS reading-list view, not only the public Vue page.                                                                                                       |
 | **[BLUEcloud Course Lists](https://www.sirsidynix.com/bluecloud-course-lists/)** (SirsiDynix / CloudSource) | No public permalink — open a student view from Canvas, Blackboard, or Moodle                                                                              | URLs containing `courselists`, `bccl`, or `bluecloudlists`, or a page titled “BLUEcloud Course Lists”. Product overview: [CloudSource Course Lists](https://www.cloudsource.net/course-lists/).                                                                                                         |
 
+## API
+
+Other Zotero plugins (and scripts such as [Actions & Tags](https://github.com/windingwind/zotero-actions-tags)) can call Syllabus via `Zotero.Syllabus.api`. Always wait until the plugin is ready:
+
+```js
+await Zotero.Syllabus.api.whenReady();
+
+const collection = ZoteroPane.getSelectedCollection();
+if (collection && Zotero.Syllabus.api.syllabus.has(collection)) {
+  const metadata = Zotero.Syllabus.api.syllabus.getMetadata(collection.id);
+  Zotero.Syllabus.api.view.openSyllabus(collection.id);
+}
+```
+
+Modules (see [`src/api.ts`](src/api.ts) for the full surface):
+
+- `syllabus` — has / ensure, metadata, lock, document snapshot, dictionary
+- `class` — add / delete / ensure, titles, reading dates, status
+- `assignment` — get / set / add / remove assignments; add items to a class
+- `view` — open Syllabus / Reading Schedule / Annotation Feed; collection view mode
+- `pinned` — pin / unpin items and syllabi; list pinned
+- `personal` — personal reading order and done state
+
+Top-level helpers: `version`, `isReady()`, `whenReady()`.
+
 ## Development
 
 Contributions are welcome — please open a Pull Request.
