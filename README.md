@@ -4,6 +4,8 @@
 
 A Zotero add-on / plugin that turns your collections into syllabi and course reading lists. Order items by class, browse them in Gallery, keep a Home of what to open next, follow due dates on Reading Schedule, and review highlights in Annotation Feed.
 
+**Documentation:** [janbaykara.github.io/zotero-syllabus](https://janbaykara.github.io/zotero-syllabus/) (also **Help → Zotero Syllabus Documentation** in the app).
+
 Changing the plugin? Architecture, storage, and local development are in **[doc/TECHNICAL.md](doc/TECHNICAL.md)**. UI strings must go through Fluent (`addon/locale/`); see the [localization](doc/TECHNICAL.md#localization) section.
 
 ## How to install
@@ -71,262 +73,21 @@ _Thank you for contributing in solidarity._
 
 ## User manual
 
-In Zotero, open this page anytime from **Help → Zotero Syllabus Documentation**. For a short walkthrough in the app, use **Help → Open Zotero Syllabus User Guide**.
+Full, user-friendly documentation lives on the docs site:
 
-The plugin has five surfaces. Turn each on or off in **Preferences → Zotero Syllabus → Views**.
+**https://janbaykara.github.io/zotero-syllabus/**
 
-1. [Syllabus](#syllabus) — structure a collection by class.
-2. [Reading Schedule](#reading-schedule) — due dates across all your syllabi.
-3. [Gallery](#gallery) — browse a collection as covers, cards, or a preview.
-4. [Home](#home) — library shelves for what to open next.
-5. [Annotation Feed](#annotation-feed) — your highlights in one timeline.
+In Zotero, open it anytime from **Help → Zotero Syllabus Documentation**. For a short walkthrough in the app, use **Help → Open Zotero Syllabus User Guide**.
 
-Shared tools that show up on more than one surface: [Pinning](#pinning), [Gallery notes](#gallery-notes). You can also [import a reading list](#import-a-reading-list) from the browser.
+The plugin has five surfaces (toggle in **Preferences → Zotero Syllabus → Views**):
 
-### Getting around
+1. **Syllabus** — structure a collection by class.
+2. **Reading Schedule** — due dates across all your syllabi.
+3. **Gallery** — browse a collection as covers, cards, or a preview.
+4. **Home** — library shelves for what to open next.
+5. **Annotation Feed** — your highlights in one timeline.
 
-- On a **collection**, the items toolbar switches **Table / Gallery / Syllabus**. A new collection says **Turn into Syllabus** until you create one. Auto-managed folders (Reading Schedule, class folders) use **Checklist** instead of Syllabus.
-- On the **library root**, the same control switches **Table / Home**.
-- **Reading Schedule** and **Annotation Feed** open as their own tabs (toolbar buttons, or **Go to…** from Home shelves).
-- Settings that apply everywhere live in **Preferences → Zotero Syllabus** (default density, default Gallery layout, quote-copy options, and more).
-
-### Syllabus
-
-Structure a collection by class (or week / session — you choose the word). Assign readings, set priorities and instructions, drag items into place, and export or publish the list.
-
-Standalone notes in the collection can be assigned to a class like any reading. They use the same Syllabus cards and ordering, with a fixed yellow **Class Note** label instead of a priority. Unassigned notes sit at the top with priority-only items (for example Course Information). Class notes stay private: they do not appear on Reading Schedule, Gallery, Annotation Feed, class folders, print, or publish.
-
-![Syllabus module interface showing class organization](doc/images/classes.png)
-
-#### Open a syllabus
-
-1. Select the collection.
-2. Click **Turn into Syllabus** (first time) or **Syllabus** in the items toolbar.
-
-#### Classes and assignments
-
-Add classes with **Add Class**, or right-click an item → **Assign to a class** → **Add to new class**.
-
-Then assign readings by:
-
-- Dragging an item onto a class in Syllabus view.
-- Right-click → **Assign to a class** and picking the class (the current syllabus, or another syllabus in the submenu).
-- Right-click → **Assign to a class** → **Search classes…**, or **Add to class…** in the item pane, to search every syllabus. This works even when the item pane is closed.
-
-An item can be assigned more than once (useful for breaking a long reading into chunks). Hover an item in Syllabus view and use **Duplicate**. If you merge duplicate items in Zotero, the surviving item keeps its class assignment.
-
-Unassigned items stay under **Further reading**.
-
-Give each class a title, description, and optional [reading date](#reading-schedule). Mark a class or an item **done** to track what you have already read.
-
-![Reading schedule view with reading status](doc/images/checkboxes.png)
-
-#### Course documents
-
-Give items the **Course Information** priority (or your own top priority) so handouts and links stay at the top of the syllabus. This is not the same as [pinning](#pinning) an item to Home or Reading Schedule.
-
-![Syllabus module interface showing class organization](doc/images/module.png)
-
-#### Reading instructions, priority, and done
-
-Use the **Reading assignments** section in the item pane to set class, instruction, priority, and done status. **Add to class…** there (or in the item context menu) assigns the selected item to any class on any syllabus, and adds it to that collection if needed.
-
-![Editing pane showing class number, instruction, and priority](doc/images/editing.png)
-
-Right-click an item to change class or priority without opening the pane.
-
-![Context menu showing syllabus operations](doc/images/right-click.png)
-
-Default priorities are Essential, Recommended, Optional, and Course Information. Edit names, colors, and order in Syllabus **Settings**, or set library-wide defaults in Preferences.
-
-#### Reorder and move
-
-![Manual reordering demonstration](doc/images/reorder.gif)
-
-Drag to reorder within a class, or reset to natural order. Drag between classes to move an assignment.
-
-![Drag and drop functionality demonstration](doc/images/drag-drop.gif)
-
-In **Table** view, a sortable **Syllabus Class / Assignment** column summarises class, priority, and status. Sort by it to see readings in syllabus order.
-
-![Standard Zotero list view](doc/images/list.png)
-
-#### Settings, lock, and class folders
-
-The header has **Settings** (nomenclature such as week / class / session, priorities, bibliography, class subcollections), **Lock** (read-only for studying), **Print**, and [Pin collection](#pinning).
-
-**Class subcollections** is off by default. When on, the plugin creates a child folder per class and keeps membership in sync. Do not add or remove items in those folders by hand. Leave this off unless you want folder mirrors.
-
-If the [Zotero Reading List](https://github.com/Dominic-DallOsto/zotero-reading-list) plugin is installed, its reading status appears in Syllabus view.
-
-#### Save, print, and publish
-
-The printer icon opens a format menu:
-
-- **Save as PDF, Word, Markdown, or HTML** — including a bibliography if that option is on.
-- **Publish online** — a public URL (HTML + attachments) on Cloudflare-hosted storage. You may be asked to authorize with your Zotero account. Anyone with the link can open the page and files; only publish materials you have the right to share. The operator must deploy the Worker in [`cloud/`](cloud/) (see [`cloud/README.md`](cloud/README.md)). Per-user storage quotas apply. Zotero public groups still do not expose attachment files.
-
-You can also [import a reading list](#import-a-reading-list) from Talis, Leganto, and other platforms.
-
-### Reading Schedule
-
-A calendar of class due dates across your syllabi, so you can see what is due this week and next.
-
-Enable it in **Preferences → Zotero Syllabus → Views**, then open the **Reading Schedule** tab (or **Go to Reading Schedule** from the Home deadlines shelf).
-
-![Reading schedule](doc/images/reading.png)
-
-1. In Syllabus view, set a **reading date** on a class.
-
-   ![Reading schedule view with due date](doc/images/scheduling.png)
-
-2. Those classes appear on the schedule, grouped by week and date. Sticky week / date / class headers stay visible as you scroll.
-3. The same Card / Cover / Magazine / Annotations layouts as [Gallery](#gallery) are available from the header menu.
-4. A **[Pinned](#pinning)** section sits above the calendar.
-
-Optional: **Preferences → Zotero Syllabus → Generate a “Reading Schedule” collection** creates an auto-managed folder tree for upcoming dates. Separately, **Other settings → Auto-manage a collection for Pinned items** (off by default) creates a top-level `Pinned` folder mirroring pinned items. Do not add or remove items in those folders by hand; turn the pref off to delete the managed collection. Syllabus items stay in place.
-
-### Gallery
-
-Browse one collection as covers, cards, a preview of excerpts, or an annotation stream. Switch with **Gallery** in the items toolbar.
-
-![Gallery view with book covers and reading progress](doc/images/gallery.png)
-
-Covers come from attached images, EPUB/PDF art, ISBN lookups, or type-specific placeholders. Reading progress shows when available. If Zotero’s **Show Items from Subcollections** is on, those items are included.
-
-Open **View options** from the `(view / sort / group)` control in the header. Choices are stored per collection. The globe button (**Save as default**) copies the current choice to collections that have not set their own. When you group items, a pill strip under the title jumps to each section.
-
-Click a cover or card to select it in Zotero; double-click opens the best attachment.
-
-#### View modes
-
-- **Cover** — artwork in a grid. Best for scanning books, papers, and web pages at a glance.
-- **Card** — the same syllabus item cards, in a narrower reading column. **Density** (Row / Standard / Expanded) is available in this mode.
-- **Preview** — covers with excerpt blurbs beside them, using the same layout as Annotations. Items without a preview sit in a horizontal cover row.
-- **Annotations** — covers with every highlight and note on the item. **Quotes** orders those excerpts by location in the document or by date added. Check **Show items with no annotations** to keep items without highlights in the list.
-
-#### Sort
-
-- **Auto** — collection order, or syllabus class order on a syllabus.
-- **A–Z** — title.
-- **Date** — item date, newest first.
-- **Added** — date added, newest first.
-- **Last Read** — most recently opened first.
-
-#### Group by
-
-- **None** — one continuous list.
-- **Automatic** — Preview only; builds shelves from classes, child collections, and frequent tags.
-- **Type** — books, journal articles, web pages, and so on.
-- **Creator**
-- **Tags**
-- **Collections** — child collections (when this folder has any).
-- **Classes** — syllabus collections only.
-
-#### Gallery notes
-
-A Gallery note is a short, collection-specific caption on an item — a reminder, a why-this-matters line, or a quote next to the cover. It is not a normal Zotero note, a [reading instruction](#reading-instructions-priority-and-done), or a pin [intention](#intention-notes).
-
-The note belongs to **this collection**. The same item in another collection can have a different Gallery note, or none.
-
-1. Select the collection (Table or Gallery).
-2. Right-click an item → **Add Gallery Note** (or **Edit Gallery Note**).
-3. Write in Zotero’s note editor.
-
-Click a Gallery note on a card, cover, or preview tile to open it. Right-click → **Remove Gallery Note** deletes only this collection’s Gallery note.
-
-How it looks: under the title on **Card**; in the sidecar on **Preview**; beside the cover in **Cover**; still on the item in **Annotations**.
-
-### Home
-
-At the **library root**, switch to **Home** for shelves of what to open next.
-
-Default shelves: **[Pinned](#pinning)**, **Upcoming reading deadlines**, **Watch now**, **Listen now**, **Recently read**, **Recently added**. You can also add **Recent in feed** and **Recent annotations**, plus any collection or saved search.
-
-- **Configure** (top right) shows, hides, and reorders shelves. Right-click any collection in the sidebar → **Add to Home** to put it on this list (not the same as [pinning](#pinning)).
-- Each shelf has its own **Configure** for layout (and sort / group on collection shelves). **Remove shelf** hides it; turn it back on from Home Configure.
-- **Go to Reading Schedule** and **Go to Annotation Feed** jump to those tabs from the matching shelves.
-
-### Annotation Feed
-
-A timeline of your highlights and notes across sources, in chronological order. Enable it in Views, then open the **Annotation Feed** tab (toolbar, or **Go to Annotation Feed** from Home).
-
-Use the search icon in the header to find matches across your library. The popover lets you choose **Annotations and Full Text**, **Annotations Only**, or **Full Text Only**. Annotation hits match **quote** or **comment** text; full-text hits show matching paragraphs in the same quote style without a highlight color. Clear the box to return to the recent (365-day) timeline.
-
-Open the options menu to:
-
-- **Order** — newest last (oldest at the top) or newest first.
-- **Layout** — **Vertical** (stacked covers with quotes underneath) or **Grid** (a wall of covers and quotes).
-- **Copy** — when you copy from the feed, optionally prefix Markdown blockquotes (`>`) and append Pandoc cite keys (`[@…]`, from Better BibTeX or the item Citation Key field). The same defaults live in Preferences.
-
-**Load previous** fetches an earlier page (of the live timeline or of the current search results). Click a quote or full-text paragraph to open it in the reader.
-
-Quote order under each item (by location in the document, or by date added) is shared with Gallery Annotations and Home’s recent-annotations shelf.
-
-Colour filters (and batch recolour in the annotation selection bar) are plain swatches by default. If [Highlight Descriptions](https://github.com/paulMrG2/zotero-highlight-descriptions) is installed, those controls show that plugin’s colour names beside each swatch — configure labels in **Settings → Highlight Descriptions**. The same names appear wherever Syllabus offers colour swatches (Annotation Feed, Gallery / Syllabus Annotations layouts).
-
-### Pinning
-
-Keep a short list of items and collections on **Home** (the Pinned shelf) and at the top of **Reading Schedule**. Use it for “read this next,” a course you are in the middle of, or anything you do not want to hunt for.
-
-This is not **Add to Home** (a collection becomes its own shelf) and not the **Course Information** priority (handouts stay at the top of a syllabus).
-
-#### Pin an item
-
-- Right-click one or more items → **Add to Pinned**.
-- Or use **Add to Pinned** in the item pane.
-
-#### Pin a collection
-
-- Right-click a collection → **Pin collection**.
-- On a syllabus, use the pin button next to Print / Lock / Settings.
-
-Pin the syllabus collection itself, not a class folder or the auto-managed Reading Schedule folder.
-
-A **pinned syllabus** shows **Next up** — the first incomplete reading in class order — plus progress. Marking that reading done advances Next up. A **pinned ordinary collection** shows items from that folder.
-
-#### Intention notes
-
-On a pinned item, **Edit intention** opens a child note for why you pinned it. Unpinning an item that has an intention note asks whether to **Keep** the note, **Delete** it, or **Cancel**.
-
-#### Where pinned things appear
-
-- **Home → Pinned** (on by default; uncheck it in Home **Configure**, or use **Remove shelf**).
-- **Reading Schedule → Pinned** at the top of the calendar.
-- If **Auto-manage a collection for Pinned items** is on, pinned _items_ are mirrored in a top-level `Pinned` folder (Table / Gallery). That folder is auto-managed.
-
-Drag to reorder on the Pinned shelf. The order is remembered per library.
-
-#### Unpin
-
-- Right-click → **Remove from Pinned** / **Unpin collection**.
-- Use the pin button again on the item pane or syllabus.
-- On Reading Schedule, the done checkbox on a pinned row asks to unpin.
-
-### Import a reading list
-
-With the [Zotero Connector](https://www.zotero.org/download/connectors) installed, you can save a supported institutional reading list from the browser. The plugin creates a **new top-level collection** named after the list, turns sections into classes, and maps importance tags (essential / required / recommended / optional, and similar labels) onto syllabus priorities. While saving, it tries each View online / file link in your signed-in browser session and stores any PDFs or EPUBs it can actually download. Remaining items are then looked up the same way **Find Available PDFs** does.
-
-This needs **Zotero 8 or later**. You must already be able to view the list in the browser (including SSO-gated lists). After you save, switch the new collection to **View as Syllabus**.
-
-How to import:
-
-1. Install this plugin and the Zotero Connector (Chrome, Firefox, or Edge).
-2. Open a supported list in the browser and wait until the readings are visible.
-3. Click the Connector button and save the page (choose all items if prompted).
-4. In Zotero, open the new top-level collection and switch to syllabus view.
-
-#### Supported platforms
-
-Example lists were last checked in August 2026 — institutions can unpublish them at any time.
-
-| Platform                                                                                                    | Example list                                                                                                                                              | When Connector save works                                                                                                                                                                                                                                                                               |
-| ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **[Talis Aspire](https://www.talis.com)**                                                                   | [CPAS0167: Teacher as Author (UCL)](https://rl.talis.com/3/ucl/lists/38afa403-9ebf-4dbe-86b0-a80e564f9777.html)                                           | List pages on `rl.talis.com` (and hosts such as Lincoln and Surrey) whose URL contains `/lists/`. Public lists work without login. Single-item `/items/` pages can also be saved.                                                                                                                       |
-| **[Ex Libris Leganto](https://exlibrisgroup.com/products/leganto-reading-list-management-system/)**         | [PI3084: Research Methods in Politics and International Relations (Aberdeen)](https://abdn.leganto.exlibrisgroup.com/leganto/nui/lists/13848239600005941) | Pages under `/leganto/` or `*.leganto.exlibrisgroup.com`. Guest-published lists can be saved without signing in; institution SSO is required when the list is not shared with “Anyone”. Catalogue: [Aberdeen Find Lists](https://abdn.leganto.exlibrisgroup.com/leganto/public/44ABE_INST/searchlists). |
-| **[KeyLinks](https://kortext.com/keylinks/)**                                                               | [MDX1234 Example Reading List](https://mdx.keylinks.org/new-ui/hierarchy/list/8875)                                                                       | `*.keylinks.org` list URLs (`/list/{id}` or `/new-ui/hierarchy/list/{id}`). CLA / digitised files and full-text links download when your browser session can fetch them. Notes are skipped.                                                                                                             |
-| **[eReserve Plus](https://www.ereserve.com.au/)**                                                           | [MHC6100 Blueprint (Edith Cowan)](https://ereserve.ecu.edu.au/app/public_lists#/unit/4955/list/15619)                                                     | `ereserve` hosts, `/app/public_lists`, or an LMS LTI launch. Full import (including files) is most reliable from the **signed-in** student / LMS reading-list view, not only the public Vue page.                                                                                                       |
-| **[BLUEcloud Course Lists](https://www.sirsidynix.com/bluecloud-course-lists/)** (SirsiDynix / CloudSource) | No public permalink — open a student view from Canvas, Blackboard, or Moodle                                                                              | URLs containing `courselists`, `bccl`, or `bluecloudlists`, or a page titled “BLUEcloud Course Lists”. Product overview: [CloudSource Course Lists](https://www.cloudsource.net/course-lists/).                                                                                                         |
+Shared tools: pinning, Gallery notes, and [importing a reading list](https://janbaykara.github.io/zotero-syllabus/how-to/import-reading-lists/) from the browser. Start with the [student](https://janbaykara.github.io/zotero-syllabus/tutorials/student/), [educator](https://janbaykara.github.io/zotero-syllabus/tutorials/educator/), or [researcher](https://janbaykara.github.io/zotero-syllabus/tutorials/researcher/) tutorial.
 
 ## API
 

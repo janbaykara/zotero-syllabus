@@ -2,28 +2,31 @@
 
 import zotero from "@zotero-plugin/eslint-config";
 
-export default zotero({
-  overrides: [
-    {
-      files: ["**/*.ts"],
-      rules: {
-        // We disable this rule here because the template
-        // contains some unused examples and variables
-        "@typescript-eslint/no-unused-vars": "off",
-      },
-    },
-    {
-      files: ["scripts/**/*.{js,mjs}"],
-      languageOptions: {
-        globals: {
-          console: "readonly",
-          process: "readonly",
-          fetch: "readonly",
-          URL: "readonly",
-          setTimeout: "readonly",
-          clearTimeout: "readonly",
+export default [
+  { ignores: ["website/**"] },
+  ...zotero({
+    overrides: [
+      {
+        files: ["**/*.ts"],
+        rules: {
+          // We disable this rule here because the template
+          // contains some unused examples and variables
+          "@typescript-eslint/no-unused-vars": "off",
         },
       },
-    },
-  ],
-});
+      {
+        files: ["scripts/**/*.{js,mjs}"],
+        languageOptions: {
+          globals: {
+            console: "readonly",
+            process: "readonly",
+            fetch: "readonly",
+            URL: "readonly",
+            setTimeout: "readonly",
+            clearTimeout: "readonly",
+          },
+        },
+      },
+    ],
+  }),
+];

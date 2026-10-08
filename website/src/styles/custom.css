@@ -1,0 +1,82 @@
+/* Zotero-adjacent accent; calm landing → serious docs chrome. */
+:root {
+  --sl-color-accent-low: #f8d6d8;
+  --sl-color-accent: #cc2936;
+  --sl-color-accent-high: #8f1a24;
+  --sl-color-text-accent: #8f1a24;
+}
+
+:root[data-theme="dark"] {
+  --sl-color-accent-low: #4a1520;
+  --sl-color-accent: #e85a63;
+  --sl-color-accent-high: #f5b0b5;
+  --sl-color-text-accent: #f5b0b5;
+}
+
+/* Landing hero: one composition, brand-forward. */
+.hero {
+  --sl-hero-padding-block: 3rem;
+}
+
+.hero .sl-link-button.primary {
+  font-weight: 600;
+}
+
+.landing-audience {
+  margin-block: 1.5rem 0;
+  max-width: 42rem;
+  color: var(--sl-color-gray-2);
+  font-size: var(--sl-text-base);
+  line-height: 1.55;
+}
+
+.landing-audience strong {
+  color: var(--sl-color-white);
+  font-weight: 600;
+}
+
+.landing-footer-note {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--sl-color-gray-5);
+  font-size: var(--sl-text-sm);
+  color: var(--sl-color-gray-3);
+}
+
+/* Accent plain text links only — not LinkButtons (primary is accent-on-accent otherwise). */
+.landing-footer-note a:not(.sl-link-button) {
+  color: var(--sl-color-text-accent);
+}
+
+.landing-footer-note .sl-link-button.primary {
+  color: var(--sl-color-black);
+}
+
+.landing-footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+}
+
+/* MDX must not wrap LinkButton labels in <p> (breaks the pill into stacked parts). */
+.landing-footer-note .sl-link-button p {
+  display: contents;
+  margin: 0;
+}
+
+/* Feature cards on splash: quieter than default stagger noise. */
+.landing-features .card {
+  border-radius: 0.5rem;
+}
+
+.landing-features .card .title {
+  font-size: var(--sl-text-lg);
+}
+
+/* Role tutorials: three across on wide screens (Starlight CardGrid is 2-up by default). */
+@media (width >= 50rem) {
+  .landing-roles .card-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

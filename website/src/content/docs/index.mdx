@@ -1,0 +1,106 @@
+---
+title: Zotero Syllabus
+description: A plugin for students and educators — turn Zotero collections into course reading lists you can study from.
+template: splash
+hero:
+  tagline: a plugin for students and educators
+  image:
+    file: ../../assets/images/classes.png
+  actions:
+    - text: Get started
+      link: /zotero-syllabus/getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: Read the docs
+      link: /zotero-syllabus/getting-started/
+      icon: open-book
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard, LinkButton } from "@astrojs/starlight/components";
+
+<p class="landing-audience">
+  Built first for <strong>university students</strong> managing weekly readings —
+  also useful for <strong>educators</strong> who build and publish syllabi and reading lists,
+  and for <strong>researchers</strong> who want different ways to explore their collections, annotations and notes.
+</p>
+
+## What you can do
+
+<div class="landing-features">
+<CardGrid>
+  <Card title="Syllabus" icon="document">
+    Structure a collection by class, week, or session. Assign readings, set
+    priorities and instructions, then lock the view while you study.
+    [How-to →](/zotero-syllabus/how-to/syllabus/)
+  </Card>
+  <Card title="Reading Schedule" icon="approve-check-circle">
+    See due dates across all your syllabi — what is due this week and next —
+    with pinned items kept at the top.
+    [How-to →](/zotero-syllabus/how-to/reading-schedule/)
+  </Card>
+  <Card title="Gallery" icon="open-book">
+    Explore and organise a personal reading list — scan covers, set your own
+    order, and check items off as you go.
+    [How-to →](/zotero-syllabus/how-to/gallery/)
+  </Card>
+  <Card title="Home" icon="star">
+    Library shelves for what to open next: pinned items, deadlines, recently
+    read, and more.
+    [How-to →](/zotero-syllabus/how-to/home/)
+  </Card>
+  <Card title="Annotation Feed" icon="comment">
+    A timeline of your highlights and notes across sources — search, copy with
+    cite keys, and jump back into the reader.
+    [How-to →](/zotero-syllabus/how-to/annotation-feed/)
+  </Card>
+  <Card title="Import a list" icon="download">
+    Save a Talis, Leganto, or other institutional list from the browser and turn
+    it into a syllabus in one step.
+    [How-to →](/zotero-syllabus/how-to/import-reading-lists/)
+  </Card>
+</CardGrid>
+</div>
+
+## Get started
+
+<div class="landing-roles">
+<CardGrid>
+  <LinkCard
+    title="Student: your first week"
+    href="/zotero-syllabus/tutorials/student/"
+    description="Import a reading list, set dates, pin what matters, and study from Lock mode."
+  />
+  <LinkCard
+    title="Educator: build a course"
+    href="/zotero-syllabus/tutorials/educator/"
+    description="Organize classes, priorities, and instructions — then print or publish for your cohort."
+  />
+  <LinkCard
+    title="Researcher: shelves and feed"
+    href="/zotero-syllabus/tutorials/researcher/"
+    description="Use Gallery, Annotation Feed, pinning, and personal reading order for a lit review."
+  />
+</CardGrid>
+</div>
+
+<div class="landing-footer-note">
+  <p class="landing-footer-actions">
+    <LinkButton href="https://github.com/janbaykara/zotero-syllabus/releases/latest/download/zotero-syllabus.xpi" variant="primary" icon="download">Download the latest .xpi</LinkButton>
+    {" "}
+    <LinkButton href="https://github.com/janbaykara/zotero-syllabus" variant="minimal" icon="external">GitHub</LinkButton>
+    {" "}
+    <LinkButton href="https://discord.gg/PtEY5DxCea" variant="minimal" icon="external">Discord</LinkButton>
+    {" "}
+    <LinkButton href="https://www.reddit.com/r/zotero/comments/1puxigg/zotero_syllabus_a_plugin_for_managing_your_uni/" variant="minimal" icon="external">Reddit</LinkButton>
+  </p>
+  <p>
+    Free and open source (AGPL-3.0). Discussion on the{" "}
+    <a href="https://forums.zotero.org/discussion/128688/zotero-syllabus-a-plugin-for-managing-your-uni-course-reading-lists">Zotero Forum</a>
+    {" "}and{" "}
+    <a href="https://www.reddit.com/r/zotero/comments/1puxigg/zotero_syllabus_a_plugin_for_managing_your_uni/">Reddit</a>.
+    If the project is useful, you can{" "}
+    <a href="https://buymeacoffee.com/janbaykara">Buy Me a Coffee</a>
+    {" "}— proceeds support funds that help keep Gaza’s universities and academic life alive.
+  </p>
+</div>

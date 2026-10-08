@@ -18,7 +18,7 @@
   "bugs": {
     "url": "https://github.com/janbaykara/zotero-syllabus/issues"
   },
-  "homepage": "https://github.com/janbaykara/zotero-syllabus#readme",
+  "homepage": "https://janbaykara.github.io/zotero-syllabus/",
   "license": "AGPL-3.0-or-later",
   "packageManager": "pnpm@10.25.0",
   "scripts": {
@@ -30,7 +30,9 @@
     "lint:fix": "prettier --write . && eslint . --fix",
     "release": "pnpm lint:check && NODE_ENV=production zotero-plugin release",
     "test": "zotero-plugin test --no-watch",
-    "update-deps": "pnpm update --save"
+    "update-deps": "pnpm update --save",
+    "docs:dev": "pnpm --dir website dev",
+    "docs:build": "pnpm --dir website build"
   },
   "dependencies": {
     "@dnd-kit/abstract": "^0.5.0",

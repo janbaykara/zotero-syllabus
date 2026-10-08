@@ -1,0 +1,36 @@
+---
+description: Keep website, README, and TECHNICAL.md in sync with product/code changes
+alwaysApply: true
+---
+
+# Documentation sync (required)
+
+When you change user-facing behaviour, architecture, storage, prefs, APIs, or install/setup flows, update **all** relevant docs in the same change — do not leave docs for a follow-up.
+
+| Audience | Where |
+| --- | --- |
+| End users (how-to, concepts, tutorials, landing) | [`website/src/content/docs/`](website/src/content/docs/) (and landing [`index.mdx`](website/src/content/docs/index.mdx) if the feature set or pitch changes) |
+| GitHub visitors (install, overview, API surface pointers) | [`README.md`](README.md) |
+| Contributors / agents (architecture, storage, build) | [`doc/TECHNICAL.md`](doc/TECHNICAL.md) |
+
+## What counts as a docs-worthy change
+
+- New or renamed views, prefs, menus, or workflows
+- Behaviour users would notice (pinning, import, publish, Gallery, Home, etc.)
+- Storage formats, tags, note titles, collection names, or merge rules
+- Public plugin API (`Zotero.Syllabus.api`) or developer setup commands
+- Install, Zotero version requirements, or Connector/import platforms
+
+## What to skip
+
+- Pure refactors with no behaviour or contract change
+- Typo/lint-only edits
+- Internal-only test or CI churn that does not change how the product works
+
+## How to update
+
+1. **Website** — edit the matching Diátaxis page(s); add a page and sidebar entry in [`website/astro.config.mjs`](website/astro.config.mjs) if it is a new surface. Keep copy user-facing (not a dump of TECHNICAL.md).
+2. **README.md** — keep the short overview accurate (install, surface list, links to the docs site and API). Do not re-expand the full user manual into the README.
+3. **TECHNICAL.md** — document storage, sync, architecture, and contributor commands. Link out to the website for end-user steps instead of duplicating them.
+
+If a change is docs-only on one surface, still check the other two for stale claims.

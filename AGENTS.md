@@ -13,9 +13,23 @@ Do not add hardcoded user-visible text in TS, TSX, XHTML, or progress windows.
 
 Details: [doc/TECHNICAL.md](doc/TECHNICAL.md#localization) and `.cursor/rules/localization.mdc`.
 
+## Documentation sync (required)
+
+Any change that affects user-facing behaviour, architecture, storage, prefs, APIs, or install/setup must update **all three** in the same change:
+
+1. **Website** — [`website/src/content/docs/`](website/src/content/docs/) (Diátaxis how-tos / tutorials / concepts / reference; landing [`index.mdx`](website/src/content/docs/index.mdx) if the feature set changes). Sidebar: [`website/astro.config.mjs`](website/astro.config.mjs).
+2. **README.md** — install overview, surface list, docs-site link, API pointers. Do not re-expand the full manual into the README.
+3. **doc/TECHNICAL.md** — architecture, storage, contributor commands. Link to the website for end-user steps.
+
+Skip only pure refactors, typo/lint-only edits, or internal CI/test churn with no behaviour or contract change. Details: `.cursor/rules/docs-sync.mdc`.
+
+## Docs site (GitHub Pages)
+
+User-facing docs live in [`website/`](website/) (Astro Starlight). From the repo root: `pnpm docs:dev` / `pnpm docs:build`. Deployed by [`.github/workflows/docs.yml`](.github/workflows/docs.yml) to https://janbaykara.github.io/zotero-syllabus/. Do not put end-user docs only in the README — update `website/src/content/docs/` instead. First-time Pages setup: repo Settings → Pages → Source = GitHub Actions.
+
 ## Lint / package manager
 
-Use **pnpm** only (`pnpm-lock.yaml`). CI runs `pnpm run lint:check` with a fresh install from that lockfile. After pulling dep changes, run `pnpm install` before linting. Prefer `pnpm lint:fix` locally, then confirm with `pnpm lint:check` (what CI runs). Do not introduce `package-lock.json`.
+Use **pnpm** only (`pnpm-lock.yaml`). CI runs `pnpm run lint:check` with a fresh install from that lockfile. After pulling dep changes, run `pnpm install` before linting. Prefer `pnpm lint:fix` locally, then confirm with `pnpm lint:check` (what CI runs). Do not introduce `package-lock.json`. The `website/` package has its own lockfile and is ignored by root Prettier/ESLint.
 
 ## Shared UI / Zotero state (Jotai)
 

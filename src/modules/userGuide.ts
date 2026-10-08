@@ -35,9 +35,9 @@ const PLAYGROUND_COLLECTION_NAME = "Syllabus Tour";
 const TOUR_EVENT_OPEN_SETTINGS = "syllabus-tour-open-settings";
 const TOUR_EVENT_CLOSE_SETTINGS = "syllabus-tour-close-settings";
 
-/** Default-branch README on the public repo — stays current as features land. */
+/** Public docs site (GitHub Pages) — stays current as features land. */
 export const DOCUMENTATION_URL =
-  "https://github.com/janbaykara/zotero-syllabus#readme";
+  "https://janbaykara.github.io/zotero-syllabus/";
 
 const ISSUES_URL = "https://github.com/janbaykara/zotero-syllabus/issues";
 const DISCORD_URL = "https://discord.gg/PtEY5DxCea";
