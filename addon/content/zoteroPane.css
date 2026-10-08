@@ -5499,8 +5499,8 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   margin-bottom: 0.5rem;
 }
 
-.syllabus-personal-order-landing-body.is-empty,
-.syllabus-personal-order-landing-empty {
+/* Border only on the droppable body — not also on the inner status text. */
+.syllabus-personal-order-landing-body.is-empty {
   min-height: 3.5rem;
   display: flex;
   align-items: center;
@@ -5511,15 +5511,13 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   text-align: center;
 }
 
-.syllabus-personal-order-landing.is-drag-active .syllabus-personal-order-landing-body.is-empty,
-.syllabus-personal-order-landing-empty.is-drop-highlight,
 .syllabus-personal-order-landing-body.is-drop-highlight.is-empty {
   border-color: var(--accent-blue, #2255e0);
   background: color-mix(in srgb, var(--accent-blue, #2255e0) 8%, transparent);
 }
 
-/* Outline + tint only — no border/padding so items don't shift. */
-.syllabus-personal-order-rest.is-drop-highlight {
+/* Outline + tint on the list body only — no border/padding so items don't shift. */
+.syllabus-personal-order-rest-body.is-drop-highlight {
   outline: 1.5px dashed var(--accent-blue, #2255e0);
   outline-offset: 2px;
   border-radius: 6px;

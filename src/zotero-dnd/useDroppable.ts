@@ -1,5 +1,8 @@
 /**
  * Preact hook: droppable target for zotero-dnd (e.g. empty landing zones).
+ *
+ * Drop highlight is applied imperatively on dragover — setState mid-drag would
+ * re-render list parents and undo OptimisticSortingPlugin DOM reorders.
  */
 
 import { useEffect, useRef, useState } from "preact/hooks";
@@ -7,6 +10,17 @@ import type { RefCallback } from "preact";
 import type { Type, UniqueIdentifier } from "@dnd-kit/abstract";
 import { ChromeDroppable } from "./entities";
 import { useDndManager } from "./useManager";
+
+const HIGHLIGHT_CLASSES = ["is-drop-target", "is-drop-highlight"] as const;
+
+function setHighlight(el: Element | undefined, on: boolean): void {
+  if (!el) {
+    return;
+  }
+  for (const name of HIGHLIGHT_CLASSES) {
+    el.classList.toggle(name, on);
+  }
+}
 
 export type UseDroppableInput = {
   id: UniqueIdentifier;
@@ -19,6 +33,7 @@ export type UseDroppableInput = {
 
 export type UseDroppableReturn = {
   ref: RefCallback<Element>;
+  /** Snapshot only — prefer CSS classes toggled on the element mid-drag. */
   isDropTarget: boolean;
 };
 
@@ -78,15 +93,15 @@ export function useDroppable(input: UseDroppableInput): UseDroppableReturn {
   }, [droppable, input.element]);
 
   useEffect(() => {
-    const sync = () => {
-      setIsDropTarget(droppable.isDropTarget);
+    const syncDom = () => {
+      setHighlight(droppable.element, droppable.isDropTarget);
     };
-    sync();
+    syncDom();
     const stops = [
-      manager.monitor.addEventListener("dragstart", sync),
-      manager.monitor.addEventListener("dragover", sync),
-      // Force clear — target can still match this id when dragend fires.
+      manager.monitor.addEventListener("dragstart", syncDom),
+      manager.monitor.addEventListener("dragover", syncDom),
       manager.monitor.addEventListener("dragend", () => {
+        setHighlight(droppable.element, false);
         setIsDropTarget(false);
       }),
     ];

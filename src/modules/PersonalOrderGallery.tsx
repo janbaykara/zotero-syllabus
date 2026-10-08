@@ -1,12 +1,15 @@
 /**
- * Personal reading-order gallery on zotero-dnd (@dnd-kit/abstract).
+ * Personal reading-order gallery — controlled multi-list Sortable.
  *
- * Always-visible landing zone at the top (empty or ordered items). Every tile
- * is draggable — drop into the landing zone to order, reorder within it, or
- * drop into the rest to remove from the stored order.
+ * Blue-line (deferred) reorder:
+ * - DropIndicatorPlugin paints `is-drop-before` / `is-drop-after` while dragging
+ * - Lists stay put until dragend → multi-aware drop helpers
+ * - Multi-select: dragging one selected item moves the whole selection
+ *   (relative order preserved)
+ * - Rest→rest blocked (unordered is drop-target only for unordering)
  *
- * Drop gap (blue line) is derived from pointer Y against the stable on-screen
- * tile list — not from live DOM reorder — so it tracks the insertion slot.
+ * FLIP live-reorder remains available via `sortableTransition` on DndProvider
+ * if another surface wants it.
  */
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -21,11 +24,19 @@ import {
 import type { ComponentChildren } from "preact";
 import { twMerge } from "tailwind-merge";
 import {
+  applyMultiDropIndicatorMove,
+  clearCoDragElements,
   DndProvider,
+  getDropIndicator,
+  isChromeSortable,
+  moveMultipleToContainerEnd,
+  resolveDragIds,
+  setCoDragElements,
   useDroppable,
   useSortable,
+  type DropIndicatorOptions,
+  type DndProviderProps,
 } from "../zotero-dnd";
-import type { DndProviderProps } from "../zotero-dnd";
 import { getString } from "../utils/locale";
 import {
   setPersonalReadingOrder,
@@ -34,19 +45,30 @@ import {
 
 type Zone = "ordered" | "rest";
 
-type DropGap = {
-  zone: Zone;
-  edge: "before" | "after";
-  targetKey: string;
-};
-
-type DropProjection = {
-  zone: Zone;
-  index: number;
-  gap: DropGap | null;
-};
-
 const ITEM_TYPE = "personal-order-item";
+
+/** Filled on dragstart — canIndicate reads this (stable options object). */
+const movingKeysRef = { current: new Set<string>() };
+
+/** Stable create-time options — do not inline on DndProvider (remounts manager). */
+const GALLERY_DROP_INDICATOR: DropIndicatorOptions = {
+  axis: (element) =>
+    element.closest(".syllabus-gallery-grid") ? "horizontal" : "vertical",
+  canIndicate: ({ source, target }) => {
+    if (!isChromeSortable(source) || !isChromeSortable(target)) {
+      return false;
+    }
+    // Unordered is a sink only — zone highlight, never per-item blue lines.
+    if (target.sortable.group === "rest") {
+      return false;
+    }
+    // Don't put the line on another item in the multi-drag set.
+    if (movingKeysRef.current.has(String(target.id))) {
+      return false;
+    }
+    return true;
+  },
+};
 
 function containersEqual(
   a: Record<Zone, string[]>,
@@ -60,184 +82,57 @@ function containersEqual(
   );
 }
 
-function zoneOfKey(containers: Record<Zone, string[]>, key: string): Zone | null {
-  if (containers.ordered.includes(key)) {
-    return "ordered";
+function sourceGroupOf(source: {
+  group?: unknown;
+  data?: { group?: unknown };
+  sortable?: { group?: unknown };
+}): string | undefined {
+  if (typeof source.sortable?.group === "string") {
+    return source.sortable.group;
   }
-  if (containers.rest.includes(key)) {
-    return "rest";
+  if (typeof source.group === "string") {
+    return source.group;
   }
-  return null;
-}
-
-function resolveZone(
-  containers: Record<Zone, string[]>,
-  targetId: string | number | null | undefined,
-): Zone | null {
-  if (targetId == null) {
-    return null;
+  if (typeof source.data?.group === "string") {
+    return source.data.group;
   }
-  const id = String(targetId);
-  if (id === "ordered" || id === "rest") {
-    return id;
-  }
-  return zoneOfKey(containers, id);
-}
-
-/**
- * Zone from pointer Y: anything from the Unordered section top downward is
- * "rest". Collision alone is unreliable — the dragged tile / feedback shape
- * can still win over the rest droppable.
- */
-function resolveZoneFromPointer(clientY: number): Zone | null {
-  const restEl = document.querySelector(
-    ".syllabus-personal-order-dnd .syllabus-personal-order-rest",
-  );
-  if (restEl && typeof restEl.getBoundingClientRect === "function") {
-    if (clientY >= restEl.getBoundingClientRect().top) {
-      return "rest";
-    }
-  }
-  const gallery = document.querySelector(".syllabus-personal-order-dnd");
-  if (gallery && typeof gallery.getBoundingClientRect === "function") {
-    const rect = gallery.getBoundingClientRect();
-    if (clientY >= rect.top && clientY <= rect.bottom) {
-      return "ordered";
-    }
-  }
-  return null;
-}
-
-/** Insertion slot from pointer Y vs stable on-screen tiles (excludes dragged). */
-function projectDrop(
-  containers: Record<Zone, string[]>,
-  zone: Zone,
-  draggedId: string,
-  clientY: number,
-): DropProjection {
-  const others = containers[zone].filter((key) => key !== draggedId);
-  for (let i = 0; i < others.length; i++) {
-    const key = others[i];
-    const el = document.querySelector(
-      `.syllabus-personal-order-dnd [data-personal-order-zone="${zone}"][data-personal-order-key="${CSS.escape(key)}"]`,
-    );
-    if (!el || typeof (el as Element).getBoundingClientRect !== "function") {
-      continue;
-    }
-    const rect = (el as Element).getBoundingClientRect();
-    if (clientY < rect.top + rect.height / 2) {
-      return {
-        zone,
-        index: i,
-        gap: { zone, edge: "before", targetKey: key },
-      };
-    }
-  }
-  if (others.length === 0) {
-    return { zone, index: 0, gap: null };
-  }
-  return {
-    zone,
-    index: others.length,
-    gap: {
-      zone,
-      edge: "after",
-      targetKey: others[others.length - 1],
-    },
-  };
-}
-
-function applyProjection(
-  before: Record<Zone, string[]>,
-  draggedId: string,
-  projection: DropProjection,
-): Record<Zone, string[]> {
-  const wasOrdered = before.ordered.includes(draggedId);
-  const ordered = before.ordered.filter((key) => key !== draggedId);
-  const rest = before.rest.filter((key) => key !== draggedId);
-  if (projection.zone === "ordered") {
-    ordered.splice(projection.index, 0, draggedId);
-  } else if (wasOrdered) {
-    // Unorder only — rest list order is not user-editable.
-    rest.push(draggedId);
-  } else {
-    // Already unordered; dropping in rest is a no-op.
-    return before;
-  }
-  return { ordered, rest };
-}
-
-function clientYOfEvent(event: {
-  /** dragmove carries the intended coords here; operation.position lags a microtask. */
-  to?: { x?: number; y?: number };
-  operation?: {
-    position?: { current?: { y?: number } };
-    activatorEvent?: Event;
-  };
-  nativeEvent?: Event;
-}): number | null {
-  if (typeof event.to?.y === "number") {
-    return event.to.y;
-  }
-  const native = event.nativeEvent;
-  if (
-    native &&
-    "clientY" in native &&
-    typeof (native as PointerEvent).clientY === "number"
-  ) {
-    return (native as PointerEvent).clientY;
-  }
-  const fromPos = event.operation?.position?.current?.y;
-  if (typeof fromPos === "number") {
-    return fromPos;
-  }
-  return null;
+  return undefined;
 }
 
 function SortablePersonalTile({
   item,
   index,
   zone,
-  dropGap,
   renderItem,
+  isMultiDragging,
 }: {
   item: Zotero.Item;
   index: number;
   zone: Zone;
-  dropGap: DropGap | null;
   renderItem: (item: Zotero.Item, index: number) => ComponentChildren;
+  /** True when this key is part of the active multi-drag set. */
+  isMultiDragging?: boolean;
 }) {
   const itemKey = item.key;
-  // Rest tiles are drag sources only — no insertion targets / blue lines.
   const { ref, isDragSource, isDragging } = useSortable({
     id: itemKey,
     index,
     group: zone,
     type: ITEM_TYPE,
     accept: ITEM_TYPE,
+    // Unordered tiles drag out only — the rest zone is the sole drop target.
     droppableDisabled: zone === "rest",
   });
 
-  const showBefore =
-    zone === "ordered" &&
-    dropGap?.zone === zone &&
-    dropGap.edge === "before" &&
-    dropGap.targetKey === itemKey;
-  const showAfter =
-    zone === "ordered" &&
-    dropGap?.zone === zone &&
-    dropGap.edge === "after" &&
-    dropGap.targetKey === itemKey;
+  const showDragStyle = isDragSource || isMultiDragging;
 
   return (
     <div
       ref={ref}
       className={twMerge(
         "syllabus-personal-order-tile cursor-grab",
-        isDragSource && "is-dragging opacity-40 cursor-grabbing",
-        isDragging && "z-20",
-        showBefore && "is-drop-before",
-        showAfter && "is-drop-after",
+        showDragStyle && "is-dragging opacity-40 cursor-grabbing",
+        (isDragging || isMultiDragging) && "z-20",
       )}
       title={getString("explorer-configure-reorder")}
       data-item-id={item.id}
@@ -249,35 +144,31 @@ function SortablePersonalTile({
   );
 }
 
-/** Always-visible ordered landing zone (empty placeholder or ordered tiles). */
 function OrderedLandingZone({
   keys,
   itemsByKey,
-  dropGap,
   className,
   renderItem,
+  draggingKeys,
 }: {
   keys: string[];
   itemsByKey: Map<string, Zotero.Item>;
-  dropGap: DropGap | null;
   className?: string;
   renderItem: (item: Zotero.Item, index: number) => ComponentChildren;
+  draggingKeys: Set<string>;
 }) {
   const empty = keys.length === 0;
-  // Only compete for collisions when empty — otherwise tiles own insertion.
-  const { ref, isDropTarget } = useDroppable({
+  // Always register the container droppable (dnd-kit multi-list pattern).
+  // Higher priority when empty so rest tiles don't steal the hit target.
+  const { ref } = useDroppable({
     id: "ordered",
     accept: ITEM_TYPE,
-    disabled: !empty,
-    collisionPriority: 1,
+    collisionPriority: empty ? 50 : 1,
   });
 
   return (
     <section
-      className={twMerge(
-        "syllabus-personal-order-landing",
-        isDropTarget && "is-drop-target",
-      )}
+      className="syllabus-personal-order-landing"
       aria-label={getString("gallery-personal-order-landing-label")}
     >
       <div className="syllabus-personal-order-landing-heading text-secondary text-sm mb-2">
@@ -286,57 +177,43 @@ function OrderedLandingZone({
       <div
         ref={ref}
         className={twMerge(
-          "syllabus-personal-order-section syllabus-personal-order-landing-body",
-          className,
+          "syllabus-personal-order-landing-body",
           empty && "is-empty",
-          isDropTarget && empty && "is-drop-highlight",
         )}
         data-personal-order-zone="ordered"
       >
         {empty ? (
           <div
-            className={twMerge(
-              "syllabus-personal-order-landing-empty text-secondary text-base",
-              isDropTarget && "is-drop-highlight",
-            )}
+            className="syllabus-personal-order-landing-empty text-secondary text-base"
             role="status"
           >
             {getString("gallery-personal-order-landing-empty")}
           </div>
         ) : (
-          keys.map((key, index) => {
-            const item = itemsByKey.get(key);
-            if (!item) {
-              return null;
-            }
-            return (
-              <SortablePersonalTile
-                key={`ordered-${item.id}`}
-                item={item}
-                index={index}
-                zone="ordered"
-                dropGap={dropGap}
-                renderItem={renderItem}
-              />
-            );
-          })
+          <div
+            className={twMerge("syllabus-personal-order-section", className)}
+          >
+            {keys.map((key, index) => {
+              const item = itemsByKey.get(key);
+              if (!item) {
+                return null;
+              }
+              return (
+                <SortablePersonalTile
+                  key={item.key}
+                  item={item}
+                  index={index}
+                  zone="ordered"
+                  renderItem={renderItem}
+                  isMultiDragging={draggingKeys.has(item.key)}
+                />
+              );
+            })}
+          </div>
         )}
       </div>
     </section>
   );
-}
-
-function sourceGroupOf(source: {
-  group?: unknown;
-  data?: { group?: unknown };
-}): string | undefined {
-  if (typeof source.group === "string") {
-    return source.group;
-  }
-  if (typeof source.data?.group === "string") {
-    return source.data.group;
-  }
-  return undefined;
 }
 
 function RestZone({
@@ -344,32 +221,25 @@ function RestZone({
   itemsByKey,
   className,
   renderItem,
-  dropHighlight,
+  draggingKeys,
 }: {
   keys: string[];
   itemsByKey: Map<string, Zotero.Item>;
   className?: string;
   renderItem: (item: Zotero.Item, index: number) => ComponentChildren;
-  /** Pointer-driven highlight (collision alone often misses this zone). */
-  dropHighlight: boolean;
+  draggingKeys: Set<string>;
 }) {
-  // Whole section is the unorder target (heading + tiles). Only from ordered.
-  // Droppable still needed for collision; highlight is pointer-driven only —
-  // isDropTarget can lag true after dragend and leave the zone stuck active.
+  // Droppable on the list body only — not the whole section — so the
+  // unorder highlight doesn't paint over the ordered landing above.
   const { ref } = useDroppable({
     id: "rest",
     accept: (source) => sourceGroupOf(source as never) === "ordered",
-    // Beat ordered tiles (priority 10) when the pointer is actually over rest.
-    collisionPriority: 20,
+    collisionPriority: 1,
   });
 
   return (
     <section
-      ref={ref}
-      className={twMerge(
-        "syllabus-personal-order-rest mt-4",
-        dropHighlight && "is-drop-target is-drop-highlight",
-      )}
+      className="syllabus-personal-order-rest mt-4"
       aria-label={getString("gallery-personal-order-unordered")}
       data-personal-order-zone="rest"
     >
@@ -380,7 +250,11 @@ function RestZone({
         {getString("gallery-personal-order-unordered")}
       </div>
       <div
-        className={twMerge("syllabus-personal-order-section", className)}
+        ref={ref}
+        className={twMerge(
+          "syllabus-personal-order-section syllabus-personal-order-rest-body",
+          className,
+        )}
       >
         {keys.map((key, index) => {
           const item = itemsByKey.get(key);
@@ -389,12 +263,12 @@ function RestZone({
           }
           return (
             <SortablePersonalTile
-              key={`rest-${item.id}`}
+              key={item.key}
               item={item}
               index={index}
               zone="rest"
-              dropGap={null}
               renderItem={renderItem}
+              isMultiDragging={draggingKeys.has(item.key)}
             />
           );
         })}
@@ -403,10 +277,6 @@ function RestZone({
   );
 }
 
-/**
- * Flat personal-reading-order gallery on zotero-dnd. Landing zone always at
- * the top; every item is draggable.
- */
 export function PersonalOrderGallery({
   items,
   orderKeys,
@@ -415,19 +285,17 @@ export function PersonalOrderGallery({
   renderItem,
   onReorder,
   modifiers,
+  selectedItemIds,
 }: {
   items: Zotero.Item[];
   orderKeys: string[];
   collectionId: number;
   className?: string;
   renderItem: (item: Zotero.Item, index: number) => ComponentChildren;
-  /** When set, called instead of writing the Personal Reading Order note. */
   onReorder?: (keys: string[]) => void;
-  /**
-   * Global drag modifiers (DragDropProvider-style). Card layout typically
-   * passes `[RestrictToVerticalAxis]`.
-   */
   modifiers?: DndProviderProps["modifiers"];
+  /** Zotero item ids currently selected — multi-drag when the active tile is among them. */
+  selectedItemIds?: number[] | null;
 }) {
   const { ordered, unordered } = splitPersonalReadingOrder(items, orderKeys);
   const itemsByKey = useMemo(() => {
@@ -437,6 +305,16 @@ export function PersonalOrderGallery({
     }
     return map;
   }, [items]);
+
+  const selectedKeys = useMemo(() => {
+    const ids = new Set(selectedItemIds ?? []);
+    if (ids.size === 0) {
+      return [] as string[];
+    }
+    return items.filter((item) => ids.has(item.id)).map((item) => item.key);
+  }, [items, selectedItemIds]);
+  const selectedKeysRef = useRef(selectedKeys);
+  selectedKeysRef.current = selectedKeys;
 
   const sourceContainers = useMemo(
     (): Record<Zone, string[]> => ({
@@ -449,10 +327,13 @@ export function PersonalOrderGallery({
 
   const [containers, setContainers] =
     useState<Record<Zone, string[]>>(sourceContainers);
-  const beforeDrag = useRef(containers);
-  const projectionRef = useRef<DropProjection | null>(null);
-  const [dropGap, setDropGap] = useState<DropGap | null>(null);
-  const [hoverZone, setHoverZone] = useState<Zone | null>(null);
+  const containersRef = useRef(containers);
+  containersRef.current = containers;
+  const previousContainers = useRef(containers);
+  const [draggingKeys, setDraggingKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const dragIdsRef = useRef<string[]>([]);
 
   useEffect(() => {
     setContainers(sourceContainers);
@@ -475,140 +356,139 @@ export function PersonalOrderGallery({
     [collectionId, onReorder, orderKeys],
   );
 
-  const updateProjection = useCallback(
-    (event: {
-      operation?: {
-        source?: { id?: string | number } | null;
-        target?: { id?: string | number } | null;
-        position?: { current?: { y?: number } };
-        activatorEvent?: Event;
-      };
-      nativeEvent?: Event;
-      to?: { x?: number; y?: number };
-    }) => {
-      const sourceId = event.operation?.source?.id;
-      if (sourceId == null) {
-        projectionRef.current = null;
-        setDropGap(null);
-        setHoverZone(null);
-        return;
-      }
-      const draggedId = String(sourceId);
-      const clientY = clientYOfEvent(event);
-      if (clientY == null) {
-        return;
-      }
-      // Prefer geometry over collision target — see resolveZoneFromPointer.
-      const zone =
-        resolveZoneFromPointer(clientY) ??
-        resolveZone(beforeDrag.current, event.operation?.target?.id);
-      if (!zone) {
-        projectionRef.current = null;
-        setDropGap(null);
-        setHoverZone(null);
-        return;
-      }
-      // Rest is not a reorder target — only accept "unorder" from ordered.
-      if (zone === "rest") {
-        const wasOrdered = beforeDrag.current.ordered.includes(draggedId);
-        if (!wasOrdered) {
-          projectionRef.current = null;
-          setDropGap(null);
-          setHoverZone(null);
-          return;
-        }
-        const projection: DropProjection = {
-          zone: "rest",
-          index: 0,
-          gap: null,
-        };
-        projectionRef.current = projection;
-        setDropGap(null);
-        setHoverZone("rest");
-        return;
-      }
-
-      const projection = projectDrop(
-        beforeDrag.current,
-        zone,
-        draggedId,
-        clientY,
-      );
-      projectionRef.current = projection;
-      setHoverZone("ordered");
-      setDropGap((prev) => {
-        const next = projection.gap;
-        if (
-          prev?.zone === next?.zone &&
-          prev?.edge === next?.edge &&
-          prev?.targetKey === next?.targetKey
-        ) {
-          return prev;
-        }
-        return next;
-      });
-    },
-    [],
-  );
+  const clearMultiDrag = (manager?: { dragOperation?: unknown }) => {
+    movingKeysRef.current = new Set();
+    dragIdsRef.current = [];
+    setDraggingKeys(new Set());
+    if (manager) {
+      clearCoDragElements(manager);
+    }
+  };
 
   return (
     <DndProvider
       modifiers={modifiers}
-      onDragStart={() => {
-        beforeDrag.current = {
-          ordered: [...containers.ordered],
-          rest: [...containers.rest],
+      dropIndicator={GALLERY_DROP_INDICATOR}
+      onDragStart={(event, manager) => {
+        previousContainers.current = {
+          ordered: [...containersRef.current.ordered],
+          rest: [...containersRef.current.rest],
         };
-        projectionRef.current = null;
-        setDropGap(null);
-        setHoverZone(null);
+        const sourceId = event.operation.source?.id;
+        const ids = sourceId
+          ? resolveDragIds(
+              containersRef.current,
+              sourceId,
+              selectedKeysRef.current,
+            )
+          : [];
+        dragIdsRef.current = ids;
+        movingKeysRef.current = new Set(ids);
+        setDraggingKeys(new Set(ids));
+
+        // Register co-dragged tiles so feedback translates the whole selection.
+        const root = document.querySelector(".syllabus-personal-order-dnd");
+        if (root && ids.length > 1) {
+          const els: Element[] = [];
+          for (const key of ids) {
+            const node = root.querySelector(
+              `[data-personal-order-key="${CSS.escape(key)}"]`,
+            );
+            if (node) {
+              els.push(node);
+            }
+          }
+          setCoDragElements(manager, els);
+        } else {
+          clearCoDragElements(manager);
+        }
       }}
-      onDragMove={updateProjection}
-      onDragOver={updateProjection}
-      onDragEnd={(event) => {
-        const before = beforeDrag.current;
-        let projection = projectionRef.current;
-        projectionRef.current = null;
-        setDropGap(null);
-        setHoverZone(null);
+      onDragOver={(event) => {
+        const { source, target } = event.operation;
+        if (!source || !target) {
+          return;
+        }
+        // No live move() — blue line only. Block rest→rest collisions.
+        if (isChromeSortable(source) && isChromeSortable(target)) {
+          if (
+            source.sortable.group === "rest" &&
+            target.sortable.group === "rest"
+          ) {
+            event.preventDefault();
+          }
+        }
+      }}
+      onDragEnd={(event, manager) => {
+        const moving = dragIdsRef.current;
+        clearMultiDrag(manager);
+
         if (event.canceled) {
+          setContainers(previousContainers.current);
           return;
         }
-        const sourceId = event.operation?.source?.id;
-        if (sourceId == null) {
+        const { source, target } = event.operation;
+        if (!source || !target || moving.length === 0) {
           return;
         }
-        const draggedId = String(sourceId);
-        const clientY = clientYOfEvent(event);
-        const zone =
-          (clientY != null ? resolveZoneFromPointer(clientY) : null) ??
-          resolveZone(before, event.operation?.target?.id);
-        if (zone === "rest") {
-          if (before.ordered.includes(draggedId)) {
-            projection = { zone: "rest", index: 0, gap: null };
-          } else {
+
+        const prev = previousContainers.current;
+        let next: Record<Zone, string[]> = prev;
+
+        if (target.id === "ordered" || target.id === "rest") {
+          // Zone container: only for cross-group drops. If every moving id is
+          // already in that zone, treat as no-op (click / same-zone release).
+          const allAlreadyThere = moving.every((id) =>
+            prev[target.id as Zone]?.includes(id),
+          );
+          if (allAlreadyThere) {
             return;
           }
-        } else if (zone === "ordered" && clientY != null) {
-          projection = projectDrop(before, "ordered", draggedId, clientY);
-        }
-        if (!projection) {
+          next = moveMultipleToContainerEnd(
+            prev,
+            moving,
+            String(target.id),
+            "after",
+          );
+        } else if (isChromeSortable(target)) {
+          if (target.sortable.group === "rest") {
+            // Rest tiles aren't insertion points — sink the block into rest.
+            const anyFromOrdered = moving.some((id) =>
+              prev.ordered.includes(id),
+            );
+            if (!anyFromOrdered) {
+              return;
+            }
+            next = moveMultipleToContainerEnd(prev, moving, "rest", "after");
+          } else {
+            const indicator = getDropIndicator(manager);
+            if (!indicator || moving.includes(String(indicator.targetId))) {
+              return;
+            }
+            next = applyMultiDropIndicatorMove(
+              prev,
+              moving,
+              indicator.targetId,
+              indicator.edge,
+            );
+          }
+        } else {
           return;
         }
-        const next = applyProjection(before, draggedId, projection);
-        if (!containersEqual(before, next)) {
-          setContainers(next);
-          commitOrder(next.ordered);
+
+        if (containersEqual(prev, next)) {
+          return;
         }
+        setContainers(next);
+        commitOrder(next.ordered);
       }}
     >
       <div className="syllabus-personal-order-gallery syllabus-personal-order-dnd">
         <OrderedLandingZone
           keys={containers.ordered}
           itemsByKey={itemsByKey}
-          dropGap={dropGap}
           className={className}
           renderItem={renderItem}
+          draggingKeys={draggingKeys}
         />
         {containers.rest.length > 0 ? (
           <RestZone
@@ -616,7 +496,7 @@ export function PersonalOrderGallery({
             itemsByKey={itemsByKey}
             className={className}
             renderItem={renderItem}
-            dropHighlight={hoverZone === "rest"}
+            draggingKeys={draggingKeys}
           />
         ) : null}
       </div>

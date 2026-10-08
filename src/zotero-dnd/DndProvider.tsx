@@ -7,6 +7,9 @@
  * Modifiers are synced in place — do not put a fresh modifiers array in the
  * manager factory deps (that remounts the whole manager every render and
  * makes drag intermittent).
+ *
+ * `dropIndicator` / `sortableTransition` are create-time options (stable
+ * boolean or module-level options object).
  */
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -22,7 +25,11 @@ import type {
   DragStartEvent,
 } from "@dnd-kit/abstract";
 import { ZoteroDndContext, type ZoteroDndManager } from "./context";
-import { createZoteroDndManager } from "./createManager";
+import {
+  createZoteroDndManager,
+  type CreateZoteroDndManagerOptions,
+} from "./createManager";
+import type { DropIndicatorOptions } from "./dropIndicator";
 
 type ManagerInput = DragDropManagerInput<DragDropManager<any, any>>;
 
@@ -34,10 +41,14 @@ export type DndProviderProps = {
   plugins?: ManagerInput["plugins"];
   /** Global modifiers — same API as DragDropProvider.modifiers. */
   modifiers?: ManagerInput["modifiers"];
-  onDragStart?: (event: DragStartEvent) => void;
-  onDragMove?: (event: DragMoveEvent) => void;
-  onDragOver?: (event: DragOverEvent) => void;
-  onDragEnd?: (event: DragEndEvent) => void;
+  /** Opt-in blue-line indicators (create-time). */
+  dropIndicator?: boolean | DropIndicatorOptions;
+  /** Opt-in FLIP after controlled move() (create-time). */
+  sortableTransition?: boolean;
+  onDragStart?: (event: DragStartEvent, manager: ZoteroDndManager) => void;
+  onDragMove?: (event: DragMoveEvent, manager: ZoteroDndManager) => void;
+  onDragOver?: (event: DragOverEvent, manager: ZoteroDndManager) => void;
+  onDragEnd?: (event: DragEndEvent, manager: ZoteroDndManager) => void;
 };
 
 export function DndProvider({
@@ -46,19 +57,28 @@ export function DndProvider({
   sensors,
   plugins,
   modifiers,
+  dropIndicator,
+  sortableTransition,
   onDragStart,
   onDragMove,
   onDragOver,
   onDragEnd,
 }: DndProviderProps) {
-  // Sensors/plugins only — modifiers update in place below.
+  // Sensors/plugins/indicator flags only — modifiers update in place below.
   const owned = useMemo(() => {
     if (managerProp) {
       return null;
     }
-    return createZoteroDndManager({ sensors, plugins, modifiers });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- modifiers synced separately
-  }, [managerProp, sensors, plugins]);
+    const opts: CreateZoteroDndManagerOptions = {
+      sensors,
+      plugins,
+      modifiers,
+      dropIndicator,
+      sortableTransition,
+    };
+    return createZoteroDndManager(opts);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- indicator/transition create-time
+  }, [managerProp, sensors, plugins, dropIndicator, sortableTransition]);
 
   const manager = managerProp ?? owned!;
 
@@ -86,16 +106,16 @@ export function DndProvider({
     const { monitor } = manager;
     const cleanups = [
       monitor.addEventListener("dragstart", (event) => {
-        handlers.current.onDragStart?.(event);
+        handlers.current.onDragStart?.(event, manager);
       }),
       monitor.addEventListener("dragmove", (event) => {
-        handlers.current.onDragMove?.(event);
+        handlers.current.onDragMove?.(event, manager);
       }),
       monitor.addEventListener("dragover", (event) => {
-        handlers.current.onDragOver?.(event);
+        handlers.current.onDragOver?.(event, manager);
       }),
       monitor.addEventListener("dragend", (event) => {
-        handlers.current.onDragEnd?.(event);
+        handlers.current.onDragEnd?.(event, manager);
       }),
     ];
     return () => {

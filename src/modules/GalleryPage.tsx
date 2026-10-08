@@ -256,16 +256,28 @@ export function GalleryPage({
     syllabusItems,
   ]);
   const personalOrderAvailable = isOptionalFeatureEnabled("gallery");
+  // Keep Personal Reading Order chrome available with an empty ordered list —
+  // otherwise dragging out the last item clears keys, unmounts DnD, and you
+  // can never drop the first item back in.
   const hasPersonalOrder =
     personalOrderAvailable &&
     isCollectionScope &&
     collectionId != null &&
-    (isPinnedFolder ? syllabusItems.length > 0 : personalOrderKeys.length > 0);
+    (isPinnedFolder
+      ? syllabusItems.length > 0
+      : personalOrderKeys.length > 0 || sortBy === "personalOrder");
   /** Explicit Personal Reading Order sort: flat list + DnD chrome. */
   const personalOrderMode = hasPersonalOrder && sortBy === "personalOrder";
-  /** Auto (and personalOrder) prefer a personal list when one exists. */
+  /** Auto prefers a personal list only when one exists; personalOrder always. */
   const preferPersonalSort =
-    hasPersonalOrder && (sortBy === "auto" || sortBy === "personalOrder");
+    personalOrderAvailable &&
+    isCollectionScope &&
+    collectionId != null &&
+    (sortBy === "personalOrder" ||
+      (sortBy === "auto" &&
+        (isPinnedFolder
+          ? syllabusItems.length > 0
+          : personalOrderKeys.length > 0)));
   const effectiveGroupBy: GalleryGroupBy = preferPersonalSort
     ? "none"
     : groupBy;
@@ -1077,6 +1089,7 @@ export function GalleryPage({
           layout === "card" ? PERSONAL_ORDER_CARD_MODIFIERS : undefined
         }
         onReorder={isPinnedFolder ? handlePersonalOrderReorder : undefined}
+        selectedItemIds={selectedItemIds}
         renderItem={(item) => {
           const chrome = readerChromeForItems([item])?.get(item.id);
           if (layout === "card") {
@@ -1284,279 +1297,289 @@ export function GalleryPage({
         tabIndex={-1}
         className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden focus:outline-none"
       >
-      <OsFileDropOverlay visible={fileDrop.isDraggingFile} />
-      <div className="pb-10">
-        <div
-          ref={stickyRef}
-          className={twMerge(
-            "syllabus-gallery-sticky sticky top-0 z-40 bg-background",
-            isZotero8OrLater() ? "md:pt-8 pt-6" : "pt-8",
-          )}
-        >
-          <div className="px-6">
-            <GalleryPageHeader
-              title={title || getString("untitled")}
-              header={header}
-              groupBy={effectiveGroupBy}
-              onGroupBy={setGroupBy}
-              groupByGlobal={groupByGlobal}
-              groupByLocked={preferPersonalSort}
-              showClasses={isSyllabus}
-              showSubcollections={isCollectionScope}
-              showPersonalOrderSort={
-                isCollectionScope && personalOrderAvailable
-              }
-              showCheckboxes={isCollectionScope}
-              readerMode={readerMode}
-              onReaderMode={setReaderMode}
-              readerModeGlobal={readerModeGlobal}
-              sortBy={sortBy}
-              onSortBy={setSortBy}
-              sortByGlobal={sortByGlobal}
-              layout={layout}
-              onLayout={setLayout}
-              layoutGlobal={layoutGlobal}
-              magazinePacking={magazinePacking}
-              onMagazinePacking={setMagazinePacking}
-              magazinePackingGlobal={magazinePackingGlobal}
-              showItemsWithoutAnnotations={showItemsWithoutAnnotations}
-              onShowItemsWithoutAnnotations={setShowItemsWithoutAnnotations}
-              showEmptyGlobal={showEmptyGlobal}
-              includeAutomaticTags={includeAutomaticTags}
-              onIncludeAutomaticTags={setIncludeAutomaticTags}
-              includeAutomaticTagsGlobal={includeAutomaticTagsGlobal}
-              annotationColors={annotationColors}
-              colorFilterScope={viewKey}
-              libraryID={libraryID}
-              navGroups={preferPersonalSort ? [] : navGroups}
-              activeGroupId={activeGroupId}
-              onSelectGroup={handleSelectGroup}
-              pillsRef={pillsRef}
-            />
-          </div>
-        </div>
-        <GalleryViewportProvider rootRef={pageRef}>
+        <OsFileDropOverlay visible={fileDrop.isDraggingFile} />
+        <div className="pb-10">
           <div
+            ref={stickyRef}
             className={twMerge(
-              "pt-4",
-              // Feed stays in the content measure; the page-level batch bar
-              // is full-width outside this wrapper.
-              layout === "card" ||
-                layout === "annotations" ||
-                layout === "magazine"
-                ? "container-padded"
-                : "px-6",
+              "syllabus-gallery-sticky sticky top-0 z-40 bg-background",
+              isZotero8OrLater() ? "md:pt-8 pt-6" : "pt-8",
             )}
           >
-            {personalOrderMode ? renderPersonalOrderBody() : null}
+            <div className="px-6">
+              <GalleryPageHeader
+                title={title || getString("untitled")}
+                header={header}
+                groupBy={effectiveGroupBy}
+                onGroupBy={setGroupBy}
+                groupByGlobal={groupByGlobal}
+                groupByLocked={preferPersonalSort}
+                showClasses={isSyllabus}
+                showSubcollections={isCollectionScope}
+                showPersonalOrderSort={
+                  isCollectionScope && personalOrderAvailable
+                }
+                showCheckboxes={isCollectionScope}
+                readerMode={readerMode}
+                onReaderMode={setReaderMode}
+                readerModeGlobal={readerModeGlobal}
+                sortBy={sortBy}
+                onSortBy={setSortBy}
+                sortByGlobal={sortByGlobal}
+                layout={layout}
+                onLayout={setLayout}
+                layoutGlobal={layoutGlobal}
+                magazinePacking={magazinePacking}
+                onMagazinePacking={setMagazinePacking}
+                magazinePackingGlobal={magazinePackingGlobal}
+                showItemsWithoutAnnotations={showItemsWithoutAnnotations}
+                onShowItemsWithoutAnnotations={setShowItemsWithoutAnnotations}
+                showEmptyGlobal={showEmptyGlobal}
+                includeAutomaticTags={includeAutomaticTags}
+                onIncludeAutomaticTags={setIncludeAutomaticTags}
+                includeAutomaticTagsGlobal={includeAutomaticTagsGlobal}
+                annotationColors={annotationColors}
+                colorFilterScope={viewKey}
+                libraryID={libraryID}
+                navGroups={preferPersonalSort ? [] : navGroups}
+                activeGroupId={activeGroupId}
+                onSelectGroup={handleSelectGroup}
+                pillsRef={pillsRef}
+              />
+            </div>
+          </div>
+          <GalleryViewportProvider rootRef={pageRef}>
+            <div
+              className={twMerge(
+                "pt-4",
+                // Feed stays in the content measure; the page-level batch bar
+                // is full-width outside this wrapper.
+                layout === "card" ||
+                  layout === "annotations" ||
+                  layout === "magazine"
+                  ? "container-padded"
+                  : "px-6",
+              )}
+            >
+              {personalOrderMode ? renderPersonalOrderBody() : null}
 
-            {!personalOrderMode &&
-              effectiveGroupBy === "none" &&
-              (!annotationGroupsReady ? null : visibleFlatItems.length === 0 ? (
-                <p className="text-secondary text-lg">{emptyMessage}</p>
-              ) : (
-                renderItems(visibleFlatItems, "all")
-              ))}
+              {!personalOrderMode &&
+                effectiveGroupBy === "none" &&
+                (!annotationGroupsReady ? null : visibleFlatItems.length ===
+                  0 ? (
+                  <p className="text-secondary text-lg">{emptyMessage}</p>
+                ) : (
+                  renderItems(visibleFlatItems, "all")
+                ))}
 
-            {!personalOrderMode &&
-              effectiveGroupBy === "auto" &&
-              (syllabusItems.length === 0 ? (
-                <p className="text-secondary text-lg">{emptyMessage}</p>
-              ) : (
-                <MagazineHome
-                  items={orderGalleryItems(
-                    syllabusItems.map(({ zoteroItem }) => zoteroItem),
-                  )}
-                  tagGroups={tagGroups}
-                  classDesks={magazineClassDesks}
-                  subcollectionRoot={subcollectionRoot}
-                  sortBy="auto"
-                  packing={magazinePacking}
-                  selectedItemIds={selectedItemIds}
-                  onClick={handleClick}
-                  onDoubleClick={handleDoubleClick}
-                  onContextMenu={handleContextMenu}
-                />
-              ))}
+              {!personalOrderMode &&
+                effectiveGroupBy === "auto" &&
+                (syllabusItems.length === 0 ? (
+                  <p className="text-secondary text-lg">{emptyMessage}</p>
+                ) : (
+                  <MagazineHome
+                    items={orderGalleryItems(
+                      syllabusItems.map(({ zoteroItem }) => zoteroItem),
+                    )}
+                    tagGroups={tagGroups}
+                    classDesks={magazineClassDesks}
+                    subcollectionRoot={subcollectionRoot}
+                    sortBy="auto"
+                    packing={magazinePacking}
+                    selectedItemIds={selectedItemIds}
+                    onClick={handleClick}
+                    onDoubleClick={handleDoubleClick}
+                    onContextMenu={handleContextMenu}
+                  />
+                ))}
 
-            {!personalOrderMode &&
-              effectiveGroupBy === "type" &&
-              (!annotationGroupsReady ? null : visibleTypeGroups.length ===
-                0 ? (
-                <p className="text-secondary text-lg">{emptyMessage}</p>
-              ) : (
-                visibleTypeGroups.map(({ itemType, label, items }) => (
-                  <section
-                    key={itemType}
-                    className="syllabus-gallery-section"
-                    data-gallery-group={`type-${itemType}`}
-                  >
-                    <GalleryGroupHeading icon={{ kind: "item-type", itemType }}>
-                      {label}
-                    </GalleryGroupHeading>
-                    {renderItems(items, `type-${itemType}`)}
-                  </section>
-                ))
-              ))}
-
-            {!personalOrderMode &&
-              effectiveGroupBy === "creator" &&
-              (!annotationGroupsReady ? null : visibleCreatorGroups.length ===
-                  0 && visibleUncreditedItems.length === 0 ? (
-                <p className="text-secondary text-lg">{emptyMessage}</p>
-              ) : (
-                <>
-                  {visibleCreatorGroups.map(({ key, label, items }, index) => (
+              {!personalOrderMode &&
+                effectiveGroupBy === "type" &&
+                (!annotationGroupsReady ? null : visibleTypeGroups.length ===
+                  0 ? (
+                  <p className="text-secondary text-lg">{emptyMessage}</p>
+                ) : (
+                  visibleTypeGroups.map(({ itemType, label, items }) => (
                     <section
-                      key={key}
+                      key={itemType}
                       className="syllabus-gallery-section"
-                      data-gallery-group={`creator-${index}`}
+                      data-gallery-group={`type-${itemType}`}
                     >
-                      <GalleryGroupHeading icon={{ kind: "creator" }}>
+                      <GalleryGroupHeading
+                        icon={{ kind: "item-type", itemType }}
+                      >
                         {label}
                       </GalleryGroupHeading>
-                      {renderItems(items, `creator-${key}`)}
+                      {renderItems(items, `type-${itemType}`)}
                     </section>
-                  ))}
-                  {visibleUncreditedItems.length > 0 && (
-                    <section
-                      className="syllabus-gallery-section"
-                      data-gallery-group="uncredited"
-                    >
-                      <GalleryGroupHeading icon={{ kind: "uncredited" }}>
-                        {getString("gallery-uncredited")}
-                      </GalleryGroupHeading>
-                      <p className="syllabus-gallery-class-description">
-                        {getString("gallery-uncredited-desc")}
-                      </p>
-                      {renderItems(visibleUncreditedItems, "uncredited")}
-                    </section>
-                  )}
-                </>
-              ))}
+                  ))
+                ))}
 
-            {!personalOrderMode &&
-              effectiveGroupBy === "tags" &&
-              (!annotationGroupsReady ? null : visibleTagGroups.length === 0 &&
-                visibleUntaggedItems.length === 0 ? (
-                <p className="text-secondary text-lg">{emptyMessage}</p>
-              ) : (
-                <>
-                  {visibleTagGroups.map(({ tag, items }, index) => (
-                    <section
-                      key={tag}
-                      className="syllabus-gallery-section"
-                      data-gallery-group={`tag-${index}`}
-                    >
-                      <GalleryGroupHeading icon={{ kind: "tag" }}>
-                        {tag}
-                      </GalleryGroupHeading>
-                      {renderItems(items, `tag-${tag}`)}
-                    </section>
-                  ))}
-                  {visibleUntaggedItems.length > 0 && (
-                    <section
-                      className="syllabus-gallery-section"
-                      data-gallery-group="untagged"
-                    >
-                      <GalleryGroupHeading icon={{ kind: "untagged" }}>
-                        {getString("gallery-untagged")}
-                      </GalleryGroupHeading>
-                      <p className="syllabus-gallery-class-description">
-                        {getString("gallery-untagged-desc")}
-                      </p>
-                      {renderItems(visibleUntaggedItems, "untagged")}
-                    </section>
-                  )}
-                </>
-              ))}
-
-            {!personalOrderMode &&
-              effectiveGroupBy === "subcollections" &&
-              (!annotationGroupsReady ? null : !visibleSubcollectionRoot ||
-                !subtreeHasContent(visibleSubcollectionRoot) ? (
-                <p className="text-secondary text-lg">
-                  {isFiltered
-                    ? emptyMessage
-                    : getString("gallery-empty-subcollections")}
-                </p>
-              ) : (
-                <GallerySubcollectionSection
-                  node={visibleSubcollectionRoot}
-                  depth={0}
-                  isRoot
-                  resolveItems={resolveSubcollectionItems}
-                  renderItems={renderItems}
-                />
-              ))}
-
-            {!personalOrderMode &&
-              effectiveGroupBy === "classes" &&
-              (!annotationGroupsReady ? null : visibleClassGroups.length ===
-                  0 && visibleFurtherReadingItems.length === 0 ? (
-                <p className="text-secondary text-lg">{emptyMessage}</p>
-              ) : (
-                <>
-                  {visibleClassGroups.map((group) => {
-                    const key = String(group.classNumber ?? "unnumbered");
-                    return (
+              {!personalOrderMode &&
+                effectiveGroupBy === "creator" &&
+                (!annotationGroupsReady ? null : visibleCreatorGroups.length ===
+                    0 && visibleUncreditedItems.length === 0 ? (
+                  <p className="text-secondary text-lg">{emptyMessage}</p>
+                ) : (
+                  <>
+                    {visibleCreatorGroups.map(
+                      ({ key, label, items }, index) => (
+                        <section
+                          key={key}
+                          className="syllabus-gallery-section"
+                          data-gallery-group={`creator-${index}`}
+                        >
+                          <GalleryGroupHeading icon={{ kind: "creator" }}>
+                            {label}
+                          </GalleryGroupHeading>
+                          {renderItems(items, `creator-${key}`)}
+                        </section>
+                      ),
+                    )}
+                    {visibleUncreditedItems.length > 0 && (
                       <section
-                        key={key}
                         className="syllabus-gallery-section"
-                        data-gallery-group={`class-${key}`}
+                        data-gallery-group="uncredited"
                       >
-                        <GalleryClassHeading
-                          collectionId={collectionIdOrZero}
-                          classNumber={group.classNumber}
-                          syllabusMetadata={syllabusMetadata}
-                        />
-                        {renderClassAssignments(
-                          group.itemAssignments,
-                          group.classNumber,
-                          `class-${key}`,
+                        <GalleryGroupHeading icon={{ kind: "uncredited" }}>
+                          {getString("gallery-uncredited")}
+                        </GalleryGroupHeading>
+                        <p className="syllabus-gallery-class-description">
+                          {getString("gallery-uncredited-desc")}
+                        </p>
+                        {renderItems(visibleUncreditedItems, "uncredited")}
+                      </section>
+                    )}
+                  </>
+                ))}
+
+              {!personalOrderMode &&
+                effectiveGroupBy === "tags" &&
+                (!annotationGroupsReady ? null : visibleTagGroups.length ===
+                    0 && visibleUntaggedItems.length === 0 ? (
+                  <p className="text-secondary text-lg">{emptyMessage}</p>
+                ) : (
+                  <>
+                    {visibleTagGroups.map(({ tag, items }, index) => (
+                      <section
+                        key={tag}
+                        className="syllabus-gallery-section"
+                        data-gallery-group={`tag-${index}`}
+                      >
+                        <GalleryGroupHeading icon={{ kind: "tag" }}>
+                          {tag}
+                        </GalleryGroupHeading>
+                        {renderItems(items, `tag-${tag}`)}
+                      </section>
+                    ))}
+                    {visibleUntaggedItems.length > 0 && (
+                      <section
+                        className="syllabus-gallery-section"
+                        data-gallery-group="untagged"
+                      >
+                        <GalleryGroupHeading icon={{ kind: "untagged" }}>
+                          {getString("gallery-untagged")}
+                        </GalleryGroupHeading>
+                        <p className="syllabus-gallery-class-description">
+                          {getString("gallery-untagged-desc")}
+                        </p>
+                        {renderItems(visibleUntaggedItems, "untagged")}
+                      </section>
+                    )}
+                  </>
+                ))}
+
+              {!personalOrderMode &&
+                effectiveGroupBy === "subcollections" &&
+                (!annotationGroupsReady ? null : !visibleSubcollectionRoot ||
+                  !subtreeHasContent(visibleSubcollectionRoot) ? (
+                  <p className="text-secondary text-lg">
+                    {isFiltered
+                      ? emptyMessage
+                      : getString("gallery-empty-subcollections")}
+                  </p>
+                ) : (
+                  <GallerySubcollectionSection
+                    node={visibleSubcollectionRoot}
+                    depth={0}
+                    isRoot
+                    resolveItems={resolveSubcollectionItems}
+                    renderItems={renderItems}
+                  />
+                ))}
+
+              {!personalOrderMode &&
+                effectiveGroupBy === "classes" &&
+                (!annotationGroupsReady ? null : visibleClassGroups.length ===
+                    0 && visibleFurtherReadingItems.length === 0 ? (
+                  <p className="text-secondary text-lg">{emptyMessage}</p>
+                ) : (
+                  <>
+                    {visibleClassGroups.map((group) => {
+                      const key = String(group.classNumber ?? "unnumbered");
+                      return (
+                        <section
+                          key={key}
+                          className="syllabus-gallery-section"
+                          data-gallery-group={`class-${key}`}
+                        >
+                          <GalleryClassHeading
+                            collectionId={collectionIdOrZero}
+                            classNumber={group.classNumber}
+                            syllabusMetadata={syllabusMetadata}
+                          />
+                          {renderClassAssignments(
+                            group.itemAssignments,
+                            group.classNumber,
+                            `class-${key}`,
+                          )}
+                        </section>
+                      );
+                    })}
+                    {visibleFurtherReadingItems.length > 0 && (
+                      <section
+                        className="syllabus-gallery-section"
+                        data-gallery-group="further-reading"
+                      >
+                        <GalleryGroupHeading icon={{ kind: "further-reading" }}>
+                          {getString("further-reading-heading")}
+                        </GalleryGroupHeading>
+                        <p className="syllabus-gallery-class-description">
+                          {getString("further-reading-empty-desc")}
+                        </p>
+                        {renderItems(
+                          orderGalleryItems(
+                            visibleFurtherReadingItems.map(
+                              (entry) => entry.item,
+                            ),
+                          ),
+                          "further-reading",
                         )}
                       </section>
-                    );
-                  })}
-                  {visibleFurtherReadingItems.length > 0 && (
-                    <section
-                      className="syllabus-gallery-section"
-                      data-gallery-group="further-reading"
-                    >
-                      <GalleryGroupHeading icon={{ kind: "further-reading" }}>
-                        {getString("further-reading-heading")}
-                      </GalleryGroupHeading>
-                      <p className="syllabus-gallery-class-description">
-                        {getString("further-reading-empty-desc")}
-                      </p>
-                      {renderItems(
-                        orderGalleryItems(
-                          visibleFurtherReadingItems.map((entry) => entry.item),
-                        ),
-                        "further-reading",
-                      )}
-                    </section>
-                  )}
-                </>
-              ))}
+                    )}
+                  </>
+                ))}
 
-            {canAddReading && (
-              <AddReadingButton
-                className="mt-6"
-                title={getString("gallery-add-readings-aria")}
-                ariaLabel={getString("gallery-add-readings-aria")}
-                onClick={() => {
-                  void pickAndAddItemsToCollection(collectionIdOrZero).catch(
-                    (err) => {
-                      ztoolkit.log("Error adding readings to collection:", err);
-                    },
-                  );
-                }}
-              />
-            )}
-          </div>
-        </GalleryViewportProvider>
-      </div>
+              {canAddReading && (
+                <AddReadingButton
+                  className="mt-6"
+                  title={getString("gallery-add-readings-aria")}
+                  ariaLabel={getString("gallery-add-readings-aria")}
+                  onClick={() => {
+                    void pickAndAddItemsToCollection(collectionIdOrZero).catch(
+                      (err) => {
+                        ztoolkit.log(
+                          "Error adding readings to collection:",
+                          err,
+                        );
+                      },
+                    );
+                  }}
+                />
+              )}
+            </div>
+          </GalleryViewportProvider>
+        </div>
       </div>
       {isAnnotationsLayout ? (
         <div className="syllabus-annotation-batch-dock shrink-0">

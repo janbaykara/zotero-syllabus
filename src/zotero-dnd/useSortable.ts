@@ -1,11 +1,17 @@
 /**
- * Preact hook: sortable item (draggable + droppable) for zotero-dnd.
+ * Preact hook: sortable item for zotero-dnd.
+ *
+ * Patterns from @dnd-kit/react useSortable:
+ * - Stable instance via registry (like useInstance)
+ * - Ref must not clear `element` mid-drag while the node is still connected
+ * - Index/group sync from props for controlled `move()` lists
  */
 
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { RefCallback } from "preact";
 import type { Type, UniqueIdentifier } from "@dnd-kit/abstract";
-import { ChromeSortable } from "./entities";
+import type { ChromeSortable } from "./entities";
+import { acquireSortable, releaseSortable } from "./sortableRegistry";
 import { useDndManager } from "./useManager";
 
 export type UseSortableInput = {
@@ -15,9 +21,7 @@ export type UseSortableInput = {
   type?: Type;
   accept?: Type | Type[] | ((source: unknown) => boolean);
   disabled?: boolean;
-  /** Disable drop target only (still draggable). */
   droppableDisabled?: boolean;
-  /** Optional explicit element; otherwise use the returned `ref`. */
   element?: Element | null;
   handle?: Element | null;
 };
@@ -36,118 +40,125 @@ export function useSortable(input: UseSortableInput): UseSortableReturn {
   handleOptRef.current = input.handle;
 
   if (!sortableRef.current) {
-    sortableRef.current = new ChromeSortable(
-      {
-        id: input.id,
-        index: input.index,
-        group: input.group,
-        type: input.type,
-        accept: input.accept as never,
-        disabled: input.disabled,
-        element: input.element ?? undefined,
-        handle: input.handle ?? undefined,
-      },
-      manager,
-    );
+    sortableRef.current = acquireSortable(manager, {
+      id: input.id,
+      index: input.index,
+      group: input.group,
+      type: input.type,
+      accept: input.accept as never,
+      disabled: input.disabled,
+      element: input.element ?? undefined,
+      handle: input.handle ?? undefined,
+    });
   }
 
-  const sortable = sortableRef.current;
+  if (sortableRef.current.id !== input.id) {
+    releaseSortable(manager, sortableRef.current);
+    sortableRef.current = acquireSortable(manager, {
+      id: input.id,
+      index: input.index,
+      group: input.group,
+      type: input.type,
+      accept: input.accept as never,
+      disabled: input.disabled,
+      element: input.element ?? undefined,
+      handle: input.handle ?? undefined,
+    });
+  }
 
-  // Keep index / group / id in sync without recreating entities.
-  sortable.index = input.index;
-  if (sortable.group !== input.group) {
-    sortable.group = input.group;
+  const current = sortableRef.current;
+
+  current.index = input.index;
+  if (current.group !== input.group) {
+    current.group = input.group;
     const nextData = {
-      ...(sortable.draggable.data as object),
+      ...(current.draggable.data as object),
       group: input.group,
     };
-    sortable.draggable.data = nextData;
-    sortable.droppable.data = nextData;
+    current.draggable.data = nextData;
+    current.droppable.data = nextData;
   }
-  if (sortable.id !== input.id) {
-    sortable.draggable.id = input.id;
-    sortable.droppable.id = input.id;
+  if (input.type !== undefined && current.draggable.type !== input.type) {
+    current.draggable.type = input.type;
+    current.droppable.type = input.type;
   }
-  if (input.type !== undefined && sortable.draggable.type !== input.type) {
-    sortable.draggable.type = input.type;
-    sortable.droppable.type = input.type;
-  }
-  if (
-    input.accept !== undefined &&
-    sortable.droppable.accept !== input.accept
-  ) {
-    sortable.droppable.accept = input.accept as never;
+  if (input.accept !== undefined && current.droppable.accept !== input.accept) {
+    current.droppable.accept = input.accept as never;
   }
   const disabled = Boolean(input.disabled);
-  if (sortable.draggable.disabled !== disabled) {
-    sortable.draggable.disabled = disabled;
+  if (current.draggable.disabled !== disabled) {
+    current.draggable.disabled = disabled;
   }
   const droppableDisabled = Boolean(input.disabled || input.droppableDisabled);
-  if (sortable.droppable.disabled !== droppableDisabled) {
-    sortable.droppable.disabled = droppableDisabled;
+  if (current.droppable.disabled !== droppableDisabled) {
+    current.droppable.disabled = droppableDisabled;
   }
 
-  const [isDragging, setIsDragging] = useState(false);
   const [isDragSource, setIsDragSource] = useState(false);
-  const [isDropTarget, setIsDropTarget] = useState(false);
 
   useEffect(() => {
+    const acquired = current;
     return () => {
-      sortable.destroy();
-      sortableRef.current = null;
+      releaseSortable(manager, acquired);
+      if (sortableRef.current === acquired) {
+        sortableRef.current = null;
+      }
     };
-  }, [sortable]);
+  }, [manager, current]);
 
   useEffect(() => {
     if (input.element) {
-      sortable.setElement(input.element);
+      current.setElement(input.element);
     }
-  }, [sortable, input.element]);
+  }, [current, input.element]);
 
   useEffect(() => {
     if (input.handle) {
-      sortable.setHandle(input.handle);
+      current.setHandle(input.handle);
     }
-  }, [sortable, input.handle]);
+  }, [current, input.handle]);
 
-  // Drive flags from the manager monitor — avoid @dnd-kit/state `effect`
-  // → Preact setState loops that blank the Gallery.
   useEffect(() => {
     const sync = () => {
-      setIsDragging(sortable.isDragging);
-      setIsDragSource(sortable.isDragSource);
-      setIsDropTarget(sortable.isDropTarget);
+      setIsDragSource(current.isDragSource);
     };
     sync();
     const stops = [
       manager.monitor.addEventListener("dragstart", sync),
-      manager.monitor.addEventListener("dragmove", sync),
-      manager.monitor.addEventListener("dragover", sync),
-      manager.monitor.addEventListener("dragend", sync),
+      manager.monitor.addEventListener("dragend", () => {
+        setIsDragSource(false);
+      }),
     ];
     return () => {
       for (const stop of stops) {
         stop();
       }
     };
-  }, [manager, sortable]);
+  }, [manager, current]);
 
-  // Stable callback — a new ref each render re-attaches and can loop.
+  // Mirror @dnd-kit/react: refuse to clear element mid-drag if still connected.
   const refStable = useRef<RefCallback<Element>>((node) => {
-    const current = sortableRef.current;
-    if (!current || !node) {
+    const instance = sortableRef.current;
+    if (!instance) {
       return;
     }
-    current.setElement(node);
-    if (!handleOptRef.current) {
-      current.setHandle(node);
+    if (
+      !node &&
+      instance.element?.isConnected &&
+      !manager.dragOperation.status.idle
+    ) {
+      return;
+    }
+    instance.setElement(node ?? undefined);
+    if (node && !handleOptRef.current) {
+      instance.setHandle(node);
     }
   });
 
   return {
     ref: refStable.current,
-    isDragging,
+    isDragging: isDragSource,
     isDragSource,
-    isDropTarget,
+    isDropTarget: false,
   };
 }

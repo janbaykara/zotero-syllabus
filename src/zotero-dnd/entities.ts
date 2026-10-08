@@ -4,6 +4,9 @@
  * Mirrors @dnd-kit/dom entity behaviour without document.head, popover,
  * or PositionObserver — shape is refreshed from getBoundingClientRect while
  * a drag is active.
+ *
+ * ChromeSortable matches @dnd-kit/dom Sortable: paired entities, index/group,
+ * captureRect/animate for optimistic reorders.
  */
 
 import {
@@ -27,6 +30,8 @@ export type ChromeDraggableInput<T extends Data = Data> = DraggableInput<T> & {
 export class ChromeDraggable<T extends Data = Data> extends Draggable<T> {
   element: Element | undefined;
   handle: Element | undefined;
+  /** Back-reference when this draggable belongs to a ChromeSortable. */
+  sortable?: ChromeSortable<T>;
 
   constructor(
     {
@@ -85,6 +90,15 @@ export class ChromeDraggable<T extends Data = Data> extends Draggable<T> {
     if (this.element === element) {
       return;
     }
+    // @dnd-kit/react useSortable: don't drop a connected element mid-drag.
+    if (
+      !element &&
+      this.element?.isConnected &&
+      this.manager &&
+      !this.manager.dragOperation.status.idle
+    ) {
+      return;
+    }
     this.element = element;
     this.data = {
       ...(this.data as object),
@@ -95,6 +109,14 @@ export class ChromeDraggable<T extends Data = Data> extends Draggable<T> {
 
   setHandle(handle: Element | undefined): void {
     if (this.handle === handle) {
+      return;
+    }
+    if (
+      !handle &&
+      this.handle?.isConnected &&
+      this.manager &&
+      !this.manager.dragOperation.status.idle
+    ) {
       return;
     }
     this.handle = handle;
@@ -116,6 +138,8 @@ export type ChromeDroppableInput<T extends Data = Data> = Omit<
 
 export class ChromeDroppable<T extends Data = Data> extends Droppable<T> {
   element: Element | undefined;
+  /** Back-reference when this droppable belongs to a ChromeSortable. */
+  sortable?: ChromeSortable<T>;
 
   constructor(
     {
@@ -161,8 +185,6 @@ export class ChromeDroppable<T extends Data = Data> extends Droppable<T> {
               }
               return;
             }
-            // Track pointer while dragging. Do not gate on accepts() here —
-            // CollisionObserver already skips non-accepting droppables.
             void mgr.dragOperation.position.current;
             this.shape = rectangleFromElement(el);
           },
@@ -178,6 +200,14 @@ export class ChromeDroppable<T extends Data = Data> extends Droppable<T> {
     if (this.element === element) {
       return;
     }
+    if (
+      !element &&
+      this.element?.isConnected &&
+      this.manager &&
+      !this.manager.dragOperation.status.idle
+    ) {
+      return;
+    }
     this.element = element;
     this.data = {
       ...(this.data as object),
@@ -186,13 +216,28 @@ export class ChromeDroppable<T extends Data = Data> extends Droppable<T> {
   }
 }
 
+export type SortableTransition = {
+  duration?: number;
+  easing?: string;
+  idle?: boolean;
+};
+
+export const defaultSortableTransition: SortableTransition = {
+  duration: 200,
+  easing: "cubic-bezier(0.25, 1, 0.5, 1)",
+  idle: false,
+};
+
 export type ChromeSortableInput<T extends Data = Data> =
   ChromeDraggableInput<T> &
     ChromeDroppableInput<T> & {
       index: number;
       group?: UniqueIdentifier;
       accept?: DroppableInput<T>["accept"];
+      transition?: SortableTransition | null;
     };
+
+type CapturedRect = { left: number; top: number };
 
 /**
  * Paired draggable + droppable with the same id. Exposes `index` / `group`
@@ -204,12 +249,15 @@ export class ChromeSortable<T extends Data = Data> {
     initialIndex: number;
     group: UniqueIdentifier | undefined;
     initialGroup: UniqueIdentifier | undefined;
+    sortable: ChromeSortable<T>;
   };
-  readonly droppable: ChromeDroppable<T>;
+  readonly droppable: ChromeDroppable<T> & { sortable: ChromeSortable<T> };
   index: number;
   group: UniqueIdentifier | undefined;
+  transition: SortableTransition | null;
   #initialIndex: number;
   #initialGroup: UniqueIdentifier | undefined;
+  #capturedRect: CapturedRect | null = null;
 
   constructor(
     input: ChromeSortableInput<T>,
@@ -228,6 +276,7 @@ export class ChromeSortable<T extends Data = Data> {
       sensors,
       collisionDetector,
       collisionPriority,
+      transition = defaultSortableTransition,
       effects: _effects,
       ...rest
     } = input;
@@ -236,11 +285,15 @@ export class ChromeSortable<T extends Data = Data> {
     this.group = group;
     this.#initialIndex = index;
     this.#initialGroup = group;
+    this.transition = transition;
 
     const dataWithGroup = {
       ...(data as object | undefined),
       group,
     } as T;
+
+    // eslint-disable-next-line @typescript-eslint/no-this-alias -- defineProperty getters
+    const self = this;
 
     this.droppable = new ChromeDroppable(
       {
@@ -251,15 +304,12 @@ export class ChromeSortable<T extends Data = Data> {
         type,
         accept: accept ?? type,
         collisionDetector,
-        // Prefer tiles over large zone droppables for insertion targeting.
         collisionPriority: collisionPriority ?? 10,
       },
       manager,
-    );
+    ) as ChromeSortable<T>["droppable"];
+    this.droppable.sortable = this;
 
-    // Closures need the sortable instance for index/group getters on the source.
-    // eslint-disable-next-line @typescript-eslint/no-this-alias -- defineProperty getters
-    const self = this;
     const draggable = new ChromeDraggable(
       {
         ...rest,
@@ -305,11 +355,16 @@ export class ChromeSortable<T extends Data = Data> {
       },
     });
 
+    draggable.sortable = this;
     this.draggable = draggable;
   }
 
   get id(): UniqueIdentifier {
     return this.draggable.id;
+  }
+
+  get element(): Element | undefined {
+    return this.draggable.element ?? this.droppable.element;
   }
 
   get manager() {
@@ -328,6 +383,88 @@ export class ChromeSortable<T extends Data = Data> {
     return this.droppable.isDropTarget;
   }
 
+  get initialIndex(): number {
+    return this.#initialIndex;
+  }
+
+  get initialGroup(): UniqueIdentifier | undefined {
+    return this.#initialGroup;
+  }
+
+  /** Snapshot layout box before an optimistic DOM reorder (ignores FLIP transform). */
+  captureRect(): void {
+    const el = this.element as HTMLElement | undefined;
+    if (!el || typeof el.getBoundingClientRect !== "function") {
+      this.#capturedRect = null;
+      return;
+    }
+    const savedTransform = el.style.transform;
+    const savedTransition = el.style.transition;
+    el.style.transition = "none";
+    el.style.transform = "none";
+    const rect = el.getBoundingClientRect();
+    el.style.transform = savedTransform;
+    el.style.transition = savedTransition;
+    this.#capturedRect = { left: rect.left, top: rect.top };
+  }
+
+  /** Drop a pending capture without touching live styles. */
+  discardCapture(): void {
+    this.#capturedRect = null;
+  }
+
+  /** Clear any in-flight FLIP styles (call on dragend). */
+  clearAnimation(): void {
+    this.#capturedRect = null;
+    const el = this.element as HTMLElement | undefined;
+    if (!el) {
+      return;
+    }
+    el.style.transition = "";
+    el.style.transform = "";
+  }
+
+  /**
+   * FLIP from captureRect() to the current layout. Skips the drag source
+   * (feedback owns its transform).
+   */
+  animate(): void {
+    const el = this.element as HTMLElement | undefined;
+    const prev = this.#capturedRect;
+    this.#capturedRect = null;
+    const transition = this.transition;
+    if (!el || !prev || !transition || this.isDragSource) {
+      return;
+    }
+    const { idle } = this.manager?.dragOperation.status ?? { idle: true };
+    if (idle && !transition.idle) {
+      return;
+    }
+    // Measure without any leftover translate from a previous FLIP.
+    const saved = el.style.transform;
+    el.style.transition = "none";
+    el.style.transform = "none";
+    const next = el.getBoundingClientRect();
+    const dx = prev.left - next.left;
+    const dy = prev.top - next.top;
+    if (!dx && !dy) {
+      el.style.transform = saved && !saved.includes("translate") ? saved : "";
+      return;
+    }
+    const duration = transition.duration ?? 250;
+    const easing = transition.easing ?? "cubic-bezier(0.25, 1, 0.5, 1)";
+    el.style.transform = `translate(${dx}px, ${dy}px)`;
+    void el.offsetHeight;
+    el.style.transition = `transform ${duration}ms ${easing}`;
+    el.style.transform = "";
+    const clear = () => {
+      el.style.transition = "";
+      el.style.transform = "";
+    };
+    el.addEventListener("transitionend", clear, { once: true });
+    window.setTimeout(clear, duration + 50);
+  }
+
   setElement(element: Element | undefined): void {
     this.draggable.setElement(element);
     this.droppable.setElement(element);
@@ -344,4 +481,16 @@ export class ChromeSortable<T extends Data = Data> {
     this.draggable.destroy();
     this.droppable.destroy();
   }
+}
+
+/** True when a drag entity is part of a ChromeSortable (dnd-kit isSortable). */
+export function isChromeSortable(
+  entity: unknown,
+): entity is { sortable: ChromeSortable; id: UniqueIdentifier } {
+  return Boolean(
+    entity &&
+    typeof entity === "object" &&
+    "sortable" in entity &&
+    (entity as { sortable: unknown }).sortable instanceof ChromeSortable,
+  );
 }

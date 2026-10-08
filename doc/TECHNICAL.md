@@ -152,6 +152,8 @@ Pin state is tags only (not syllabus JSON). Shelf order is a per-library pref (`
 
 Display chrome is per view with “Save as default” — see [DISPLAY-PREFS.md](DISPLAY-PREFS.md). Modes: Card, Cover, Annotations, Preview (same cover+sidecar layout as Annotations, with excerpt blurbs). End-user steps: [README — Gallery](../README.md#gallery).
 
+**Personal Reading Order DnD** uses [`src/zotero-dnd`](../src/zotero-dnd/) (chrome-safe `@dnd-kit/abstract`). Gallery uses blue-line indicators; FLIP live-reorder is opt-in. Usage guide: [`src/zotero-dnd/README.md`](../src/zotero-dnd/README.md). Reference UI: [`PersonalOrderGallery.tsx`](../src/modules/PersonalOrderGallery.tsx).
+
 ## Gallery notes
 
 Collection-scoped notes on regular items for Gallery / card views. Each note is a **child note** tagged `zotero-syllabus-gallery:{collectionKey}` (collection **key**, not numeric id). Edited via Zotero’s built-in note editor (`ZoteroPane.selectItem`). Shown in Row/card like a reading instruction, beside Cover tiles (span 2), and in the Preview sidecar when there is no excerpt blurb. Display uses the stored note HTML (sanitized), not a plain-text / Markdown conversion. See [`src/modules/galleryNote.ts`](../src/modules/galleryNote.ts). End-user steps: [README — Gallery notes](../README.md#gallery-notes).

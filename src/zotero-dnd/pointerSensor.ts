@@ -1,15 +1,20 @@
 /**
  * Chrome-safe pointer sensor for @dnd-kit/abstract.
  *
- * Differences from @dnd-kit/dom PointerSensor:
- * - No `instanceof HTMLElement` / `Document`
- * - Captures pointer on the activator element (not `document.body`)
- * - Listens on the activator's ownerDocument (+ window fallback)
- * - Immediate activation (no distance/delay constraints)
- * - Also listens to mouse events (XUL sometimes starves pointermove)
+ * Inspired by @dnd-kit/dom PointerSensor + @dnd-kit/react useSortable:
+ * - Activator may change when controlled `move()` remounts a tile; keep
+ *   rebinding pointerdown for the life of bind(), not a 2s poll.
+ * - bind() cleanup must NOT tear down an in-progress drag — remounts unbind
+ *   the activator only; document listeners stay until pointerup.
+ * - No setPointerCapture on the source node: remount / pointer-events:none
+ *   releases capture and fires pointercancel, which looked like "drag ended
+ *   at the group edge".
+ * - Ignore pointercancel while dragging for the same remount reason; Escape
+ *   and real pointerup still end the operation.
  */
 
 import {
+  ActivationConstraint,
   ActivationController,
   Draggable,
   Sensor,
@@ -19,12 +24,35 @@ import type { CleanupFunction } from "@dnd-kit/state";
 import { activatorOf, clientPoint, eventDocument, isElement } from "./dom";
 
 export type ChromePointerSensorOptions = SensorOptions & {
-  /**
-   * Return true to skip starting a drag (e.g. interactive controls).
-   * Default skips buttons, links, inputs, etc.
-   */
   preventActivation?: (event: PointerEvent, source: Draggable) => boolean;
+  /** Pixels of movement before a drag starts (default 5). Clicks stay clicks. */
+  activationDistance?: number;
 };
+
+/** Activate only after the pointer moves `value` px from the down point. */
+class DistanceConstraint extends ActivationConstraint<
+  PointerEvent,
+  { value: number }
+> {
+  #origin: { x: number; y: number } | null = null;
+
+  onEvent(event: PointerEvent): void {
+    const point = clientPoint(event);
+    if (!this.#origin) {
+      this.#origin = point;
+      return;
+    }
+    const dx = point.x - this.#origin.x;
+    const dy = point.y - this.#origin.y;
+    if (Math.hypot(dx, dy) >= this.options.value) {
+      this.activate(event);
+    }
+  }
+
+  abort(): void {
+    this.#origin = null;
+  }
+}
 
 const DEFAULT_PREVENT =
   "button, a[href], input, textarea, select, label, [contenteditable]:not([contenteditable='false'])";
@@ -42,12 +70,15 @@ function isPrimaryPointerLike(event: Event): event is PointerEvent {
   if (typeof e.clientX !== "number" || typeof e.clientY !== "number") {
     return false;
   }
-  // MouseEvent: button 0. PointerEvent: isPrimary + button 0.
   if (typeof e.isPrimary === "boolean" && !e.isPrimary) {
     return false;
   }
-  if (typeof e.button === "number" && e.button !== 0 && e.type !== "pointermove" && e.type !== "mousemove") {
-    // move events often report button === -1 or 0; only gate down/up.
+  if (
+    typeof e.button === "number" &&
+    e.button !== 0 &&
+    e.type !== "pointermove" &&
+    e.type !== "mousemove"
+  ) {
     if (e.type.endsWith("down") || e.type.endsWith("up")) {
       return e.button === 0;
     }
@@ -63,7 +94,8 @@ export class ChromePointerSensor extends Sensor<
   #controller: ActivationController<PointerEvent> | null = null;
   #initial: { x: number; y: number } | null = null;
   #latest: { event?: Event; coordinates?: { x: number; y: number } } = {};
-  #pointerId: number | null = null;
+  /** Source currently driving an active drag (document-level listeners). */
+  #activeSource: Draggable | null = null;
 
   bind(
     source: Draggable,
@@ -89,26 +121,25 @@ export class ChromePointerSensor extends Sensor<
       };
     };
 
-    // Re-bind when element/handle show up (Preact often attaches late).
     let bound: Element | undefined;
     let detach = attach();
     bound = activatorOf(source);
+    // Keep activator in sync for the life of this bind (cross-list remounts).
     const poll = setInterval(() => {
       const next = activatorOf(source);
-      if (next && next !== bound) {
+      if (next !== bound) {
         detach();
         detach = attach();
         bound = next;
-        clearInterval(poll);
       }
     }, 50);
-    const stopPoll = setTimeout(() => clearInterval(poll), 2000);
 
     return () => {
       clearInterval(poll);
-      clearTimeout(stopPoll);
       detach();
-      this.#cleanup();
+      // Remount / effect rebind: only drop activator listeners. Never stop the
+      // active drag or strip document listeners — that cancels at the group
+      // edge when move() remounts the tile.
     };
   }
 
@@ -135,14 +166,17 @@ export class ChromePointerSensor extends Sensor<
 
     const point = clientPoint(event);
     this.#initial = point;
-    this.#pointerId =
-      typeof event.pointerId === "number" ? event.pointerId : null;
 
-    const controller = new ActivationController(undefined, (activateEvent) =>
-      this.#start(source, activateEvent as PointerEvent),
+    const distance = options.activationDistance ?? 5;
+    const controller = new ActivationController(
+      [new DistanceConstraint({ value: distance })],
+      (activateEvent) => this.#start(source, activateEvent as PointerEvent),
     );
     this.#controller = controller;
-    controller.signal.onabort = () => this.#cancel(event);
+    // DistanceConstraint.abort only — do not cancel a drag that never started.
+    controller.signal.onabort = () => {
+      this.#cleanup();
+    };
     controller.onEvent(event);
 
     const doc = eventDocument(event);
@@ -150,9 +184,12 @@ export class ChromePointerSensor extends Sensor<
 
     const onMove = (e: Event) => this.#onPointerMove(e, source);
     const onUp = (e: Event) => this.#onPointerUp(e);
-    const onCancel = (e: Event) => this.#cancel(e);
+    // pointercancel is expected when the source node remounts under another
+    // list (lost capture / disconnected target). Do not end the drag.
+    const onCancel = (_e: Event) => {
+      /* ignore — see file header */
+    };
 
-    // Capture on document + window: XUL/chrome can drop one or the other.
     for (const target of [doc, view].filter(Boolean) as EventTarget[]) {
       target.addEventListener("pointermove", onMove, true);
       target.addEventListener("mousemove", onMove, true);
@@ -186,35 +223,10 @@ export class ChromePointerSensor extends Sensor<
       return;
     }
 
-    // Do not preventDefault on the activating down-event — that can starve
-    // subsequent pointermove delivery in chrome. Prevent on move instead.
+    this.#activeSource = source;
+    // Intentionally no setPointerCapture — document listeners are enough, and
+    // capture on a remounted tile fires pointercancel at the group boundary.
 
-    const captureEl = activatorOf(source);
-    if (
-      captureEl &&
-      this.#pointerId != null &&
-      typeof captureEl.setPointerCapture === "function"
-    ) {
-      try {
-        captureEl.setPointerCapture(this.#pointerId);
-        this.#cleanups.add(() => {
-          try {
-            if (
-              typeof captureEl.hasPointerCapture === "function" &&
-              captureEl.hasPointerCapture(this.#pointerId!)
-            ) {
-              captureEl.releasePointerCapture(this.#pointerId!);
-            }
-          } catch {
-            // Ignore.
-          }
-        });
-      } catch {
-        // Capture optional in chrome; continue without it.
-      }
-    }
-
-    // Flush any moves that arrived while status was still initializing.
     Promise.resolve().then(() => this.#flushMove());
   }
 
@@ -255,6 +267,12 @@ export class ChromePointerSensor extends Sensor<
   }
 
   #onPointerUp(event: Event): void {
+    // Click / press without enough movement — never started a drag.
+    if (this.#controller && !this.#controller.activated) {
+      this.#controller.abort(event as PointerEvent);
+      this.#cleanup();
+      return;
+    }
     const { status } = this.manager.dragOperation;
     if (!status.idle) {
       if (typeof (event as PointerEvent).preventDefault === "function") {
@@ -295,6 +313,6 @@ export class ChromePointerSensor extends Sensor<
     this.#controller = null;
     this.#initial = null;
     this.#latest = {};
-    this.#pointerId = null;
+    this.#activeSource = null;
   }
 }
