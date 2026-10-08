@@ -42,13 +42,13 @@ export function NoteNotebookCover({
     <div
       className={twMerge(
         "syllabus-note-notebook-cover relative w-full overflow-hidden bg-white",
+        selected && "is-selected",
         className,
       )}
       style={{
         aspectRatio: "2 / 3",
         border: `1px solid ${NOTE_PAD_OUTLINE}`,
         clipPath: `polygon(0 0, 100% 0, 100% calc(100% - ${FOLD_SIZE_PX}px), calc(100% - ${FOLD_SIZE_PX}px) 100%, 0 100%)`,
-        filter: selected ? "brightness(0.92)" : undefined,
       }}
       aria-hidden="true"
     >

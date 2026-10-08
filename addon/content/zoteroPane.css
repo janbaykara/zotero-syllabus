@@ -4251,12 +4251,8 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   padding-block: 0.65rem;
 }
 
-.syllabus-my-annotations-stream-entry.is-selected
-  .syllabus-my-annotations-stream-avatar
-  .syllabus-gallery-tile {
-  outline: 2px solid var(--accent-blue, #1d4ed8);
-  outline-offset: 2px;
-}
+/* Selection outline lives on the cover art (`.is-selected` in galleryCover.css),
+   not the whole tile — otherwise metadata is boxed too (double border). */
 
 .syllabus-my-annotations-stream-avatar {
   position: sticky;

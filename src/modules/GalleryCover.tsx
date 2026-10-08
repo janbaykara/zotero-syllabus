@@ -112,8 +112,7 @@ export const GalleryCover = memo(function GalleryCover({
         className={twMerge(
           "relative w-full overflow-hidden rounded-[3px] bg-quinary",
           coverShapeClass,
-          selected &&
-            "ring-2 ring-[#7b4ddb] ring-offset-2 ring-offset-background",
+          selected && "is-selected",
         )}
       />
     );
@@ -132,8 +131,7 @@ export const GalleryCover = memo(function GalleryCover({
                 cover.kind === "image" &&
                 "syllabus-gallery-journal-sheet",
             ),
-        selected &&
-          "ring-2 ring-[#7b4ddb] ring-offset-2 ring-offset-background",
+        selected && "is-selected",
       )}
     >
       {showBinder ? (

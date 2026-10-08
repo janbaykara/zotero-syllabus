@@ -15,6 +15,18 @@
   color: rgba(0, 0, 0, 0.55);
 }
 
+/* Selection: outline (not box-shadow) so cover drop-shadows stay intact. */
+.syllabus-gallery-cover-portrait.is-selected,
+.syllabus-gallery-cover-video.is-selected,
+.syllabus-gallery-cover-web.is-selected,
+.syllabus-gallery-cover-square.is-selected,
+.syllabus-gallery-cover-natural.is-selected,
+.syllabus-gallery-cover-with-binder.is-selected,
+.syllabus-note-notebook-cover.is-selected {
+  outline: 2px solid var(--accent-blue, #2255e0);
+  outline-offset: 2px;
+}
+
 .syllabus-note-notebook-prose.syllabus-prose {
   font-size: 8px;
   font-weight: 500;
