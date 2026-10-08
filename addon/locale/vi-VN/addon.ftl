@@ -531,6 +531,7 @@ column-status = Trạng thái
 column-reading-time = Thời gian đọc
 column-syllabus-info = Buổi học / bài tập đề cương
 column-syllabus-priority = Mức ưu tiên đề cương
+column-personal-reading-order = Thứ tự đọc cá nhân
 column-class-hash = #{ $number }
 
 # Progress / dialogs

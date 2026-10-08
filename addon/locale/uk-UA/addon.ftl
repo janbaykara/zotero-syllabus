@@ -531,6 +531,7 @@ column-status = Стан
 column-reading-time = Час читання
 column-syllabus-info = Заняття / завдання силабуса
 column-syllabus-priority = Пріоритет силабуса
+column-personal-reading-order = Особистий порядок читання
 column-class-hash = №{ $number }
 
 # Progress / dialogs

@@ -531,6 +531,7 @@ column-status = 상태
 column-reading-time = 읽기 시간
 column-syllabus-info = 강의계획서 수업 / 과제
 column-syllabus-priority = 강의계획서 우선순위
+column-personal-reading-order = 개인 읽기 순서
 column-class-hash = #{ $number }
 
 # Progress / dialogs

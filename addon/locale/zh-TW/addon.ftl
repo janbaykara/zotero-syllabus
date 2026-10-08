@@ -531,6 +531,7 @@ column-status = 狀態
 column-reading-time = 閱讀時間
 column-syllabus-info = 教學大綱課堂 / 作業
 column-syllabus-priority = 教學大綱優先順序
+column-personal-reading-order = 個人閱讀順序
 column-class-hash = #{ $number }
 
 # Progress / dialogs

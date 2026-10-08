@@ -51,6 +51,7 @@ export type FluentMessageId =
   | 'class-note-priority'
   | 'class-reset-sort'
   | 'column-class-hash'
+  | 'column-personal-reading-order'
   | 'column-reading-instructions'
   | 'column-reading-time'
   | 'column-status'

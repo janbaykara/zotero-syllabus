@@ -531,6 +531,7 @@ column-status = Estado
 column-reading-time = Tiempo de lectura
 column-syllabus-info = Clase / asignación del programa
 column-syllabus-priority = Prioridad del programa
+column-personal-reading-order = Orden de lectura personal
 column-class-hash = #{ $number }
 
 # Progress / dialogs

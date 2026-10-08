@@ -531,6 +531,7 @@ column-status = Durum
 column-reading-time = Okuma süresi
 column-syllabus-info = İzlence dersi / ödev
 column-syllabus-priority = İzlence önceliği
+column-personal-reading-order = Kişisel okuma sırası
 column-class-hash = #{ $number }
 
 # Progress / dialogs

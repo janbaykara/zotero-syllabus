@@ -529,6 +529,7 @@ column-status = 状态
 column-reading-time = 阅读时间
 column-syllabus-info = 教学大纲课堂 / 作业
 column-syllabus-priority = 教学大纲优先级
+column-personal-reading-order = 个人阅读顺序
 column-class-hash = #{ $number }
 
 # Progress / dialogs

@@ -531,6 +531,7 @@ column-status = Status
 column-reading-time = Waktu baca
 column-syllabus-info = Kelas / tugas silabus
 column-syllabus-priority = Prioritas silabus
+column-personal-reading-order = Urutan baca pribadi
 column-class-hash = #{ $number }
 
 # Progress / dialogs

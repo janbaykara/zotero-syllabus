@@ -393,6 +393,7 @@ import {
   registerSyllabusClassInstructionColumn,
   registerSyllabusStatusColumn,
   registerReadingTimeColumn,
+  registerPersonalReadingOrderColumn,
   registerSyllabusInfoColumn,
   registerSyllabusPriorityColumn,
 } from "./syllabusColumns";
@@ -606,6 +607,7 @@ export class SyllabusManager {
     this.registerSyllabusClassInstructionColumn();
     this.registerSyllabusStatusColumn();
     this.registerReadingTimeColumn();
+    this.registerPersonalReadingOrderColumn();
     this.registerSyllabusItemPaneSection();
     this.registerItemSharePaneSection();
 
@@ -2150,6 +2152,8 @@ export class SyllabusManager {
     registerSyllabusClassInstructionColumn;
   static registerSyllabusStatusColumn = registerSyllabusStatusColumn;
   static registerReadingTimeColumn = registerReadingTimeColumn;
+  static registerPersonalReadingOrderColumn =
+    registerPersonalReadingOrderColumn;
   static registerSyllabusInfoColumn = registerSyllabusInfoColumn;
   static registerSyllabusPriorityColumn = registerSyllabusPriorityColumn;
 

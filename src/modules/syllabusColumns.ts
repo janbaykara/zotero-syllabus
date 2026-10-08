@@ -4,6 +4,19 @@ import { getReadingTimeSync, formatReadingTime } from "../utils/readingTime";
 import { getString } from "../utils/locale";
 import { SyllabusManager } from "./syllabus";
 import { SYLLABUS_NOTE_TAG } from "./syllabusNote";
+import {
+  getPersonalReadingOrderKeys,
+  subscribePersonalReadingOrderChanges,
+} from "./personalReadingOrder";
+
+/**
+ * Sort sentinel so unordered items follow numbered ones (ascending).
+ * Must sort after zero-padded indices under both `localeCompare` and
+ * default string order (tildes sort *before* digits in localeCompare).
+ */
+const PERSONAL_ORDER_UNORDERED_SORT = "zzzzzz";
+
+let personalReadingOrderColumnRefreshBound = false;
 
 export async function registerSyllabusClassInstructionColumn() {
   const field = "syllabus-class-instruction";
@@ -135,6 +148,81 @@ export async function registerReadingTimeColumn() {
       return container;
     },
   });
+}
+
+/**
+ * 1-based position in the selected collection’s Personal Reading Order.
+ * Sortable: ascending = reading order; items not in the list sort last.
+ */
+export async function registerPersonalReadingOrderColumn() {
+  const field = "personal-reading-order";
+  await Zotero.ItemTreeManager.registerColumns({
+    pluginID: addon.data.config.addonID,
+    dataKey: field,
+    label: getString("column-personal-reading-order"),
+    width: "72px",
+    staticWidth: true,
+    dataProvider: (item: Zotero.Item, _dataKey: string) => {
+      try {
+        if (typeof item.isRegularItem === "function" && !item.isRegularItem()) {
+          return PERSONAL_ORDER_UNORDERED_SORT;
+        }
+        const selectedCollection = getSelectedCollection();
+        if (!selectedCollection) {
+          return PERSONAL_ORDER_UNORDERED_SORT;
+        }
+        const keys = getPersonalReadingOrderKeys(selectedCollection.id);
+        const index = keys.indexOf(item.key);
+        if (index < 0) {
+          return PERSONAL_ORDER_UNORDERED_SORT;
+        }
+        return String(index + 1).padStart(6, "0");
+      } catch {
+        return PERSONAL_ORDER_UNORDERED_SORT;
+      }
+    },
+    renderCell: (_index, data, column, _isFirstColumn, doc) => {
+      const container = doc.createElement("span");
+      container.className = `cell ${column.className}`;
+      container.style.display = "flex";
+      container.style.alignItems = "center";
+      container.style.justifyContent = "flex-end";
+      container.style.fontVariantNumeric = "tabular-nums";
+
+      const dataStr = String(data);
+      if (dataStr && dataStr !== PERSONAL_ORDER_UNORDERED_SORT) {
+        const position = parseInt(dataStr, 10);
+        if (!isNaN(position) && position > 0) {
+          container.textContent = String(position);
+        }
+      }
+
+      return container;
+    },
+  });
+
+  if (!personalReadingOrderColumnRefreshBound) {
+    personalReadingOrderColumnRefreshBound = true;
+    subscribePersonalReadingOrderChanges(() => {
+      try {
+        for (const win of Zotero.getMainWindows() as _ZoteroTypes.MainWindow[]) {
+          const itemsView = win.ZoteroPane?.itemsView as
+            | {
+                tree?: { invalidate?: () => void };
+                refresh?: () => void | Promise<void>;
+              }
+            | undefined;
+          itemsView?.tree?.invalidate?.();
+          void itemsView?.refresh?.();
+        }
+      } catch (error) {
+        ztoolkit.log(
+          "Error refreshing personal reading order column:",
+          error,
+        );
+      }
+    });
+  }
 }
 
 function isStandaloneSyllabusNote(item: Zotero.Item): boolean {
