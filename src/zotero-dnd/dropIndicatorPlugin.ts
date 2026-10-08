@@ -92,12 +92,17 @@ export class DropIndicatorPlugin extends CorePlugin<
     this.#afterClass = options.afterClass ?? DROP_INDICATOR_AFTER_CLASS;
 
     const clearPaint = () => {
-      for (const root of document.querySelectorAll(
-        ".syllabus-personal-order-dnd, .syllabus-page-dnd",
-      )) {
-        for (const node of root.querySelectorAll(
-          `.${this.#beforeClass}, .${this.#afterClass}`,
-        )) {
+      // Gecko NodeList iterates as Node | null; cast to Element[].
+      const roots = Array.from(
+        document.querySelectorAll(
+          ".syllabus-personal-order-dnd, .syllabus-page-dnd",
+        ),
+      ) as Element[];
+      for (const root of roots) {
+        const nodes = Array.from(
+          root.querySelectorAll(`.${this.#beforeClass}, .${this.#afterClass}`),
+        ) as Element[];
+        for (const node of nodes) {
           node.classList.remove(this.#beforeClass, this.#afterClass);
         }
       }
@@ -119,9 +124,10 @@ export class DropIndicatorPlugin extends CorePlugin<
         el.closest(".syllabus-personal-order-dnd, .syllabus-page-dnd") ??
         el.parentElement;
       if (root) {
-        for (const node of root.querySelectorAll(
-          `.${this.#beforeClass}, .${this.#afterClass}`,
-        )) {
+        const nodes = Array.from(
+          root.querySelectorAll(`.${this.#beforeClass}, .${this.#afterClass}`),
+        ) as Element[];
+        for (const node of nodes) {
           if (node !== el) {
             node.classList.remove(this.#beforeClass, this.#afterClass);
           }

@@ -145,7 +145,10 @@ export async function addItemsToClass(
  */
 export function priorityPatchForUnnumbered(
   collectionId: number,
-  existing?: { priority?: string; classInstruction?: string },
+  existing?: {
+    priority?: string | null;
+    classInstruction?: string | null;
+  },
 ): { priority?: string } {
   if (existing?.priority || existing?.classInstruction) {
     return {};

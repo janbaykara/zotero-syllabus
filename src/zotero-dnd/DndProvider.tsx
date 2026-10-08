@@ -16,13 +16,14 @@
 import { h } from "preact";
 import { useEffect, useMemo, useRef } from "preact/hooks";
 import type { ComponentChildren } from "preact";
-import type {
-  DragDropManager,
-  DragDropManagerInput,
-  DragEndEvent,
-  DragMoveEvent,
-  DragOverEvent,
-  DragStartEvent,
+import {
+  resolveCustomizable,
+  type DragDropManager,
+  type DragDropManagerInput,
+  type DragEndEvent,
+  type DragMoveEvent,
+  type DragOverEvent,
+  type DragStartEvent,
 } from "@dnd-kit/abstract";
 import { ZoteroDndContext, type ZoteroDndManager } from "./context";
 import {
@@ -87,11 +88,7 @@ export function DndProvider({
     if (!owned) {
       return;
     }
-    owned.modifiers = Array.isArray(modifiers)
-      ? modifiers
-      : modifiers
-        ? [modifiers]
-        : [];
+    owned.modifiers = resolveCustomizable(modifiers, []);
   }, [owned, modifiers]);
 
   const handlers = useRef({

@@ -290,7 +290,7 @@ export class ChromeSortable<T extends Data = Data> {
     const dataWithGroup = {
       ...(data as object | undefined),
       group,
-    } as T;
+    } as unknown as T;
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias -- defineProperty getters
     const self = this;

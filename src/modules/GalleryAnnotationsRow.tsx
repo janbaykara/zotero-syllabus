@@ -1,6 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import type { FluentMessageId } from "../../typings/i10n";
 import { getString } from "../utils/locale";
 import {
   annotationMatchesColorFilter,
@@ -317,7 +318,7 @@ export function GalleryAnnotationsSection({
       sortedWith.length === 0 &&
       withAnnotations.length > 0 &&
       (colorFilter.length > 0 || tagFilter.length > 0);
-    const emptyFilterMessage =
+    const emptyFilterMessage: FluentMessageId =
       colorFilter.length > 0 && tagFilter.length > 0
         ? "my-annotations-empty-filters"
         : tagFilter.length > 0

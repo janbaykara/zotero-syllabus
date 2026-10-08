@@ -77,7 +77,8 @@ function getAddonInstance(): typeof addon | undefined {
     return addon;
   }
   try {
-    return Zotero[config.addonInstance] as typeof addon | undefined;
+    return (Zotero as Record<string, unknown>)[config.addonInstance] as
+      typeof addon | undefined;
   } catch {
     return undefined;
   }
