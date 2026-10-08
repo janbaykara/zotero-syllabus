@@ -21,6 +21,8 @@ Gallery and syllabus on the same collection are independent slots. Class-folder 
 - **Gallery:** layout, sort, group, magazine packing, card density, quote order, colour filter, show items without annotations
 - **Syllabus / Reading Schedule:** layout, magazine packing, density, reader-mode checkboxes, quote order, colour filter, show items without annotations, further-reading sort
 
+Colour-filter and batch-recolour swatches show [Highlight Descriptions](https://github.com/paulMrG2/zotero-highlight-descriptions) names when that plugin is installed (`extensions.highlightdescriptions.color_*`); otherwise they stay colour-only with hex tooltips. Implementation: [TECHNICAL.md — Highlight Descriptions](TECHNICAL.md#highlight-descriptions).
+
 Layout has two defaults because the surfaces start from different presets: `defaultGalleryLayout` (`cover`) vs `defaultSyllabusLayout` (`card`). Other shared controls use one default.
 
 ## Global only (prefs pane)

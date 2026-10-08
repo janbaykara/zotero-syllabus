@@ -612,6 +612,22 @@
   gap: 0.3rem;
 }
 
+.syllabus-annotation-color-filter.is-labeled {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0.15rem;
+  max-width: 18rem;
+}
+
+.syllabus-annotation-batch-swatches.syllabus-annotation-color-filter.is-labeled {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  max-width: min(36rem, 100%);
+  gap: 0.3rem;
+}
+
 .syllabus-annotation-color-filter-btn {
   appearance: none;
   display: inline-flex;
@@ -632,8 +648,50 @@
   color: #1a1a1a;
 }
 
+.syllabus-annotation-color-filter-btn.is-labeled {
+  width: auto;
+  height: auto;
+  min-height: 1.5rem;
+  justify-content: flex-start;
+  gap: 0.4rem;
+  padding: 0.2rem 0.4rem;
+  border-color: var(--fill-quinary, rgba(0, 0, 0, 0.16));
+  border-radius: 0.35rem;
+  background: var(--material-background, var(--color-background, #fff));
+  color: var(--fill-primary, inherit);
+}
+
+.syllabus-annotation-color-filter-btn.is-labeled:hover {
+  background: var(--fill-quinary, rgba(0, 0, 0, 0.06));
+}
+
+.syllabus-annotation-color-filter-swatch {
+  flex: 0 0 auto;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 3px;
+  border: 0.5px solid rgba(0, 0, 0, 0.18);
+  background: var(--swatch-color);
+}
+
+.syllabus-annotation-color-filter-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  text-align: start;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .syllabus-annotation-color-filter-btn[aria-checked="true"] {
   box-shadow: 0 0 0 2px #7b4ddb;
+}
+
+.syllabus-annotation-color-filter-btn.is-labeled[aria-checked="true"] {
+  box-shadow: 0 0 0 2px #7b4ddb;
+  background: color-mix(in srgb, #7b4ddb 10%, transparent);
 }
 
 .syllabus-annotation-color-filter-btn:focus-visible {
@@ -4531,8 +4589,8 @@ button.syllabus-explorer-class-segment-header:focus-visible {
 
 .syllabus-annotation-batch-bar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-wrap: nowrap;
+  align-items: flex-start;
   justify-content: center;
   gap: 0.55rem 0.75rem;
   padding: 0;
@@ -4546,17 +4604,26 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   pointer-events: none;
 }
 
+.syllabus-annotation-batch-leading.syllabus-annotation-batch-btn {
+  flex: 0 0 auto;
+  gap: 0.3rem;
+  min-height: 1.7rem;
+  padding-inline: 0.35rem 0.5rem;
+}
+
 .syllabus-annotation-batch-count {
   flex: 0 0 auto;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--fill-primary, inherit);
+  color: inherit;
+  line-height: 1.2;
 }
 
 .syllabus-annotation-batch-actions {
   display: flex;
+  flex: 1 1 auto;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.4rem 0.55rem;
   min-width: 0;
 }
@@ -4613,6 +4680,11 @@ button.syllabus-explorer-class-segment-header:focus-visible {
 .syllabus-annotation-batch-btn.is-clear:hover {
   color: var(--fill-primary, inherit);
   background: var(--fill-quinary, rgba(0, 0, 0, 0.06));
+}
+
+.syllabus-annotation-batch-btn.is-icon {
+  padding: 0.25rem;
+  justify-content: center;
 }
 
 .syllabus-annotation-batch-btn:focus-visible {

@@ -1,9 +1,13 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { h } from "preact";
+import { h, Fragment } from "preact";
 import type { JSX } from "preact";
 import { Check, X } from "lucide-preact";
 import { twMerge } from "tailwind-merge";
 import { getString } from "../utils/locale";
+import {
+  anyHighlightColorDescriptions,
+  getHighlightColorDescription,
+} from "../highlight-descriptions/compat";
 import {
   annotationSwatchUsesDarkMark,
   toggleAnnotationColorFilter,
@@ -28,6 +32,7 @@ export function AnnotationColorFilter({
     useAnnotationColorFilter(scope);
   const showGlobe =
     (showGlobeProp ?? true) && colorFilterInheritsDefault(scope);
+  const showLabels = anyHighlightColorDescriptions(colors);
   if (colors.length === 0) {
     return null;
   }
@@ -59,12 +64,17 @@ export function AnnotationColorFilter({
       <div
         role="group"
         aria-label={getString("my-annotations-menu-color")}
-        className="syllabus-annotation-color-filter"
+        className={twMerge(
+          "syllabus-annotation-color-filter",
+          showLabels && "is-labeled",
+        )}
       >
         {colors.map((hex) => {
           const checked = colorFilter.includes(hex);
+          const description = getHighlightColorDescription(hex);
+          const colorName = description ?? hex;
           const label = getString("my-annotations-color-swatch", {
-            args: { color: hex },
+            args: { color: colorName },
           });
           return (
             <button
@@ -76,14 +86,28 @@ export function AnnotationColorFilter({
               title={label}
               className={twMerge(
                 "syllabus-annotation-color-filter-btn",
-                annotationSwatchUsesDarkMark(hex) && "is-light",
+                showLabels && "is-labeled",
+                !showLabels && annotationSwatchUsesDarkMark(hex) && "is-light",
               )}
               style={{ "--swatch-color": hex } as JSX.CSSProperties}
               onClick={() =>
                 setColorFilter(toggleAnnotationColorFilter(colorFilter, hex))
               }
             >
-              {checked ? (
+              {showLabels ? (
+                <>
+                  <span
+                    className="syllabus-annotation-color-filter-swatch"
+                    aria-hidden="true"
+                  />
+                  <span className="syllabus-annotation-color-filter-label">
+                    {colorName}
+                  </span>
+                  {checked ? (
+                    <Check size={12} strokeWidth={2.5} aria-hidden="true" />
+                  ) : null}
+                </>
+              ) : checked ? (
                 <Check size={12} strokeWidth={2.5} aria-hidden="true" />
               ) : null}
             </button>

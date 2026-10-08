@@ -263,6 +263,8 @@ Open the options menu to:
 
 Quote order under each item (by location in the document, or by date added) is shared with Gallery Annotations and Home’s recent-annotations shelf.
 
+Colour filters (and batch recolour in the annotation selection bar) are plain swatches by default. If [Highlight Descriptions](https://github.com/paulMrG2/zotero-highlight-descriptions) is installed, those controls show that plugin’s colour names beside each swatch — configure labels in **Settings → Highlight Descriptions**. The same names appear wherever Syllabus offers colour swatches (Annotation Feed, Gallery / Syllabus Annotations layouts).
+
 ### Pinning
 
 Keep a short list of items and collections on **Home** (the Pinned shelf) and at the top of **Reading Schedule**. Use it for “read this next,” a course you are in the middle of, or anything you do not want to hunt for.

@@ -1,9 +1,13 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { h } from "preact";
+import { h, Fragment } from "preact";
 import type { JSX } from "preact";
 import { useMemo, useRef, useState } from "preact/hooks";
 import { Check, Copy, Tag, Tags, X } from "lucide-preact";
 import { twMerge } from "tailwind-merge";
+import {
+  anyHighlightColorDescriptions,
+  getHighlightColorDescription,
+} from "../highlight-descriptions/compat";
 import { ZOTERO_ANNOTATION_COLOR_ORDER } from "../utils/annotationColors";
 import {
   collectTagsForAnnotations,
@@ -15,10 +19,7 @@ import { openAnnotationTagFilterPopup } from "../utils/annotationTagFilterPopup"
 import { copyStringToClipboard } from "../utils/clipboard";
 import { getString } from "../utils/locale";
 import { useAnnotationSelection } from "./annotationSelection";
-import {
-  formatAnnotationIdsCopyText,
-  useCopyFlash,
-} from "./annotationStream";
+import { formatAnnotationIdsCopyText, useCopyFlash } from "./annotationStream";
 
 export function AnnotationBatchBar({
   libraryID,
@@ -118,9 +119,7 @@ export function AnnotationBatchBar({
       live: false,
       position: "before_start",
       onChange: (tags) => {
-        const remaining = new Set(
-          tags.map((tag) => tag.toLowerCase()),
-        );
+        const remaining = new Set(tags.map((tag) => tag.toLowerCase()));
         const removed = initial.filter(
           (tag) => !remaining.has(tag.toLowerCase()),
         );
@@ -139,6 +138,9 @@ export function AnnotationBatchBar({
   const selectedLabel = getString("my-annotations-batch-selected", {
     args: { count },
   });
+  const showColorLabels = anyHighlightColorDescriptions(
+    ZOTERO_ANNOTATION_COLOR_ORDER,
+  );
 
   return (
     <div
@@ -150,7 +152,20 @@ export function AnnotationBatchBar({
       role="toolbar"
       aria-label={getString("my-annotations-batch-aria")}
     >
-      <span className="syllabus-annotation-batch-count">{selectedLabel}</span>
+      <button
+        type="button"
+        className="syllabus-annotation-batch-leading syllabus-annotation-batch-btn is-clear"
+        disabled={busy}
+        title={getString("my-annotations-batch-clear")}
+        aria-label={getString("my-annotations-batch-clear")}
+        onClick={(event) => {
+          event.stopPropagation();
+          clear();
+        }}
+      >
+        <X size={14} strokeWidth={2} aria-hidden="true" />
+        <span className="syllabus-annotation-batch-count">{selectedLabel}</span>
+      </button>
       <div className="syllabus-annotation-batch-actions">
         <button
           ref={tagButtonRef}
@@ -215,11 +230,16 @@ export function AnnotationBatchBar({
         <div
           role="group"
           aria-label={getString("my-annotations-batch-recolour")}
-          className="syllabus-annotation-batch-swatches syllabus-annotation-color-filter"
+          className={twMerge(
+            "syllabus-annotation-batch-swatches syllabus-annotation-color-filter",
+            showColorLabels && "is-labeled",
+          )}
         >
           {ZOTERO_ANNOTATION_COLOR_ORDER.map((hex) => {
+            const description = getHighlightColorDescription(hex);
+            const colorName = description ?? hex;
             const label = getString("my-annotations-batch-recolour-swatch", {
-              args: { color: hex },
+              args: { color: colorName },
             });
             return (
               <button
@@ -228,31 +248,31 @@ export function AnnotationBatchBar({
                 disabled={busy}
                 aria-label={label}
                 title={label}
-                className="syllabus-annotation-color-filter-btn"
+                className={twMerge(
+                  "syllabus-annotation-color-filter-btn",
+                  showColorLabels && "is-labeled",
+                )}
                 style={{ "--swatch-color": hex } as JSX.CSSProperties}
                 onClick={(event) => {
                   event.stopPropagation();
                   void run(() => recolorAnnotations(selectedList, hex));
                 }}
-              />
+              >
+                {showColorLabels ? (
+                  <>
+                    <span
+                      className="syllabus-annotation-color-filter-swatch"
+                      aria-hidden="true"
+                    />
+                    <span className="syllabus-annotation-color-filter-label">
+                      {colorName}
+                    </span>
+                  </>
+                ) : null}
+              </button>
             );
           })}
         </div>
-
-        <button
-          type="button"
-          className="syllabus-annotation-batch-btn is-clear"
-          disabled={busy}
-          title={getString("my-annotations-batch-clear")}
-          aria-label={getString("my-annotations-batch-clear")}
-          onClick={(event) => {
-            event.stopPropagation();
-            clear();
-          }}
-        >
-          <X size={14} strokeWidth={2} aria-hidden="true" />
-          <span>{getString("my-annotations-batch-clear")}</span>
-        </button>
       </div>
     </div>
   );

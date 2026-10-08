@@ -2,7 +2,7 @@
 
 This document is for people changing the plugin. End-user behaviour is in [README.md](../README.md).
 
-Contents: [collection note](#collection-note) · [item merges](#item-merges) · [preferences](#preferences) · [Extra absorb](#item-extra-legacy-absorb) · [class folders](#class-subcollections) · [practical rules](#practical-rules) · [localization](#localization) · [reading-list connectors](#reading-list-connectors) · [cloud publish](#cloud-publish) · [local development](#local-development) · [project structure](#project-structure) · [references](#references) · [display prefs](DISPLAY-PREFS.md)
+Contents: [collection note](#collection-note) · [item merges](#item-merges) · [preferences](#preferences) · [Extra absorb](#item-extra-legacy-absorb) · [class folders](#class-subcollections) · [practical rules](#practical-rules) · [localization](#localization) · [reading-list connectors](#reading-list-connectors) · [Highlight Descriptions](#highlight-descriptions) · [cloud publish](#cloud-publish) · [local development](#local-development) · [project structure](#project-structure) · [references](#references) · [display prefs](DISPLAY-PREFS.md)
 
 A **syllabus is one Zotero collection** that you have turned into a syllabus (or that had a legacy `collectionMetadata` preference). Items in that collection are the membership. Everything else — classes, assignments, course metadata — is stored in a **collection note** so it syncs with the library. Plugin **prefs** hold UI chrome only (and leftover legacy data). **Class subcollections** are a derived, one-way view of the note.
 
@@ -207,6 +207,20 @@ On startup (Zotero 8+), the plugin installs Connector translators from [`addon/c
 | `bluecloud-course-lists-custom.js` | `BLUEcloud Course Lists` |
 
 Gated by `FEATURE_FLAG.TALIS_METADATA` in [`src/modules/featureFlags.ts`](../src/modules/featureFlags.ts). End-user behaviour is in the [README import section](../README.md#import-a-reading-list).
+
+## Highlight Descriptions
+
+Soft read-only integration with [paulMrG2/zotero-highlight-descriptions](https://github.com/paulMrG2/zotero-highlight-descriptions) (same pattern as [`src/zotero-reading-list/compat.ts`](../src/zotero-reading-list/compat.ts) for Reading List status). Syllabus does **not** own colour names, prefs UI, or reader popup labelling — when HD is installed we surface its labels on our swatches; when it is not, tooltips stay hex.
+
+| Piece | Detail |
+| --- | --- |
+| Prefs | `extensions.highlightdescriptions.color_{hexWithoutHash}` (e.g. `color_ffd400`). Defaults come from HD’s `prefs.js` once that plugin is installed. |
+| Reader | `getHighlightColorDescription` in [`src/highlight-descriptions/compat.ts`](../src/highlight-descriptions/compat.ts) via `getCachedPref` |
+| Surfaces | [`AnnotationColorFilter.tsx`](../src/modules/AnnotationColorFilter.tsx) (filter), [`AnnotationBatchBar.tsx`](../src/modules/AnnotationBatchBar.tsx) (batch recolour). When any HD label exists, swatches become labeled rows (swatch + name); otherwise compact colour-only chips with hex `title` / `aria-label`. |
+| Absent label | Missing pref, blank, or HD’s gray default `"-"` → treat as unlabeled; if the group is in labeled mode, that chip still shows the hex as text |
+| Tests | [`test/highlightDescriptionsCompat.test.ts`](../test/highlightDescriptionsCompat.test.ts) |
+
+Out of scope: duplicating HD’s editor, grouping colours under one name, reordering from `color_order`, or injecting into the Zotero reader. Uninstalling HD clears its prefs (per that plugin), so Syllabus falls back to compact swatches automatically. End-user note: [README Annotation Feed](../README.md#annotation-feed); display-prefs mention: [DISPLAY-PREFS.md](DISPLAY-PREFS.md).
 
 ## Cloud publish
 
