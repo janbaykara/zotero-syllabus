@@ -50,7 +50,7 @@ export const PLUGIN_PREF_DEFAULTS: {
   latestGalleryTourVersion: 0,
   defaultGalleryLayout: "cover",
   defaultSyllabusLayout: "card",
-  defaultGallerySort: "auto",
+  defaultGallerySort: "title",
   defaultGalleryGroupBy: "auto",
   defaultFurtherReadingSort: "title",
   defaultAnnotationColorFilter: "",

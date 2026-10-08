@@ -146,9 +146,6 @@
   .top-1\.5 {
     top: calc(var(--spacing) * 1.5);
   }
-  .top-1\/2 {
-    top: calc(1 / 2 * 100%);
-  }
   .top-10 {
     top: calc(var(--spacing) * 10);
   }

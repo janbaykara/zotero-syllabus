@@ -36,6 +36,7 @@ import { selectItemInCollection } from "./ClassReadingBlock";
 import type { MagazineSectionTemplate } from "./magazineDesks";
 import { assignMagazineRoles, type MagazineTileRole } from "./magazineLayout";
 import type { MagazinePacking } from "./magazinePacking";
+import { PersonalOrderCaptureItem } from "./PersonalOrderCapture";
 import {
   ReadingDoneCheckbox,
   ReadingPriorityBadge,
@@ -83,7 +84,7 @@ export type MagazineTileProps = {
   chrome?: ReadingTileChrome | null;
 };
 
-export const MagazineTile = memo(function MagazineTile({
+const MagazineTileInner = memo(function MagazineTileInner({
   item,
   role,
   selected,
@@ -397,6 +398,14 @@ export const MagazineTile = memo(function MagazineTile({
     </div>
   );
 }, areMagazineTilePropsEqual);
+
+export function MagazineTile(props: MagazineTileProps) {
+  return (
+    <PersonalOrderCaptureItem item={props.item}>
+      <MagazineTileInner {...props} />
+    </PersonalOrderCaptureItem>
+  );
+}
 
 function areMagazineTilePropsEqual(
   prev: MagazineTileProps,

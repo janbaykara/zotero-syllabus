@@ -38,6 +38,7 @@ import {
   type DndProviderProps,
 } from "../zotero-dnd";
 import { getString } from "../utils/locale";
+import { PERSONAL_ORDER_ITEM_TYPE } from "./personalOrderDnd";
 import {
   setPersonalReadingOrder,
   splitPersonalReadingOrder,
@@ -45,7 +46,7 @@ import {
 
 type Zone = "ordered" | "rest";
 
-const ITEM_TYPE = "personal-order-item";
+const ITEM_TYPE = PERSONAL_ORDER_ITEM_TYPE;
 
 /** Filled on dragstart — canIndicate reads this (stable options object). */
 const movingKeysRef = { current: new Set<string>() };

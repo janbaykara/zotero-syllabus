@@ -802,6 +802,24 @@
   margin: 0 0 20px;
 }
 
+/* Card + Row/Standard: match Syllabus locked class titles (text-xl / semibold). */
+.syllabus-gallery-layout-card[data-item-density="row"]
+  .syllabus-gallery-section-title,
+.syllabus-gallery-layout-card[data-item-density="standard"]
+  .syllabus-gallery-section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 12px;
+}
+
+.syllabus-gallery-layout-card[data-item-density="row"]
+  .syllabus-gallery-section-title-muted,
+.syllabus-gallery-layout-card[data-item-density="standard"]
+  .syllabus-gallery-section-title-muted {
+  font-size: 1rem;
+}
+
 .syllabus-gallery-class-header {
   margin: 0 0 20px;
 }
@@ -1187,36 +1205,19 @@
     var(--syllabus-annotations-cover-cols),
     minmax(0, var(--syllabus-annotations-cover-width))
   );
-  /* One row per tile — do not use the Cover gallery’s 2-row subgrid here
-     (priority / title / author spacing goes wrong once chrome is present). */
-  grid-auto-rows: auto;
+  /* Same cover/meta subgrid as Cover gallery so captions share a baseline
+     and tiles keep their row gap (margin-bottom on .syllabus-gallery-tile). */
+  grid-auto-rows: auto auto;
   column-gap: var(--syllabus-annotations-cover-gap);
   justify-content: start;
   width: 100%;
-  align-items: start;
+  align-items: stretch;
 }
 
 .syllabus-gallery-annotations-empty-section .syllabus-gallery-tile {
-  display: flex;
-  flex-direction: column;
-  grid-row: auto;
-  grid-column: auto;
-  grid-template-rows: none;
-  align-content: start;
-  align-items: stretch;
   width: 100%;
   min-width: 0;
   max-width: var(--syllabus-annotations-cover-width);
-  margin-bottom: 0;
-}
-
-.syllabus-gallery-annotations-empty-section .syllabus-gallery-tile-main {
-  display: flex;
-  flex-direction: column;
-  grid-row: auto;
-  grid-column: auto;
-  grid-template-rows: none;
-  align-content: start;
 }
 
 .syllabus-gallery-annotations-empty-section .syllabus-gallery-meta {
@@ -1227,16 +1228,18 @@
  * Do not let Gallery Notes span a second parent-grid column here: with
  * cols-cap=1 that creates an implicit auto track and the cover blows up.
  * Match the annotation feed avatar — note stacks under cover + metadata.
+ * (These tiles leave the shared cover/meta baseline for that cell.)
  */
 .syllabus-gallery-annotations-empty-section
   .syllabus-gallery-tile.has-gallery-note {
   display: flex;
   flex-direction: column;
   grid-column: auto;
-  grid-row: auto;
+  grid-row: span 2;
   grid-template-columns: none;
   grid-template-rows: none;
-  align-content: start;
+  align-content: end;
+  justify-content: flex-end;
   column-gap: 0;
 }
 
@@ -1248,7 +1251,8 @@
   grid-column: auto;
   grid-row: auto;
   grid-template-rows: none;
-  align-content: start;
+  align-content: end;
+  justify-content: flex-end;
 }
 
 .syllabus-gallery-annotations-empty-section
@@ -1273,6 +1277,8 @@
     .syllabus-gallery-tile.has-gallery-note {
     display: flex;
     flex-direction: column;
+    justify-content: flex-end;
+    grid-row: auto;
   }
 
   .syllabus-gallery-annotations-empty-section
@@ -1280,6 +1286,7 @@
     .syllabus-gallery-tile-main {
     display: flex;
     flex-direction: column;
+    justify-content: flex-end;
   }
 
   .syllabus-gallery-annotations-empty-section
@@ -4664,7 +4671,11 @@ button.syllabus-explorer-class-segment-header:focus-visible {
 .syllabus-annotation-batch-btn.is-copied {
   color: var(--accent-green, #15803d);
   background: color-mix(in srgb, var(--accent-green, #15803d) 12%, transparent);
-  border-color: color-mix(in srgb, var(--accent-green, #15803d) 35%, transparent);
+  border-color: color-mix(
+    in srgb,
+    var(--accent-green, #15803d) 35%,
+    transparent
+  );
 }
 
 .syllabus-annotation-batch-btn.is-clear {
@@ -5495,6 +5506,25 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   margin-bottom: 0.5rem;
 }
 
+/* Outside Reading Order: ordered dropzone + Unordered heading only while dragging. */
+.syllabus-personal-order-capture-landing,
+.syllabus-personal-order-capture-rest-heading {
+  display: none;
+}
+
+.syllabus-personal-order-capture-landing {
+  margin-bottom: 0.75rem;
+}
+
+.syllabus-personal-order-capture.is-dnd-active
+  > .syllabus-personal-order-capture-landing,
+.syllabus-personal-order-capture-landing.is-dnd-active,
+.syllabus-personal-order-capture.is-dnd-active
+  > .syllabus-personal-order-capture-rest-heading,
+.syllabus-personal-order-capture-rest-heading.is-dnd-active {
+  display: block;
+}
+
 /* Border only on the droppable body — not also on the inner status text. */
 .syllabus-personal-order-landing-body.is-empty {
   min-height: 3.5rem;
@@ -5522,6 +5552,41 @@ button.syllabus-explorer-class-segment-header:focus-visible {
 
 .syllabus-personal-order-tile {
   position: relative;
+}
+
+/*
+ * Cover gallery lays out each tile across two shared tracks (cover / meta) via
+ * subgrid. Personal-order DnD wrappers sit between the grid and the tile —
+ * they must span both tracks too, or captions stop lining up across a row.
+ */
+.syllabus-gallery-grid > .syllabus-personal-order-tile,
+.syllabus-gallery-grid > .syllabus-personal-order-capture-item {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 2;
+  min-width: 0;
+  /* Row gap lives on the grid child (the wrapper), not the nested tile. */
+  margin-bottom: 1.75rem;
+  /* contain:layout breaks subgrid (covers no longer share a baseline). */
+  contain: style;
+  align-content: end;
+}
+
+.syllabus-gallery-grid > .syllabus-personal-order-tile > .syllabus-gallery-tile,
+.syllabus-gallery-grid
+  > .syllabus-personal-order-capture-item
+  > .syllabus-gallery-tile {
+  margin-bottom: 0;
+}
+
+@supports not (grid-template-rows: subgrid) {
+  .syllabus-gallery-grid > .syllabus-personal-order-tile,
+  .syllabus-gallery-grid > .syllabus-personal-order-capture-item {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    grid-row: auto;
+  }
 }
 
 .syllabus-personal-order-tile.is-dragging {

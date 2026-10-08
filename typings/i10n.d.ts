@@ -173,6 +173,7 @@ export type FluentMessageId =
   | 'gallery-note-edit'
   | 'gallery-note-label'
   | 'gallery-note-remove'
+  | 'gallery-open-collection'
   | 'gallery-options-aria'
   | 'gallery-options-title'
   | 'gallery-packing-grid'

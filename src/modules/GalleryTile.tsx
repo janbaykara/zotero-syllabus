@@ -43,6 +43,7 @@ import {
   type ReadingTileChrome,
 } from "./readingAssignmentChrome";
 import { isItemReadingDone } from "./personalReadingOrder";
+import { PersonalOrderCaptureItem } from "./PersonalOrderCapture";
 import { usePersonalReadingOrderGeneration } from "./react-zotero-sync/personalReadingOrder";
 
 type GalleryTileProps = {
@@ -61,7 +62,7 @@ type GalleryTileProps = {
   ) => void;
 };
 
-export const GalleryTile = memo(function GalleryTile({
+const GalleryTileInner = memo(function GalleryTileInner({
   item,
   collectionId: collectionIdProp,
   showGalleryNote = false,
@@ -320,6 +321,14 @@ export const GalleryTile = memo(function GalleryTile({
     </div>
   );
 }, areGalleryTilePropsEqual);
+
+export function GalleryTile(props: GalleryTileProps) {
+  return (
+    <PersonalOrderCaptureItem item={props.item}>
+      <GalleryTileInner {...props} />
+    </PersonalOrderCaptureItem>
+  );
+}
 
 function areGalleryTilePropsEqual(
   prev: GalleryTileProps,

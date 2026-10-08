@@ -12,6 +12,7 @@ import {
   type ItemDensity,
 } from "./react-zotero-sync/itemDensity";
 import { SyllabusItemCard } from "./SyllabusItemCard";
+import { PersonalOrderCaptureItem } from "./PersonalOrderCapture";
 import { getString, getUiDir } from "../utils/locale";
 import type { FluentMessageId } from "../../typings/i10n";
 
@@ -210,21 +211,23 @@ export function SlimSyllabusItemCard({
   readerMode?: boolean;
 }) {
   return (
-    <SyllabusItemCard
-      key={`${keyPrefix}-${item.id}`}
-      item={item}
-      collectionId={collectionId}
-      classNumber={undefined}
-      slim={true}
-      density={density}
-      readerMode={readerMode}
-      isLocked={true}
-      showGalleryNote={showGalleryNote}
-      selectedIdentifiers={selectedIdentifiers}
-      onIdentifierClick={onIdentifierClick}
-      onContextMenu={onContextMenu}
-      isZoteroSelected={selectedItemIds?.includes(item.id) || false}
-      isIdentifierSelected={selectedIdentifiers.has(`item:${item.id}`)}
-    />
+    <PersonalOrderCaptureItem item={item}>
+      <SyllabusItemCard
+        key={`${keyPrefix}-${item.id}`}
+        item={item}
+        collectionId={collectionId}
+        classNumber={undefined}
+        slim={true}
+        density={density}
+        readerMode={readerMode}
+        isLocked={true}
+        showGalleryNote={showGalleryNote}
+        selectedIdentifiers={selectedIdentifiers}
+        onIdentifierClick={onIdentifierClick}
+        onContextMenu={onContextMenu}
+        isZoteroSelected={selectedItemIds?.includes(item.id) || false}
+        isIdentifierSelected={selectedIdentifiers.has(`item:${item.id}`)}
+      />
+    </PersonalOrderCaptureItem>
   );
 }

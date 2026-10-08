@@ -16,7 +16,7 @@ pref("latestTourVersion", 0);
 pref("latestGalleryTourVersion", 0);
 pref("defaultGalleryLayout", "cover");
 pref("defaultSyllabusLayout", "card");
-pref("defaultGallerySort", "auto");
+pref("defaultGallerySort", "title");
 pref("defaultGalleryGroupBy", "auto");
 pref("defaultFurtherReadingSort", "title");
 pref("defaultAnnotationColorFilter", "");

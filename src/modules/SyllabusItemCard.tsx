@@ -747,8 +747,12 @@ export function SyllabusItemCard({
             "absolute right-full mr-1 w-4 h-4 cursor-pointer shrink-0 in-[.print]:hidden",
             isZotero8OrLater() ? "md:mr-2!" : "mr-2!",
           )}
-          // Pin to the title/icon row — avoid top-1/2 which centers on tall cards.
-          style={{ top: "0.35rem" }}
+          // Row: center on the single-line row. Taller cards: pin to the icon/title band.
+          style={
+            density === "row"
+              ? { top: "50%", transform: "translateY(-50%)" }
+              : { top: "0.35rem" }
+          }
           title={
             onReaderCheck
               ? getString("pinned-done-unpin-title")
