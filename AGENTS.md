@@ -27,6 +27,8 @@ Skip only pure refactors, typo/lint-only edits, or internal CI/test churn with n
 
 User-facing docs live in [`website/`](website/) (Astro Starlight). From the repo root: `pnpm docs:dev` / `pnpm docs:build`. Deployed by [`.github/workflows/docs.yml`](.github/workflows/docs.yml) to https://janbaykara.github.io/zotero-syllabus/. Do not put end-user docs only in the README — update `website/src/content/docs/` instead. First-time Pages setup: repo Settings → Pages → Source = GitHub Actions.
 
+**API reference:** [`starlight-typedoc`](https://starlight-typedoc.vercel.app/) in [`website/astro.config.mjs`](website/astro.config.mjs) generates docs from [`src/api.ts`](src/api.ts) into `website/src/content/docs/api/` (gitignored). Sidebar: one **Reference → API** entry pointing at the `syllabusApi` page (intro + example from that symbol’s JSDoc; interface pages stay linkable but off-nav). Prefer list-format JSDoc on public methods; use thin `interface extends …` wrappers for Zod-inferred shapes so returns link by name instead of inlining.
+
 ## Lint / package manager
 
 Use **pnpm** only (`pnpm-lock.yaml`). CI runs `pnpm run lint:check` with a fresh install from that lockfile. After pulling dep changes, run `pnpm install` before linting. Prefer `pnpm lint:fix` locally, then confirm with `pnpm lint:check` (what CI runs). Do not introduce `package-lock.json`. The `website/` package has its own lockfile and is ignored by root Prettier/ESLint.

@@ -44,17 +44,17 @@ const DISCORD_URL = "https://discord.gg/PtEY5DxCea";
 const FORUM_URL =
   "https://forums.zotero.org/discussion/128688/zotero-syllabus-a-plugin-for-managing-your-uni-course-reading-lists";
 const REDDIT_URL =
-  "https://www.reddit.com/r/zotero/comments/1puxigg/zotero_syllabus_a_plugin_for_managing_your_uni/";
+  "https://www.reddit.com/r/zotero/comments/1w3eu97/zotero_syllabus_a_plugin_for_students_to_organise/";
 
 const FINISH_COMMUNITY_LINKS: {
   id: FluentMessageId;
   url: string;
 }[] = [
-  { id: "userGuide-link-discord", url: DISCORD_URL },
-  { id: "userGuide-link-issues", url: ISSUES_URL },
-  { id: "userGuide-link-forum", url: FORUM_URL },
-  { id: "userGuide-link-reddit", url: REDDIT_URL },
-];
+    { id: "userGuide-link-discord", url: DISCORD_URL },
+    { id: "userGuide-link-issues", url: ISSUES_URL },
+    { id: "userGuide-link-forum", url: FORUM_URL },
+    { id: "userGuide-link-reddit", url: REDDIT_URL },
+  ];
 
 /** Last MenuManager ID returned by registerMenu (CSS-escaped pluginID-menuID). */
 let registeredHelpMenuID: string | null = null;
@@ -531,11 +531,11 @@ function registerUserGuideHelpMenu() {
     key: FluentMessageId;
     url: string;
   }[] = [
-    { key: "menuHelp-openDiscord", url: DISCORD_URL },
-    { key: "menuHelp-openIssues", url: ISSUES_URL },
-    { key: "menuHelp-openReddit", url: REDDIT_URL },
-    { key: "menuHelp-openForum", url: FORUM_URL },
-  ];
+      { key: "menuHelp-openDiscord", url: DISCORD_URL },
+      { key: "menuHelp-openIssues", url: ISSUES_URL },
+      { key: "menuHelp-openReddit", url: REDDIT_URL },
+      { key: "menuHelp-openForum", url: FORUM_URL },
+    ];
 
   if (typeof Zotero.MenuManager?.registerMenu === "function") {
     const menuID = `${config.addonRef}-menuHelp`;

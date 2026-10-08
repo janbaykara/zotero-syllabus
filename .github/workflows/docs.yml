@@ -6,6 +6,10 @@ on:
       - main
     paths:
       - "website/**"
+      - "src/api.ts"
+      - "tsconfig.json"
+      - "package.json"
+      - "pnpm-lock.yaml"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
 
@@ -35,9 +39,15 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: website/pnpm-lock.yaml
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            website/pnpm-lock.yaml
 
-      - name: Install
+      # Root install: TypeDoc (via starlight-typedoc) resolves zotero-types from ../tsconfig.json
+      - name: Install (root)
+        run: pnpm install --frozen-lockfile
+
+      - name: Install (website)
         run: pnpm install --frozen-lockfile
         working-directory: website
 

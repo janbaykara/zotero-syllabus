@@ -11,6 +11,21 @@ End-user behaviour is documented on this site. Storage formats, item merges, cla
 
 - [`doc/TECHNICAL.md`](https://github.com/janbaykara/zotero-syllabus/blob/main/doc/TECHNICAL.md)
 
+## Public JS API
+
+Other plugins call `Zotero.Syllabus.api`. See **[Reference → API](/zotero-syllabus/api/variables/syllabusapi/)** for the intro, example, and full method reference (generated from [`src/api.ts`](https://github.com/janbaykara/zotero-syllabus/blob/main/src/api.ts) via [starlight-typedoc](https://starlight-typedoc.vercel.app/)).
+
+```js
+await Zotero.Syllabus.api.whenReady();
+
+const collection = ZoteroPane.getSelectedCollection();
+if (collection && Zotero.Syllabus.api.syllabus.has(collection)) {
+  Zotero.Syllabus.api.view.openSyllabus(collection.id);
+}
+```
+
+
+
 ## Local development
 
 1. Clone the repository.

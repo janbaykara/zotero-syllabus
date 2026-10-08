@@ -1,6 +1,6 @@
 # Zotero Syllabus
 
-[![zotero target version](https://img.shields.io/badge/Zotero-7%2F8%2F9%2F10-green?style=flat-square&logo=zotero&logoColor=CC2936)](https://www.zotero.org)
+![zotero target version](https://img.shields.io/badge/Zotero-7%2F8%2F9%2F10-green?style=flat-square&logo=zotero&logoColor=CC2936)
 
 A Zotero add-on / plugin that turns your collections into syllabi and course reading lists. Order items by class, browse them in Gallery, keep a Home of what to open next, follow due dates on Reading Schedule, and review highlights in Annotation Feed.
 
@@ -38,44 +38,41 @@ A message from Jan, the software developer:
 >
 > I'm particularly interested to improve the onboarding / documentation / accessibility of the tool, but your thoughts might also help shape new features! I'll be listening as a software developer, as a fellow student, and as student of pedagogy in particular!
 >
-> If you can spare 15 minutes, here's a booking link: https://calendly.com/janbaykara-pm/30min - Pick a slot and I look forward to chatting!
+> If you can spare 15 minutes, here's a booking link: [https://calendly.com/janbaykara-pm/30min](https://calendly.com/janbaykara-pm/30min) - Pick a slot and I look forward to chatting!
 >
 > — Jan :)
+
+
 
 ## Discussion
 
 - For **bug reports** and **feature requests**, please use the [GitHub Issues](https://github.com/janbaykara/zotero-syllabus/issues) page.
-- For **general discussion**, join the [Discord](https://discord.gg/PtEY5DxCea), or use the [Zotero Forum Thread](https://forums.zotero.org/discussion/128688/zotero-syllabus-a-plugin-for-managing-your-uni-course-reading-lists) or [Reddit Thread](https://www.reddit.com/r/zotero/comments/1puxigg/zotero_syllabus_a_plugin_for_managing_your_uni/).
+- For **general discussion**, join the [Discord](https://discord.gg/PtEY5DxCea), or use the [Zotero Forum Thread](https://forums.zotero.org/discussion/128688/zotero-syllabus-a-plugin-for-managing-your-uni-course-reading-lists) or [Reddit Thread](https://www.reddit.com/r/zotero/comments/1w3eu97/zotero_syllabus_a_plugin_for_students_to_organise/).
+
+
 
 ## Show your thanks by donating 🙏🇵🇸🕊️
 
 If this project is useful to you, [Buy Me a Coffee](https://buymeacoffee.com/janbaykara) and I will regularly donate proceeds to third party funds, including those that help keep **Gaza's universities, students, and academic life alive** during reconstruction, following the genocide of the Palestinian people by the Israeli-American occupation:
 
 - **ISNAD — Emergency Fund for Gaza’s Universities (via Taawon / Welfare Association)**  
-  Primary Palestinian-led programme supporting scholarships, staff, and core university operations.  
-  https://taawon.org/en/isnad
-
-- **BRISMES Fund for Higher Education in Gaza**  
-  A UK academic-society fund that channels small donations in line with the priorities of Gaza’s Emergency Committee of Universities.  
-  https://www.gofundme.com/f/brismes-fund-for-higher-education-in-gaza
-
+Primary Palestinian-led programme supporting scholarships, staff, and core university operations.  
+[https://taawon.org/en/isnad](https://taawon.org/en/isnad)
 - **Friends of Palestinian Universities (FoPU / Fobzu)**  
-  Long-standing UK charity supporting Palestinian universities, including emergency work for Gaza.  
-  https://fobzu.org
-
-- **BuildPalestine — Gaza Education & Community Projects**  
-  Palestinian-run crowdfunding platform that vets and supports grassroots education initiatives.  
-  https://buildpalestine.com
+Long-standing UK charity supporting Palestinian universities, including emergency work for Gaza.  
+[https://fobzu.org](https://fobzu.org)
 
 Supporting these funds helps sustain students, staff, research, and educational infrastructure — the foundations for rebuilding Gaza’s higher-education system.
 
-_Thank you for contributing in solidarity._
+*Thank you for contributing in solidarity.*
+
+Same page on the docs site: [Supporting Gaza’s academic reconstruction](https://janbaykara.github.io/zotero-syllabus/support-gaza/).
 
 ## User manual
 
 Full, user-friendly documentation lives on the docs site:
 
-**https://janbaykara.github.io/zotero-syllabus/**
+**[https://janbaykara.github.io/zotero-syllabus/](https://janbaykara.github.io/zotero-syllabus/)**
 
 In Zotero, open it anytime from **Help → Zotero Syllabus Documentation**. For a short walkthrough in the app, use **Help → Open Zotero Syllabus User Guide**.
 
@@ -103,7 +100,7 @@ if (collection && Zotero.Syllabus.api.syllabus.has(collection)) {
 }
 ```
 
-Modules (see [`src/api.ts`](src/api.ts) for the full surface):
+Modules (full reference: [docs → API](https://janbaykara.github.io/zotero-syllabus/api/variables/syllabusapi/), source `[src/api.ts](src/api.ts)`):
 
 - `syllabus` — has / ensure, metadata, lock, document snapshot, dictionary
 - `class` — add / delete / ensure, titles, reading dates, status
@@ -112,7 +109,7 @@ Modules (see [`src/api.ts`](src/api.ts) for the full surface):
 - `pinned` — pin / unpin items and syllabi; list pinned
 - `personal` — personal reading order and done state
 
-Top-level helpers: `version`, `isReady()`, `whenReady()`.
+Top-level helpers: `version`, `isReady()`, `whenReady()`. The docs site regenerates the API pages from TypeScript on every `pnpm docs:build` ([starlight-typedoc](https://starlight-typedoc.vercel.app/)).
 
 ## Development
 
@@ -130,8 +127,9 @@ Thanks to the following:
 
 - The authors of all syllabi everywhere — [Teacher As Author](https://rl.talis.com/3/ucl/lists/38afa403-9ebf-4dbe-86b0-a80e564f9777.html) — including the project author's own lecturers (Community Education faculty at UWS; the Politics department at SOAS), and those who teach outside formal academic institutions.
 - Academic institutions for sharing their syllabi, and platforms such as [Talis](https://www.talis.com), [Ex Libris Leganto](https://exlibrisgroup.com/products/leganto-reading-list-management-system/), [KeyLinks](https://kortext.com/keylinks/), [eReserve Plus](https://www.ereserve.com.au/), and [BLUEcloud Course Lists](https://www.sirsidynix.com/bluecloud-course-lists/) that make it possible to download this data easily.
-- The [RIS](<https://en.wikipedia.org/wiki/RIS_(file_format)>) (Research Information Systems) format, which makes bibliographic records portable between tools.
+- The [RIS](https://en.wikipedia.org/wiki/RIS_(file_format)) (Research Information Systems) format, which makes bibliographic records portable between tools.
 - [Zotero](https://www.zotero.org)'s developers, for building an open platform, and for recent developments that have opened plugin development to contemporary web technologies.
 - The Zotero plugin toolkit community, including [zotero-plugin-template](https://github.com/windingwind/zotero-plugin-template) and [zotero-plugin-toolkit](https://github.com/windingwind/zotero-plugin-toolkit).
 - The authors of the open-source libraries this plugin relies on, among them [Preact](https://preactjs.com), [React](https://react.dev), [Zod](https://zod.dev), [Tailwind CSS](https://tailwindcss.com), and [esbuild](https://esbuild.github.io).
 - Early users, for a steer and encouraging words.
+

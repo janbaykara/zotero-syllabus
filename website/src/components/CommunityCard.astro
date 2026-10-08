@@ -1,0 +1,92 @@
+---
+import { Icon } from "@astrojs/starlight/components";
+import type { ComponentProps } from "astro/types";
+
+type IconName = ComponentProps<typeof Icon>["name"];
+
+interface Props {
+  title: string;
+  description: string;
+  href: string;
+  icon: IconName;
+}
+
+const { title, description, href, icon } = Astro.props;
+const external = /^https?:\/\//.test(href);
+---
+
+<a
+  class="community-card"
+  href={href}
+  {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+>
+  <span class="community-card__icon" aria-hidden="true">
+    <Icon name={icon} size="1.25rem" />
+  </span>
+  <span class="community-card__body">
+    <span class="community-card__title">{title}</span>
+    <span class="community-card__description">{description}</span>
+  </span>
+  <Icon name="right-arrow" size="1.25rem" class="community-card__arrow rtl:flip" />
+</a>
+
+<style>
+  .community-card {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.85rem 1rem;
+    align-items: start;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.5rem;
+    box-shadow: var(--sl-shadow-sm);
+    text-decoration: none;
+    color: inherit;
+    background: var(--sl-color-black);
+  }
+
+  .community-card:hover {
+    background: var(--sl-color-gray-7, var(--sl-color-gray-6));
+    border-color: var(--sl-color-gray-2);
+  }
+
+  .community-card:hover .community-card__arrow {
+    color: var(--sl-color-white);
+  }
+
+  .community-card__icon {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.4rem;
+    border: 1px solid var(--sl-color-accent-high);
+    background: var(--sl-color-accent-low);
+    color: var(--sl-color-text-accent);
+  }
+
+  .community-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+  }
+
+  .community-card__title {
+    color: var(--sl-color-white);
+    font-weight: 600;
+    font-size: var(--sl-text-lg);
+    line-height: var(--sl-line-height-headings);
+  }
+
+  .community-card__description {
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-sm);
+    line-height: 1.5;
+  }
+
+  .community-card__arrow {
+    color: var(--sl-color-gray-3);
+    margin-top: 0.2rem;
+  }
+</style>

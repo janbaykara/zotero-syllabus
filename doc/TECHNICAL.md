@@ -315,7 +315,9 @@ Full command list and API table: [`cloud/README.md`](../cloud/README.md).
 
 ## Public JS API
 
-Other plugins access Syllabus through **`Zotero.Syllabus.api`** (same pattern as Better Notes). The facade lives in [`src/api.ts`](../src/api.ts) and is attached on the Addon instance in [`src/addon.ts`](../src/addon.ts). Callers should `await Zotero.Syllabus.api.whenReady()` before reading or writing. End-user-facing summary: [README § API](../README.md#api).
+Other plugins access Syllabus through **`Zotero.Syllabus.api`** (same pattern as Better Notes). The facade lives in [`src/api.ts`](../src/api.ts) (`syllabusApi` / `SyllabusApi`) and is attached on the Addon instance in [`src/addon.ts`](../src/addon.ts). Callers should `await Zotero.Syllabus.api.whenReady()` before reading or writing.
+
+**Generated reference:** the docs site builds a single **Reference → API** page from those typings via [`starlight-typedoc`](https://starlight-typedoc.vercel.app/) ([`website/astro.config.mjs`](../website/astro.config.mjs) → output `api/`; intro + example live in the `syllabusApi` JSDoc in [`src/api.ts`](../src/api.ts)). Preview: https://janbaykara.github.io/zotero-syllabus/api/variables/syllabusapi/. End-user-facing summary: [README § API](../README.md#api).
 
 ## Local development
 

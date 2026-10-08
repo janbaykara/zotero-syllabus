@@ -80,3 +80,17 @@
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
+/* Community page cards */
+.community-spaces {
+  margin-block: 1.25rem 2rem;
+}
+
+.community-spaces a {
+  border-radius: 0.5rem;
+}
+
+/* Keep header search compact on the right (not a full middle column). */
+.site-header site-search > button {
+  max-width: 14rem;
+}

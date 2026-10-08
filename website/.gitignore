@@ -3,6 +3,10 @@ dist/
 # generated types
 .astro/
 
+# starlight-typedoc output (regenerated on docs:dev / docs:build)
+src/content/docs/api/
+src/content/docs/reference/api/
+
 # dependencies
 node_modules/
 

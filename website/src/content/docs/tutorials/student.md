@@ -56,4 +56,4 @@ On the syllabus header, click **Lock**. The view becomes read-only so you do not
 - [ ] Collection or key items pinned
 - [ ] You know how to open Reading Schedule and Home
 
-When something is unclear, see the [how-to guides](/zotero-syllabus/how-to/syllabus/) or [ask on Discord](/zotero-syllabus/reference/community/).
+When something is unclear, see the [how-to guides](/zotero-syllabus/how-to/syllabus/) or [ask in Community](/zotero-syllabus/community/).

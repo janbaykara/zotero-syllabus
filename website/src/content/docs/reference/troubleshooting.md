@@ -33,4 +33,4 @@ Minor styling issues are expected on Zotero 7. Prefer Zotero 8, 9, or 10.
 
 ## Still stuck?
 
-Collect steps to reproduce and ask on [Discord](https://discord.gg/PtEY5DxCea) or open a [GitHub issue](https://github.com/janbaykara/zotero-syllabus/issues).
+Collect steps to reproduce and ask via [Community](/zotero-syllabus/community/) (Discord or [GitHub Issues](https://github.com/janbaykara/zotero-syllabus/issues)).

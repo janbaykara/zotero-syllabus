@@ -1,0 +1,136 @@
+---
+import config from "virtual:starlight/user-config";
+
+import LanguageSelect from "virtual:starlight/components/LanguageSelect";
+import Search from "virtual:starlight/components/Search";
+import SiteTitle from "virtual:starlight/components/SiteTitle";
+import SocialIcons from "virtual:starlight/components/SocialIcons";
+import ThemeSelect from "virtual:starlight/components/ThemeSelect";
+
+const shouldRenderSearch =
+  config.pagefind ||
+  config.components.Search !== "@astrojs/starlight/components/Search.astro";
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+const id = Astro.locals.starlightRoute.id;
+const isCommunity = id === "community" || id.startsWith("community/");
+const isDocs = !isCommunity && id !== "";
+
+const nav = [
+  { label: "Docs", href: `${base}getting-started/`, current: isDocs },
+  {
+    label: "Changelog",
+    href: "https://github.com/janbaykara/zotero-syllabus/releases",
+    external: true,
+  },
+  { label: "Community", href: `${base}community/`, current: isCommunity },
+];
+---
+
+<div class="header site-header">
+  <div class="title-wrapper sl-flex">
+    <SiteTitle />
+  </div>
+  <nav class="site-nav sl-hidden md:sl-flex print:hidden" aria-label="Main">
+    {
+      nav.map((item) => (
+        <a
+          href={item.href}
+          class:list={["site-nav-link", { "site-nav-link--current": item.current }]}
+          {...(item.external
+            ? { target: "_blank", rel: "noopener noreferrer" }
+            : {})}
+          {...(item.current ? { "aria-current": "page" } : {})}
+        >
+          {item.label}
+          {item.external ? (
+            <span class="sr-only"> (opens in a new tab)</span>
+          ) : null}
+        </a>
+      ))
+    }
+  </nav>
+  <div class="sl-flex print:hidden right-group">
+    {shouldRenderSearch && <Search />}
+    <div class="sl-flex social-icons">
+      <SocialIcons />
+    </div>
+    <ThemeSelect />
+    <LanguageSelect />
+  </div>
+</div>
+
+<style>
+  @layer starlight.core {
+    .header {
+      display: flex;
+      gap: var(--sl-nav-gap);
+      justify-content: space-between;
+      align-items: center;
+      height: 100%;
+    }
+
+    .title-wrapper {
+      overflow: clip;
+      padding: 0.25rem;
+      margin: -0.25rem;
+      min-width: 0;
+    }
+
+    .site-nav {
+      align-items: center;
+      gap: 0.15rem 1.1rem;
+      margin-inline-end: auto;
+      min-width: 0;
+    }
+
+    .site-nav-link {
+      color: var(--sl-color-gray-2);
+      font-size: var(--sl-text-sm);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .site-nav-link:hover {
+      color: var(--sl-color-white);
+    }
+
+    .site-nav-link--current {
+      color: var(--sl-color-text-accent);
+    }
+
+    .right-group,
+    .social-icons {
+      gap: 1rem;
+      align-items: center;
+      margin-inline-start: auto;
+    }
+
+    .social-icons::after {
+      content: "";
+      height: 2rem;
+      border-inline-end: 1px solid var(--sl-color-gray-5);
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (min-width: 50rem) {
+      .header {
+        display: flex;
+        justify-content: flex-start;
+      }
+    }
+  }
+</style>
