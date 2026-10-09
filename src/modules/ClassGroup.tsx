@@ -652,13 +652,12 @@ export function ClassGroupComponent({
                     : "mt-2 px-2 pb-2 -mx-2",
                 )
               : density !== "expanded"
-                ? "space-y-2 px-1 pb-1 -mx-1"
-                : "mt-2 space-y-4 px-2 pb-2 -mx-2",
+                ? "px-1 pb-1 -mx-1"
+                : "mt-2 px-2 pb-2 -mx-2",
             // Filled lists: outline the list. Empty classes tint the dashed
             // hint via group-data-[dropzone-active] (chrome DnD sets the attr).
             itemAssignments.length > 0 &&
               "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:outline-accent-blue! data-[dropzone-active='true']:text-accent-blue! transition-all duration-200 outline-transparent outline-2! outline-dashed!",
-            !chromeDnd && !isZotero8OrLater() && "compat-space-y",
           )}
           data-density={
             chromeDnd && density !== "expanded" ? "compact" : undefined
@@ -733,9 +732,14 @@ export function ClassGroupComponent({
             />
           ) : itemAssignments.length > 0 ? (
             <div
-              className={
-                chromeDnd ? "syllabus-personal-order-section" : undefined
-              }
+              className={twMerge(
+                chromeDnd
+                  ? "syllabus-personal-order-section"
+                  : density !== "expanded"
+                    ? "space-y-2"
+                    : "space-y-4",
+                !chromeDnd && !isZotero8OrLater() && "compat-space-y",
+              )}
             >
               {itemAssignments.map(({ item, assignment }, index) => {
                 // Require assignment ID - if missing, skip this assignment

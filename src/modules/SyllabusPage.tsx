@@ -3021,8 +3021,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                               density !== "expanded" ? "p-1 -m-1" : "p-2 -m-2",
                             )
                           : density !== "expanded"
-                            ? "space-y-2 p-1 -m-1"
-                            : "space-y-4 p-2 -m-2",
+                            ? "p-1 -m-1"
+                            : "p-2 -m-2",
                         "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:outline-accent-blue! data-[dropzone-active='true']:text-accent-blue! transition-all duration-200 outline-transparent outline-2! outline-dashed!",
                       )}
                       data-density={
@@ -3163,11 +3163,16 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                         />
                       ) : (
                         <div
-                          className={
+                          className={twMerge(
                             syllabusChromeDnd
                               ? "syllabus-personal-order-section"
-                              : undefined
-                          }
+                              : density !== "expanded"
+                                ? "space-y-2"
+                                : "space-y-4",
+                            !syllabusChromeDnd &&
+                              !isZotero8OrLater() &&
+                              "compat-space-y",
+                          )}
                         >
                           {furtherReadingItems.map(
                             ({ item, assignment }, index) => {
