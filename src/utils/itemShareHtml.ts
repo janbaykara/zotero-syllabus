@@ -23,6 +23,18 @@ export type ItemShareMetaRow = {
   href?: string;
 };
 
+/** One annotation row for the public share page (already sorted). */
+export type ItemShareAnnotation = {
+  quote: string;
+  /** Sanitized display HTML for the comment, if any. */
+  commentHtml: string;
+  color: string;
+  pageLabel: string;
+  tags: string[];
+  /** Pref-baked clipboard text for Copy. */
+  copyText: string;
+};
+
 export type BuildItemShareHtmlOpts = {
   title: string;
   creators: string;
@@ -42,6 +54,8 @@ export type BuildItemShareHtmlOpts = {
     bibHref?: string;
     rdfHref?: string;
   };
+  /** Annotations in document location order (omit or empty = no section). */
+  annotations?: ItemShareAnnotation[];
 };
 
 export function isEmbeddableShareContentType(
@@ -79,6 +93,361 @@ function escapeHtml(text: string): string {
 function escapeAttr(text: string): string {
   return escapeHtml(text).replace(/'/g, "&#39;");
 }
+
+function formatSharePageLabel(page: string): string {
+  try {
+    const cite = (
+      Zotero as typeof Zotero & {
+        Cite?: { getLocatorString?: (locator: string) => string };
+      }
+    ).Cite;
+    const locator = cite?.getLocatorString?.("page");
+    if (locator) {
+      return `${locator} ${page}`;
+    }
+  } catch {
+    // Fall through to Fluent.
+  }
+  return getString("my-annotations-page", { args: { page } });
+}
+
+function buildAnnotationsSectionHtml(
+  annotations: ItemShareAnnotation[],
+): string {
+  if (!annotations.length) {
+    return "";
+  }
+
+  const copyLabel = getString("my-annotations-copy");
+  const copiedLabel = getString("my-annotations-copied");
+  const copyAllLabel = getString("my-annotations-copy-all");
+  const tagsAria = getString("my-annotations-stream-tags-aria");
+  const groupCopyText = annotations
+    .map((a) => a.copyText)
+    .filter(Boolean)
+    .join("\n\n");
+
+  const entriesHtml = annotations
+    .map((ann) => {
+      const pageText = ann.pageLabel
+        ? formatSharePageLabel(ann.pageLabel)
+        : "";
+      const hasCopy = !!ann.copyText;
+      const tags = ann.tags || [];
+      const showMeta = !!(pageText || tags.length > 0 || hasCopy);
+
+      const quoteHtml = ann.quote
+        ? `<div class="ann-quote"><mark class="ann-mark" style="--highlight-color:${escapeAttr(ann.color || "#ffd400")}">${escapeHtml(ann.quote)}</mark></div>`
+        : "";
+
+      const metaParts: string[] = [];
+      if (pageText) {
+        metaParts.push(
+          `<span class="ann-location">${escapeHtml(pageText)}</span>`,
+        );
+      }
+      if (tags.length > 0) {
+        if (metaParts.length) {
+          metaParts.push(
+            `<span class="ann-meta-sep" aria-hidden="true">·</span>`,
+          );
+        }
+        metaParts.push(
+          `<span class="ann-tags" role="list" aria-label="${escapeAttr(tagsAria)}">${tags
+            .map(
+              (tag) =>
+                `<span role="listitem" class="ann-tag" title="${escapeAttr(tag)}">${escapeHtml(tag)}</span>`,
+            )
+            .join("")}</span>`,
+        );
+      }
+      if (hasCopy) {
+        if (metaParts.length) {
+          metaParts.push(
+            `<span class="ann-meta-sep ann-copy-sep" aria-hidden="true">·</span>`,
+          );
+        }
+        metaParts.push(
+          `<button type="button" class="ann-copy" data-copy="${escapeAttr(ann.copyText)}" data-label-copy="${escapeAttr(copyLabel)}" data-label-copied="${escapeAttr(copiedLabel)}" title="${escapeAttr(copyLabel)}" aria-label="${escapeAttr(copyLabel)}">${escapeHtml(copyLabel)}</button>`,
+        );
+      }
+
+      const metaHtml = showMeta
+        ? `<div class="ann-meta">${metaParts.join("")}</div>`
+        : "";
+
+      const commentHtml = ann.commentHtml
+        ? `<div class="ann-comment">${ann.commentHtml}</div>`
+        : "";
+
+      return `<article class="ann-entry">
+  <div class="ann-body">
+    ${quoteHtml}
+    ${metaHtml}
+    ${commentHtml}
+  </div>
+</article>`;
+    })
+    .join("\n");
+
+  const copyAllHtml = groupCopyText
+    ? `<div class="ann-copy-all-wrap">
+  <button type="button" class="ann-copy-all" data-copy="${escapeAttr(groupCopyText)}" data-label-copy="${escapeAttr(copyAllLabel)}" data-label-copied="${escapeAttr(copiedLabel)}" title="${escapeAttr(copyAllLabel)}" aria-label="${escapeAttr(copyAllLabel)}">${escapeHtml(copyAllLabel)}</button>
+</div>`
+    : "";
+
+  return `<section class="annotations" aria-label="${escapeAttr(getString("item-share-annotations-heading"))}">
+  <div class="annotations-head">
+    <h2>${escapeHtml(getString("item-share-annotations-heading"))}</h2>
+    ${copyAllHtml}
+  </div>
+  <div class="ann-stream">
+    ${entriesHtml}
+  </div>
+</section>`;
+}
+
+const ANNOTATIONS_CSS = `
+  .annotations {
+    margin-top: 2rem;
+  }
+  .annotations-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    margin-bottom: 0.75rem;
+  }
+  .annotations-head h2 {
+    font-family: system-ui, sans-serif;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    margin: 0;
+  }
+  .ann-stream {
+    display: flex;
+    flex-direction: column;
+    gap: 1.15rem;
+  }
+  .ann-entry {
+    min-width: 0;
+  }
+  .ann-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 0;
+    padding: 0.35rem 0.45rem;
+    margin: -0.35rem -0.45rem;
+    border-radius: 0.35rem;
+  }
+  .ann-body:hover {
+    background: color-mix(in srgb, var(--muted) 10%, transparent);
+  }
+  .ann-quote {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: 1.2rem;
+    line-height: 1.55;
+    letter-spacing: 0.005em;
+    white-space: pre-wrap;
+  }
+  .ann-mark {
+    --highlight-color: #ffd400;
+    color: inherit;
+    font: inherit;
+    font-weight: 450;
+    font-style: normal;
+    padding: 0.04em 0.14em;
+    border-radius: 0.08em;
+    background-color: transparent;
+    background-image: linear-gradient(
+      to bottom,
+      transparent 0.1em,
+      color-mix(in srgb, var(--highlight-color) 58%, var(--panel)) 0.1em,
+      color-mix(in srgb, var(--highlight-color) 58%, var(--panel)) calc(100% - 0.06em),
+      transparent calc(100% - 0.06em)
+    );
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+  .ann-meta {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: system-ui, sans-serif;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  .ann-location { font-variant-numeric: tabular-nums; }
+  .ann-meta-sep { opacity: 0.7; }
+  .ann-tags {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+  .ann-tag {
+    display: inline-block;
+    max-width: 9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0.05rem 0.45rem;
+    border: 1px solid color-mix(in srgb, var(--muted) 40%, transparent);
+    border-radius: 999px;
+    background: transparent;
+    color: inherit;
+    font-size: inherit;
+    line-height: 1.35;
+  }
+  .ann-copy,
+  .ann-copy-all {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border: none;
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    font-size: inherit;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+  }
+  .ann-copy-sep { opacity: 0; }
+  .ann-body:hover .ann-copy,
+  .ann-body:focus-within .ann-copy,
+  .ann-copy:focus-visible,
+  .ann-copy.is-copied {
+    opacity: 1;
+  }
+  .ann-body:hover .ann-copy-sep,
+  .ann-body:focus-within .ann-copy-sep,
+  .ann-body:has(.ann-copy.is-copied) .ann-copy-sep {
+    opacity: 0.7;
+  }
+  .ann-copy:hover { color: var(--ink); }
+  .ann-copy.is-copied { color: #15803d; }
+  .ann-copy:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-radius: 0.2rem;
+  }
+  .ann-comment {
+    align-self: flex-end;
+    max-width: min(28rem, 92%);
+    box-sizing: border-box;
+    margin-block-start: 0.15rem;
+    padding: 0.55rem 0.8rem 0.6rem;
+    border-radius: 1rem 1rem 0.25rem 1rem;
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+    font-family: system-ui, sans-serif;
+    font-size: 0.95rem;
+    line-height: 1.45;
+    color: color-mix(in srgb, var(--ink) 88%, transparent);
+    white-space: pre-wrap;
+    text-align: start;
+  }
+  .ann-copy-all-wrap {
+    display: flex;
+    justify-content: flex-end;
+  }
+  .ann-copy-all {
+    font-family: system-ui, sans-serif;
+    font-size: 0.75rem;
+    color: var(--muted);
+    padding: 0.2rem 0.35rem;
+    border-radius: 0.3rem;
+  }
+  .annotations-head:hover .ann-copy-all,
+  .annotations-head:focus-within .ann-copy-all,
+  .ann-copy-all:focus-visible,
+  .ann-copy-all.is-copied {
+    opacity: 1;
+  }
+  .ann-copy-all:hover {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--muted) 12%, transparent);
+  }
+  .ann-copy-all.is-copied {
+    color: #15803d;
+    background: color-mix(in srgb, #15803d 12%, transparent);
+  }
+  .ann-copy-all:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+`;
+
+const ANNOTATIONS_SCRIPT = `
+<script>
+(function () {
+  var COPIED_MS = 900;
+  function flash(btn) {
+    var copy = btn.getAttribute("data-label-copy") || "Copy";
+    var copied = btn.getAttribute("data-label-copied") || "Copied";
+    btn.classList.add("is-copied");
+    btn.setAttribute("aria-label", copied);
+    btn.setAttribute("title", copied);
+    btn.textContent = copied;
+    clearTimeout(btn._flashTimer);
+    btn._flashTimer = setTimeout(function () {
+      btn.classList.remove("is-copied");
+      btn.setAttribute("aria-label", copy);
+      btn.setAttribute("title", copy);
+      btn.textContent = copy;
+    }, COPIED_MS);
+  }
+  function onClick(ev) {
+    var btn = ev.target.closest(".ann-copy, .ann-copy-all");
+    if (!btn) return;
+    ev.preventDefault();
+    var text = btn.getAttribute("data-copy") || "";
+    if (!text) return;
+    var done = function () { flash(btn); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () {
+        try {
+          var ta = document.createElement("textarea");
+          ta.value = text;
+          ta.setAttribute("readonly", "");
+          ta.style.position = "fixed";
+          ta.style.left = "-9999px";
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          document.body.removeChild(ta);
+          done();
+        } catch (e) {}
+      });
+    } else {
+      try {
+        var ta2 = document.createElement("textarea");
+        ta2.value = text;
+        ta2.setAttribute("readonly", "");
+        ta2.style.position = "fixed";
+        ta2.style.left = "-9999px";
+        document.body.appendChild(ta2);
+        ta2.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta2);
+        done();
+      } catch (e) {}
+    }
+  }
+  document.addEventListener("click", onClick);
+})();
+</script>
+`;
 
 /** Collect chief bibliographic fields for the share sidebar. */
 export function collectItemShareMeta(item: Zotero.Item): ItemShareMetaRow[] {
@@ -207,6 +576,11 @@ export function buildItemShareHtml(opts: BuildItemShareHtmlOpts): string {
     `<section class="viewer">
       <iframe src="${escapeAttr(opts.embedRelPath)}" title="${escapeAttr(getString("item-share-viewer-title"))}"></iframe>
     </section>`;
+
+  const annotations = opts.annotations || [];
+  const annotationsHtml = buildAnnotationsSectionHtml(annotations);
+  const annotationsCss = annotationsHtml ? ANNOTATIONS_CSS : "";
+  const annotationsScript = annotationsHtml ? ANNOTATIONS_SCRIPT : "";
 
   const ogImage = opts.ogImageUrl
     ? `<meta property="og:image" content="${escapeAttr(opts.ogImageUrl)}" />
@@ -388,6 +762,7 @@ ${ogImage}
   footer.item-share-credit a:hover {
     opacity: 0.85;
   }
+${annotationsCss}
 </style>
 </head>
 <body>
@@ -416,9 +791,11 @@ ${ogImage}
         }
       </div>
     </div>
+    ${annotationsHtml}
     ${viewer || ""}
     ${creditHtml}
   </div>
+  ${annotationsScript}
 </body>
 </html>`;
 }

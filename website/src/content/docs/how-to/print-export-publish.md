@@ -21,6 +21,16 @@ Anyone with the link can open the page and files. Only publish materials you hav
 
 The operator must deploy the Worker in the repo’s `cloud/` folder (see [`cloud/README.md`](https://github.com/janbaykara/zotero-syllabus/blob/main/cloud/README.md) on GitHub).
 
+## Share an item via URL
+
+From an item’s context menu or the item pane **Share online** section, **Share via URL** publishes that item’s bibliographic details and attached files to a public link (same Cloudflare storage as syllabus publish).
+
+When you share or **Sync changes**, a checkbox lets you **Include annotations**. If you do, the public page shows highlights and notes in [Annotation Feed](/zotero-syllabus/how-to/annotation-feed/) style — ordered by location in the document, with **Copy** and **Copy all** (using your Annotation Feed copy preferences at publish time).
+
+:::caution[Sharing rights]
+Anyone with the link can open the page, files, and any annotations you included. Only share materials you have the right to share.
+:::
+
 ## What is excluded
 
 [Class notes](/zotero-syllabus/concepts/class-notes/) stay private: they do not appear on print or publish.

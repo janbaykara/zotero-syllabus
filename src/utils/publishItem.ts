@@ -11,14 +11,23 @@ import {
 } from "./exportCitations";
 import { resolveItemCover } from "./itemCover";
 import {
+  formatAnnotationCopyText,
+  annotationHasCopyText,
+} from "../modules/annotationStream";
+import { annotationCommentToDisplayHtml } from "./annotationComment";
+import {
+  annotationsStreamForParent,
+  sortAnnotationsByQuoteOrder,
+} from "../modules/explorerQueries";
+import {
   buildItemShareHtml,
   collectItemShareMeta,
   isEmbeddableShareContentType,
   itemShareDisplayTitle,
+  type ItemShareAnnotation,
   type ItemShareFileLink,
 } from "./itemShareHtml";
 import { getItemAbstractSnippet, getItemCreatorLine } from "./items";
-import { getString } from "./locale";
 import {
   deletePublishItem,
   getPublishApiBaseUrl,
@@ -217,8 +226,30 @@ export function resolveShareItem(item: Zotero.Item): Zotero.Item {
   return item;
 }
 
+async function collectItemShareAnnotations(
+  item: Zotero.Item,
+): Promise<ItemShareAnnotation[]> {
+  const stream = await annotationsStreamForParent(item);
+  const ordered = sortAnnotationsByQuoteOrder(stream, "location");
+  return ordered
+    .map((entry) => ({
+      quote: entry.quote || "",
+      commentHtml: entry.comment
+        ? annotationCommentToDisplayHtml(entry.comment)
+        : "",
+      color: entry.color || "#ffd400",
+      pageLabel: entry.pageLabel || "",
+      tags: entry.tags || [],
+      copyText: annotationHasCopyText(entry)
+        ? formatAnnotationCopyText(entry)
+        : "",
+    }))
+    .filter((row) => row.quote || row.commentHtml);
+}
+
 export async function publishItemToCloud(opts: {
   item: Zotero.Item;
+  includeAnnotations?: boolean;
   onProgress?: (phase: string, current?: number, total?: number) => void;
 }): Promise<{ publicUrl: string }> {
   const session = getPublishSession();
@@ -415,6 +446,17 @@ export async function publishItemToCloud(opts: {
     // keep fallback
   }
 
+  let annotations: ItemShareAnnotation[] | undefined;
+  if (opts.includeAnnotations) {
+    opts.onProgress?.("annotations");
+    try {
+      annotations = await collectItemShareAnnotations(item);
+    } catch (err) {
+      ztoolkit.log("item share annotations collect failed:", err);
+      annotations = [];
+    }
+  }
+
   const title = itemShareDisplayTitle(item);
   const html = buildItemShareHtml({
     title,
@@ -436,6 +478,7 @@ export async function publishItemToCloud(opts: {
       bibHref: hasBib ? PUBLISH_BIBLIOGRAPHY_BIB : undefined,
       rdfHref: hasRdf ? PUBLISH_BIBLIOGRAPHY_RDF : undefined,
     },
+    annotations,
   });
 
   opts.onProgress?.("upload", done + 1, total);

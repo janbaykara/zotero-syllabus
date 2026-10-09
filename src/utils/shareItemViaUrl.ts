@@ -13,7 +13,7 @@ import {
   unpublishItemFromCloud,
 } from "./publishItem";
 import { copyStringToClipboard } from "./clipboard";
-import { confirmPrompt } from "./window";
+import { confirmPrompt, confirmPromptWithCheck } from "./window";
 
 async function ensurePublishSignedIn(): Promise<boolean> {
   if (getPublishSession()) {
@@ -103,15 +103,24 @@ export async function shareItemViaUrl(
     return;
   }
 
-  if (!options?.skipConfirm) {
-    const ok = confirmPrompt(
-      getString("dialog-item-share-confirm-title"),
-      getString("dialog-item-share-confirm-text"),
-    );
-    if (!ok) {
-      return;
-    }
+  const checkMsg = getString("dialog-item-share-include-annotations");
+  const prompt = options?.skipConfirm
+    ? confirmPromptWithCheck(
+        getString("dialog-item-share-sync-title"),
+        getString("dialog-item-share-sync-text"),
+        checkMsg,
+        false,
+      )
+    : confirmPromptWithCheck(
+        getString("dialog-item-share-confirm-title"),
+        getString("dialog-item-share-confirm-text"),
+        checkMsg,
+        false,
+      );
+  if (!prompt.ok) {
+    return;
   }
+  const includeAnnotations = prompt.checked;
 
   if (!(await ensurePublishSignedIn())) {
     return;
@@ -130,8 +139,8 @@ export async function shareItemViaUrl(
   try {
     const { publicUrl } = await publishItemToCloud({
       item,
-      onProgress: (phase, current, total) => {
-        if (phase === "upload" && current != null && total != null) {
+      includeAnnotations,
+      onProgress: (phase, current, total) => {        if (phase === "upload" && current != null && total != null) {
           progress.changeLine({
             text: getString("progress-item-share-uploading", {
               args: { current, total },

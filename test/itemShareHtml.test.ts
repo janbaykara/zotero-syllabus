@@ -67,5 +67,62 @@ describe("item share HTML", function () {
     );
     assert.include(html, 'href="https://www.zotero.org/"');
     assert.include(html, "Zotero Syllabus");
+    assert.notInclude(html, 'class="annotations"');
+  });
+
+  it("renders annotations section with copy controls in given order", function () {
+    const html = buildItemShareHtml({
+      title: "Annotated Paper",
+      creators: "Ada Lovelace",
+      itemTypeLabel: "Journal Article",
+      canonicalUrl: "https://example.test/u/1/1/item/ITEM/",
+      metaRows: [],
+      files: [],
+      annotations: [
+        {
+          quote: "First quote in document",
+          commentHtml: "",
+          color: "#ffd400",
+          pageLabel: "3",
+          tags: ["method"],
+          copyText: "First quote in document",
+        },
+        {
+          quote: "Second quote later",
+          commentHtml: "<p>A note</p>",
+          color: "#ff6666",
+          pageLabel: "12",
+          tags: [],
+          copyText: "Second quote later\n\nA note",
+        },
+      ],
+    });
+    assert.include(html, 'class="annotations"');
+    assert.include(html, "First quote in document");
+    assert.include(html, "Second quote later");
+    assert.include(html, 'data-copy="First quote in document"');
+    assert.include(html, 'class="ann-copy-all"');
+    assert.include(html, 'data-copy="First quote in document\n\nSecond quote later\n\nA note"');
+    assert.include(html, "--highlight-color:#ffd400");
+    assert.include(html, "<p>A note</p>");
+    assert.include(html, "navigator.clipboard");
+    // Location order preserved as provided
+    const firstIdx = html.indexOf("First quote in document");
+    const secondIdx = html.indexOf("Second quote later");
+    assert.isBelow(firstIdx, secondIdx);
+  });
+
+  it("omits annotations section when empty", function () {
+    const html = buildItemShareHtml({
+      title: "No Annotations",
+      creators: "",
+      itemTypeLabel: "Book",
+      canonicalUrl: "https://example.test/u/1/1/item/ITEM/",
+      metaRows: [],
+      files: [],
+      annotations: [],
+    });
+    assert.notInclude(html, 'class="annotations"');
+    assert.notInclude(html, "navigator.clipboard");
   });
 });

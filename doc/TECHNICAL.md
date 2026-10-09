@@ -279,6 +279,8 @@ https://<worker>/u/{zoteroUserId}/{libraryID}/{collectionKey}/
 https://<worker>/u/{zoteroUserId}/{libraryID}/item/{itemKey}/
 ```
 
+Each Share / Sync confirm offers an **Include annotations** checkbox (default off). When checked, the cover page embeds that item’s annotations in Annotation Feed style (location order via `annotationSortIndex`, Copy / Copy all with prefs baked at publish time) in [`itemShareHtml.ts`](../src/utils/itemShareHtml.ts).
+
 **Unpublish.** Syllabus banner **Unpublish** calls `DELETE /v1/syllabus`, which wipes the syllabus prefix, removes that collection from each listed item’s `refs.json`, and **deletes the item prefix** when no item URL remains (`page: false`) and no other syllabus refs it. **Unpublish shared URL** on the item menu clears the cover page and deletes files only when no syllabus still references the item. Local prefs: `publishUrls`, `publishItemUrls`.
 
 **Quota.** R2 has no per-prefix caps. The Worker tracks `usage:{userId}` in KV, measures actual upload bytes, and rejects when projected usage exceeds `USER_QUOTA_BYTES` (default 200 MB). Set a Cloudflare **billing alert / spend limit** on the account as a backstop; that does not replace per-user quotas in the product.

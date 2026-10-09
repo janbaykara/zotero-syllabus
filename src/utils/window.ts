@@ -47,6 +47,46 @@ export function confirmPrompt(title: string, text: string): boolean {
 }
 
 /**
+ * OK/Cancel prompt with a checkbox.
+ * Returns `{ ok, checked }`. Auto-accepts in the test environment.
+ */
+export function confirmPromptWithCheck(
+  title: string,
+  text: string,
+  checkMsg: string,
+  defaultChecked = false,
+): { ok: boolean; checked: boolean } {
+  if (isTestEnv()) {
+    return { ok: true, checked: defaultChecked };
+  }
+  const win = Zotero.getMainWindow();
+  if (!win) {
+    return { ok: false, checked: defaultChecked };
+  }
+  try {
+    const prompt = Services.prompt as typeof Services.prompt & {
+      confirmCheck: (
+        parent: Window | null,
+        dialogTitle: string,
+        dialogText: string,
+        checkMessage: string,
+        checkState: { value: boolean },
+      ) => boolean;
+    };
+    const checkState = { value: defaultChecked };
+    const ok = prompt.confirmCheck(win, title, text, checkMsg, checkState);
+    return { ok, checked: !!checkState.value };
+  } catch (error) {
+    try {
+      ztoolkit.log("Error showing confirmCheck dialog:", error);
+    } catch {
+      // Tests (and early boot) may not have ztoolkit.
+    }
+    return { ok: false, checked: defaultChecked };
+  }
+}
+
+/**
  * Three-button prompt (button0 / button1 / button2).
  * Returns 0, 1, or 2 for the pressed button; -1 if unavailable.
  * In test env returns 0 (first button — Keep for unpin dialogs).
