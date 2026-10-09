@@ -77,7 +77,9 @@ import {
   isAssignmentReadingDone,
   isItemReadingDone,
   mergePersonalReadingDoneKeys,
+  getPersonalReadingOrderKeys,
   pinItemToPersonalReadingOrder,
+  removeItemFromPersonalReadingOrder,
   setAssignmentReadingDone,
   setItemReadingDone,
   shutdownPersonalReadingOrder,
@@ -2621,7 +2623,7 @@ export class SyllabusManager {
       tag: "menu",
       id: "syllabus-set-status-menu",
       label: getString("menu-set-reading-status"),
-      icon: "chrome://zotero/skin/16/universal/book.svg",
+      icon: "chrome://zotero/skin/16/universal/tick.svg",
       isHidden: () => !this.selectionHasRegularItem(),
       children: [
         {
@@ -2679,7 +2681,8 @@ export class SyllabusManager {
     ztoolkit.Menu.register("item", {
       tag: "menuitem",
       id: "syllabus-personal-reading-order-menu",
-      label: getString("personal-reading-order-menu-pin-top"),
+      label: getString("personal-reading-order-menu-add"),
+      icon: "chrome://zotero/skin/16/universal/list-number.svg",
       isHidden: () => {
         if (!isOptionalFeatureEnabled("gallery")) {
           return true;
@@ -2690,6 +2693,21 @@ export class SyllabusManager {
         const collection = getSelectedCollection();
         return !collection;
       },
+      onShowing: (elem) => {
+        const collection = getSelectedCollection();
+        const items = selectedRegularItems();
+        if (!collection || items.length === 0) {
+          return;
+        }
+        const orderKeys = new Set(getPersonalReadingOrderKeys(collection));
+        const allInOrder = items.every((item) => orderKeys.has(item.key));
+        elem.setAttribute(
+          "label",
+          allInOrder
+            ? getString("personal-reading-order-menu-remove")
+            : getString("personal-reading-order-menu-add"),
+        );
+      },
       commandListener: async () => {
         if (!isOptionalFeatureEnabled("gallery")) {
           return;
@@ -2699,9 +2717,19 @@ export class SyllabusManager {
           return;
         }
         const items = selectedRegularItems();
-        // Pin in reverse so the first selected ends up at the top.
+        const orderKeys = new Set(getPersonalReadingOrderKeys(collection));
+        const allInOrder = items.every((item) => orderKeys.has(item.key));
+        if (allInOrder) {
+          for (const item of items) {
+            await removeItemFromPersonalReadingOrder(collection, item.key);
+          }
+          return;
+        }
+        // Add in reverse so the first selected ends up at the top.
         for (let i = items.length - 1; i >= 0; i--) {
-          await pinItemToPersonalReadingOrder(collection, items[i].key);
+          if (!orderKeys.has(items[i].key)) {
+            await pinItemToPersonalReadingOrder(collection, items[i].key);
+          }
         }
       },
     });
@@ -2916,6 +2944,7 @@ export class SyllabusManager {
       tag: "menuitem",
       id: "syllabus-item-share-via-url-menu",
       label: getString("item-share-via-url"),
+      icon: "chrome://zotero/skin/16/universal/link.svg",
       isHidden: () => !selectedShareable(),
       commandListener: () => {
         const item = selectedShareable();

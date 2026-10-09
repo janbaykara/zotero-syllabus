@@ -25,7 +25,7 @@ Pin the collection and the few items you are mid-way through. They appear on **H
 
 ## 3. Order readings your way
 
-[Personal reading order](/zotero-syllabus/concepts/personal-reading-order/) lets you pin items to the top of a collection’s reading list and mark items done without relying on syllabus class structure. Gallery can sort by **Personal Reading Order**; pinned “next up” stacks respect that order when set.
+[Personal reading order](/zotero-syllabus/concepts/personal-reading-order/) lets you add items to a collection’s reading order and mark items done without relying on syllabus class structure. Gallery can sort by **Personal Reading Order**; pinned “next up” stacks respect that order when set.
 
 ## 4. Review highlights in Annotation Feed
 

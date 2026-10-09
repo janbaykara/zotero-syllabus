@@ -717,6 +717,24 @@ export async function pinItemToPersonalReadingOrder(
   return doc.order;
 }
 
+/** Remove item key from personal reading order (done state unchanged). */
+export async function removeItemFromPersonalReadingOrder(
+  collection: Zotero.Collection | number,
+  itemKey: string,
+): Promise<string[]> {
+  const resolved = resolveCollection(collection);
+  if (!resolved || !itemKey) {
+    return [];
+  }
+  const doc = await mutatePersonalReadingOrderDocument(resolved, (current) => ({
+    version: PERSONAL_READING_ORDER_VERSION,
+    order: (current.order || []).filter((key) => key !== itemKey),
+    done: current.done || [],
+    assignmentDone: current.assignmentDone || [],
+  }));
+  return doc.order;
+}
+
 /**
  * Gallery / item-level done. When set, every assignment for the item reads as
  * done. `siblingAssignmentIds` are cleared from assignmentDone (redundant).

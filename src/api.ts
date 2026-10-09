@@ -20,6 +20,7 @@ import {
   isAssignmentReadingDone as isPersonalAssignmentReadingDone,
   isItemReadingDone as isPersonalItemReadingDone,
   pinItemToPersonalReadingOrder,
+  removeItemFromPersonalReadingOrder,
   setAssignmentReadingDone as setPersonalAssignmentReadingDone,
   setItemReadingDone as setPersonalItemReadingDone,
   setPersonalReadingOrder,
@@ -621,11 +622,17 @@ const personal = {
     collection: Zotero.Collection | number,
     orderKeys: string[],
   ): Promise<string[]> => setPersonalReadingOrder(collection, orderKeys),
-  /** Move an item to the front of the personal reading list. Returns the new order. */
+  /** Move an item to the front of the personal reading order. Returns the new order. */
   pinItem: (
     collection: Zotero.Collection | number,
     itemKey: string,
   ): Promise<string[]> => pinItemToPersonalReadingOrder(collection, itemKey),
+  /** Remove an item from the personal reading order. Returns the new order. */
+  removeItem: (
+    collection: Zotero.Collection | number,
+    itemKey: string,
+  ): Promise<string[]> =>
+    removeItemFromPersonalReadingOrder(collection, itemKey),
   /** Whether the item is marked done in personal reading order. */
   isDone: (collection: Zotero.Collection | number, itemKey: string): boolean =>
     isPersonalItemReadingDone(collection, itemKey),

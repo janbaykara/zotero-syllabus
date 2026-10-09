@@ -41,7 +41,7 @@ UI metadata is a projection of the document (`classesToNumberKeyed`): number-key
 
 ## Personal reading order
 
-Distinct from the Syllabus note: a hidden top-level collection note (title `Personal Reading Order`, tag `zotero-syllabus-personal-reading-order`) stores a flat list of item keys the user wants to read in. It is excluded from Syllabus/Gallery item lists (same pattern as the Syllabus document note). **UI surfaces** (Gallery sort + DnD, Explorer “Reading order” sort, context-menu pin-to-top, personal-order precedence on shelves/stacks) require the **Gallery** optional feature (`enableGallery`). Done-state storage still works for Syllabus checkboxes when Gallery is off.
+Distinct from the Syllabus note: a hidden top-level collection note (title `Personal Reading Order`, tag `zotero-syllabus-personal-reading-order`) stores a flat list of item keys the user wants to read in. It is excluded from Syllabus/Gallery item lists (same pattern as the Syllabus document note). **UI surfaces** (Gallery sort + DnD, Explorer “Reading order” sort, context-menu add/remove from collection reading order, personal-order precedence on shelves/stacks) require the **Gallery** optional feature (`enableGallery`). Done-state storage still works for Syllabus checkboxes when Gallery is off.
 
 Envelope (human then machine), in [`src/modules/personalReadingOrder.ts`](../src/modules/personalReadingOrder.ts):
 

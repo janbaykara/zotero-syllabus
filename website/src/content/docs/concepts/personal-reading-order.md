@@ -17,6 +17,6 @@ Reading done status for this flow is tied to personal reading order (including m
 
 ## How to use it
 
-From item context menus on a collection, use **Pin to top of collection reading list** (wording may follow your Zotero language) to place items at the head of the personal order. Reorder and clear via the same reading-list controls as you work.
+From item context menus on a collection, use **Add to collection reading order** / **Remove from collection reading order** (wording may follow your Zotero language). Adding places items at the head of the personal order; removing drops them from it. Reorder via Gallery’s **Reading order** sort.
 
 For day-to-day studying, combine personal order with [pinning](/zotero-syllabus/how-to/pinning/) the collection so Home always shows the right next item.
