@@ -79,7 +79,7 @@ export default defineConfig({
             expandObjects: false,
             expandParameters: false,
             useCodeBlocks: true,
-            parametersFormat: "list",
+            parametersFormat: "table",
             // list = heading + JSDoc per member (not a giant type table)
             typeDeclarationFormat: "list",
             propertyMembersFormat: "list",
