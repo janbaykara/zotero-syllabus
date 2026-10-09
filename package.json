@@ -32,7 +32,8 @@
     "test": "zotero-plugin test --no-watch",
     "update-deps": "pnpm update --save",
     "docs:dev": "pnpm --dir website dev",
-    "docs:build": "pnpm --dir website build"
+    "docs:build": "pnpm --dir website build",
+    "publish:dash": "cd cloud && npx wrangler deploy && cd .."
   },
   "dependencies": {
     "@dnd-kit/abstract": "^0.5.0",

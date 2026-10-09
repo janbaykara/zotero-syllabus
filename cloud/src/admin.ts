@@ -1,14 +1,32 @@
 import type { Env } from "./types";
 import { queryViewStats, syllabusStatsKey, type ViewStats } from "./analytics";
-import { readSyllabusItemKeys, removeSyllabusFromItems } from "./itemRefs";
-import { PathError, objectKey, userSyllabusPrefix } from "./paths";
+import {
+  readSyllabusItemKeys,
+  removeSyllabusFromItems,
+  unpublishItemPage,
+} from "./itemRefs";
+import {
+  PathError,
+  itemObjectKey,
+  objectKey,
+  publicUrlForItem,
+  publicUrlForSyllabus,
+  userSyllabusPrefix,
+} from "./paths";
 import { reconcileUsage } from "./quota";
 import { syllabusMetaFromCustomMetadata } from "./syllabusMeta";
 
-export type PublishedSyllabus = {
+export type ShareKind = "syllabus" | "item";
+
+/** One published syllabus or individual item share page. */
+export type PublishedShare = {
+  kind: ShareKind;
   userId: string;
   libraryId: string;
+  /** Set when kind === "syllabus". */
   collectionKey: string;
+  /** Set when kind === "item". */
+  itemKey: string;
   publicUrl: string;
   bytes: number;
   files: number;
@@ -16,17 +34,30 @@ export type PublishedSyllabus = {
   title: string;
   courseCode: string;
   institution: string;
+  /** Item shares: localized item type. */
+  itemType: string;
+  /** Item shares: "y" | "n" | "". */
+  annotations: string;
 };
 
+/** @deprecated Prefer PublishedShare */
+export type PublishedSyllabus = PublishedShare;
+
 export type AdminReport = {
-  syllabi: PublishedSyllabus[];
+  /** All shares (syllabi + item pages), sorted. */
+  shares: PublishedShare[];
+  /** Alias of shares filtered to syllabi (kept for chart helpers). */
+  syllabi: PublishedShare[];
   totalBytes: number;
   totalFiles: number;
+  syllabusCount: number;
+  itemCount: number;
   userCount: number;
   views: ViewStats;
 };
 
 const SYLLABUS_KEY = /^users\/([^/]+)\/syllabi\/([^/]+)\/([^/]+)\/(.+)$/;
+const ITEM_KEY = /^users\/([^/]+)\/items\/([^/]+)\/([^/]+)\/(.+)$/;
 
 /** Timing-safe equality for secrets of equal length; rejects otherwise. */
 export function adminKeyMatches(
@@ -48,33 +79,49 @@ export function adminKeyMatches(
   return diff === 0;
 }
 
-function syllabusId(
-  userId: string,
-  libraryId: string,
-  collectionKey: string,
-): string {
-  return `${userId}\0${libraryId}\0${collectionKey}`;
+function shareId(kind: ShareKind, userId: string, libraryId: string, key: string): string {
+  return `${kind}\0${userId}\0${libraryId}\0${key}`;
+}
+
+function shareStatsKey(row: PublishedShare): string {
+  if (row.kind === "item") {
+    return syllabusStatsKey(row.userId, row.libraryId, `item/${row.itemKey}`);
+  }
+  return syllabusStatsKey(row.userId, row.libraryId, row.collectionKey);
+}
+
+function shareSortLabel(row: PublishedShare): string {
+  return (
+    row.title.trim() ||
+    row.courseCode.trim() ||
+    (row.kind === "item" ? row.itemKey : row.collectionKey)
+  );
 }
 
 /** Parallel head() of index.html customMetadata after a cheap key-only list. */
 async function attachIndexMeta(
   env: Env,
-  syllabi: PublishedSyllabus[],
+  shares: PublishedShare[],
 ): Promise<void> {
   await Promise.all(
-    syllabi.map(async (row) => {
+    shares.map(async (row) => {
       try {
-        const key = objectKey(
-          row.userId,
-          row.libraryId,
-          row.collectionKey,
-          "index.html",
-        );
+        const key =
+          row.kind === "item"
+            ? itemObjectKey(row.userId, row.libraryId, row.itemKey, "index.html")
+            : objectKey(
+                row.userId,
+                row.libraryId,
+                row.collectionKey,
+                "index.html",
+              );
         const obj = await env.BUCKET.head(key);
         const meta = syllabusMetaFromCustomMetadata(obj?.customMetadata);
         row.title = meta.title;
         row.courseCode = meta.courseCode;
         row.institution = meta.institution;
+        row.itemType = meta.itemType;
+        row.annotations = meta.annotations;
       } catch {
         // Leave empty; storage row is still useful.
       }
@@ -82,23 +129,24 @@ async function attachIndexMeta(
   );
 }
 
-/** List published syllabi by scanning R2 under users/. */
+type AccRow = {
+  kind: ShareKind;
+  userId: string;
+  libraryId: string;
+  collectionKey: string;
+  itemKey: string;
+  bytes: number;
+  files: number;
+  hasIndex: boolean;
+};
+
+/** List published syllabi and item share pages by scanning R2 under users/. */
 export async function listPublishedSyllabi(
   env: Env,
   publicBaseUrl: string,
 ): Promise<AdminReport> {
   const base = publicBaseUrl.replace(/\/+$/, "");
-  const byId = new Map<
-    string,
-    {
-      userId: string;
-      libraryId: string;
-      collectionKey: string;
-      bytes: number;
-      files: number;
-      hasIndex: boolean;
-    }
-  >();
+  const byId = new Map<string, AccRow>();
 
   let cursor: string | undefined;
   do {
@@ -108,19 +156,51 @@ export async function listPublishedSyllabi(
       limit: 1000,
     });
     for (const obj of listed.objects) {
-      const m = SYLLABUS_KEY.exec(obj.key);
-      if (!m) continue;
-      const userId = m[1];
-      const libraryId = m[2];
-      const collectionKey = m[3];
-      const relPath = m[4];
-      const id = syllabusId(userId, libraryId, collectionKey);
+      const syllabusMatch = SYLLABUS_KEY.exec(obj.key);
+      if (syllabusMatch) {
+        const userId = syllabusMatch[1];
+        const libraryId = syllabusMatch[2];
+        const collectionKey = syllabusMatch[3];
+        const relPath = syllabusMatch[4];
+        const id = shareId("syllabus", userId, libraryId, collectionKey);
+        let row = byId.get(id);
+        if (!row) {
+          row = {
+            kind: "syllabus",
+            userId,
+            libraryId,
+            collectionKey,
+            itemKey: "",
+            bytes: 0,
+            files: 0,
+            hasIndex: false,
+          };
+          byId.set(id, row);
+        }
+        row.bytes += obj.size;
+        if (relPath === "index.html") {
+          row.hasIndex = true;
+        } else if (relPath.startsWith("files/")) {
+          row.files += 1;
+        }
+        continue;
+      }
+
+      const itemMatch = ITEM_KEY.exec(obj.key);
+      if (!itemMatch) continue;
+      const userId = itemMatch[1];
+      const libraryId = itemMatch[2];
+      const itemKey = itemMatch[3];
+      const relPath = itemMatch[4];
+      const id = shareId("item", userId, libraryId, itemKey);
       let row = byId.get(id);
       if (!row) {
         row = {
+          kind: "item",
           userId,
           libraryId,
-          collectionKey,
+          collectionKey: "",
+          itemKey,
           bytes: 0,
           files: 0,
           hasIndex: false,
@@ -137,43 +217,83 @@ export async function listPublishedSyllabi(
     cursor = listed.truncated ? listed.cursor : undefined;
   } while (cursor);
 
-  const syllabi: PublishedSyllabus[] = [];
+  const shares: PublishedShare[] = [];
   for (const row of byId.values()) {
+    // Only rows with a public cover page (syllabus publish or Share via URL).
     if (!row.hasIndex) continue;
-    syllabi.push({
-      userId: row.userId,
-      libraryId: row.libraryId,
-      collectionKey: row.collectionKey,
-      publicUrl: `${base}/u/${row.userId}/${row.libraryId}/${row.collectionKey}/`,
-      bytes: row.bytes,
-      files: row.files,
-      hasIndex: true,
-      title: "",
-      courseCode: "",
-      institution: "",
-    });
+    if (row.kind === "syllabus") {
+      shares.push({
+        kind: "syllabus",
+        userId: row.userId,
+        libraryId: row.libraryId,
+        collectionKey: row.collectionKey,
+        itemKey: "",
+        publicUrl: publicUrlForSyllabus(
+          base,
+          row.userId,
+          row.libraryId,
+          row.collectionKey,
+        ),
+        bytes: row.bytes,
+        files: row.files,
+        hasIndex: true,
+        title: "",
+        courseCode: "",
+        institution: "",
+        itemType: "",
+        annotations: "",
+      });
+    } else {
+      shares.push({
+        kind: "item",
+        userId: row.userId,
+        libraryId: row.libraryId,
+        collectionKey: "",
+        itemKey: row.itemKey,
+        publicUrl: publicUrlForItem(
+          base,
+          row.userId,
+          row.libraryId,
+          row.itemKey,
+        ),
+        bytes: row.bytes,
+        files: row.files,
+        hasIndex: true,
+        title: "",
+        courseCode: "",
+        institution: "",
+        itemType: "",
+        annotations: "",
+      });
+    }
   }
 
-  await attachIndexMeta(env, syllabi);
+  await attachIndexMeta(env, shares);
 
-  syllabi.sort((a, b) => {
+  shares.sort((a, b) => {
     if (a.userId !== b.userId) {
       return a.userId.localeCompare(b.userId);
     }
-    const titleCmp = (a.title || a.collectionKey).localeCompare(
-      b.title || b.collectionKey,
-    );
+    if (a.kind !== b.kind) {
+      // Syllabi first, then items.
+      return a.kind === "syllabus" ? -1 : 1;
+    }
+    const titleCmp = shareSortLabel(a).localeCompare(shareSortLabel(b));
     if (titleCmp !== 0) return titleCmp;
     return b.bytes - a.bytes;
   });
 
   let totalBytes = 0;
   let totalFiles = 0;
+  let syllabusCount = 0;
+  let itemCount = 0;
   const users = new Set<string>();
-  for (const s of syllabi) {
+  for (const s of shares) {
     totalBytes += s.bytes;
     totalFiles += s.files;
     users.add(s.userId);
+    if (s.kind === "syllabus") syllabusCount += 1;
+    else itemCount += 1;
   }
 
   let views: ViewStats;
@@ -192,9 +312,12 @@ export async function listPublishedSyllabi(
   }
 
   return {
-    syllabi,
+    shares,
+    syllabi: shares.filter((s) => s.kind === "syllabus"),
     totalBytes,
     totalFiles,
+    syllabusCount,
+    itemCount,
     userCount: users.size,
     views,
   };
@@ -231,36 +354,31 @@ function visitsLabel(n: number): string {
   return `${Math.round(n)} ${n === 1 ? "visit" : "visits"}`;
 }
 
-function syllabusChartLabel(
-  syllabiByKey: Map<string, PublishedSyllabus>,
+function shareChartLabel(
+  sharesByKey: Map<string, PublishedShare>,
   key: string,
 ): string {
-  const s = syllabiByKey.get(key);
+  const s = sharesByKey.get(key);
   if (s) {
     const code = s.courseCode.trim();
     const title = s.title.trim();
-    if (code && title) return `${code} — ${title}`;
-    if (code) return code;
-    if (title) return title;
-    if (s.collectionKey) return s.collectionKey;
+    const kind = s.kind === "item" ? "Item" : "Syllabus";
+    if (code && title) return `${kind}: ${code} — ${title}`;
+    if (code) return `${kind}: ${code}`;
+    if (title) return `${kind}: ${title}`;
+    if (s.kind === "item" && s.itemKey) return `${kind}: ${s.itemKey}`;
+    if (s.collectionKey) return `${kind}: ${s.collectionKey}`;
   }
   const parts = key.split("/");
+  if (parts[2] === "item" && parts[3]) return `Item: ${parts[3]}`;
   return parts[2] || key;
 }
 
-function renderDailyChart(
-  views: ViewStats,
-  syllabi: PublishedSyllabus[],
-): string {
+function renderDailyChart(views: ViewStats, shares: PublishedShare[]): string {
   if (!views.available) {
     return `<p class="muted chart-note">${escapeHtml(views.error || "Views unavailable")}</p>`;
   }
-  const syllabiByKey = new Map(
-    syllabi.map((s) => [
-      syllabusStatsKey(s.userId, s.libraryId, s.collectionKey),
-      s,
-    ]),
-  );
+  const sharesByKey = new Map(shares.map((s) => [shareStatsKey(s), s]));
   const max = Math.max(1, ...views.daily.map((d) => d.pageViews));
   const bars = views.daily
     .map((d) => {
@@ -269,14 +387,14 @@ function renderDailyChart(
       const top = d.topSyllabi || [];
       const topRows = top
         .map((t) => {
-          const name = escapeHtml(syllabusChartLabel(syllabiByKey, t.key));
+          const name = escapeHtml(shareChartLabel(sharesByKey, t.key));
           return `<div class="bar-tip-row"><span class="bar-tip-name">${name}</span><span class="bar-tip-n">${escapeHtml(formatCount(t.pageViews))}</span></div>`;
         })
         .join("");
       const list = topRows ? `<div class="bar-tip-list">${topRows}</div>` : "";
       const ariaTop = top
         .map((t) => {
-          const name = syllabusChartLabel(syllabiByKey, t.key);
+          const name = shareChartLabel(sharesByKey, t.key);
           return `${name}: ${visitsLabel(t.pageViews)}`;
         })
         .join("; ");
@@ -296,10 +414,48 @@ function renderDailyChart(
 </div>`;
 }
 
+function typeLabel(kind: ShareKind): string {
+  return kind === "item" ? "Item" : "Syllabus";
+}
+
+/** Single Metadata column: code + institution (syllabus) or type + annotations (item). */
+function formatShareMetadata(row: PublishedShare): {
+  text: string;
+  sort: string;
+} {
+  if (row.kind === "item") {
+    const parts: string[] = [];
+    if (row.itemType.trim()) parts.push(row.itemType.trim());
+    if (row.annotations === "y" || row.annotations === "n") {
+      parts.push(`Annotations: ${row.annotations}`);
+    }
+    const text = parts.join(" · ");
+    return { text, sort: text.toLowerCase() };
+  }
+  const parts: string[] = [];
+  if (row.courseCode.trim()) parts.push(row.courseCode.trim());
+  if (row.institution.trim()) parts.push(row.institution.trim());
+  const text = parts.join(" · ");
+  return { text, sort: text.toLowerCase() };
+}
+
+function userSummary(rows: PublishedShare[]): string {
+  const syllabi = rows.filter((r) => r.kind === "syllabus").length;
+  const items = rows.filter((r) => r.kind === "item").length;
+  const parts: string[] = [];
+  if (syllabi) {
+    parts.push(`${syllabi} ${syllabi === 1 ? "syllabus" : "syllabi"}`);
+  }
+  if (items) {
+    parts.push(`${items} ${items === 1 ? "item" : "items"}`);
+  }
+  return parts.join(", ") || "0 shares";
+}
+
 export function renderAdminHtml(report: AdminReport): string {
   const views = report.views;
-  const byUser = new Map<string, PublishedSyllabus[]>();
-  for (const s of report.syllabi) {
+  const byUser = new Map<string, PublishedShare[]>();
+  for (const s of report.shares) {
     const list = byUser.get(s.userId) || [];
     list.push(s);
     byUser.set(s.userId, list);
@@ -311,7 +467,7 @@ export function renderAdminHtml(report: AdminReport): string {
     const userFiles = rows.reduce((n, r) => n + r.files, 0);
     const trs = rows
       .map((r) => {
-        const key = syllabusStatsKey(r.userId, r.libraryId, r.collectionKey);
+        const key = shareStatsKey(r);
         const counts = views.bySyllabus[key];
         const viewCell = views.available
           ? formatCount(counts?.pageViews ?? 0)
@@ -322,11 +478,7 @@ export function renderAdminHtml(report: AdminReport): string {
         const citeCell = views.available
           ? formatCount(counts?.citationDownloads ?? 0)
           : "—";
-        const label =
-          r.title.trim() ||
-          r.courseCode.trim() ||
-          r.collectionKey ||
-          r.publicUrl;
+        const label = shareSortLabel(r) || r.publicUrl;
         const viewSort = views.available ? String(counts?.pageViews ?? 0) : "";
         const dlSort = views.available
           ? String(counts?.fileDownloads ?? 0)
@@ -334,35 +486,37 @@ export function renderAdminHtml(report: AdminReport): string {
         const citeSort = views.available
           ? String(counts?.citationDownloads ?? 0)
           : "";
+        const type = typeLabel(r.kind);
+        const meta = formatShareMetadata(r);
+        const deleteAttrs =
+          r.kind === "item"
+            ? `data-kind="item" data-user-id="${escapeHtml(r.userId)}" data-library-id="${escapeHtml(r.libraryId)}" data-item-key="${escapeHtml(r.itemKey)}" data-label="${escapeHtml(label)}"`
+            : `data-kind="syllabus" data-user-id="${escapeHtml(r.userId)}" data-library-id="${escapeHtml(r.libraryId)}" data-collection-key="${escapeHtml(r.collectionKey)}" data-label="${escapeHtml(label)}"`;
         return `<tr>
+  <td data-sort="${escapeHtml(r.kind)}"><span class="type-pill type-${r.kind}">${escapeHtml(type)}</span></td>
   <td data-sort="${escapeHtml(r.title.trim().toLowerCase())}">${cellOrDash(r.title)}</td>
-  <td data-sort="${escapeHtml(r.courseCode.trim().toLowerCase())}">${cellOrDash(r.courseCode)}</td>
-  <td data-sort="${escapeHtml(r.institution.trim().toLowerCase())}">${cellOrDash(r.institution)}</td>
+  <td data-sort="${escapeHtml(meta.sort)}">${meta.text ? escapeHtml(meta.text) : `<span class="muted">—</span>`}</td>
   <td data-sort="${escapeHtml(r.publicUrl.toLowerCase())}"><a href="${escapeHtml(r.publicUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.publicUrl)}</a></td>
   <td class="num" data-sort="${r.bytes}" data-sort-type="num">${escapeHtml(formatBytes(r.bytes))}</td>
   <td class="num" data-sort="${r.files}" data-sort-type="num">${r.files}</td>
   <td class="num" data-sort="${escapeHtml(viewSort)}" data-sort-type="num">${viewCell}</td>
   <td class="num" data-sort="${escapeHtml(dlSort)}" data-sort-type="num">${dlCell}</td>
   <td class="num" data-sort="${escapeHtml(citeSort)}" data-sort-type="num">${citeCell}</td>
-  <td><button type="button" class="delete"
-    data-user-id="${escapeHtml(r.userId)}"
-    data-library-id="${escapeHtml(r.libraryId)}"
-    data-collection-key="${escapeHtml(r.collectionKey)}"
-    data-label="${escapeHtml(label)}">Delete</button></td>
+  <td><button type="button" class="delete" ${deleteAttrs}>Delete</button></td>
 </tr>`;
       })
       .join("\n");
     sections.push(`<section>
   <h2>User <span class="mono">${escapeHtml(userId)}</span>
-    <span class="muted">— ${rows.length} ${rows.length === 1 ? "syllabus" : "syllabi"},
+    <span class="muted">— ${escapeHtml(userSummary(rows))},
     ${escapeHtml(formatBytes(userBytes))}, ${userFiles} file${userFiles === 1 ? "" : "s"}</span>
   </h2>
   <table class="sortable">
     <thead>
       <tr>
-        <th scope="col" data-col="0"><button type="button" class="sort">Title</button></th>
-        <th scope="col" data-col="1"><button type="button" class="sort">Code</button></th>
-        <th scope="col" data-col="2"><button type="button" class="sort">Institution</button></th>
+        <th scope="col" data-col="0"><button type="button" class="sort">Type</button></th>
+        <th scope="col" data-col="1"><button type="button" class="sort">Title</button></th>
+        <th scope="col" data-col="2"><button type="button" class="sort">Metadata</button></th>
         <th scope="col" data-col="3"><button type="button" class="sort">Public URL</button></th>
         <th scope="col" class="num" data-col="4"><button type="button" class="sort">Size</button></th>
         <th scope="col" class="num" data-col="5"><button type="button" class="sort">Files</button></th>
@@ -380,8 +534,8 @@ ${trs}
   }
 
   const body =
-    report.syllabi.length === 0
-      ? `<p class="muted">No published syllabi found.</p>`
+    report.shares.length === 0
+      ? `<p class="muted">No published syllabi or shared items found.</p>`
       : sections.join("\n");
 
   const viewsTotal = views.available ? formatCount(views.pageViews30d) : "—";
@@ -494,6 +648,24 @@ ${trs}
     tr:last-child td { border-bottom: 0; }
     td.num, th.num { text-align: right; white-space: nowrap; }
     th.num .sort { justify-content: flex-end; }
+    .type-pill {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      padding: 0.15rem 0.45rem;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .type-pill.type-syllabus {
+      color: #1e40af;
+      background: #dbeafe;
+    }
+    .type-pill.type-item {
+      color: #065f46;
+      background: #d1fae5;
+    }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
     a { color: #1d4ed8; word-break: break-all; }
     button.sort {
@@ -531,9 +703,10 @@ ${trs}
 </head>
 <body>
   <h1>Syllabus publish admin</h1>
-  <p class="muted">Storage and attachment counts from R2. Title / code / institution come from index.html metadata (re-publish to populate older syllabi). Page views, file downloads, and citation exports (RIS/BIB/RDF) are last-30-day totals from Analytics Engine. Delete removes all R2 objects for that syllabus (public URLs then 404); the publisher can re-publish from the plugin.</p>
+  <p class="muted">Storage and attachment counts from R2 for published syllabi and Share via URL item pages. Metadata is course code · institution for syllabi, or item type · Annotations: y/n for items (from index.html customMetadata; re-publish/sync to populate older shares). Page views, file downloads, and citation exports (RIS/BIB/RDF) are last-30-day totals from Analytics Engine. Delete unpublishes that row (syllabus wipe or item page unpublish); the publisher can re-publish from the plugin.</p>
   <div class="totals">
-    <div><strong>${report.syllabi.length}</strong><span>Syllabi</span></div>
+    <div><strong>${report.syllabusCount}</strong><span>Syllabi</span></div>
+    <div><strong>${report.itemCount}</strong><span>Items</span></div>
     <div><strong>${report.userCount}</strong><span>Users</span></div>
     <div><strong>${escapeHtml(formatBytes(report.totalBytes))}</strong><span>Total storage</span></div>
     <div><strong>${report.totalFiles}</strong><span>Total files</span></div>
@@ -541,28 +714,42 @@ ${trs}
     <div><strong>${downloadsTotal}</strong><span>File downloads (30d)</span></div>
     <div><strong>${citationsTotal}</strong><span>Citations (30d)</span></div>
   </div>
-  ${renderDailyChart(views, report.syllabi)}
+  ${renderDailyChart(views, report.shares)}
   ${body}
   <script>
   (function () {
     var key = new URLSearchParams(location.search).get("key") || "";
     document.querySelectorAll("button.delete").forEach(function (btn) {
       btn.addEventListener("click", async function () {
+        var kind = btn.getAttribute("data-kind") || "syllabus";
         var userId = btn.getAttribute("data-user-id") || "";
         var libraryId = btn.getAttribute("data-library-id") || "";
         var collectionKey = btn.getAttribute("data-collection-key") || "";
-        var label = btn.getAttribute("data-label") || collectionKey;
-        if (!key || !userId || !libraryId || !collectionKey) return;
-        if (!confirm("Delete published syllabus?\\n\\n" + label + "\\n\\nThis cannot be undone.")) {
-          return;
+        var itemKey = btn.getAttribute("data-item-key") || "";
+        var label = btn.getAttribute("data-label") || collectionKey || itemKey;
+        if (!key || !userId || !libraryId) return;
+        if (kind === "item") {
+          if (!itemKey) return;
+          if (!confirm("Unpublish shared item?\\n\\n" + label + "\\n\\nRemoves the public item page (attached files stay if a syllabus still links to them).")) {
+            return;
+          }
+        } else {
+          if (!collectionKey) return;
+          if (!confirm("Delete published syllabus?\\n\\n" + label + "\\n\\nThis cannot be undone.")) {
+            return;
+          }
         }
         btn.disabled = true;
         try {
-          var url = new URL("/admin/syllabus", location.origin);
+          var url = new URL(kind === "item" ? "/admin/item" : "/admin/syllabus", location.origin);
           url.searchParams.set("key", key);
           url.searchParams.set("userId", userId);
           url.searchParams.set("libraryId", libraryId);
-          url.searchParams.set("collectionKey", collectionKey);
+          if (kind === "item") {
+            url.searchParams.set("itemKey", itemKey);
+          } else {
+            url.searchParams.set("collectionKey", collectionKey);
+          }
           var res = await fetch(url.toString(), { method: "DELETE" });
           var body = await res.json().catch(function () { return {}; });
           if (!res.ok) {
@@ -755,4 +942,36 @@ export async function handleAdminDeleteSyllabus(
     gcDeleted: gc.gcDeleted,
     usageBytes,
   });
+}
+
+/** Unpublish one shared item page (same as plugin Unpublish shared URL). */
+export async function handleAdminDeleteItem(
+  request: Request,
+  env: Env,
+): Promise<Response> {
+  if (!requireAdminKey(request, env)) {
+    return adminJson({ error: "not_found" }, 404);
+  }
+
+  const url = new URL(request.url);
+  const userId = url.searchParams.get("userId") || "";
+  const libraryId = url.searchParams.get("libraryId") || "";
+  const itemKey = url.searchParams.get("itemKey") || "";
+
+  try {
+    const result = await unpublishItemPage(env, userId, libraryId, itemKey);
+    const usageBytes = await reconcileUsage(env, userId);
+    return adminJson({
+      ok: true,
+      deleted: result.deleted,
+      gcDeleted: result.gcDeleted,
+      refs: result.refs,
+      usageBytes,
+    });
+  } catch (e) {
+    if (e instanceof PathError) {
+      return adminJson({ error: "bad_path", message: e.message }, 400);
+    }
+    throw e;
+  }
 }

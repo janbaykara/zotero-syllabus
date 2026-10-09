@@ -1,5 +1,9 @@
 import type { Env, OAuthPending, OAuthReady } from "./types";
-import { handleAdminDashboard, handleAdminDeleteSyllabus } from "./admin";
+import {
+  handleAdminDashboard,
+  handleAdminDeleteItem,
+  handleAdminDeleteSyllabus,
+} from "./admin";
 import { recordPublicHit } from "./analytics";
 import { randomId, signJwt, verifyJwt } from "./jwt";
 import {
@@ -282,6 +286,9 @@ export default {
       }
       if (path === "/admin/syllabus" && request.method === "DELETE") {
         return handleAdminDeleteSyllabus(request, env);
+      }
+      if (path === "/admin/item" && request.method === "DELETE") {
+        return handleAdminDeleteItem(request, env);
       }
 
       if (path === "/auth/zotero/start" && request.method === "POST") {

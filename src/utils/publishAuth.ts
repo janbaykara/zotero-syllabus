@@ -480,6 +480,10 @@ export async function putPublishObject(opts: {
     title?: string;
     courseCode?: string;
     institution?: string;
+    /** Item shares: localized item type. */
+    itemType?: string;
+    /** Item shares: "y" | "n". */
+    annotations?: string;
   } | null;
 }): Promise<{ publicUrl: string; usageBytes: number; quotaBytes: number }> {
   const base = getPublishApiBaseUrl();
@@ -497,9 +501,13 @@ export async function putPublishObject(opts: {
     const title = encodeSyllabusMetaHeader(opts.syllabusMeta.title);
     const courseCode = encodeSyllabusMetaHeader(opts.syllabusMeta.courseCode);
     const institution = encodeSyllabusMetaHeader(opts.syllabusMeta.institution);
+    const itemType = encodeSyllabusMetaHeader(opts.syllabusMeta.itemType);
+    const annotations = encodeSyllabusMetaHeader(opts.syllabusMeta.annotations);
     if (title) headers["X-Syllabus-Title"] = title;
     if (courseCode) headers["X-Syllabus-Course-Code"] = courseCode;
     if (institution) headers["X-Syllabus-Institution"] = institution;
+    if (itemType) headers["X-Syllabus-Item-Type"] = itemType;
+    if (annotations) headers["X-Syllabus-Annotations"] = annotations;
   }
   const xhr = await Zotero.HTTP.request("PUT", `${base}/v1/objects`, {
     headers,

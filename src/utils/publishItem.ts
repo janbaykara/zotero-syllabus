@@ -487,7 +487,11 @@ export async function publishItemToCloud(opts: {
     target,
     relPath: "index.html",
     bytes: new TextEncoder().encode(html),
-    syllabusMeta: { title },
+    syllabusMeta: {
+      title,
+      itemType: itemTypeLabel,
+      annotations: opts.includeAnnotations ? "y" : "n",
+    },
   });
   publicUrl = result.publicUrl || publicUrl;
   if (!publicUrl.endsWith("/")) {
