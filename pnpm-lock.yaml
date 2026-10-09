@@ -25,6 +25,9 @@ importers:
       '@dnd-kit/helpers':
         specifier: ^0.5.0
         version: 0.5.0
+      '@dnd-kit/state':
+        specifier: ^0.5.0
+        version: 0.5.0
       concurrently:
         specifier: ^9.2.1
         version: 9.2.1

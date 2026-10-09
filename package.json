@@ -39,6 +39,7 @@
     "@dnd-kit/collision": "^0.5.0",
     "@dnd-kit/geometry": "^0.5.0",
     "@dnd-kit/helpers": "^0.5.0",
+    "@dnd-kit/state": "^0.5.0",
     "concurrently": "^9.2.1",
     "date-fns": "^4.4.0",
     "docx": "^9.7.1",
