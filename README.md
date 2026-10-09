@@ -80,7 +80,7 @@ The plugin has five surfaces (toggle in **Preferences → Zotero Syllabus → Vi
 4. **Home** — library shelves for what to open next.
 5. **Annotation Feed** — your highlights in one timeline.
 
-Shared tools: pinning, Gallery notes, and [importing a reading list](https://janbaykara.github.io/zotero-syllabus/how-to/import-reading-lists/) from the browser. Start with the [student](https://janbaykara.github.io/zotero-syllabus/tutorials/student/), [educator](https://janbaykara.github.io/zotero-syllabus/tutorials/educator/), or [researcher](https://janbaykara.github.io/zotero-syllabus/tutorials/researcher/) tutorial.
+Shared tools: pinning, Gallery notes, [publishing a collection](https://janbaykara.github.io/zotero-syllabus/how-to/print-export-publish/) (syllabus or reading list), and [importing a reading list](https://janbaykara.github.io/zotero-syllabus/how-to/import-reading-lists/) from the browser. Start with the [student](https://janbaykara.github.io/zotero-syllabus/tutorials/student/), [educator](https://janbaykara.github.io/zotero-syllabus/tutorials/educator/), or [researcher](https://janbaykara.github.io/zotero-syllabus/tutorials/researcher/) tutorial.
 
 ## API
 

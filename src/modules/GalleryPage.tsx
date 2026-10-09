@@ -34,6 +34,15 @@ import {
   User,
   UserX,
 } from "lucide-preact";
+import { PublishStatusBanner } from "./PublishStatusBanner";
+import { CollectionSaveFormatMenu } from "./CollectionSaveFormatMenu";
+import { getPublishedSyllabusUrl } from "../utils/publishUrls";
+import { copyStringToClipboard } from "../utils/clipboard";
+import {
+  runCollectionPublish,
+  runCollectionUnpublish,
+  type CollectionPublishUiStatus,
+} from "../utils/runCollectionPublish";
 import { renderComponent } from "../utils/react";
 import { isZotero8OrLater } from "../utils/zotero";
 import {
@@ -124,11 +133,16 @@ import { PersonalOrderGallery } from "./PersonalOrderGallery";
 import {
   applyPersonalReadingOrder,
   setPersonalReadingOrder,
+  setPersonalReadingOrderDescription,
 } from "./personalReadingOrder";
 
 /** Stable identity — a fresh `[RestrictToVerticalAxis]` each render remounts DnD. */
 const PERSONAL_ORDER_CARD_MODIFIERS = [RestrictToVerticalAxis];
-import { usePersonalReadingOrderKeys } from "./react-zotero-sync/personalReadingOrder";
+import {
+  usePersonalReadingOrderDescription,
+  usePersonalReadingOrderKeys,
+} from "./react-zotero-sync/personalReadingOrder";
+import { TextInput } from "./syllabusInputs";
 import { pinnedGenerationAtom } from "./react-zotero-sync/pinned";
 import { useReaderMode } from "./react-zotero-sync/readerMode";
 import { isOptionalFeatureEnabled } from "./optionalFeatures";
@@ -180,6 +194,20 @@ export function GalleryPage({
   const isCollectionScope = collectionId != null;
   const resolvedTreeViewID = treeViewID ?? (isCollectionScope ? "" : viewKey);
   const collectionIdOrZero = collectionId ?? 0;
+
+  const [publishStatus, setPublishStatus] = useState<CollectionPublishUiStatus>(
+    { kind: "idle" },
+  );
+  const [publishedUrl, setPublishedUrl] = useState<string | null>(() =>
+    collectionId != null ? getPublishedSyllabusUrl(collectionId) : null,
+  );
+
+  useEffect(() => {
+    setPublishedUrl(
+      collectionId != null ? getPublishedSyllabusUrl(collectionId) : null,
+    );
+    setPublishStatus({ kind: "idle" });
+  }, [collectionId]);
   const libraryID = useMemo(() => {
     if (collectionId != null) {
       return (
@@ -192,6 +220,7 @@ export function GalleryPage({
   const [collectionTitle] = useZoteroCollectionTitle(collectionIdOrZero);
   const treeRowTitle = useZoteroTreeRowTitle(resolvedTreeViewID);
   const title = isCollectionScope ? collectionTitle : treeRowTitle;
+  const galleryDescription = usePersonalReadingOrderDescription(collectionId);
   const collectionItems = useZoteroCollectionItems(collectionIdOrZero, {
     recursive: "pref",
     includeAssignedClassNotes: true,
@@ -202,6 +231,7 @@ export function GalleryPage({
   });
   const matchingIds = useZoteroItemsViewRegularItemIds(collectionIdOrZero);
   const allItems = isCollectionScope ? collectionItems : treeRowItems;
+
   const isFiltered = isCollectionScope && matchingIds != null;
   const syllabusItems = useMemo(() => {
     if (!matchingIds) {
@@ -214,6 +244,37 @@ export function GalleryPage({
         matchingIds.has(zoteroItem.id) || isClassNoteItem(zoteroItem),
     );
   }, [allItems, matchingIds]);
+
+  const handlePublish = async (sync = false) => {
+    if (collectionId == null) return;
+    const publishItems = syllabusItems
+      .map(({ zoteroItem }) => zoteroItem)
+      .filter((item) => item.isRegularItem?.() && !isClassNoteItem(item));
+    await runCollectionPublish({
+      collectionId,
+      items: publishItems,
+      initialKind: "gallery",
+      sync,
+      title: title || undefined,
+      setStatus: setPublishStatus,
+      onPublishedUrl: setPublishedUrl,
+    });
+  };
+
+  const handleUnpublish = async () => {
+    if (collectionId == null) return;
+    await runCollectionUnpublish({
+      collectionId,
+      setStatus: setPublishStatus,
+      onCleared: () => setPublishedUrl(null),
+    });
+  };
+
+  const hasClassNotes = useMemo(
+    () => syllabusItems.some(({ zoteroItem }) => isClassNoteItem(zoteroItem)),
+    [syllabusItems],
+  );
+
   const isSyllabus =
     collectionId != null && collectionHasSyllabusNote(collectionId);
   const canAddReading = useMemo(() => {
@@ -1155,7 +1216,42 @@ export function GalleryPage({
                 activeGroupId={activeGroupId}
                 onSelectGroup={handleSelectGroup}
                 pillsRef={pillsRef}
+                showSaveMenu={isCollectionScope}
+                onPublish={() => void handlePublish(false)}
+                hasClassNotes={hasClassNotes}
               />
+              {isCollectionScope ? (
+                <div className="mt-2">
+                  <PublishStatusBanner
+                    status={publishStatus}
+                    publishedUrl={publishedUrl}
+                    onOpen={(url) => Zotero.launchURL(url)}
+                    onCopy={(url) => copyStringToClipboard(url)}
+                    onSync={() => void handlePublish(true)}
+                    onUnpublish={() => void handleUnpublish()}
+                    onDismissStatus={() => setPublishStatus({ kind: "idle" })}
+                  />
+                </div>
+              ) : null}
+              {isCollectionScope ? (
+                <div className="syllabus-collection-description mt-3">
+                  <TextInput
+                    elementType="textarea"
+                    initialValue={galleryDescription}
+                    onSave={(value) => {
+                      if (collectionId == null) return;
+                      void setPersonalReadingOrderDescription(
+                        collectionId,
+                        value,
+                      );
+                    }}
+                    className="w-full px-0! mx-0! text-primary"
+                    placeholder={getString("placeholder-add-description")}
+                    emptyBehavior="delete"
+                    fieldSizing="content"
+                  />
+                </div>
+              ) : null}
             </div>
           </div>
           <GalleryViewportProvider rootRef={pageRef}>
@@ -1808,6 +1904,9 @@ function GalleryPageHeader({
   activeGroupId,
   onSelectGroup,
   pillsRef,
+  showSaveMenu = false,
+  onPublish,
+  hasClassNotes = false,
 }: {
   title: string;
   header?: ComponentChildren;
@@ -1843,6 +1942,9 @@ function GalleryPageHeader({
   activeGroupId: string | null;
   onSelectGroup: (id: string) => void;
   pillsRef: RefObject<HTMLElement>;
+  showSaveMenu?: boolean;
+  onPublish?: () => void;
+  hasClassNotes?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [tourPinned, setTourPinned] = useState(false);
@@ -1949,6 +2051,13 @@ function GalleryPageHeader({
           {title}
         </h1>
         <div className="syllabus-gallery-menu" ref={rootRef}>
+          {showSaveMenu && onPublish ? (
+            <CollectionSaveFormatMenu
+              onPublish={onPublish}
+              hasClassNotes={hasClassNotes}
+              compact
+            />
+          ) : null}
           <button
             type="button"
             className="syllabus-gallery-menu-btn"

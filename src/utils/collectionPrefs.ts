@@ -23,6 +23,7 @@ export const COLLECTION_ID_PREF_KEYS = [
   `${config.prefsPrefix}.showClassNotes`,
   `${config.prefsPrefix}.annotationsQuoteOrderByView`,
   `${config.prefsPrefix}.publishUrls`,
+  `${config.prefsPrefix}.publishShareOptions`,
 ] as const;
 
 /**

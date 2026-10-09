@@ -9,6 +9,8 @@ import {
   getItemTitle,
 } from "./items";
 import { buildPublishCreditHtml } from "./printSyllabus";
+import { buildShareCoverHtml } from "./shareCoverHtml";
+import { coinsHiddenBlock } from "./zoteroCoins";
 
 export type ItemShareFileLink = {
   relPath: string;
@@ -38,11 +40,15 @@ export type ItemShareAnnotation = {
 export type BuildItemShareHtmlOpts = {
   title: string;
   creators: string;
+  /** Zotero item type id (e.g. book) — drives cover treatments. */
+  itemType: string;
   itemTypeLabel: string;
   description?: string;
   canonicalUrl: string;
   coverDataUrl?: string | null;
   coverPlaceholder?: { color: string; title: string; creator: string } | null;
+  /** galleryCover.css + share-viewer-cover-shim.css */
+  coverCss?: string;
   ogImageUrl?: string;
   metaRows: ItemShareMetaRow[];
   citationHtml?: string;
@@ -56,6 +62,10 @@ export type BuildItemShareHtmlOpts = {
   };
   /** Annotations in document location order (omit or empty = no section). */
   annotations?: ItemShareAnnotation[];
+  /** Highwire Press citation_* meta tags for Zotero Connector. */
+  highwireMetaHtml?: string;
+  /** COinS span(s) for Zotero Connector. */
+  coinsHtml?: string;
 };
 
 export function isEmbeddableShareContentType(
@@ -94,7 +104,8 @@ function escapeAttr(text: string): string {
   return escapeHtml(text).replace(/'/g, "&#39;");
 }
 
-function formatSharePageLabel(page: string): string {
+/** Format a raw PDF page label for share pages (Cite locator or Fluent). */
+export function formatSharePageLabel(page: string): string {
   try {
     const cite = (
       Zotero as typeof Zotero & {
@@ -129,9 +140,7 @@ function buildAnnotationsSectionHtml(
 
   const entriesHtml = annotations
     .map((ann) => {
-      const pageText = ann.pageLabel
-        ? formatSharePageLabel(ann.pageLabel)
-        : "";
+      const pageText = ann.pageLabel ? formatSharePageLabel(ann.pageLabel) : "";
       const hasCopy = !!ann.copyText;
       const tags = ann.tags || [];
       const showMeta = !!(pageText || tags.length > 0 || hasCopy);
@@ -522,14 +531,13 @@ export function buildItemShareHtml(opts: BuildItemShareHtmlOpts): string {
   const description = (opts.description || "").trim();
   const creditHtml = buildPublishCreditHtml({ className: "item-share-credit" });
 
-  const coverBlock = opts.coverDataUrl
-    ? `<div class="cover"><img src="${escapeAttr(opts.coverDataUrl)}" alt="" /></div>`
-    : opts.coverPlaceholder
-      ? `<div class="cover placeholder" style="background:${escapeAttr(opts.coverPlaceholder.color)}">
-          <div class="ph-title">${escapeHtml(opts.coverPlaceholder.title)}</div>
-          <div class="ph-creator">${escapeHtml(opts.coverPlaceholder.creator)}</div>
-        </div>`
-      : `<div class="cover placeholder" style="background:#64748b"></div>`;
+  const coverBlock = `<div class="sv-page item-share-cover">${buildShareCoverHtml(
+    {
+      itemType: opts.itemType,
+      coverDataUrl: opts.coverDataUrl,
+      coverPlaceholder: opts.coverPlaceholder,
+    },
+  )}</div>`;
 
   const metaRowsHtml = opts.metaRows
     .map((row) => {
@@ -603,23 +611,22 @@ export function buildItemShareHtml(opts: BuildItemShareHtmlOpts): string {
 <meta name="twitter:title" content="${escapeAttr(title)}" />
 <meta name="twitter:description" content="${escapeAttr(description || creators || title)}" />
 ${ogImage}
+${opts.highwireMetaHtml || ""}
 <style>
   :root {
-    --bg: #f6f4ef;
-    --ink: #1a1a1a;
-    --muted: #5c5c5c;
-    --line: #d9d4c8;
-    --panel: #fffdf8;
-    --accent: #1f4b7a;
+    --bg: #fafafa;
+    --ink: #111;
+    --muted: #666;
+    --line: #e5e5e5;
+    --panel: #fff;
+    --accent: #2563eb;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
     font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
     color: var(--ink);
-    background:
-      radial-gradient(ellipse 80% 50% at 10% 0%, #ebe6d9 0%, transparent 55%),
-      var(--bg);
+    background: var(--bg);
     line-height: 1.45;
   }
   .wrap {
@@ -636,29 +643,19 @@ ${ogImage}
   @media (max-width: 720px) {
     .hero { grid-template-columns: 1fr; }
   }
-  .cover {
+  .item-share-cover {
     width: 100%;
-    aspect-ratio: 2 / 3;
-    border-radius: 2px;
-    overflow: hidden;
-    box-shadow: 0 12px 28px rgba(0,0,0,0.12);
-    background: #ddd;
+    max-width: 220px;
+    min-width: 0;
   }
-  .cover img {
+  .item-share-cover .syllabus-gallery-cover-portrait,
+  .item-share-cover .syllabus-gallery-cover-video,
+  .item-share-cover .syllabus-gallery-cover-web,
+  .item-share-cover .syllabus-gallery-cover-square,
+  .item-share-cover .syllabus-gallery-cover-natural,
+  .item-share-cover .syllabus-gallery-cover-with-binder {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
   }
-  .cover.placeholder {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    padding: 1rem;
-    color: #fff;
-  }
-  .ph-title { font-size: 1.05rem; font-weight: 600; }
-  .ph-creator { font-size: 0.85rem; opacity: 0.9; margin-top: 0.35rem; }
   h1 {
     font-size: clamp(1.5rem, 3vw, 2.1rem);
     margin: 0 0 0.35rem;
@@ -762,11 +759,12 @@ ${ogImage}
   footer.item-share-credit a:hover {
     opacity: 0.85;
   }
+${opts.coverCss || ""}
 ${annotationsCss}
 </style>
 </head>
 <body>
-  <div class="wrap">
+${coinsHiddenBlock(opts.coinsHtml || "")}  <div class="wrap">
     <div class="hero">
       ${coverBlock}
       <div>

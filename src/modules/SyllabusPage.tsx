@@ -51,25 +51,15 @@ import {
 } from "./furtherReadingSort";
 import {
   ArrowUpDown,
-  CodeXml,
-  FileText,
-  FileType,
-  Globe,
-  Hash,
-  Printer,
   Settings,
   Lock,
   Unlock,
   List,
   Pin,
   PinOff,
-  Copy,
-  ExternalLink,
-  LoaderCircle,
-  Trash2,
-  Upload,
-  X,
 } from "lucide-preact";
+import { PublishStatusBanner } from "./PublishStatusBanner";
+import { CollectionSaveFormatMenu } from "./CollectionSaveFormatMenu";
 import { TableOfContents } from "./TableOfContents";
 import {
   buildPrintableHtml,
@@ -82,21 +72,13 @@ import {
   saveSyllabusPdf,
   type SyllabusExportFormat,
 } from "../utils/exportSyllabus";
-import {
-  getPublishSession,
-  isPublishApiConfigured,
-  signInWithZoteroForPublish,
-} from "../utils/publishAuth";
-import {
-  publishSyllabusToCloud,
-  unpublishSyllabusFromCloud,
-} from "../utils/publishSyllabus";
-import { confirmPrompt } from "../utils/window";
+import { getPublishedSyllabusUrl } from "../utils/publishUrls";
 import { copyStringToClipboard } from "../utils/clipboard";
 import {
-  getPublishedSyllabusUrl,
-  setPublishedSyllabusUrl,
-} from "../utils/publishUrls";
+  runCollectionPublish,
+  runCollectionUnpublish,
+  type CollectionPublishUiStatus,
+} from "../utils/runCollectionPublish";
 import {
   useSyllabusClassGroups,
   visibleSyllabusClassGroups,
@@ -377,363 +359,7 @@ async function importSyllabusMetadataFromFile(
   }
 }
 
-function useSaveFormatPopover(
-  open: boolean,
-  setOpen: (open: boolean) => void,
-  rootRef: { current: HTMLDivElement | null },
-): JSX.CSSProperties {
-  const [popoverStyle, setPopoverStyle] = useState<JSX.CSSProperties>({});
-  const setOpenRef = useRef(setOpen);
-  setOpenRef.current = setOpen;
-
-  useLayoutEffect(() => {
-    if (!open) {
-      return;
-    }
-    const doc = rootRef.current?.ownerDocument || document;
-    const updatePosition = () => {
-      const el = rootRef.current;
-      if (!el) {
-        return;
-      }
-      const rect = el.getBoundingClientRect();
-      const view = doc.documentElement;
-      setPopoverStyle(
-        getUiDir() === "rtl"
-          ? { top: rect.bottom + 6, left: rect.left }
-          : { top: rect.bottom + 6, right: view.clientWidth - rect.right },
-      );
-    };
-    updatePosition();
-    const onPointerDown = (event: PointerEvent) => {
-      if (rootRef.current?.contains(event.target as Node)) {
-        return;
-      }
-      setOpenRef.current(false);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpenRef.current(false);
-      }
-    };
-    const win = doc.defaultView;
-    win?.addEventListener("resize", updatePosition);
-    doc.addEventListener("pointerdown", onPointerDown, true);
-    doc.addEventListener("keydown", onKeyDown);
-    return () => {
-      win?.removeEventListener("resize", updatePosition);
-      doc.removeEventListener("pointerdown", onPointerDown, true);
-      doc.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open, rootRef]);
-
-  return popoverStyle;
-}
-
-const SAVE_FORMAT_OPTIONS: {
-  format: SyllabusExportFormat;
-  labelKey:
-    | "page-save-pdf"
-    | "page-save-word"
-    | "page-save-markdown"
-    | "page-save-html";
-  Icon: typeof FileText;
-}[] = [
-  { format: "pdf", labelKey: "page-save-pdf", Icon: FileText },
-  { format: "docx", labelKey: "page-save-word", Icon: FileType },
-  { format: "markdown", labelKey: "page-save-markdown", Icon: Hash },
-  { format: "html", labelKey: "page-save-html", Icon: CodeXml },
-];
-
-type PublishUiStatus =
-  | { kind: "idle" }
-  | { kind: "auth" }
-  | { kind: "preparing" }
-  | { kind: "unpublishing" }
-  | { kind: "uploading"; current: number; total: number }
-  | { kind: "done"; url: string }
-  | { kind: "error"; message: string };
-
-function PublishStatusBanner({
-  status,
-  publishedUrl,
-  onOpen,
-  onCopy,
-  onSync,
-  onUnpublish,
-  onDismissStatus,
-}: {
-  status: PublishUiStatus;
-  publishedUrl: string | null;
-  onOpen: (url: string) => void;
-  onCopy: (url: string) => void;
-  onSync: () => void;
-  onUnpublish: () => void;
-  onDismissStatus: () => void;
-}) {
-  const busy =
-    status.kind === "auth" ||
-    status.kind === "preparing" ||
-    status.kind === "unpublishing" ||
-    status.kind === "uploading";
-  const showUrl =
-    (status.kind === "done" && status.url) ||
-    (status.kind === "idle" && publishedUrl) ||
-    (status.kind === "error" && publishedUrl);
-
-  const statusText =
-    status.kind === "auth"
-      ? getString("publish-status-auth")
-      : status.kind === "preparing"
-        ? getString("publish-status-preparing")
-        : status.kind === "unpublishing"
-          ? getString("publish-status-unpublishing")
-          : status.kind === "uploading"
-            ? getString("publish-status-uploading", {
-                args: { current: status.current, total: status.total },
-              })
-            : status.kind === "done"
-              ? getString("publish-status-done")
-              : status.kind === "error"
-                ? status.message
-                : null;
-
-  if (!busy && !showUrl && status.kind !== "error") {
-    return null;
-  }
-
-  const url =
-    status.kind === "done"
-      ? status.url
-      : publishedUrl && (status.kind === "idle" || status.kind === "error")
-        ? publishedUrl
-        : null;
-
-  const canSync = Boolean(url) && !busy;
-  const isError = status.kind === "error";
-  const actionHover = isError
-    ? "hover:bg-publish-error-hover"
-    : "hover:bg-publish-hover";
-  const actionColor = isError ? "text-publish-error-fg" : "text-publish-fg";
-  const busyHeading =
-    status.kind === "unpublishing"
-      ? getString("publish-status-heading-unpublishing")
-      : getString("publish-status-heading-busy");
-
-  return (
-    <div
-      className={twMerge(
-        "syllabus-publish-banner in-[.print]:hidden w-full rounded border px-3 py-2 text-base",
-        isError
-          ? "border-publish-error-border bg-publish-error text-publish-error-fg"
-          : "border-publish-border bg-publish text-publish-fg",
-      )}
-      role="status"
-      aria-live="polite"
-    >
-      <div className="flex flex-row items-center gap-2 w-full min-w-0">
-        <div className="flex flex-row items-center gap-2 min-w-0 flex-1">
-          {busy ? (
-            <LoaderCircle
-              size={18}
-              className="animate-spin shrink-0"
-              aria-hidden="true"
-            />
-          ) : null}
-          {statusText && (busy || isError || !url) ? (
-            <span className="font-medium truncate min-w-0">
-              {busy ? busyHeading : null}
-              {busy && statusText ? " — " : null}
-              {statusText}
-            </span>
-          ) : null}
-          {url ? (
-            <>
-              <span className="shrink-0 font-medium">
-                {getString("publish-status-url-label")}
-              </span>
-              <button
-                type="button"
-                className={twMerge(
-                  "min-w-0 flex-1 truncate text-left underline bg-transparent border-none p-0 cursor-pointer font-inherit",
-                  actionColor,
-                )}
-                onClick={() => onOpen(url)}
-                title={getString("publish-status-open")}
-              >
-                {url}
-              </button>
-              <button
-                type="button"
-                className={twMerge(
-                  "p-1.5 rounded border-none bg-transparent cursor-pointer shrink-0",
-                  actionHover,
-                  actionColor,
-                )}
-                title={getString("publish-status-copy")}
-                aria-label={getString("publish-status-copy")}
-                onClick={() => onCopy(url)}
-              >
-                <Copy size={18} />
-              </button>
-              <button
-                type="button"
-                className={twMerge(
-                  "p-1.5 rounded border-none bg-transparent cursor-pointer shrink-0",
-                  actionHover,
-                  actionColor,
-                )}
-                title={getString("publish-status-open")}
-                aria-label={getString("publish-status-open")}
-                onClick={() => onOpen(url)}
-              >
-                <ExternalLink size={18} />
-              </button>
-            </>
-          ) : null}
-          {(status.kind === "done" || isError) && (
-            <button
-              type="button"
-              className={twMerge(
-                "p-1.5 rounded border-none bg-transparent cursor-pointer shrink-0",
-                actionHover,
-                actionColor,
-              )}
-              title={getString("publish-status-dismiss")}
-              aria-label={getString("publish-status-dismiss")}
-              onClick={onDismissStatus}
-            >
-              <X size={18} />
-            </button>
-          )}
-        </div>
-        {canSync ? (
-          <div className="inline-flex items-center gap-1 shrink-0 ml-auto">
-            <button
-              type="button"
-              className={twMerge(
-                "inline-flex items-center gap-1.5 px-2 py-1 rounded border-none bg-transparent cursor-pointer font-medium",
-                actionHover,
-                actionColor,
-              )}
-              title={getString("publish-status-sync")}
-              aria-label={getString("publish-status-sync")}
-              onClick={onSync}
-            >
-              <Upload size={16} aria-hidden="true" />
-              <span>{getString("publish-status-sync")}</span>
-            </button>
-            <button
-              type="button"
-              className={twMerge(
-                "inline-flex items-center gap-1.5 px-2 py-1 rounded border-none bg-transparent cursor-pointer font-medium",
-                actionHover,
-                actionColor,
-              )}
-              title={getString("publish-status-unpublish")}
-              aria-label={getString("publish-status-unpublish")}
-              onClick={onUnpublish}
-            >
-              <Trash2 size={16} aria-hidden="true" />
-              <span>{getString("publish-status-unpublish")}</span>
-            </button>
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-type SaveMenuAction =
-  { kind: "export"; format: SyllabusExportFormat } | { kind: "publish" };
-
-function SyllabusSaveFormatMenu({
-  onSelect,
-  onPublish,
-  hasClassNotes = false,
-}: {
-  onSelect: (format: SyllabusExportFormat) => void;
-  onPublish: () => void;
-  /** When the collection has class notes, remind that they stay private. */
-  hasClassNotes?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const popoverStyle = useSaveFormatPopover(open, setOpen, rootRef);
-
-  const run = (action: SaveMenuAction) => {
-    setOpen(false);
-    if (action.kind === "export") {
-      onSelect(action.format);
-    } else {
-      onPublish();
-    }
-  };
-
-  return (
-    <div
-      className="syllabus-save-format relative grow-0 shrink-0"
-      ref={rootRef}
-    >
-      <div
-        className="flex items-center in-[.print]:hidden cursor-pointer"
-        title={getString("page-print")}
-        aria-label={getString("page-print")}
-        aria-expanded={open}
-        aria-haspopup="menu"
-        onClick={() => setOpen((value) => !value)}
-      >
-        <Printer
-          size={20}
-          className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
-        />
-      </div>
-      {open ? (
-        <div
-          className="syllabus-explorer-configure-popover syllabus-save-format-popover"
-          role="menu"
-          aria-label={getString("page-print")}
-          style={popoverStyle}
-        >
-          <ul className="syllabus-explorer-configure-list">
-            {SAVE_FORMAT_OPTIONS.map(({ format, labelKey, Icon }) => (
-              <li key={format}>
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="syllabus-save-format-option"
-                  onClick={() => run({ kind: "export", format })}
-                >
-                  <Icon size={16} strokeWidth={2} aria-hidden="true" />
-                  {getString(labelKey)}
-                </button>
-              </li>
-            ))}
-            <li>
-              <button
-                type="button"
-                role="menuitem"
-                className="syllabus-save-format-option"
-                onClick={() => run({ kind: "publish" })}
-              >
-                <Globe size={16} strokeWidth={2} aria-hidden="true" />
-                {getString("page-publish")}
-              </button>
-            </li>
-          </ul>
-          {hasClassNotes ? (
-            <>
-              <hr className="syllabus-save-format-divider" />
-              <p className="syllabus-save-format-note">
-                {getString("print-notes-excluded")}
-              </p>
-            </>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  );
-}
+type PublishUiStatus = CollectionPublishUiStatus;
 
 function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   // Sync with external Zotero stores using hooks
@@ -2759,245 +2385,27 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     setPublishStatus({ kind: "idle" });
   }, [collectionId]);
 
-  const ensurePublishSignedIn = async (): Promise<boolean> => {
-    if (getPublishSession()) {
-      return true;
-    }
-    setPublishStatus({ kind: "auth" });
-    const progress = new ztoolkit.ProgressWindow(getString("app-name"), {
-      closeOnClick: false,
-      closeTime: -1,
-    })
-      .createLine({
-        text: getString("progress-publish-auth"),
-        type: "default",
-      })
-      .show();
-    try {
-      await signInWithZoteroForPublish();
-      progress.close();
-      return !!getPublishSession();
-    } catch (err) {
-      ztoolkit.log("Publish sign-in failed:", err);
-      progress.close();
-      const message =
-        err instanceof Error && err.message === "publish_oauth_not_configured"
-          ? getString("progress-publish-oauth-unconfigured")
-          : getString("progress-publish-auth-failed");
-      setPublishStatus({ kind: "error", message });
-      new ztoolkit.ProgressWindow(getString("app-name"), {
-        closeOnClick: true,
-        closeTime: 5000,
-      })
-        .createLine({
-          text: message,
-          type: "fail",
-        })
-        .show();
-      return false;
-    }
-  };
-
   const handlePublish = async (options?: { skipConfirm?: boolean }) => {
-    if (!isPublishApiConfigured()) {
-      const message = getString("progress-publish-unconfigured");
-      setPublishStatus({ kind: "error", message });
-      new ztoolkit.ProgressWindow(getString("app-name"), {
-        closeOnClick: true,
-        closeTime: 5000,
-      })
-        .createLine({
-          text: message,
-          type: "fail",
-        })
-        .show();
-      return;
-    }
-
-    if (!options?.skipConfirm) {
-      const ok = confirmPrompt(
-        getString("dialog-publish-confirm-title"),
-        getString("dialog-publish-confirm-text"),
-      );
-      if (!ok) {
-        return;
-      }
-    }
-
-    if (!(await ensurePublishSignedIn())) {
-      return;
-    }
-
-    const syllabusPageElement = syllabusPageRef.current;
-    if (!syllabusPageElement) {
-      ztoolkit.log("Syllabus page element not found");
-      return;
-    }
-
-    setPublishStatus({ kind: "preparing" });
-    const progress = new ztoolkit.ProgressWindow(getString("app-name"), {
-      closeOnClick: false,
-      closeTime: -1,
-    })
-      .createLine({
-        text: getString("progress-publish-preparing"),
-        type: "default",
-      })
-      .show();
-
-    try {
-      const bibliographyHtmlPromise = (async () => {
-        const bibliography = await generateBibliographyForPrint(
-          items,
-          syllabusMetadata.cslStyle || null,
-        );
-        return bibliography
-          ? bibliographyToHtml(
-              bibliography.content,
-              density,
-              bibliography.isHtml,
-            )
-          : "";
-      })();
-      const { publicUrl } = await publishSyllabusToCloud({
-        collectionId,
-        items,
-        pageElement: syllabusPageElement,
-        density,
-        title: title || "Syllabus",
-        courseCode: syllabusMetadata.courseCode || "",
-        institution: syllabusMetadata.institution || "",
-        bibliographyHtml: "",
-        bibliographyHtmlPromise,
-        cslStyle: syllabusMetadata.cslStyle || null,
-        onProgress: (phase, current, total) => {
-          if (phase === "upload" && current != null && total != null) {
-            setPublishStatus({
-              kind: "uploading",
-              current,
-              total,
-            });
-            progress.changeLine({
-              text: getString("progress-publish-uploading", {
-                args: { current, total },
-              }),
-              type: "default",
-            });
-          } else {
-            setPublishStatus({ kind: "preparing" });
-            progress.changeLine({
-              text: getString("progress-publish-preparing"),
-              type: "default",
-            });
-          }
-        },
-      });
-      copyStringToClipboard(publicUrl);
-      setPublishedSyllabusUrl(collectionId, publicUrl);
-      setPublishedUrl(publicUrl);
-      setPublishStatus({ kind: "done", url: publicUrl });
-      progress.close();
-      new ztoolkit.ProgressWindow(getString("app-name"), {
-        closeOnClick: true,
-        closeTime: 4000,
-      })
-        .createLine({
-          text: getString("progress-publish-done"),
-          type: "success",
-        })
-        .show();
-      Zotero.launchURL(publicUrl);
-    } catch (err) {
-      ztoolkit.log("Error publishing syllabus:", err);
-      progress.close();
-      const message =
-        err instanceof Error && err.message === "publish_api_unconfigured"
-          ? getString("progress-publish-unconfigured")
-          : getString("progress-publish-failed");
-      setPublishStatus({ kind: "error", message });
-      new ztoolkit.ProgressWindow(getString("app-name"), {
-        closeOnClick: true,
-        closeTime: 5000,
-      })
-        .createLine({
-          text: message,
-          type: "fail",
-        })
-        .show();
-    }
+    await runCollectionPublish({
+      collectionId,
+      items,
+      initialKind: "syllabus",
+      sync: !!options?.skipConfirm,
+      title: title || "Syllabus",
+      courseCode: syllabusMetadata.courseCode || "",
+      institution: syllabusMetadata.institution || "",
+      cslStyle: syllabusMetadata.cslStyle || null,
+      setStatus: setPublishStatus,
+      onPublishedUrl: setPublishedUrl,
+    });
   };
 
   const handleUnpublish = async () => {
-    if (!isPublishApiConfigured()) {
-      const message = getString("progress-publish-unconfigured");
-      setPublishStatus({ kind: "error", message });
-      new ztoolkit.ProgressWindow(getString("app-name"), {
-        closeOnClick: true,
-        closeTime: 5000,
-      })
-        .createLine({
-          text: message,
-          type: "fail",
-        })
-        .show();
-      return;
-    }
-
-    const ok = confirmPrompt(
-      getString("dialog-publish-unpublish-title"),
-      getString("publish-unpublish-confirm"),
-    );
-    if (!ok) {
-      return;
-    }
-
-    if (!(await ensurePublishSignedIn())) {
-      return;
-    }
-
-    setPublishStatus({ kind: "unpublishing" });
-    const progress = new ztoolkit.ProgressWindow(getString("app-name"), {
-      closeOnClick: false,
-      closeTime: -1,
-    })
-      .createLine({
-        text: getString("publish-status-unpublishing"),
-        type: "default",
-      })
-      .show();
-
-    try {
-      await unpublishSyllabusFromCloud({ collectionId });
-      setPublishedUrl(null);
-      setPublishStatus({ kind: "idle" });
-      progress.close();
-      new ztoolkit.ProgressWindow(getString("app-name"), {
-        closeOnClick: true,
-        closeTime: 4000,
-      })
-        .createLine({
-          text: getString("publish-status-unpublished"),
-          type: "success",
-        })
-        .show();
-    } catch (err) {
-      ztoolkit.log("Error unpublishing syllabus:", err);
-      progress.close();
-      const message =
-        err instanceof Error && err.message === "publish_api_unconfigured"
-          ? getString("progress-publish-unconfigured")
-          : getString("progress-publish-unpublish-failed");
-      setPublishStatus({ kind: "error", message });
-      new ztoolkit.ProgressWindow(getString("app-name"), {
-        closeOnClick: true,
-        closeTime: 5000,
-      })
-        .createLine({
-          text: message,
-          type: "fail",
-        })
-        .show();
-    }
+    await runCollectionUnpublish({
+      collectionId,
+      setStatus: setPublishStatus,
+      onCleared: () => setPublishedUrl(null),
+    });
   };
 
   const collection = useMemo(() => {
@@ -3172,7 +2580,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                       className="text-secondary hover:text-primary hover:bg-quinary rounded p-1"
                     />
                   </div>
-                  <SyllabusSaveFormatMenu
+                  <CollectionSaveFormatMenu
                     onSelect={handleExportFormat}
                     onPublish={handlePublish}
                     hasClassNotes={hasClassNotes}

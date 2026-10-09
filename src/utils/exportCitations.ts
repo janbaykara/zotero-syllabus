@@ -398,23 +398,49 @@ export function injectExportIdsIntoBibTeX(
   );
 }
 
-async function resolveTranslator(
+/**
+ * Zotero 10 (and some builds) ship with no built-in export translators.
+ * `setTranslator(id)` still returns true, then `getCodeForTranslator` throws
+ * `Unsupported type 'undefined' for source` when the file path is missing.
+ * Only attempt Translate.Export when we have a real translator object/code.
+ */
+async function resolveExportTranslator(
   translatorID: string,
-): Promise<string | { translatorID: string }> {
+): Promise<{ translatorID: string } | null> {
   try {
     const translators = Zotero.Translators as {
       get?: (id: string) => Promise<unknown> | unknown;
+      getAllForType?: (
+        type: string,
+      ) => Promise<Array<{ translatorID?: string }> | unknown> | unknown;
     };
+    if (typeof translators.getAllForType === "function") {
+      const all = await Promise.resolve(translators.getAllForType("export"));
+      const list = Array.isArray(all) ? all : [];
+      if (!list.length) {
+        return null;
+      }
+    }
     if (typeof translators.get === "function") {
       const got = await Promise.resolve(translators.get(translatorID));
       if (got && typeof got === "object") {
+        const rec = got as {
+          translatorID?: string;
+          code?: string;
+          path?: string;
+          fileName?: string;
+        };
+        // Bare metadata without code/path will fail in getCodeForTranslator.
+        if (!rec.code && !rec.path && !rec.fileName) {
+          return null;
+        }
         return got as { translatorID: string };
       }
     }
   } catch (err) {
-    ztoolkit.log("resolveTranslator failed:", translatorID, err);
+    ztoolkit.log("resolveExportTranslator failed:", translatorID, err);
   }
-  return translatorID;
+  return null;
 }
 
 export async function exportItemsWithTranslator(
@@ -426,12 +452,16 @@ export async function exportItemsWithTranslator(
     return "";
   }
 
+  const translator = await resolveExportTranslator(translatorID);
+  if (!translator) {
+    throw new Error(`export_translator_unavailable:${translatorID}`);
+  }
+
   const translation = new Zotero.Translate.Export();
   translation.setItems(exportItems);
   if (typeof translation.setDisplayOptions === "function") {
     translation.setDisplayOptions({ exportNotes: true });
   }
-  const translator = await resolveTranslator(translatorID);
   const ok = translation.setTranslator(translator as never);
   if (!ok) {
     throw new Error(`export_translator_missing:${translatorID}`);
@@ -514,7 +544,11 @@ async function exportWithSyllabusNote(
       return text;
     }
   } catch (err) {
-    ztoolkit.log("Citation translator export failed; using fallback:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    // Expected on Zotero builds with no export translators — fallback is fine.
+    if (!msg.startsWith("export_translator_unavailable:")) {
+      ztoolkit.log("Citation translator export failed; using fallback:", err);
+    }
     return fallback([...regular, ...notes], options);
   }
   // Translators typically skip standalone notes — append explicitly.

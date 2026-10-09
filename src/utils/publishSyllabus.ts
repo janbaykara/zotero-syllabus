@@ -9,6 +9,7 @@ import {
   patchPublishItemRefs,
 } from "./publishAuth";
 import { clearPublishedSyllabusUrl } from "./publishUrls";
+import { clearPublishedShareOptions } from "./publishShareOptions";
 import {
   buildPrintableHtml,
   serializeSyllabusForPublish,
@@ -27,6 +28,7 @@ import {
   PUBLISH_BIBLIOGRAPHY_RIS,
 } from "./exportCitations";
 import { getString } from "./locale";
+import { isDevelopmentEnv } from "./env";
 import {
   PUBLISH_OG_IMAGE,
   buildPublishOgImageJpeg,
@@ -49,6 +51,16 @@ export type PublishAttachmentPick = {
   ext: string;
 };
 
+function linkedUrlAttachmentMode(): number {
+  try {
+    const mode = Zotero.Attachments?.LINK_MODE_LINKED_URL;
+    if (typeof mode === "number") return mode;
+  } catch {
+    // fall through
+  }
+  return 3;
+}
+
 function extensionForAttachment(att: Zotero.Item): string {
   const path = String(
     att.attachmentPath || att.attachmentFilename || "",
@@ -56,6 +68,13 @@ function extensionForAttachment(att: Zotero.Item): string {
   const type = (att.attachmentContentType || "").toLowerCase();
   if (type.includes("pdf") || path.endsWith(".pdf")) return "pdf";
   if (type.includes("epub") || path.endsWith(".epub")) return "epub";
+  if (
+    type.includes("html") ||
+    path.endsWith(".html") ||
+    path.endsWith(".htm")
+  ) {
+    return "html";
+  }
   if (type.includes("png") || path.endsWith(".png")) return "png";
   if (type.includes("jpeg") || type.includes("jpg") || path.endsWith(".jpg")) {
     return "jpg";
@@ -67,6 +86,38 @@ function extensionForAttachment(att: Zotero.Item): string {
     }
   }
   return "bin";
+}
+
+/** True when the attachment is a URL bookmark with no local file (not an HTML snapshot). */
+export function isLinkedUrlAttachment(att: Zotero.Item): boolean {
+  return att.attachmentLinkMode === linkedUrlAttachmentMode();
+}
+
+/** Local readable file suitable for upload (not a linked URL or directory). */
+export async function attachmentHasLocalPublishFile(
+  att: Zotero.Item,
+): Promise<boolean> {
+  if (isLinkedUrlAttachment(att)) return false;
+  try {
+    const path = await att.getFilePathAsync?.();
+    if (!path || typeof path !== "string") return false;
+    if (
+      typeof IOUtils !== "undefined" &&
+      typeof IOUtils.exists === "function"
+    ) {
+      if (!(await IOUtils.exists(path))) return false;
+      if (typeof IOUtils.stat === "function") {
+        const st = (await IOUtils.stat(path)) as {
+          type?: string;
+          size?: number;
+        };
+        if (st?.type === "directory") return false;
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -81,10 +132,12 @@ export function pickBestPublishAttachment(
     .filter((att): att is Zotero.Item => !!att && att.isAttachment());
 
   const score = (att: Zotero.Item): number => {
+    if (isLinkedUrlAttachment(att)) return -1;
     const linkMode = att.attachmentLinkMode;
     const type = (att.attachmentContentType || "").toLowerCase();
     const path = (att.attachmentPath || "").toLowerCase();
     let s = 0;
+    // LINK_MODE_IMPORTED_FILE
     if (linkMode === 0 || linkMode === undefined) s += 10;
     if (
       att.isPDFAttachment?.() ||
@@ -98,8 +151,14 @@ export function pickBestPublishAttachment(
       path.endsWith(".epub")
     ) {
       s += 40;
-    } else if (linkMode === 3) {
-      s += 5;
+    } else if (
+      // LINK_MODE_IMPORTED_URL — real HTML snapshots with local files
+      linkMode === 1 ||
+      type.includes("html") ||
+      path.endsWith(".html") ||
+      path.endsWith(".htm")
+    ) {
+      s += 20;
     } else {
       s += 15;
     }
@@ -114,15 +173,17 @@ export function pickBestPublishAttachment(
   return null;
 }
 
-export function collectPublishAttachments(
+/** Attachments that can actually be uploaded (local file present). */
+export async function collectPublishAttachments(
   items: Zotero.Item[],
-): PublishAttachmentPick[] {
+): Promise<PublishAttachmentPick[]> {
   const picks: PublishAttachmentPick[] = [];
   const seenAtt = new Set<number>();
   for (const item of items) {
     if (item.isAttachment?.() || item.isNote?.()) continue;
     const att = pickBestPublishAttachment(item);
     if (!att || seenAtt.has(att.id)) continue;
+    if (!(await attachmentHasLocalPublishFile(att))) continue;
     seenAtt.add(att.id);
     const ext = extensionForAttachment(att);
     picks.push({
@@ -202,7 +263,7 @@ export async function publishSyllabusToCloud(opts: {
   };
 
   opts.onProgress?.("attachments");
-  const picks = collectPublishAttachments(opts.items);
+  const picks = await collectPublishAttachments(opts.items);
   const linkMap = publishLinkMap(picks, session.userId, libraryId);
   const newItemKeys = [...new Set(picks.map((p) => p.itemKey))];
 
@@ -543,6 +604,7 @@ export async function publishSyllabusToCloud(opts: {
       title: opts.title || "Syllabus",
       courseCode: opts.courseCode || "",
       institution: opts.institution || "",
+      ...(isDevelopmentEnv() ? { dev: "y" } : {}),
     },
   });
   publicUrl = result.publicUrl || publicUrl;
@@ -575,5 +637,6 @@ export async function unpublishSyllabusFromCloud(opts: {
     collectionKey,
   });
   clearPublishedSyllabusUrl(opts.collectionId);
+  clearPublishedShareOptions(opts.collectionId);
   return { deleted: result.deleted };
 }

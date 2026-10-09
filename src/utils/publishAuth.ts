@@ -482,8 +482,12 @@ export async function putPublishObject(opts: {
     institution?: string;
     /** Item shares: localized item type. */
     itemType?: string;
-    /** Item shares: "y" | "n". */
+    /** Item / collection shares: "y" | "n". */
     annotations?: string;
+    /** Collection shares: "syllabus" | "gallery". */
+    shareKind?: string;
+    /** "y" when published from a development plugin build. */
+    dev?: string;
   } | null;
 }): Promise<{ publicUrl: string; usageBytes: number; quotaBytes: number }> {
   const base = getPublishApiBaseUrl();
@@ -503,11 +507,15 @@ export async function putPublishObject(opts: {
     const institution = encodeSyllabusMetaHeader(opts.syllabusMeta.institution);
     const itemType = encodeSyllabusMetaHeader(opts.syllabusMeta.itemType);
     const annotations = encodeSyllabusMetaHeader(opts.syllabusMeta.annotations);
+    const shareKind = encodeSyllabusMetaHeader(opts.syllabusMeta.shareKind);
+    const dev = encodeSyllabusMetaHeader(opts.syllabusMeta.dev);
     if (title) headers["X-Syllabus-Title"] = title;
     if (courseCode) headers["X-Syllabus-Course-Code"] = courseCode;
     if (institution) headers["X-Syllabus-Institution"] = institution;
     if (itemType) headers["X-Syllabus-Item-Type"] = itemType;
     if (annotations) headers["X-Syllabus-Annotations"] = annotations;
+    if (shareKind) headers["X-Syllabus-Share-Kind"] = shareKind;
+    if (dev) headers["X-Syllabus-Dev"] = dev;
   }
   const xhr = await Zotero.HTTP.request("PUT", `${base}/v1/objects`, {
     headers,

@@ -13,6 +13,8 @@ Open **View options** from the `(view / sort / group)` control in the header. Ch
 
 Click a cover or card to select it in Zotero; double-click opens the best attachment.
 
+Under the title you can **Add a description…** — a short blurb for the reading list. It is stored on the collection’s Personal Reading Order note (not the Syllabus note) and appears at the top of Gallery exports and published gallery pages. If you later turn the collection into a syllabus, that blurb is copied onto the Syllabus description when the syllabus is created.
+
 ## View modes
 
 - **Cover** — artwork in a grid. Best for scanning books, papers, and web pages at a glance.
@@ -52,3 +54,7 @@ The note belongs to **this collection**. The same item in another collection can
 Click a Gallery note on a card, cover, or preview tile to open it. Right-click → **Remove Gallery Note** deletes only this collection’s Gallery note.
 
 How it looks: under the title on **Card**; in the sidecar on **Preview**; beside the cover in **Cover**; still on the item in **Annotations**.
+
+## Print, export, and share
+
+Use the globe icon in the Gallery header to **Publish online…**. You can also right-click the collection → **Share via URL**. The share wizard can publish as a personal reading list (mirroring Gallery view options) or as a syllabus when the collection has one. Checkboxes, read status, and Gallery notes stay private. (Syllabus view still has the printer menu for PDF / Word / Markdown / HTML.) Details: [Print, export, and publish](/zotero-syllabus/how-to/print-export-publish/).

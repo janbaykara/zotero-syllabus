@@ -104,6 +104,17 @@ var queueMicrotask = globalThis.queueMicrotask;
 `.replace(/\n/g, " "),
         },
       },
+      {
+        // Public collection-share viewer (uploaded to R2; no Zotero chrome APIs).
+        entryPoints: ["src/publish-viewer/index.tsx"],
+        bundle: true,
+        target: "es2020",
+        format: "iife",
+        outfile: `.scaffold/build/addon/content/scripts/publish-viewer.js`,
+        jsx: "transform",
+        jsxFactory: "h",
+        jsxFragment: "Fragment",
+      },
     ],
   },
 

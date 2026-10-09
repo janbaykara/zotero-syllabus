@@ -55,6 +55,7 @@ declare namespace _ZoteroTypes {
       "publishUserId": string;
       "publishJwtExpiresAt": number;
       "publishItemUrls": string;
+      "publishShareOptions": string;
       "defaultPriorities": string;
     };
   }

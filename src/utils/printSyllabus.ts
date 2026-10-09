@@ -10,10 +10,10 @@ import {
   svgForPublishHrefKind,
 } from "./zoteroAttachmentIcons";
 import { PUBLISH_COVER_CSS } from "./publishCoverStyles.generated";
-import { PLUGIN_REPO_URL } from "../modules/syllabusNoteHtml";
 import { proseToDisplayHtml } from "./prose";
+import { buildPublishCreditHtml } from "./publishCredit";
 
-const ZOTERO_HOME_URL = "https://www.zotero.org/";
+export { buildPublishCreditHtml };
 
 type PrintBrowsingContext = {
   print: (settings: unknown) => Promise<unknown>;
@@ -932,7 +932,7 @@ function polishMasthead(root: ParentNode): void {
   });
 }
 
-/** Hosted HTML: “published 01 Sep 2026 at 2.34pm” on the course/institution line. */
+/** Hosted HTML: “Published 01 Sep 2026” on the course/institution line. */
 function insertPublishTimestamp(root: ParentNode, when = new Date()): void {
   const meta = asElement(root.querySelector(".syllabus-masthead-meta"));
   if (!meta?.ownerDocument) {
@@ -1702,27 +1702,6 @@ function buildPublishShareMetaHtml(opts: {
     lines.push(`<meta name="twitter:image" content="${escapeHtml(image)}">`);
   }
   return lines.join("\n  ");
-}
-
-/**
- * Small credit line for hosted HTML (product names stay untranslated).
- * Links “Zotero Syllabus” → plugin repo and “Zotero” → zotero.org.
- */
-export function buildPublishCreditHtml(options?: {
-  className?: string;
-}): string {
-  const syllabusMarker = "\uE000";
-  const zoteroMarker = "\uE001";
-  const label = getString("publish-html-credit", {
-    args: { syllabus: syllabusMarker, zotero: zoteroMarker },
-  });
-  const syllabusLink = `<a href="${escapeHtml(PLUGIN_REPO_URL)}" target="_blank" rel="noopener noreferrer">Zotero Syllabus</a>`;
-  const zoteroLink = `<a href="${escapeHtml(ZOTERO_HOME_URL)}" target="_blank" rel="noopener noreferrer">Zotero</a>`;
-  const body = escapeHtml(label)
-    .replace(syllabusMarker, syllabusLink)
-    .replace(zoteroMarker, zoteroLink);
-  const className = options?.className || "syllabus-publish-credit";
-  return `<footer class="${escapeHtml(className)}">${body}</footer>`;
 }
 
 function cc(contract: string): {

@@ -48,14 +48,19 @@ export function bibliographyToHtml(
   content: string,
   density: ItemDensity = "expanded",
   isHtml = false,
+  options?: { includeHeading?: boolean },
 ): string {
   const body = isHtml
     ? styleBibliographyEntries(content)
     : escapeHtml(content).replace(/\r\n|\n/g, "<br>");
+  const includeHeading = options?.includeHeading !== false;
   const headingSize = isDenseDensity(density) ? "18px" : "20px";
   const headingMargin = density === "row" ? "0 0 10px" : "0 0 16px";
+  const heading = includeHeading
+    ? `<h2 class="syllabus-print-bibliography-heading" style="font-size:${headingSize};font-weight:700;margin:${headingMargin};letter-spacing:-0.02em">${getString("bibliography-heading")}</h2>`
+    : "";
   return `<section class="syllabus-print-bibliography" data-item-density="${density}" style="color:#111;padding-top:4px">
-  <h2 class="syllabus-print-bibliography-heading" style="font-size:${headingSize};font-weight:700;margin:${headingMargin};letter-spacing:-0.02em">${getString("bibliography-heading")}</h2>
+  ${heading}
   <div class="syllabus-print-bibliography-body" style="color:#111;font-size:12.5px;line-height:1.45">${body}</div>
 </section>`;
 }

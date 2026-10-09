@@ -39,7 +39,19 @@ export const PersonalReadingOrderDocumentSchema = z.object({
    * Independent per assignment unless the item is also in `done`.
    */
   assignmentDone: z.array(z.string()).default([]),
+  /**
+   * Optional gallery / reading-list blurb shown under the Gallery title and on
+   * published gallery pages. Distinct from syllabus collection description.
+   */
+  description: z.string().optional(),
 });
+
+function normalizeDescription(
+  value: string | null | undefined,
+): string | undefined {
+  const trimmed = (value || "").trim();
+  return trimmed || undefined;
+}
 
 export type PersonalReadingOrderDocument = z.infer<
   typeof PersonalReadingOrderDocumentSchema
@@ -323,19 +335,21 @@ export function serializePersonalReadingOrderNote(
   const doneOnlyBlock = doneOnlyLis
     ? `<h3>Done</h3><ul>${doneOnlyLis}</ul>`
     : "";
-  const json = JSON.stringify(
-    {
-      version: PERSONAL_READING_ORDER_VERSION,
-      order,
-      done: document.done || [],
-      assignmentDone: document.assignmentDone || [],
-    },
-    null,
-    2,
-  );
+  const description = normalizeDescription(document.description);
+  const payload: Record<string, unknown> = {
+    version: PERSONAL_READING_ORDER_VERSION,
+    order,
+    done: document.done || [],
+    assignmentDone: document.assignmentDone || [],
+  };
+  if (description) {
+    payload.description = description;
+  }
+  const json = JSON.stringify(payload, null, 2);
   const repoHref = escapeHtml(PLUGIN_REPO_URL);
   const body = [
     `<h1>${escapeHtml(PERSONAL_READING_ORDER_NOTE_TITLE)}</h1>`,
+    description ? `<p>${escapeHtml(description)}</p>` : "",
     list,
     doneOnlyBlock,
     `<h3>${escapeHtml(PLUGIN_JSON_HEADING)}</h3>`,
@@ -660,11 +674,13 @@ async function mutatePersonalReadingOrderDocument(
       assignmentDone: uniqueKeys(document.assignmentDone || []),
     };
     const next = mutator(document);
+    const description = normalizeDescription(next.description);
     const pruned: PersonalReadingOrderDocument = {
       version: PERSONAL_READING_ORDER_VERSION,
       order: prunePersonalReadingOrderKeys(next.order || [], liveKeys),
       done: prunePersonalReadingOrderKeys(next.done || [], liveKeys),
       assignmentDone: uniqueKeys(next.assignmentDone || []),
+      ...(description ? { description } : {}),
     };
 
     let note = findPersonalReadingOrderNoteUncached(collection);
@@ -688,10 +704,9 @@ export async function setPersonalReadingOrder(
     return [];
   }
   const doc = await mutatePersonalReadingOrderDocument(resolved, (current) => ({
+    ...current,
     version: PERSONAL_READING_ORDER_VERSION,
     order: orderKeys,
-    done: current.done || [],
-    assignmentDone: current.assignmentDone || [],
   }));
   return doc.order;
 }
@@ -708,10 +723,9 @@ export async function pinItemToPersonalReadingOrder(
   const doc = await mutatePersonalReadingOrderDocument(resolved, (current) => {
     const rest = (current.order || []).filter((key) => key !== itemKey);
     return {
+      ...current,
       version: PERSONAL_READING_ORDER_VERSION,
       order: [itemKey, ...rest],
-      done: current.done || [],
-      assignmentDone: current.assignmentDone || [],
     };
   });
   return doc.order;
@@ -727,12 +741,38 @@ export async function removeItemFromPersonalReadingOrder(
     return [];
   }
   const doc = await mutatePersonalReadingOrderDocument(resolved, (current) => ({
+    ...current,
     version: PERSONAL_READING_ORDER_VERSION,
     order: (current.order || []).filter((key) => key !== itemKey),
-    done: current.done || [],
-    assignmentDone: current.assignmentDone || [],
   }));
   return doc.order;
+}
+
+/** Gallery / reading-list description under the title (and on publish). */
+export function getPersonalReadingOrderDescription(
+  collection: Zotero.Collection | number,
+): string {
+  return (
+    normalizeDescription(
+      getPersonalReadingOrderDocument(collection).description,
+    ) || ""
+  );
+}
+
+export async function setPersonalReadingOrderDescription(
+  collection: Zotero.Collection | number,
+  description: string,
+): Promise<string> {
+  const resolved = resolveCollection(collection);
+  if (!resolved) {
+    return "";
+  }
+  const doc = await mutatePersonalReadingOrderDocument(resolved, (current) => ({
+    ...current,
+    version: PERSONAL_READING_ORDER_VERSION,
+    description: normalizeDescription(description),
+  }));
+  return normalizeDescription(doc.description) || "";
 }
 
 /**
@@ -764,6 +804,7 @@ export async function setItemReadingDone(
       }
     }
     return {
+      ...current,
       version: PERSONAL_READING_ORDER_VERSION,
       order: current.order || [],
       done: [...doneKeys],
@@ -817,6 +858,7 @@ export async function setAssignmentReadingDone(
     }
 
     return {
+      ...current,
       version: PERSONAL_READING_ORDER_VERSION,
       order: current.order || [],
       done: [...doneKeys],
@@ -855,6 +897,7 @@ export async function mergePersonalReadingDoneKeys(
       }
     }
     return {
+      ...current,
       version: PERSONAL_READING_ORDER_VERSION,
       order: current.order || [],
       done: [...done],

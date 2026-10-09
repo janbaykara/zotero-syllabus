@@ -36,6 +36,10 @@ import {
   shareItemViaUrl,
   unpublishItemViaUrl,
 } from "../utils/shareItemViaUrl";
+import {
+  canShareCollectionViaUrl,
+  shareCollectionViaUrl,
+} from "../utils/shareCollectionViaUrl";
 import { renderComponent, unmountComponent } from "../utils/react";
 import { ItemPane } from "./ItemPane";
 import { openAddToClassDialog } from "./openAddToClassDialog";
@@ -910,6 +914,7 @@ export class SyllabusManager {
     );
     this.setupContextMenuPinned();
     this.setupContextMenuShareItem();
+    this.setupContextMenuShareCollection();
     this.setupContextMenuAddCollectionShelf();
   }
 
@@ -2967,6 +2972,43 @@ export class SyllabusManager {
         if (item) {
           void unpublishItemViaUrl(item);
         }
+      },
+    });
+  }
+
+  static setupContextMenuShareCollection() {
+    ztoolkit.Menu.unregister("syllabus-collection-share-via-url-menu");
+
+    ztoolkit.Menu.register("collection", {
+      tag: "menuitem",
+      id: "syllabus-collection-share-via-url-menu",
+      label: getString("item-share-via-url"),
+      icon: "chrome://zotero/skin/16/universal/link.svg",
+      isHidden: () => {
+        const collection = getSelectedCollection();
+        if (!canShareCollectionViaUrl(collection)) return true;
+        // Managed folders / class subcollections are not share targets.
+        if (
+          collection &&
+          (isManagedReadingScheduleCollection(collection.id) ||
+            isAutoManagedCollection(collection.id) ||
+            getClassSubcollectionContext(collection))
+        ) {
+          return true;
+        }
+        return false;
+      },
+      commandListener: () => {
+        const collection = getSelectedCollection();
+        if (!collection || !canShareCollectionViaUrl(collection)) return;
+        const mode = SyllabusManager.getCollectionViewMode();
+        const initialKind =
+          mode === "syllabus"
+            ? "syllabus"
+            : mode === "gallery"
+              ? "gallery"
+              : undefined;
+        void shareCollectionViaUrl(collection, { initialKind });
       },
     });
   }

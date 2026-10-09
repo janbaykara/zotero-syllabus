@@ -1,11 +1,9 @@
 import { appendExportIdToExtra, SYLLABUS_EXPORT_ID_KEY } from "./identifiers";
 import { readItemNote } from "./items";
+import { exportItemsWithTranslator } from "./exportCitations";
 
 /** Official Zotero RDF export translator (when built-ins are available). */
 const RDF_EXPORT_TRANSLATOR_ID = "14763d24-8ba0-45df-8f52-b8d1108e7ac9";
-
-/** Match citation export: hung Translate.Export used to block publish. */
-const RDF_EXPORT_TIMEOUT_MS = 20_000;
 
 const RDF_NS = {
   rdf: "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
@@ -248,75 +246,9 @@ export function replaceSyllabusNoteHtmlInRdf(
 }
 
 async function exportRdfWithTranslator(items: Zotero.Item[]): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const translation = new Zotero.Translate.Export();
-    translation.setItems(items);
-    const translatorSet = translation.setTranslator(RDF_EXPORT_TRANSLATOR_ID);
-
-    if (typeof translation.setDisplayOptions === "function") {
-      translation.setDisplayOptions({ exportNotes: true });
-    }
-
-    if (!translatorSet) {
-      reject(new Error("Failed to set RDF translator"));
-      return;
-    }
-
-    let settled = false;
-    const finish = (fn: () => void) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timeout);
-      fn();
-    };
-
-    const timeout = setTimeout(() => {
-      finish(() =>
-        reject(
-          new Error(`RDF export timed out after ${RDF_EXPORT_TIMEOUT_MS}ms`),
-        ),
-      );
-    }, RDF_EXPORT_TIMEOUT_MS);
-
-    translation.setHandler(
-      "error",
-      (_translate: unknown, error: Error | string) => {
-        finish(() =>
-          reject(error instanceof Error ? error : new Error(String(error))),
-        );
-      },
-    );
-
-    translation.setHandler("done", (translate: unknown, success: boolean) => {
-      finish(() => {
-        if (!success) {
-          reject(new Error("RDF export failed"));
-          return;
-        }
-        const rdfXml = String((translate as { string?: string }).string || "");
-        if (!rdfXml) {
-          reject(new Error("RDF export did not return a valid string"));
-          return;
-        }
-        resolve(rdfXml);
-      });
-    });
-
-    try {
-      const result = translation.translate() as unknown;
-      if (result && typeof (result as Promise<unknown>).then === "function") {
-        (result as Promise<unknown>).catch((err) => {
-          finish(() =>
-            reject(err instanceof Error ? err : new Error(String(err))),
-          );
-        });
-      }
-    } catch (error) {
-      finish(() =>
-        reject(error instanceof Error ? error : new Error(String(error))),
-      );
-    }
-  });
+  // Same Translate.Export path as RIS/BibTeX — skips when Zotero has no
+  // built-in export translators (avoids Unsupported type 'undefined' for source).
+  return exportItemsWithTranslator(items, RDF_EXPORT_TRANSLATOR_ID);
 }
 
 export async function getRDFStringForCollection(
@@ -338,10 +270,13 @@ export async function getRDFStringForCollection(
       return text;
     }
   } catch (err) {
-    ztoolkit.log(
-      "RDF translator export failed; using Zotero RDF fallback:",
-      err,
-    );
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.startsWith("export_translator_unavailable:")) {
+      ztoolkit.log(
+        "RDF translator export failed; using Zotero RDF fallback:",
+        err,
+      );
+    }
   }
 
   const fallback = fallbackItemsAsZoteroRdf(items, options);

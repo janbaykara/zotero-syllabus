@@ -23,6 +23,8 @@ export type DailyTopSyllabus = {
   /** `${userId}/${libraryId}/${collectionKey}` */
   key: string;
   pageViews: number;
+  /** True when this key is a development publish (excluded from chart totals). */
+  dev?: boolean;
 };
 
 export type DailyViewCounts = {
@@ -189,13 +191,26 @@ async function runAnalyticsSql(
   }
 }
 
+export type QueryViewStatsOptions = {
+  /**
+   * Stats keys (`userId/libraryId/collectionKey` or `…/item/{key}`) to omit from
+   * chart totals and daily series (e.g. development publishes). Per-key
+   * `bySyllabus` still includes them so the admin list can show raw counts.
+   */
+  excludeFromChartKeys?: ReadonlySet<string>;
+};
+
 /**
  * Aggregate last 30 days of page views and file downloads for the admin dashboard.
  * Degrades gracefully when secrets are missing or the dataset has no rows yet.
  */
-export async function queryViewStats(env: Env): Promise<ViewStats> {
+export async function queryViewStats(
+  env: Env,
+  opts: QueryViewStatsOptions = {},
+): Promise<ViewStats> {
   const daily = emptyDailySeries(30);
   const bySyllabus: Record<string, SyllabusViewCounts> = {};
+  const excludeFromChart = opts.excludeFromChartKeys;
 
   const dailySql = `
 SELECT
@@ -284,28 +299,12 @@ FORMAT JSON
   }
 
   const dayIndex = new Map(daily.map((d, i) => [d.day, i]));
-  let pageViews30d = 0;
-  let fileDownloads30d = 0;
-  let citationDownloads30d = 0;
-
-  for (const row of dailyRes.rows) {
-    // toDate may return "YYYY-MM-DD" or a DateTime string.
-    const day = asString(row.day).slice(0, 10);
-    const event = asString(row.event);
-    const hits = asNumber(row.hits);
-    const idx = dayIndex.get(day);
-    if (idx == null) continue;
-    if (event === EVENT_PAGE_VIEW) {
-      daily[idx].pageViews += hits;
-      pageViews30d += hits;
-    } else if (event === EVENT_FILE_DOWNLOAD) {
-      daily[idx].fileDownloads += hits;
-      fileDownloads30d += hits;
-    } else if (event === EVENT_CITATION_DOWNLOAD) {
-      daily[idx].citationDownloads += hits;
-      citationDownloads30d += hits;
-    }
-  }
+  const exclude = (key: string) =>
+    !!(
+      excludeFromChart &&
+      excludeFromChart.size > 0 &&
+      excludeFromChart.has(key)
+    );
 
   for (const row of perRes.rows) {
     const event = asString(row.event);
@@ -327,8 +326,45 @@ FORMAT JSON
       counts.citationDownloads += hits;
   }
 
-  if (dailyBySyllabusRes.ok) {
-    applyDailyTopSyllabi(daily, dayIndex, dailyBySyllabusRes.rows);
+  // Chart / header totals: omit excluded (dev) keys. Prefer rebuilding page-view
+  // daily bars from per-syllabus rows so exclusions are accurate; fall back to
+  // the unfiltered day totals when no exclusions apply.
+  let pageViews30d = 0;
+  let fileDownloads30d = 0;
+  let citationDownloads30d = 0;
+  for (const [key, counts] of Object.entries(bySyllabus)) {
+    if (exclude(key)) continue;
+    pageViews30d += counts.pageViews;
+    fileDownloads30d += counts.fileDownloads;
+    citationDownloads30d += counts.citationDownloads;
+  }
+
+  const useFilteredDaily =
+    !!(excludeFromChart && excludeFromChart.size > 0) && dailyBySyllabusRes.ok;
+
+  if (useFilteredDaily) {
+    applyDailyTopSyllabi(daily, dayIndex, dailyBySyllabusRes.rows, {
+      excludeKeys: excludeFromChart,
+      assignDailyPageViews: true,
+    });
+  } else {
+    for (const row of dailyRes.rows) {
+      const day = asString(row.day).slice(0, 10);
+      const event = asString(row.event);
+      const hits = asNumber(row.hits);
+      const idx = dayIndex.get(day);
+      if (idx == null) continue;
+      if (event === EVENT_PAGE_VIEW) daily[idx].pageViews += hits;
+      else if (event === EVENT_FILE_DOWNLOAD) daily[idx].fileDownloads += hits;
+      else if (event === EVENT_CITATION_DOWNLOAD) {
+        daily[idx].citationDownloads += hits;
+      }
+    }
+    if (dailyBySyllabusRes.ok) {
+      applyDailyTopSyllabi(daily, dayIndex, dailyBySyllabusRes.rows, {
+        excludeKeys: excludeFromChart,
+      });
+    }
   }
 
   return {
@@ -347,7 +383,13 @@ function applyDailyTopSyllabi(
   daily: DailyViewCounts[],
   dayIndex: Map<string, number>,
   rows: Array<Record<string, unknown>>,
+  opts: {
+    excludeKeys?: ReadonlySet<string>;
+    /** When true, set each day's pageViews from non-excluded keys. */
+    assignDailyPageViews?: boolean;
+  } = {},
 ): void {
+  // All keys (including development publishes) for tooltip ranking.
   const byDay = new Map<string, Map<string, number>>();
   for (const row of rows) {
     const day = asString(row.day).slice(0, 10);
@@ -370,9 +412,24 @@ function applyDailyTopSyllabi(
 
   for (const d of daily) {
     const perKey = byDay.get(d.day);
-    if (!perKey) continue;
+    if (!perKey) {
+      if (opts.assignDailyPageViews) d.pageViews = 0;
+      continue;
+    }
+    if (opts.assignDailyPageViews) {
+      let sum = 0;
+      for (const [key, n] of perKey) {
+        if (opts.excludeKeys?.has(key)) continue;
+        sum += n;
+      }
+      d.pageViews = sum;
+    }
     d.topSyllabi = [...perKey.entries()]
-      .map(([key, pageViews]) => ({ key, pageViews }))
+      .map(([key, pageViews]) => ({
+        key,
+        pageViews,
+        ...(opts.excludeKeys?.has(key) ? { dev: true as const } : {}),
+      }))
       .sort((a, b) => b.pageViews - a.pageViews || a.key.localeCompare(b.key))
       .slice(0, DAILY_TOP_LIMIT);
   }

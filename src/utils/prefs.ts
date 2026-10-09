@@ -80,6 +80,7 @@ export const PLUGIN_PREF_DEFAULTS: {
   publishUserId: "",
   publishJwtExpiresAt: 0,
   publishItemUrls: "",
+  publishShareOptions: "",
   defaultPriorities: "",
 };
 

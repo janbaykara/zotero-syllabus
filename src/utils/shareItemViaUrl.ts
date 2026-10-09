@@ -140,7 +140,8 @@ export async function shareItemViaUrl(
     const { publicUrl } = await publishItemToCloud({
       item,
       includeAnnotations,
-      onProgress: (phase, current, total) => {        if (phase === "upload" && current != null && total != null) {
+      onProgress: (phase, current, total) => {
+        if (phase === "upload" && current != null && total != null) {
           progress.changeLine({
             text: getString("progress-item-share-uploading", {
               args: { current, total },

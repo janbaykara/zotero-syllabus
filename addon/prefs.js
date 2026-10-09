@@ -46,4 +46,5 @@ pref("publishJwt", "");
 pref("publishUserId", "");
 pref("publishJwtExpiresAt", 0);
 pref("publishItemUrls", "");
+pref("publishShareOptions", "");
 pref("defaultPriorities", "");

@@ -36,8 +36,12 @@ export type PublishedShare = {
   institution: string;
   /** Item shares: localized item type. */
   itemType: string;
-  /** Item shares: "y" | "n" | "". */
+  /** Item / collection shares: "y" | "n" | "". */
   annotations: string;
+  /** Collection shares: "syllabus" | "gallery" | "". */
+  shareKind: string;
+  /** True when published from a development plugin build. */
+  dev: boolean;
 };
 
 /** @deprecated Prefer PublishedShare */
@@ -79,7 +83,12 @@ export function adminKeyMatches(
   return diff === 0;
 }
 
-function shareId(kind: ShareKind, userId: string, libraryId: string, key: string): string {
+function shareId(
+  kind: ShareKind,
+  userId: string,
+  libraryId: string,
+  key: string,
+): string {
   return `${kind}\0${userId}\0${libraryId}\0${key}`;
 }
 
@@ -108,7 +117,12 @@ async function attachIndexMeta(
       try {
         const key =
           row.kind === "item"
-            ? itemObjectKey(row.userId, row.libraryId, row.itemKey, "index.html")
+            ? itemObjectKey(
+                row.userId,
+                row.libraryId,
+                row.itemKey,
+                "index.html",
+              )
             : objectKey(
                 row.userId,
                 row.libraryId,
@@ -122,6 +136,8 @@ async function attachIndexMeta(
         row.institution = meta.institution;
         row.itemType = meta.itemType;
         row.annotations = meta.annotations;
+        row.shareKind = meta.shareKind;
+        row.dev = meta.dev === "y";
       } catch {
         // Leave empty; storage row is still useful.
       }
@@ -242,6 +258,8 @@ export async function listPublishedSyllabi(
         institution: "",
         itemType: "",
         annotations: "",
+        shareKind: "",
+        dev: false,
       });
     } else {
       shares.push({
@@ -264,6 +282,8 @@ export async function listPublishedSyllabi(
         institution: "",
         itemType: "",
         annotations: "",
+        shareKind: "",
+        dev: false,
       });
     }
   }
@@ -288,17 +308,21 @@ export async function listPublishedSyllabi(
   let syllabusCount = 0;
   let itemCount = 0;
   const users = new Set<string>();
+  const excludeFromChartKeys = new Set<string>();
   for (const s of shares) {
     totalBytes += s.bytes;
     totalFiles += s.files;
     users.add(s.userId);
     if (s.kind === "syllabus") syllabusCount += 1;
     else itemCount += 1;
+    if (s.dev) {
+      excludeFromChartKeys.add(shareStatsKey(s));
+    }
   }
 
   let views: ViewStats;
   try {
-    views = await queryViewStats(env);
+    views = await queryViewStats(env, { excludeFromChartKeys });
   } catch (e) {
     views = {
       available: false,
@@ -340,11 +364,6 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
-function cellOrDash(value: string): string {
-  const v = value.trim();
-  return v ? escapeHtml(v) : `<span class="muted">—</span>`;
-}
-
 function formatCount(n: number | undefined): string {
   if (n == null || !Number.isFinite(n)) return "—";
   return String(Math.round(n));
@@ -358,20 +377,26 @@ function shareChartLabel(
   sharesByKey: Map<string, PublishedShare>,
   key: string,
 ): string {
+  const parts = key.split("/");
+  const userIdFromKey = parts[0] || "";
   const s = sharesByKey.get(key);
+  let label = "";
   if (s) {
     const code = s.courseCode.trim();
     const title = s.title.trim();
     const kind = s.kind === "item" ? "Item" : "Syllabus";
-    if (code && title) return `${kind}: ${code} — ${title}`;
-    if (code) return `${kind}: ${code}`;
-    if (title) return `${kind}: ${title}`;
-    if (s.kind === "item" && s.itemKey) return `${kind}: ${s.itemKey}`;
-    if (s.collectionKey) return `${kind}: ${s.collectionKey}`;
+    if (code && title) label = `${kind}: ${code} — ${title}`;
+    else if (code) label = `${kind}: ${code}`;
+    else if (title) label = `${kind}: ${title}`;
+    else if (s.kind === "item" && s.itemKey) label = `${kind}: ${s.itemKey}`;
+    else if (s.collectionKey) label = `${kind}: ${s.collectionKey}`;
   }
-  const parts = key.split("/");
-  if (parts[2] === "item" && parts[3]) return `Item: ${parts[3]}`;
-  return parts[2] || key;
+  if (!label) {
+    if (parts[2] === "item" && parts[3]) label = `Item: ${parts[3]}`;
+    else label = parts[2] || key;
+  }
+  const userId = (s?.userId || userIdFromKey).trim();
+  return userId ? `${userId} · ${label}` : label;
 }
 
 function renderDailyChart(views: ViewStats, shares: PublishedShare[]): string {
@@ -387,15 +412,22 @@ function renderDailyChart(views: ViewStats, shares: PublishedShare[]): string {
       const top = d.topSyllabi || [];
       const topRows = top
         .map((t) => {
+          const share = sharesByKey.get(t.key);
+          const isDev = !!(t.dev || share?.dev);
           const name = escapeHtml(shareChartLabel(sharesByKey, t.key));
-          return `<div class="bar-tip-row"><span class="bar-tip-name">${name}</span><span class="bar-tip-n">${escapeHtml(formatCount(t.pageViews))}</span></div>`;
+          const pill = isDev
+            ? ` <span class="type-pill type-dev" title="Development plugin publish">Dev</span>`
+            : "";
+          return `<div class="bar-tip-row${isDev ? " is-dev" : ""}"><span class="bar-tip-name">${name}${pill}</span><span class="bar-tip-n">${escapeHtml(formatCount(t.pageViews))}</span></div>`;
         })
         .join("");
       const list = topRows ? `<div class="bar-tip-list">${topRows}</div>` : "";
       const ariaTop = top
         .map((t) => {
+          const share = sharesByKey.get(t.key);
+          const isDev = !!(t.dev || share?.dev);
           const name = shareChartLabel(sharesByKey, t.key);
-          return `${name}: ${visitsLabel(t.pageViews)}`;
+          return `${name}${isDev ? " (Dev)" : ""}: ${visitsLabel(t.pageViews)}`;
         })
         .join("; ");
       const aria = ariaTop
@@ -414,22 +446,22 @@ function renderDailyChart(views: ViewStats, shares: PublishedShare[]): string {
 </div>`;
 }
 
-function typeLabel(kind: ShareKind): string {
-  return kind === "item" ? "Item" : "Syllabus";
+function typeLabel(row: PublishedShare | ShareKind): string {
+  if (typeof row === "string") {
+    return row === "item" ? "Item" : "Syllabus";
+  }
+  if (row.kind === "item") return "Item";
+  if (row.shareKind === "gallery") return "Reading list";
+  return "Syllabus";
 }
 
-/** Single Metadata column: code + institution (syllabus) or type + annotations (item). */
+/** Metadata column: code + institution (syllabus) or item type (item). */
 function formatShareMetadata(row: PublishedShare): {
   text: string;
   sort: string;
 } {
   if (row.kind === "item") {
-    const parts: string[] = [];
-    if (row.itemType.trim()) parts.push(row.itemType.trim());
-    if (row.annotations === "y" || row.annotations === "n") {
-      parts.push(`Annotations: ${row.annotations}`);
-    }
-    const text = parts.join(" · ");
+    const text = row.itemType.trim();
     return { text, sort: text.toLowerCase() };
   }
   const parts: string[] = [];
@@ -437,6 +469,29 @@ function formatShareMetadata(row: PublishedShare): {
   if (row.institution.trim()) parts.push(row.institution.trim());
   const text = parts.join(" · ");
   return { text, sort: text.toLowerCase() };
+}
+
+/** Annotations column: checked box when included, dash when not. */
+function formatAnnotationsCell(row: PublishedShare): {
+  html: string;
+  sort: number;
+} {
+  if (row.annotations === "y") {
+    return {
+      html: `<input type="checkbox" class="ann-check" checked disabled title="Annotations included" aria-label="Annotations included" />`,
+      sort: 2,
+    };
+  }
+  if (row.annotations === "n") {
+    return {
+      html: `<span class="muted" title="Annotations not included">—</span>`,
+      sort: 1,
+    };
+  }
+  return {
+    html: `<span class="muted">—</span>`,
+    sort: 0,
+  };
 }
 
 function userSummary(rows: PublishedShare[]): string {
@@ -486,17 +541,43 @@ export function renderAdminHtml(report: AdminReport): string {
         const citeSort = views.available
           ? String(counts?.citationDownloads ?? 0)
           : "";
-        const type = typeLabel(r.kind);
+        const type = typeLabel(r);
         const meta = formatShareMetadata(r);
+        const ann = formatAnnotationsCell(r);
         const deleteAttrs =
           r.kind === "item"
             ? `data-kind="item" data-user-id="${escapeHtml(r.userId)}" data-library-id="${escapeHtml(r.libraryId)}" data-item-key="${escapeHtml(r.itemKey)}" data-label="${escapeHtml(label)}"`
             : `data-kind="syllabus" data-user-id="${escapeHtml(r.userId)}" data-library-id="${escapeHtml(r.libraryId)}" data-collection-key="${escapeHtml(r.collectionKey)}" data-label="${escapeHtml(label)}"`;
-        return `<tr>
-  <td data-sort="${escapeHtml(r.kind)}"><span class="type-pill type-${r.kind}">${escapeHtml(type)}</span></td>
-  <td data-sort="${escapeHtml(r.title.trim().toLowerCase())}">${cellOrDash(r.title)}</td>
+        const typeClass =
+          r.kind === "item"
+            ? "item"
+            : r.shareKind === "gallery"
+              ? "gallery"
+              : "syllabus";
+        const typeSort =
+          r.kind === "item"
+            ? "item"
+            : r.shareKind === "gallery"
+              ? "gallery"
+              : "syllabus";
+        const typePills = `<span class="type-pill type-${typeClass}">${escapeHtml(type)}</span>`;
+        const devCell = r.dev
+          ? `<span class="type-pill type-dev" title="Published from a development plugin build">Dev</span>`
+          : `<span class="muted">—</span>`;
+        const titleText = r.title.trim() || shareSortLabel(r) || r.publicUrl;
+        const titleLinkClass = r.dev ? "title-link is-dev" : "title-link";
+        const titleTitle = r.dev
+          ? `Development plugin publish — ${r.publicUrl}`
+          : r.publicUrl;
+        const titleCell = `<a class="${titleLinkClass}" href="${escapeHtml(r.publicUrl)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(titleTitle)}">${escapeHtml(titleText)}</a>`;
+        return `<tr${r.dev ? ` class="is-dev"` : ""}>
+  <td class="check-col"><input type="checkbox" class="row-check" aria-label="Select ${escapeHtml(titleText)}" ${deleteAttrs}></td>
+  <td class="mono" data-sort="${escapeHtml(r.userId)}">${escapeHtml(r.userId)}</td>
+  <td data-sort="${escapeHtml(typeSort)}">${typePills}</td>
+  <td class="dev-col" data-sort="${r.dev ? "1" : "0"}" data-sort-type="num">${devCell}</td>
+  <td data-sort="${escapeHtml(titleText.toLowerCase())}">${titleCell}</td>
   <td data-sort="${escapeHtml(meta.sort)}">${meta.text ? escapeHtml(meta.text) : `<span class="muted">—</span>`}</td>
-  <td data-sort="${escapeHtml(r.publicUrl.toLowerCase())}"><a href="${escapeHtml(r.publicUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.publicUrl)}</a></td>
+  <td class="ann-col" data-sort="${ann.sort}" data-sort-type="num">${ann.html}</td>
   <td class="num" data-sort="${r.bytes}" data-sort-type="num">${escapeHtml(formatBytes(r.bytes))}</td>
   <td class="num" data-sort="${r.files}" data-sort-type="num">${r.files}</td>
   <td class="num" data-sort="${escapeHtml(viewSort)}" data-sort-type="num">${viewCell}</td>
@@ -514,15 +595,18 @@ export function renderAdminHtml(report: AdminReport): string {
   <table class="sortable">
     <thead>
       <tr>
-        <th scope="col" data-col="0"><button type="button" class="sort">Type</button></th>
-        <th scope="col" data-col="1"><button type="button" class="sort">Title</button></th>
-        <th scope="col" data-col="2"><button type="button" class="sort">Metadata</button></th>
-        <th scope="col" data-col="3"><button type="button" class="sort">Public URL</button></th>
-        <th scope="col" class="num" data-col="4"><button type="button" class="sort">Size</button></th>
-        <th scope="col" class="num" data-col="5"><button type="button" class="sort">Files</button></th>
-        <th scope="col" class="num" data-col="6"><button type="button" class="sort">Views (30d)</button></th>
-        <th scope="col" class="num" data-col="7"><button type="button" class="sort">Downloads (30d)</button></th>
-        <th scope="col" class="num" data-col="8"><button type="button" class="sort">Citations (30d)</button></th>
+        <th scope="col" class="check-col"><input type="checkbox" class="select-table" title="Select all in this table" aria-label="Select all in this table"></th>
+        <th scope="col" data-col="1"><button type="button" class="sort">User</button></th>
+        <th scope="col" data-col="2"><button type="button" class="sort">Type</button></th>
+        <th scope="col" data-col="3"><button type="button" class="sort">Dev</button></th>
+        <th scope="col" data-col="4"><button type="button" class="sort">Title</button></th>
+        <th scope="col" data-col="5"><button type="button" class="sort">Metadata</button></th>
+        <th scope="col" data-col="6"><button type="button" class="sort">Annotations</button></th>
+        <th scope="col" class="num" data-col="7"><button type="button" class="sort">Size</button></th>
+        <th scope="col" class="num" data-col="8"><button type="button" class="sort">Files</button></th>
+        <th scope="col" class="num" data-col="9"><button type="button" class="sort">Views (30d)</button></th>
+        <th scope="col" class="num" data-col="10"><button type="button" class="sort">Downloads (30d)</button></th>
+        <th scope="col" class="num" data-col="11"><button type="button" class="sort">Citations (30d)</button></th>
         <th></th>
       </tr>
     </thead>
@@ -625,9 +709,17 @@ ${trs}
     .chart-hover .bar-tip-row {
       display: flex; justify-content: space-between; gap: 0.75rem;
       margin-top: 0.15rem;
+      align-items: baseline;
+    }
+    .chart-hover .bar-tip-row.is-dev {
+      background: #fffbeb;
+      margin-inline: -0.35rem;
+      padding: 0.15rem 0.35rem;
+      border-radius: 4px;
     }
     .chart-hover .bar-tip-name {
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      min-width: 0;
     }
     .chart-hover .bar-tip-n { color: #6b7280; flex: 0 0 auto; }
     .chart-axis {
@@ -666,8 +758,47 @@ ${trs}
       color: #065f46;
       background: #d1fae5;
     }
+    .type-pill.type-gallery {
+      color: #6b21a8;
+      background: #f3e8ff;
+    }
+    .type-pill.type-dev {
+      color: #92400e;
+      background: #fef3c7;
+    }
+    tr.is-dev td { background: #fffbeb; }
+    td.dev-col { white-space: nowrap; }
+    td.ann-col { text-align: center; white-space: nowrap; }
+    td.ann-col .ann-check {
+      width: 1rem;
+      height: 1rem;
+      margin: 0;
+      accent-color: #15803d;
+      vertical-align: middle;
+      pointer-events: none;
+    }
+    th.check-col, td.check-col {
+      width: 2rem;
+      text-align: center;
+      vertical-align: middle;
+      padding-left: 0.5rem;
+      padding-right: 0.35rem;
+    }
+    th.check-col input, td.check-col input.row-check,
+    input.select-table {
+      width: 1rem;
+      height: 1rem;
+      margin: 0;
+      accent-color: #1d4ed8;
+      cursor: pointer;
+      vertical-align: middle;
+    }
+    tr.is-selected td { background: #eff6ff; }
+    tr.is-dev.is-selected td { background: #fef3c7; }
+    a.title-link { color: #1d4ed8; text-decoration: underline; text-underline-offset: 0.12em; }
+    a.title-link.is-dev { color: #92400e; font-weight: 600; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
-    a { color: #1d4ed8; word-break: break-all; }
+    a { color: #1d4ed8; word-break: break-word; }
     button.sort {
       display: inline-flex; align-items: center; gap: 0.25rem;
       width: 100%; margin: 0; padding: 0;
@@ -687,7 +818,7 @@ ${trs}
       border-bottom: 0;
       border-top: 0.35em solid currentColor;
     }
-    button.delete {
+    button.delete, button.bulk-delete {
       font: inherit; font-size: 12px;
       padding: 0.25rem 0.55rem;
       color: #991b1b;
@@ -697,13 +828,52 @@ ${trs}
       cursor: pointer;
       white-space: nowrap;
     }
-    button.delete:hover { background: #fef2f2; }
-    button.delete:disabled { opacity: 0.55; cursor: wait; }
+    button.delete:hover, button.bulk-delete:hover { background: #fef2f2; }
+    button.delete:disabled, button.bulk-delete:disabled { opacity: 0.55; cursor: wait; }
+    .bulk-bar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: none;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.65rem 1rem;
+      margin: 0 0 0.85rem;
+      padding: 0.65rem 0.85rem;
+      background: #1e3a8a;
+      color: #fff;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
+    }
+    .bulk-bar.is-visible { display: flex; }
+    .bulk-bar .bulk-count { font-weight: 600; }
+    .bulk-bar .bulk-clear {
+      font: inherit; font-size: 12px;
+      padding: 0.25rem 0.55rem;
+      color: #fff;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.45);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .bulk-bar .bulk-clear:hover { background: rgba(255,255,255,0.12); }
+    .bulk-bar button.bulk-delete {
+      background: #fff;
+      color: #991b1b;
+      border-color: #fecaca;
+    }
+    .bulk-bar .bulk-status { font-size: 12px; opacity: 0.9; }
   </style>
 </head>
 <body>
   <h1>Syllabus publish admin</h1>
-  <p class="muted">Storage and attachment counts from R2 for published syllabi and Share via URL item pages. Metadata is course code · institution for syllabi, or item type · Annotations: y/n for items (from index.html customMetadata; re-publish/sync to populate older shares). Page views, file downloads, and citation exports (RIS/BIB/RDF) are last-30-day totals from Analytics Engine. Delete unpublishes that row (syllabus wipe or item page unpublish); the publisher can re-publish from the plugin.</p>
+  <p class="muted">Storage and attachment counts from R2 for published syllabi and Share via URL item pages. Metadata is course code · institution for syllabi, or item type for items (from index.html customMetadata; re-publish/sync to populate older shares). <strong>Title</strong> links to the public page. <strong>Annotations</strong> is a checkbox when the share included annotations, otherwise —. Pages published from a <strong>development</strong> plugin build are marked in the <strong>Dev</strong> column (and amber title links); they are omitted from chart bar heights and 30-day header totals, but still appear in chart tooltips with a <span class="type-pill type-dev">Dev</span> badge (row-level counts still show). Page views, file downloads, and citation exports (RIS/BIB/RDF) are last-30-day totals from Analytics Engine. Use row checkboxes for <strong>bulk delete</strong>, or Delete on a single row (syllabus wipe or item page unpublish); the publisher can re-publish from the plugin.</p>
+  <div class="bulk-bar" id="bulk-bar" aria-live="polite">
+    <span class="bulk-count" id="bulk-count">0 selected</span>
+    <button type="button" class="bulk-delete" id="bulk-delete">Delete selected</button>
+    <button type="button" class="bulk-clear" id="bulk-clear">Clear selection</button>
+    <span class="bulk-status" id="bulk-status"></span>
+  </div>
   <div class="totals">
     <div><strong>${report.syllabusCount}</strong><span>Syllabi</span></div>
     <div><strong>${report.itemCount}</strong><span>Items</span></div>
@@ -719,42 +889,165 @@ ${trs}
   <script>
   (function () {
     var key = new URLSearchParams(location.search).get("key") || "";
+
+    function shareFromEl(el) {
+      return {
+        kind: el.getAttribute("data-kind") || "syllabus",
+        userId: el.getAttribute("data-user-id") || "",
+        libraryId: el.getAttribute("data-library-id") || "",
+        collectionKey: el.getAttribute("data-collection-key") || "",
+        itemKey: el.getAttribute("data-item-key") || "",
+        label: el.getAttribute("data-label") || "",
+      };
+    }
+
+    function deleteUrl(share) {
+      var url = new URL(share.kind === "item" ? "/admin/item" : "/admin/syllabus", location.origin);
+      url.searchParams.set("key", key);
+      url.searchParams.set("userId", share.userId);
+      url.searchParams.set("libraryId", share.libraryId);
+      if (share.kind === "item") {
+        url.searchParams.set("itemKey", share.itemKey);
+      } else {
+        url.searchParams.set("collectionKey", share.collectionKey);
+      }
+      return url.toString();
+    }
+
+    async function deleteShare(share) {
+      if (!key || !share.userId || !share.libraryId) {
+        throw new Error("Missing share identity");
+      }
+      if (share.kind === "item" && !share.itemKey) {
+        throw new Error("Missing item key");
+      }
+      if (share.kind !== "item" && !share.collectionKey) {
+        throw new Error("Missing collection key");
+      }
+      var res = await fetch(deleteUrl(share), { method: "DELETE" });
+      var body = await res.json().catch(function () { return {}; });
+      if (!res.ok) {
+        throw new Error(body.message || body.error || ("HTTP " + res.status));
+      }
+      return body;
+    }
+
+    var bulkBar = document.getElementById("bulk-bar");
+    var bulkCount = document.getElementById("bulk-count");
+    var bulkDeleteBtn = document.getElementById("bulk-delete");
+    var bulkClearBtn = document.getElementById("bulk-clear");
+    var bulkStatus = document.getElementById("bulk-status");
+
+    function selectedChecks() {
+      return Array.prototype.slice.call(document.querySelectorAll("input.row-check:checked"));
+    }
+
+    function syncTableSelectAll(table) {
+      var master = table.querySelector("thead input.select-table");
+      if (!master) return;
+      var checks = table.querySelectorAll("tbody input.row-check");
+      var total = checks.length;
+      var checked = 0;
+      checks.forEach(function (c) { if (c.checked) checked += 1; });
+      master.checked = total > 0 && checked === total;
+      master.indeterminate = checked > 0 && checked < total;
+    }
+
+    function syncBulkBar() {
+      var selected = selectedChecks();
+      var n = selected.length;
+      document.querySelectorAll("tbody tr").forEach(function (tr) {
+        var check = tr.querySelector("input.row-check");
+        tr.classList.toggle("is-selected", !!(check && check.checked));
+      });
+      document.querySelectorAll("table.sortable").forEach(syncTableSelectAll);
+      if (!bulkBar) return;
+      if (n === 0) {
+        bulkBar.classList.remove("is-visible");
+        if (bulkStatus) bulkStatus.textContent = "";
+        return;
+      }
+      bulkBar.classList.add("is-visible");
+      if (bulkCount) {
+        bulkCount.textContent = n + " selected";
+      }
+    }
+
+    document.querySelectorAll("input.row-check").forEach(function (check) {
+      check.addEventListener("change", syncBulkBar);
+    });
+
+    document.querySelectorAll("thead input.select-table").forEach(function (master) {
+      master.addEventListener("change", function () {
+        var table = master.closest("table");
+        if (!table) return;
+        table.querySelectorAll("tbody input.row-check").forEach(function (c) {
+          c.checked = master.checked;
+        });
+        syncBulkBar();
+      });
+    });
+
+    if (bulkClearBtn) {
+      bulkClearBtn.addEventListener("click", function () {
+        document.querySelectorAll("input.row-check").forEach(function (c) { c.checked = false; });
+        syncBulkBar();
+      });
+    }
+
+    if (bulkDeleteBtn) {
+      bulkDeleteBtn.addEventListener("click", async function () {
+        var checks = selectedChecks();
+        if (!checks.length || !key) return;
+        var shares = checks.map(shareFromEl);
+        var labels = shares.map(function (s) { return s.label || s.itemKey || s.collectionKey; });
+        var preview = labels.slice(0, 8).join("\\n");
+        if (labels.length > 8) preview += "\\n… and " + (labels.length - 8) + " more";
+        if (!confirm("Delete " + shares.length + " published share" + (shares.length === 1 ? "" : "s") + "?\\n\\n" + preview + "\\n\\nThis cannot be undone.")) {
+          return;
+        }
+        bulkDeleteBtn.disabled = true;
+        document.querySelectorAll("button.delete").forEach(function (b) { b.disabled = true; });
+        document.querySelectorAll("input.row-check, input.select-table").forEach(function (c) { c.disabled = true; });
+        var failed = [];
+        for (var i = 0; i < shares.length; i++) {
+          if (bulkStatus) {
+            bulkStatus.textContent = "Deleting " + (i + 1) + " of " + shares.length + "…";
+          }
+          try {
+            await deleteShare(shares[i]);
+          } catch (err) {
+            failed.push((shares[i].label || shares[i].itemKey || shares[i].collectionKey) + ": " + (err && err.message ? err.message : String(err)));
+          }
+        }
+        if (failed.length) {
+          alert("Deleted " + (shares.length - failed.length) + " of " + shares.length + ". Failures:\\n\\n" + failed.join("\\n"));
+          location.reload();
+          return;
+        }
+        location.reload();
+      });
+    }
+
     document.querySelectorAll("button.delete").forEach(function (btn) {
       btn.addEventListener("click", async function () {
-        var kind = btn.getAttribute("data-kind") || "syllabus";
-        var userId = btn.getAttribute("data-user-id") || "";
-        var libraryId = btn.getAttribute("data-library-id") || "";
-        var collectionKey = btn.getAttribute("data-collection-key") || "";
-        var itemKey = btn.getAttribute("data-item-key") || "";
-        var label = btn.getAttribute("data-label") || collectionKey || itemKey;
-        if (!key || !userId || !libraryId) return;
-        if (kind === "item") {
-          if (!itemKey) return;
+        var share = shareFromEl(btn);
+        var label = share.label || share.collectionKey || share.itemKey;
+        if (!key || !share.userId || !share.libraryId) return;
+        if (share.kind === "item") {
+          if (!share.itemKey) return;
           if (!confirm("Unpublish shared item?\\n\\n" + label + "\\n\\nRemoves the public item page (attached files stay if a syllabus still links to them).")) {
             return;
           }
         } else {
-          if (!collectionKey) return;
+          if (!share.collectionKey) return;
           if (!confirm("Delete published syllabus?\\n\\n" + label + "\\n\\nThis cannot be undone.")) {
             return;
           }
         }
         btn.disabled = true;
         try {
-          var url = new URL(kind === "item" ? "/admin/item" : "/admin/syllabus", location.origin);
-          url.searchParams.set("key", key);
-          url.searchParams.set("userId", userId);
-          url.searchParams.set("libraryId", libraryId);
-          if (kind === "item") {
-            url.searchParams.set("itemKey", itemKey);
-          } else {
-            url.searchParams.set("collectionKey", collectionKey);
-          }
-          var res = await fetch(url.toString(), { method: "DELETE" });
-          var body = await res.json().catch(function () { return {}; });
-          if (!res.ok) {
-            throw new Error(body.message || body.error || ("HTTP " + res.status));
-          }
+          await deleteShare(share);
           location.reload();
         } catch (err) {
           alert("Delete failed: " + (err && err.message ? err.message : String(err)));
@@ -762,6 +1055,8 @@ ${trs}
         }
       });
     });
+
+    syncBulkBar();
 
     function cellValue(td) {
       if (!td) return { empty: true, num: 0, text: "" };

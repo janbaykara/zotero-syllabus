@@ -36,6 +36,7 @@ import {
   patchPublishItemRefs,
   putPublishObject,
 } from "./publishAuth";
+import { isDevelopmentEnv } from "./env";
 import {
   localFileFingerprint,
   remoteMatchesLocal,
@@ -45,9 +46,12 @@ import {
   rememberPublishedItemUrl,
 } from "./publishItemUrls";
 import { PUBLISH_OG_IMAGE, bytesContentFingerprint } from "./publishOgImage";
+import { generateBibliographyForPrint } from "./cite";
+import { loadShareCoverCss } from "./loadPublishViewerAssets";
 import { pickBestPublishAttachment } from "./publishSyllabus";
 import type { PublishTarget } from "./publishTarget";
 import { fallbackItemsAsZoteroRdf } from "./rdf";
+import { buildHighwireMetaTags, extractCoinsSpans } from "./zoteroCoins";
 
 export type ItemPublishAttachment = {
   attachment: Zotero.Item;
@@ -102,9 +106,9 @@ export function collectAllItemShareAttachments(
 
   const consider = (att: Zotero.Item | false | null | undefined) => {
     if (!att || !att.isAttachment?.() || seen.has(att.id)) return;
-    const linkMode = att.attachmentLinkMode;
-    // Skip linked-URL-only (typically 2 without local file — checked later by path).
-    if (linkMode === 2 && !att.attachmentPath) return;
+    // LINK_MODE_LINKED_URL — URL bookmark only; no file to upload.
+    const linkedUrl = Zotero.Attachments?.LINK_MODE_LINKED_URL ?? 3;
+    if (att.attachmentLinkMode === linkedUrl) return;
     seen.add(att.id);
     const ext = extensionForAttachment(att);
     const contentType = String(att.attachmentContentType || "");
@@ -150,7 +154,7 @@ async function readAttachmentBytes(
   }
 }
 
-async function coverToDataUrl(item: Zotero.Item): Promise<{
+export async function coverToDataUrl(item: Zotero.Item): Promise<{
   dataUrl: string | null;
   placeholder: { color: string; title: string; creator: string } | null;
   jpegBytes: Uint8Array | null;
@@ -226,7 +230,7 @@ export function resolveShareItem(item: Zotero.Item): Zotero.Item {
   return item;
 }
 
-async function collectItemShareAnnotations(
+export async function collectItemShareAnnotations(
   item: Zotero.Item,
 ): Promise<ItemShareAnnotation[]> {
   const stream = await annotationsStreamForParent(item);
@@ -458,14 +462,39 @@ export async function publishItemToCloud(opts: {
   }
 
   const title = itemShareDisplayTitle(item);
+  const coverCss = await loadShareCoverCss().catch((err) => {
+    ztoolkit.log("item share cover CSS load failed:", err);
+    return "";
+  });
+
+  // Zotero Connector: Highwire meta + COinS from a one-item CSL bibliography.
+  const pdfFile = uploadedFiles.find((f) =>
+    f.relPath.toLowerCase().endsWith(".pdf"),
+  );
+  const highwireMetaHtml = buildHighwireMetaTags(item, {
+    pageUrl: publicUrl,
+    pdfUrl: pdfFile ? `${publicUrl}${pdfFile.relPath}` : undefined,
+  });
+  let coinsHtml = "";
+  try {
+    const coinsBib = await generateBibliographyForPrint([item], null);
+    if (coinsBib?.isHtml) {
+      coinsHtml = extractCoinsSpans(coinsBib.content);
+    }
+  } catch (err) {
+    ztoolkit.log("item share COinS failed:", err);
+  }
+
   const html = buildItemShareHtml({
     title,
     creators: getItemCreatorLine(item),
+    itemType: String(item.itemType || ""),
     itemTypeLabel,
     description: getItemAbstractSnippet(item).slice(0, 300),
     canonicalUrl: publicUrl,
     coverDataUrl: cover.dataUrl,
     coverPlaceholder: cover.placeholder,
+    coverCss,
     ogImageUrl: ogImageReady ? `${publicUrl}${PUBLISH_OG_IMAGE}` : undefined,
     metaRows: collectItemShareMeta(item),
     citationHtml: citationHtml
@@ -479,6 +508,8 @@ export async function publishItemToCloud(opts: {
       rdfHref: hasRdf ? PUBLISH_BIBLIOGRAPHY_RDF : undefined,
     },
     annotations,
+    highwireMetaHtml,
+    coinsHtml,
   });
 
   opts.onProgress?.("upload", done + 1, total);
@@ -491,6 +522,7 @@ export async function publishItemToCloud(opts: {
       title,
       itemType: itemTypeLabel,
       annotations: opts.includeAnnotations ? "y" : "n",
+      ...(isDevelopmentEnv() ? { dev: "y" } : {}),
     },
   });
   publicUrl = result.publicUrl || publicUrl;

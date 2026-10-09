@@ -29,7 +29,10 @@ export function assertSyllabusRelPath(relPath: string): string {
     p === "bibliography.bib" ||
     p === "bibliography.rdf" ||
     p === "og-image.jpg" ||
-    p === "itemKeys.json"
+    p === "itemKeys.json" ||
+    p === "share.json" ||
+    p === "viewer.js" ||
+    p === "viewer.css"
   ) {
     return p;
   }
@@ -115,6 +118,10 @@ export function contentTypeForPath(relPath: string): string {
   const lower = relPath.toLowerCase();
   if (lower.endsWith(".html") || lower.endsWith(".htm")) {
     return "text/html; charset=utf-8";
+  }
+  if (lower.endsWith(".css")) return "text/css; charset=utf-8";
+  if (lower.endsWith(".js") || lower.endsWith(".mjs")) {
+    return "text/javascript; charset=utf-8";
   }
   if (lower.endsWith(".json")) return "application/json; charset=utf-8";
   if (lower.endsWith(".ris")) return "application/x-research-info-systems";

@@ -98,7 +98,10 @@ import {
   serializeSyllabusNoteFallback,
   withUnrecognizedDocumentFields,
 } from "./syllabusNoteHtml";
-import { isPersonalReadingOrderNote } from "./personalReadingOrder";
+import {
+  getPersonalReadingOrderDescription,
+  isPersonalReadingOrderNote,
+} from "./personalReadingOrder";
 
 export { absorbSyllabusExtraFromItems } from "./syllabusExtra";
 export {
@@ -2700,6 +2703,14 @@ export async function mutateCollectionDocument(
         const mutatorSetPriorities =
           JSON.stringify(mutated.priorities ?? null) !==
           JSON.stringify(current.priorities ?? null);
+        // Gallery “Add a description…” lives on the Personal Reading Order
+        // note — seed the syllabus blurb from it when turning a gallery into
+        // a syllabus so the user does not retype.
+        const galleryDescription =
+          getPersonalReadingOrderDescription(collection).trim();
+        const hasSyllabusDescription = !!(
+          next.description && String(next.description).trim()
+        );
         next = {
           ...next,
           priorities: mutatorSetPriorities
@@ -2709,6 +2720,9 @@ export async function mutateCollectionDocument(
             next.createSubcollections === undefined
               ? false
               : next.createSubcollections,
+          ...(galleryDescription && !hasSyllabusDescription
+            ? { description: galleryDescription }
+            : {}),
         };
       }
       setCacheEntry(ref, note.id || null, note.version || 0, next);

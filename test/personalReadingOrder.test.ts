@@ -47,6 +47,20 @@ describe("personal reading order", function () {
     assert.equal(parsed!.version, PERSONAL_READING_ORDER_VERSION);
   });
 
+  it("round-trips an optional gallery description", function () {
+    const html = serializePersonalReadingOrderNote({
+      version: PERSONAL_READING_ORDER_VERSION,
+      order: ["a"],
+      done: [],
+      assignmentDone: [],
+      description: "A reading list for Zen.",
+    });
+    assert.include(html, "A reading list for Zen.");
+    const parsed = parsePersonalReadingOrderNote(html);
+    assert.isNotNull(parsed);
+    assert.equal(parsed!.description, "A reading list for Zen.");
+  });
+
   it("defaults missing done fields to empty on parse", function () {
     const html = `<pre ${PERSONAL_READING_ORDER_PRE_ATTR}="1">${JSON.stringify({
       version: 1,

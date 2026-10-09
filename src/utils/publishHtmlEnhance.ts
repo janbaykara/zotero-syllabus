@@ -64,9 +64,10 @@ function svgToDataUri(svg: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-async function itemTypeIconDataUri(
+/** Embeddable data-URI for a Zotero item-type icon (public HTML / share.json). */
+export async function itemTypeIconDataUri(
   itemType: string,
-  size: 16 | 28,
+  size: 16 | 28 = 28,
 ): Promise<string | null> {
   const svg = await svgForItemType(itemType, size);
   return svg ? svgToDataUri(svg) : null;

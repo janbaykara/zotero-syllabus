@@ -1,5 +1,12 @@
 @import url("galleryCover.css");
 
+/* Zotero chrome defaults to content-box; w-full + padding would overflow. */
+.syllabus-publish-banner {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+}
+
 /* Segmented Table / Gallery / Syllabus control */
 #syllabus-view-mode-cluster {
   flex: 0 0 auto;
@@ -344,7 +351,40 @@
 
 .syllabus-gallery-menu {
   position: relative;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.15rem;
   flex-shrink: 0;
+}
+
+/* Match print trigger to the … options button (same row, same icon size).
+   Only the trigger — not the fixed popover (also a direct child div). */
+.syllabus-gallery-menu .syllabus-save-format-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2rem;
+  width: 2rem;
+  margin: 0;
+  padding: 0;
+  border-radius: 4px;
+  color: var(--fill-secondary, #8c8c8c);
+  cursor: pointer;
+}
+
+.syllabus-gallery-menu .syllabus-save-format-trigger:hover {
+  color: var(--fill-primary);
+  background: var(--fill-quinary, rgba(0, 0, 0, 0.06));
+}
+
+.syllabus-gallery-menu .syllabus-save-format-trigger svg {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
 }
 
 .syllabus-gallery-prefs {

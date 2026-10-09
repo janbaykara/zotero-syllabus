@@ -1,5 +1,6 @@
 import { useAtomValue } from "jotai";
 import {
+  getPersonalReadingOrderDescription,
   getPersonalReadingOrderGeneration,
   getPersonalReadingOrderKeys,
   hasPersonalReadingOrder,
@@ -45,4 +46,20 @@ export function useHasPersonalReadingOrder(
   return keys.length > 0;
 }
 
-export { hasPersonalReadingOrder, getPersonalReadingOrderKeys };
+/** Reactive gallery / reading-list description for a collection. */
+export function usePersonalReadingOrderDescription(
+  collectionId: number | null | undefined,
+): string {
+  const generation = usePersonalReadingOrderGeneration();
+  if (!collectionId) {
+    return "";
+  }
+  void generation;
+  return getPersonalReadingOrderDescription(collectionId);
+}
+
+export {
+  hasPersonalReadingOrder,
+  getPersonalReadingOrderKeys,
+  getPersonalReadingOrderDescription,
+};

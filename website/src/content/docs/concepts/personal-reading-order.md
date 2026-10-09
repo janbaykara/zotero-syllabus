@@ -3,7 +3,7 @@ title: Personal reading order
 description: Your own flat reading sequence for a collection, separate from class structure.
 ---
 
-**Personal reading order** is a flat list of item keys you want to read in — stored separately from syllabus class structure. Use it when class order is not how you plan to tackle the pile.
+**Personal reading order** is a flat list of item keys you want to read in — stored separately from syllabus class structure. Use it when class order is not how you plan to tackle the pile. The same note can also hold an optional **Gallery description** for the collection (shown under the Gallery title and on published reading-list pages).
 
 ## What it affects
 

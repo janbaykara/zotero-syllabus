@@ -965,11 +965,22 @@ async function handlePublicGet(request: Request, env: Env): Promise<Response> {
     relPath: parsed.relPath,
   });
   const headers = new Headers();
+  // Prefer path-derived MIME over R2 metadata — older uploads stored
+  // viewer.css/js as application/octet-stream, which browsers refuse to apply.
+  const fromPath = contentTypeForPath(parsed.relPath);
+  const stored = obj.httpMetadata?.contentType || "";
   headers.set(
     "content-type",
-    obj.httpMetadata?.contentType || contentTypeForPath(parsed.relPath),
+    fromPath !== "application/octet-stream" ? fromPath : stored || fromPath,
   );
-  if (parsed.relPath === "index.html" || parsed.relPath === "") {
+  // share.json / viewer.* change on every republish — don't cache stale kind/layout.
+  if (
+    parsed.relPath === "index.html" ||
+    parsed.relPath === "" ||
+    parsed.relPath === "share.json" ||
+    parsed.relPath === "viewer.js" ||
+    parsed.relPath === "viewer.css"
+  ) {
     headers.set("cache-control", "no-cache, max-age=0, must-revalidate");
   } else {
     headers.set("cache-control", "public, max-age=300");

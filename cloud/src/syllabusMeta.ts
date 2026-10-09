@@ -4,14 +4,20 @@ export const SYLLABUS_META_TITLE = "title";
 export const SYLLABUS_META_COURSE_CODE = "courseCode";
 export const SYLLABUS_META_INSTITUTION = "institution";
 export const SYLLABUS_META_ITEM_TYPE = "itemType";
-/** Item shares only: "y" or "n". */
+/** Item / collection shares: "y" or "n". */
 export const SYLLABUS_META_ANNOTATIONS = "annotations";
+/** Collection shares: "syllabus" | "gallery". */
+export const SYLLABUS_META_SHARE_KIND = "shareKind";
+/** Published from a development (scaffold) plugin build: "y". */
+export const SYLLABUS_META_DEV = "dev";
 
 export const META_HEADER_TITLE = "x-syllabus-title";
 export const META_HEADER_COURSE_CODE = "x-syllabus-course-code";
 export const META_HEADER_INSTITUTION = "x-syllabus-institution";
 export const META_HEADER_ITEM_TYPE = "x-syllabus-item-type";
 export const META_HEADER_ANNOTATIONS = "x-syllabus-annotations";
+export const META_HEADER_SHARE_KIND = "x-syllabus-share-kind";
+export const META_HEADER_DEV = "x-syllabus-dev";
 
 /** Max stored length per field (well under R2's 8 KiB metadata budget). */
 export const META_FIELD_MAX_CHARS = 512;
@@ -22,8 +28,12 @@ export type SyllabusIndexMeta = {
   institution: string;
   /** Item shares: localized item type label. */
   itemType: string;
-  /** Item shares: "y" | "n" when known. */
+  /** Item / collection shares: "y" | "n" when known. */
   annotations: string;
+  /** Collection shares: "syllabus" | "gallery". */
+  shareKind: string;
+  /** "y" when published from a development plugin build. */
+  dev: string;
 };
 
 export function sanitizeMetaField(
@@ -69,6 +79,21 @@ export function encodeMetaHeader(value: string): string {
   return cleaned ? encodeURIComponent(cleaned) : "";
 }
 
+function sanitizeShareKind(raw: string | null | undefined): string {
+  const v = sanitizeMetaField(raw).toLowerCase();
+  if (v === "syllabus" || v === "gallery") return v;
+  return "";
+}
+
+/** Normalize dev flag to "y" / "". */
+export function sanitizeDevFlag(raw: string | null | undefined): "" | "y" {
+  const v = sanitizeMetaField(raw).toLowerCase();
+  if (v === "y" || v === "yes" || v === "true" || v === "1" || v === "dev") {
+    return "y";
+  }
+  return "";
+}
+
 export function syllabusMetaFromHeaders(
   headers: Headers,
 ): SyllabusIndexMeta | null {
@@ -79,10 +104,30 @@ export function syllabusMetaFromHeaders(
   const annotations = sanitizeAnnotationsFlag(
     decodeMetaHeader(headers.get(META_HEADER_ANNOTATIONS)),
   );
-  if (!title && !courseCode && !institution && !itemType && !annotations) {
+  const shareKind = sanitizeShareKind(
+    decodeMetaHeader(headers.get(META_HEADER_SHARE_KIND)),
+  );
+  const dev = sanitizeDevFlag(decodeMetaHeader(headers.get(META_HEADER_DEV)));
+  if (
+    !title &&
+    !courseCode &&
+    !institution &&
+    !itemType &&
+    !annotations &&
+    !shareKind &&
+    !dev
+  ) {
     return null;
   }
-  return { title, courseCode, institution, itemType, annotations };
+  return {
+    title,
+    courseCode,
+    institution,
+    itemType,
+    annotations,
+    shareKind,
+    dev,
+  };
 }
 
 export function customMetadataFromSyllabusMeta(
@@ -96,6 +141,12 @@ export function customMetadataFromSyllabusMeta(
   if (meta.annotations === "y" || meta.annotations === "n") {
     out[SYLLABUS_META_ANNOTATIONS] = meta.annotations;
   }
+  if (meta.shareKind === "syllabus" || meta.shareKind === "gallery") {
+    out[SYLLABUS_META_SHARE_KIND] = meta.shareKind;
+  }
+  if (meta.dev === "y") {
+    out[SYLLABUS_META_DEV] = "y";
+  }
   return out;
 }
 
@@ -108,6 +159,8 @@ export function syllabusMetaFromCustomMetadata(
     institution: sanitizeMetaField(custom?.[SYLLABUS_META_INSTITUTION]),
     itemType: sanitizeMetaField(custom?.[SYLLABUS_META_ITEM_TYPE]),
     annotations: sanitizeAnnotationsFlag(custom?.[SYLLABUS_META_ANNOTATIONS]),
+    shareKind: sanitizeShareKind(custom?.[SYLLABUS_META_SHARE_KIND]),
+    dev: sanitizeDevFlag(custom?.[SYLLABUS_META_DEV]),
   };
 }
 
@@ -118,4 +171,6 @@ export const SYLLABUS_META_HEADER_NAMES = [
   META_HEADER_INSTITUTION,
   META_HEADER_ITEM_TYPE,
   META_HEADER_ANNOTATIONS,
+  META_HEADER_SHARE_KIND,
+  META_HEADER_DEV,
 ] as const;

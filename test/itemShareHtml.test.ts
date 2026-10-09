@@ -32,6 +32,7 @@ describe("item share HTML", function () {
     const html = buildItemShareHtml({
       title: "Test Paper",
       creators: "Ada Lovelace",
+      itemType: "journalArticle",
       itemTypeLabel: "Journal Article",
       description: "An abstract",
       canonicalUrl: "https://example.test/u/1/1/item/ITEM/",
@@ -57,6 +58,8 @@ describe("item share HTML", function () {
     assert.include(html, "Test Paper");
     assert.include(html, "Ada Lovelace");
     assert.include(html, "data:image/png;base64,abc");
+    assert.include(html, "syllabus-gallery-cover-natural");
+    assert.include(html, "syllabus-gallery-cover-img");
     assert.include(html, 'href="files/ATT.pdf"');
     assert.include(html, '<iframe src="files/ATT.pdf"');
     assert.include(html, "bibliography.ris");
@@ -70,10 +73,26 @@ describe("item share HTML", function () {
     assert.notInclude(html, 'class="annotations"');
   });
 
+  it("applies book spine treatment on book covers", function () {
+    const html = buildItemShareHtml({
+      title: "Cold Intimacies",
+      creators: "Illouz",
+      itemType: "book",
+      itemTypeLabel: "Book",
+      canonicalUrl: "https://example.test/u/1/1/item/ITEM/",
+      coverDataUrl: "data:image/png;base64,abc",
+      metaRows: [],
+      files: [],
+    });
+    assert.include(html, "syllabus-gallery-book-spine");
+    assert.include(html, "syllabus-gallery-cover-natural");
+  });
+
   it("renders annotations section with copy controls in given order", function () {
     const html = buildItemShareHtml({
       title: "Annotated Paper",
       creators: "Ada Lovelace",
+      itemType: "journalArticle",
       itemTypeLabel: "Journal Article",
       canonicalUrl: "https://example.test/u/1/1/item/ITEM/",
       metaRows: [],
@@ -102,7 +121,10 @@ describe("item share HTML", function () {
     assert.include(html, "Second quote later");
     assert.include(html, 'data-copy="First quote in document"');
     assert.include(html, 'class="ann-copy-all"');
-    assert.include(html, 'data-copy="First quote in document\n\nSecond quote later\n\nA note"');
+    assert.include(
+      html,
+      'data-copy="First quote in document\n\nSecond quote later\n\nA note"',
+    );
     assert.include(html, "--highlight-color:#ffd400");
     assert.include(html, "<p>A note</p>");
     assert.include(html, "navigator.clipboard");
@@ -116,6 +138,7 @@ describe("item share HTML", function () {
     const html = buildItemShareHtml({
       title: "No Annotations",
       creators: "",
+      itemType: "book",
       itemTypeLabel: "Book",
       canonicalUrl: "https://example.test/u/1/1/item/ITEM/",
       metaRows: [],
