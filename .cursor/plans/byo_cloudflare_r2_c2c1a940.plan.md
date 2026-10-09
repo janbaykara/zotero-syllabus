@@ -28,8 +28,6 @@ flowchart LR
   worker --> byo
 ```
 
-
-
 ## Non-goals (v1)
 
 - Deploying a full Worker clone into the user’s account.
@@ -45,8 +43,9 @@ Today all object I/O uses `env.BUCKET` (`[cloud/src/index.ts](cloud/src/index.ts
 
 1. **Control plane** (always operator R2): OAuth ready blobs, anything not under `users/{userId}/`.
 2. **User content** (`users/{userId}/…`): resolve via `getContentStore(env, userId)`:
-  - no BYO record → `env.BUCKET` (current behaviour)
-  - BYO record → S3-compatible client against `https://{accountId}.r2.cloudflarestorage.com` / bucket name
+
+- no BYO record → `env.BUCKET` (current behaviour)
+- BYO record → S3-compatible client against `https://{accountId}.r2.cloudflarestorage.com` / bucket name
 
 Implement a thin `ContentStore` interface (`get` / `head` / `put` / `delete` / `list`) wrapping native `R2Bucket` and an `aws4fetch`-style R2 client. Route **public** `/u/{userId}/…` and **authenticated** `/v1/`* object ops through it. Keep quota KV (`usage:{userId}`) as today.
 
@@ -110,4 +109,3 @@ List `storage` mode per user; for BYO users, size/list via their credentials or 
 3. Cloudflare OAuth connect/disconnect + encrypt.
 4. Plugin UI + Fluent + `/v1/me` storage field.
 5. Admin + docs.
-

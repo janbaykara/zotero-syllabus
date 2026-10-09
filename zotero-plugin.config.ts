@@ -77,25 +77,40 @@ export default defineConfig({
           "react-dom": "preact/compat",
         },
         banner: {
-          // @dnd-kit/abstract needs bare AbortController + queueMicrotask;
-          // chrome bootstrap sandboxes often lack both (and may lack `window`).
+          // @dnd-kit/abstract ActivationController extends AbortController at
+          // module eval; chrome bootstrap sandboxes often lack bare bindings
+          // (headless CI especially). Prefer ChromeUtils.importGlobalProperties,
+          // then fall back to window / hiddenDOMWindow.
           js: `
 (function () {
   var g = typeof globalThis !== "undefined" ? globalThis : null;
-  var w = null;
-  try {
-    w = typeof window !== "undefined" ? window
-      : Components.classes["@mozilla.org/appshell/appShellService;1"]
-          .getService(Components.interfaces.nsIAppShellService).hiddenDOMWindow;
-  } catch (e) {}
-  if (g && typeof g.AbortController !== "function" && w && w.AbortController) {
-    g.AbortController = w.AbortController;
-    if (w.AbortSignal) g.AbortSignal = w.AbortSignal;
+  if (g && typeof g.AbortController !== "function") {
+    try {
+      ChromeUtils.importGlobalProperties(["AbortController", "AbortSignal"]);
+    } catch (e) {}
+  }
+  if (g && typeof g.AbortController !== "function") {
+    try {
+      var w = typeof window !== "undefined" ? window
+        : Components.classes["@mozilla.org/appshell/appShellService;1"]
+            .getService(Components.interfaces.nsIAppShellService).hiddenDOMWindow;
+      if (w && w.AbortController) {
+        g.AbortController = w.AbortController;
+        if (w.AbortSignal) g.AbortSignal = w.AbortSignal;
+      }
+    } catch (e2) {}
   }
   if (g && typeof g.queueMicrotask !== "function") {
-    g.queueMicrotask = (w && typeof w.queueMicrotask === "function")
-      ? w.queueMicrotask.bind(w)
-      : function (cb) { Promise.resolve().then(cb); };
+    try {
+      var w2 = typeof window !== "undefined" ? window
+        : Components.classes["@mozilla.org/appshell/appShellService;1"]
+            .getService(Components.interfaces.nsIAppShellService).hiddenDOMWindow;
+      g.queueMicrotask = (w2 && typeof w2.queueMicrotask === "function")
+        ? w2.queueMicrotask.bind(w2)
+        : function (cb) { Promise.resolve().then(cb); };
+    } catch (e3) {
+      g.queueMicrotask = function (cb) { Promise.resolve().then(cb); };
+    }
   }
 })();
 var AbortController = globalThis.AbortController;
