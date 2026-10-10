@@ -47,7 +47,7 @@
     "jotai": "^3.0.1",
     "jotai-family": "^1.1.0",
     "lru-cache": "^11.5.2",
-    "lucide-preact": "^0.562.0",
+    "lucide-preact": "^1.52.0",
     "markdown-it": "^15.0.2",
     "pluralize": "^8.0.0",
     "preact": "^10.29.8",
