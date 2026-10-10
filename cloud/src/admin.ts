@@ -646,8 +646,18 @@ ${trs}
       color: #111;
       background: #fafafa;
     }
-    h1 { font-size: 1.35rem; margin: 0 0 0.35rem; }
+    h1 { font-size: 1.35rem; margin: 0; }
     h2 { font-size: 1.05rem; margin: 1.75rem 0 0.6rem; font-weight: 600; }
+    .page-head {
+      display: flex; flex-wrap: wrap; align-items: baseline;
+      justify-content: space-between; gap: 0.5rem 1.25rem;
+      margin: 0 0 0.35rem;
+    }
+    .page-head a {
+      color: #1d4ed8; font-size: 0.92em; text-decoration: none;
+      white-space: nowrap;
+    }
+    .page-head a:hover { text-decoration: underline; }
     .muted { color: #6b7280; font-weight: 400; font-size: 0.92em; }
     .totals {
       display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem;
@@ -866,8 +876,11 @@ ${trs}
   </style>
 </head>
 <body>
-  <h1>Syllabus publish admin</h1>
-  <p class="muted">Storage and attachment counts from R2 for published syllabi and Share via URL item pages. Metadata is course code · institution for syllabi, or item type for items (from index.html customMetadata; re-publish/sync to populate older shares). <strong>Title</strong> links to the public page. <strong>Annotations</strong> is a checkbox when the share included annotations, otherwise —. Pages published from a <strong>development</strong> plugin build are marked in the <strong>Dev</strong> column (and amber title links); they are omitted from chart bar heights and 30-day header totals, but still appear in chart tooltips with a <span class="type-pill type-dev">Dev</span> badge (row-level counts still show). Page views, file downloads, and citation exports (RIS/BIB/RDF) are last-30-day totals from Analytics Engine. Use row checkboxes for <strong>bulk delete</strong>, or Delete on a single row (syllabus wipe or item page unpublish); the publisher can re-publish from the plugin.</p>
+  <div class="page-head">
+    <h1>Syllabus publish admin</h1>
+    <a href="https://dash.cloudflare.com/02bb1c1fe8fa155b4f84c74cbf9d8b36/web-analytics/overview?siteTag~in=d19e602cb91a4cfd9f55230ae70223d8&amp;excludeBots=Yes" target="_blank" rel="noopener noreferrer">Docs site analytics</a>
+  </div>
+  <p class="muted">Storage and attachment counts from R2 for published syllabi and Share via URL item pages. Metadata is course code · institution for syllabi, or item type for items (from index.html customMetadata; re-publish/sync to populate older shares). <strong>Title</strong> links to the public page. <strong>Annotations</strong> is a checkbox when the share included annotations, otherwise —. Pages published from a <strong>development</strong> plugin build are marked in the <strong>Dev</strong> column (and amber title links); they are omitted from chart bar heights and 30-day header totals, but still appear in chart tooltips with a <span class="type-pill type-dev">Dev</span> badge (row-level counts still show). Page views, file downloads, and citation exports (RIS/BIB/RDF) are last-30-day totals from Analytics Engine. <strong>Docs site analytics</strong> opens Cloudflare Web Analytics for the GitHub Pages docs site. Use row checkboxes for <strong>bulk delete</strong>, or Delete on a single row (syllabus wipe or item page unpublish); the publisher can re-publish from the plugin.</p>
   <div class="bulk-bar" id="bulk-bar" aria-live="polite">
     <span class="bulk-count" id="bulk-count">0 selected</span>
     <button type="button" class="bulk-delete" id="bulk-delete">Delete selected</button>
