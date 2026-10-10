@@ -52,6 +52,11 @@ jobs:
       - name: Build
         run: pnpm build
         working-directory: website
+        env:
+          # Cloudflare Web Analytics site token (public beacon id). Create a site at
+          # https://dash.cloudflare.com/?to=/:account/web-analytics then add the
+          # repo secret CLOUDFLARE_WEB_ANALYTICS_TOKEN. Omit → site builds without analytics.
+          PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN: ${{ secrets.CLOUDFLARE_WEB_ANALYTICS_TOKEN }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

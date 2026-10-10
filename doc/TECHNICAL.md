@@ -329,6 +329,8 @@ Other plugins access Syllabus through **`Zotero.Syllabus.api`** (same pattern as
 
 **Generated reference:** the docs site builds a single **Reference → API** page from those typings via [`starlight-typedoc`](https://starlight-typedoc.vercel.app/) ([`website/astro.config.mjs`](../website/astro.config.mjs) → output `api/`; intro + example live in the `syllabusApi` JSDoc in [`src/api.ts`](../src/api.ts)). Preview: https://janbaykara.github.io/zotero-syllabus/api/variables/syllabusapi/. End-user-facing summary: [README § API](../README.md#api).
 
+**Docs analytics:** Cloudflare Web Analytics (JS beacon) is injected from `PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN` during the docs site build. CI maps the repo secret `CLOUDFLARE_WEB_ANALYTICS_TOKEN`. Setup: [`website/README.md`](../website/README.md#cloudflare-web-analytics).
+
 ## Local development
 
 Requires Zotero 7+ (8–10 recommended), Node.js LTS, Git, and pnpm. Built on the [Zotero Plugin Template](https://github.com/windingwind/zotero-plugin-template).

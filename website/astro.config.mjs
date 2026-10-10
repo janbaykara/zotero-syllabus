@@ -5,6 +5,10 @@ import starlightTypeDoc from "starlight-typedoc";
 
 const base = "/zotero-syllabus";
 
+/** Cloudflare Web Analytics site token (public; ships in page HTML). */
+const cloudflareWebAnalyticsToken =
+  process.env.PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN?.trim() || "";
+
 // https://astro.build/config
 export default defineConfig({
   site: "https://janbaykara.github.io",
@@ -212,6 +216,22 @@ export default defineConfig({
             href: `${base}/favicon.png`,
           },
         },
+        // GitHub Pages is not proxied by Cloudflare — JS snippet mode.
+        // https://developers.cloudflare.com/web-analytics/get-started/
+        ...(cloudflareWebAnalyticsToken
+          ? [
+              {
+                tag: "script",
+                attrs: {
+                  src: "https://static.cloudflareinsights.com/beacon.min.js",
+                  "data-cf-beacon": JSON.stringify({
+                    token: cloudflareWebAnalyticsToken,
+                  }),
+                  defer: true,
+                },
+              },
+            ]
+          : []),
       ],
     }),
   ],

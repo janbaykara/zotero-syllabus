@@ -35,3 +35,13 @@ Output is `website/dist`. Deployed by [`.github/workflows/docs.yml`](../.github/
 3. After the first successful deploy, the site is at `https://janbaykara.github.io/zotero-syllabus/`.
 
 `astro.config.mjs` sets `site` and `base: '/zotero-syllabus'` for project pages. For a custom domain later, set `base: '/'` and add a `public/CNAME`.
+
+### Cloudflare Web Analytics
+
+The site is on GitHub Pages, so analytics uses Cloudflare’s [JS snippet](https://developers.cloudflare.com/web-analytics/get-started/) (not automatic edge injection).
+
+1. In the [Cloudflare dashboard](https://dash.cloudflare.com/?to=/:account/web-analytics), add a site for `https://janbaykara.github.io/zotero-syllabus/` and copy the site token.
+2. Repo **Settings → Secrets and variables → Actions**: create `CLOUDFLARE_WEB_ANALYTICS_TOKEN` with that token.
+3. Re-run the **Docs** workflow (or push a docs change). The build injects the beacon when `PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN` is set.
+
+Local preview with analytics: `PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN=… pnpm docs:dev` (from the repo root). The token is a public site identifier embedded in page HTML, not a dashboard credential.
