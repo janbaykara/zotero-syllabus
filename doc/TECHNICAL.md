@@ -333,7 +333,7 @@ Other plugins access Syllabus through **`Zotero.Syllabus.api`** (same pattern as
 
 ## Local development
 
-Requires Zotero 7+ (8–10 recommended), Node.js LTS, Git, and pnpm. Built on the [Zotero Plugin Template](https://github.com/windingwind/zotero-plugin-template).
+Requires Zotero 7+ (8–11 recommended), Node.js LTS, Git, and pnpm. Built on the [Zotero Plugin Template](https://github.com/windingwind/zotero-plugin-template).
 
 ```bash
 git clone https://github.com/janbaykara/zotero-syllabus.git
@@ -388,6 +388,7 @@ cloud/                           # Cloudflare Worker (R2 + KV + OAuth)
 - Zotero 7 plugin development guide: https://gist.github.com/EwoutH/04c8df5a97963b5b46cec9f392ceb103#file-zotero_7_plugin_dev_guide-md
 - Zotero 7 plugin technical notes: https://www.zotero.org/support/dev/zotero_7_for_developers#plugin_changes
 - Zotero 10 plugin technical notes: https://www.zotero.org/support/dev/zotero_10_for_developers
+- Zotero 11 plugin technical notes: https://www.zotero.org/support/dev/zotero_11_for_developers
 - https://www.zotero.org/support/kb/connector_zotero_unavailable
 - Translator code API: https://github.com/zotero/translators/blob/master/index.d.ts
 - Zotero Web API OAuth: https://www.zotero.org/support/dev/web_api/v3/oauth

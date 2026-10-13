@@ -15,7 +15,7 @@ Zotero Syllabus turns your collections into course reading lists: order items by
 6. Restart Zotero.
 
 :::tip[Zotero version]  
-For best results, use [Zotero 8, 9, or 10](https://www.zotero.org/download/). Zotero 7 works but has some minor styling issues.  
+For best results, use [Zotero 8, 9, 10, or 11](https://www.zotero.org/download/). Zotero 7 works but has some minor styling issues.  
 :::
 
 ## Enable the views you need

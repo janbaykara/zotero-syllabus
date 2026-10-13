@@ -5,6 +5,7 @@ import {
   type BasicOptions,
   type TagElementProps,
 } from "zotero-plugin-toolkit";
+import { setXulBooleanAttribute, xulBooleanAttributeEntries } from "./zotero";
 
 /**
  * Local copy of toolkit MenuManager (removed in zotero-plugin-toolkit 5.1.1+).
@@ -34,17 +35,24 @@ export class MenuManager extends ManagerTool {
     }
     const doc: Document = popup.ownerDocument;
     const genMenuElement = (menuitemOption: MenuitemOptions) => {
+      const attributes: Record<string, string> = {
+        label: menuitemOption.label || "",
+        class: menuitemOption.class || "",
+        ...xulBooleanAttributeEntries({
+          hidden: Boolean(menuitemOption.hidden),
+          disabled: Boolean(menuitemOption.disabled),
+        }),
+      };
+      // Omit empty oncommand: Zotero 11 treats `.oncommand = "…"` as a WebIDL
+      // handler; keep attribute writes intentional only.
+      if (menuitemOption.oncommand) {
+        attributes.oncommand = menuitemOption.oncommand;
+      }
       const elementOption: TagElementProps = {
         tag: menuitemOption.tag,
         id: menuitemOption.id,
         namespace: "xul",
-        attributes: {
-          label: menuitemOption.label || "",
-          hidden: Boolean(menuitemOption.hidden),
-          disabled: Boolean(menuitemOption.disabled),
-          class: menuitemOption.class || "",
-          oncommand: menuitemOption.oncommand || "",
-        },
+        attributes,
         classList: menuitemOption.classList,
         styles: menuitemOption.styles || {},
         listeners: [],
@@ -58,8 +66,10 @@ export class MenuManager extends ManagerTool {
             elementOption.attributes!.class += " menuitem-iconic";
           }
         }
-        elementOption.styles!["list-style-image" as any] =
-          `url("${menuitemOption.icon}")`;
+        const iconUrl = `url("${menuitemOption.icon}")`;
+        elementOption.styles!["list-style-image" as any] = iconUrl;
+        // Zotero 11: menuitem icon is an HTML <img> using --menuitem-icon.
+        elementOption.styles!["--menuitem-icon" as any] = iconUrl;
       }
       if (menuitemOption.commandListener) {
         elementOption.listeners?.push({
@@ -68,8 +78,13 @@ export class MenuManager extends ManagerTool {
         });
       }
       if (menuitemOption.tag === "menuitem") {
-        elementOption.attributes!.type = menuitemOption.type || "";
-        elementOption.attributes!.checked = menuitemOption.checked || false;
+        if (menuitemOption.type) {
+          elementOption.attributes!.type = menuitemOption.type;
+        }
+        Object.assign(
+          elementOption.attributes!,
+          xulBooleanAttributeEntries({ checked: !!menuitemOption.checked }),
+        );
       }
       const menuItem = this.ui.createElement(
         doc,
@@ -91,11 +106,7 @@ export class MenuManager extends ManagerTool {
           if (typeof hidden === "undefined") {
             return;
           }
-          if (hidden) {
-            menuItem.setAttribute("hidden", "true");
-          } else {
-            menuItem.removeAttribute("hidden");
-          }
+          setXulBooleanAttribute(menuItem, "hidden", hidden);
         });
       }
       if (menuitemOption.isDisabled) {
@@ -107,11 +118,7 @@ export class MenuManager extends ManagerTool {
           if (typeof disabled === "undefined") {
             return;
           }
-          if (disabled) {
-            menuItem.setAttribute("disabled", "true");
-          } else {
-            menuItem.removeAttribute("disabled");
-          }
+          setXulBooleanAttribute(menuItem, "disabled", disabled);
         });
       }
       if (

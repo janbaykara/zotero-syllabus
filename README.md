@@ -1,6 +1,6 @@
 # Zotero Syllabus
 
-![zotero target version](https://img.shields.io/badge/Zotero-7%2F8%2F9%2F10-green?style=flat-square&logo=zotero&logoColor=CC2936)
+![zotero target version](https://img.shields.io/badge/Zotero-7%2F8%2F9%2F10%2F11-green?style=flat-square&logo=zotero&logoColor=CC2936)
 
 A Zotero add-on / plugin that turns your collections into syllabi and course reading lists. Order items by class, browse them in Gallery, keep a Home of what to open next, follow due dates on Reading Schedule, and review highlights in Annotation Feed.
 
@@ -18,7 +18,7 @@ Changing the plugin? Architecture, storage, and local development are in **[doc/
 6. Restart Zotero!
 
 > [!NOTE]
-> For best results, use [Zotero 8, 9, or 10](https://www.zotero.org/download/). Zotero 7 works but has some minor styling issues.
+> For best results, use [Zotero 8, 9, 10, or 11](https://www.zotero.org/download/). Zotero 7 works but has some minor styling issues.
 
 The plugin UI follows **Zotero’s language** (Settings → General → Language). Besides English and Simplified Chinese, that includes Brazilian and European Portuguese, German, Spanish, French, Italian, Japanese, Korean, Traditional Chinese, Dutch, Polish, Turkish, Arabic, Indonesian, Russian, Ukrainian, and Vietnamese.
 
@@ -113,7 +113,7 @@ Contributions are welcome — please open a Pull Request.
 
 See **[doc/TECHNICAL.md](doc/TECHNICAL.md)** for how the plugin stores syllabi, handles item merges, class folders, reading-list translators, and the rest of the architecture, as well as build, test, lint, and release commands.
 
-To run locally: clone the repo, `pnpm install`, copy `.env.example` to `.env` (set your Zotero path), then `pnpm start`. Requires Zotero 7+ (8–10 recommended), Node.js LTS, Git, and pnpm.
+To run locally: clone the repo, `pnpm install`, copy `.env.example` to `.env` (set your Zotero path), then `pnpm start`. Requires Zotero 7+ (8–11 recommended), Node.js LTS, Git, and pnpm.
 
 This plugin is built using the [Zotero Plugin Template](https://github.com/windingwind/zotero-plugin-template).
 

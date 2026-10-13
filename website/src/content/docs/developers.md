@@ -33,7 +33,7 @@ if (collection && Zotero.Syllabus.api.syllabus.has(collection)) {
 3. Copy `.env.example` to `.env` and set your Zotero path.
 4. `pnpm start`
 
-Requires Zotero 7+ (8–10 recommended), Node.js LTS, Git, and pnpm. The plugin is built with [zotero-plugin-template](https://github.com/windingwind/zotero-plugin-template) / scaffold.
+Requires Zotero 7+ (8–11 recommended), Node.js LTS, Git, and pnpm. The plugin is built with [zotero-plugin-template](https://github.com/windingwind/zotero-plugin-template) / scaffold.
 
 ## This documentation site
 

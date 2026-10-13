@@ -29,7 +29,7 @@ If **Class subcollections** is on, do not edit those child folders by hand. Re-a
 
 ## Styling looks off on Zotero 7
 
-Minor styling issues are expected on Zotero 7. Prefer Zotero 8, 9, or 10.
+Minor styling issues are expected on Zotero 7. Prefer Zotero 8, 9, 10, or 11.
 
 ## Still stuck?
 

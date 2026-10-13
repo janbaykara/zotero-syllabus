@@ -13,9 +13,9 @@ Your Cursor agent id is `{{AGENT_ID}}`. You must include this HTML comment uncha
 1. In `addon/manifest.json`, set `applications.zotero.strict_max_version` to `{{MAJOR}}.0.*`.
 2. Patch-bump the plugin version in `package.json` (for example `1.3.2` → `1.3.3`). This is required so a GitHub release can be published after merge. Do not bump major/minor unless behavior changes.
 3. Update user-facing Zotero version strings in `README.md` only:
-   - The badge on line 3 (`Zotero-7%2F8%2F9%2F10` → include `{{MAJOR}}`)
-   - The install note (“Zotero 8, 9, or 10”)
-   - Requirements (“8–10 recommended”)
+   - The badge on line 3 (`Zotero-7%2F8%2F9%2F10%2F11` → include `{{MAJOR}}`)
+   - The install note (“Zotero 8, 9, 10, or 11”)
+   - Requirements (“8–11 recommended”)
    - Leave `doc/README-zhCN.md` and `doc/README-frFR.md` alone.
 4. Read the developer changelog below. Grep this plugin’s Zotero API usage (`src/utils/zotero.ts` collection APIs, `src/hooks.ts` `Zotero.Server.Endpoints`, translators, file picker, notes, `src/modules/`). Patch **only** APIs this plugin actually calls.
 5. Add Mocha tests under `test/` for changelog APIs this plugin uses. Follow `test/startup.test.ts` (chai `assert`, live Zotero via zotero-plugin-scaffold).

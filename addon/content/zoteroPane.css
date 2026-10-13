@@ -51,7 +51,8 @@
 }
 
 .syllabus-view-mode-button[data-selected="true"],
-.syllabus-view-mode-button[checked="true"] {
+/* Zotero 11: reflected booleans use presence (often checked=""); match both. */
+.syllabus-view-mode-button[checked] {
   background-color: #7b4ddb !important;
   color: #fff !important;
 }
@@ -459,6 +460,12 @@
 .syllabus-my-annotations-search-input {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+/* Zotero 11: chrome search inputs get a native clear control; we draw our own. */
+.syllabus-my-annotations-search-input::-moz-search-clear-button,
+.syllabus-my-annotations-search-input::-webkit-search-cancel-button {
+  display: none;
 }
 
 .syllabus-my-annotations-search-scope {

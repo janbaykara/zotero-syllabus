@@ -16,9 +16,55 @@ export function isZoteroVersionAtLeast(minVersion: string): boolean {
   return aPatch >= bPatch;
 }
 
-/** Zotero 8+ platform / UI features (also true on Zotero 9/10). */
+/** Zotero 8+ platform / UI features (also true on Zotero 9–11). */
 export function isZotero8OrLater(): boolean {
   return isZoteroVersionAtLeast("8.0");
+}
+
+/**
+ * Presence-only XUL boolean attributes (hidden, disabled, checked, …).
+ * Zotero 11 / Firefox 153 treat any attribute value — including `"false"` — as
+ * true. Only set the attribute when the flag is on; otherwise omit/remove it.
+ * Toolkit `createElement` stringifies via `setAttribute`, so callers must not
+ * pass `false` in the attributes object.
+ */
+export function setXulBooleanAttribute(
+  el: Element,
+  name: string,
+  value: boolean,
+): void {
+  if (value) {
+    el.setAttribute(name, "true");
+  } else {
+    el.removeAttribute(name);
+  }
+}
+
+/** Attributes object entries for true XUL booleans only (safe for createElement). */
+export function xulBooleanAttributeEntries(
+  flags: Record<string, boolean | undefined>,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [name, value] of Object.entries(flags)) {
+    if (value) {
+      out[name] = "true";
+    }
+  }
+  return out;
+}
+
+/**
+ * Menu icon for `<menuitem>` / `<menu>`: keep `list-style-image` for native
+ * macOS menus; set `--menuitem-icon` for the HTML `<img>` used on Zotero 11+.
+ */
+export function setMenuitemIcon(el: Element, url: string): void {
+  const style = (el as HTMLElement).style;
+  if (!style?.setProperty) {
+    return;
+  }
+  const value = `url("${url}")`;
+  style.setProperty("list-style-image", value);
+  style.setProperty("--menuitem-icon", value);
 }
 
 type ZoteroPaneSelection = {

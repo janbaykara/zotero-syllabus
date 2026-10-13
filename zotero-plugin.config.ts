@@ -62,8 +62,8 @@ export default defineConfig({
           __env__: `"${process.env.NODE_ENV}"`,
         },
         bundle: true,
-        // Keep firefox115 so the bundle still runs on Zotero 7; Zotero 8–10
-        // (Firefox 140) are a superset for the syntax we emit.
+        // Keep firefox115 so the bundle still runs on Zotero 7; Zotero 8–11
+        // are a superset for the syntax we emit.
         target: "firefox115",
         outfile: `.scaffold/build/addon/content/scripts/${pkg.config.addonRef}.js`,
         jsx: "transform",
