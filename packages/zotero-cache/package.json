@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@janbaykara/zotero-jotai-state": "workspace:*",
-    "lru-cache": "^11.5.2"
+    "lru-cache": "^11.5.3"
   },
   "peerDependencies": {
     "verzod": "^0.5.0",
