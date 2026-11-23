@@ -444,26 +444,26 @@ export function ClassGroupComponent({
             )}
           >
             {!isLocked && (
-              <button
-                type="button"
-                className="absolute left-0 right-0 top-1.5 flex items-center gap-2 opacity-0 group-hover/class-heading:opacity-100 focus-visible:opacity-100 transition-opacity in-[.print]:hidden text-xs text-secondary hover:text-primary cursor-pointer bg-transparent border-0 p-0"
-                onClick={handleInsertClassBefore}
-                title={getString("class-insert-here", {
-                  args: { nomenclature: singular },
-                })}
-                aria-label={getString("class-insert-here", {
-                  args: { nomenclature: singular },
-                })}
-              >
+              <div className="absolute left-0 right-0 top-1.5 flex items-center gap-2 opacity-0 group-hover/class-heading:opacity-100 focus-within:opacity-100 transition-opacity in-[.print]:hidden pointer-events-none">
                 <span className="flex-1 h-px bg-quinary" />
-                <span className="inline-flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  className="pointer-events-auto inline-flex items-center gap-1 shrink-0 text-xs text-secondary hover:text-primary cursor-pointer bg-transparent border-0 p-0"
+                  onClick={handleInsertClassBefore}
+                  title={getString("class-insert-here", {
+                    args: { nomenclature: singular },
+                  })}
+                  aria-label={getString("class-insert-here", {
+                    args: { nomenclature: singular },
+                  })}
+                >
                   <Plus size={12} />
                   {getString("class-insert-here", {
                     args: { nomenclature: singular },
                   })}
-                </span>
+                </button>
                 <span className="flex-1 h-px bg-quinary" />
-              </button>
+              </div>
             )}
             <div
               className={twMerge(
