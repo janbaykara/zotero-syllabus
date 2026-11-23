@@ -3687,11 +3687,22 @@ export class SyllabusManager {
     );
 
     if (entryIndex >= 0) {
-      const next = { ...assignments[entryIndex], ...metadata };
-      if (
+      const clearingClass =
         Object.prototype.hasOwnProperty.call(metadata, "classNumber") &&
-        metadata.classNumber === undefined
-      ) {
+        metadata.classNumber === undefined;
+      // Item already has other assignments: drop this row instead of leaving a
+      // classless stub that resurfaces under Further reading (#46).
+      if (clearingClass && assignments.length > 1) {
+        await this.removeAssignmentById(
+          item,
+          collectionId,
+          assignmentId,
+          source,
+        );
+        return;
+      }
+      const next = { ...assignments[entryIndex], ...metadata };
+      if (clearingClass) {
         next.classId = undefined;
         next.classNumber = undefined;
       }
