@@ -144,8 +144,17 @@ import {
   pickAndAddItemsToFurtherReading,
   priorityPatchForUnnumbered,
 } from "./addItemsToClass";
-import { shouldCaptureCustomViewKeyboard } from "./galleryKeyboardNav";
-import { clearZoteroItemSelection } from "./browsePage";
+import {
+  findGalleryNavIndex,
+  getGalleryNavElements,
+  parseGalleryNavKey,
+  shouldCaptureCustomViewKeyboard,
+  type GalleryNavKey,
+} from "./galleryKeyboardNav";
+import {
+  clearZoteroItemSelection,
+  shouldClearSelectionOnPointer,
+} from "./browsePage";
 import {
   isItemContextMenuKey,
   openZoteroItemContextMenu,
@@ -261,6 +270,75 @@ function getActiveNavIndex(
     }
   }
   return -1;
+}
+
+function entryForSyllabusTile(
+  el: HTMLElement,
+  entries: SyllabusNavEntry[],
+): SyllabusNavEntry | null {
+  const identifier = el.getAttribute("data-syllabus-identifier");
+  if (identifier) {
+    const byId = entries.find((entry) => entry.identifier === identifier);
+    if (byId) {
+      return byId;
+    }
+  }
+  const itemId = Number(el.dataset.itemId);
+  if (!itemId) {
+    return null;
+  }
+  return entries.find((entry) => entry.item.id === itemId) ?? null;
+}
+
+/** Active cover/magazine tile index — prefers syllabus identifiers, then Zotero ids. */
+function getActiveSyllabusTileIndex(
+  els: HTMLElement[],
+  selectedIdentifiers: Set<string>,
+  selectedItemIds: number[] | null | undefined,
+  key: GalleryNavKey,
+): number {
+  if (selectedIdentifiers.size > 0) {
+    const matches: number[] = [];
+    for (let i = 0; i < els.length; i++) {
+      const id = els[i].getAttribute("data-syllabus-identifier");
+      if (id && selectedIdentifiers.has(id)) {
+        matches.push(i);
+      }
+    }
+    if (matches.length > 0) {
+      if (
+        key === "down" ||
+        key === "right" ||
+        key === "end" ||
+        key === "pagedown"
+      ) {
+        return matches[matches.length - 1];
+      }
+      return matches[0];
+    }
+  }
+  if (!selectedItemIds?.length) {
+    return -1;
+  }
+  const idSet = new Set(selectedItemIds);
+  const matches: number[] = [];
+  for (let i = 0; i < els.length; i++) {
+    if (idSet.has(Number(els[i].dataset.itemId))) {
+      matches.push(i);
+    }
+  }
+  if (matches.length === 0) {
+    return -1;
+  }
+  if (
+    key === "down" ||
+    key === "right" ||
+    key === "end" ||
+    key === "pagedown"
+  ) {
+    return matches[matches.length - 1];
+  }
+  return matches[0];
 }
 
 function scrollSyllabusIdentifierIntoView(
@@ -1106,8 +1184,13 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   const navStateRef = useRef({
     selectedIdentifiers,
     navigableEntries,
+    selectedItemIds,
   });
-  navStateRef.current = { selectedIdentifiers, navigableEntries };
+  navStateRef.current = {
+    selectedIdentifiers,
+    navigableEntries,
+    selectedItemIds,
+  };
 
   const clearSyllabusSelection = useCallback(() => {
     setSelectedIdentifiers(new Set());
@@ -1115,6 +1198,24 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   }, [setSelectedIdentifiers]);
   const clearSyllabusSelectionRef = useRef(clearSyllabusSelection);
   clearSyllabusSelectionRef.current = clearSyllabusSelection;
+
+  const selectSyllabusNavEntry = useCallback(
+    (entry: SyllabusNavEntry, opts?: { showGroupHeader?: boolean }) => {
+      pendingNavScrollRef.current = {
+        identifier: entry.identifier,
+        showGroupHeader: Boolean(opts?.showGroupHeader),
+      };
+      setSelectedIdentifiers(new Set([entry.identifier]));
+      try {
+        ztoolkit.getGlobal("ZoteroPane").selectItem(entry.item.id);
+      } catch (err) {
+        ztoolkit.log("Error selecting syllabus nav item:", err);
+      }
+    },
+    [setSelectedIdentifiers],
+  );
+  const selectSyllabusNavEntryRef = useRef(selectSyllabusNavEntry);
+  selectSyllabusNavEntryRef.current = selectSyllabusNavEntry;
 
   const handleSyllabusKeyDown = useCallback((event: Event) => {
     const e = event as KeyboardEvent;
@@ -1151,15 +1252,129 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       return;
     }
 
+    const {
+      selectedIdentifiers: selected,
+      navigableEntries: entries,
+      selectedItemIds: zoteroIds,
+    } = navStateRef.current;
+    const isContextMenu = isItemContextMenuKey(e);
+    // Resolve a root that contains the tiles. The scroll `syllabusPageRef` is
+    // not the `.syllabus-page` node; document-target key events have no Element
+    // target for `closest`.
+    const eventDoc =
+      ((e.target as Node | null)?.ownerDocument as Document | null) ||
+      (e.view?.document as Document | null) ||
+      syllabusPageRef.current?.ownerDocument ||
+      null;
+    const container: HTMLElement | null =
+      syllabusPageRef.current ||
+      (eventDoc?.querySelector(
+        ".syllabus-page .syllabus-gallery-tile, .syllabus-page .syllabus-magazine-tile",
+      )?.closest(".syllabus-page") as HTMLElement | null) ||
+      (eventDoc?.querySelector(".syllabus-page") as HTMLElement | null) ||
+      null;
+    const tileEls = container ? getGalleryNavElements(container) : [];
+    // Cover / Magazine (and any surface that mounts gallery tiles): 2D nav.
+    // Detect via DOM so we still navigate if layout state lags a lock toggle.
+    if (tileEls.length > 0) {
+      const els = tileEls;
+
+      const navKey = parseGalleryNavKey(e.key);
+      if (!navKey && !isContextMenu) {
+        return;
+      }
+      const currentIndex = getActiveSyllabusTileIndex(
+        els,
+        selected,
+        zoteroIds,
+        navKey ?? "down",
+      );
+
+      if (isContextMenu) {
+        const currentEl = currentIndex >= 0 ? els[currentIndex] : null;
+        const entry =
+          currentIndex >= 0
+            ? entryForSyllabusTile(els[currentIndex], entries)
+            : null;
+        if (!entry || !currentEl) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === "function") {
+          e.stopImmediatePropagation();
+        }
+        void openZoteroItemContextMenu(entry.item, e, currentEl);
+        return;
+      }
+
+      if (!navKey) {
+        return;
+      }
+
+      const rects = els.map((el) => {
+        const rect = el.getBoundingClientRect();
+        return {
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+        };
+      });
+      const currentRect = currentIndex >= 0 ? rects[currentIndex] : null;
+      const pageRows = currentRect
+        ? Math.max(
+            1,
+            Math.floor(
+              (container?.clientHeight || 1) / currentRect.height,
+            ) - 1,
+          )
+        : 1;
+      const nextIndex = findGalleryNavIndex(rects, currentIndex, navKey, {
+        pageRows,
+      });
+      if (nextIndex < 0 || nextIndex === currentIndex) {
+        if (currentIndex < 0) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === "function") {
+          e.stopImmediatePropagation();
+        }
+        return;
+      }
+
+      const nextEl = els[nextIndex];
+      const nextEntry = entryForSyllabusTile(nextEl, entries);
+      if (!nextEntry) {
+        return;
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof e.stopImmediatePropagation === "function") {
+        e.stopImmediatePropagation();
+      }
+
+      nextEl.scrollIntoView({ block: "nearest", inline: "nearest" });
+      if (typeof nextEl.focus === "function") {
+        nextEl.focus({ preventScroll: true });
+      }
+      selectSyllabusNavEntryRef.current(nextEntry, {
+        showGroupHeader:
+          (navKey === "down" || navKey === "pagedown" || navKey === "right") &&
+          nextEntry.isFirstInGroup,
+      });
+      return;
+    }
+
     const isDown = e.key === "ArrowDown" || e.key === "Down";
     const isUp = e.key === "ArrowUp" || e.key === "Up";
-    const isContextMenu = isItemContextMenuKey(e);
     if (!isDown && !isUp && !isContextMenu) {
       return;
     }
 
-    const { selectedIdentifiers: selected, navigableEntries: entries } =
-      navStateRef.current;
     if (selected.size === 0 || entries.length === 0) {
       return;
     }
@@ -1204,27 +1419,54 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     }
 
     const next = entries[nextIndex];
-    pendingNavScrollRef.current = {
-      identifier: next.identifier,
+    selectSyllabusNavEntryRef.current(next, {
       showGroupHeader: isDown && next.isFirstInGroup,
-    };
-    setSelectedIdentifiers(new Set([next.identifier]));
+    });
   }, []);
 
   useEffect(() => {
     const win = Zotero.getMainWindow();
-    // Prefer the page root's document (same compartment as the focused UI).
-    const doc =
-      syllabusPageRef.current?.ownerDocument ?? win?.document ?? document;
+    const root = syllabusPageRef.current;
+    // Prefer the page root's ownerDocument — the plugin sandbox `document` is
+    // not the chrome document that receives UI events (Escape still worked
+    // because it was also bound directly on `root`).
+    const doc = root?.ownerDocument ?? win?.document ?? document;
     const view = doc.defaultView ?? win;
+
+    const onOutsidePointer = (event: Event) => {
+      const { selectedIdentifiers: selected } = navStateRef.current;
+      let zoteroCount = 0;
+      try {
+        zoteroCount =
+          (
+            ztoolkit.getGlobal("ZoteroPane").getSelectedItems(true) as number[]
+          )?.length ?? 0;
+      } catch {
+        zoteroCount = 0;
+      }
+      if (selected.size === 0 && zoteroCount === 0) {
+        return;
+      }
+      // shouldClearSelectionOnPointer skips item tiles + Zotero chrome.
+      if (!shouldClearSelectionOnPointer(event)) {
+        return;
+      }
+      clearSyllabusSelectionRef.current();
+    };
+
     view?.addEventListener("keydown", handleSyllabusKeyDown, true);
     doc.addEventListener("keydown", handleSyllabusKeyDown, true);
-    const root = syllabusPageRef.current;
     root?.addEventListener("keydown", handleSyllabusKeyDown);
+    // Bind on the page root (capture): same compartment as the click target,
+    // avoids missing events when document listeners land on the wrong doc.
+    root?.addEventListener("pointerdown", onOutsidePointer, true);
+    root?.addEventListener("mousedown", onOutsidePointer, true);
     return () => {
       view?.removeEventListener("keydown", handleSyllabusKeyDown, true);
       doc.removeEventListener("keydown", handleSyllabusKeyDown, true);
       root?.removeEventListener("keydown", handleSyllabusKeyDown);
+      root?.removeEventListener("pointerdown", onOutsidePointer, true);
+      root?.removeEventListener("mousedown", onOutsidePointer, true);
     };
   }, [handleSyllabusKeyDown]);
 
@@ -3133,6 +3375,18 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                               slim: true,
                             }),
                           )}
+                          onItemClick={(item, _collectionId, e) => {
+                            const el = e?.currentTarget as HTMLElement | null;
+                            const identifier =
+                              el?.getAttribute?.("data-syllabus-identifier") ||
+                              "";
+                            const assignmentId = identifier.startsWith(
+                              "assignment:",
+                            )
+                              ? identifier.slice("assignment:".length)
+                              : undefined;
+                            handleIdentifierClick(item, assignmentId, e);
+                          }}
                         />
                       ) : (
                         <div

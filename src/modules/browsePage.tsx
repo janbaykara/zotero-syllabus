@@ -66,6 +66,156 @@ export function clearZoteroItemSelection(): void {
   }
 }
 
+/** Targets that own item selection (clicking them should not clear). */
+const SELECTION_ITEM_SELECTOR = [
+  "[data-syllabus-identifier]",
+  ".syllabus-gallery-tile",
+  ".syllabus-magazine-tile",
+  ".syllabus-item-card",
+  ".syllabus-personal-order-capture-item",
+  ".syllabus-my-annotations-stream-entry",
+  ".syllabus-annotation-row",
+].join(", ");
+
+const SELECTION_OUTSIDE_IGNORE_SELECTOR = [
+  // Keep selection when interacting with Zotero chrome / popovers outside the
+  // reading list. Form fields inside the custom view should still deselect
+  // items (clicking the description is an "outside" click).
+  "#zotero-collections-tree",
+  "#zotero-collections-pane",
+  ".syllabus-gallery-popover",
+  "#zotero-item-pane",
+  "#zotero-context-pane",
+  "browser.reader",
+  ".reader",
+].join(", ");
+
+/**
+ * Walk composedPath / parentNode and test a selector without relying on
+ * `path.includes(node)` (Xray wrappers break reference equality). Prefer
+ * `closest` when available; fall back to id / class / data-attr matches so
+ * chrome ↔ sandbox compartments still resolve.
+ */
+function eventPathHitsSelector(event: Event, selector: string): boolean {
+  const path =
+    typeof event.composedPath === "function" ? event.composedPath() : [];
+  const nodes: unknown[] =
+    path.length > 0 ? path : [event.target].filter(Boolean);
+
+  // Also walk parentNode from the target — more reliable under Xray than
+  // depending solely on composedPath entries having a working closest().
+  let walk: unknown = event.target;
+  for (let depth = 0; walk && depth < 40; depth++) {
+    nodes.push(walk);
+    const parent =
+      (walk as { parentNode?: unknown; parentElement?: unknown; host?: unknown })
+        .parentElement ??
+      (walk as { parentNode?: unknown }).parentNode ??
+      (walk as { host?: unknown }).host;
+    walk = parent && parent !== walk ? parent : null;
+  }
+
+  for (const node of nodes) {
+    if (!node) {
+      continue;
+    }
+    const el = node as Element;
+    if (typeof el.closest === "function") {
+      try {
+        if (el.closest(selector)) {
+          return true;
+        }
+      } catch {
+        // Xray may throw on some nodes; fall through to attribute checks.
+      }
+    }
+    if (selectorMatchesElementShallow(el, selector)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Best-effort match for simple selectors used in selection outside-click. */
+function selectorMatchesElementShallow(
+  el: Element,
+  selector: string,
+): boolean {
+  const id = typeof el.id === "string" ? el.id : "";
+  const tag =
+    typeof (el as { tagName?: string }).tagName === "string"
+      ? (el as { tagName: string }).tagName.toLowerCase()
+      : "";
+  const className = String(
+    (el as { className?: unknown }).className ?? "",
+  ).toString();
+  const classList = className.split(/\s+/).filter(Boolean);
+
+  // Split on commas for selector lists.
+  for (const part of selector.split(",")) {
+    const s = part.trim();
+    if (!s) {
+      continue;
+    }
+    if (s.startsWith("#") && id === s.slice(1)) {
+      return true;
+    }
+    if (s.startsWith(".") && classList.includes(s.slice(1))) {
+      return true;
+    }
+    if (
+      s.startsWith("[data-syllabus-identifier]") ||
+      s === "[data-syllabus-identifier]"
+    ) {
+      if (
+        typeof el.getAttribute === "function" &&
+        el.getAttribute("data-syllabus-identifier") != null
+      ) {
+        return true;
+      }
+    }
+    if (s.includes("[contenteditable")) {
+      if (
+        typeof el.getAttribute === "function" &&
+        el.getAttribute("contenteditable") === "true"
+      ) {
+        return true;
+      }
+    }
+    if (s.includes(".") && s.includes("[")) {
+      // e.g. browser.reader — tag + class
+      const [tagPart, classPart] = s.split(".");
+      if (
+        tag &&
+        tagPart.toLowerCase() === tag &&
+        classList.includes(classPart)
+      ) {
+        return true;
+      }
+    }
+    if (!s.startsWith("#") && !s.startsWith(".") && !s.startsWith("[")) {
+      if (tag === s.toLowerCase()) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * True when an outside pointer should clear custom-view item selection.
+ * Skips clicks on items themselves and chrome that should keep selection.
+ */
+export function shouldClearSelectionOnPointer(event: Event): boolean {
+  if (eventPathHitsSelector(event, SELECTION_ITEM_SELECTOR)) {
+    return false;
+  }
+  if (eventPathHitsSelector(event, SELECTION_OUTSIDE_IGNORE_SELECTOR)) {
+    return false;
+  }
+  return true;
+}
+
 export function useItemIdentifierSelection() {
   const selectedItemIds = useZoteroSelectedItemIds();
   const [selectedIdentifiers, setSelectedIdentifiers] = useState<Set<string>>(

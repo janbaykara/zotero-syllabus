@@ -1916,12 +1916,22 @@ button.syllabus-personal-order-done-toggle[aria-expanded="false"]
   align-content: end;
 }
 
-/* Cover selection: blue plate behind cover + metadata (matches card rows). */
+/* Cover selection plate: absolute ::before growing outward from the
+   content stack so packing/subgrid layout does not shift. */
+.syllabus-gallery-tile-stack {
+  grid-row: 1 / -1;
+  align-self: end;
+  justify-self: stretch;
+  width: 100%;
+  height: max-content;
+  min-width: 0;
+  position: relative;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .syllabus-gallery-tile.is-selected {
-  background-color: var(--accent-blue, #2255e0);
-  border-radius: 0.5rem;
-  padding: 0.45rem 0.45rem 0.55rem;
-  box-sizing: border-box;
   --fill-primary: var(--accent-white, #fff);
   --fill-secondary: color-mix(
     in srgb,
@@ -1940,6 +1950,20 @@ button.syllabus-personal-order-done-toggle[aria-expanded="false"]
     transparent
   );
   color: var(--accent-white, #fff);
+  isolation: isolate;
+  /* Paint the outward plate above neighbouring tiles’ gaps. */
+  z-index: 1;
+}
+
+.syllabus-gallery-tile.is-selected .syllabus-gallery-tile-stack::before,
+.syllabus-gallery-tile.is-selected .syllabus-gallery-tile-main::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  inset: -0.45rem -0.45rem -0.55rem;
+  border-radius: 0.5rem;
+  background-color: var(--accent-blue, #2255e0);
 }
 
 .syllabus-gallery-tile.is-selected .syllabus-gallery-title,
@@ -1987,6 +2011,10 @@ button.syllabus-personal-order-done-toggle[aria-expanded="false"]
   grid-column: 1;
   min-width: 0;
   align-content: end;
+  position: relative;
+  z-index: 0;
+  height: max-content;
+  align-self: end;
 }
 
 .syllabus-gallery-note {
@@ -2403,11 +2431,10 @@ button.syllabus-personal-order-done-toggle[aria-expanded="false"]
 }
 
 .syllabus-magazine-tile.is-selected {
-  background-color: var(--accent-blue, #2255e0);
-  border-radius: 0.5rem;
-  padding: 0.55rem 0.65rem 0.65rem;
-  box-sizing: border-box;
   outline: none;
+  isolation: isolate;
+  /* Let the selection plate grow past the tile box. */
+  overflow: visible;
   --fill-primary: var(--accent-white, #fff);
   --fill-secondary: color-mix(
     in srgb,
@@ -2425,6 +2452,16 @@ button.syllabus-personal-order-done-toggle[aria-expanded="false"]
     transparent
   );
   color: var(--accent-white, #fff);
+}
+
+.syllabus-magazine-tile.is-selected::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  inset: -0.55rem -0.65rem -0.65rem;
+  border-radius: 0.5rem;
+  background-color: var(--accent-blue, #2255e0);
 }
 
 .syllabus-magazine-tile:focus-visible:not(.is-selected) {

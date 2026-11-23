@@ -170,7 +170,11 @@ export function ReadingItemsLayout({
   /** Order among Syllabus/Gallery annotation streams for shared selection. */
   annotationStreamOrder?: number;
   className?: string;
-  onItemClick?: (item: Zotero.Item, collectionId: number) => void;
+  onItemClick?: (
+    item: Zotero.Item,
+    collectionId: number,
+    e?: JSX.TargetedMouseEvent<HTMLElement>,
+  ) => void;
   /** When set, Cover/Magazine tiles highlight this selection; else Zotero selection. */
   selectedItemIds?: number[] | null;
 }) {
@@ -188,7 +192,7 @@ export function ReadingItemsLayout({
       e.stopPropagation();
       const row = rows.find((r) => r.item.id === item.id);
       if (row && onItemClick) {
-        onItemClick(item, row.collectionId);
+        onItemClick(item, row.collectionId, e);
         return;
       }
       try {
@@ -249,6 +253,11 @@ export function ReadingItemsLayout({
             key={row.key}
             item={row.item}
             selected={selectedItemIds?.includes(row.item.id) || false}
+            syllabusIdentifier={
+              row.assignment?.id
+                ? `assignment:${row.assignment.id}`
+                : `item:${row.item.id}`
+            }
             chrome={chromeByItemId.get(row.item.id)}
             onClick={handleClick}
             onDoubleClick={handleDoubleClick}
@@ -330,6 +339,11 @@ export function ReadingItemsLayout({
               key={row.key}
               item={row.item}
               selected={selectedItemIds?.includes(row.item.id) || false}
+              syllabusIdentifier={
+                row.assignment?.id
+                  ? `assignment:${row.assignment.id}`
+                  : `item:${row.item.id}`
+              }
               chrome={chromeByItemId.get(row.item.id)}
               onClick={handleClick}
               onDoubleClick={handleDoubleClick}
@@ -367,7 +381,7 @@ export function ReadingItemsLayout({
             isLocked={isLocked}
             onClick={
               onItemClick
-                ? (item) => onItemClick(item, row.collectionId)
+                ? (item, e) => onItemClick(item, row.collectionId, e)
                 : undefined
             }
             onContextMenu={(item, e) => {

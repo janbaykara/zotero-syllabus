@@ -72,8 +72,12 @@ import {
   useItemDensity,
   type ItemDensity,
 } from "./react-zotero-sync/itemDensity";
-import { densityLabel } from "./browsePage";
-import { SlimSyllabusItemCard, useItemIdentifierSelection } from "./browsePage";
+import {
+  densityLabel,
+  SlimSyllabusItemCard,
+  shouldClearSelectionOnPointer,
+  useItemIdentifierSelection,
+} from "./browsePage";
 import { selectCollectionInLibrary } from "./ClassReadingBlock";
 import { useSyllabusClassGroups } from "./classGroups";
 import { useGalleryGroupBy, type GalleryGroupBy } from "./galleryGroupBy";
@@ -1024,16 +1028,36 @@ export function GalleryPage({
 
   useEffect(() => {
     const win = Zotero.getMainWindow();
-    const doc = pageRef.current?.ownerDocument ?? win?.document ?? document;
+    const root = pageRef.current;
+    const doc = root?.ownerDocument ?? win?.document ?? document;
     const view = doc.defaultView ?? win;
+
+    const onOutsidePointer = (event: Event) => {
+      const {
+        selectedItemIds: selected,
+        selectedIdentifiers: identifiers,
+        clearSelection: clear,
+      } = navStateRef.current;
+      if ((selected?.length ?? 0) === 0 && identifiers.size === 0) {
+        return;
+      }
+      if (!shouldClearSelectionOnPointer(event)) {
+        return;
+      }
+      clear();
+    };
+
     view?.addEventListener("keydown", handleGalleryKeyDown, true);
     doc.addEventListener("keydown", handleGalleryKeyDown, true);
-    const root = pageRef.current;
     root?.addEventListener("keydown", handleGalleryKeyDown);
+    root?.addEventListener("pointerdown", onOutsidePointer, true);
+    root?.addEventListener("mousedown", onOutsidePointer, true);
     return () => {
       view?.removeEventListener("keydown", handleGalleryKeyDown, true);
       doc.removeEventListener("keydown", handleGalleryKeyDown, true);
       root?.removeEventListener("keydown", handleGalleryKeyDown);
+      root?.removeEventListener("pointerdown", onOutsidePointer, true);
+      root?.removeEventListener("mousedown", onOutsidePointer, true);
     };
   }, [handleGalleryKeyDown]);
 

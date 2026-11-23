@@ -87,6 +87,7 @@ import {
   SlimSyllabusItemCard,
   useItemIdentifierSelection,
   densityLabel,
+  shouldClearSelectionOnPointer,
 } from "./browsePage";
 import { shouldCaptureCustomViewKeyboard } from "./galleryKeyboardNav";
 import { collectionHasSyllabusNote } from "./syllabusNote";
@@ -1262,11 +1263,30 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
       }
       clear();
     };
+    const onOutsidePointer = (event: Event) => {
+      const {
+        selectedIdentifiers: identifiers,
+        selectedItemIds: itemIds,
+        clearSelection: clear,
+      } = selectionEscapeRef.current;
+      if (identifiers.size === 0 && (itemIds?.length ?? 0) === 0) {
+        return;
+      }
+      if (!shouldClearSelectionOnPointer(event)) {
+        return;
+      }
+      clear();
+    };
     const win = Zotero.getMainWindow();
-    const doc = win?.document ?? document;
+    const root = pageRef.current;
+    const doc = root?.ownerDocument ?? win?.document ?? document;
     doc.addEventListener("keydown", onKeyDown, true);
+    root?.addEventListener("pointerdown", onOutsidePointer, true);
+    root?.addEventListener("mousedown", onOutsidePointer, true);
     return () => {
       doc.removeEventListener("keydown", onKeyDown, true);
+      root?.removeEventListener("pointerdown", onOutsidePointer, true);
+      root?.removeEventListener("mousedown", onOutsidePointer, true);
     };
   }, []);
 

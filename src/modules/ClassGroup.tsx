@@ -759,7 +759,20 @@ export function ClassGroupComponent({
                   assignment,
                   classNumber,
                 }))}
-              onItemClick={(item) => selectItemInCollection(item, collectionId)}
+              onItemClick={(item, _collectionId, e) => {
+                const el = e?.currentTarget as HTMLElement | null;
+                const identifier =
+                  el?.getAttribute?.("data-syllabus-identifier") || "";
+                const assignmentId = identifier.startsWith("assignment:")
+                  ? identifier.slice("assignment:".length)
+                  : itemAssignments.find((row) => row.item.id === item.id)
+                      ?.assignment.id;
+                if (onIdentifierClick) {
+                  onIdentifierClick(item, assignmentId, e);
+                  return;
+                }
+                void selectItemInCollection(item, collectionId);
+              }}
             />
           ) : itemAssignments.length > 0 ? (
             <div

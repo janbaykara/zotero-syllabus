@@ -53,6 +53,8 @@ type GalleryTileProps = {
   showGalleryNote?: boolean;
   selected: boolean;
   interactive?: boolean;
+  /** Syllabus assignment/item id for keyboard nav + selection sync. */
+  syllabusIdentifier?: string;
   chrome?: ReadingTileChrome | null;
   onClick: (item: Zotero.Item, e: JSX.TargetedMouseEvent<HTMLElement>) => void;
   onDoubleClick: (item: Zotero.Item) => void;
@@ -68,6 +70,7 @@ const GalleryTileInner = memo(function GalleryTileInner({
   showGalleryNote = false,
   selected,
   interactive = true,
+  syllabusIdentifier,
   chrome,
   onClick,
   onDoubleClick,
@@ -291,6 +294,7 @@ const GalleryTileInner = memo(function GalleryTileInner({
       role={interactive ? "button" : undefined}
       tabIndex={interactive ? -1 : undefined}
       data-item-id={item.id}
+      data-syllabus-identifier={syllabusIdentifier || undefined}
       data-print-url={printUrl}
       className={twMerge(
         "syllabus-gallery-tile group min-w-0 select-none relative",
@@ -314,10 +318,10 @@ const GalleryTileInner = memo(function GalleryTileInner({
           {notePane}
         </>
       ) : (
-        <>
+        <div className="syllabus-gallery-tile-stack">
           {coverNode}
           {isClassNote ? null : meta}
-        </>
+        </div>
       )}
     </div>
   );
@@ -342,6 +346,7 @@ function areGalleryTilePropsEqual(
     prev.item.dateModified === next.item.dateModified &&
     prev.selected === next.selected &&
     prev.interactive === next.interactive &&
+    prev.syllabusIdentifier === next.syllabusIdentifier &&
     !!prev.showGalleryNote === !!next.showGalleryNote &&
     prevCollectionId === nextCollectionId &&
     (!prev.showGalleryNote ||
