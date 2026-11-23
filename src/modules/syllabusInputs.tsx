@@ -354,22 +354,55 @@ export function TextInput({
       return;
     }
 
-    const onPointerDown = (event: PointerEvent) => {
+    const onOutsidePointer = (event: Event) => {
       const el = inputRef.current;
-      if (!el || !focusedRef.current) {
+      if (!el) {
         return;
       }
-      const target = event.target;
-      if (!(target instanceof Node) || el.contains(target)) {
+      // Inputs: only while focused. Textareas: while the editor is open, even
+      // if focus never stuck (common when mousedown preventDefault runs).
+      if (elementType !== "textarea" && !focusedRef.current) {
         return;
+      }
+      // Prefer composedPath: avoids cross-compartment `instanceof Node` false
+      // negatives in Zotero's plugin sandbox vs chrome event targets.
+      const path =
+        typeof event.composedPath === "function" ? event.composedPath() : [];
+      if (path.length > 0) {
+        if (path.includes(el)) {
+          return;
+        }
+      } else {
+        const target = event.target as Node | null;
+        if (
+          target &&
+          typeof (target as Node).nodeType === "number" &&
+          (el === target || el.contains(target))
+        ) {
+          return;
+        }
       }
       el.blur();
+      if (elementType === "textarea") {
+        focusedRef.current = false;
+        save(valueRef.current);
+        setEditing(false);
+      }
     };
 
-    const doc = inputRef.current?.ownerDocument ?? document;
-    doc.addEventListener("pointerdown", onPointerDown, true);
+    const doc =
+      inputRef.current?.ownerDocument ??
+      (typeof ztoolkit !== "undefined"
+        ? ztoolkit.getGlobal("document")
+        : undefined) ??
+      document;
+    // Listen to both: some Zotero paths synthesize mousedown only, and DnD
+    // preventDefault is typically on mousedown.
+    doc.addEventListener("pointerdown", onOutsidePointer, true);
+    doc.addEventListener("mousedown", onOutsidePointer, true);
     return () => {
-      doc.removeEventListener("pointerdown", onPointerDown, true);
+      doc.removeEventListener("pointerdown", onOutsidePointer, true);
+      doc.removeEventListener("mousedown", onOutsidePointer, true);
     };
   }, [editing, elementType, readOnly]);
 
