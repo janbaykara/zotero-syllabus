@@ -342,6 +342,37 @@ export function TextInput({
     }
   }, [editing, elementType, readOnly]);
 
+  // Blur when clicking outside — DnD / selection handlers often call
+  // preventDefault on mousedown, which stops the native focus change.
+  useEffect(() => {
+    if (readOnly) {
+      return;
+    }
+    // Textareas only need this while the editor is open; inputs are always
+    // mounted, so the handler no-ops until focusedRef is set.
+    if (elementType === "textarea" && !editing) {
+      return;
+    }
+
+    const onPointerDown = (event: PointerEvent) => {
+      const el = inputRef.current;
+      if (!el || !focusedRef.current) {
+        return;
+      }
+      const target = event.target;
+      if (!(target instanceof Node) || el.contains(target)) {
+        return;
+      }
+      el.blur();
+    };
+
+    const doc = inputRef.current?.ownerDocument ?? document;
+    doc.addEventListener("pointerdown", onPointerDown, true);
+    return () => {
+      doc.removeEventListener("pointerdown", onPointerDown, true);
+    };
+  }, [editing, elementType, readOnly]);
+
   // Hide the entire component when readOnly and no value
   if (readOnly && !value && !initialValue) {
     return null;
@@ -365,6 +396,14 @@ export function TextInput({
       return;
     }
     beginEditing();
+  }
+
+  function commitAndBlur(
+    el: HTMLInputElement | HTMLTextAreaElement,
+    next: string = value,
+  ) {
+    save(next);
+    el.blur();
   }
 
   // Single-line inputs keep always-editable behavior
@@ -402,14 +441,12 @@ export function TextInput({
               ) => {
                 if (e.key === "Escape") {
                   e.preventDefault();
-                  e.currentTarget.blur();
-                  save(value);
+                  commitAndBlur(e.currentTarget);
                   return;
                 }
                 if (e.key === "Enter") {
                   e.preventDefault();
-                  e.currentTarget.blur();
-                  save(value);
+                  commitAndBlur(e.currentTarget);
                 }
               },
           onSelect: readOnly
@@ -474,8 +511,12 @@ export function TextInput({
             onKeyDown={(e) => {
               if (e.key === "Escape") {
                 e.preventDefault();
-                e.currentTarget.blur();
-                save(value);
+                commitAndBlur(e.currentTarget);
+                return;
+              }
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                commitAndBlur(e.currentTarget);
               }
             }}
             placeholder={resolvedPlaceholder}
