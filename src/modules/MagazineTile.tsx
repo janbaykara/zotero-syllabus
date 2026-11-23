@@ -198,13 +198,13 @@ const MagazineTileInner = memo(function MagazineTileInner({
   if (isClassNote) {
     coverNode = (
       <div className="syllabus-magazine-cover is-gallery">
-        <NoteNotebookCover item={item} selected={false} />
+        <NoteNotebookCover item={item} selected={selected} />
       </div>
     );
   } else if (useGalleryCover) {
     coverNode = (
       <div className="syllabus-magazine-cover is-gallery">
-        <GalleryCover item={item} selected={false} visible={visible} />
+        <GalleryCover item={item} selected={selected} visible={visible} />
       </div>
     );
   } else if (usePhotoBanner && (hasImage || playable)) {

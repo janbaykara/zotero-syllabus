@@ -35,6 +35,7 @@ import { useShowItemsWithoutAnnotations } from "./showItemsWithoutAnnotations";
 import { SyllabusItemCard } from "./SyllabusItemCard";
 import { SyllabusManager } from "./syllabus";
 import { getString } from "../utils/locale";
+import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
 
 export type ReadingLayoutRow = {
   key: string;
@@ -151,6 +152,7 @@ export function ReadingItemsLayout({
   annotationStreamOrder = 0,
   className,
   onItemClick,
+  selectedItemIds: selectedItemIdsProp,
 }: {
   layout: GalleryLayout;
   density: ItemDensity;
@@ -169,7 +171,14 @@ export function ReadingItemsLayout({
   annotationStreamOrder?: number;
   className?: string;
   onItemClick?: (item: Zotero.Item, collectionId: number) => void;
+  /** When set, Cover/Magazine tiles highlight this selection; else Zotero selection. */
+  selectedItemIds?: number[] | null;
 }) {
+  const zoteroSelectedItemIds = useZoteroSelectedItemIds();
+  const selectedItemIds =
+    selectedItemIdsProp !== undefined
+      ? selectedItemIdsProp
+      : zoteroSelectedItemIds;
   const [scopedShowEmpty] = useShowItemsWithoutAnnotations(
     colorFilterScope || "",
   );
@@ -239,7 +248,7 @@ export function ReadingItemsLayout({
           <GalleryTile
             key={row.key}
             item={row.item}
-            selected={false}
+            selected={selectedItemIds?.includes(row.item.id) || false}
             chrome={chromeByItemId.get(row.item.id)}
             onClick={handleClick}
             onDoubleClick={handleDoubleClick}
@@ -259,7 +268,7 @@ export function ReadingItemsLayout({
         keyPrefix={rows[0]?.key || "reading"}
         sortBy="auto"
         collectionId={collectionId}
-        selectedItemIds={null}
+        selectedItemIds={selectedItemIds}
         chromeByItemId={chromeByItemId}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
@@ -276,7 +285,7 @@ export function ReadingItemsLayout({
           keyPrefix={rows[0]?.key || "reading"}
           sortBy="auto"
           collectionId={rows[0]?.collectionId ?? 0}
-          selectedItemIds={null}
+          selectedItemIds={selectedItemIds}
           showItemsWithoutAnnotations={showItemsWithoutAnnotations}
           chromeByItemId={chromeByItemId}
           colorFilterScope={
@@ -299,7 +308,7 @@ export function ReadingItemsLayout({
           keyPrefix={rows[0]?.key || "reading"}
           sortBy="auto"
           collectionId={rows[0]?.collectionId ?? 0}
-          selectedItemIds={null}
+          selectedItemIds={selectedItemIds}
           chromeByItemId={chromeByItemId}
           onClick={handleClick}
           onDoubleClick={handleDoubleClick}
@@ -320,7 +329,7 @@ export function ReadingItemsLayout({
             <GalleryTile
               key={row.key}
               item={row.item}
-              selected={false}
+              selected={selectedItemIds?.includes(row.item.id) || false}
               chrome={chromeByItemId.get(row.item.id)}
               onClick={handleClick}
               onDoubleClick={handleDoubleClick}

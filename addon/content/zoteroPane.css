@@ -1916,6 +1916,64 @@ button.syllabus-personal-order-done-toggle[aria-expanded="false"]
   align-content: end;
 }
 
+/* Cover selection: blue plate behind cover + metadata (matches card rows). */
+.syllabus-gallery-tile.is-selected {
+  background-color: var(--accent-blue, #2255e0);
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.45rem 0.55rem;
+  box-sizing: border-box;
+  --fill-primary: var(--accent-white, #fff);
+  --fill-secondary: color-mix(
+    in srgb,
+    var(--accent-white, #fff) 78%,
+    transparent
+  );
+  --fill-tertiary: color-mix(
+    in srgb,
+    var(--accent-white, #fff) 62%,
+    transparent
+  );
+  --color-primary: var(--accent-white, #fff);
+  --color-secondary: color-mix(
+    in srgb,
+    var(--accent-white, #fff) 78%,
+    transparent
+  );
+  color: var(--accent-white, #fff);
+}
+
+.syllabus-gallery-tile.is-selected .syllabus-gallery-title,
+.syllabus-gallery-tile.is-selected .syllabus-gallery-creator,
+.syllabus-gallery-tile.is-selected .syllabus-gallery-hostrow,
+.syllabus-gallery-tile.is-selected .syllabus-gallery-instruction,
+.syllabus-gallery-tile.is-selected .syllabus-gallery-meta,
+.syllabus-gallery-tile.is-selected .text-primary,
+.syllabus-gallery-tile.is-selected .text-secondary {
+  color: var(--accent-white, #fff) !important;
+}
+
+/* Priority label chip: keep the dot colour, force light text on blue. */
+.syllabus-gallery-tile.is-selected .syllabus-gallery-meta span[style*="color"] {
+  color: var(--accent-white, #fff) !important;
+  background-color: color-mix(
+    in srgb,
+    var(--accent-white, #fff) 18%,
+    transparent
+  ) !important;
+}
+
+/* Whole-tile fill replaces the cover outline. */
+.syllabus-gallery-tile.is-selected .syllabus-gallery-cover-portrait.is-selected,
+.syllabus-gallery-tile.is-selected .syllabus-gallery-cover-video.is-selected,
+.syllabus-gallery-tile.is-selected .syllabus-gallery-cover-web.is-selected,
+.syllabus-gallery-tile.is-selected .syllabus-gallery-cover-square.is-selected,
+.syllabus-gallery-tile.is-selected .syllabus-gallery-cover-natural.is-selected,
+.syllabus-gallery-tile.is-selected
+  .syllabus-gallery-cover-with-binder.is-selected,
+.syllabus-gallery-tile.is-selected .syllabus-note-notebook-cover.is-selected {
+  outline: none;
+}
+
 .syllabus-gallery-tile.has-gallery-note {
   grid-column: span 2;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -2344,10 +2402,66 @@ button.syllabus-personal-order-done-toggle[aria-expanded="false"]
   grid-row: span 2;
 }
 
-.syllabus-magazine-tile.is-selected,
-.syllabus-magazine-tile:focus-visible {
-  outline: 2px solid #7b4ddb;
+.syllabus-magazine-tile.is-selected {
+  background-color: var(--accent-blue, #2255e0);
+  border-radius: 0.5rem;
+  padding: 0.55rem 0.65rem 0.65rem;
+  box-sizing: border-box;
+  outline: none;
+  --fill-primary: var(--accent-white, #fff);
+  --fill-secondary: color-mix(
+    in srgb,
+    var(--accent-white, #fff) 78%,
+    transparent
+  );
+  --fill-tertiary: color-mix(
+    in srgb,
+    var(--accent-white, #fff) 62%,
+    transparent
+  );
+  --syllabus-magazine-kicker: color-mix(
+    in srgb,
+    var(--accent-white, #fff) 78%,
+    transparent
+  );
+  color: var(--accent-white, #fff);
+}
+
+.syllabus-magazine-tile:focus-visible:not(.is-selected) {
+  outline: 2px solid var(--accent-blue, #2255e0);
   outline-offset: 3px;
+}
+
+.syllabus-magazine-tile.is-selected .syllabus-magazine-title,
+.syllabus-magazine-tile.is-selected .syllabus-magazine-byline,
+.syllabus-magazine-tile.is-selected .syllabus-magazine-kicker,
+.syllabus-magazine-tile.is-selected .syllabus-magazine-instruction,
+.syllabus-magazine-tile.is-selected .syllabus-magazine-abstract,
+.syllabus-magazine-tile.is-selected .syllabus-magazine-context,
+.syllabus-magazine-tile.is-selected .syllabus-magazine-gallery-note {
+  color: var(--accent-white, #fff) !important;
+}
+
+.syllabus-magazine-tile.is-selected
+  .syllabus-magazine-assignment-row
+  span[style*="color"] {
+  color: var(--accent-white, #fff) !important;
+  background-color: color-mix(
+    in srgb,
+    var(--accent-white, #fff) 18%,
+    transparent
+  ) !important;
+}
+
+.syllabus-magazine-tile.is-selected .syllabus-gallery-cover-portrait.is-selected,
+.syllabus-magazine-tile.is-selected .syllabus-gallery-cover-video.is-selected,
+.syllabus-magazine-tile.is-selected .syllabus-gallery-cover-web.is-selected,
+.syllabus-magazine-tile.is-selected .syllabus-gallery-cover-square.is-selected,
+.syllabus-magazine-tile.is-selected .syllabus-gallery-cover-natural.is-selected,
+.syllabus-magazine-tile.is-selected
+  .syllabus-gallery-cover-with-binder.is-selected,
+.syllabus-magazine-tile.is-selected .syllabus-note-notebook-cover.is-selected {
+  outline: none;
 }
 
 .syllabus-magazine-cover {

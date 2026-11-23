@@ -295,6 +295,7 @@ const GalleryTileInner = memo(function GalleryTileInner({
       className={twMerge(
         "syllabus-gallery-tile group min-w-0 select-none relative",
         interactive && "cursor-pointer outline-none",
+        selected && "is-selected",
         done && "opacity-40",
         notePane && "has-gallery-note",
         isClassNote && "is-class-note in-[.print]:hidden",
