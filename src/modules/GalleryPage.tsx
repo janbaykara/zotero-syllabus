@@ -588,9 +588,6 @@ export function GalleryPage({
   const annotationColors = useExistingAnnotationColors(
     layout === "annotations" ? allItemsForAnnotationFilter : [],
   );
-  const annotationGroupsReady =
-    !hideEmptyAnnotationGroups || annotatedItemIds != null;
-
   const visibleTypeGroups = useMemo(() => {
     if (!hideEmptyAnnotationGroups) {
       return typeGroups;
@@ -1416,7 +1413,7 @@ export function GalleryPage({
                         ) : (
                           <>
                             {effectiveGroupBy === "none" &&
-                              (!annotationGroupsReady ? null : visibleFlatItems.length ===
+                              (visibleFlatItems.length ===
                                 0 ? (
                                 <p className="text-secondary text-lg">
                                   {emptyMessage}
@@ -1450,7 +1447,7 @@ export function GalleryPage({
                               ))}
 
                             {effectiveGroupBy === "type" &&
-                              (!annotationGroupsReady ? null : visibleTypeGroups.length ===
+                              (visibleTypeGroups.length ===
                                 0 ? (
                                 <p className="text-secondary text-lg">
                                   {emptyMessage}
@@ -1475,7 +1472,7 @@ export function GalleryPage({
                               ))}
 
                             {effectiveGroupBy === "creator" &&
-                              (!annotationGroupsReady ? null : visibleCreatorGroups.length ===
+                              (visibleCreatorGroups.length ===
                                   0 && visibleUncreditedItems.length === 0 ? (
                                 <p className="text-secondary text-lg">
                                   {emptyMessage}
@@ -1521,7 +1518,7 @@ export function GalleryPage({
                               ))}
 
                             {effectiveGroupBy === "tags" &&
-                              (!annotationGroupsReady ? null : visibleTagGroups.length ===
+                              (visibleTagGroups.length ===
                                   0 && visibleUntaggedItems.length === 0 ? (
                                 <p className="text-secondary text-lg">
                                   {emptyMessage}
@@ -1567,7 +1564,7 @@ export function GalleryPage({
                               ))}
 
                             {effectiveGroupBy === "subcollections" &&
-                              (!annotationGroupsReady ? null : !visibleSubcollectionRoot ||
+                              (!visibleSubcollectionRoot ||
                                 !subtreeHasContent(visibleSubcollectionRoot) ? (
                                 <p className="text-secondary text-lg">
                                   {isFiltered
