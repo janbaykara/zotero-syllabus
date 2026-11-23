@@ -257,14 +257,26 @@ function buildSyllabusPayload(
     };
   });
 
+  const priorityNameById = new Map(
+    (doc.priorities || []).map((priority) => [
+      priority.id,
+      String(priority.name || "").trim(),
+    ]),
+  );
+
   const assignments: ShareSyllabusAssignment[] = [];
   for (const [itemKey, rows] of Object.entries(doc.items || {})) {
     for (const row of rows || []) {
+      const priorityId = row.priority ?? null;
+      const priorityLabel = priorityId
+        ? priorityNameById.get(priorityId) || null
+        : null;
       assignments.push({
         id: row.id,
         itemKey,
         classId: row.classId,
-        priority: row.priority ?? null,
+        // Public page shows the human label; raw ids (custom-…) are useless there.
+        priority: priorityLabel || priorityId,
         classInstruction: row.classInstruction ?? null,
       });
     }

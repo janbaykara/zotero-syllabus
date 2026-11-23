@@ -81,6 +81,7 @@ export type ShareSyllabusAssignment = {
   id: string;
   itemKey: string;
   classId?: string;
+  /** Display label resolved at publish (not the stored priority id). */
   priority?: string | null;
   classInstruction?: string | null;
 };
