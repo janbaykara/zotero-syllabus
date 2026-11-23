@@ -1,13 +1,14 @@
 import { getCachedCollectionById } from "@janbaykara/zotero-cache";
-import { isSyllabusAssignableItem } from "../utils/items";
 import { compareLocale } from "../utils/locale";
 import {
-  collectionLibraryIsEditable,
   getAllCollections,
-  itemBelongsInCollection,
   libraryDisplayName,
   libraryIsEditable,
 } from "../utils/zotero";
+import {
+  addItemsToClass as addItemsToNumberedClass,
+  addItemsToFurtherReading,
+} from "./addItemsToClass";
 import { getSyllabusCollectionDictionary } from "./syllabusNote";
 import { SyllabusManager } from "./syllabus";
 
@@ -176,38 +177,15 @@ export async function addItemsToClass(options: {
   collectionId: number;
   classNumber: number | undefined;
 }): Promise<void> {
-  const collection =
-    getCachedCollectionById(options.collectionId) ||
-    Zotero.Collections.get(options.collectionId);
-  if (!collection || collection.deleted) {
+  // Shared helpers resolve parents, ensure collection membership (skipSelect),
+  // then write assignments — avoids #55 where notes updated but items stayed out.
+  if (options.classNumber == null) {
+    await addItemsToFurtherReading(options.items, options.collectionId);
     return;
   }
-  if (!collectionLibraryIsEditable(collection)) {
-    return;
-  }
-  for (const item of options.items) {
-    if (!isSyllabusAssignableItem(item)) {
-      continue;
-    }
-    if (!itemBelongsInCollection(item, collection)) {
-      continue;
-    }
-    try {
-      const collectionIds = item.getCollections();
-      if (!collectionIds.includes(collection.id)) {
-        item.addToCollection(collection.id);
-        await item.saveTx();
-      }
-      await SyllabusManager.applyToFirstAssignment(item, collection.id, {
-        classNumber: options.classNumber,
-      });
-      await item.saveTx();
-    } catch (error) {
-      try {
-        ztoolkit.log("Error adding item to class:", error);
-      } catch {
-        // Tests (and early boot) may not have ztoolkit.
-      }
-    }
-  }
+  await addItemsToNumberedClass(
+    options.items,
+    options.collectionId,
+    options.classNumber,
+  );
 }
