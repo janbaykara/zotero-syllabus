@@ -145,6 +145,7 @@ import {
   priorityPatchForUnnumbered,
 } from "./addItemsToClass";
 import { shouldCaptureCustomViewKeyboard } from "./galleryKeyboardNav";
+import { clearZoteroItemSelection } from "./browsePage";
 import {
   isItemContextMenuKey,
   openZoteroItemContextMenu,
@@ -617,7 +618,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           const isZoteroSelected = selectedItemIds?.includes(item.id) || false;
           if (isZoteroSelected) {
             ztoolkit.log("Deselect item", item.id);
-            pane.selectItem(-1);
+            clearZoteroItemSelection();
           } else {
             pane.selectItem(item.id);
           }
@@ -895,6 +896,17 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     }
   }, [selectedIdentifiers, syllabusItems]);
 
+  // When plugin selection is cleared (Escape, click-off), drop Zotero selection
+  // in a separate effect so the sync-up effect above cannot race and restore it.
+  const prevIdentifierCountRef = useRef(selectedIdentifiers.size);
+  useEffect(() => {
+    const prev = prevIdentifierCountRef.current;
+    prevIdentifierCountRef.current = selectedIdentifiers.size;
+    if (prev > 0 && selectedIdentifiers.size === 0) {
+      clearZoteroItemSelection();
+    }
+  }, [selectedIdentifiers]);
+
   // Set up global drag event listeners
   useEffect(() => {
     const clearDragUi = () => {
@@ -1097,12 +1109,45 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
   });
   navStateRef.current = { selectedIdentifiers, navigableEntries };
 
+  const clearSyllabusSelection = useCallback(() => {
+    setSelectedIdentifiers(new Set());
+    clearZoteroItemSelection();
+  }, [setSelectedIdentifiers]);
+  const clearSyllabusSelectionRef = useRef(clearSyllabusSelection);
+  clearSyllabusSelectionRef.current = clearSyllabusSelection;
+
   const handleSyllabusKeyDown = useCallback((event: Event) => {
     const e = event as KeyboardEvent;
     if (!shouldCaptureCustomViewKeyboard(e)) {
       return;
     }
     if (e.ctrlKey || e.metaKey || e.altKey) {
+      return;
+    }
+
+    const isEscape = e.key === "Escape" || e.key === "Esc";
+    if (isEscape) {
+      const { selectedIdentifiers: selected } = navStateRef.current;
+      let zoteroCount = 0;
+      try {
+        zoteroCount =
+          (
+            ztoolkit.getGlobal("ZoteroPane").getSelectedItems(true) as number[]
+          )?.length ?? 0;
+      } catch {
+        zoteroCount = 0;
+      }
+      if (selected.size === 0 && zoteroCount === 0) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof e.stopImmediatePropagation === "function") {
+        e.stopImmediatePropagation();
+      }
+      // Clear plugin selection first so the Zotero-sync effect cannot
+      // re-select items after we wipe the pane selection.
+      clearSyllabusSelectionRef.current();
       return;
     }
 
@@ -1168,10 +1213,18 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
   useEffect(() => {
     const win = Zotero.getMainWindow();
-    const doc = win?.document ?? document;
+    // Prefer the page root's document (same compartment as the focused UI).
+    const doc =
+      syllabusPageRef.current?.ownerDocument ?? win?.document ?? document;
+    const view = doc.defaultView ?? win;
+    view?.addEventListener("keydown", handleSyllabusKeyDown, true);
     doc.addEventListener("keydown", handleSyllabusKeyDown, true);
+    const root = syllabusPageRef.current;
+    root?.addEventListener("keydown", handleSyllabusKeyDown);
     return () => {
+      view?.removeEventListener("keydown", handleSyllabusKeyDown, true);
       doc.removeEventListener("keydown", handleSyllabusKeyDown, true);
+      root?.removeEventListener("keydown", handleSyllabusKeyDown);
     };
   }, [handleSyllabusKeyDown]);
 

@@ -445,13 +445,25 @@ export function GalleryPage({
     syllabusMetadata,
     0,
   );
-  const { selectedIdentifiers, selectedItemIds, handleIdentifierClick } =
-    useItemIdentifierSelection();
+  const {
+    selectedIdentifiers,
+    selectedItemIds,
+    handleIdentifierClick,
+    clearSelection,
+  } = useItemIdentifierSelection();
   const pageRef = useRef<HTMLDivElement>(null);
   const stickyRef = useRef<HTMLDivElement>(null);
   const pillsRef = useRef<HTMLElement>(null);
-  const navStateRef = useRef({ selectedItemIds });
-  navStateRef.current = { selectedItemIds };
+  const navStateRef = useRef({
+    selectedItemIds,
+    selectedIdentifiers,
+    clearSelection,
+  });
+  navStateRef.current = {
+    selectedItemIds,
+    selectedIdentifiers,
+    clearSelection,
+  };
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const suppressScrollSpyRef = useRef(false);
   const fileDrop = useOsFileDropHandlers({
@@ -887,6 +899,24 @@ export function GalleryPage({
         return;
       }
 
+      if (e.key === "Escape") {
+        const {
+          selectedItemIds: selected,
+          selectedIdentifiers: identifiers,
+          clearSelection: clear,
+        } = navStateRef.current;
+        if ((selected?.length ?? 0) === 0 && identifiers.size === 0) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === "function") {
+          e.stopImmediatePropagation();
+        }
+        clear();
+        return;
+      }
+
       const container = pageRef.current;
       if (!container) {
         return;
@@ -994,10 +1024,16 @@ export function GalleryPage({
 
   useEffect(() => {
     const win = Zotero.getMainWindow();
-    const doc = win?.document ?? document;
+    const doc = pageRef.current?.ownerDocument ?? win?.document ?? document;
+    const view = doc.defaultView ?? win;
+    view?.addEventListener("keydown", handleGalleryKeyDown, true);
     doc.addEventListener("keydown", handleGalleryKeyDown, true);
+    const root = pageRef.current;
+    root?.addEventListener("keydown", handleGalleryKeyDown);
     return () => {
+      view?.removeEventListener("keydown", handleGalleryKeyDown, true);
       doc.removeEventListener("keydown", handleGalleryKeyDown, true);
+      root?.removeEventListener("keydown", handleGalleryKeyDown);
     };
   }, [handleGalleryKeyDown]);
 

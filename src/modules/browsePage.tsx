@@ -48,11 +48,34 @@ export function DensityIcon({
   return <Maximize2 size={20} className={className} />;
 }
 
+export function clearZoteroItemSelection(): void {
+  try {
+    const pane = ztoolkit.getGlobal("ZoteroPane");
+    // selectItem(-1) / selectItems([]) are unreliable while a custom view is
+    // showing; the items-tree selection API clears Zotero + Item Pane state.
+    const clear = pane.itemsView?.selection?.clearSelection;
+    if (typeof clear === "function") {
+      clear.call(pane.itemsView.selection);
+      return;
+    }
+    if (typeof pane.selectItem === "function") {
+      pane.selectItem(-1);
+    }
+  } catch (err) {
+    ztoolkit.log("Error clearing item selection:", err);
+  }
+}
+
 export function useItemIdentifierSelection() {
   const selectedItemIds = useZoteroSelectedItemIds();
   const [selectedIdentifiers, setSelectedIdentifiers] = useState<Set<string>>(
     new Set(),
   );
+
+  const clearSelection = useCallback(() => {
+    setSelectedIdentifiers(new Set());
+    clearZoteroItemSelection();
+  }, []);
 
   const handleIdentifierClick = useCallback(
     (
@@ -93,7 +116,7 @@ export function useItemIdentifierSelection() {
             pane.selectItem(itemId);
           }
         } else if (selectedItemIds?.includes(item.id)) {
-          pane.selectItem(-1);
+          clearZoteroItemSelection();
         } else {
           pane.selectItem(item.id);
         }
@@ -104,7 +127,12 @@ export function useItemIdentifierSelection() {
     [selectedItemIds],
   );
 
-  return { selectedIdentifiers, selectedItemIds, handleIdentifierClick };
+  return {
+    selectedIdentifiers,
+    selectedItemIds,
+    handleIdentifierClick,
+    clearSelection,
+  };
 }
 
 export function useBrowsePageChrome() {

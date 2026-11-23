@@ -88,6 +88,7 @@ import {
   useItemIdentifierSelection,
   densityLabel,
 } from "./browsePage";
+import { shouldCaptureCustomViewKeyboard } from "./galleryKeyboardNav";
 import { collectionHasSyllabusNote } from "./syllabusNote";
 import { SyllabusManager } from "./syllabus";
 import {
@@ -1214,14 +1215,61 @@ export function ExplorerPage({ libraryID }: { libraryID: number }) {
   const data = useExplorerQueryData(libraryID, visibleShelves);
   const allSyllabi = useSyllabi();
   const [density] = useZoteroItemDensity();
-  const { selectedIdentifiers, selectedItemIds, handleIdentifierClick } =
-    useItemIdentifierSelection();
+  const {
+    selectedIdentifiers,
+    selectedItemIds,
+    handleIdentifierClick,
+    clearSelection,
+  } = useItemIdentifierSelection();
   const pageRef = useRef<HTMLDivElement>(null);
   const stickyRef = useRef<HTMLDivElement>(null);
   const pillsRef = useRef<HTMLElement>(null);
   const suppressScrollSpyRef = useRef(false);
   const [activeShelfId, setActiveShelfId] = useState<string | null>(null);
   const [itemCount, setItemCount] = useState<number | null>(null);
+  const selectionEscapeRef = useRef({
+    selectedIdentifiers,
+    selectedItemIds,
+    clearSelection,
+  });
+  selectionEscapeRef.current = {
+    selectedIdentifiers,
+    selectedItemIds,
+    clearSelection,
+  };
+
+  useEffect(() => {
+    const onKeyDown = (event: Event) => {
+      const e = event as KeyboardEvent;
+      if (e.key !== "Escape" || e.ctrlKey || e.metaKey || e.altKey) {
+        return;
+      }
+      if (!shouldCaptureCustomViewKeyboard(e)) {
+        return;
+      }
+      const {
+        selectedIdentifiers: identifiers,
+        selectedItemIds: itemIds,
+        clearSelection: clear,
+      } = selectionEscapeRef.current;
+      if (identifiers.size === 0 && (itemIds?.length ?? 0) === 0) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof e.stopImmediatePropagation === "function") {
+        e.stopImmediatePropagation();
+      }
+      clear();
+    };
+    const win = Zotero.getMainWindow();
+    const doc = win?.document ?? document;
+    doc.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      doc.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, []);
+
   const title = libraryDisplayName(libraryID) || getString("untitled");
   const collections = useMemo(() => libraryCollections(libraryID), [libraryID]);
   const topLevelCollectionKeys = useMemo(
