@@ -447,6 +447,23 @@ gallery-note-edit = 编辑个人笔记
 gallery-note-remove = 移除个人笔记
 gallery-note-label = 个人笔记
 gallery-show-notes = Show personal notes
+gallery-separate-done = Separate done items
+gallery-separate-done-title = Show items marked done in their own section
+gallery-prioritised-items =
+    { $count ->
+        [one] { $count } prioritised item
+       *[other] { $count } prioritised items
+    }
+gallery-unprioritised-items =
+    { $count ->
+        [one] { $count } unprioritised item
+       *[other] { $count } unprioritised items
+    }
+gallery-done-items =
+    { $count ->
+        [one] { $count } done item
+       *[other] { $count } done items
+    }
 magazine-shelf-watch = 观看
 magazine-shelf-watch-title = 最近添加的视频
 magazine-shelf-listen = 收听

@@ -76,7 +76,7 @@ The plugin has five surfaces (toggle in **Preferences → Zotero Syllabus → Vi
 
 1. **Syllabus** — structure a collection by class.
 2. **Reading Schedule** — due dates across all your syllabi.
-3. **Gallery** — browse a collection as a reading list (covers, cards, or a preview) with your own reading order.
+3. **Gallery** — browse a collection as a reading list (covers, cards, or a preview) with your own reading order. Items you mark done can sit in a separate Done section, most recently finished first.
 4. **Home** — library shelves for what to open next (pinned, recently read, annotations, deadlines, and more).
 5. **Annotation Feed** — your highlights in one timeline.
 

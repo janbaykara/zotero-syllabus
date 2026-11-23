@@ -449,6 +449,23 @@ gallery-note-edit = 個人メモを編集
 gallery-note-remove = 個人メモを削除
 gallery-note-label = 個人メモ
 gallery-show-notes = Show personal notes
+gallery-separate-done = Separate done items
+gallery-separate-done-title = Show items marked done in their own section
+gallery-prioritised-items =
+    { $count ->
+        [one] { $count } prioritised item
+       *[other] { $count } prioritised items
+    }
+gallery-unprioritised-items =
+    { $count ->
+        [one] { $count } unprioritised item
+       *[other] { $count } unprioritised items
+    }
+gallery-done-items =
+    { $count ->
+        [one] { $count } done item
+       *[other] { $count } done items
+    }
 magazine-shelf-watch = 見る
 magazine-shelf-watch-title = 最近追加した動画
 magazine-shelf-listen = 聴く

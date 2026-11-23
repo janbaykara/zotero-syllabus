@@ -870,6 +870,65 @@
   margin: 0 0 20px;
 }
 
+/* Prioritised, done, and unprioritised: done-heading size, prioritised colour. */
+.syllabus-personal-order-zone-heading {
+  color: var(--color-secondary);
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+/* Zotero sets `button { max-height: 25px }`, which clips this heading. */
+button.syllabus-personal-order-done-toggle {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.35em;
+  width: 100%;
+  max-height: none;
+  height: auto;
+  min-height: 0;
+  margin-left: 0;
+  margin-right: 0;
+  margin-bottom: 12px;
+  padding-left: 0;
+  padding-right: 0;
+  padding-bottom: 0;
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+  text-align: start;
+  color: var(--color-secondary);
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+button.syllabus-personal-order-done-toggle .syllabus-gallery-done-chevron {
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+  transition: transform 0.15s ease;
+}
+
+button.syllabus-personal-order-done-toggle[aria-expanded="false"]
+  .syllabus-gallery-done-chevron {
+  transform: rotate(-90deg);
+}
+
+@media print {
+  .syllabus-gallery-done-body {
+    display: block !important;
+  }
+
+  button.syllabus-personal-order-done-toggle .syllabus-gallery-done-chevron {
+    display: none;
+  }
+}
+
 /* Card + Row/Standard: match Syllabus locked class titles (text-xl / semibold). */
 .syllabus-gallery-layout-card[data-item-density="row"]
   .syllabus-gallery-section-title,

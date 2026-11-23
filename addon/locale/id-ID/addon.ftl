@@ -449,6 +449,23 @@ gallery-note-edit = Edit catatan pribadi
 gallery-note-remove = Hapus catatan pribadi
 gallery-note-label = Catatan pribadi
 gallery-show-notes = Show personal notes
+gallery-separate-done = Separate done items
+gallery-separate-done-title = Show items marked done in their own section
+gallery-prioritised-items =
+    { $count ->
+        [one] { $count } prioritised item
+       *[other] { $count } prioritised items
+    }
+gallery-unprioritised-items =
+    { $count ->
+        [one] { $count } unprioritised item
+       *[other] { $count } unprioritised items
+    }
+gallery-done-items =
+    { $count ->
+        [one] { $count } done item
+       *[other] { $count } done items
+    }
 magazine-shelf-watch = Tonton
 magazine-shelf-watch-title = Video yang baru ditambahkan
 magazine-shelf-listen = Dengar

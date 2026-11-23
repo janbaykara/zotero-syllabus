@@ -449,6 +449,23 @@ gallery-note-edit = Modifier la note personnelle
 gallery-note-remove = Supprimer la note personnelle
 gallery-note-label = Note personnelle
 gallery-show-notes = Show personal notes
+gallery-separate-done = Separate done items
+gallery-separate-done-title = Show items marked done in their own section
+gallery-prioritised-items =
+    { $count ->
+        [one] { $count } prioritised item
+       *[other] { $count } prioritised items
+    }
+gallery-unprioritised-items =
+    { $count ->
+        [one] { $count } unprioritised item
+       *[other] { $count } unprioritised items
+    }
+gallery-done-items =
+    { $count ->
+        [one] { $count } done item
+       *[other] { $count } done items
+    }
 magazine-shelf-watch = À regarder
 magazine-shelf-watch-title = Vidéos ajoutées récemment
 magazine-shelf-listen = À écouter

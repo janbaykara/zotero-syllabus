@@ -54,7 +54,7 @@ Optional **`description`** is the Gallery reading-list blurb (placeholder “Add
 
 Unordered items are **not** stored in `order`; they follow the ordered keys at display time. Personal progress lives here, not on the shared syllabus document:
 
-- **`done`** — item keys (Gallery / flat checkbox). Checking an item marks every syllabus assignment for that key done.
+- **`done`** — item keys (Gallery / flat checkbox), oldest first. Checking an item appends its key (a key already listed moves to the end) and marks every syllabus assignment for that key done. Unticking removes the key and leaves the rest in place. Gallery’s Done section shows this list most recently done first.
 - **`assignmentDone`** — assignment ids (Syllabus page). Checking one assignment leaves siblings unchecked until all are done (then promoted to `done`).
 - **`classDone`** — syllabus class ids (class-level checkbox). Drives class-folder `✅` suffixes only (not the shared readable syllabus note).
 
@@ -64,7 +64,9 @@ The note is created lazily on first mutation. Startup migrates legacy `assignmen
 
 **Show personal notes** (Gallery) is a collection-scoped view pref (`showGalleryNotes.<collectionId>`, default `galleryShowNotes`). When off, collection-scoped Gallery notes are hidden on Cover / Card / Preview / Annotations tiles; the notes themselves stay in the library.
 
-**Precedence:** when `order` is non-empty after pruning missing keys, pinned stacks / next-up, Explorer collection shelves, and Gallery with sort **Auto** use personal order instead of syllabus class order (Gallery flattens grouping while that list exists). Gallery sort **Personal Reading Order** is the same precedence with DnD chrome (ordered, then an Unordered gap, then the rest). Auto without a personal list falls back to class/syllabus order when the collection is a syllabus. The Syllabus tab stays class-structured. Item merges remap keys via `dc:replaces` like the syllabus note.
+**Separate done items** (Gallery) is a collection-scoped view pref (`gallerySeparateDone.<collectionId>`, default `defaultGallerySeparateDone`, default on). In the **Reading order** sort, the ordered section is headed “N prioritised items” and the rest “N unprioritised items”. When the option is on, items whose key is in the Personal Reading Order `done` list leave both of those lists and sit in a collapsible **Done** section between them (starts open; heading “☑️ N done items”; most recently marked done first). Done keys stay in the stored reading order, so unticking puts an item back where it was. Dragging a done item into the prioritised or unprioritised zone clears its item-level done (and that item’s assignment ticks) in the same note write as the new order: prioritised inserts it at the drop position; unprioritised drops it from `order`. When the option is off, done items stay in the prioritised or unprioritised list.
+
+**Precedence:** when `order` is non-empty after pruning missing keys, pinned stacks / next-up, Explorer collection shelves, and Gallery with sort **Auto** use personal order instead of syllabus class order (Gallery flattens grouping while that list exists). Gallery sort **Personal Reading Order** is the same precedence with DnD chrome (prioritised items, then an “unprioritised items” gap, then the rest). Auto without a personal list falls back to class/syllabus order when the collection is a syllabus. The Syllabus tab stays class-structured. Item merges remap keys via `dc:replaces` like the syllabus note.
 
 ## Item merges
 

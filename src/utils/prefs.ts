@@ -66,6 +66,7 @@ export const PLUGIN_PREF_DEFAULTS: {
   galleryShowItemsWithoutAnnotations: true,
   galleryIncludeAutomaticTags: false,
   galleryShowNotes: true,
+  defaultGallerySeparateDone: true,
   syllabusShowClassNotes: true,
   magazineTypeSize: "small",
   magazinePacking: "packed",

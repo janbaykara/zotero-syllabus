@@ -449,6 +449,23 @@ gallery-note-edit = Sửa ghi chú cá nhân
 gallery-note-remove = Xóa ghi chú cá nhân
 gallery-note-label = Ghi chú cá nhân
 gallery-show-notes = Show personal notes
+gallery-separate-done = Separate done items
+gallery-separate-done-title = Show items marked done in their own section
+gallery-prioritised-items =
+    { $count ->
+        [one] { $count } prioritised item
+       *[other] { $count } prioritised items
+    }
+gallery-unprioritised-items =
+    { $count ->
+        [one] { $count } unprioritised item
+       *[other] { $count } unprioritised items
+    }
+gallery-done-items =
+    { $count ->
+        [one] { $count } done item
+       *[other] { $count } done items
+    }
 magazine-shelf-watch = Xem
 magazine-shelf-watch-title = Video mới thêm
 magazine-shelf-listen = Nghe

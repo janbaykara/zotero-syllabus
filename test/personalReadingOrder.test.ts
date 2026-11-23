@@ -7,7 +7,9 @@ import {
   looksLikePersonalReadingOrderPayload,
   parsePersonalReadingOrderNote,
   personalReadingOrderDocumentHeading,
+  personalReadingOrderReleasingDone,
   prunePersonalReadingOrderKeys,
+  readingDoneKeysAfterToggle,
   remapPersonalReadingOrderKeys,
   serializePersonalReadingOrderNote,
   splitPersonalReadingOrder,
@@ -64,6 +66,39 @@ describe("personal reading order", function () {
     assert.deepEqual(parsed!.done, ["key2"]);
     assert.deepEqual(parsed!.assignmentDone, ["asg-9"]);
     assert.equal(parsed!.version, PERSONAL_READING_ORDER_VERSION);
+  });
+
+  it("clears done keys and can replace the reading order together", function () {
+    const next = personalReadingOrderReleasingDone(
+      {
+        version: PERSONAL_READING_ORDER_VERSION,
+        order: ["a", "d1", "b"],
+        done: ["d1", "d2"],
+        assignmentDone: ["asg-d1", "asg-keep"],
+      },
+      [{ itemKey: "d1", siblingAssignmentIds: ["asg-d1"] }],
+      ["d1", "a", "b"],
+    );
+    assert.deepEqual(next.order, ["d1", "a", "b"]);
+    assert.deepEqual(next.done, ["d2"]);
+    assert.deepEqual(next.assignmentDone, ["asg-keep"]);
+  });
+
+  it("appends a newly done key and drops it on untick", function () {
+    assert.deepEqual(readingDoneKeysAfterToggle(["a", "b"], "c", true), [
+      "a",
+      "b",
+      "c",
+    ]);
+    assert.deepEqual(readingDoneKeysAfterToggle(["a", "b", "c"], "b", true), [
+      "a",
+      "c",
+      "b",
+    ]);
+    assert.deepEqual(readingDoneKeysAfterToggle(["a", "b", "c"], "b", false), [
+      "a",
+      "c",
+    ]);
   });
 
   it("round-trips an optional gallery description", function () {

@@ -41,6 +41,7 @@ declare namespace _ZoteroTypes {
       "galleryShowItemsWithoutAnnotations": boolean;
       "galleryIncludeAutomaticTags": boolean;
       "galleryShowNotes": boolean;
+      "defaultGallerySeparateDone": boolean;
       "syllabusShowClassNotes": boolean;
       "magazineTypeSize": string;
       "magazinePacking": string;

@@ -5,7 +5,7 @@
  *
  * Envelope: human-readable numbered list, then “Plugin data (do not edit)” + JSON.
  * Unordered items are not stored in `order` — they follow ordered keys at display
- * time. Done keys live in `done` (item keys marked read).
+ * time. `done` is item keys marked read, oldest first: a new tick is appended.
  */
 
 import * as z from "zod";
@@ -117,6 +117,82 @@ function emptyDocument(): PersonalReadingOrderDocument {
     assignmentDone: [],
     classDone: [],
   };
+}
+
+export type ReadingDoneRelease = {
+  itemKey: string;
+  siblingAssignmentIds?: readonly string[];
+};
+
+/** Drop item-level done (and those items' assignment ticks). Optionally replace `order`. */
+export function personalReadingOrderReleasingDone(
+  document: PersonalReadingOrderDocument,
+  releases: readonly ReadingDoneRelease[],
+  orderKeys?: readonly string[],
+): PersonalReadingOrderDocument {
+  const clearItems = new Set<string>();
+  const clearAssignments = new Set<string>();
+  for (const release of releases) {
+    if (release.itemKey) {
+      clearItems.add(release.itemKey);
+    }
+    for (const id of release.siblingAssignmentIds ?? []) {
+      if (id) {
+        clearAssignments.add(id);
+      }
+    }
+  }
+  return {
+    ...document,
+    version: PERSONAL_READING_ORDER_VERSION,
+    order: orderKeys ? [...orderKeys] : document.order || [],
+    done: (document.done || []).filter((key) => !clearItems.has(key)),
+    assignmentDone: (document.assignmentDone || []).filter(
+      (id) => !clearAssignments.has(id),
+    ),
+  };
+}
+
+/**
+ * Optimistic: clear item-level done for `releases` and, when `orderKeys` is
+ * set, store that reading order in the same note write.
+ */
+export async function releasePersonalReadingDone(
+  collection: Zotero.Collection | number,
+  releases: readonly ReadingDoneRelease[],
+  orderKeys?: readonly string[],
+): Promise<void> {
+  const resolved = resolveCollection(collection);
+  if (!resolved || releases.length === 0) {
+    return;
+  }
+  await mutatePersonalReadingOrderOptimistic(resolved, (current) =>
+    personalReadingOrderReleasingDone(current, releases, orderKeys),
+  );
+}
+
+/**
+ * Item-level done keys, oldest first. Marking done appends the key (or moves
+ * it to the end if it was already listed). Unticking removes it.
+ */
+export function readingDoneKeysAfterToggle(
+  done: readonly string[],
+  itemKey: string,
+  markDone: boolean,
+): string[] {
+  const rest: string[] = [];
+  const seen = new Set<string>();
+  for (const key of done) {
+    if (!key || key === itemKey || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    rest.push(key);
+  }
+  if (!markDone || !itemKey) {
+    return rest;
+  }
+  return [...rest, itemKey];
 }
 
 function uniqueKeys(keys: string[]): string[] {
@@ -873,24 +949,15 @@ function withItemReadingDone(
   done: boolean,
   siblingAssignmentIds: string[],
 ): PersonalReadingOrderDocument {
-  const doneKeys = new Set(current.done || []);
   const assignmentDone = new Set(current.assignmentDone || []);
-  if (done) {
-    doneKeys.add(itemKey);
-    for (const id of siblingAssignmentIds) {
-      assignmentDone.delete(id);
-    }
-  } else {
-    doneKeys.delete(itemKey);
-    for (const id of siblingAssignmentIds) {
-      assignmentDone.delete(id);
-    }
+  for (const id of siblingAssignmentIds) {
+    assignmentDone.delete(id);
   }
   return {
     ...current,
     version: PERSONAL_READING_ORDER_VERSION,
     order: current.order || [],
-    done: [...doneKeys],
+    done: readingDoneKeysAfterToggle(current.done || [], itemKey, done),
     assignmentDone: [...assignmentDone],
   };
 }
@@ -903,9 +970,9 @@ function withAssignmentReadingDone(
   siblingAssignmentIds: string[],
 ): PersonalReadingOrderDocument {
   const siblings = uniqueKeys(siblingAssignmentIds);
-  const doneKeys = new Set(current.done || []);
   const assignmentDone = new Set(current.assignmentDone || []);
-  const itemWasDone = doneKeys.has(itemKey);
+  const itemWasDone = (current.done || []).includes(itemKey);
+  let doneKeys = current.done || [];
 
   if (done) {
     assignmentDone.add(assignmentId);
@@ -913,13 +980,13 @@ function withAssignmentReadingDone(
       (id) => id === assignmentId || assignmentDone.has(id),
     );
     if (allDone && siblings.length > 0) {
-      doneKeys.add(itemKey);
+      doneKeys = readingDoneKeysAfterToggle(doneKeys, itemKey, true);
       for (const id of siblings) {
         assignmentDone.delete(id);
       }
     }
   } else if (itemWasDone) {
-    doneKeys.delete(itemKey);
+    doneKeys = readingDoneKeysAfterToggle(doneKeys, itemKey, false);
     for (const id of siblings) {
       if (id !== assignmentId) {
         assignmentDone.add(id);
@@ -934,7 +1001,7 @@ function withAssignmentReadingDone(
     ...current,
     version: PERSONAL_READING_ORDER_VERSION,
     order: current.order || [],
-    done: [...doneKeys],
+    done: doneKeys,
     assignmentDone: [...assignmentDone],
   };
 }

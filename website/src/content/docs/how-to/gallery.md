@@ -60,6 +60,12 @@ How it looks: under the title on **Card**; in the sidecar on **Preview**; beside
 
 Use Gallery **View options → Show personal notes** to hide or show these captions without deleting them. The setting is per collection (same pattern as **Show checkboxes**).
 
+## Done items
+
+Sort by **Reading order**. That list is headed **N prioritised items** (for example, “3 prioritised items”). Items that are not in the order sit under **N unprioritised items**.
+
+Turn on **Show checkboxes**, then tick an item when you have finished it. **Separate done items** (on by default, also in View options) moves those items out of both lists into a **Done** section directly under the prioritised items. The section lists the most recently finished item first. Drag an item from Done into **prioritised** or **unprioritised** to put it back in that list and clear its done tick. The Done heading looks like “☑️ 2 done items”. It starts open; click it to collapse the section. Untick **Separate done items** to leave finished items in whichever list they were in. Both settings are stored per collection, and **Save as default** copies them to collections that have not set their own.
+
 ## Print, export, and share
 
 Use the globe icon in the Gallery header to **Publish online…**. You can also right-click the collection → **Share via URL**. The share wizard can publish as a personal reading list (mirroring Gallery view options) or as a syllabus when the collection has one. Checkboxes, read status, and Gallery notes stay private. (Syllabus view still has the printer menu for PDF / Word / Markdown / HTML.) Details: [Print, export, and publish](/zotero-syllabus/how-to/print-export-publish/).
