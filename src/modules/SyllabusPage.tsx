@@ -310,58 +310,6 @@ function scrollSyllabusIdentifierIntoView(
   }
 }
 
-async function importSyllabusMetadataFromFile(
-  collectionId: number,
-  file: File,
-): Promise<void> {
-  try {
-    const fileContents = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const content = event.target?.result;
-        if (typeof content === "string") {
-          resolve(content);
-        } else if (content instanceof ArrayBuffer) {
-          resolve(new TextDecoder("utf-8").decode(content));
-        } else {
-          reject(new Error("Failed to read file contents"));
-        }
-      };
-      reader.onerror = () => reject(new Error("Error reading file"));
-      reader.readAsText(file);
-    });
-
-    await SyllabusManager.importSyllabusMetadata(
-      collectionId,
-      fileContents,
-      "page",
-    );
-
-    ztoolkit.log("Successfully imported and merged syllabus metadata");
-
-    new ztoolkit.ProgressWindow(getString("progress-import-success-title"), {
-      closeOnClick: true,
-      closeTime: 3000,
-    })
-      .createLine({
-        text: getString("progress-import-success-text"),
-        type: "success",
-      })
-      .show();
-  } catch (error) {
-    new ztoolkit.ProgressWindow(getString("progress-import-error-title"), {
-      closeOnClick: true,
-      closeTime: 5000,
-    })
-      .createLine({
-        text: error instanceof Error ? error.message : String(error),
-        type: "fail",
-      })
-      .show();
-    ztoolkit.log("Import processing error:", error);
-  }
-}
-
 type PublishUiStatus = CollectionPublishUiStatus;
 
 function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
@@ -465,12 +413,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
   const fileDrop = useOsFileDropHandlers({
     onOsFileDrop: async (event) => {
-      const files = Array.from(event.dataTransfer?.files || []);
-      for (const file of files) {
-        if (isSyllabusNoteFileName(file.name)) {
-          await importSyllabusMetadataFromFile(collectionId, file);
-        }
-      }
+      // Bespoke .syllabus import was removed (#40); skip those files and use
+      // Zotero’s native RDF export/import to move syllabi between libraries.
       const added = await importDroppedOsFilesIntoCurrentView(event, {
         skipFileName: isSyllabusNoteFileName,
       });

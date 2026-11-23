@@ -68,6 +68,10 @@ The note is created lazily on first mutation. Startup migrates legacy `assignmen
 
 **Precedence:** when `order` is non-empty after pruning missing keys, pinned stacks / next-up, Explorer collection shelves, and Gallery with sort **Auto** use personal order instead of syllabus class order (Gallery flattens grouping while that list exists). Gallery sort **Personal Reading Order** is the same precedence with DnD chrome (prioritised items, then an “unprioritised items” gap, then the rest). Auto without a personal list falls back to class/syllabus order when the collection is a syllabus. The Syllabus tab stays class-structured. Item merges remap keys via `dc:replaces` like the syllabus note.
 
+## Moving a syllabus between libraries
+
+Settings no longer offers bespoke `.syllabus` export/import (that path was unreliable). Users move collections with Zotero’s native **Zotero RDF** export/import; the Syllabus note travels with the collection. Translator JSON import (`importSyllabusMetadata` for Talis/etc.) remains for reading-list Connector flows.
+
 ## Item merges
 
 Assignments are keyed by Zotero `item.key`. When the user merges duplicates, Zotero **keeps the master’s key** and **trashes the others**. The Syllabus UI only shows live collection members and looks up `document.items[currentKey]`. If the note still stores class/priority data under the deleted key, the survivor looks unassigned and lands in **Further reading**.
@@ -307,6 +311,8 @@ The Worker ignores any client-supplied owner and forces `users/{jwt.sub}/…`. P
 ```text
 https://<worker>/u/{zoteroUserId}/{libraryID}/{collectionKey}/
 ```
+
+Public GETs set `Content-Security-Policy: frame-ancestors *` (and CORS `*`) so embeds in Obsidian/Notion/LMS iframes are not blocked by framing policy. Unpublished prefixes still 404.
 
 **Zotero Connector.** Collection `index.html` inlines COinS (`span.Z3988`) extracted from the CSL bibliography into a hidden `#zotero-coins` block so the Connector can multi-detect items before the SPA hydrates (same as pre-share.json static publish). The viewer also dispatches `ZoteroItemUpdated` after mount. Item share pages emit Highwire Press `citation_*` meta tags plus COinS ([`zoteroCoins.ts`](../src/utils/zoteroCoins.ts)).
 

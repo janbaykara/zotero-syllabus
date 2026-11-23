@@ -66,6 +66,8 @@ In **Table** view, a sortable **Syllabus Class / Assignment** column summarises 
 
 The header has **Settings** (nomenclature such as week / class / session, priorities, bibliography, class subcollections), **Lock** (read-only for studying), **Print**, and [Pin collection](/zotero-syllabus/how-to/pinning/).
 
+To **move a syllabus** between libraries or machines, use Zotero’s built-in **Zotero RDF** export/import for the collection — not a separate `.syllabus` file. See [Troubleshooting](/zotero-syllabus/reference/troubleshooting/#moving-a-syllabus-between-libraries).
+
 **Class subcollections** is off by default. When on, the plugin creates a child folder per class and keeps membership in sync. Do not add or remove items in those folders by hand. Leave this off unless you want folder mirrors. See [Auto-managed folders](/zotero-syllabus/concepts/auto-managed-folders/).
 
 If the [Zotero Reading List](https://github.com/Dominic-DallOsto/zotero-reading-list) plugin is installed, its reading status appears in Syllabus view.

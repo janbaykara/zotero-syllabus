@@ -21,6 +21,18 @@ description: Common problems and how to fix them.
 
 If **Class subcollections** is on, do not edit those child folders by hand. Re-assign in Syllabus view, or turn the setting off. See [Auto-managed folders](/zotero-syllabus/concepts/auto-managed-folders/).
 
+## Moving a syllabus between libraries
+
+Do **not** use a bespoke `.syllabus` file from Settings. Export the collection with Zotero’s built-in **Zotero RDF** (collection or library export), then **File → Import…** in the destination library. The Syllabus note travels with the collection.
+
+## Obsidian / iframe embed shows “site unreachable”
+
+Published pages allow framing (`frame-ancestors *`). If Obsidian’s **Create embed** still fails while the same URL opens in Obsidian’s web viewer:
+
+1. Confirm the publish URL still loads in a normal browser (unpublished or expired shares return 404).
+2. Prefer a normal Markdown link; some Obsidian builds cannot iframe third-party Cloudflare Worker hosts even when framing is allowed.
+3. Republish after updating the plugin so the public page is current.
+
 ## Publish failed or link missing files
 
 - Only publish what you have rights to share.
