@@ -999,6 +999,8 @@ async function handlePublicGet(request: Request, env: Env): Promise<Response> {
     headers.set("cache-control", "public, max-age=300");
   }
   headers.set("access-control-allow-origin", "*");
+  // Allow Obsidian / Notion / LMS iframes (#59). Do not send X-Frame-Options.
+  headers.set("content-security-policy", "frame-ancestors *");
   if (obj.size != null) {
     headers.set("content-length", String(obj.size));
   }
