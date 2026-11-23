@@ -664,14 +664,30 @@ export function SyllabusItemCard({
     </div>
   ) : null;
 
+  const selectedOnAccent = isIdentifierSelected
+    ? ({
+        // scheme-dark alone does not remap Zotero fill tokens — force
+        // light text so titles stay readable on accent-blue.
+        "--color-primary": "var(--accent-white)",
+        "--color-secondary":
+          "color-mix(in srgb, var(--accent-white) 78%, transparent)",
+        "--color-tertiary":
+          "color-mix(in srgb, var(--accent-white) 62%, transparent)",
+        "--color-icon": "var(--accent-white)",
+      } as JSX.CSSProperties)
+    : undefined;
+
   return (
     <div
       style={
         density === "row"
-          ? !isIdentifierSelected && rowHovered
-            ? { backgroundColor: rowHoverTint }
-            : undefined
-          : colors
+          ? {
+              ...selectedOnAccent,
+              ...(!isIdentifierSelected && rowHovered
+                ? { backgroundColor: rowHoverTint }
+                : undefined),
+            }
+          : { ...colors, ...selectedOnAccent }
       }
       className={twMerge(
         "syllabus-item-card in-[.print]:scheme-light",
