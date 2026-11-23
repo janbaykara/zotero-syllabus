@@ -2765,7 +2765,14 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
                 {visibleClassGroups.map((group, index) => (
                   <ClassGroupComponent
-                    key={group.classNumber ?? "null"}
+                    key={
+                      group.classNumber == null
+                        ? "null"
+                        : (SyllabusManager.getClassIdByNumber(
+                            collectionId,
+                            group.classNumber,
+                          ) ?? `class-${group.classNumber}`)
+                    }
                     classNumber={group.classNumber}
                     itemAssignments={group.itemAssignments}
                     collectionId={collectionId}
