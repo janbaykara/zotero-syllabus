@@ -578,29 +578,10 @@ export async function searchRecentAnnotations(
   libraryID: number,
   limit: number,
 ): Promise<MyAnnotationStreamEntry[]> {
-  const ids = await searchItemIds(libraryID, [
-    ["itemType", "is", "annotation"],
-    ["dateModified", "isInTheLast", "90 days"],
-  ]);
-  const rows: MyAnnotationStreamEntry[] = [];
-  for (const id of ids) {
-    const item = resolveItem(id);
-    if (!item) {
-      continue;
-    }
-    try {
-      if (item.deleted) {
-        continue;
-      }
-    } catch {
-      continue;
-    }
-    const row = mapAnnotationStreamEntry(item);
-    if (row) {
-      rows.push(row);
-    }
-  }
-  return rows.sort(compareAnnotationNewestFirst).slice(0, limit);
+  // Same timeline as the Annotations Feed (dateAdded, no 90-day dateModified
+  // window) so the Home shelf matches the top of My Annotations (#52).
+  const { rows } = await searchMyAnnotationsStream(libraryID, { limit });
+  return rows;
 }
 
 export const MY_ANNOTATIONS_STREAM_PAGE_SIZE = 50;
