@@ -647,6 +647,7 @@ export type FluentMessageId =
   | 'settings-density'
   | 'settings-file'
   | 'settings-file-desc'
+  | 'settings-file-zotero-rdf'
   | 'settings-new-priority-name'
   | 'settings-nomenclature'
   | 'settings-nomenclature-desc'
