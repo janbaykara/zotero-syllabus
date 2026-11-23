@@ -244,12 +244,16 @@ function buildSyllabusPayload(
         date = rawDate;
       }
     }
+    const itemOrder = (meta?.itemOrder || []).filter(
+      (assignmentId): assignmentId is string => Boolean(assignmentId),
+    );
     return {
       id,
       number: meta?.number ?? index + 1,
       title: String(meta?.title || "").trim() || `Class ${index + 1}`,
       description: descriptionHtml || null,
       date,
+      ...(itemOrder.length > 0 ? { itemOrder } : {}),
     };
   });
 

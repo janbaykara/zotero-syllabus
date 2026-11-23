@@ -73,6 +73,8 @@ export type ShareSyllabusClass = {
   title: string;
   description?: string | null;
   date?: string | null;
+  /** Manual assignment-id order within the class (from syllabus DnD). */
+  itemOrder?: string[];
 };
 
 export type ShareSyllabusAssignment = {

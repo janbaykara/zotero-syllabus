@@ -90,6 +90,8 @@ export type ShareSyllabusClass = {
   /** Class blurb under the heading (Markdown → HTML at publish). */
   description?: string | null;
   date?: string | null;
+  /** Manual assignment-id order within the class (from syllabus DnD). */
+  itemOrder?: string[];
 };
 
 export type ShareSyllabusAssignment = {

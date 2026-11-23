@@ -928,6 +928,34 @@ function SyllabusAssignmentCovers({
   );
 }
 
+/** Honour syllabus DnD order baked into each class’s `itemOrder`. */
+function sortShareAssignments(
+  assignments: ShareSyllabusAssignment[],
+  itemOrder: string[] | undefined,
+): ShareSyllabusAssignment[] {
+  if (!itemOrder?.length) {
+    return assignments;
+  }
+  const byId = new Map(
+    assignments
+      .filter((assignment) => assignment.id)
+      .map((assignment) => [assignment.id, assignment]),
+  );
+  const ordered: ShareSyllabusAssignment[] = [];
+  for (const id of itemOrder) {
+    const assignment = byId.get(id);
+    if (!assignment) {
+      continue;
+    }
+    ordered.push(assignment);
+    byId.delete(id);
+  }
+  for (const assignment of byId.values()) {
+    ordered.push(assignment);
+  }
+  return ordered;
+}
+
 function SyllabusView({
   doc,
   view,
@@ -1007,8 +1035,9 @@ function SyllabusView({
     <div>
       {classes.map((cls) => {
         if (!cls) return null;
-        const assignments = syllabus.assignments.filter(
-          (a) => a.classId === cls.id,
+        const assignments = sortShareAssignments(
+          syllabus.assignments.filter((a) => a.classId === cls.id),
+          cls.itemOrder,
         );
         return (
           <section className="sv-class" key={cls.id}>
