@@ -595,8 +595,9 @@ export function GalleryPage({
     if (!hideEmptyAnnotationGroups) {
       return typeGroups;
     }
+    // Still loading annotation membership — show all groups rather than blank (#53).
     if (!annotatedItemIds) {
-      return [];
+      return typeGroups;
     }
     return typeGroups
       .map((group) => ({
@@ -611,7 +612,7 @@ export function GalleryPage({
       return creatorGroups;
     }
     if (!annotatedItemIds) {
-      return [];
+      return creatorGroups;
     }
     return creatorGroups
       .map((group) => ({
@@ -626,7 +627,7 @@ export function GalleryPage({
       return uncreditedItems;
     }
     if (!annotatedItemIds) {
-      return [];
+      return uncreditedItems;
     }
     return uncreditedItems.filter((item) => annotatedItemIds.has(item.id));
   }, [uncreditedItems, hideEmptyAnnotationGroups, annotatedItemIds]);
@@ -636,7 +637,7 @@ export function GalleryPage({
       return tagGroups;
     }
     if (!annotatedItemIds) {
-      return [];
+      return tagGroups;
     }
     return tagGroups
       .map((group) => ({
@@ -651,7 +652,7 @@ export function GalleryPage({
       return untaggedItems;
     }
     if (!annotatedItemIds) {
-      return [];
+      return untaggedItems;
     }
     return untaggedItems.filter((item) => annotatedItemIds.has(item.id));
   }, [untaggedItems, hideEmptyAnnotationGroups, annotatedItemIds]);
@@ -660,7 +661,10 @@ export function GalleryPage({
     if (!hideEmptyAnnotationGroups) {
       return subcollectionRoot;
     }
-    if (!annotatedItemIds || !subcollectionRoot) {
+    if (!annotatedItemIds) {
+      return subcollectionRoot;
+    }
+    if (!subcollectionRoot) {
       return null;
     }
     return pruneSubcollectionByAnnotatedIds(
@@ -675,7 +679,7 @@ export function GalleryPage({
       return items;
     }
     if (!annotatedItemIds) {
-      return [];
+      return items;
     }
     return items.filter((item) => annotatedItemIds.has(item.id));
   }, [syllabusItems, hideEmptyAnnotationGroups, annotatedItemIds]);
@@ -1166,9 +1170,8 @@ export function GalleryPage({
     if (!collectionId) {
       return null;
     }
-    if (!annotationGroupsReady) {
-      return null;
-    }
+    // While annotation membership loads, still show the reading-order list
+    // (possibly unfiltered) instead of a blank page (#53).
     if (visibleFlatItems.length === 0) {
       return showReadingListEmpty ? (
         readingListEmptyState
