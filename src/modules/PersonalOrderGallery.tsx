@@ -86,6 +86,14 @@ function containersEqual(a: OrderContainers, b: OrderContainers): boolean {
   );
 }
 
+function cloneContainers(containers: OrderContainers): OrderContainers {
+  return {
+    ordered: [...containers.ordered],
+    rest: [...containers.rest],
+    done: [...containers.done],
+  };
+}
+
 function sourceGroupOf(source: {
   group?: unknown;
   data?: { group?: unknown };
@@ -473,10 +481,7 @@ export function PersonalOrderGallery({
       modifiers={modifiers}
       dropIndicator={GALLERY_DROP_INDICATOR}
       onDragStart={(event, manager) => {
-        previousContainers.current = {
-          ordered: [...containersRef.current.ordered],
-          rest: [...containersRef.current.rest],
-        };
+        previousContainers.current = cloneContainers(containersRef.current);
         const sourceId = event.operation.source?.id;
         const ids = sourceId
           ? resolveDragIds(
