@@ -53,9 +53,12 @@ export function clearZoteroItemSelection(): void {
     const pane = ztoolkit.getGlobal("ZoteroPane");
     // selectItem(-1) / selectItems([]) are unreliable while a custom view is
     // showing; the items-tree selection API clears Zotero + Item Pane state.
-    const clear = pane.itemsView?.selection?.clearSelection;
+    // itemsView is `ItemTree | false` — falsy check narrows before .selection.
+    const itemsView = pane.itemsView;
+    const selection = itemsView ? itemsView.selection : undefined;
+    const clear = selection?.clearSelection;
     if (typeof clear === "function") {
-      clear.call(pane.itemsView.selection);
+      clear.call(selection);
       return;
     }
     if (typeof pane.selectItem === "function") {

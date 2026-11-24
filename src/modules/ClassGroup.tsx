@@ -1068,8 +1068,9 @@ export function ClassGroupComponent({
                       onDragOver={(e) => {
                         onDragOver(e);
                         if (!isOsFileDrag(e.dataTransfer)) {
-                          (e.currentTarget as HTMLElement).dataset.dropzoneActive =
-                            "true";
+                          (
+                            e.currentTarget as HTMLElement
+                          ).dataset.dropzoneActive = "true";
                         }
                       }}
                       onDragLeave={(e) => {
