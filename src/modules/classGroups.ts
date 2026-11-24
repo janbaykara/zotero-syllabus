@@ -4,6 +4,7 @@ import {
   SettingsSyllabusMetadata,
   SyllabusManager,
   classByNumber,
+  orderedSectionIds,
 } from "./syllabus";
 import {
   isClassNoteItem,
@@ -12,6 +13,10 @@ import {
   sortItemsByTitle,
 } from "../utils/items";
 import type { GallerySortBy } from "./gallerySort";
+import {
+  partitionClassAssignmentsBySection as partitionRowsBySection,
+  type ClassSectionPartition as SectionPartition,
+} from "./classSections";
 
 export type SyllabusClassGroup = {
   classNumber: number | null;
@@ -48,6 +53,15 @@ export type ClassAssignmentRow = {
   item: Zotero.Item;
   assignment: ItemSyllabusAssignment;
 };
+
+export type ClassSectionPartition = SectionPartition<ClassAssignmentRow>;
+
+export function partitionClassAssignmentsBySection(
+  rows: ClassAssignmentRow[],
+  classMeta: Parameters<typeof partitionRowsBySection>[1],
+): { root: ClassAssignmentRow[]; sections: ClassSectionPartition[] } {
+  return partitionRowsBySection(rows, classMeta);
+}
 
 /** Keep incoming (syllabus / further-reading) order for `auto`. */
 export function sortItemRows<T extends { item: Zotero.Item }>(
@@ -151,10 +165,11 @@ export function applyFurtherReadingOrder<T extends { item: Zotero.Item }>(
   return ordered;
 }
 
-/** No assigned readings/notes and no class description. */
+/** No assigned readings/notes, no class description, and no sections. */
 export function isEmptyClassGroup(group: SyllabusClassGroup): boolean {
   const description = (group.syllabusMetadata?.description || "").trim();
-  return group.itemAssignments.length === 0 && !description;
+  const hasSections = orderedSectionIds(group.syllabusMetadata).length > 0;
+  return group.itemAssignments.length === 0 && !description && !hasSections;
 }
 
 /**

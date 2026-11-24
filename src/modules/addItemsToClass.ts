@@ -2,6 +2,7 @@ import { getCachedCollectionById } from "@janbaykara/zotero-cache";
 import { pickLibraryItems } from "../utils/itemPicker";
 import { resolveItemsForClassAssignment } from "../utils/items";
 import { collectionLibraryIsEditable } from "../utils/zotero";
+import { insertAssignmentIds } from "./classSections";
 import { SyllabusManager } from "./syllabus";
 
 function itemIsAlreadyInClass(
@@ -61,18 +62,35 @@ async function appendAssignmentIdsToClassOrder(
   collectionId: number,
   classNumber: number | null,
   addedAssignmentIds: string[],
+  sectionId?: string,
 ): Promise<void> {
   if (addedAssignmentIds.length === 0) {
+    return;
+  }
+  if (sectionId && classNumber != null) {
+    const meta = SyllabusManager.getClassMetadata(collectionId, classNumber);
+    const section = meta.sections?.[sectionId];
+    if (!section) {
+      return;
+    }
+    const order = section.itemOrder || [];
+    const next = insertAssignmentIds(order, addedAssignmentIds);
+    if (next.length !== order.length) {
+      await SyllabusManager.setClassSectionItemOrder(
+        collectionId,
+        classNumber,
+        sectionId,
+        next,
+        "page",
+      );
+    }
     return;
   }
   const order = SyllabusManager.getClassItemOrder(collectionId, classNumber);
   if (order.length === 0) {
     return;
   }
-  const next = [
-    ...order,
-    ...addedAssignmentIds.filter((id) => !order.includes(id)),
-  ];
+  const next = insertAssignmentIds(order, addedAssignmentIds);
   if (next.length !== order.length) {
     await SyllabusManager.setClassItemOrder(
       collectionId,
@@ -86,17 +104,20 @@ async function appendAssignmentIdsToClassOrder(
 /**
  * Add library items to a numbered class: collection membership + assignment.
  * Items already assigned to this class are skipped. Manual order, when
- * present, appends the new assignment ids.
+ * present, appends the new assignment ids. Optional `sectionId` places them
+ * in a one-level class section.
  */
 export async function addItemsToClass(
   items: readonly Zotero.Item[],
   collectionId: number,
   classNumber: number,
+  options?: { sectionId?: string },
 ): Promise<void> {
   const collection = getCachedCollectionById(collectionId);
   if (!collection || items.length === 0) {
     return;
   }
+  const sectionId = options?.sectionId;
 
   const toAdd = resolveItemsForClassAssignment(items, collection);
   const addedAssignmentIds: string[] = [];
@@ -118,7 +139,7 @@ export async function addItemsToClass(
       item,
       collectionId,
       classNumber,
-      {},
+      sectionId ? { sectionId } : {},
       "page",
     );
 
@@ -135,6 +156,7 @@ export async function addItemsToClass(
     collectionId,
     classNumber,
     addedAssignmentIds,
+    sectionId,
   );
 }
 
@@ -304,11 +326,16 @@ async function pickAndRun(
 export async function pickAndAddItemsToClass(
   collectionId: number,
   classNumber: number,
+  options?: { sectionId?: string },
 ): Promise<void> {
+  const sectionId = options?.sectionId;
   await pickAndRun(
-    `${collectionId}:class:${classNumber}`,
+    `${collectionId}:class:${classNumber}:${sectionId || "root"}`,
     collectionId,
-    (items) => addItemsToClass(items, collectionId, classNumber),
+    (items) =>
+      addItemsToClass(items, collectionId, classNumber, {
+        sectionId,
+      }),
   );
 }
 

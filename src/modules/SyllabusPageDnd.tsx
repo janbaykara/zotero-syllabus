@@ -59,6 +59,8 @@ export type SyllabusDropTarget = {
   targetItemId?: number;
   /** Bare assignment id from the blue-line host (incl. display-only `note:…`). */
   targetAssignmentId?: string;
+  /** One-level class section destination (omit for class root). */
+  sectionId?: string;
   insertBefore?: boolean;
   zone?: "further-reading";
 };
@@ -78,7 +80,7 @@ export function SyllabusPageDnd({
   selectedIdentifiers: Set<string>;
   syllabusItems: Array<{
     zoteroItem: Zotero.Item;
-    assignments: Array<{ id?: string }>;
+    assignments: Array<{ id?: string; sectionId?: string }>;
   }>;
   onDragActivity?: (dragging: boolean) => void;
   onDragStartMeta?: (meta: {
@@ -115,7 +117,10 @@ export function SyllabusPageDnd({
         if (meta.unnumbered) {
           return { targetClassNumber: null };
         }
-        return { targetClassNumber: meta.classNumber };
+        return {
+          targetClassNumber: meta.classNumber,
+          ...(meta.sectionId ? { sectionId: meta.sectionId } : {}),
+        };
       }
 
       if (!isChromeSortable(target)) {
@@ -135,6 +140,14 @@ export function SyllabusPageDnd({
       );
       const targetAssignmentId = assignmentIdFromSyllabusIdentifier(identifier);
       const insertBefore = indicator?.edge === "before";
+
+      const sectionId =
+        meta.sectionId ||
+        (targetAssignmentId != null
+          ? syllabusItems
+              .flatMap((row) => row.assignments)
+              .find((a) => a.id === targetAssignmentId)?.sectionId
+          : undefined);
 
       if (meta.zone === "further-reading") {
         return {
@@ -157,6 +170,7 @@ export function SyllabusPageDnd({
         targetClassNumber: meta.classNumber,
         targetItemId,
         targetAssignmentId,
+        ...(sectionId ? { sectionId } : {}),
         insertBefore,
       };
     },

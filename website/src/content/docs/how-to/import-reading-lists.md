@@ -3,7 +3,7 @@ title: Import a reading list
 description: Save Talis, Leganto, and other institutional lists into a new syllabus collection.
 ---
 
-With the [Zotero Connector](https://www.zotero.org/download/connectors) installed, you can save a supported institutional reading list from the browser. The plugin creates a **new top-level collection** named after the list, turns sections into classes, and maps importance tags (essential / required / recommended / optional, and similar labels) onto syllabus priorities. While saving, it tries each View online / file link in your signed-in browser session and stores any PDFs or EPUBs it can actually download. Remaining items are then looked up the same way **Find Available PDFs** does.
+With the [Zotero Connector](https://www.zotero.org/download/connectors) installed, you can save a supported institutional reading list from the browser. The plugin creates a **new top-level collection** named after the list, turns top-level sections into classes, and maps nested subsections into one-level **class sections** (title, description, and items). Importance tags (essential / required / recommended / optional, and similar labels) map onto syllabus priorities. While saving, it tries each View online / file link in your signed-in browser session and stores any PDFs or EPUBs it can actually download. Remaining items are then looked up the same way **Find Available PDFs** does.
 
 :::caution[Requirements]
 This needs **Zotero 8 or later**. You must already be able to view the list in the browser (including SSO-gated lists). After you save, switch the new collection to **View as Syllabus**.

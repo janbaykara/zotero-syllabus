@@ -247,6 +247,22 @@ function buildSyllabusPayload(
     const itemOrder = (meta?.itemOrder || []).filter(
       (assignmentId): assignmentId is string => Boolean(assignmentId),
     );
+    const sectionOrder = (meta?.sectionOrder || []).filter((sectionId) =>
+      Boolean(meta?.sections?.[sectionId]),
+    );
+    const sections = sectionOrder.map((sectionId) => {
+      const section = meta!.sections![sectionId]!;
+      const sectionDescriptionHtml = proseToDisplayHtml(section.description);
+      const sectionItemOrder = (section.itemOrder || []).filter(
+        (assignmentId): assignmentId is string => Boolean(assignmentId),
+      );
+      return {
+        id: sectionId,
+        title: String(section.title || "").trim() || "Section",
+        description: sectionDescriptionHtml || null,
+        ...(sectionItemOrder.length > 0 ? { itemOrder: sectionItemOrder } : {}),
+      };
+    });
     return {
       id,
       number: meta?.number ?? index + 1,
@@ -254,6 +270,7 @@ function buildSyllabusPayload(
       description: descriptionHtml || null,
       date,
       ...(itemOrder.length > 0 ? { itemOrder } : {}),
+      ...(sections.length > 0 ? { sections, sectionOrder } : {}),
     };
   });
 
@@ -275,6 +292,7 @@ function buildSyllabusPayload(
         id: row.id,
         itemKey,
         classId: row.classId,
+        ...(row.sectionId ? { sectionId: row.sectionId } : {}),
         // Public page shows the human label; raw ids (custom-…) are useless there.
         priority: priorityLabel || priorityId,
         classInstruction: row.classInstruction ?? null,

@@ -74,7 +74,7 @@ In Zotero, open it anytime from **Help → Zotero Syllabus Documentation**. For 
 
 The plugin has five surfaces (toggle in **Preferences → Zotero Syllabus → Views**):
 
-1. **Syllabus** — structure a collection by class.
+1. **Syllabus** — structure a collection by class (with optional one-level sections under a class).
 2. **Reading Schedule** — due dates across all your syllabi.
 3. **Gallery** — browse a collection as a reading list (covers, cards, or a preview) with your own reading order. Items you mark done can sit in a separate Done section, most recently finished first.
 4. **Home** — library shelves for what to open next (pinned, recently read, annotations, deadlines, and more).

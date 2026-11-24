@@ -236,9 +236,10 @@ export function resolveShareItem(item: Zotero.Item): Zotero.Item {
   return item;
 }
 
-async function annotationImageDataUrl(
-  entry: { id: number; imageSrc?: string },
-): Promise<string | undefined> {
+async function annotationImageDataUrl(entry: {
+  id: number;
+  imageSrc?: string;
+}): Promise<string | undefined> {
   if (!entry.imageSrc) {
     return undefined;
   }

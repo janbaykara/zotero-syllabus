@@ -11,12 +11,15 @@ export function SyllabusDndZone({
   empty,
   className,
   children,
+  collisionPriority,
   ...rest
 }: {
   group: string;
   empty?: boolean;
   className?: string;
   children: ComponentChildren;
+  /** Prefer nested section/root empty zones over sibling class zones. */
+  collisionPriority?: number;
 } & JSX.HTMLAttributes<HTMLDivElement>) {
   const enabled = useSyllabusPageDnd()?.enabled ?? false;
   // Hooks must not run without <DndProvider> (locked / no chrome DnD).
@@ -32,6 +35,7 @@ export function SyllabusDndZone({
       group={group}
       empty={empty}
       className={className}
+      collisionPriority={collisionPriority}
       {...rest}
     >
       {children}
@@ -44,19 +48,21 @@ function SyllabusDndZoneActive({
   empty,
   className,
   children,
+  collisionPriority = 50,
   ...rest
 }: {
   group: string;
   empty?: boolean;
   className?: string;
   children: ComponentChildren;
+  collisionPriority?: number;
 } & JSX.HTMLAttributes<HTMLDivElement>) {
   // Only empty lists register as zone targets. A filled zone wrapping
   // sortables would otherwise compete for hits and break in-list reorder.
   const { ref } = useDroppable({
     id: syllabusDndZoneId(group),
     accept: SYLLABUS_DND_ITEM_TYPE,
-    collisionPriority: 50,
+    collisionPriority,
     disabled: !empty,
   });
 

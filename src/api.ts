@@ -575,10 +575,8 @@ const view = {
    * Open the Annotation Feed tab for a library.
    * Pass `parentItemId` to isolate the feed to one parent work.
    */
-  openMyAnnotations: (
-    libraryID: number,
-    parentItemId?: number | null,
-  ): void => openMyAnnotationsTab(libraryID, parentItemId),
+  openMyAnnotations: (libraryID: number, parentItemId?: number | null): void =>
+    openMyAnnotationsTab(libraryID, parentItemId),
   /** Current items-pane mode for the selected collection (`table` / `gallery` / `syllabus` / …). */
   getCollectionViewMode: (): CollectionViewMode =>
     SyllabusManager.getCollectionViewMode(),

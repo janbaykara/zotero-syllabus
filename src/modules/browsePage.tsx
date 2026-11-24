@@ -108,8 +108,13 @@ function eventPathHitsSelector(event: Event, selector: string): boolean {
   for (let depth = 0; walk && depth < 40; depth++) {
     nodes.push(walk);
     const parent =
-      (walk as { parentNode?: unknown; parentElement?: unknown; host?: unknown })
-        .parentElement ??
+      (
+        walk as {
+          parentNode?: unknown;
+          parentElement?: unknown;
+          host?: unknown;
+        }
+      ).parentElement ??
       (walk as { parentNode?: unknown }).parentNode ??
       (walk as { host?: unknown }).host;
     walk = parent && parent !== walk ? parent : null;
@@ -137,10 +142,7 @@ function eventPathHitsSelector(event: Event, selector: string): boolean {
 }
 
 /** Best-effort match for simple selectors used in selection outside-click. */
-function selectorMatchesElementShallow(
-  el: Element,
-  selector: string,
-): boolean {
+function selectorMatchesElementShallow(el: Element, selector: string): boolean {
   const id = typeof el.id === "string" ? el.id : "";
   const tag =
     typeof (el as { tagName?: string }).tagName === "string"

@@ -902,6 +902,16 @@ a.sv-card-main .sv-card-title {
   white-space: nowrap;
 }
 
+.sv-class-section {
+  margin-top: 1rem;
+}
+
+.sv-class-section-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
 .sv-class-desc {
   margin: 0 0 0.85rem;
   color: var(--sv-text);

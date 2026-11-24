@@ -67,20 +67,30 @@ export type ShareItem = {
   annotations?: ShareAnnotation[];
 };
 
+export type ShareSyllabusSection = {
+  id: string;
+  title: string;
+  description?: string | null;
+  itemOrder?: string[];
+};
+
 export type ShareSyllabusClass = {
   id: string;
   number: number | null;
   title: string;
   description?: string | null;
   date?: string | null;
-  /** Manual assignment-id order within the class (from syllabus DnD). */
+  /** Manual assignment-id order at class root (not in a section). */
   itemOrder?: string[];
+  sections?: ShareSyllabusSection[];
+  sectionOrder?: string[];
 };
 
 export type ShareSyllabusAssignment = {
   id: string;
   itemKey: string;
   classId?: string;
+  sectionId?: string;
   /** Display label resolved at publish (not the stored priority id). */
   priority?: string | null;
   classInstruction?: string | null;

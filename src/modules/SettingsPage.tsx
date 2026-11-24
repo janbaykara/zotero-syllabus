@@ -1,11 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
-import {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-} from "preact/hooks";
+import { useState, useEffect, useCallback, useMemo } from "preact/hooks";
 import type { ComponentChildren } from "preact";
 import { twMerge } from "tailwind-merge";
 import { isZotero8OrLater } from "../utils/zotero";

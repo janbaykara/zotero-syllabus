@@ -1035,10 +1035,25 @@ function SyllabusView({
     <div>
       {classes.map((cls) => {
         if (!cls) return null;
-        const assignments = sortShareAssignments(
-          syllabus.assignments.filter((a) => a.classId === cls.id),
+        const classAssignments = syllabus.assignments.filter(
+          (a) => a.classId === cls.id,
+        );
+        const sectionIds = new Set(
+          (cls.sectionOrder || cls.sections?.map((s) => s.id) || []).filter(
+            Boolean,
+          ),
+        );
+        const rootAssignments = sortShareAssignments(
+          classAssignments.filter(
+            (a) => !a.sectionId || !sectionIds.has(a.sectionId),
+          ),
           cls.itemOrder,
         );
+        const orderedSections = (cls.sectionOrder || [])
+          .map((id) => cls.sections?.find((s) => s.id === id))
+          .filter(Boolean);
+        const sections =
+          orderedSections.length > 0 ? orderedSections : cls.sections || [];
         return (
           <section className="sv-class" key={cls.id}>
             <h2 className="sv-class-head">
@@ -1055,7 +1070,30 @@ function SyllabusView({
             {cls.description ? (
               <ShareProse html={cls.description} className="sv-class-desc" />
             ) : null}
-            {renderAssignments(assignments)}
+            {rootAssignments.length > 0
+              ? renderAssignments(rootAssignments)
+              : null}
+            {sections.map((section) => {
+              if (!section) return null;
+              const sectionAssignments = sortShareAssignments(
+                classAssignments.filter((a) => a.sectionId === section.id),
+                section.itemOrder,
+              );
+              return (
+                <div className="sv-class-section" key={section.id}>
+                  <h3 className="sv-class-section-title">{section.title}</h3>
+                  {section.description ? (
+                    <ShareProse
+                      html={section.description}
+                      className="sv-class-desc"
+                    />
+                  ) : null}
+                  {sectionAssignments.length > 0
+                    ? renderAssignments(sectionAssignments)
+                    : null}
+                </div>
+              );
+            })}
           </section>
         );
       })}

@@ -27,8 +27,9 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
   const ctx = { rootURI };
   ctx._globalThis = ctx;
 
+  // Query busts Firefox loadSubScript cache so plugin reload picks up new builds.
   Services.scriptloader.loadSubScript(
-    `${rootURI}/content/scripts/__addonRef__.js`,
+    `${rootURI}/content/scripts/__addonRef__.js?v=${Date.now()}`,
     ctx,
   );
   await Zotero.__addonInstance__.hooks.onStartup(rootURI);

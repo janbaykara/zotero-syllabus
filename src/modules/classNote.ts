@@ -85,6 +85,7 @@ async function selectCreatedNote(
 export async function createAndAssignClassNote(
   collectionId: number,
   classNumber: number,
+  options?: { sectionId?: string },
 ): Promise<{ note: Zotero.Item; assignmentId: string } | null> {
   try {
     const note = await createCollectionNoteItem(
@@ -96,16 +97,31 @@ export async function createAndAssignClassNote(
       return null;
     }
 
+    const sectionId = options?.sectionId;
     const assignmentId = await SyllabusManager.addClassAssignment(
       note,
       collectionId,
       classNumber,
-      {},
+      sectionId ? { sectionId } : {},
       "page",
     );
     if (!assignmentId) {
       ztoolkit.log("createAndAssignClassNote: assignment id missing");
       return null;
+    }
+
+    if (sectionId) {
+      const meta = SyllabusManager.getClassMetadata(collectionId, classNumber);
+      const order = meta.sections?.[sectionId]?.itemOrder || [];
+      if (!order.includes(assignmentId)) {
+        await SyllabusManager.setClassSectionItemOrder(
+          collectionId,
+          classNumber,
+          sectionId,
+          [...order, assignmentId],
+          "page",
+        );
+      }
     }
 
     await selectCreatedNote(note, collectionId);

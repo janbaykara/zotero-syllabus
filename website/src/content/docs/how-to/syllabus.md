@@ -31,6 +31,8 @@ Unassigned items stay under **Further reading**.
 
 Give each class a title, description, and optional [reading date](/zotero-syllabus/how-to/reading-schedule/). Mark a class or an item **done** to track what you have already read.
 
+Under a class, use **Add section** (next to **Add note**) for one level of subsections — each with its own title, description, and ordered items. Drag items between the class root and its sections. Nested sections from [imported reading lists](/zotero-syllabus/how-to/import-reading-lists/) map into these class sections.
+
 ![Checkboxes and status](../../../assets/images/checkboxes.png)
 
 ## Course documents

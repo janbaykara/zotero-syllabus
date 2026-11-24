@@ -40,6 +40,10 @@ export function generateClassId(): string {
   return `class-${uuidv7()}`;
 }
 
+export function generateSectionId(): string {
+  return `section-${uuidv7()}`;
+}
+
 /**
  * ItemSyllabusAssignment schema
  * Version 2: Ensures id is always present
@@ -61,6 +65,8 @@ const ItemSyllabusAssignmentV2Schema = z.object({
 const ItemSyllabusAssignmentV3Schema = z.object({
   id: z.string().default(generateAssignmentId),
   classId: z.string().optional(),
+  /** One-level section under the assignment's class (`section-{uuid}`). */
+  sectionId: z.string().optional(),
   classNumber: classNumberSchema,
   priority: SyllabusPrioritySchema.optional().nullable(),
   classInstruction: z.string().optional().nullable(),
@@ -335,12 +341,26 @@ export const DEFAULT_PRIORITIES: z.infer<typeof PrioritySchema>[] = [
 ];
 
 /**
+ * One-level section under a class: title, description, ordered assignment ids.
+ * Not a nested class — no priorities, dates, or personal-done state.
+ */
+export const ClassSectionMetadataSchema = z.object({
+  title: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
+  itemOrder: z.array(z.string()).optional(),
+});
+
+/**
  * Settings Class Metadata schema
  */
 export const SettingsClassMetadataSchema = z.object({
   title: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
+  /** Assignment ids at class root (not in any section). */
   itemOrder: z.array(z.string()).optional(),
+  sections: z.record(z.string(), ClassSectionMetadataSchema).optional(),
+  /** Ordered section ids within this class. */
+  sectionOrder: z.array(z.string()).optional(),
   readingDate: z.string().optional().nullable(), // ISO date string
   status: ClassStatusSchema.optional().nullable(),
 });
@@ -363,6 +383,30 @@ export const ExportClassMetadataSchema = SettingsClassMetadataSchema.omit({
  * Shared transform function for classes field
  * Filters out null classes and empty itemOrder arrays
  */
+function cleanClassSectionMap(
+  sections:
+    Record<string, z.infer<typeof ClassSectionMetadataSchema>> | undefined,
+): Record<string, z.infer<typeof ClassSectionMetadataSchema>> | undefined {
+  if (!sections) {
+    return undefined;
+  }
+  const cleaned: Record<
+    string,
+    z.infer<typeof ClassSectionMetadataSchema>
+  > = {};
+  for (const [sectionId, section] of Object.entries(sections)) {
+    if (!section) {
+      continue;
+    }
+    const next = { ...section };
+    if (next.itemOrder && next.itemOrder.length === 0) {
+      delete next.itemOrder;
+    }
+    cleaned[sectionId] = next;
+  }
+  return Object.keys(cleaned).length > 0 ? cleaned : undefined;
+}
+
 const transformClasses = <T extends z.ZodTypeAny>(classSchema: T) => {
   return z
     .record(z.string(), classSchema)
@@ -375,12 +419,34 @@ const transformClasses = <T extends z.ZodTypeAny>(classSchema: T) => {
           // Skip null classes
           continue;
         }
-        // Remove empty itemOrder arrays
-        const cleanedValue = { ...value };
-        if (cleanedValue.itemOrder && cleanedValue.itemOrder.length === 0) {
+        // Remove empty itemOrder arrays (class + sections)
+        const cleanedValue: Record<string, unknown> = { ...value };
+        if (
+          Array.isArray(cleanedValue.itemOrder) &&
+          cleanedValue.itemOrder.length === 0
+        ) {
           delete cleanedValue.itemOrder;
         }
-        filtered[key] = cleanedValue;
+        if (
+          Array.isArray(cleanedValue.sectionOrder) &&
+          cleanedValue.sectionOrder.length === 0
+        ) {
+          delete cleanedValue.sectionOrder;
+        }
+        if (cleanedValue.sections) {
+          const sections = cleanClassSectionMap(
+            cleanedValue.sections as Record<
+              string,
+              z.infer<typeof ClassSectionMetadataSchema>
+            >,
+          );
+          if (sections) {
+            cleanedValue.sections = sections;
+          } else {
+            delete cleanedValue.sections;
+          }
+        }
+        filtered[key] = cleanedValue as z.infer<typeof classSchema>;
       }
       return Object.keys(filtered).length > 0 ? filtered : {};
     });
@@ -697,6 +763,7 @@ export type ItemSyllabusAssignment = z.infer<
 export type ItemSyllabusData = z.infer<typeof ItemSyllabusDataSchema>;
 export type Priority = z.infer<typeof PrioritySchema>;
 export type SettingsClassMetadata = z.infer<typeof SettingsClassMetadataSchema>;
+export type ClassSectionMetadata = z.infer<typeof ClassSectionMetadataSchema>;
 export type ExportClassMetadata = z.infer<typeof ExportClassMetadataSchema>;
 export type SettingsSyllabusMetadata = z.infer<
   typeof SettingsSyllabusMetadataSchema
@@ -959,12 +1026,37 @@ export function insertClassAtIndex(
   return classId;
 }
 
+export function orderedSectionIds(
+  classMeta:
+    Pick<SettingsClassMetadata, "sections" | "sectionOrder"> | null | undefined,
+): string[] {
+  const sections = classMeta?.sections || {};
+  const known = new Set(Object.keys(sections).filter((id) => sections[id]));
+  const order: string[] = [];
+  for (const id of classMeta?.sectionOrder || []) {
+    if (known.has(id) && !order.includes(id)) {
+      order.push(id);
+    }
+  }
+  for (const id of known) {
+    if (!order.includes(id)) {
+      order.push(id);
+    }
+  }
+  return order;
+}
+
 export function persistAssignment(
   assignment: ItemSyllabusAssignment,
   classes: NonNullable<CollectionSyllabusDocument["classes"]>,
   classOrder?: string[],
 ): ItemSyllabusAssignment {
-  const { classNumber, classId: existingClassId, ...rest } = assignment;
+  const {
+    classNumber,
+    classId: existingClassId,
+    sectionId: existingSectionId,
+    ...rest
+  } = assignment;
   let classId =
     existingClassId && classes[existingClassId] ? existingClassId : undefined;
   if (typeof classNumber === "number") {
@@ -976,6 +1068,13 @@ export function persistAssignment(
   const persisted: ItemSyllabusAssignment = { ...rest };
   if (classId) {
     persisted.classId = classId;
+  }
+  if (
+    existingSectionId &&
+    classId &&
+    classes[classId]?.sections?.[existingSectionId]
+  ) {
+    persisted.sectionId = existingSectionId;
   }
   return persisted;
 }

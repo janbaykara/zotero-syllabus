@@ -118,6 +118,10 @@ import {
   getClassNumberById,
   insertClassAtIndex,
   orderedClassIds,
+  orderedSectionIds,
+  generateSectionId,
+  ClassSectionMetadataSchema,
+  mergeNumberKeyedClasses,
   shouldCreateSubcollections,
 } from "../utils/schemas";
 import * as z from "zod";
@@ -157,8 +161,14 @@ import {
   applyClassItemOrderOptimistic,
   applyFurtherReadingOrderOptimistic,
   applyItemAssignmentsOptimistic,
+  patchCollectionDocumentOptimistic,
   SYLLABUS_NOTE_TAG,
 } from "./syllabusNote";
+import {
+  applyClassAssignmentPlacementToDocument,
+  clearAssignmentSectionId,
+  computeClassAssignmentPlacement,
+} from "./classSections";
 import { getItemTitle, readItemNote } from "../utils/items";
 import { migrateLegacyCollectionMetadataPrefs } from "./migratePrefsToNotes";
 import {
@@ -417,6 +427,8 @@ import type {
   SettingsCollectionDictionaryData,
   SettingsSyllabusMetadata,
   SettingsClassMetadata,
+  ClassSectionMetadata,
+  CollectionSyllabusDocument,
   Priority,
 } from "../utils/schemas";
 import { installReadingListTranslators } from "../utils/translator";
@@ -454,8 +466,9 @@ export type {
   SettingsCollectionDictionaryData,
   SettingsSyllabusMetadata,
   SettingsClassMetadata,
+  ClassSectionMetadata,
 };
-export { classByNumber } from "../utils/schemas";
+export { classByNumber, orderedSectionIds } from "../utils/schemas";
 
 // Export GetByLibraryAndKeyArgs for use in other modules
 export type { GetByLibraryAndKeyArgs };
@@ -3769,6 +3782,12 @@ export class SyllabusManager {
         next.classId = undefined;
         next.classNumber = undefined;
       }
+      if (
+        Object.prototype.hasOwnProperty.call(metadata, "sectionId") &&
+        !metadata.sectionId
+      ) {
+        delete next.sectionId;
+      }
       assignments[entryIndex] = next;
     } else {
       ztoolkit.log("Warning: Assignment not found by ID:", assignmentId);
@@ -4381,6 +4400,197 @@ export class SyllabusManager {
   }
 
   /**
+   * Append an empty one-level section under a numbered class.
+   * Returns the new section id, or null on failure.
+   */
+  static async addClassSection(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    classNumber: number,
+    source: "page" = "page",
+  ): Promise<string | null> {
+    const meta = SyllabusManager.getClassMetadata(collectionId, classNumber);
+    const sectionId = generateSectionId();
+    const sections = {
+      ...(meta.sections || {}),
+      [sectionId]: ClassSectionMetadataSchema.parse({ title: "" }),
+    };
+    const sectionOrder = [...orderedSectionIds(meta), sectionId];
+    await SyllabusManager.setClassMetadata(
+      collectionId,
+      classNumber,
+      { sections, sectionOrder },
+      source,
+    );
+    return sectionId;
+  }
+
+  static async setClassSectionMetadata(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    classNumber: number,
+    sectionId: string,
+    patch: Partial<ClassSectionMetadata>,
+    source: "page" = "page",
+  ): Promise<void> {
+    const meta = SyllabusManager.getClassMetadata(collectionId, classNumber);
+    const existing = meta.sections?.[sectionId];
+    if (!existing) {
+      return;
+    }
+    const parsed = ClassSectionMetadataSchema.partial().safeParse(patch);
+    if (!parsed.success) {
+      ztoolkit.log("Error validating section metadata:", parsed.error);
+      return;
+    }
+    const sections = {
+      ...(meta.sections || {}),
+      [sectionId]: ClassSectionMetadataSchema.parse({
+        ...existing,
+        ...parsed.data,
+      }),
+    };
+    await SyllabusManager.setClassMetadata(
+      collectionId,
+      classNumber,
+      { sections, sectionOrder: orderedSectionIds(meta) },
+      source,
+    );
+  }
+
+  static async setClassSectionItemOrder(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    classNumber: number,
+    sectionId: string,
+    itemOrder: string[],
+    source: "page" = "page",
+  ): Promise<void> {
+    await SyllabusManager.setClassSectionMetadata(
+      collectionId,
+      classNumber,
+      sectionId,
+      { itemOrder },
+      source,
+    );
+  }
+
+  static async moveClassSection(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    classNumber: number,
+    sectionId: string,
+    direction: "up" | "down",
+    source: "page" = "page",
+  ): Promise<void> {
+    const meta = SyllabusManager.getClassMetadata(collectionId, classNumber);
+    const order = orderedSectionIds(meta);
+    const index = order.indexOf(sectionId);
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (index < 0 || targetIndex < 0 || targetIndex >= order.length) {
+      return;
+    }
+    const next = [...order];
+    const [moved] = next.splice(index, 1);
+    next.splice(targetIndex, 0, moved);
+    await SyllabusManager.setClassMetadata(
+      collectionId,
+      classNumber,
+      { sectionOrder: next },
+      source,
+    );
+  }
+
+  /**
+   * Move/reorder assignment ids within a class: class root or one section.
+   * Updates section itemOrders, root itemOrder, and each row's `sectionId`.
+   * Paints the full placement in the document cache first so the UI does not
+   * flash "root then section" while the note write queues.
+   */
+  static async placeAssignmentsInClassOrder(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    classNumber: number,
+    assignmentIds: string[],
+    options: {
+      /** Target one-level section, or omit/null for class root. */
+      sectionId?: string | null;
+      targetAssignmentId?: string;
+      insertBefore?: boolean;
+    } = {},
+    source: "page" | "item-pane" = "page",
+  ): Promise<void> {
+    const ids = assignmentIds.filter(Boolean);
+    if (ids.length === 0) {
+      return;
+    }
+    const meta = SyllabusManager.getClassMetadata(collectionId, classNumber);
+    const placement = computeClassAssignmentPlacement(meta, ids, options);
+    const applyPlacement = (document: CollectionSyllabusDocument) =>
+      applyClassAssignmentPlacementToDocument(
+        document,
+        classNumber,
+        placement,
+        ids,
+      );
+
+    // Sync cache + listeners first; note serialize/save can take ~1s.
+    patchCollectionDocumentOptimistic(collectionId, applyPlacement);
+    await mutateCollectionDocument(collectionId, applyPlacement, {
+      createNote: source === "page" ? "prompt" : "always",
+    });
+    if (source !== "page") {
+      this.setupPage();
+    }
+    this.onClassListUpdate();
+  }
+
+  static async removeClassSection(
+    collectionId: number | GetByLibraryAndKeyArgs,
+    classNumber: number,
+    sectionId: string,
+    source: "page" = "page",
+  ): Promise<void> {
+    const meta = SyllabusManager.getClassMetadata(collectionId, classNumber);
+    if (!meta.sections?.[sectionId]) {
+      return;
+    }
+    const movedIds = meta.sections[sectionId]?.itemOrder || [];
+    const sections = { ...(meta.sections || {}) };
+    delete sections[sectionId];
+    const sectionOrder = orderedSectionIds({
+      sections,
+      sectionOrder: (meta.sectionOrder || []).filter((id) => id !== sectionId),
+    });
+    const rootSeen = new Set(meta.itemOrder || []);
+    const rootOrder = [
+      ...(meta.itemOrder || []),
+      ...movedIds.filter((id) => !rootSeen.has(id)),
+    ];
+    const classPatch = {
+      itemOrder: rootOrder,
+      sections: Object.keys(sections).length > 0 ? sections : {},
+      sectionOrder,
+    };
+    const applyRemoval = (document: CollectionSyllabusDocument) => {
+      const nextItems = clearAssignmentSectionId(document.items, sectionId);
+      return {
+        ...document,
+        classes: mergeNumberKeyedClasses(
+          document.classes,
+          { [String(classNumber)]: classPatch },
+          document.classOrder,
+        ),
+        ...(nextItems ? { items: nextItems } : {}),
+      };
+    };
+
+    patchCollectionDocumentOptimistic(collectionId, applyRemoval);
+    await mutateCollectionDocument(collectionId, applyRemoval, {
+      createNote: source === "page" ? "prompt" : "always",
+    });
+    if (source !== "page") {
+      this.setupPage();
+    }
+    this.onClassListUpdate();
+  }
+
+  /**
    * Get class status for a specific collection and class number.
    * Personal Reading Order is canonical; legacy `classes[].status` is fallback.
    */
@@ -4805,10 +5015,7 @@ export class SyllabusManager {
    * Open and render the My Annotations tab for a library.
    * Pass `parentItemId` to isolate the feed to one parent work.
    */
-  static openMyAnnotationsTab(
-    libraryID: number,
-    parentItemId?: number | null,
-  ) {
+  static openMyAnnotationsTab(libraryID: number, parentItemId?: number | null) {
     if (!isOptionalFeatureEnabled("annotations")) {
       return;
     }

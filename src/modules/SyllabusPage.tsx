@@ -12,7 +12,7 @@ import type { JSX } from "preact";
 import { twMerge } from "tailwind-merge";
 import { generateBibliographyForPrint } from "@janbaykara/zotero-csl";
 import { getPref } from "../utils/prefs";
-import { getString, getUiDir, compareLocale } from "../utils/locale";
+import { getString, getUiDir } from "../utils/locale";
 import {
   showUserGuide,
   TOUR_EVENT_CLOSE_SETTINGS,
@@ -38,7 +38,6 @@ import { useItemDensity } from "./react-zotero-sync/itemDensity";
 import { useReaderMode } from "./react-zotero-sync/readerMode";
 import { isZotero8OrLater } from "../utils/zotero";
 import {
-  getItemTitle,
   isClassNoteItem,
   isSyllabusAssignableItem,
   sortItems,
@@ -126,6 +125,7 @@ import {
   buildSyllabusIdentifierContainers,
   syllabusDndGroup,
 } from "./syllabusDnd";
+import { insertAssignmentIds } from "./classSections";
 import { SyllabusDndSortable } from "./SyllabusDndSortable";
 import { SyllabusDndZone } from "./SyllabusDndZone";
 import {
@@ -1229,12 +1229,11 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     const isEscape = e.key === "Escape" || e.key === "Esc";
     if (isEscape) {
       const { selectedIdentifiers: selected } = navStateRef.current;
-      let zoteroCount = 0;
+      let zoteroCount: number;
       try {
         zoteroCount =
-          (
-            ztoolkit.getGlobal("ZoteroPane").getSelectedItems(true) as number[]
-          )?.length ?? 0;
+          (ztoolkit.getGlobal("ZoteroPane").getSelectedItems(true) as number[])
+            ?.length ?? 0;
       } catch {
         zoteroCount = 0;
       }
@@ -1268,9 +1267,11 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       null;
     const container: HTMLElement | null =
       syllabusPageRef.current ||
-      (eventDoc?.querySelector(
-        ".syllabus-page .syllabus-gallery-tile, .syllabus-page .syllabus-magazine-tile",
-      )?.closest(".syllabus-page") as HTMLElement | null) ||
+      (eventDoc
+        ?.querySelector(
+          ".syllabus-page .syllabus-gallery-tile, .syllabus-page .syllabus-magazine-tile",
+        )
+        ?.closest(".syllabus-page") as HTMLElement | null) ||
       (eventDoc?.querySelector(".syllabus-page") as HTMLElement | null) ||
       null;
     const tileEls = container ? getGalleryNavElements(container) : [];
@@ -1325,9 +1326,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       const pageRows = currentRect
         ? Math.max(
             1,
-            Math.floor(
-              (container?.clientHeight || 1) / currentRect.height,
-            ) - 1,
+            Math.floor((container?.clientHeight || 1) / currentRect.height) - 1,
           )
         : 1;
       const nextIndex = findGalleryNavIndex(rects, currentIndex, navKey, {
@@ -1435,12 +1434,11 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
     const onOutsidePointer = (event: Event) => {
       const { selectedIdentifiers: selected } = navStateRef.current;
-      let zoteroCount = 0;
+      let zoteroCount: number;
       try {
         zoteroCount =
-          (
-            ztoolkit.getGlobal("ZoteroPane").getSelectedItems(true) as number[]
-          )?.length ?? 0;
+          (ztoolkit.getGlobal("ZoteroPane").getSelectedItems(true) as number[])
+            ?.length ?? 0;
       } catch {
         zoteroCount = 0;
       }
@@ -1655,7 +1653,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
     targetClassNumber: number | null,
     targetItemId?: number,
     insertBefore?: boolean,
-    zone?: "further-reading",
+    extras?: { zone?: "further-reading"; sectionId?: string },
   ) => {
     if (isOsFileDrag(e.dataTransfer)) {
       e.preventDefault();
@@ -1686,7 +1684,8 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       targetClassNumber,
       targetItemId,
       insertBefore,
-      zone,
+      ...(extras?.zone ? { zone: extras.zone } : {}),
+      ...(extras?.sectionId ? { sectionId: extras.sectionId } : {}),
     });
   };
 
@@ -1696,6 +1695,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       targetClassNumber,
       targetItemId,
       targetAssignmentId: dropTargetAssignmentId,
+      sectionId: dropTargetSectionId,
       insertBefore,
       zone,
     }: SyllabusDropTarget,
@@ -1771,33 +1771,57 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
       )?.id;
     };
 
+    const resolveSectionIdForAssignment = (
+      assignmentId: string | undefined,
+    ): string | undefined => {
+      if (!assignmentId) {
+        return undefined;
+      }
+      for (const row of syllabusItems) {
+        const match = row.assignments.find((a) => a.id === assignmentId);
+        if (match?.sectionId) {
+          return match.sectionId;
+        }
+      }
+      return undefined;
+    };
+
     /** Insert at the blue-line position (or append) in a class / unnumbered order. */
     const insertAssignmentsAtDropLine = async (
       classNumber: number | null,
       assignmentIds: string[],
+      sectionId?: string | null,
     ) => {
       if (assignmentIds.length === 0) {
         return;
       }
-      const newOrder = currentOrderForClass(classNumber).filter(
-        (id) => !assignmentIds.includes(id),
-      );
       const targetAssignmentId = resolveDropTargetAssignmentId(
         classNumber,
         assignmentIds,
       );
-      const targetIndex = targetAssignmentId
-        ? newOrder.findIndex((id) => id === targetAssignmentId)
-        : -1;
-      if (targetIndex !== -1) {
-        if (insertBefore) {
-          newOrder.splice(targetIndex, 0, ...assignmentIds);
-        } else {
-          newOrder.splice(targetIndex + 1, 0, ...assignmentIds);
-        }
-      } else {
-        newOrder.push(...assignmentIds);
+      if (typeof classNumber === "number") {
+        const targetSectionId =
+          sectionId !== undefined && sectionId !== null
+            ? sectionId
+            : resolveSectionIdForAssignment(targetAssignmentId);
+        void SyllabusManager.placeAssignmentsInClassOrder(
+          collectionId,
+          classNumber,
+          assignmentIds,
+          {
+            sectionId: targetSectionId,
+            targetAssignmentId,
+            insertBefore,
+          },
+          "page",
+        );
+        return;
       }
+      const newOrder = insertAssignmentIds(
+        currentOrderForClass(classNumber),
+        assignmentIds,
+        { targetAssignmentId, insertBefore },
+      );
       void SyllabusManager.setClassItemOrder(
         collectionId,
         classNumber,
@@ -1864,65 +1888,22 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
             ? parseInt(sourceClassNumberStr, 10)
             : undefined;
 
-        // Check if this is a reorder within the same class
-        const isReorder =
+        // Same-class multi move/reorder (root or section via placeAssignments).
+        // Empty section/root zones have no targetItemId — still place by sectionId.
+        const isSameClass =
           sourceClassNumber !== undefined &&
           targetClassNumberValue !== undefined &&
-          sourceClassNumber === targetClassNumberValue &&
-          targetItemId !== undefined;
+          sourceClassNumber === targetClassNumberValue;
 
-        // Same-class multi reorder: only touch itemOrder (no per-item note writes).
-        if (isReorder && targetClassNumberValue !== undefined) {
-          let currentOrder = SyllabusManager.getClassItemOrder(
-            collectionId,
-            targetClassNumberValue,
-          );
-          if (currentOrder.length === 0) {
-            classAssignments.sort((a, b) => {
-              const diff = SyllabusManager.compareAssignments(a, b);
-              if (diff !== 0) return diff;
-              const assignmentA = syllabusItems.find((item) =>
-                item.assignments.find((assignment) => assignment.id === a.id),
-              );
-              const assignmentB = syllabusItems.find((item) =>
-                item.assignments.find((assignment) => assignment.id === b.id),
-              );
-              if (assignmentA && assignmentB) {
-                return compareLocale(
-                  getItemTitle(assignmentA.zoteroItem),
-                  getItemTitle(assignmentB.zoteroItem),
-                );
-              }
-              return 0;
-            });
-            currentOrder = classAssignments
-              .map((assignment) => assignment.id!)
-              .filter(Boolean);
-          }
-          const newOrder = currentOrder.filter(
-            (id) => !assignmentIds.includes(id),
-          );
-          const targetAssignmentId = resolveDropTargetAssignmentId(
+        if (
+          isSameClass &&
+          targetClassNumberValue !== undefined &&
+          assignmentIds.length > 0
+        ) {
+          void insertAssignmentsAtDropLine(
             targetClassNumberValue,
             assignmentIds,
-          );
-          const targetIndex = targetAssignmentId
-            ? newOrder.findIndex((id) => id === targetAssignmentId)
-            : -1;
-          if (targetIndex !== -1) {
-            if (insertBefore) {
-              newOrder.splice(targetIndex, 0, ...assignmentIds);
-            } else {
-              newOrder.splice(targetIndex + 1, 0, ...assignmentIds);
-            }
-          } else {
-            newOrder.push(...assignmentIds);
-          }
-          void SyllabusManager.setClassItemOrder(
-            collectionId,
-            targetClassNumberValue,
-            newOrder,
-            "page",
+            dropTargetSectionId,
           );
           setItemOrderVersion((v) => v + 1);
           return;
@@ -2067,10 +2048,11 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
             newlyCreatedAssignmentIds.length > 0)
         ) {
           // Unnumbered / further reading → class: honour the blue line.
-          void insertAssignmentsAtDropLine(targetClassNumberValue, [
-            ...processedAssignmentIds,
-            ...newlyCreatedAssignmentIds,
-          ]);
+          void insertAssignmentsAtDropLine(
+            targetClassNumberValue,
+            [...processedAssignmentIds, ...newlyCreatedAssignmentIds],
+            dropTargetSectionId,
+          );
         }
 
         setItemOrderVersion((v) => v + 1);
@@ -2100,86 +2082,21 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
         ? parseInt(sourceClassNumberStr, 10)
         : undefined;
 
-    // Check if this is a reorder within the same class
+    // Same-class move/reorder (root or section via placeAssignments).
+    // Empty section/root dropzones omit targetItemId; sectionId alone is enough.
     if (
       sourceClassNumber !== undefined &&
       targetClassNumberValue !== undefined &&
       sourceClassNumber === targetClassNumberValue &&
-      targetItemId !== undefined &&
       sourceAssignmentId
     ) {
-      // Reordering within the same class - update manual order using assignment IDs
-      let currentOrder = SyllabusManager.getClassItemOrder(
-        collectionId,
-        targetClassNumberValue,
-      );
-
-      // If no manual order exists, initialize it with current assignment order from the class
-      if (currentOrder.length === 0) {
-        // Sort by current display order (priority, then title)
-        classAssignments.sort((a, b) => {
-          const diff = SyllabusManager.compareAssignments(a, b);
-          if (diff !== 0) return diff;
-          // Find items by assignment ID
-          const assignmentA = syllabusItems.find((item) =>
-            item.assignments.find((assignment) => assignment.id === a.id),
-          );
-          const assignmentB = syllabusItems.find((item) =>
-            item.assignments.find((assignment) => assignment.id === b.id),
-          );
-          if (assignmentA && assignmentB) {
-            const itemA = assignmentA.zoteroItem;
-            const itemB = assignmentB.zoteroItem;
-            return compareLocale(getItemTitle(itemA), getItemTitle(itemB));
-          }
-          return 0;
-        });
-        // Initialize order with assignment IDs
-        currentOrder = classAssignments
-          .map((assignment) => assignment.id!)
-          .filter(Boolean);
-      }
-
-      // Remove dragged assignment from current order
-      const newOrder = currentOrder.filter((id) => id !== sourceAssignmentId);
-
-      // Prefer blue-line assignment id — same item can have several class rows.
-      const targetAssignmentId = resolveDropTargetAssignmentId(
+      void insertAssignmentsAtDropLine(
         targetClassNumberValue,
         [sourceAssignmentId],
-      );
-
-      // Find target position
-      const targetIndex = targetAssignmentId
-        ? newOrder.findIndex((id) => id === targetAssignmentId)
-        : -1;
-
-      if (targetIndex !== -1) {
-        // Insert at target position
-        if (insertBefore) {
-          newOrder.splice(targetIndex, 0, sourceAssignmentId);
-        } else {
-          newOrder.splice(targetIndex + 1, 0, sourceAssignmentId);
-        }
-      } else {
-        // Target not found, append to end
-        newOrder.push(sourceAssignmentId);
-      }
-
-      // Update manual order (optimistic cache + background note save)
-      void SyllabusManager.setClassItemOrder(
-        collectionId,
-        targetClassNumberValue,
-        newOrder,
-        "page",
-      );
-      ztoolkit.log(
-        "Updated manual order for class",
-        targetClassNumberValue,
-        newOrder,
+        dropTargetSectionId,
       );
       setItemOrderVersion((v) => v + 1);
-      return; // Early return - no need to update assignment
+      return;
     }
 
     // Get all existing assignments
@@ -2222,9 +2139,11 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
           );
         }
 
-        void insertAssignmentsAtDropLine(targetClassNumberValue, [
-          sourceAssignmentId,
-        ]);
+        void insertAssignmentsAtDropLine(
+          targetClassNumberValue,
+          [sourceAssignmentId],
+          dropTargetSectionId,
+        );
         setItemOrderVersion((v) => v + 1);
       }
     }
@@ -2261,22 +2180,11 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
 
         // If moving to a numbered class, add to target class order
         if (targetClassNumberValue !== undefined) {
-          const targetOrder = SyllabusManager.getClassItemOrder(
-            collectionId,
+          void insertAssignmentsAtDropLine(
             targetClassNumberValue,
+            [sourceAssignmentId],
+            dropTargetSectionId,
           );
-          if (
-            targetOrder.length > 0 &&
-            !targetOrder.includes(sourceAssignmentId)
-          ) {
-            const updatedTargetOrder = [...targetOrder, sourceAssignmentId];
-            void SyllabusManager.setClassItemOrder(
-              collectionId,
-              targetClassNumberValue,
-              updatedTargetOrder,
-              "page",
-            );
-          }
           setItemOrderVersion((v) => v + 1);
         }
       }
@@ -3255,18 +3163,14 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                                     null,
                                     targetById.item.id,
                                     dropIndicator.edge === "before",
-                                    "further-reading",
+                                    { zone: "further-reading" },
                                   );
                                   return;
                                 }
                               }
-                              void handleDrop(
-                                e,
-                                null,
-                                undefined,
-                                undefined,
-                                "further-reading",
-                              );
+                              void handleDrop(e, null, undefined, undefined, {
+                                zone: "further-reading",
+                              });
                             }
                       }
                       onDragOver={
@@ -3446,7 +3350,7 @@ function CollectionSyllabusPage({ collectionId }: SyllabusPageProps) {
                                         null,
                                         item.id,
                                         insertBefore,
-                                        "further-reading",
+                                        { zone: "further-reading" },
                                       )
                                     }
                                     onDragOver={(e) => {

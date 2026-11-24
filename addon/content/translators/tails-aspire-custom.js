@@ -253,8 +253,9 @@ async function scrape(syllabusURL, selectedUUIDs, doc) {
     }
   }
   var metadata = await constructExportSyllabusMetadataFromTalisAPI(syllabusURL);
-  // Extract itemSectionTitles before sending to Zotero (it will be stripped by schema validation)
+  // Extract helper maps before sending to Zotero (stripped by schema validation)
   var itemSectionTitles = metadata._itemSectionTitles || {};
+  var itemSectionPlacement = metadata._itemSectionPlacement || {};
   var syllabusResponseString = await setTalisSyllabusMetadata(metadata);
   var syllabusResponse = JSON.parse(syllabusResponseString);
 
@@ -282,27 +283,70 @@ async function scrape(syllabusURL, selectedUUIDs, doc) {
         translator.setString(ris);
         // Set handler to wrap up the show
         translator.setHandler("itemDone", function (_, item) {
-          // Pull data via assignmentID
+          var assignmentId = uuidToAssignmentID(uuid);
+          var placement = itemSectionPlacement[uuid] || {};
+          // Prefer placement map; fall back to scanning class/section itemOrders
           var classEntry = Object.entries(
-            syllabusResponse.syllabusData.classes,
-          ).find(([classNumber, classData]) => {
-            return (
-              classData &&
+            syllabusResponse.syllabusData.classes || {},
+          ).find(([_classNumber, classData]) => {
+            if (!classData) {
+              return false;
+            }
+            if (
               classData.itemOrder &&
-              classData.itemOrder.includes(uuidToAssignmentID(uuid))
-            );
+              classData.itemOrder.includes(assignmentId)
+            ) {
+              return true;
+            }
+            if (!classData.sections) {
+              return false;
+            }
+            return Object.keys(classData.sections).some(function (sectionId) {
+              var section = classData.sections[sectionId];
+              return (
+                section &&
+                section.itemOrder &&
+                section.itemOrder.includes(assignmentId)
+              );
+            });
           });
-          var classNumber = classEntry ? Number(classEntry[0]) : undefined;
+          var classNumber =
+            placement.classNumber != null
+              ? Number(placement.classNumber)
+              : classEntry
+                ? Number(classEntry[0])
+                : undefined;
+          var sectionId = placement.sectionId;
+          if (
+            !sectionId &&
+            classEntry &&
+            classEntry[1] &&
+            classEntry[1].sections
+          ) {
+            Object.keys(classEntry[1].sections).some(function (sid) {
+              var section = classEntry[1].sections[sid];
+              if (
+                section &&
+                section.itemOrder &&
+                section.itemOrder.includes(assignmentId)
+              ) {
+                sectionId = sid;
+                return true;
+              }
+              return false;
+            });
+          }
           var priority = itemPriorities[syllabusURL]
             ? itemPriorities[syllabusURL][uuid]
             : undefined;
 
-          // Enhance classInstruction with nested section titles, excluding the top-level (class) title
+          // Enhance classInstruction with nested section titles deeper than the
+          // one-level class section (top-level class + first nested section title
+          // are real structure now).
           var finalClassInstruction = classInstruction;
           if (itemSectionTitles[uuid] && itemSectionTitles[uuid].length > 0) {
-            var sectionPath = itemSectionTitles[uuid].slice(); // Copy array
+            var sectionPath = itemSectionTitles[uuid].slice();
 
-            // Remove the top-level section title if it matches the class title
             if (
               classNumber &&
               classEntry &&
@@ -311,11 +355,24 @@ async function scrape(syllabusURL, selectedUUIDs, doc) {
             ) {
               var classTitle = classEntry[1].title;
               if (sectionPath.length > 0 && sectionPath[0] === classTitle) {
-                sectionPath = sectionPath.slice(1); // Remove first element
+                sectionPath = sectionPath.slice(1);
               }
             }
 
-            // Only add section titles if there are any left after removing the top-level
+            // Drop the one-level section title when the item lives in that section
+            if (
+              sectionId &&
+              classEntry &&
+              classEntry[1] &&
+              classEntry[1].sections &&
+              classEntry[1].sections[sectionId] &&
+              classEntry[1].sections[sectionId].title &&
+              sectionPath.length > 0 &&
+              sectionPath[0] === classEntry[1].sections[sectionId].title
+            ) {
+              sectionPath = sectionPath.slice(1);
+            }
+
             if (sectionPath.length > 0) {
               var sectionTitles = sectionPath.join(" > ");
               if (finalClassInstruction) {
@@ -329,15 +386,17 @@ async function scrape(syllabusURL, selectedUUIDs, doc) {
 
           // safeLog("TALIS-ASPIRE-CUSTOM: got classNumber and priority for item:", { uuid: uuid, classNumber, priority });
           if (syllabusResponse.collectionAndLibraryKey) {
+            var assignmentRow = {
+              id: assignmentId,
+              classNumber: classNumber,
+              priority: priority,
+              classInstruction: finalClassInstruction,
+            };
+            if (sectionId) {
+              assignmentRow.sectionId = sectionId;
+            }
             var itemSyllabusData = {
-              [syllabusResponse.collectionAndLibraryKey]: [
-                {
-                  id: uuidToAssignmentID(uuid),
-                  classNumber,
-                  priority,
-                  classInstruction: finalClassInstruction,
-                },
-              ],
+              [syllabusResponse.collectionAndLibraryKey]: [assignmentRow],
             };
             item.extra = `syllabus: ${JSON.stringify(itemSyllabusData)}`;
           }
@@ -789,7 +848,11 @@ async function callZoteroClientEndpoint(endpoint, method, data) {
   return await postToZoteroLocal(endpoint, data ? { metadata: data } : {});
 }
 
-async function setTalisSyllabusMetadata({ _itemSectionTitles, ...metadata }) {
+async function setTalisSyllabusMetadata({
+  _itemSectionTitles,
+  _itemSectionPlacement,
+  ...metadata
+}) {
   // Use callMethod to send metadata via POST request
   return await callZoteroClientEndpoint(
     "/syllabus/setTalisMetadata",
@@ -906,13 +969,13 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
     metadata.priorities = priorities;
   }
 
-  // Build classes object from top-level sections only
-  // Helper function to recursively collect all items from a section and its children
+  // Build classes from top-level Talis sections. Immediate child sections become
+  // one-level class sections; deeper nesting flattens into that section's items
+  // (titles still land in classInstruction via itemSectionTitles).
   function collectItemsFromSection(sectionId, included) {
     var itemOrder = [];
     var section = null;
 
-    // Find the section in included array
     for (var i = 0; i < included.length; i++) {
       if (included[i].type === "sections" && included[i].id === sectionId) {
         section = included[i];
@@ -928,15 +991,12 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
       return itemOrder;
     }
 
-    // Recursively collect items from all_children
     var children = section.relationships.all_children.data || [];
     for (var j = 0; j < children.length; j++) {
       var child = children[j];
       if (child.type === "items") {
-        // Direct item - add to list
         itemOrder.push(uuidToAssignmentID(child.id));
       } else if (child.type === "sections") {
-        // Nested section - recursively collect its items
         var nestedItems = collectItemsFromSection(child.id, included);
         itemOrder = itemOrder.concat(nestedItems);
       }
@@ -945,7 +1005,13 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
     return itemOrder;
   }
 
-  // Get top-level sections from data.relationships.sections
+  function talisSectionId(talisId) {
+    return "section-" + String(talisId);
+  }
+
+  // uuid → { classNumber, sectionId? } for scrape itemDone
+  var itemSectionPlacement = {};
+
   if (
     talisSyllabusData.data &&
     talisSyllabusData.data.relationships &&
@@ -956,7 +1022,6 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
     var classes = {};
     var topLevelSections = talisSyllabusData.data.relationships.sections.data;
 
-    // Create a map of section ID to section data for quick lookup
     var sectionMap = {};
     for (var i = 0; i < talisSyllabusData.included.length; i++) {
       var inc = talisSyllabusData.included[i];
@@ -965,48 +1030,100 @@ async function constructExportSyllabusMetadataFromTalisAPI(url) {
       }
     }
 
-    // Process each top-level section
     for (var k = 0; k < topLevelSections.length; k++) {
       var topSectionRef = topLevelSections[k];
-      if (topSectionRef.type === "sections") {
-        var topSectionId = topSectionRef.id;
-        var topSection = sectionMap[topSectionId];
+      if (topSectionRef.type !== "sections") {
+        continue;
+      }
+      var topSectionId = topSectionRef.id;
+      var topSection = sectionMap[topSectionId];
+      if (!topSection || !topSection.attributes) {
+        continue;
+      }
 
-        if (topSection && topSection.attributes) {
-          var sectionTitle = topSection.attributes.title || "";
-          var sectionDescription = topSection.attributes.description || null;
+      var sectionTitle = topSection.attributes.title || "";
+      var sectionDescription = topSection.attributes.description || null;
+      var classNumber = k + 1;
+      var rootItemOrder = [];
+      var classSections = {};
+      var classSectionOrder = [];
 
-          // Recursively collect all items from this section and its nested children
-          var itemOrder = collectItemsFromSection(
-            topSectionId,
+      var topChildren =
+        (topSection.relationships &&
+          topSection.relationships.all_children &&
+          topSection.relationships.all_children.data) ||
+        [];
+
+      for (var c = 0; c < topChildren.length; c++) {
+        var child = topChildren[c];
+        if (child.type === "items") {
+          var rootAssignmentId = uuidToAssignmentID(child.id);
+          rootItemOrder.push(rootAssignmentId);
+          itemSectionPlacement[child.id] = { classNumber: classNumber };
+        } else if (child.type === "sections") {
+          var nested = sectionMap[child.id];
+          var nestedTitle =
+            nested && nested.attributes && nested.attributes.title
+              ? nested.attributes.title
+              : "";
+          var nestedDescription =
+            nested && nested.attributes && nested.attributes.description
+              ? nested.attributes.description
+              : null;
+          var nestedItemOrder = collectItemsFromSection(
+            child.id,
             talisSyllabusData.included,
           );
-
-          // Build class object (ExportClassMetadataSchema: title, description, itemOrder, readingDate)
-          var classObj = {};
-          if (sectionTitle) {
-            classObj.title = sectionTitle;
+          var pluginSectionId = talisSectionId(child.id);
+          var sectionObj = {};
+          if (nestedTitle) {
+            sectionObj.title = nestedTitle;
           }
-          if (sectionDescription) {
-            classObj.description = sectionDescription;
+          if (nestedDescription) {
+            sectionObj.description = nestedDescription;
           }
-          if (itemOrder.length > 0) {
-            classObj.itemOrder = itemOrder;
+          if (nestedItemOrder.length > 0) {
+            sectionObj.itemOrder = nestedItemOrder;
           }
-
-          // Only add class if it has at least a title or itemOrder
-          if (
-            classObj.title ||
-            (classObj.itemOrder && classObj.itemOrder.length > 0)
-          ) {
-            // Use section index + 1 as key to start at 1 (not 0)
-            classes[(k + 1).toString()] = classObj;
+          classSections[pluginSectionId] = sectionObj;
+          classSectionOrder.push(pluginSectionId);
+          for (var ni = 0; ni < nestedItemOrder.length; ni++) {
+            var nestedUuid = assignmentIDToUUID(nestedItemOrder[ni]);
+            itemSectionPlacement[nestedUuid] = {
+              classNumber: classNumber,
+              sectionId: pluginSectionId,
+            };
           }
         }
+      }
+
+      var classObj = {};
+      if (sectionTitle) {
+        classObj.title = sectionTitle;
+      }
+      if (sectionDescription) {
+        classObj.description = sectionDescription;
+      }
+      if (rootItemOrder.length > 0) {
+        classObj.itemOrder = rootItemOrder;
+      }
+      if (classSectionOrder.length > 0) {
+        classObj.sections = classSections;
+        classObj.sectionOrder = classSectionOrder;
+      }
+
+      if (
+        classObj.title ||
+        (classObj.itemOrder && classObj.itemOrder.length > 0) ||
+        (classObj.sectionOrder && classObj.sectionOrder.length > 0)
+      ) {
+        classes[classNumber.toString()] = classObj;
       }
     }
     metadata.classes = classes;
   }
+
+  metadata._itemSectionPlacement = itemSectionPlacement;
 
   // Build section/item tree dictionary: maps item UUID to array of nested section titles
   // This will be used to enhance classInstruction with nested section titles

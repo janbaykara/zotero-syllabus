@@ -2,6 +2,7 @@ import type { ItemDensity } from "./react-zotero-sync/itemDensity";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
 import type { JSX } from "preact";
+import { useMemo } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
 import { ChevronUp, ChevronDown, Plus } from "lucide-preact";
 import {
@@ -10,6 +11,7 @@ import {
   SettingsSyllabusMetadata,
   classByNumber,
 } from "./syllabus";
+import { partitionClassAssignmentsBySection } from "./classGroups";
 import { FEATURE_FLAG } from "./featureFlags";
 import { useZoteroSelectedItemIds } from "./react-zotero-sync/selectedItem";
 import { formatReadingDate } from "../utils/dates";
@@ -64,6 +66,7 @@ export interface ClassGroupComponentProps {
     classNumber: number | null,
     targetItemId?: number,
     insertBefore?: boolean,
+    extras?: { sectionId?: string },
   ) => Promise<void>;
   onDragOver: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
   onDragLeave: (e: JSX.TargetedDragEvent<HTMLElement>) => void;
@@ -265,6 +268,254 @@ export function ClassGroupComponent({
       ztoolkit.log("Error adding class note:", err);
     }
   };
+
+  const handleAddSection = async () => {
+    if (classNumber == null || isLocked) {
+      return;
+    }
+    try {
+      await SyllabusManager.addClassSection(collectionId, classNumber, "page");
+    } catch (err) {
+      ztoolkit.log("Error adding class section:", err);
+    }
+  };
+
+  const handleSectionTitleSave = async (sectionId: string, title: string) => {
+    if (classNumber == null) {
+      return;
+    }
+    try {
+      await SyllabusManager.setClassSectionMetadata(
+        collectionId,
+        classNumber,
+        sectionId,
+        { title },
+        "page",
+      );
+    } catch (err) {
+      ztoolkit.log("Error saving section title:", err);
+    }
+  };
+
+  const handleSectionDescriptionSave = async (
+    sectionId: string,
+    description: string,
+  ) => {
+    if (classNumber == null) {
+      return;
+    }
+    try {
+      await SyllabusManager.setClassSectionMetadata(
+        collectionId,
+        classNumber,
+        sectionId,
+        { description },
+        "page",
+      );
+    } catch (err) {
+      ztoolkit.log("Error saving section description:", err);
+    }
+  };
+
+  const handleDeleteSection = async (sectionId: string) => {
+    if (classNumber == null) {
+      return;
+    }
+    try {
+      await SyllabusManager.removeClassSection(
+        collectionId,
+        classNumber,
+        sectionId,
+        "page",
+      );
+    } catch (err) {
+      ztoolkit.log("Error removing section:", err);
+    }
+  };
+
+  const handleMoveSection = async (
+    sectionId: string,
+    direction: "up" | "down",
+  ) => {
+    if (classNumber == null) {
+      return;
+    }
+    try {
+      await SyllabusManager.moveClassSection(
+        collectionId,
+        classNumber,
+        sectionId,
+        direction,
+        "page",
+      );
+    } catch (err) {
+      ztoolkit.log("Error moving section:", err);
+    }
+  };
+
+  const { root: rootAssignments, sections: classSections } = useMemo(
+    () =>
+      partitionClassAssignmentsBySection(
+        itemAssignments,
+        classNumber != null ? classMeta : undefined,
+      ),
+    [itemAssignments, classNumber, classMeta],
+  );
+
+  /** Cumulative card-index offsets so section sortables stay contiguous. */
+  const sectionIndexOffsets = useMemo(() => {
+    const offsets: number[] = [];
+    let running = rootAssignments.length;
+    for (const section of classSections) {
+      offsets.push(running);
+      running += section.rows.length;
+    }
+    return offsets;
+  }, [rootAssignments.length, classSections]);
+
+  const renderAssignmentCards = (
+    rows: typeof itemAssignments,
+    indexOffset = 0,
+    sectionId?: string,
+  ) =>
+    rows.map(({ item, assignment }, index) => {
+      if (!assignment.id) {
+        ztoolkit.log(
+          "Warning: Assignment missing ID, skipping render",
+          assignment,
+        );
+        return null;
+      }
+      const uniqueKey = `${item.id}-assignment-${assignment.id}`;
+      const cardIdentifier = `assignment:${assignment.id}`;
+      return (
+        <SyllabusDndSortable
+          key={uniqueKey}
+          identifier={cardIdentifier}
+          index={indexOffset + index}
+          group={syllabusDndGroup(classNumber, undefined, sectionId)}
+          draggingIdentifiers={draggingIdentifiers}
+        >
+          <SyllabusItemCard
+            item={item}
+            collectionId={collectionId}
+            classNumber={classNumber ?? undefined}
+            assignment={assignment}
+            slim={true}
+            density={density}
+            readerMode={readerMode}
+            isLocked={isLocked}
+            selectedIdentifiers={selectedIdentifiers}
+            onIdentifierClick={onIdentifierClick}
+            onContextMenu={onContextMenu}
+            selectedForDrag={selectedForDrag}
+            onPriorityChange={onPriorityChange}
+            onDelete={onDelete}
+            onDuplicate={onDuplicate}
+            onDrop={(e, insertBefore) =>
+              onDrop(
+                e,
+                classNumber ?? null,
+                item.id,
+                insertBefore,
+                sectionId ? { sectionId } : undefined,
+              )
+            }
+            onDragOver={handleItemDragOver}
+            dropEdge={
+              chromeDnd
+                ? null
+                : visibleDropIndicator?.identifier === cardIdentifier
+                  ? visibleDropIndicator.edge
+                  : null
+            }
+            isZoteroSelected={selectedItemIds?.includes(item.id) || false}
+            isIdentifierSelected={selectedIdentifiers.has(cardIdentifier)}
+          />
+        </SyllabusDndSortable>
+      );
+    });
+
+  const renderLockedLayoutRows = (rows: typeof itemAssignments) => (
+    <ReadingItemsLayout
+      layout={layout}
+      density={density}
+      readerMode={readerMode}
+      isLocked
+      template="strip"
+      magazinePacking={magazinePacking}
+      colorFilterScope={colorFilterScope || String(collectionId)}
+      showItemsWithoutAnnotations={showItemsWithoutAnnotations}
+      annotationStreamOrder={annotationStreamOrder}
+      rows={rows
+        .filter(({ assignment }) => !!assignment.id)
+        .map(({ item, assignment }) => ({
+          key: `${item.id}-assignment-${assignment.id}`,
+          item,
+          collectionId,
+          assignment,
+          classNumber,
+        }))}
+      onItemClick={(item, _collectionId, e) => {
+        const el = e?.currentTarget as HTMLElement | null;
+        const identifier = el?.getAttribute?.("data-syllabus-identifier") || "";
+        const assignmentId = identifier.startsWith("assignment:")
+          ? identifier.slice("assignment:".length)
+          : rows.find((row) => row.item.id === item.id)?.assignment.id;
+        if (onIdentifierClick) {
+          onIdentifierClick(item, assignmentId, e);
+          return;
+        }
+        void selectItemInCollection(item, collectionId);
+      }}
+    />
+  );
+
+  const sectionDropzoneHint = (sectionId: string) => (
+    <SyllabusDndZone
+      group={syllabusDndGroup(classNumber, undefined, sectionId)}
+      empty
+      // Beat sibling class-root empty zones when the pointer is over a section.
+      collisionPriority={80}
+      className={twMerge(
+        "syllabus-class-section-dropzone box-border! rounded-md group/section-items",
+        "text-center bg-quinary/50 text-secondary border-2 border-dashed border-quinary in-[.print]:hidden",
+        "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:border-accent-blue! data-[dropzone-active='true']:text-accent-blue!",
+        "group-data-[dropzone-active=true]/section-items:bg-accent-blue/15 group-data-[dropzone-active=true]/section-items:border-accent-blue group-data-[dropzone-active=true]/section-items:text-accent-blue",
+        density !== "expanded" ? "p-3" : "p-5",
+      )}
+      onDrop={
+        isLocked
+          ? undefined
+          : (e) => {
+              void onDrop(e, classNumber ?? null, undefined, undefined, {
+                sectionId,
+              });
+            }
+      }
+      onDragOver={
+        isLocked
+          ? undefined
+          : (e) => {
+              onDragOver(e);
+              if (!isOsFileDrag(e.dataTransfer)) {
+                (e.currentTarget as HTMLElement).dataset.dropzoneActive =
+                  "true";
+              }
+            }
+      }
+      onDragLeave={
+        isLocked
+          ? undefined
+          : (e) => {
+              onDragLeave(e);
+              delete (e.currentTarget as HTMLElement).dataset.dropzoneActive;
+            }
+      }
+    >
+      {getString("class-section-dropzone-hint")}
+    </SyllabusDndZone>
+  );
 
   const handleClassStatusToggle = async () => {
     if (classNumber !== null && classNumber !== undefined) {
@@ -653,7 +904,7 @@ export function ClassGroupComponent({
         ) : null}
         <SyllabusDndZone
           group={syllabusDndGroup(classNumber)}
-          empty={itemAssignments.length === 0}
+          empty={itemAssignments.length === 0 && classSections.length === 0}
           className={twMerge(
             "syllabus-class-items box-border! rounded-lg group/class-items",
             // Horizontal-only negative margin so dropzone outline can bleed;
@@ -702,6 +953,9 @@ export function ClassGroupComponent({
                         classNumber ?? null,
                         target.item.id,
                         dropIndicator.edge === "before",
+                        target.assignment.sectionId
+                          ? { sectionId: target.assignment.sectionId }
+                          : undefined,
                       );
                       return;
                     }
@@ -714,6 +968,7 @@ export function ClassGroupComponent({
         >
           {!isLocked &&
           itemAssignments.length === 0 &&
+          classSections.length === 0 &&
           // Numbered classes: always. Unnumbered top: only while dragging.
           (classNumber !== null || unnumberedDragDropzone) ? (
             <div
@@ -739,45 +994,10 @@ export function ClassGroupComponent({
                   })
                 : getString("unnumbered-dropzone-hint")}
             </div>
-          ) : itemAssignments.length > 0 && isLocked && layout !== "card" ? (
-            <ReadingItemsLayout
-              layout={layout}
-              density={density}
-              readerMode={readerMode}
-              isLocked
-              template="strip"
-              magazinePacking={magazinePacking}
-              colorFilterScope={colorFilterScope || String(collectionId)}
-              showItemsWithoutAnnotations={showItemsWithoutAnnotations}
-              annotationStreamOrder={annotationStreamOrder}
-              rows={itemAssignments
-                .filter(({ assignment }) => !!assignment.id)
-                .map(({ item, assignment }) => ({
-                  key: `${item.id}-assignment-${assignment.id}`,
-                  item,
-                  collectionId,
-                  assignment,
-                  classNumber,
-                }))}
-              onItemClick={(item, _collectionId, e) => {
-                const el = e?.currentTarget as HTMLElement | null;
-                const identifier =
-                  el?.getAttribute?.("data-syllabus-identifier") || "";
-                const assignmentId = identifier.startsWith("assignment:")
-                  ? identifier.slice("assignment:".length)
-                  : itemAssignments.find((row) => row.item.id === item.id)
-                      ?.assignment.id;
-                if (onIdentifierClick) {
-                  onIdentifierClick(item, assignmentId, e);
-                  return;
-                }
-                void selectItemInCollection(item, collectionId);
-              }}
-            />
-          ) : itemAssignments.length > 0 ? (
+          ) : rootAssignments.length > 0 || classSections.length > 0 ? (
             <div
               className={twMerge(
-                chromeDnd
+                chromeDnd && !isLocked
                   ? "syllabus-personal-order-section"
                   : density !== "expanded"
                     ? "space-y-2"
@@ -785,66 +1005,281 @@ export function ClassGroupComponent({
                 !chromeDnd && !isZotero8OrLater() && "compat-space-y",
               )}
             >
-              {itemAssignments.map(({ item, assignment }, index) => {
-                // Require assignment ID - if missing, skip this assignment
-                if (!assignment.id) {
-                  ztoolkit.log(
-                    "Warning: Assignment missing ID, skipping render",
-                    assignment,
-                  );
-                  return null;
-                }
-
-                // Use assignment priority directly
-                // Generate unique key using assignment ID - REQUIRED
-                const uniqueKey = `${item.id}-assignment-${assignment.id}`;
-                const cardIdentifier = `assignment:${assignment.id}`;
-
-                return (
-                  <SyllabusDndSortable
-                    key={uniqueKey}
-                    identifier={cardIdentifier}
-                    index={index}
-                    group={syllabusDndGroup(classNumber)}
-                    draggingIdentifiers={draggingIdentifiers}
-                  >
-                    <SyllabusItemCard
-                      item={item}
-                      collectionId={collectionId}
-                      classNumber={classNumber ?? undefined}
-                      assignment={assignment}
-                      slim={true}
-                      density={density}
-                      readerMode={readerMode}
-                      isLocked={isLocked}
-                      selectedIdentifiers={selectedIdentifiers}
-                      onIdentifierClick={onIdentifierClick}
-                      onContextMenu={onContextMenu}
-                      selectedForDrag={selectedForDrag}
-                      onPriorityChange={onPriorityChange}
-                      onDelete={onDelete}
-                      onDuplicate={onDuplicate}
-                      onDrop={(e, insertBefore) =>
-                        onDrop(e, classNumber ?? null, item.id, insertBefore)
-                      }
-                      onDragOver={handleItemDragOver}
-                      dropEdge={
-                        chromeDnd
-                          ? null
-                          : visibleDropIndicator?.identifier === cardIdentifier
-                            ? visibleDropIndicator.edge
-                            : null
-                      }
-                      isZoteroSelected={
-                        selectedItemIds?.includes(item.id) || false
-                      }
-                      isIdentifierSelected={selectedIdentifiers.has(
-                        cardIdentifier,
+              {isLocked && layout !== "card" ? (
+                <>
+                  {rootAssignments.length > 0
+                    ? renderLockedLayoutRows(rootAssignments)
+                    : null}
+                  {classSections.map((section) => (
+                    <div
+                      key={section.sectionId}
+                      className="syllabus-class-section flex flex-col gap-2 pt-3 w-full min-w-0"
+                      data-section-id={section.sectionId}
+                    >
+                      <div className="w-full min-w-0">
+                        <div
+                          className={twMerge(
+                            "w-full font-semibold text-primary",
+                            density !== "expanded" ? "text-lg" : "text-xl",
+                          )}
+                        >
+                          {section.meta.title?.trim() ||
+                            getString("class-section-title-placeholder")}
+                        </div>
+                        {section.meta.description?.trim() ? (
+                          <div
+                            className={twMerge(
+                              density !== "expanded"
+                                ? "text-base mt-1"
+                                : "text-lg mt-2",
+                            )}
+                          >
+                            <div className="w-full text-primary">
+                              {section.meta.description}
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                      {section.rows.length > 0
+                        ? renderLockedLayoutRows(section.rows)
+                        : null}
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <>
+                  {!isLocked &&
+                  rootAssignments.length === 0 &&
+                  classSections.length > 0 ? (
+                    // Distinct group id (`class:N:root`) so this empty zone does
+                    // not collide with the outer class list droppable id.
+                    <SyllabusDndZone
+                      group={`${syllabusDndGroup(classNumber)}:root`}
+                      empty
+                      className={twMerge(
+                        "syllabus-class-root-dropzone box-border! rounded-md group/root-items",
+                        "text-center bg-quinary/50 text-secondary border-2 border-dashed border-quinary in-[.print]:hidden",
+                        "data-[dropzone-active='true']:bg-accent-blue/15! data-[dropzone-active='true']:border-accent-blue! data-[dropzone-active='true']:text-accent-blue!",
+                        density !== "expanded" ? "p-3" : "p-5",
                       )}
-                    />
-                  </SyllabusDndSortable>
-                );
-              })}
+                      onDrop={(e) => {
+                        void onDrop(e, classNumber ?? null);
+                      }}
+                      onDragOver={(e) => {
+                        onDragOver(e);
+                        if (!isOsFileDrag(e.dataTransfer)) {
+                          (e.currentTarget as HTMLElement).dataset.dropzoneActive =
+                            "true";
+                        }
+                      }}
+                      onDragLeave={(e) => {
+                        onDragLeave(e);
+                        delete (e.currentTarget as HTMLElement).dataset
+                          .dropzoneActive;
+                      }}
+                    >
+                      {classNumber != null
+                        ? getString("class-dropzone-hint", {
+                            args: {
+                              nomenclature: singularCapitalized,
+                              number: classNumber,
+                            },
+                          })
+                        : getString("unnumbered-dropzone-hint")}
+                    </SyllabusDndZone>
+                  ) : rootAssignments.length > 0 ? (
+                    renderAssignmentCards(rootAssignments, 0)
+                  ) : null}
+                  {classSections.map((section, sectionIndex) => {
+                    const sectionIndexOffset =
+                      sectionIndexOffsets[sectionIndex] ?? 0;
+                    const canMoveSectionUp = sectionIndex > 0;
+                    const canMoveSectionDown =
+                      sectionIndex < classSections.length - 1;
+                    return (
+                      <div
+                        key={section.sectionId}
+                        className="syllabus-class-section flex flex-col gap-2 pt-3 w-full min-w-0"
+                        data-section-id={section.sectionId}
+                      >
+                        <div className="w-full min-w-0">
+                          <div className="flex items-baseline gap-2 w-full">
+                            <div
+                              className={twMerge(
+                                "min-w-0 flex-1 font-semibold",
+                                density !== "expanded" ? "text-lg" : "text-xl",
+                              )}
+                            >
+                              <TextInput
+                                elementType="input"
+                                initialValue={section.meta.title || ""}
+                                onSave={(title) =>
+                                  void handleSectionTitleSave(
+                                    section.sectionId,
+                                    title,
+                                  )
+                                }
+                                className="w-full px-0! mx-0! text-primary"
+                                placeholder={getString(
+                                  "class-section-title-placeholder",
+                                )}
+                                emptyBehavior="reset"
+                                readOnly={isLocked}
+                              />
+                            </div>
+                            {!isLocked ? (
+                              <div className="shrink-0 inline-flex flex-row items-baseline gap-0.5 in-[.print]:hidden opacity-0 group-hover/class:opacity-100 focus-within:opacity-100">
+                                <button
+                                  type="button"
+                                  className="bg-transparent border-none rounded cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex items-center justify-center w-8 h-8 disabled:opacity-30 disabled:cursor-not-allowed"
+                                  onClick={() =>
+                                    void handleMoveSection(
+                                      section.sectionId,
+                                      "up",
+                                    )
+                                  }
+                                  disabled={!canMoveSectionUp}
+                                  title={getString("class-section-move-up")}
+                                  aria-label={getString(
+                                    "class-section-move-up",
+                                  )}
+                                >
+                                  <ChevronUp size={16} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="bg-transparent border-none rounded cursor-pointer hover:bg-quinary text-secondary hover:text-primary inline-flex items-center justify-center w-8 h-8 disabled:opacity-30 disabled:cursor-not-allowed"
+                                  onClick={() =>
+                                    void handleMoveSection(
+                                      section.sectionId,
+                                      "down",
+                                    )
+                                  }
+                                  disabled={!canMoveSectionDown}
+                                  title={getString("class-section-move-down")}
+                                  aria-label={getString(
+                                    "class-section-move-down",
+                                  )}
+                                >
+                                  <ChevronDown size={16} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="bg-transparent border-none rounded cursor-pointer hover:bg-red-500/15 text-secondary hover:text-red-400 inline-flex items-center justify-center w-8 h-8"
+                                  onClick={() =>
+                                    void handleDeleteSection(section.sectionId)
+                                  }
+                                  title={getString("class-section-delete")}
+                                  aria-label={getString(
+                                    "class-section-delete-aria",
+                                  )}
+                                >
+                                  <span className="text-2xl leading-none">
+                                    ×
+                                  </span>
+                                </button>
+                              </div>
+                            ) : null}
+                          </div>
+                          <div
+                            className={twMerge(
+                              density !== "expanded"
+                                ? "text-base mt-1"
+                                : "text-lg mt-2",
+                            )}
+                          >
+                            <TextInput
+                              elementType="textarea"
+                              initialValue={section.meta.description || ""}
+                              onSave={(description) =>
+                                void handleSectionDescriptionSave(
+                                  section.sectionId,
+                                  description,
+                                )
+                              }
+                              className="w-full px-0! mx-0! text-primary"
+                              placeholder={getString(
+                                "class-section-description-placeholder",
+                              )}
+                              emptyBehavior="reset"
+                              fieldSizing="content"
+                              readOnly={isLocked}
+                            />
+                          </div>
+                        </div>
+                        {section.rows.length > 0 ? (
+                          <SyllabusDndZone
+                            group={syllabusDndGroup(
+                              classNumber,
+                              undefined,
+                              section.sectionId,
+                            )}
+                            empty={false}
+                            className={twMerge(
+                              chromeDnd
+                                ? "syllabus-personal-order-section"
+                                : density !== "expanded"
+                                  ? "space-y-2"
+                                  : "space-y-4",
+                            )}
+                            onDrop={
+                              isLocked
+                                ? undefined
+                                : (e) => {
+                                    if (
+                                      dropIndicator &&
+                                      dropIndicator.zone !==
+                                        "further-reading" &&
+                                      dropIndicator.classNumber ===
+                                        classNumberKey
+                                    ) {
+                                      const target = section.rows.find(
+                                        ({ assignment }) =>
+                                          assignment.id != null &&
+                                          `assignment:${assignment.id}` ===
+                                            dropIndicator.identifier,
+                                      );
+                                      if (target) {
+                                        void onDrop(
+                                          e,
+                                          classNumber ?? null,
+                                          target.item.id,
+                                          dropIndicator.edge === "before",
+                                          { sectionId: section.sectionId },
+                                        );
+                                        return;
+                                      }
+                                    }
+                                    void onDrop(
+                                      e,
+                                      classNumber ?? null,
+                                      undefined,
+                                      undefined,
+                                      { sectionId: section.sectionId },
+                                    );
+                                  }
+                            }
+                            onDragOver={
+                              isLocked ? undefined : handleItemsDragOver
+                            }
+                            onDragLeave={
+                              isLocked ? undefined : handleItemsDragLeave
+                            }
+                          >
+                            {renderAssignmentCards(
+                              section.rows,
+                              sectionIndexOffset,
+                              section.sectionId,
+                            )}
+                          </SyllabusDndZone>
+                        ) : !isLocked ? (
+                          sectionDropzoneHint(section.sectionId)
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </>
+              )}
             </div>
           ) : null}
           {!isLocked && !unnumberedDragDropzone && (
@@ -912,6 +1347,38 @@ export function ClassGroupComponent({
                       aria-hidden="true"
                     />
                     {getString("class-add-note")}
+                  </button>
+                </>
+              ) : null}
+              {classNumber != null ? (
+                <>
+                  <span
+                    className="text-xs text-tertiary select-none"
+                    aria-hidden="true"
+                  >
+                    ·
+                  </span>
+                  <button
+                    type="button"
+                    className="inline-flex items-center justify-center gap-1 cursor-pointer bg-transparent border-0 p-0 text-xs text-secondary hover:text-primary"
+                    onClick={() => {
+                      void handleAddSection();
+                    }}
+                    title={getString("class-add-section-aria", {
+                      args: {
+                        nomenclature: singularCapitalized,
+                        number: classNumber,
+                      },
+                    })}
+                    aria-label={getString("class-add-section-aria", {
+                      args: {
+                        nomenclature: singularCapitalized,
+                        number: classNumber,
+                      },
+                    })}
+                  >
+                    <Plus size={12} aria-hidden="true" />
+                    {getString("class-add-section")}
                   </button>
                 </>
               ) : null}

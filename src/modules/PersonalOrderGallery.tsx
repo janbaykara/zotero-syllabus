@@ -480,10 +480,10 @@ export function PersonalOrderGallery({
         const sourceId = event.operation.source?.id;
         const ids = sourceId
           ? resolveDragIds(
-            containersRef.current,
-            sourceId,
-            selectedKeysRef.current,
-          )
+              containersRef.current,
+              sourceId,
+              selectedKeysRef.current,
+            )
           : [];
         dragIdsRef.current = ids;
         movingKeysRef.current = new Set(ids);
