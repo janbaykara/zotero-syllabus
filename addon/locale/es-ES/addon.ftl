@@ -305,6 +305,10 @@ add-to-class-search = Buscar temarios y clases
 add-to-class-empty = No hay clases coincidentes
 add-to-class-no-syllabi = Convierte una colección en un temario para asignar lecturas a las clases.
 add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-choose-syllabus = Elegir un temario
+add-to-class-choose-class = Elegir una clase
+add-to-class-search-link = Buscar…
+add-to-class-back = Atrás
 add-to-class-cancel = Cancelar
 
 # Settings
@@ -846,6 +850,16 @@ my-annotations-load-previous-loading = Loading…
 my-annotations-end = Your first annotation
 my-annotations-end-search = Start of results
 my-annotations-open-in-reader = Open in reader
+my-annotations-area-image = Imagen de anotación de área
+my-annotations-open-feed = Abrir el feed de anotaciones
+my-annotations-isolated-for = Anotaciones de { $title }
+my-annotations-show-all-items = Mostrar anotaciones de todos los elementos
+my-annotations-timeline-aria = Línea de tiempo de anotaciones
+my-annotations-timeline-untitled = Anotación
+my-annotations-timeline-gap = Hueco entre meses
+my-annotations-timeline-year-gap = Hueco entre años
+my-annotations-timeline-collapse = Contraer la línea de tiempo
+my-annotations-timeline-expand = Expandir la línea de tiempo
 my-annotations-copy = Copy
 my-annotations-copied = Copied
 my-annotations-copy-all = Copy all

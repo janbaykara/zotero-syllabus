@@ -16,8 +16,11 @@ import { getString, getUiDir } from "../utils/locale";
 import { openZoteroItemContextMenu } from "../utils/itemContextMenu";
 import { renderComponent } from "@janbaykara/zotero-preact";
 import { useDebouncedEffect } from "../utils/react/useDebouncedEffect";
-import { annotationMatchesColorFilter } from "@janbaykara/zotero-annotations";
-import { annotationMatchesTagFilter } from "@janbaykara/zotero-annotations";
+import {
+  annotationMatchesColorFilter,
+  annotationMatchesTagFilter,
+  collectAnnotationColors,
+} from "@janbaykara/zotero-annotations";
 import {
   ANNOTATION_COLOR_FILTER_FEED,
   ANNOTATION_TAG_FILTER_FEED,
@@ -46,6 +49,7 @@ import {
 } from "./annotationSelection";
 import { AnnotationBatchBar } from "./AnnotationBatchBar";
 import {
+  annotationsStreamForParent,
   isFulltextStreamEntry,
   isMyAnnotationsSearchActive,
   normalizeMyAnnotationsSearchQuery,
@@ -53,6 +57,12 @@ import {
   useMyAnnotationsStream,
   type MyAnnotationStreamEntry,
 } from "./explorerQueries";
+import {
+  setMyAnnotationsParentItemId,
+  useMyAnnotationsParentItemId,
+} from "./myAnnotationsIsolation";
+import { AnnotationTimelineRail } from "./AnnotationTimelineRail";
+import { getCachedItem } from "@janbaykara/zotero-cache";
 
 function dateMs(value: string | undefined): number {
   const parsed = Date.parse(value || "");
@@ -196,6 +206,11 @@ function restoreScrollAnchor(
 }
 
 export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
+  const parentItemId = useMyAnnotationsParentItemId();
+  const [isolatedRows, setIsolatedRows] = useState<
+    MyAnnotationStreamEntry[] | null
+  >(null);
+  const [isolatedLoading, setIsolatedLoading] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [searchScope, setSearchScope] = useMyAnnotationsSearchScope();
@@ -217,9 +232,81 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
     [searchInput],
     300,
   );
-  const { rows, colors, hasMore, loading, loadingMore, loadPrevious } =
-    useMyAnnotationsStream(libraryID, debouncedQuery, searchScope);
-  const searchActive = isMyAnnotationsSearchActive(debouncedQuery);
+  const libraryStream = useMyAnnotationsStream(
+    libraryID,
+    parentItemId ? "" : debouncedQuery,
+    searchScope,
+  );
+
+  useEffect(() => {
+    if (!parentItemId) {
+      setIsolatedRows(null);
+      setIsolatedLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setIsolatedLoading(true);
+    void (async () => {
+      const item =
+        getCachedItem(parentItemId) || Zotero.Items.get(parentItemId);
+      if (!item) {
+        if (!cancelled) {
+          setIsolatedRows([]);
+          setIsolatedLoading(false);
+        }
+        return;
+      }
+      try {
+        const rows = await annotationsStreamForParent(item);
+        if (!cancelled) {
+          setIsolatedRows(rows);
+          setIsolatedLoading(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setIsolatedRows([]);
+          setIsolatedLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [parentItemId]);
+
+  const isolated = parentItemId != null;
+  const rows = isolated ? isolatedRows || [] : libraryStream.rows;
+  const colors = isolated
+    ? collectAnnotationColors(rows.map((row) => row.color))
+    : libraryStream.colors;
+  const hasMore = isolated ? false : libraryStream.hasMore;
+  const loading = isolated ? isolatedLoading : libraryStream.loading;
+  const loadingMore = isolated ? false : libraryStream.loadingMore;
+  const loadPrevious = libraryStream.loadPrevious;
+  const searchActive = !isolated && isMyAnnotationsSearchActive(debouncedQuery);
+
+  const isolatedParent = useMemo(() => {
+    if (!parentItemId) {
+      return null;
+    }
+    return (
+      getCachedItem(parentItemId) || Zotero.Items.get(parentItemId) || null
+    );
+  }, [parentItemId]);
+  const isolatedTitle = useMemo(() => {
+    if (!isolatedParent) {
+      return "";
+    }
+    try {
+      return (
+        isolatedParent.getDisplayTitle?.() ||
+        isolatedParent.getField?.("title") ||
+        ""
+      );
+    } catch {
+      return "";
+    }
+  }, [isolatedParent]);
   const [order, setOrder] = useMyAnnotationsOrder();
   const [quoteOrder] = useAnnotationsQuoteOrder();
   const [colorFilter] = useAnnotationColorFilter(ANNOTATION_COLOR_FILTER_FEED);
@@ -237,14 +324,14 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
   const userScrolledRef = useRef(false);
 
   useEffect(() => {
-    if (searchActive) {
+    if (searchActive && !isolated) {
       return;
     }
     pinnedToLiveRef.current = true;
     pendingScrollRef.current = { kind: "live" };
     skipNextPinTrackRef.current = true;
     userScrolledRef.current = false;
-  }, [searchActive]);
+  }, [searchActive, isolated, parentItemId]);
 
   const displayRows = useMemo(
     () =>
@@ -272,6 +359,49 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
 
   const handleContextMenu = useCallback<MagazineTileClick>((item, e) => {
     void openZoteroItemContextMenu(item, e);
+  }, []);
+
+  const scrollToAnnotation = useCallback((annotationId: number) => {
+    const page = pageRef.current;
+    if (!page) {
+      return;
+    }
+    const target = page.querySelector(
+      `[data-annotation-id="${annotationId}"]`,
+    ) as HTMLElement | null;
+    if (!target) {
+      return;
+    }
+    pinnedToLiveRef.current = false;
+    skipNextPinTrackRef.current = true;
+    userScrolledRef.current = true;
+    target.scrollIntoView({ block: "center", behavior: "smooth" });
+    queueMicrotask(() => {
+      skipNextPinTrackRef.current = false;
+    });
+  }, []);
+
+  const clearIsolation = useCallback(() => {
+    setMyAnnotationsParentItemId(null);
+    pinnedToLiveRef.current = true;
+    pendingScrollRef.current = { kind: "live" };
+    skipNextPinTrackRef.current = true;
+    userScrolledRef.current = false;
+  }, []);
+
+  const isolateToParent = useCallback((item: Zotero.Item) => {
+    try {
+      if (!item.isRegularItem?.()) {
+        return;
+      }
+    } catch {
+      return;
+    }
+    setMyAnnotationsParentItemId(item.id);
+    pinnedToLiveRef.current = true;
+    pendingScrollRef.current = { kind: "live" };
+    skipNextPinTrackRef.current = true;
+    userScrolledRef.current = false;
   }, []);
 
   const updatePinnedFromScroll = useCallback(() => {
@@ -478,98 +608,137 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
           className="syllabus-my-annotations-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
           ref={pageRef}
         >
-          <div
-            ref={headerRef}
-            className={twMerge(
-              "sticky top-0 z-20 w-full bg-background py-1",
-              isZotero8OrLater() ? "pt-4 md:pt-8" : "pt-8",
-            )}
-          >
-            <div className="container-padded bg-background">
-              <div className="flex flex-row items-center gap-2 justify-between">
-                <div className="min-w-0 shrink">
-                  <div className="font-semibold text-3xl">
-                    {getString("view-tab-my-annotations")}
-                  </div>
-                  <p className="text-secondary text-base mt-1">
-                    {getString("my-annotations-desc")}
-                  </p>
-                </div>
-                <div className="inline-flex items-center gap-2.5 shrink grow-0">
-                  <MyAnnotationsSearchMenu
-                    searchInput={searchInput}
-                    onSearchInput={applySearchInput}
-                    searchScope={searchScope}
-                    onSearchScope={setSearchScope}
-                    searchActive={searchActive}
-                  />
-                  <MyAnnotationsMenu
-                    order={order}
-                    onOrder={handleOrderChange}
-                    colors={colors}
-                    libraryID={libraryID}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-          <GalleryViewportProvider rootRef={pageRef}>
-            <div className="syllabus-my-annotations-body syllabus-my-annotations-stream container-padded pt-6 pb-10 flex flex-col gap-6 min-w-0">
-              {order === "newestLast" ? loadPreviousControl : null}
-              {loading && rows.length === 0 ? (
-                <p className="text-secondary text-base">
-                  {getString("my-annotations-load-previous-loading")}
-                </p>
-              ) : displayRows.length === 0 ? (
-                <p className="text-secondary text-base">
-                  {getString(
-                    searchActive
-                      ? "my-annotations-empty-search"
-                      : rows.length === 0
-                        ? "my-annotations-empty"
-                        : colorFilter.length > 0 && tagFilter.length > 0
-                          ? "my-annotations-empty-filters"
-                          : tagFilter.length > 0
-                            ? "my-annotations-empty-tag-filter"
-                            : "my-annotations-empty-color-filter",
-                  )}
-                </p>
-              ) : (
-                displayGroups.map((group, i) => {
-                  const prev = i > 0 ? displayGroups[i - 1] : null;
-                  return (
-                    <Fragment key={group.key}>
-                      {quoteOrder === "dateAdded" && prev ? (
-                        <AnnotationActivityGap
-                          from={streamGroupEdgeAdded(prev, "end")}
-                          to={streamGroupEdgeAdded(group, "start")}
+          <div className="syllabus-my-annotations-layout">
+            <aside className="syllabus-my-annotations-layout-minimap">
+              <AnnotationTimelineRail
+                entries={displayRows}
+                onSelect={scrollToAnnotation}
+                scrollRootRef={pageRef}
+              />
+            </aside>
+            <div className="syllabus-my-annotations-layout-main">
+              <div
+                ref={headerRef}
+                className={twMerge(
+                  "sticky top-0 z-20 w-full bg-background py-1",
+                  isZotero8OrLater() ? "pt-4 md:pt-8" : "pt-8",
+                )}
+              >
+                <div className="syllabus-my-annotations-main-pad bg-background">
+                  <div className="flex flex-row items-center gap-2 justify-between">
+                    <div className="min-w-0 shrink">
+                      <div className="font-semibold text-3xl min-w-0">
+                        {isolated && isolatedTitle
+                          ? getString("my-annotations-isolated-for", {
+                              args: { title: isolatedTitle },
+                            })
+                          : getString("view-tab-my-annotations")}
+                      </div>
+                      {isolated ? (
+                        <button
+                          type="button"
+                          className="syllabus-my-annotations-clear-isolation text-accent-blue text-base mt-1 border-0 bg-transparent cursor-pointer p-0 text-left min-w-0 max-w-full hover:underline"
+                          onClick={clearIsolation}
+                        >
+                          {getString("my-annotations-show-all-items")}
+                        </button>
+                      ) : (
+                        <p className="text-secondary text-base mt-1">
+                          {getString("my-annotations-desc")}
+                        </p>
+                      )}
+                    </div>
+                    <div className="inline-flex items-center gap-2.5 shrink grow-0">
+                      {!isolated ? (
+                        <MyAnnotationsSearchMenu
+                          searchInput={searchInput}
+                          onSearchInput={applySearchInput}
+                          searchScope={searchScope}
+                          onSearchScope={setSearchScope}
+                          searchActive={searchActive}
                         />
                       ) : null}
-                      <AnnotationStreamGroup
-                        group={group}
-                        selected={
-                          !!group.parent &&
-                          (selectedItemIds?.includes(group.parent.id) || false)
-                        }
-                        searchQuery={debouncedQuery}
-                        richText
-                        onClick={(_item, e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          openAnnotationGroupInReader(group);
-                        }}
-                        onDoubleClick={() => {
-                          openAnnotationGroupInReader(group);
-                        }}
-                        onContextMenu={handleContextMenu}
+                      <MyAnnotationsMenu
+                        order={order}
+                        onOrder={handleOrderChange}
+                        colors={colors}
+                        libraryID={libraryID}
                       />
-                    </Fragment>
-                  );
-                })
-              )}
-              {order === "newestFirst" ? loadPreviousControl : null}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <GalleryViewportProvider rootRef={pageRef}>
+                <div className="syllabus-my-annotations-main-pad pt-6 pb-10">
+                  <div className="syllabus-my-annotations-body syllabus-my-annotations-stream flex flex-col gap-6 min-w-0">
+                    {order === "newestLast" ? loadPreviousControl : null}
+                    {loading && rows.length === 0 ? (
+                      <p className="text-secondary text-base">
+                        {getString("my-annotations-load-previous-loading")}
+                      </p>
+                    ) : displayRows.length === 0 ? (
+                      <p className="text-secondary text-base">
+                        {getString(
+                          searchActive
+                            ? "my-annotations-empty-search"
+                            : rows.length === 0
+                              ? "my-annotations-empty"
+                              : colorFilter.length > 0 && tagFilter.length > 0
+                                ? "my-annotations-empty-filters"
+                                : tagFilter.length > 0
+                                  ? "my-annotations-empty-tag-filter"
+                                  : "my-annotations-empty-color-filter",
+                        )}
+                      </p>
+                    ) : (
+                      displayGroups.map((group, i) => {
+                        const prev = i > 0 ? displayGroups[i - 1] : null;
+                        return (
+                          <Fragment key={group.key}>
+                            {quoteOrder === "dateAdded" && prev ? (
+                              <AnnotationActivityGap
+                                from={streamGroupEdgeAdded(prev, "end")}
+                                to={streamGroupEdgeAdded(group, "start")}
+                              />
+                            ) : null}
+                            <AnnotationStreamGroup
+                              group={group}
+                              selected={
+                                !!group.parent &&
+                                (selectedItemIds?.includes(group.parent.id) ||
+                                  false)
+                              }
+                              searchQuery={isolated ? "" : debouncedQuery}
+                              richText
+                              onClick={(_item, e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                // Click a cover isolates the feed to that book.
+                                if (group.parent && !isolated) {
+                                  isolateToParent(group.parent);
+                                  return;
+                                }
+                                openAnnotationGroupInReader(group);
+                              }}
+                              onDoubleClick={() => {
+                                openAnnotationGroupInReader(group);
+                              }}
+                              onContextMenu={handleContextMenu}
+                            />
+                          </Fragment>
+                        );
+                      })
+                    )}
+                    {order === "newestFirst" ? loadPreviousControl : null}
+                  </div>
+                </div>
+              </GalleryViewportProvider>
             </div>
-          </GalleryViewportProvider>
+            <div
+              className="syllabus-my-annotations-layout-balance"
+              aria-hidden="true"
+            />
+          </div>
         </div>
         <div className="syllabus-annotation-batch-dock shrink-0">
           <div className="container-padded">

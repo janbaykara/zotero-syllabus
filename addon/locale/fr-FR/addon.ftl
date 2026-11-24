@@ -305,6 +305,10 @@ add-to-class-search = Rechercher des syllabus et des séances
 add-to-class-empty = Aucune séance correspondante
 add-to-class-no-syllabi = Transformez une collection en syllabus pour attribuer des lectures aux séances.
 add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-choose-syllabus = Choisir un syllabus
+add-to-class-choose-class = Choisir une séance
+add-to-class-search-link = Rechercher…
+add-to-class-back = Retour
 add-to-class-cancel = Annuler
 
 # Settings
@@ -846,6 +850,16 @@ my-annotations-load-previous-loading = Loading…
 my-annotations-end = Your first annotation
 my-annotations-end-search = Start of results
 my-annotations-open-in-reader = Open in reader
+my-annotations-area-image = Image d’annotation de zone
+my-annotations-open-feed = Ouvrir le fil d’annotations
+my-annotations-isolated-for = Annotations pour { $title }
+my-annotations-show-all-items = Afficher les annotations de tous les documents
+my-annotations-timeline-aria = Chronologie des annotations
+my-annotations-timeline-untitled = Annotation
+my-annotations-timeline-gap = Intervalle entre mois
+my-annotations-timeline-year-gap = Intervalle entre années
+my-annotations-timeline-collapse = Réduire la chronologie
+my-annotations-timeline-expand = Développer la chronologie
 my-annotations-copy = Copy
 my-annotations-copied = Copied
 my-annotations-copy-all = Copy all

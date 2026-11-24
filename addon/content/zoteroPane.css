@@ -2490,7 +2490,8 @@ button.syllabus-personal-order-done-toggle[aria-expanded="false"]
   ) !important;
 }
 
-.syllabus-magazine-tile.is-selected .syllabus-gallery-cover-portrait.is-selected,
+.syllabus-magazine-tile.is-selected
+  .syllabus-gallery-cover-portrait.is-selected,
 .syllabus-magazine-tile.is-selected .syllabus-gallery-cover-video.is-selected,
 .syllabus-magazine-tile.is-selected .syllabus-gallery-cover-web.is-selected,
 .syllabus-magazine-tile.is-selected .syllabus-gallery-cover-square.is-selected,
@@ -4452,6 +4453,378 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   }
 }
 
+/*
+ * Three columns: minimap | main feed (container-4xl content) | equal balance.
+ * Side columns share free space so the feed stays centered at its usual width.
+ * Main column outer width matches former content-box container-padded
+ * (56rem content + inline padding).
+ */
+.syllabus-my-annotations-scroll {
+  --syllabus-annotations-timeline-width: 12.5rem;
+  --syllabus-annotations-main-pad: 1.5rem;
+  --syllabus-annotations-main-max: calc(
+    var(--container-4xl, 56rem) + (2 * var(--syllabus-annotations-main-pad))
+  );
+}
+
+@media (width >= 48rem) {
+  .syllabus-my-annotations-scroll {
+    --syllabus-annotations-main-pad: 2.5rem;
+  }
+}
+
+/*
+ * minimap (fills left gutter) | main | equal right gutter
+ * Side 1fr tracks stay equal so the feed stays centered; the minimap expands
+ * into leftover left space instead of truncating beside an empty gap.
+ */
+.syllabus-my-annotations-layout {
+  display: grid;
+  grid-template-columns:
+    minmax(var(--syllabus-annotations-timeline-width), 1fr)
+    minmax(0, var(--syllabus-annotations-main-max))
+    minmax(var(--syllabus-annotations-timeline-width), 1fr);
+  column-gap: 75px;
+  align-items: start;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.syllabus-my-annotations-layout-minimap {
+  position: sticky;
+  top: 0;
+  grid-column: 1;
+  justify-self: stretch;
+  width: 100%;
+  min-width: 0;
+  padding-block: 0.75rem 1rem;
+  padding-inline: 0.75rem 0.75rem;
+  box-sizing: border-box;
+  z-index: 15;
+  opacity: 0.5;
+  transition: opacity 140ms ease;
+}
+
+.syllabus-my-annotations-layout-minimap:hover,
+.syllabus-my-annotations-layout-minimap:focus-within {
+  opacity: 1;
+}
+
+/* Collapsed: keep the same three-column grid; only the outline content hides. */
+.syllabus-my-annotations-layout:has(
+    .syllabus-my-annotations-minimap-shell.is-collapsed
+  )
+  .syllabus-my-annotations-layout-minimap {
+  opacity: 1;
+}
+
+.syllabus-my-annotations-minimap-shell {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.syllabus-my-annotations-minimap-toggle {
+  position: absolute;
+  top: 0.15rem;
+  inset-inline-end: 0;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  margin: 0;
+  padding: 0 0.35rem;
+  border: 0;
+  border-radius: 0.35rem;
+  background: color-mix(
+    in srgb,
+    var(--material-background, #fff) 88%,
+    transparent
+  );
+  color: color-mix(in srgb, var(--fill-secondary, #666) 90%, transparent);
+  font-family: system-ui, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 1px 2px color-mix(in srgb, #000 12%, transparent);
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.syllabus-my-annotations-minimap-toggle:hover {
+  background: color-mix(
+    in srgb,
+    var(--fill-quinary, #ccc) 45%,
+    var(--material-background, #fff)
+  );
+  color: color-mix(in srgb, var(--fill-primary, #111) 88%, transparent);
+}
+
+.syllabus-my-annotations-minimap-toggle:focus-visible {
+  outline: 2px solid var(--accent-blue, #1d4ed8);
+  outline-offset: 1px;
+}
+
+.syllabus-my-annotations-minimap-shell .syllabus-my-annotations-timeline-rail {
+  transform-origin: left top;
+  transition:
+    opacity 240ms ease,
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.syllabus-my-annotations-minimap-shell[dir="rtl"]
+  .syllabus-my-annotations-timeline-rail {
+  transform-origin: right top;
+}
+
+.syllabus-my-annotations-minimap-shell.is-collapsed
+  .syllabus-my-annotations-timeline-rail {
+  opacity: 0;
+  transform: translateX(-0.5rem);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.syllabus-my-annotations-minimap-shell.is-collapsed[dir="rtl"]
+  .syllabus-my-annotations-timeline-rail {
+  transform: translateX(0.5rem);
+}
+
+.syllabus-my-annotations-layout-main {
+  grid-column: 2;
+  min-width: 0;
+  width: 100%;
+}
+
+.syllabus-my-annotations-layout-balance {
+  grid-column: 3;
+  min-width: 0;
+  width: 100%;
+  pointer-events: none;
+}
+
+/* Same inline padding as container-padded; grid handles centering. */
+.syllabus-my-annotations-main-pad {
+  padding-inline: var(--syllabus-annotations-main-pad);
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.syllabus-my-annotations-timeline-rail {
+  width: 100%;
+  max-width: 100%;
+  max-height: calc(100vh - 1.5rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  box-sizing: border-box;
+  /* Room for the floating collapse control. */
+  padding-inline-end: 1.85rem;
+}
+
+.syllabus-my-annotations-timeline-rail::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.syllabus-my-annotations-timeline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  border-inline-start: 1px solid
+    color-mix(in srgb, var(--fill-quinary, #ccc) 70%, transparent);
+  padding-inline-start: 0.65rem;
+}
+
+.syllabus-my-annotations-timeline-year {
+  list-style: none;
+  margin: 1.75rem 0 0.45rem;
+  padding: 0;
+  font-family: system-ui, sans-serif;
+  font-size: calc(0.78rem + 1px);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--fill-primary, #111) 78%, transparent);
+  transition:
+    color 120ms ease,
+    font-weight 120ms ease;
+}
+
+.syllabus-my-annotations-timeline-year:first-child {
+  margin-top: 0;
+}
+
+.syllabus-my-annotations-timeline-year.is-active {
+  font-weight: 800;
+  color: color-mix(in srgb, var(--fill-primary, #111) 95%, transparent);
+}
+
+.syllabus-my-annotations-timeline-month {
+  list-style: none;
+  margin: 1.4rem 0 0.35rem;
+  padding: 0;
+  font-family: system-ui, sans-serif;
+  font-size: calc(0.68rem + 1px);
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--fill-secondary, #666) 95%, transparent);
+  transition:
+    color 120ms ease,
+    font-weight 120ms ease;
+}
+
+.syllabus-my-annotations-timeline-month.is-active {
+  font-weight: 800;
+  color: color-mix(in srgb, var(--fill-primary, #111) 92%, transparent);
+}
+
+.syllabus-my-annotations-timeline-gap {
+  list-style: none;
+  /* Equal space above/below; following month/year drops its top margin. */
+  margin-block: 1.5rem;
+  padding: 0;
+  font-family: system-ui, sans-serif;
+  font-size: calc(0.72rem + 1px);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: color-mix(in srgb, var(--fill-secondary, #666) 75%, transparent);
+  user-select: none;
+}
+
+.syllabus-my-annotations-timeline-gap.is-year-gap {
+  margin-block: 1.75rem;
+  letter-spacing: 0.18em;
+}
+
+.syllabus-my-annotations-timeline-gap + .syllabus-my-annotations-timeline-month,
+.syllabus-my-annotations-timeline-gap + .syllabus-my-annotations-timeline-year {
+  margin-top: 0;
+}
+
+.syllabus-my-annotations-timeline-date-block {
+  list-style: none;
+  margin: 0.35rem 0;
+  padding: 0.35rem 0.4rem;
+  border-radius: 0.45rem;
+  transition: background-color 140ms ease;
+}
+
+.syllabus-my-annotations-timeline-date-block.is-active {
+  background: color-mix(in srgb, var(--fill-quinary, #ccc) 42%, transparent);
+}
+
+.syllabus-my-annotations-timeline-date-titles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+
+.syllabus-my-annotations-timeline-date {
+  margin: 0 0 0.15rem;
+  padding: 0;
+  font-family: system-ui, sans-serif;
+  font-size: calc(0.72rem + 1px);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--fill-secondary, #666) 95%, transparent);
+  transition:
+    color 120ms ease,
+    font-weight 120ms ease;
+}
+
+.syllabus-my-annotations-timeline-item {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.syllabus-my-annotations-timeline-date-block.is-active
+  .syllabus-my-annotations-timeline-date,
+.syllabus-my-annotations-timeline-date.is-active {
+  font-weight: 750;
+  color: color-mix(in srgb, var(--fill-primary, #111) 92%, transparent);
+}
+
+.syllabus-my-annotations-timeline-date-block.is-active
+  .syllabus-my-annotations-timeline-title {
+  color: color-mix(in srgb, var(--fill-primary, #111) 92%, transparent);
+}
+
+.syllabus-my-annotations-timeline-mark {
+  display: grid;
+  grid-template-columns: 0.65rem minmax(0, 1fr);
+  column-gap: 0.25rem;
+  align-items: baseline;
+  width: 100%;
+  margin: 0;
+  padding: 0.2rem 0.15rem;
+  border: 0;
+  border-radius: 0.25rem;
+  background: transparent;
+  cursor: pointer;
+  text-align: start;
+  color: inherit;
+}
+
+.syllabus-my-annotations-timeline-mark::before {
+  content: "•";
+  font-size: 0.85em;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--fill-secondary, #666) 85%, transparent);
+}
+
+.syllabus-my-annotations-timeline-mark:hover {
+  background: color-mix(in srgb, var(--fill-quinary, #ccc) 35%, transparent);
+}
+
+.syllabus-my-annotations-timeline-mark:focus-visible {
+  outline: 2px solid var(--accent-blue, #1d4ed8);
+  outline-offset: 1px;
+}
+
+.syllabus-my-annotations-timeline-title {
+  display: block;
+  min-width: 0;
+  font-family: system-ui, sans-serif;
+  font-size: calc(0.8rem + 1px);
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--fill-primary, #111) 88%, transparent);
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+/* Too narrow for side gutters: feed only, full width with normal padding. */
+@media (max-width: 64rem) {
+  .syllabus-my-annotations-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .syllabus-my-annotations-layout-minimap,
+  .syllabus-my-annotations-layout-balance {
+    display: none;
+  }
+
+  .syllabus-my-annotations-layout-main {
+    grid-column: 1;
+  }
+}
+
 .syllabus-my-annotations-stream {
   --syllabus-magazine-serif:
     "Newsreader", Georgia, "Palatino Linotype", Palatino, "Songti SC",
@@ -4554,6 +4927,26 @@ button.syllabus-explorer-class-segment-header:focus-visible {
 
 .syllabus-my-annotations-stream-avatar .syllabus-gallery-tile {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Same containment as explorer cover-rail: align-self:start meta otherwise
+   sizes to max-content and can paint over the annotation column. */
+.syllabus-my-annotations-stream-avatar .syllabus-gallery-tile-stack,
+.syllabus-my-annotations-stream-avatar .syllabus-gallery-meta {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.syllabus-my-annotations-stream-avatar .syllabus-gallery-title,
+.syllabus-my-annotations-stream-avatar .syllabus-gallery-creator,
+.syllabus-my-annotations-stream-avatar .syllabus-gallery-hostrow,
+.syllabus-my-annotations-stream-avatar .syllabus-gallery-progress {
+  max-width: 100%;
   min-width: 0;
 }
 
@@ -5147,6 +5540,36 @@ button.syllabus-explorer-class-segment-header:focus-visible {
   outline: 2px solid var(--accent-blue, #1d4ed8);
   outline-offset: 1px;
   border-radius: 0.2rem;
+}
+
+/* Zotero sets `button { max-height: 25px }`, which collapses the hit target
+   so page/time meta paints on top of the area image. */
+.syllabus-my-annotations-stream-image-btn {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  max-height: none;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 0.25rem;
+}
+
+.syllabus-my-annotations-stream-image-btn:focus-visible {
+  outline: 2px solid var(--accent-blue, #1d4ed8);
+  outline-offset: 2px;
+}
+
+.syllabus-my-annotations-stream-image {
+  display: block;
+  max-width: min(100%, 28rem);
+  height: auto;
+  border-radius: 0.25rem;
+  border: 1px solid
+    color-mix(in srgb, var(--fill-quinary, #ccc) 55%, transparent);
 }
 
 .syllabus-my-annotations-stream-quote {

@@ -40,7 +40,11 @@ import { CoverStreamRow } from "./coverStream";
 import { ExplorerCoverItem } from "./ExplorerMagazineRail";
 import { MagazineBlurb } from "./MagazineCoverBlurb";
 import { NoteHtml } from "./NoteHtml";
-import { selectItemInCollection } from "./ClassReadingBlock";
+import {
+  openMyAnnotationsTab,
+  selectItemInCollection,
+} from "./ClassReadingBlock";
+import { isOptionalFeatureEnabled } from "./optionalFeatures";
 import type { MagazineTileClick } from "./MagazineTile";
 import type { ReadingTileChrome } from "./readingAssignmentChrome";
 import {
@@ -545,6 +549,36 @@ export function AnnotationStreamBody({
         </button>
       ) : null}
       <div className="syllabus-my-annotations-stream-body min-w-0">
+        {entry.imageSrc ? (
+          <button
+            type="button"
+            className="syllabus-my-annotations-stream-image-btn"
+            title={getString("my-annotations-open-in-reader")}
+            aria-label={getString("my-annotations-area-image")}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              openInReader();
+            }}
+          >
+            <img
+              className="syllabus-my-annotations-stream-image"
+              src={entry.imageSrc}
+              alt=""
+              loading="lazy"
+              onError={(e) => {
+                const img = e.currentTarget;
+                img.style.display = "none";
+                const wrap = img.closest(
+                  ".syllabus-my-annotations-stream-image-btn",
+                ) as HTMLElement | null;
+                if (wrap) {
+                  wrap.style.display = "none";
+                }
+              }}
+            />
+          </button>
+        ) : null}
         {entry.quote ? (
           <div
             className="syllabus-my-annotations-stream-quote"
@@ -1013,31 +1047,53 @@ export function AnnotationStreamGroup({
       onContextMenu={onContextMenu}
       stackRef={stackRef}
       extraAvatar={
-        showCopyAll ? (
+        showCopyAll ||
+        (collectionId != null &&
+          !!parent &&
+          isOptionalFeatureEnabled("annotations")) ? (
           <div className="syllabus-my-annotations-stream-copy-all-wrap">
-            <button
-              type="button"
-              className={twMerge(
-                "syllabus-my-annotations-stream-copy-all",
-                copiedAll && "is-copied",
-              )}
-              title={copyAllLabel}
-              aria-label={copyAllLabel}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (copyStringToClipboard(formatGroupCopyText(entries))) {
-                  flashCopiedAll();
-                }
-              }}
-            >
-              {copiedAll ? (
-                <Check size={12} strokeWidth={2.5} aria-hidden="true" />
-              ) : (
-                <Copy size={12} strokeWidth={2} aria-hidden="true" />
-              )}
-              {copyAllLabel}
-            </button>
+            {collectionId != null &&
+            parent &&
+            isOptionalFeatureEnabled("annotations") ? (
+              <button
+                type="button"
+                className="syllabus-my-annotations-stream-copy-all"
+                title={getString("my-annotations-open-feed")}
+                aria-label={getString("my-annotations-open-feed")}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  openMyAnnotationsTab(parent.libraryID, parent.id);
+                }}
+              >
+                {getString("my-annotations-open-feed")}
+              </button>
+            ) : null}
+            {showCopyAll ? (
+              <button
+                type="button"
+                className={twMerge(
+                  "syllabus-my-annotations-stream-copy-all",
+                  copiedAll && "is-copied",
+                )}
+                title={copyAllLabel}
+                aria-label={copyAllLabel}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (copyStringToClipboard(formatGroupCopyText(entries))) {
+                    flashCopiedAll();
+                  }
+                }}
+              >
+                {copiedAll ? (
+                  <Check size={12} strokeWidth={2.5} aria-hidden="true" />
+                ) : (
+                  <Copy size={12} strokeWidth={2} aria-hidden="true" />
+                )}
+                {copyAllLabel}
+              </button>
+            ) : null}
           </div>
         ) : null
       }

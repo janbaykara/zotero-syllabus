@@ -305,6 +305,10 @@ add-to-class-search = Lehrpläne und Sitzungen durchsuchen
 add-to-class-empty = Keine passenden Sitzungen
 add-to-class-no-syllabi = Wandle zuerst eine Sammlung in einen Lehrplan um, um Lektüre Sitzungen zuzuweisen.
 add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-choose-syllabus = Syllabus wählen
+add-to-class-choose-class = Sitzung wählen
+add-to-class-search-link = Suchen…
+add-to-class-back = Zurück
 add-to-class-cancel = Abbrechen
 
 # Settings
@@ -846,6 +850,16 @@ my-annotations-load-previous-loading = Loading…
 my-annotations-end = Your first annotation
 my-annotations-end-search = Start of results
 my-annotations-open-in-reader = Open in reader
+my-annotations-area-image = Bild der Flächenannotation
+my-annotations-open-feed = Annotations-Feed öffnen
+my-annotations-isolated-for = Annotationen für { $title }
+my-annotations-show-all-items = Annotationen für alle Einträge zeigen
+my-annotations-timeline-aria = Annotations-Zeitleiste
+my-annotations-timeline-untitled = Annotation
+my-annotations-timeline-gap = Lücke zwischen Monaten
+my-annotations-timeline-year-gap = Lücke zwischen Jahren
+my-annotations-timeline-collapse = Zeitleiste einklappen
+my-annotations-timeline-expand = Zeitleiste ausklappen
 my-annotations-copy = Copy
 my-annotations-copied = Copied
 my-annotations-copy-all = Copy all

@@ -322,7 +322,9 @@ Public GETs set `Content-Security-Policy: frame-ancestors *` (and CORS `*`) so e
 https://<worker>/u/{zoteroUserId}/{libraryID}/item/{itemKey}/
 ```
 
-Each Share / Sync confirm offers an **Include annotations** checkbox (default off). When checked, the cover page embeds that item’s annotations in Annotation Feed style (location order via `annotationSortIndex`, Copy / Copy all with prefs baked at publish time) in [`itemShareHtml.ts`](../src/utils/itemShareHtml.ts).
+Each Share / Sync confirm offers an **Include annotations** checkbox (default off). When checked, the cover page embeds that item’s annotations in Annotation Feed style (location order via `annotationSortIndex`, Copy / Copy all with prefs baked at publish time) in [`itemShareHtml.ts`](../src/utils/itemShareHtml.ts). Area / ink annotations include their Zotero cache PNG (`Zotero.Annotations.getCacheImagePath`) as a data URL when present — same images the Annotation Feed shows inline via `imageSrc` on `MyAnnotationStreamEntry`.
+
+Annotation Feed isolation (single parent work) is a Jotai atom (`myAnnotationsParentItemIdAtom` in [`myAnnotationsIsolation.ts`](../src/modules/myAnnotationsIsolation.ts)); `openMyAnnotations(libraryID, parentItemId?)`, the item context menu **Open annotation feed**, and clicking a cover in the library feed set it (before selecting the tab when opened externally). Isolated mode loads via `annotationsStreamForParent` instead of the library-wide paginated stream. The left-hand date outline (`AnnotationTimelineRail`) collapses via a floating control (hides the outline only; the three-column layout stays); expanded/collapsed is session UI state only (not a pref).
 
 **Unpublish.** Banner **Unpublish** calls `DELETE /v1/syllabus`, which wipes the syllabus prefix, removes that collection from each listed item’s `refs.json`, and **deletes the item prefix** when no item URL remains (`page: false`) and no other syllabus refs it. **Unpublish shared URL** on the item menu clears the cover page and deletes files only when no syllabus still references the item. Local prefs: `publishUrls`, `publishShareOptions`, `publishItemUrls`.
 

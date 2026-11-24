@@ -69,6 +69,11 @@ export type MyAnnotationStreamEntry = {
   quote: string;
   comment: string;
   color: string;
+  /**
+   * Area / ink annotation cache image (`file://` URI) when Zotero has one.
+   * Absent for highlights and when the cache PNG is missing.
+   */
+  imageSrc?: string;
   /** Annotation item tags (not parent-item tags). */
   tags: string[];
   /** Zotero related items (`dc:relation`) on this annotation. */
@@ -700,6 +705,39 @@ export function annotationLocationPageLabel(item: Zotero.Item): string {
   return "";
 }
 
+/** Area (`image`) and ink annotations store a PNG under Zotero’s cache. */
+function isImageCacheAnnotation(item: Zotero.Item): boolean {
+  try {
+    const type = item.annotationType as unknown;
+    return type === "image" || type === "ink" || type === 3 || type === 4;
+  } catch {
+    return false;
+  }
+}
+
+/** `file://` URI for the annotation cache PNG, if present on disk. */
+function annotationCacheImageSrc(item: Zotero.Item): string | undefined {
+  if (!isImageCacheAnnotation(item)) {
+    return undefined;
+  }
+  try {
+    const Annotations = (
+      Zotero as typeof Zotero & {
+        Annotations?: {
+          getCacheImagePath?: (annotation: Zotero.Item) => string;
+        };
+      }
+    ).Annotations;
+    const path = Annotations?.getCacheImagePath?.(item);
+    if (!path) {
+      return undefined;
+    }
+    return Zotero.File.pathToFileURI(path);
+  } catch {
+    return undefined;
+  }
+}
+
 function mapAnnotationStreamEntry(
   item: Zotero.Item,
 ): MyAnnotationStreamEntry | null {
@@ -715,7 +753,10 @@ function mapAnnotationStreamEntry(
   } catch {
     // Keep empty when annotation comment is unavailable.
   }
-  if (!quote && !comment) {
+  const imageSrc = annotationCacheImageSrc(item);
+  // Area annotations often have neither quote nor comment — keep them when
+  // an image is available.
+  if (!quote && !comment && !imageSrc) {
     return null;
   }
   let color = DEFAULT_HIGHLIGHT_COLOR;
@@ -730,6 +771,7 @@ function mapAnnotationStreamEntry(
     quote,
     comment,
     color,
+    ...(imageSrc ? { imageSrc } : {}),
     tags: readItemAnnotationTags(item),
     related: readAnnotationRelatedItems(item),
     dateAdded: String(item.dateAdded || item.dateModified || ""),

@@ -305,6 +305,10 @@ add-to-class-search = Cari silabus dan kelas
 add-to-class-empty = Tidak ada kelas yang cocok
 add-to-class-no-syllabi = Ubah koleksi menjadi silabus untuk menetapkan bacaan ke kelas.
 add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-choose-syllabus = Pilih silabus
+add-to-class-choose-class = Pilih kelas
+add-to-class-search-link = Cari…
+add-to-class-back = Kembali
 add-to-class-cancel = Batal
 
 # Settings
@@ -846,6 +850,16 @@ my-annotations-load-previous-loading = Loading…
 my-annotations-end = Your first annotation
 my-annotations-end-search = Start of results
 my-annotations-open-in-reader = Open in reader
+my-annotations-area-image = Gambar anotasi area
+my-annotations-open-feed = Buka umpan anotasi
+my-annotations-isolated-for = Anotasi untuk { $title }
+my-annotations-show-all-items = Tampilkan anotasi semua item
+my-annotations-timeline-aria = Linimasa anotasi
+my-annotations-timeline-untitled = Anotasi
+my-annotations-timeline-gap = Celah antar bulan
+my-annotations-timeline-year-gap = Celah antar tahun
+my-annotations-timeline-collapse = Ciutkan linimasa
+my-annotations-timeline-expand = Bentangkan linimasa
 my-annotations-copy = Copy
 my-annotations-copied = Copied
 my-annotations-copy-all = Copy all

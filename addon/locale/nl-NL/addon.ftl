@@ -305,6 +305,10 @@ add-to-class-search = Syllabi en bijeenkomsten zoeken
 add-to-class-empty = Geen overeenkomende bijeenkomsten
 add-to-class-no-syllabi = Zet eerst een collectie om in een syllabus om lectuur aan bijeenkomsten toe te wijzen.
 add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-choose-syllabus = Kies een syllabus
+add-to-class-choose-class = Kies een bijeenkomst
+add-to-class-search-link = Zoeken…
+add-to-class-back = Terug
 add-to-class-cancel = Annuleren
 
 # Settings
@@ -846,6 +850,16 @@ my-annotations-load-previous-loading = Loading…
 my-annotations-end = Your first annotation
 my-annotations-end-search = Start of results
 my-annotations-open-in-reader = Open in reader
+my-annotations-area-image = Afbeelding van gebiedsannotatie
+my-annotations-open-feed = Annotatiefeed openen
+my-annotations-isolated-for = Annotaties voor { $title }
+my-annotations-show-all-items = Annotaties van alle items tonen
+my-annotations-timeline-aria = Annotatietijdlijn
+my-annotations-timeline-untitled = Annotatie
+my-annotations-timeline-gap = Onderbreking tussen maanden
+my-annotations-timeline-year-gap = Onderbreking tussen jaren
+my-annotations-timeline-collapse = Tijdlijn inklappen
+my-annotations-timeline-expand = Tijdlijn uitklappen
 my-annotations-copy = Copy
 my-annotations-copied = Copied
 my-annotations-copy-all = Copy all

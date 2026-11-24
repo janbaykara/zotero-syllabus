@@ -197,6 +197,9 @@
   .top-10 {
     top: calc(var(--spacing) * 10);
   }
+  .top-\[var\(--syllabus-item-pane-chrome-offset\,2\.75rem\)\] {
+    top: var(--syllabus-item-pane-chrome-offset,2.75rem);
+  }
   .top-full {
     top: 100%;
   }
@@ -211,6 +214,9 @@
   }
   .left-1\/2 {
     left: calc(1 / 2 * 100%);
+  }
+  .isolate {
+    isolation: isolate;
   }
   .z-0 {
     z-index: 0;
@@ -479,6 +485,9 @@
   }
   .max-h-\[80vh\] {
     max-height: 80vh;
+  }
+  .max-h-none {
+    max-height: none;
   }
   .min-h-0 {
     min-height: 0px;

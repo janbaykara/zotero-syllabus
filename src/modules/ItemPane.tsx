@@ -1,7 +1,13 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
 import type { JSX } from "preact";
-import { useState, useCallback, useMemo } from "preact/hooks";
+import {
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+  useLayoutEffect,
+} from "preact/hooks";
 import { SyllabusManager, ItemSyllabusAssignment } from "./syllabus";
 import {
   BookOpen,
@@ -110,7 +116,7 @@ export function ItemPane({ editable }: ItemPaneProps) {
             args: { count: selectedItemIds.length },
           })}
         </div>
-        {editable ? <AddToClassButton /> : null}
+        {editable ? <AddToClassButton itemIds={selectedItemIds} /> : null}
       </div>
     );
   }
@@ -428,23 +434,51 @@ function ItemPaneContent({
     return options;
   }, []);
 
+  const rootRef = useRef<HTMLDivElement>(null);
+  const chromeRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    const chrome = chromeRef.current;
+    if (!root || !chrome) {
+      return;
+    }
+    const syncOffset = () => {
+      root.style.setProperty(
+        "--syllabus-item-pane-chrome-offset",
+        `${Math.ceil(chrome.getBoundingClientRect().height)}px`,
+      );
+    };
+    syncOffset();
+    const win = root.ownerDocument.defaultView;
+    win?.addEventListener("resize", syncOffset);
+    return () => win?.removeEventListener("resize", syncOffset);
+  }, [editable, itemVersion.item.id, allAssignmentsByCollection.length]);
+
   return (
     <div
+      ref={rootRef}
       className="flex flex-col gap-2 pb-2"
       data-tour="syllabus-item-pane"
       dir={getUiDir()}
     >
-      <PinnedItemPaneControls item={itemVersion.item} />
-      {editable ? <AddToClassButton /> : null}
+      {/* Stay above sticky collection headers so Add to class remains usable. */}
+      <div
+        ref={chromeRef}
+        className="syllabus-item-pane-chrome sticky top-0 z-30 bg-background-sidepane flex flex-col gap-2 pb-1"
+      >
+        <PinnedItemPaneControls item={itemVersion.item} />
+        {editable ? <AddToClassButton items={[itemVersion.item]} /> : null}
+      </div>
       {allAssignmentsByCollection.map((group) => {
         const isCurrentCollection = group.collectionId === currentCollectionId;
         const classNote = isClassNoteItem(itemVersion.item);
         return (
           <div key={group.collectionId} className="flex flex-col gap-2">
-            {/* Collection Heading */}
+            {/* Collection Heading — sticks under the chrome bar */}
             <header
               className={twMerge(
-                "sticky top-0 bg-background-sidepane z-20 py-2",
+                "sticky top-[var(--syllabus-item-pane-chrome-offset,2.75rem)] bg-background-sidepane z-20 py-2",
                 !isCurrentCollection && "mt-2! border-t-2! border-quinary",
               )}
             >
@@ -876,12 +910,35 @@ function AssignmentEditor({
   );
 }
 
-function AddToClassButton() {
+function AddToClassButton({
+  items,
+  itemIds,
+}: {
+  items?: Zotero.Item[];
+  itemIds?: number[];
+}) {
+  const resolveItems = (): Zotero.Item[] | undefined => {
+    if (items && items.length > 0) {
+      return items;
+    }
+    if (!itemIds || itemIds.length === 0) {
+      return undefined;
+    }
+    return itemIds
+      .map((id) => Zotero.Items.get(id))
+      .filter((item): item is Zotero.Item => Boolean(item));
+  };
+
   return (
     <button
       type="button"
-      onClick={() => openAddToClassDialog()}
-      className="px-2 py-1 text-xs font-medium rounded-md cursor-pointer border-0 bg-transparent text-secondary hover:bg-quinary"
+      onClick={() =>
+        openAddToClassDialog({
+          items: resolveItems(),
+          mode: "stepped",
+        })
+      }
+      className="syllabus-item-pane-add-to-class px-2 py-1 text-xs font-medium rounded-md cursor-pointer border-0 bg-transparent text-secondary hover:bg-quinary max-h-none h-auto"
       title={getString("item-pane-add-to-class")}
     >
       <span className="flex items-center gap-2">

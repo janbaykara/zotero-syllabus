@@ -305,6 +305,10 @@ add-to-class-search = シラバスと授業を検索
 add-to-class-empty = 一致する授業がありません
 add-to-class-no-syllabi = コレクションをシラバスにすると、授業に文献を割り当てられます。
 add-to-class-syllabus-in-library = { $syllabus }（{ $library }）
+add-to-class-choose-syllabus = シラバスを選択
+add-to-class-choose-class = 授業を選択
+add-to-class-search-link = 検索…
+add-to-class-back = 戻る
 add-to-class-cancel = キャンセル
 
 # Settings
@@ -822,6 +826,16 @@ my-annotations-load-previous-loading = Loading…
 my-annotations-end = Your first annotation
 my-annotations-end-search = Start of results
 my-annotations-open-in-reader = Open in reader
+my-annotations-area-image = 範囲注釈の画像
+my-annotations-open-feed = 注釈フィードを開く
+my-annotations-isolated-for = { $title } の注釈
+my-annotations-show-all-items = すべてのアイテムの注釈を表示
+my-annotations-timeline-aria = 注釈タイムライン
+my-annotations-timeline-untitled = 注釈
+my-annotations-timeline-gap = 月のあいだの空白
+my-annotations-timeline-year-gap = 年のあいだの空白
+my-annotations-timeline-collapse = タイムラインを折りたたむ
+my-annotations-timeline-expand = タイムラインを展開
 my-annotations-copy = Copy
 my-annotations-copied = Copied
 my-annotations-copy-all = Copy all

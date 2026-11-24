@@ -571,9 +571,14 @@ const view = {
     openSyllabusAssignmentInCollection(collectionId, itemId, assignmentData),
   /** Open the Reading Schedule tab. */
   openReadingSchedule: (): void => openReadingScheduleTab(),
-  /** Open the Annotation Feed tab for a library. */
-  openMyAnnotations: (libraryID: number): void =>
-    openMyAnnotationsTab(libraryID),
+  /**
+   * Open the Annotation Feed tab for a library.
+   * Pass `parentItemId` to isolate the feed to one parent work.
+   */
+  openMyAnnotations: (
+    libraryID: number,
+    parentItemId?: number | null,
+  ): void => openMyAnnotationsTab(libraryID, parentItemId),
   /** Current items-pane mode for the selected collection (`table` / `gallery` / `syllabus` / …). */
   getCollectionViewMode: (): CollectionViewMode =>
     SyllabusManager.getCollectionViewMode(),

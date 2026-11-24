@@ -305,6 +305,10 @@ add-to-class-search = 搜尋課程大綱和課堂
 add-to-class-empty = 沒有符合的課堂
 add-to-class-no-syllabi = 請先將一個收藏集轉為課程大綱，才能把閱讀指定到課堂。
 add-to-class-syllabus-in-library = { $syllabus }（{ $library }）
+add-to-class-choose-syllabus = 選擇課程大綱
+add-to-class-choose-class = 選擇課堂
+add-to-class-search-link = 搜尋…
+add-to-class-back = 返回
 add-to-class-cancel = 取消
 
 # Settings
@@ -822,6 +826,16 @@ my-annotations-load-previous-loading = Loading…
 my-annotations-end = Your first annotation
 my-annotations-end-search = Start of results
 my-annotations-open-in-reader = Open in reader
+my-annotations-area-image = 區域註解圖片
+my-annotations-open-feed = 開啟註解動態
+my-annotations-isolated-for = { $title } 的註解
+my-annotations-show-all-items = 顯示所有條目的註解
+my-annotations-timeline-aria = 註解時間軸
+my-annotations-timeline-untitled = 註解
+my-annotations-timeline-gap = 月份之間的間隔
+my-annotations-timeline-year-gap = 年份之間的間隔
+my-annotations-timeline-collapse = 收合時間軸
+my-annotations-timeline-expand = 展開時間軸
 my-annotations-copy = Copy
 my-annotations-copied = Copied
 my-annotations-copy-all = Copy all

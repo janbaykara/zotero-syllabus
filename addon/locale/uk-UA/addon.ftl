@@ -305,6 +305,10 @@ add-to-class-search = Шукати навчальні плани й занятт
 add-to-class-empty = Немає відповідних занять
 add-to-class-no-syllabi = Перетворіть колекцію на навчальний план, щоб призначати читання заняттям.
 add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-choose-syllabus = Виберіть навчальний план
+add-to-class-choose-class = Виберіть заняття
+add-to-class-search-link = Пошук…
+add-to-class-back = Назад
 add-to-class-cancel = Скасувати
 
 # Settings
@@ -860,6 +864,16 @@ my-annotations-load-previous-loading = Loading…
 my-annotations-end = Your first annotation
 my-annotations-end-search = Start of results
 my-annotations-open-in-reader = Open in reader
+my-annotations-area-image = Зображення анотації області
+my-annotations-open-feed = Відкрити стрічку анотацій
+my-annotations-isolated-for = Анотації до «{ $title }»
+my-annotations-show-all-items = Показати анотації всіх записів
+my-annotations-timeline-aria = Часова шкала анотацій
+my-annotations-timeline-untitled = Анотація
+my-annotations-timeline-gap = Проміжок між місяцями
+my-annotations-timeline-year-gap = Проміжок між роками
+my-annotations-timeline-collapse = Згорнути часову шкалу
+my-annotations-timeline-expand = Розгорнути часову шкалу
 my-annotations-copy = Copy
 my-annotations-copied = Copied
 my-annotations-copy-all = Copy all

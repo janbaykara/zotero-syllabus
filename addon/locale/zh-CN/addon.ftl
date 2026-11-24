@@ -303,6 +303,10 @@ add-to-class-search = 搜索教学大纲和课堂
 add-to-class-empty = 没有匹配的课堂
 add-to-class-no-syllabi = 请先将一个分类转为教学大纲，才能把阅读分配到课堂。
 add-to-class-syllabus-in-library = { $syllabus }（{ $library }）
+add-to-class-choose-syllabus = 选择教学大纲
+add-to-class-choose-class = 选择课堂
+add-to-class-search-link = 搜索…
+add-to-class-back = 返回
 add-to-class-cancel = 取消
 
 # Settings
@@ -816,6 +820,16 @@ my-annotations-load-previous-loading = Loading…
 my-annotations-end = Your first annotation
 my-annotations-end-search = Start of results
 my-annotations-open-in-reader = Open in reader
+my-annotations-area-image = 区域批注图片
+my-annotations-open-feed = 打开批注动态
+my-annotations-isolated-for = { $title } 的批注
+my-annotations-show-all-items = 显示所有条目的批注
+my-annotations-timeline-aria = 批注时间线
+my-annotations-timeline-untitled = 批注
+my-annotations-timeline-gap = 月份之间的间隔
+my-annotations-timeline-year-gap = 年份之间的间隔
+my-annotations-timeline-collapse = 收起时间线
+my-annotations-timeline-expand = 展开时间线
 my-annotations-copy = Copy
 my-annotations-copied = Copied
 my-annotations-copy-all = Copy all

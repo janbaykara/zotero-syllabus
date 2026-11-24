@@ -236,13 +236,49 @@ export function resolveShareItem(item: Zotero.Item): Zotero.Item {
   return item;
 }
 
+async function annotationImageDataUrl(
+  entry: { id: number; imageSrc?: string },
+): Promise<string | undefined> {
+  if (!entry.imageSrc) {
+    return undefined;
+  }
+  try {
+    const annotation = Zotero.Items.get(entry.id);
+    if (!annotation) {
+      return undefined;
+    }
+    const Annotations = (
+      Zotero as typeof Zotero & {
+        Annotations?: {
+          getCacheImagePath?: (item: Zotero.Item) => string;
+        };
+      }
+    ).Annotations;
+    const path = Annotations?.getCacheImagePath?.(annotation);
+    if (!path) {
+      return undefined;
+    }
+    const FileApi = Zotero.File as typeof Zotero.File & {
+      generateDataURI?: (path: string, contentType: string) => Promise<string>;
+    };
+    if (typeof FileApi.generateDataURI === "function") {
+      return await FileApi.generateDataURI(path, "image/png");
+    }
+  } catch (err) {
+    ztoolkit.log("annotation image data URI failed:", err);
+  }
+  return undefined;
+}
+
 export async function collectItemShareAnnotations(
   item: Zotero.Item,
 ): Promise<ItemShareAnnotation[]> {
   const stream = await annotationsStreamForParent(item);
   const ordered = sortAnnotationsByQuoteOrder(stream, "location");
-  return ordered
-    .map((entry) => ({
+  const rows: ItemShareAnnotation[] = [];
+  for (const entry of ordered) {
+    const imageDataUrl = await annotationImageDataUrl(entry);
+    const row: ItemShareAnnotation = {
       quote: entry.quote || "",
       commentHtml: entry.comment
         ? annotationCommentToDisplayHtml(entry.comment)
@@ -253,8 +289,13 @@ export async function collectItemShareAnnotations(
       copyText: annotationHasCopyText(entry)
         ? formatAnnotationCopyText(entry)
         : "",
-    }))
-    .filter((row) => row.quote || row.commentHtml);
+      ...(imageDataUrl ? { imageDataUrl } : {}),
+    };
+    if (row.quote || row.commentHtml || row.imageDataUrl) {
+      rows.push(row);
+    }
+  }
+  return rows;
 }
 
 export async function publishItemToCloud(opts: {

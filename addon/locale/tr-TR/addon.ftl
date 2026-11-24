@@ -305,6 +305,10 @@ add-to-class-search = Müfredat ve ders ara
 add-to-class-empty = Eşleşen ders yok
 add-to-class-no-syllabi = Okumaları derslere atamak için önce bir koleksiyonu müfredata dönüştürün.
 add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-choose-syllabus = Müfredat seç
+add-to-class-choose-class = Ders seç
+add-to-class-search-link = Ara…
+add-to-class-back = Geri
 add-to-class-cancel = İptal
 
 # Settings
@@ -846,6 +850,16 @@ my-annotations-load-previous-loading = Loading…
 my-annotations-end = Your first annotation
 my-annotations-end-search = Start of results
 my-annotations-open-in-reader = Open in reader
+my-annotations-area-image = Alan açıklaması görseli
+my-annotations-open-feed = Açıklama akışını aç
+my-annotations-isolated-for = { $title } için açıklamalar
+my-annotations-show-all-items = Tüm öğelerin açıklamalarını göster
+my-annotations-timeline-aria = Açıklama zaman çizelgesi
+my-annotations-timeline-untitled = Açıklama
+my-annotations-timeline-gap = Aylar arası boşluk
+my-annotations-timeline-year-gap = Yıllar arası boşluk
+my-annotations-timeline-collapse = Zaman çizelgesini daralt
+my-annotations-timeline-expand = Zaman çizelgesini genişlet
 my-annotations-copy = Copy
 my-annotations-copied = Copied
 my-annotations-copy-all = Copy all

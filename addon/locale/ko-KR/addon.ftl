@@ -305,6 +305,10 @@ add-to-class-search = 강의계획서와 수업 검색
 add-to-class-empty = 일치하는 수업이 없습니다
 add-to-class-no-syllabi = 컬렉션을 강의계획서로 만들면 수업에 읽기를 배정할 수 있습니다.
 add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-choose-syllabus = 강의계획서 선택
+add-to-class-choose-class = 수업 선택
+add-to-class-search-link = 검색…
+add-to-class-back = 뒤로
 add-to-class-cancel = 취소
 
 # Settings
@@ -822,6 +826,16 @@ my-annotations-load-previous-loading = Loading…
 my-annotations-end = Your first annotation
 my-annotations-end-search = Start of results
 my-annotations-open-in-reader = Open in reader
+my-annotations-area-image = 영역 주석 이미지
+my-annotations-open-feed = 주석 피드 열기
+my-annotations-isolated-for = { $title }의 주석
+my-annotations-show-all-items = 모든 항목의 주석 표시
+my-annotations-timeline-aria = 주석 타임라인
+my-annotations-timeline-untitled = 주석
+my-annotations-timeline-gap = 월 사이 공백
+my-annotations-timeline-year-gap = 연도 사이 공백
+my-annotations-timeline-collapse = 타임라인 접기
+my-annotations-timeline-expand = 타임라인 펼치기
 my-annotations-copy = Copy
 my-annotations-copied = Copied
 my-annotations-copy-all = Copy all

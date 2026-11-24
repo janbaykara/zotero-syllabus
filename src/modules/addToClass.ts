@@ -1,4 +1,5 @@
 import { getCachedCollectionById } from "@janbaykara/zotero-cache";
+import { isSyllabusAssignableItem } from "../utils/items";
 import { compareLocale } from "../utils/locale";
 import {
   getAllCollections,

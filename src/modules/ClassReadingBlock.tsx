@@ -79,9 +79,12 @@ export function openReadingScheduleTab(): void {
   }
 }
 
-export function openMyAnnotationsTab(libraryID: number): void {
+export function openMyAnnotationsTab(
+  libraryID: number,
+  parentItemId?: number | null,
+): void {
   try {
-    SyllabusManager.openMyAnnotationsTab(libraryID);
+    SyllabusManager.openMyAnnotationsTab(libraryID, parentItemId);
   } catch (error) {
     ztoolkit.log("Error opening My Annotations:", error);
   }

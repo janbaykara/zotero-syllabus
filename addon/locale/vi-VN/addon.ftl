@@ -305,6 +305,10 @@ add-to-class-search = Tìm đề cương và buổi học
 add-to-class-empty = Không có buổi học phù hợp
 add-to-class-no-syllabi = Hãy biến một bộ sưu tập thành đề cương để gán bài đọc cho buổi học.
 add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-choose-syllabus = Chọn đề cương
+add-to-class-choose-class = Chọn buổi học
+add-to-class-search-link = Tìm…
+add-to-class-back = Quay lại
 add-to-class-cancel = Hủy
 
 # Settings
@@ -846,6 +850,16 @@ my-annotations-load-previous-loading = Loading…
 my-annotations-end = Your first annotation
 my-annotations-end-search = Start of results
 my-annotations-open-in-reader = Open in reader
+my-annotations-area-image = Ảnh chú thích vùng
+my-annotations-open-feed = Mở bảng chú thích
+my-annotations-isolated-for = Chú thích của { $title }
+my-annotations-show-all-items = Hiện chú thích của tất cả tài liệu
+my-annotations-timeline-aria = Dòng thời gian chú thích
+my-annotations-timeline-untitled = Chú thích
+my-annotations-timeline-gap = Khoảng trống giữa các tháng
+my-annotations-timeline-year-gap = Khoảng trống giữa các năm
+my-annotations-timeline-collapse = Thu gọn dòng thời gian
+my-annotations-timeline-expand = Mở rộng dòng thời gian
 my-annotations-copy = Copy
 my-annotations-copied = Copied
 my-annotations-copy-all = Copy all

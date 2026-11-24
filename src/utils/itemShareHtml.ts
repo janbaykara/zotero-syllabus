@@ -30,6 +30,8 @@ export type ItemShareAnnotation = {
   quote: string;
   /** Sanitized display HTML for the comment, if any. */
   commentHtml: string;
+  /** Area / ink annotation as a data URL (PNG), when available. */
+  imageDataUrl?: string;
   color: string;
   pageLabel: string;
   tags: string[];
@@ -145,6 +147,10 @@ function buildAnnotationsSectionHtml(
       const tags = ann.tags || [];
       const showMeta = !!(pageText || tags.length > 0 || hasCopy);
 
+      const imageHtml = ann.imageDataUrl
+        ? `<div class="ann-image"><img src="${escapeAttr(ann.imageDataUrl)}" alt="" loading="lazy" /></div>`
+        : "";
+
       const quoteHtml = ann.quote
         ? `<div class="ann-quote"><mark class="ann-mark" style="--highlight-color:${escapeAttr(ann.color || "#ffd400")}">${escapeHtml(ann.quote)}</mark></div>`
         : "";
@@ -191,6 +197,7 @@ function buildAnnotationsSectionHtml(
 
       return `<article class="ann-entry">
   <div class="ann-body">
+    ${imageHtml}
     ${quoteHtml}
     ${metaHtml}
     ${commentHtml}
@@ -255,6 +262,16 @@ const ANNOTATIONS_CSS = `
   }
   .ann-body:hover {
     background: color-mix(in srgb, var(--muted) 10%, transparent);
+  }
+  .ann-image {
+    max-width: 100%;
+  }
+  .ann-image img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.25rem;
+    border: 1px solid color-mix(in srgb, var(--muted) 35%, transparent);
   }
   .ann-quote {
     font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;

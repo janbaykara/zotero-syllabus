@@ -2,6 +2,7 @@
 import { h } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { twMerge } from "tailwind-merge";
+import { ChevronLeft } from "lucide-preact";
 import { getString, getUiDir } from "../utils/locale";
 import { getSelectedCollection } from "../utils/zotero";
 import { isTestEnv } from "../utils/env";
@@ -48,7 +49,68 @@ function rowLabel(row: AddToClassRow): string {
   });
 }
 
-function AddToClassDialogBody({
+function ClassRowList({
+  rows,
+  onPick,
+  listLabel,
+}: {
+  rows: AddToClassRow[];
+  onPick: (row: AddToClassRow) => void;
+  listLabel: string;
+}) {
+  return (
+    <div
+      role="listbox"
+      aria-label={listLabel}
+      className="rounded-md border border-quinary overflow-hidden bg-background"
+    >
+      {rows.map((row) => (
+        <button
+          key={`${row.kind}-${row.classNumber ?? "none"}`}
+          type="button"
+          role="option"
+          onClick={() => onPick(row)}
+          className={twMerge(
+            "flex w-full items-center px-3 py-2 text-left text-sm border-0 cursor-pointer bg-transparent text-primary hover:bg-quinary/40",
+            row.kind !== "class" && "text-secondary",
+          )}
+        >
+          <span className="min-w-0 flex-1 truncate">{rowLabel(row)}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ClassGroupList({
+  group,
+  onPick,
+}: {
+  group: AddToClassGroup;
+  onPick: (row: AddToClassRow) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="text-xs font-semibold uppercase tracking-wide text-secondary px-1">
+        {group.libraryName
+          ? getString("add-to-class-syllabus-in-library", {
+              args: {
+                syllabus: group.collectionName,
+                library: group.libraryName,
+              },
+            })
+          : group.collectionName}
+      </div>
+      <ClassRowList
+        rows={group.rows}
+        onPick={onPick}
+        listLabel={group.collectionName}
+      />
+    </div>
+  );
+}
+
+function SearchAddToClassBody({
   items,
   currentCollectionId,
   onPick,
@@ -125,59 +187,149 @@ function AddToClassDialogBody({
   );
 }
 
-function ClassGroupList({
-  group,
+/**
+ * Two-step picker: syllabus list → class list (with Search… fallback).
+ */
+function SteppedAddToClassBody({
+  items,
+  currentCollectionId,
   onPick,
+  onOpenSearch,
 }: {
-  group: AddToClassGroup;
+  items: Zotero.Item[];
+  currentCollectionId: number | null;
   onPick: (row: AddToClassRow) => void;
+  onOpenSearch: () => void;
 }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="text-xs font-semibold uppercase tracking-wide text-secondary px-1">
-        {group.libraryName
-          ? getString("add-to-class-syllabus-in-library", {
-              args: {
-                syllabus: group.collectionName,
-                library: group.libraryName,
-              },
-            })
-          : group.collectionName}
+  const [selectedGroup, setSelectedGroup] = useState<AddToClassGroup | null>(
+    null,
+  );
+  const groups = useMemo(
+    () =>
+      buildAddToClassGroups({
+        libraryIDs: libraryIDsForAddToClass(items),
+        currentCollectionId,
+      }),
+    [items, currentCollectionId],
+  );
+
+  if (groups.length === 0) {
+    return (
+      <div className="p-4 space-y-3" dir={getUiDir()} style={{ minWidth: 380 }}>
+        <p className="text-sm text-secondary m-0">
+          {getString("add-to-class-no-syllabi")}
+        </p>
       </div>
-      <div
-        role="listbox"
-        aria-label={group.collectionName}
-        className="rounded-md border border-quinary overflow-hidden bg-background"
-      >
-        {group.rows.map((row) => (
+    );
+  }
+
+  if (!selectedGroup) {
+    return (
+      <div className="p-4 space-y-3" dir={getUiDir()} style={{ minWidth: 380 }}>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm text-secondary m-0">
+            {getString("add-to-class-choose-syllabus")}
+          </p>
           <button
-            key={`${row.kind}-${row.classNumber ?? "none"}`}
             type="button"
-            role="option"
-            onClick={() => onPick(row)}
-            className={twMerge(
-              "flex w-full items-center px-3 py-2 text-left text-sm border-0 cursor-pointer bg-transparent text-primary hover:bg-quinary/40",
-              row.kind !== "class" && "text-secondary",
-            )}
+            className="text-sm text-accent-blue border-0 bg-transparent cursor-pointer p-0 hover:underline"
+            onClick={onOpenSearch}
           >
-            <span className="min-w-0 flex-1 truncate">{rowLabel(row)}</span>
+            {getString("add-to-class-search-link")}
           </button>
-        ))}
+        </div>
+        <div
+          role="listbox"
+          aria-label={getString("add-to-class-choose-syllabus")}
+          className="rounded-md border border-quinary overflow-hidden bg-background max-h-96 overflow-auto"
+        >
+          {groups.map((group) => (
+            <button
+              key={group.collectionId}
+              type="button"
+              role="option"
+              onClick={() => setSelectedGroup(group)}
+              className="flex w-full items-center px-3 py-2 text-left text-sm border-0 cursor-pointer bg-transparent text-primary hover:bg-quinary/40"
+            >
+              <span className="min-w-0 flex-1 truncate">
+                {group.libraryName
+                  ? getString("add-to-class-syllabus-in-library", {
+                      args: {
+                        syllabus: group.collectionName,
+                        library: group.libraryName,
+                      },
+                    })
+                  : group.collectionName}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 space-y-3" dir={getUiDir()} style={{ minWidth: 380 }}>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 text-sm text-secondary border-0 bg-transparent cursor-pointer p-0 hover:text-primary"
+          onClick={() => setSelectedGroup(null)}
+          title={getString("add-to-class-back")}
+          aria-label={getString("add-to-class-back")}
+        >
+          <ChevronLeft size={16} aria-hidden="true" />
+          {getString("add-to-class-back")}
+        </button>
+        <span className="text-sm text-secondary truncate min-w-0 flex-1">
+          {selectedGroup.libraryName
+            ? getString("add-to-class-syllabus-in-library", {
+                args: {
+                  syllabus: selectedGroup.collectionName,
+                  library: selectedGroup.libraryName,
+                },
+              })
+            : selectedGroup.collectionName}
+        </span>
+        <button
+          type="button"
+          className="text-sm text-accent-blue border-0 bg-transparent cursor-pointer p-0 hover:underline shrink-0"
+          onClick={onOpenSearch}
+        >
+          {getString("add-to-class-search-link")}
+        </button>
+      </div>
+      <p className="text-sm text-secondary m-0">
+        {getString("add-to-class-choose-class")}
+      </p>
+      <div className="max-h-96 overflow-auto">
+        <ClassRowList
+          rows={selectedGroup.rows}
+          onPick={onPick}
+          listLabel={selectedGroup.collectionName}
+        />
       </div>
     </div>
   );
 }
 
-/** Searchable picker: add the selected items to any class on any syllabus. */
-export function openAddToClassDialog(options?: {
+export type OpenAddToClassDialogOptions = {
   items?: Zotero.Item[];
-}): void {
+  /** Default `stepped` for Item Pane; `search` keeps the flat searchable list. */
+  mode?: "stepped" | "search";
+};
+
+/** Picker: add the selected items to any class on any syllabus. */
+export function openAddToClassDialog(
+  options?: OpenAddToClassDialogOptions,
+): void {
   if (isTestEnv()) {
     return;
   }
 
   const items = selectedAssignableItems(options?.items);
   const currentCollectionId = getSelectedCollection()?.id ?? null;
+  const mode = options?.mode ?? "stepped";
 
   const handleRef: { current: PreactDialogHandle | null } = { current: null };
 
@@ -190,17 +342,32 @@ export function openAddToClassDialog(options?: {
     handleRef.current?.close();
   };
 
+  const openSearch = () => {
+    handleRef.current?.close();
+    openAddToClassDialog({ items, mode: "search" });
+  };
+
   handleRef.current = openPreactDialog({
     title: getString("add-to-class-window-title"),
     rootId: "syllabus-add-to-class-root",
     singleton: false,
     content: (handle) => {
       handleRef.current = handle;
+      if (mode === "search") {
+        return (
+          <SearchAddToClassBody
+            items={items}
+            currentCollectionId={currentCollectionId}
+            onPick={pick}
+          />
+        );
+      }
       return (
-        <AddToClassDialogBody
+        <SteppedAddToClassBody
           items={items}
           currentCollectionId={currentCollectionId}
           onPick={pick}
+          onOpenSearch={openSearch}
         />
       );
     },

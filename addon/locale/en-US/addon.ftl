@@ -303,6 +303,10 @@ add-to-class-search = Search syllabi and classes
 add-to-class-empty = No matching classes
 add-to-class-no-syllabi = Turn a collection into a syllabus to assign readings to classes.
 add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-choose-syllabus = Choose a syllabus
+add-to-class-choose-class = Choose a class
+add-to-class-search-link = Search…
+add-to-class-back = Back
 add-to-class-cancel = Cancel
 
 # Settings
@@ -844,6 +848,16 @@ my-annotations-load-previous-loading = Loading…
 my-annotations-end = Your first annotation
 my-annotations-end-search = Start of results
 my-annotations-open-in-reader = Open in reader
+my-annotations-area-image = Area annotation image
+my-annotations-open-feed = Open annotation feed
+my-annotations-isolated-for = Annotations for { $title }
+my-annotations-show-all-items = Show annotations for all items
+my-annotations-timeline-aria = Annotation timeline
+my-annotations-timeline-untitled = Annotation
+my-annotations-timeline-gap = Gap between months
+my-annotations-timeline-year-gap = Gap between years
+my-annotations-timeline-collapse = Collapse timeline
+my-annotations-timeline-expand = Expand timeline
 my-annotations-copy = Copy
 my-annotations-copied = Copied
 my-annotations-copy-all = Copy all

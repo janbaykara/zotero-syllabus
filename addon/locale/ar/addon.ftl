@@ -305,6 +305,10 @@ add-to-class-search = البحث في المقررات والمحاضرات
 add-to-class-empty = لا توجد محاضرات مطابقة
 add-to-class-no-syllabi = حوّل مجموعة إلى مقرر لتعيين القراءات إلى المحاضرات.
 add-to-class-syllabus-in-library = { $syllabus } ({ $library })
+add-to-class-choose-syllabus = اختر مقررًا
+add-to-class-choose-class = اختر محاضرة
+add-to-class-search-link = بحث…
+add-to-class-back = رجوع
 add-to-class-cancel = إلغاء
 
 # Settings
@@ -854,6 +858,16 @@ my-annotations-load-previous-loading = Loading…
 my-annotations-end = Your first annotation
 my-annotations-end-search = Start of results
 my-annotations-open-in-reader = Open in reader
+my-annotations-area-image = صورة تعليق المنطقة
+my-annotations-open-feed = فتح موجز التعليقات
+my-annotations-isolated-for = تعليقات { $title }
+my-annotations-show-all-items = عرض التعليقات لجميع العناصر
+my-annotations-timeline-aria = الخط الزمني للتعليقات
+my-annotations-timeline-untitled = تعليق
+my-annotations-timeline-gap = فجوة بين الأشهر
+my-annotations-timeline-year-gap = فجوة بين السنوات
+my-annotations-timeline-collapse = طي الخط الزمني
+my-annotations-timeline-expand = توسيع الخط الزمني
 my-annotations-copy = Copy
 my-annotations-copied = Copied
 my-annotations-copy-all = Copy all

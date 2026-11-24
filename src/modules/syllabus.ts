@@ -58,6 +58,7 @@ import pluralize from "pluralize";
 import { getPref } from "../utils/prefs";
 import { ReadingSchedule } from "./ReadingSchedule";
 import { MyAnnotationsPage } from "./MyAnnotationsPage";
+import { setMyAnnotationsParentItemId } from "./myAnnotationsIsolation";
 import { parseXULTemplate } from "../utils/ui";
 import { TabManager } from "@janbaykara/zotero-preact";
 import { FEATURE_FLAG } from "./featureFlags";
@@ -935,6 +936,7 @@ export class SyllabusManager {
     );
     this.setupContextMenuPinned();
     this.setupContextMenuShareItem();
+    this.setupContextMenuOpenAnnotationFeed();
     this.setupContextMenuShareCollection();
     this.setupContextMenuAddCollectionShelf();
   }
@@ -2951,6 +2953,67 @@ export class SyllabusManager {
     });
   }
 
+  static setupContextMenuOpenAnnotationFeed() {
+    ztoolkit.Menu.unregister("syllabus-item-open-annotation-feed-menu");
+
+    const selectedFeedParent = (): Zotero.Item | null => {
+      if (!isOptionalFeatureEnabled("annotations")) {
+        return null;
+      }
+      try {
+        const items = ztoolkit.getGlobal("ZoteroPane").getSelectedItems() || [];
+        if (items.length !== 1) {
+          return null;
+        }
+        const item = items[0];
+        try {
+          if (item.deleted || item.isAnnotation?.()) {
+            return null;
+          }
+        } catch {
+          return null;
+        }
+        // Attachments → parent work; regular items are the parent.
+        try {
+          if (item.isAttachment?.()) {
+            const parent = item.parentItem;
+            if (parent && !parent.deleted) {
+              return parent;
+            }
+            return null;
+          }
+        } catch {
+          // Fall through to treating as a regular item.
+        }
+        try {
+          if (item.isRegularItem?.()) {
+            return item;
+          }
+        } catch {
+          return null;
+        }
+        return null;
+      } catch {
+        return null;
+      }
+    };
+
+    ztoolkit.Menu.register("item", {
+      tag: "menuitem",
+      id: "syllabus-item-open-annotation-feed-menu",
+      label: getString("my-annotations-open-feed"),
+      icon: chromeSkinUrl("16/universal/attachment-annotations.svg"),
+      isHidden: () => !selectedFeedParent(),
+      commandListener: () => {
+        const item = selectedFeedParent();
+        if (!item) {
+          return;
+        }
+        this.openMyAnnotationsTab(item.libraryID, item.id);
+      },
+    });
+  }
+
   static setupContextMenuShareItem() {
     ztoolkit.Menu.unregister("syllabus-item-share-via-url-menu");
     ztoolkit.Menu.unregister("syllabus-item-unpublish-menu");
@@ -4739,12 +4802,21 @@ export class SyllabusManager {
   }
 
   /**
-   * Open and render the My Annotations tab for a library
+   * Open and render the My Annotations tab for a library.
+   * Pass `parentItemId` to isolate the feed to one parent work.
    */
-  static openMyAnnotationsTab(libraryID: number) {
+  static openMyAnnotationsTab(
+    libraryID: number,
+    parentItemId?: number | null,
+  ) {
     if (!isOptionalFeatureEnabled("annotations")) {
       return;
     }
+    setMyAnnotationsParentItemId(
+      typeof parentItemId === "number" && parentItemId > 0
+        ? parentItemId
+        : null,
+    );
     const win = Zotero.getMainWindow();
     this.myAnnotationsTab.open(win, { libraryID });
     this.syncMyAnnotationsTabIcon(win);
