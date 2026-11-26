@@ -78,7 +78,7 @@ The plugin has five surfaces (toggle in **Preferences → Zotero Syllabus → Vi
 2. **Reading Schedule** — due dates across all your syllabi.
 3. **Gallery** — browse a collection as a reading list (covers, cards, or a preview) with your own reading order. Items you mark done can sit in a separate Done section, most recently finished first.
 4. **Home** — library shelves for what to open next (pinned, recently read, annotations, deadlines, and more).
-5. **Annotation Feed** — your highlights and area-annotation images in one timeline (optional single-item isolation).
+5. **Annotation Feed** — your highlights and area-annotation images in one timeline (optional single-item isolation; save filter/order combos as reusable views).
 
 Shared tools: pinning, Gallery notes, [publishing a collection](https://janbaykara.github.io/zotero-syllabus/how-to/print-export-publish/) (syllabus or reading list), and [importing a reading list](https://janbaykara.github.io/zotero-syllabus/how-to/import-reading-lists/) from the browser. Start with the [student](https://janbaykara.github.io/zotero-syllabus/tutorials/student/), [educator](https://janbaykara.github.io/zotero-syllabus/tutorials/educator/), or [researcher](https://janbaykara.github.io/zotero-syllabus/tutorials/researcher/) tutorial.
 

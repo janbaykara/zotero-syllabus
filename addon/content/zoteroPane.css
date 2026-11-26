@@ -481,6 +481,38 @@
   accent-color: var(--accent-green, #2f6f4e);
 }
 
+.syllabus-my-annotations-view-menu {
+  position: fixed;
+  z-index: 80;
+  min-width: 8rem;
+  padding: 0.25rem;
+  border: 0.5px solid var(--fill-quinary, #d9d9d9);
+  border-radius: 8px;
+  background: var(--material-background, var(--color-background, #fff));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.syllabus-my-annotations-view-menu-item {
+  appearance: none;
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0.35rem 0.6rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fill-primary);
+  font: inherit;
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  text-align: start;
+  cursor: pointer;
+}
+
+.syllabus-my-annotations-view-menu-item:hover {
+  background: var(--fill-quinary, rgba(0, 0, 0, 0.06));
+}
+
 .syllabus-gallery-popover {
   position: absolute;
   top: calc(100% + 0.35rem);

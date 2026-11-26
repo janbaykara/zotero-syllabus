@@ -42,8 +42,13 @@ Annotation hits match **quote** or **comment** text; full-text hits show matchin
 Open the options menu to:
 
 - **Order** — newest last (oldest at the top) or newest first.
-- **Layout** — **Vertical** (stacked covers with quotes underneath) or **Grid** (a wall of covers and quotes).
+- **Quote order** — under each item, by location in the document or by date added.
+- **Filter by colour / tag** — show only matching annotations (empty filter = everything).
 - **Copy** — when you copy from the feed, optionally prefix Markdown blockquotes (`>`) and append Pandoc cite keys (`[@…]`, from Better BibTeX or the item Citation Key field). The same defaults live in Preferences.
+
+## Saved views
+
+When a colour or tag filter is active, a **+** appears under the title so you can save the current order, quote order, and filters as a named view (stored in your global preferences). Pills appear to the left of **+**; click one to re-apply those filters. Right-click a pill → **Delete view** to remove it. The active pill highlights when the live filters match that view.
 
 Scroll to the older end of the feed (top when newest is last, bottom when newest is first) to load an earlier page automatically — or use **Load previous**. When you reach the oldest item, a **Your first annotation** marker appears (or **Start of results** in search). Click a quote, area image, or full-text paragraph to open it in the reader.
 

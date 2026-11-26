@@ -32,6 +32,7 @@ import {
   type MyAnnotationsOrder,
 } from "./myAnnotationsPrefs";
 import { MyAnnotationsMenu } from "./MyAnnotationsMenu";
+import { MyAnnotationsSavedViews } from "./MyAnnotationsSavedViews";
 import { MyAnnotationsSearchMenu } from "./MyAnnotationsSearchMenu";
 import { GalleryViewportProvider } from "./galleryVisibility";
 import { useItemIdentifierSelection } from "./browsePage";
@@ -666,6 +667,12 @@ export function MyAnnotationsPage({ libraryID }: { libraryID: number }) {
                       />
                     </div>
                   </div>
+                  <MyAnnotationsSavedViews
+                    order={order}
+                    quoteOrder={quoteOrder}
+                    colorFilter={colorFilter}
+                    tagFilter={tagFilter}
+                  />
                 </div>
               </div>
               <GalleryViewportProvider rootRef={pageRef}>

@@ -32,6 +32,8 @@ Layout has two defaults because the surfaces start from different presets: `defa
 
 ## Out of scope
 
-Feature flags, My Annotations page prefs, Explorer shelves, WPM, publish, **Generate Reading Schedule collection**.
+Feature flags, My Annotations page prefs (except colour/tag filter maps below), Explorer shelves, WPM, publish, **Generate Reading Schedule collection**.
 
 My Annotations / Explorer colour filters use named keys (`feed`, `explorer`, `explorer-pinned`) and do **not** inherit the gallery/syllabus colour-filter default.
+
+**Annotation Feed saved views** (`myAnnotationsViews`) are a separate global JSON array of named filter/order snapshots — not a `viewPref` slot. See [TECHNICAL.md](TECHNICAL.md).

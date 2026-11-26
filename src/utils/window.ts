@@ -25,6 +25,50 @@ export function alertPrompt(title: string, text: string): void {
   }
 }
 
+/**
+ * OK/Cancel text prompt. Returns the trimmed string, or `null` if cancelled /
+ * empty after trim. Auto-returns `defaultValue` (or `""`) in the test environment.
+ */
+export function promptText(
+  title: string,
+  text: string,
+  defaultValue = "",
+): string | null {
+  if (isTestEnv()) {
+    return defaultValue;
+  }
+  const win = Zotero.getMainWindow();
+  if (!win) {
+    return null;
+  }
+  try {
+    const prompt = Services.prompt as typeof Services.prompt & {
+      prompt: (
+        parent: Window | null,
+        dialogTitle: string,
+        dialogText: string,
+        value: { value: string },
+        checkMsg: string | null,
+        checkState: { value: boolean },
+      ) => boolean;
+    };
+    const value = { value: defaultValue };
+    const ok = prompt.prompt(win, title, text, value, null, { value: false });
+    if (!ok) {
+      return null;
+    }
+    const trimmed = String(value.value ?? "").trim();
+    return trimmed.length > 0 ? trimmed : null;
+  } catch (error) {
+    try {
+      ztoolkit.log("Error showing text prompt dialog:", error);
+    } catch {
+      // Tests (and early boot) may not have ztoolkit.
+    }
+    return null;
+  }
+}
+
 /** OK/Cancel prompt. Auto-accepts in the test environment. */
 export function confirmPrompt(title: string, text: string): boolean {
   if (isTestEnv()) {
