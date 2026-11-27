@@ -123,6 +123,7 @@ body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-journal,
 body.publish-layout
   .syllabus-item-thumbnail-cover
   .syllabus-gallery-placeholder-face,
+body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-letter,
 body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-book-spine,
 body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-page-fold,
 body.publish-layout .syllabus-item-thumbnail-cover .syllabus-gallery-play,
@@ -230,6 +231,14 @@ body.publish-layout .syllabus-gallery-journal-abstract {
 }
 body.publish-layout .syllabus-gallery-page-fold {
   position: absolute !important;
+}
+body.publish-layout .syllabus-gallery-letter {
+  position: absolute !important;
+  display: flex !important;
+  color: #2c2418 !important;
+}
+body.publish-layout .syllabus-gallery-letter-title {
+  color: #1f1810 !important;
 }
 body.publish-layout .syllabus-gallery-placeholder-face {
   position: absolute !important;

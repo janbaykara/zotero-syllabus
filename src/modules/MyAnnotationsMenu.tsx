@@ -16,6 +16,8 @@ import { AnnotationTagFilter } from "./AnnotationTagFilter";
 import {
   ANNOTATION_COLOR_FILTER_FEED,
   ANNOTATION_TAG_FILTER_FEED,
+  useAnnotationColorFilter,
+  useAnnotationTagFilter,
   useAnnotationsQuoteOrder,
   type MyAnnotationsOrder,
 } from "./myAnnotationsPrefs";
@@ -81,6 +83,9 @@ export function MyAnnotationsMenu({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const [quoteOrder, setQuoteOrder] = useAnnotationsQuoteOrder();
+  const [colorFilter] = useAnnotationColorFilter(ANNOTATION_COLOR_FILTER_FEED);
+  const [tagFilter] = useAnnotationTagFilter(ANNOTATION_TAG_FILTER_FEED);
+  const filtersActive = colorFilter.length > 0 || tagFilter.length > 0;
   const [blockquote, setBlockquote] = useBooleanPref(
     "myAnnotationsCopyBlockquote",
   );
@@ -126,12 +131,20 @@ export function MyAnnotationsMenu({
     <div className="syllabus-gallery-menu in-[.print]:hidden" ref={rootRef}>
       <button
         type="button"
-        className="syllabus-gallery-menu-btn"
+        className={
+          filtersActive
+            ? "syllabus-gallery-menu-btn is-filter-active"
+            : "syllabus-gallery-menu-btn"
+        }
         data-tour="my-annotations-view-options"
         aria-label={getString("my-annotations-options-aria")}
         aria-haspopup="menu"
         aria-expanded={open}
-        title={getString("my-annotations-options-aria")}
+        title={
+          filtersActive
+            ? getString("my-annotations-options-filters-active")
+            : getString("my-annotations-options-aria")
+        }
         onClick={() => setOpen((value) => !value)}
       >
         <MoreHorizontal size={18} strokeWidth={2} aria-hidden="true" />

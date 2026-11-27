@@ -171,6 +171,8 @@ Display chrome is per view with “Save as default” — see [DISPLAY-PREFS.md]
 
 **Home (Explorer) defaults** (`defaultExplorerShelves` in [`explorerConfig.ts`](../src/modules/explorerConfig.ts)): Pinned → Recently read → Recent annotations → Upcoming deadlines → Watch / Listen → Recently added. Users still on the previous pinned+deadlines-first shipped layout are migrated once via `coerceExplorerShelves`.
 
+**Gallery cover faces** ([`GalleryCover.tsx`](../src/modules/GalleryCover.tsx) + [`galleryCover.css`](../addon/content/galleryCover.css)): type-specific placeholders include journal first-page mockups, sealed-envelope faces for `letter` / `email` (handwritten centred title), binders for report/document/thesis, and notebook covers for class notes. `galleryCover.css` is loaded cache-busted from [`hooks.ts`](../src/hooks.ts) (not `@import`ed from `zoteroPane.css`, which Firefox keeps stale across plugin reloads).
+
 ## Gallery notes
 
 Collection-scoped notes on regular items for Gallery / card views. Each note is a **child note** tagged `zotero-syllabus-gallery:{collectionKey}` (collection **key**, not numeric id). Edited via Zotero’s built-in note editor (`ZoteroPane.selectItem`). Shown in Row/card like a reading instruction, beside Cover tiles (span 2), and in the Preview sidecar when there is no excerpt blurb. Display uses the stored note HTML (sanitized), not a plain-text / Markdown conversion. See [`src/modules/galleryNote.ts`](../src/modules/galleryNote.ts). End-user steps: [README — Gallery notes](../README.md#gallery-notes).

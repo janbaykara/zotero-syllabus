@@ -62,6 +62,7 @@ export function buildShareCoverHtml(opts: ShareCoverHtmlInput): string {
   const itemType = opts.itemType || "";
   const hasImage = Boolean(opts.coverDataUrl);
   const isBookLike = itemType === "book" || itemType === "bookSection";
+  const isLetterLike = itemType === "letter" || itemType === "email";
   const showSpine = isBookLike;
   const showBinder =
     itemType === "report" || itemType === "document" || itemType === "thesis";
@@ -74,6 +75,13 @@ export function buildShareCoverHtml(opts: ShareCoverHtmlInput): string {
       ? "syllabus-gallery-cover-img is-natural"
       : "syllabus-gallery-cover-img";
     faceInner += `<img src="${escapeAttr(opts.coverDataUrl)}" alt="" class="${imgClass}" draggable="false" />`;
+  } else if (isLetterLike && opts.coverPlaceholder) {
+    const ph = opts.coverPlaceholder;
+    faceInner += `<div class="syllabus-gallery-letter">`;
+    faceInner += `<div class="syllabus-gallery-letter-flap" aria-hidden="true"></div>`;
+    faceInner += `<div class="syllabus-gallery-letter-folds" aria-hidden="true"></div>`;
+    faceInner += `<div class="syllabus-gallery-letter-title">${escapeHtml(ph.title)}</div>`;
+    faceInner += `</div>`;
   } else if (opts.coverPlaceholder) {
     const ph = opts.coverPlaceholder;
     const faceClass = showSpine

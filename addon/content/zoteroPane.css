@@ -1,4 +1,4 @@
-@import url("galleryCover.css");
+/* galleryCover.css is loaded separately (cache-busted) from hooks.ts */
 
 /* Zotero chrome defaults to content-box; w-full + padding would overflow. */
 .syllabus-publish-banner {
@@ -408,6 +408,7 @@
 
 .syllabus-gallery-menu-btn {
   appearance: none;
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -440,6 +441,18 @@
 
 .syllabus-gallery-menu-btn.is-search-active {
   color: var(--accent-blue, #1d4ed8);
+}
+
+.syllabus-gallery-menu-btn.is-filter-active::after {
+  content: "";
+  position: absolute;
+  top: 0.2rem;
+  inset-inline-end: 0.12rem;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  background: var(--accent-blue, #1d4ed8);
+  pointer-events: none;
 }
 
 .syllabus-my-annotations-search-popover {

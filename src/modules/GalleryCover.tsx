@@ -70,12 +70,14 @@ export const GalleryCover = memo(function GalleryCover({
 
   const isJournalLike =
     item.itemType === "journalArticle" || item.itemType === "conferencePaper";
+  const isLetterLike = item.itemType === "letter" || item.itemType === "email";
   const isBookLike =
     item.itemType === "book" || item.itemType === "bookSection";
   const isPageLike = PAGE_LIKE_ITEM_TYPES.has(item.itemType);
   const isArtwork = item.itemType === "artwork";
   const showSpine = isBookLike;
   const useJournalFace = isJournalLike && cover.kind !== "image";
+  const useLetterFace = isLetterLike && cover.kind !== "image";
   const showBinder =
     item.itemType === "report" ||
     item.itemType === "document" ||
@@ -175,6 +177,8 @@ export const GalleryCover = memo(function GalleryCover({
           />
         ) : useJournalFace ? (
           <JournalFace item={item} />
+        ) : useLetterFace ? (
+          <LetterFace title={placeholder.title} />
         ) : (
           <PlaceholderFace
             cover={cover}
@@ -459,6 +463,17 @@ function JournalFace({ item }: { item: Zotero.Item }) {
       {creator ? (
         <div className="syllabus-gallery-journal-author">{creator}</div>
       ) : null}
+    </div>
+  );
+}
+
+/** Closed envelope face for letter / email items without cover art. */
+function LetterFace({ title }: { title: string }) {
+  return (
+    <div className="syllabus-gallery-letter">
+      <div className="syllabus-gallery-letter-flap" aria-hidden="true" />
+      <div className="syllabus-gallery-letter-folds" aria-hidden="true" />
+      <div className="syllabus-gallery-letter-title">{title}</div>
     </div>
   );
 }

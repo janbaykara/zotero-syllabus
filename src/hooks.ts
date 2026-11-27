@@ -286,18 +286,27 @@ function registerStyleSheet(win: _ZoteroTypes.MainWindow) {
   });
   doc.documentElement?.appendChild(tailwindStyles);
 
-  // Load existing stylesheet (cache-bust so chrome:// updates after rebuild)
-  const styles = ztoolkit.UI.createElement(doc, "link", {
-    properties: {
-      type: "text/css",
-      rel: "stylesheet",
-      href: `chrome://${addon.data.config.addonRef}/content/zoteroPane.css?t=${Date.now()}`,
-    },
-    attributes: {
-      "data-syllabus-stylesheet": "true",
-    },
-  });
-  doc.documentElement?.appendChild(styles);
+  // Cache-bust chrome:// CSS so rebuilds show up after plugin reload.
+  // galleryCover.css is linked on its own — @import inside zoteroPane.css
+  // stays cached across reloads in Firefox.
+  const cacheBust = Date.now();
+  const styleHrefs = [
+    `chrome://${addon.data.config.addonRef}/content/galleryCover.css?t=${cacheBust}`,
+    `chrome://${addon.data.config.addonRef}/content/zoteroPane.css?t=${cacheBust}`,
+  ];
+  for (const href of styleHrefs) {
+    const styles = ztoolkit.UI.createElement(doc, "link", {
+      properties: {
+        type: "text/css",
+        rel: "stylesheet",
+        href,
+      },
+      attributes: {
+        "data-syllabus-stylesheet": "true",
+      },
+    });
+    doc.documentElement?.appendChild(styles);
+  }
 }
 
 async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {

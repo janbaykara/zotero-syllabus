@@ -34,6 +34,16 @@ function PlaceholderFace({
   );
 }
 
+function LetterFace({ title }: { title: string }) {
+  return (
+    <div className="syllabus-gallery-letter">
+      <div className="syllabus-gallery-letter-flap" aria-hidden="true" />
+      <div className="syllabus-gallery-letter-folds" aria-hidden="true" />
+      <div className="syllabus-gallery-letter-title">{title}</div>
+    </div>
+  );
+}
+
 /**
  * Same structure / classes as in-app GalleryCover so galleryCover.css applies.
  */
@@ -41,11 +51,13 @@ export function ShareGalleryCover({ item }: { item: ShareItem }) {
   const cover = item.cover;
   const itemType = item.itemType || "";
   const isBookLike = itemType === "book" || itemType === "bookSection";
+  const isLetterLike = itemType === "letter" || itemType === "email";
   const showSpine = isBookLike;
   const showBinder =
     itemType === "report" || itemType === "document" || itemType === "thesis";
   const shape = shareCoverShapeClass(itemType, cover?.kind === "image");
   const useNatural = shape === "syllabus-gallery-cover-natural";
+  const useLetterFace = isLetterLike && cover?.kind === "placeholder";
 
   const face = (
     <>
@@ -60,6 +72,8 @@ export function ShareGalleryCover({ item }: { item: ShareItem }) {
           }
           draggable={false}
         />
+      ) : useLetterFace ? (
+        <LetterFace title={cover.title} />
       ) : cover?.kind === "placeholder" ? (
         <PlaceholderFace cover={cover} insetForSpine={showSpine} />
       ) : (

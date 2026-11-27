@@ -467,6 +467,94 @@
   background: #fff;
 }
 
+/* Closed envelope for letter / email placeholders */
+.syllabus-gallery-letter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem 0.7rem;
+  background: linear-gradient(165deg, #f7f1e6 0%, #efe6d6 42%, #e5d9c4 100%);
+  color: #2c2418;
+  overflow: hidden;
+}
+
+.syllabus-gallery-letter-flap {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 58%;
+  background: linear-gradient(180deg, #f3ebdc 0%, #e8dcc8 72%, #d9cbb4 100%);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.syllabus-gallery-letter-flap::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 42%;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(90, 70, 40, 0.07) 55%,
+    rgba(90, 70, 40, 0.16) 100%
+  );
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+.syllabus-gallery-letter-folds {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    linear-gradient(
+      to bottom right,
+      transparent calc(50% - 0.6px),
+      rgba(90, 70, 40, 0.14) 50%,
+      transparent calc(50% + 0.6px)
+    ),
+    linear-gradient(
+      to bottom left,
+      transparent calc(50% - 0.6px),
+      rgba(90, 70, 40, 0.14) 50%,
+      transparent calc(50% + 0.6px)
+    );
+}
+
+.syllabus-gallery-letter-title {
+  position: relative;
+  z-index: 2;
+  max-width: 100%;
+  font-family:
+    "Segoe Print", "Bradley Hand", "Apple Chancery", "Snell Roundhand",
+    "Segoe Script", "Comic Sans MS", cursive;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.25;
+  text-align: center;
+  color: #1f1810;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+  text-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.35);
+}
+
+.syllabus-item-thumbnail-cover .syllabus-gallery-letter {
+  padding: 0.4rem 0.35rem;
+}
+
+.syllabus-item-thumbnail-cover .syllabus-gallery-letter-title {
+  font-size: 10px;
+  -webkit-line-clamp: 3;
+}
+
 .syllabus-gallery-page-fold {
   position: absolute;
   top: 0;

@@ -7,7 +7,7 @@ Browse one collection as a **reading list** — covers, cards, a preview of exce
 
 ![Gallery](../../../assets/images/gallery.png)
 
-Covers come from attached images, EPUB/PDF art, ISBN lookups, or type-specific placeholders. Reading progress shows when available. If Zotero’s **Show Items from Subcollections** is on, those items are included.
+Covers come from attached images, EPUB/PDF art, ISBN lookups, or type-specific placeholders (for example journals as a first page, letters and emails as a sealed envelope with the title handwritten). Reading progress shows when available. If Zotero’s **Show Items from Subcollections** is on, those items are included.
 
 Open **View options** from the `(view / sort / group)` control in the header. Choices are stored per collection. The globe button (**Save as default**) copies the current choice to collections that have not set their own. When you group items, a pill strip under the title jumps to each section.
 

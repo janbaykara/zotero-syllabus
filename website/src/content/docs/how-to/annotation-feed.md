@@ -48,7 +48,7 @@ Open the options menu to:
 
 ## Saved views
 
-When a colour or tag filter is active, a **+** appears under the title so you can save the current order, quote order, and filters as a named view (stored in your global preferences). Pills appear to the left of **+**; click one to re-apply those filters. Right-click a pill → **Delete view** to remove it. The active pill highlights when the live filters match that view.
+When a colour or tag filter is active, the options **⋯** shows a blue dot, and under the title you get **Clear filters** (and **Save view** when the current setup doesn’t already match a saved view). **Save view** stores the current order, quote order, and filters as a named view (in your global preferences). Pills appear to the left; click one to apply those filters, or click the active pill again to clear them. Right-click a pill → **Delete view** to remove it. The active pill highlights when the live filters match that view.
 
 Scroll to the older end of the feed (top when newest is last, bottom when newest is first) to load an earlier page automatically — or use **Load previous**. When you reach the oldest item, a **Your first annotation** marker appears (or **Start of results** in search). Click a quote, area image, or full-text paragraph to open it in the reader.
 

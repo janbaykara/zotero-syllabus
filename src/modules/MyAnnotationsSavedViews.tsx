@@ -1,7 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { h, Fragment } from "preact";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
-import { Plus } from "lucide-preact";
+import { Plus, X } from "lucide-preact";
 import { getString } from "../utils/locale";
 import { confirmPrompt, promptText } from "../utils/window";
 import {
@@ -13,7 +13,13 @@ import {
   type MyAnnotationsSavedView,
 } from "./myAnnotationsViews";
 import type { AnnotationsQuoteOrder } from "./explorerQueries";
-import type { MyAnnotationsOrder } from "./myAnnotationsPrefs";
+import {
+  ANNOTATION_COLOR_FILTER_FEED,
+  ANNOTATION_TAG_FILTER_FEED,
+  setAnnotationColorFilter,
+  setAnnotationTagFilter,
+  type MyAnnotationsOrder,
+} from "./myAnnotationsPrefs";
 
 type DisplayOptions = {
   order: MyAnnotationsOrder;
@@ -42,7 +48,11 @@ export function MyAnnotationsSavedViews({
     colorFilter,
     tagFilter,
   };
-  const canSave = colorFilter.length > 0 || tagFilter.length > 0;
+  const hasFilters = colorFilter.length > 0 || tagFilter.length > 0;
+  const matchesSavedView = views.some((view) =>
+    myAnnotationsSavedViewMatches(view, current),
+  );
+  const canSave = hasFilters && !matchesSavedView;
 
   useEffect(() => {
     if (!menu) {
@@ -90,10 +100,29 @@ export function MyAnnotationsSavedViews({
     setViews([...views, view]);
   }, [colorFilter, order, quoteOrder, setViews, tagFilter, views]);
 
-  const handleApply = useCallback((view: MyAnnotationsSavedView) => {
-    applyMyAnnotationsSavedView(view);
-    setMenu(null);
+  const handleClearFilters = useCallback(() => {
+    setAnnotationColorFilter(ANNOTATION_COLOR_FILTER_FEED, []);
+    setAnnotationTagFilter(ANNOTATION_TAG_FILTER_FEED, []);
   }, []);
+
+  const handleApply = useCallback(
+    (view: MyAnnotationsSavedView) => {
+      const active = myAnnotationsSavedViewMatches(view, {
+        order,
+        quoteOrder,
+        colorFilter,
+        tagFilter,
+      });
+      if (active) {
+        setAnnotationColorFilter(ANNOTATION_COLOR_FILTER_FEED, []);
+        setAnnotationTagFilter(ANNOTATION_TAG_FILTER_FEED, []);
+      } else {
+        applyMyAnnotationsSavedView(view);
+      }
+      setMenu(null);
+    },
+    [colorFilter, order, quoteOrder, tagFilter],
+  );
 
   const handleDelete = useCallback(
     (view: MyAnnotationsSavedView) => {
@@ -121,7 +150,7 @@ export function MyAnnotationsSavedViews({
     [],
   );
 
-  if (views.length === 0 && !canSave) {
+  if (views.length === 0 && !hasFilters) {
     return null;
   }
 
@@ -140,9 +169,12 @@ export function MyAnnotationsSavedViews({
                 type="button"
                 className="syllabus-gallery-group-pill"
                 aria-current={isActive ? "true" : undefined}
-                title={getString("my-annotations-view-apply", {
-                  args: { name: view.name },
-                })}
+                title={getString(
+                  isActive
+                    ? "my-annotations-view-clear"
+                    : "my-annotations-view-apply",
+                  { args: { name: view.name } },
+                )}
                 onClick={() => handleApply(view)}
                 onContextMenu={(event) => handleContextMenu(event, view)}
               >
@@ -163,6 +195,20 @@ export function MyAnnotationsSavedViews({
               <Plus size={12} aria-hidden="true" />
               <span className="syllabus-gallery-group-pill-label">
                 {getString("my-annotations-view-save-title")}
+              </span>
+            </button>
+          ) : null}
+          {hasFilters ? (
+            <button
+              type="button"
+              className="syllabus-gallery-group-pill"
+              title={getString("my-annotations-view-clear-filters")}
+              aria-label={getString("my-annotations-view-clear-filters")}
+              onClick={handleClearFilters}
+            >
+              <X size={12} aria-hidden="true" />
+              <span className="syllabus-gallery-group-pill-label">
+                {getString("my-annotations-view-clear-filters")}
               </span>
             </button>
           ) : null}
