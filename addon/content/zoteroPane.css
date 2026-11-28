@@ -5591,7 +5591,7 @@ button.syllabus-explorer-class-segment-header:focus-visible {
    so page/time meta paints on top of the area image. */
 .syllabus-my-annotations-stream-image-btn {
   display: block;
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
   max-height: none;
   height: auto;
@@ -5610,7 +5610,8 @@ button.syllabus-explorer-class-segment-header:focus-visible {
 
 .syllabus-my-annotations-stream-image {
   display: block;
-  max-width: min(100%, 28rem);
+  width: 100%;
+  max-width: 100%;
   height: auto;
   border-radius: 0.25rem;
   border: 1px solid
